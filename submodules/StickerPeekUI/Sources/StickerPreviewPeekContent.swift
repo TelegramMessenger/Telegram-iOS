@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -159,7 +160,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             isPremiumSticker = file.isPremiumSticker
             
             if file.isAnimatedSticker || file.isVideoSticker {
-                let animationNode = DefaultAnimatedStickerNodeImpl()
+                let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
                 animationNode.overrideVisibility = true
                 self.animationNode = animationNode
                 
@@ -184,7 +185,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                     self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: effect.resource).start())
                     
                     let source = AnimatedStickerResourceSource(account: context.account, resource: effect.resource, fitzModifier: nil)
-                    let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+                    let additionalAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
                     additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                     additionalAnimationNode.visibility = true
                     self.additionalAnimationNode = additionalAnimationNode

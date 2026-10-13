@@ -532,7 +532,11 @@ final class UserAppearanceScreenComponent: Component {
                     return
                 }
                 
-                let proceed: () -> Void = {
+                let proceed: () -> Void = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+
                     self.isApplyingSettings = true
                     self.state?.updated()
                     
@@ -626,7 +630,7 @@ final class UserAppearanceScreenComponent: Component {
                     let _ = (self.starsTopUpOptionsPromise.get()
                     |> filter { $0 != nil }
                     |> take(1)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] options in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller, starsContext] options in
                         guard let self, let controller else {
                             return
                         }
@@ -1956,7 +1960,8 @@ final class UserAppearanceScreenComponent: Component {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

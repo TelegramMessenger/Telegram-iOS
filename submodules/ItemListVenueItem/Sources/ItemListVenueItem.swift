@@ -28,6 +28,18 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
     
     public let sectionId: ItemListSectionId
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: (self as? ItemListRevealOptionsStatefulItem)?.hasActiveRevealOptions ?? false,
+            headerId: self.header?.id,
+            headerFamily: .itemListVenue
+        ))
+    }
     
     public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, engine: TelegramEngine, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, icon: ItemListVenueItem.InfoIcon = .info, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
@@ -44,24 +56,24 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
         self.header = header
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             var firstWithHeader = false
             var last = false
             if self.style == .plain {
-                if previousItem == nil {
+                if neighbors.previous == nil {
                     firstWithHeader = true
-                } else if let previousItem = previousItem as? ItemListVenueItem, self.header != nil && previousItem.header?.id != self.header?.id {
+                } else if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .itemListVenue, self.header != nil && previousItem.headerId != self.header?.id {
                     firstWithHeader = true
                 }
-                if nextItem == nil {
+                if neighbors.next == nil {
                     last = true
-                } else if let nextItem = nextItem as? ItemListVenueItem, self.header != nil && nextItem.header?.id != self.header?.id {
+                } else if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .itemListVenue, self.header != nil && nextItem.headerId != self.header?.id {
                     last = true
                 }
             }
             let node = ItemListVenueItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -74,7 +86,7 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListVenueItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -83,18 +95,18 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
                     var firstWithHeader = false
                     var last = false
                     if self.style == .plain {
-                        if previousItem == nil {
+                        if neighbors.previous == nil {
                             firstWithHeader = true
-                        } else if let previousItem = previousItem as? ItemListVenueItem, self.header != nil && previousItem.header?.id != self.header?.id {
+                        } else if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .itemListVenue, self.header != nil && previousItem.headerId != self.header?.id {
                             firstWithHeader = true
                         }
-                        if nextItem == nil {
+                        if neighbors.next == nil {
                             last = true
-                        } else if let nextItem = nextItem as? ItemListVenueItem, self.header != nil && nextItem.header?.id != self.header?.id {
+                        } else if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .itemListVenue, self.header != nil && nextItem.headerId != self.header?.id {
                             last = true
                         }
                     }
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -199,7 +211,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         
         let currentItem = self.layoutParams?.0
                 
-        return { item, params, neighbors, firstWithHeader, last in
+        return { [weak self] item, params, neighbors, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             var updatedVenueType: String?
             
@@ -484,4 +496,8 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
             return nil
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let itemListVenue = ListViewItemHeaderFamily("itemListVenue")
 }

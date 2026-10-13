@@ -492,7 +492,9 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     }
                 )],
                 background: centerAction.isAccent ? .activeTint(inset: true) : .panel,
-                keepWide: true
+                keepWide: true,
+                minWidth: centerAction.isAccent ? 166.0 : nil,
+                textHorizontalInset: centerAction.isAccent ? 19.0 : 10.0
             )
         }
         

@@ -106,7 +106,7 @@ public protocol ChatRichTextInputNode: AnyObject {
     /// native backend forwards it to the editor's media-view provider, resolving its private `mediaByID` →
     /// this factory; the legacy `UITextView` backend stores it but never uses it (no media). `naturalSize` is
     /// the medium's natural size, for aspect-correct display. Mirrors `emojiViewProvider`'s host-owned seam.
-    var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)? { get set }
+    var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)? { get set }
 
     /// Host-provided formula renderer. The native backend forwards it to `RichTextEditorView`; the legacy
     /// backend stores it but never uses it, matching the media seam.
@@ -340,6 +340,11 @@ public protocol ChatRichTextInputNode: AnyObject {
     /// a no-op (the host routes its paste through the `NSAttributedString` path instead).
     func performRichPaste()
 
+    /// Host transform for pasted PLAIN text, forwarded to the native editor's
+    /// `plainTextFragmentTransformer`. Returning a `Document` splices rich content at the caret;
+    /// returning nil keeps the built-in plain paste. Native backend only — legacy backend ignores it.
+    var pastedMarkdownFragmentParser: ((String) -> Document?)? { get set }
+
     /// Fired on a genuine user TEXT edit (typing/delete/paste/IME) so the host can report the "typing…" chat
     /// activity. Set by the PANEL, wired to its `updateActivity`. It must NOT fire on a caret/selection move or
     /// on a programmatic content set (draft restore / send-clear / state echo) — otherwise the chat partner
@@ -533,7 +538,7 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
 
     // Stored-but-unused: the legacy `UITextView` backend has no media blocks to render, so it satisfies the
     // protocol but never reads this. The native (`RichTextEditorChatInputNode`) backend wires it to the editor.
-    var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)?
+    var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)?
 
     // Stored-but-unused: the legacy backend has no formula atoms to render. The native backend wires this into
     // `RichTextEditorView`.
@@ -1013,6 +1018,8 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
     // The legacy path routes media via `chatInputTextNodeShouldPaste`; these hooks are never read.
     public var canPasteMedia: (() -> Bool)?
     public var onPasteMedia: (() -> Bool)?
+    // The legacy backend has no native editor; the parser is stored but never consulted.
+    public var pastedMarkdownFragmentParser: ((String) -> Document?)?
 
     func performFormatAction(_ action: ChatRichTextFormatAction) {}
     func performRichPaste() {}

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1256,7 +1257,8 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
                             ),
                             color: .white,
                             size: CGSize(width: 34.0, height: 34.0),
-                            playOnce: moreButtonPlayOnce
+                            playOnce: moreButtonPlayOnce,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )
                     )),
                     action: { [weak state] view in
@@ -1389,7 +1391,8 @@ final class GiftAuctionViewSheetComponent: CombinedComponent {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }

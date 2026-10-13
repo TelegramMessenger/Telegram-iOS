@@ -4,9 +4,11 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import WebProxyTransport
 import Display
 import TelegramPresentationData
 import TelegramCallsUI
+import TelegramAudio
 import TelegramUIPreferences
 import TelegramStringFormatting
 import AccountContext
@@ -16,6 +18,7 @@ import LegacyUI
 import ChatListUI
 import PeerInfoUI
 import SettingsUI
+import PasscodeUI
 import UrlHandling
 import LegacyMediaPickerUI
 import LocalMediaResources
@@ -76,6 +79,17 @@ import MiniAppListScreen
 import GiftOptionsScreen
 import GiftViewScreen
 import StarsIntroScreen
+import WalletScreen
+import WalletReceiveScreen
+import WalletImportScreen
+import WalletSettingsScreen
+import WalletAppsScreen
+import WalletWordsScreen
+import WalletInfoScreen
+import WalletConnectScreen
+import WalletContext
+import WalletTransactionScreen
+import WalletCollectibleScreen
 import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
@@ -298,6 +312,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var invalidatedApsToken: Data?
     
     private let energyUsageAutomaticDisposable = MetaDisposable()
+    private var webProxyCarrierHost: WebProxyCarrierWindowHost?
     
     init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, notificationController: NotificationContainerController?, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?, Bool) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?, testingEnvironment: Bool = false) {
         assert(Queue.mainQueue().isCurrent())
@@ -519,6 +534,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
         
         GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass })
+        ManagedAudioSessionImpl.respectsSystemRecordingInput = immediateExperimentalUISettingsValue.with({ $0.respectSystemMicrophone })
         
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
@@ -527,6 +543,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
+                ManagedAudioSessionImpl.respectsSystemRecordingInput = settings.respectSystemMicrophone
             }
         })
         
@@ -830,7 +847,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
-            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: {
+            let webProxyCarrierHost = WebProxyCarrierWindowHost(containerView: mainWindow.hostView.containerView)
+            self.webProxyCarrierHost = webProxyCarrierHost
+            WebProxyTransport.shared.setViewHost(webProxyCarrierHost)
+
+            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: { [self] in
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
                 }, {
@@ -2360,12 +2381,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return presentAddMembersImpl(context: context, updatedPresentationData: updatedPresentationData, parentController: parentController, groupPeer: groupPeer, selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(
-            openMessage: { _, _ in
-                return false
+            openMessage: { message, _ in
+                guard isGiftMessageComposerPreview, let tapMessage else {
+                    return false
+                }
+                tapMessage(message)
+                return true
             },
             openPeer: { _, _, _, _ in },
             openPeerMention: { _, _ in },
@@ -2381,7 +2406,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             navigateToThreadMessage: { _, _, _ in
             },
-            tapMessage: { message in
+            tapMessage: isGiftMessageComposerPreview ? nil : { message in
                 tapMessage?(message)
             },
             clickThroughMessage: { view, location in
@@ -2528,7 +2553,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             openJoinLink: { _ in
             },
-            openWebView: { _, _, _, _ in
+            openWebView: { _, _, _, _, _ in
             },
             activateAdAction: { _, _, _, _ in
             },
@@ -2608,6 +2633,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         var entryAttributes = ChatMessageEntryAttributes()
         entryAttributes.isCentered = isCentered
+        entryAttributes.isGiftMessageComposerPreview = isGiftMessageComposerPreview
         if let rank {
             switch rankRole {
             case .creator:
@@ -2652,6 +2678,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 subject: nil,
                 contactsPeerIds: Set(),
                 animatedEmojiStickers: [:],
+                premiumGiftStickers: context.premiumGiftStickersValue,
+                tonGiftStickers: context.tonGiftStickersValue,
                 forcedResourceStatus: forcedResourceStatus,
                 availableReactions: availableReactions,
                 availableMessageEffects: nil,
@@ -3207,7 +3235,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 settingsPromise = Promise()
                 settingsPromise.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
             }
-            let birthdayController = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: {
+            let birthdayController = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: { [controller] in
                 context.sharedContext.makeBirthdayPrivacyController(context: context, settings: settingsPromise, openedFromBirthdayScreen: true, present: { [weak controller] c in
                     controller?.push(c)
                 })
@@ -3398,7 +3426,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 settingsPromise = Promise()
                 settingsPromise.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
             }
-            let birthdayController = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: {
+            let birthdayController = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: { [controller] in
                 context.sharedContext.makeBirthdayPrivacyController(context: context, settings: settingsPromise, openedFromBirthdayScreen: true, present: { [weak controller] c in
                     controller?.push(c)
                 })
@@ -3418,7 +3446,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             if currentTime > canExportDate {
-                let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: {
+                let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: { [controller] in
                     let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
                     |> deliverOnMainQueue).start(error: { [weak controller] error in
                         switch error {
@@ -4138,7 +4166,151 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeStarsIntroScreen(context: AccountContext) -> ViewController {
         return StarsIntroScreen(context: context)
     }
+
+    public func makeWalletScreen(context: AccountContext) -> ViewController {
+        guard let walletContext = context.walletContext else {
+            fatalError()
+        }
+
+        return WalletScreen(
+            context: context,
+            walletContext: walletContext
+        )
+    }
+
+    public func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController {
+        return WalletReceiveScreen(context: context, address: address)
+    }
+
+    public func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController {
+        return WalletReceiveScreen(context: context, address: address, appeared: appeared)
+    }
+
+    public func makeWalletImportScreen(context: AccountContext, mode: WalletImportScreenMode, completion: (() -> Void)?) -> ViewController {
+        guard let walletContext = context.walletContext else {
+            preconditionFailure("Wallet is only available in the main account context")
+        }
+        return WalletImportScreen(context: context, walletContext: walletContext, mode: mode, completion: completion)
+    }
+
+    public func makeWalletSettingsScreen(context: AccountContext) -> ViewController {
+        guard let walletContext = context.walletContext else {
+            preconditionFailure("Wallet is only available in the main account context")
+        }
+        return WalletSettingsScreen(context: context, walletContext: walletContext)
+    }
+
+    public func makeWalletAppsScreen(context: AccountContext) -> ViewController {
+        guard let walletContext = context.walletContext else {
+            preconditionFailure("Wallet is only available in the main account context")
+        }
+        return WalletAppsScreen(context: context, walletContext: walletContext)
+    }
+
+    public func makeWalletWordsScreen(context: AccountContext, words: [String], verify: Bool, dismissOnBackgroundOrLock: Bool = false, completion: (() -> Void)?) -> ViewController {
+        return WalletWordsScreen(context: context, words: words, verify: verify, dismissOnBackgroundOrLock: dismissOnBackgroundOrLock, completion: completion)
+    }
+
+    public func makeWalletWordsScreen(context: AccountContext, words: [String], mode: WalletWordsScreenMode, completion: (() -> Void)?) -> ViewController {
+        return WalletWordsScreen(context: context, words: words, mode: mode, completion: completion)
+    }
     
+    public func makeWalletInfoScreen(context: AccountContext, mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController {
+        return WalletInfoScreen(context: context, mode: mode, completion: completion)
+    }
+
+    public func makeWalletInfoScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController {
+        return WalletInfoScreen(context: context, updatedPresentationData: updatedPresentationData, mode: mode, completion: completion)
+    }
+
+    public func makeWalletConnectScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectRequest, cancelled: @escaping () -> Void, connect: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
+        return WalletConnectScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, connect: connect)
+    }
+
+    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
+        return WalletTransferScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, confirm: confirm)
+    }
+
+    public func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {
+        return WalletTransactionScreen(context: context, transaction: transaction, fromChat: fromChat, decryptCommentOnOpen: decryptCommentOnOpen)
+    }
+
+    public func makeWalletTransactionScreen(context: AccountContext, walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {
+        return WalletTransactionScreen(context: context, walletContext: walletContext, transaction: transaction, fromChat: fromChat, decryptCommentOnOpen: decryptCommentOnOpen)
+    }
+
+    public func makeWalletTransactionScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {
+        return WalletTransactionScreen(context: context, updatedPresentationData: updatedPresentationData, walletContext: walletContext, transaction: transaction, fromChat: fromChat, decryptCommentOnOpen: decryptCommentOnOpen)
+    }
+
+    public func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, preparedTransfer: WalletContext.PreparedTransfer, dismissSendScreen: @escaping () -> Void) -> ViewController {
+        return WalletTransactionPreviewScreen(
+            context: context,
+            walletContext: walletContext,
+            preparedTransfer: preparedTransfer,
+            dismissSendScreen: dismissSendScreen
+        )
+    }
+
+    public func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController {
+        return WalletTransactionPreviewScreen(
+            context: context,
+            walletContext: walletContext,
+            address: address,
+            amount: amount,
+            sendAll: sendAll,
+            comment: comment,
+            initialFee: initialFee,
+            dismissSendScreen: dismissSendScreen
+        )
+    }
+
+    public func makeWalletTransactionPreviewScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController {
+        return WalletTransactionPreviewScreen(
+            context: context,
+            updatedPresentationData: updatedPresentationData,
+            walletContext: walletContext,
+            address: address,
+            amount: amount,
+            sendAll: sendAll,
+            comment: comment,
+            initialFee: initialFee,
+            dismissSendScreen: dismissSendScreen
+        )
+    }
+
+    public func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, recipientPeer: EnginePeer?, collectible: WalletContext.Collectible, comment: String?, dismissSendScreen: @escaping () -> Void) -> ViewController {
+        return WalletTransactionPreviewScreen(
+            context: context,
+            walletContext: walletContext,
+            address: address,
+            recipientPeer: recipientPeer,
+            amount: 0,
+            sendAll: false,
+            comment: comment,
+            collectible: collectible,
+            dismissSendScreen: dismissSendScreen
+        )
+    }
+
+    public func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, collectibleSent: @escaping (String) -> Void) -> ViewController {
+        return WalletCollectibleScreen(
+            context: context,
+            walletContext: walletContext,
+            collectible: collectible,
+            collectibleSent: collectibleSent
+        )
+    }
+
+    public func authorizeWalletAccess(context: AccountContext, completion: @escaping (Bool) -> Void) {
+        let _ = passcodeEntryController(context: context, completion: completion).start(next: { [weak self] controller in
+            guard let self, let controller else {
+                return
+            }
+            self.mainWindow?.present(controller, on: .root)
+        })
+    }
+
     public func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: ((StarGift.UniqueGift) -> Void)?) -> ViewController {
         return GiftViewScreen(context: context, subject: .message(message), shareStory: shareStory)
     }
@@ -4300,6 +4472,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController {
         return incomingMessagePrivacyScreen(context: context, value: value, exceptions: exceptions, update: update)
+    }
+
+    public func openBotApp(context: AccountContext, parentController: ViewController, botApp: BotApp?, botPeer: EnginePeer, payload: String?, mode: ResolvedStartAppMode, isOnramp: Bool, willOpen: @escaping () -> Void, completion: @escaping () -> Void) {
+        ChatControllerImpl.presentBotApp(
+            context: context,
+            parentController: parentController,
+            botApp: botApp,
+            botPeer: botPeer,
+            payload: payload,
+            mode: mode,
+            isOnramp: isOnramp,
+            willOpen: willOpen,
+            opened: completion
+        )
     }
     
     public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?, verifyAgeCompletion: ((Int) -> Void)?) {

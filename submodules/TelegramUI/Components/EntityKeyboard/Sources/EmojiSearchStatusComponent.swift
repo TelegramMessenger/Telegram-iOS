@@ -16,7 +16,8 @@ import LottieComponent
 import AudioToolbox
 import SwiftSignalKit
 import GZip
-import RLottieBinding
+import LottieBinding
+import LottieSettings
 import AppBundle
 import Lottie
 
@@ -68,6 +69,7 @@ final class EmojiSearchStatusComponent: Component {
         case results
     }
     
+    let context: AccountContext
     let theme: PresentationTheme
     let forceNeedsVibrancy: Bool
     let strings: PresentationStrings
@@ -75,12 +77,14 @@ final class EmojiSearchStatusComponent: Component {
     let content: Content
 
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         forceNeedsVibrancy: Bool,
         strings: PresentationStrings,
         useOpaqueTheme: Bool,
         content: Content
     ) {
+        self.context = context
         self.theme = theme
         self.forceNeedsVibrancy = forceNeedsVibrancy
         self.strings = strings
@@ -167,8 +171,8 @@ final class EmojiSearchStatusComponent: Component {
             }
         }
         
-        init?(content: ContentState, data: Data, displaySize: CGSize, frameRange: ClosedRange<Int>?, previousAnimationState: EmojiSearchStatusAnimationState?) {
-            guard let animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
+        init?(content: ContentState, data: Data, displaySize: CGSize, frameRange: ClosedRange<Int>?, previousAnimationState: EmojiSearchStatusAnimationState?, lottieSettings: LottieRenderingSettings) {
+            guard let animationInstance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: lottieSettings) else {
                 return nil
             }
             self.content = content
@@ -466,9 +470,9 @@ final class EmojiSearchStatusComponent: Component {
                 
                 if canSwitchNow {
                     /*if let currentAnimationState = self.currentAnimationState, case .search = currentAnimationState.content, case .progress = component.content {
-                        self.switchToContent(content: .searchToProgress)
+                        self.switchToContent(content: .searchToProgress, lottieSettings: component.context.lottieRenderingSettings)
                     } else {*/
-                        self.switchToContent(content: ContentState(content: component.content))
+                        self.switchToContent(content: ContentState(content: component.content), lottieSettings: component.context.lottieRenderingSettings)
                     //}
                 } else {
                     self.pendingContent = component.content
@@ -483,7 +487,7 @@ final class EmojiSearchStatusComponent: Component {
             return availableSize
         }
         
-        private func switchToContent(content: ContentState) {
+        private func switchToContent(content: ContentState, lottieSettings: LottieRenderingSettings) {
             guard let displaySize = self.displaySize else {
                 return
             }
@@ -702,13 +706,14 @@ final class EmojiSearchStatusComponent: Component {
                     resolvedFrameRange = resolvedLowerBound ... max(resolvedLowerBound, resolvedUpperBound)
                 }
                 
-                self.currentAnimationState = LottieAnimationState(content: content, data: data, displaySize: displaySize, frameRange: resolvedFrameRange, previousAnimationState: previousAnimationState)
+                self.currentAnimationState = LottieAnimationState(content: content, data: data, displaySize: displaySize, frameRange: resolvedFrameRange, previousAnimationState: previousAnimationState, lottieSettings: lottieSettings)
             } else {
                 self.currentAnimationState = nil
             }
         }
         
         private func updateAnimation() {
+            let lottieSettings = self.component?.context.lottieRenderingSettings ?? .noAccountFallback
             var needsAnimation = false
             
             for (tempView, tempTintView, animationState) in self.disappearingAnimationStates {
@@ -740,10 +745,10 @@ final class EmojiSearchStatusComponent: Component {
                     
                     if currentAnimationState.isCompleted {
                         if self.pendingContent == nil, let automaticNextState = currentAnimationState.content.automaticNextState {
-                            self.switchToContent(content: automaticNextState)
+                            self.switchToContent(content: automaticNextState, lottieSettings: lottieSettings)
                         } else if let pendingContent = self.pendingContent {
                             self.pendingContent = nil
-                            self.switchToContent(content: ContentState(content: pendingContent))
+                            self.switchToContent(content: ContentState(content: pendingContent), lottieSettings: lottieSettings)
                         } else {
                             break
                         }

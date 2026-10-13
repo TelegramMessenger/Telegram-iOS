@@ -3,6 +3,7 @@ include "MediaId.fbs";
 include "TelegramChannel.fbs";
 include "PixelDimensions.fbs";
 include "RichText.fbs";
+include "Optional.fbs";
 
 namespace TelegramCore;
 
@@ -37,7 +38,9 @@ union InstantPageBlock_Value {
     InstantPageBlock_Map,
     InstantPageBlock_Heading,
     InstantPageBlock_Formula,
-    InstantPageBlock_Thinking
+    InstantPageBlock_Thinking,
+    InstantPageBlock_ButtonRow,
+    InstantPageBlock_Document
 }
 
 table InstantPageBlock {
@@ -95,6 +98,7 @@ table InstantPageBlock_BlockQuote {
     text:RichText (id: 0);
     caption:RichText (id: 1, required);
     blocks:[InstantPageBlock] (id: 2);
+    collapsed:OptionalBool (id: 3);
 }
 
 table InstantPageBlock_PullQuote {
@@ -119,6 +123,21 @@ table InstantPageBlock_Video {
 }
 
 table InstantPageBlock_Audio {
+    id:MediaId (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+}
+
+// InstantPageButton is defined in RichText.fbs, which this file already includes.
+table InstantPageBlock_ButtonRow {
+    buttons:[InstantPageButton] (id: 0, required);
+    // Horizontal placement — InstantPageButtonRowAlignment.rawValue. Not `required`: flatc forbids
+    // that on scalars, and an absent field reading 0 is exactly the wanted default (.justify), which
+    // is how pages cached before this field decode.
+    alignment:int32 (id: 1);
+}
+
+// A generic file. Its own case rather than a widened Audio: .audio renders a music player.
+table InstantPageBlock_Document {
     id:MediaId (id: 0, required);
     caption:InstantPageCaption (id: 1, required);
 }
@@ -170,6 +189,7 @@ table InstantPageBlock_Table {
     rows:[InstantPageTableRow] (id: 1, required);
     bordered:bool (id: 2);
     striped:bool (id: 3);
+    compact:bool (id: 4);
 }
 
 table InstantPageBlock_Details {

@@ -1,3 +1,5 @@
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
 public_headers = glob([
   "Source/PublicHeaders/AsyncDisplayKit/*.h",
 ])

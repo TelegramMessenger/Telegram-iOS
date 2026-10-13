@@ -209,7 +209,27 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                     flags |= Int32(1 << 17)
                 }
                 
-                return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, scheduleRepeatPeriod: effectiveScheduleRepeatPeriod, quickReplyShortcutId: quickReplyShortcutId, richMessage: apiRichMessage))
+                let request: Signal<Api.Updates, MTRpcError>
+                if messageId.namespace == Namespaces.Message.WelcomeMessageCloud {
+                    var welcomeFlags: Int32 = (1 << 0) | (1 << 6) | (1 << 7)
+                    if apiEntities != nil {
+                        welcomeFlags |= (1 << 1)
+                    }
+                    if inputMedia != nil {
+                        welcomeFlags |= (1 << 3)
+                    }
+                    if apiRichMessage != nil {
+                        welcomeFlags |= (1 << 4)
+                    }
+                    if invertMediaAttribute != nil || webpagePreviewAttribute?.leadingPreview == true {
+                        welcomeFlags |= (1 << 5)
+                    }
+                    request = network.request(Api.functions.ephemeral.editMessage(flags: welcomeFlags, peer: inputPeer, receiverId: .inputUserEmpty, id: messageId.id, message: text, media: inputMedia, entities: apiEntities, replyMarkup: nil, richMessage: apiRichMessage))
+                } else {
+                    request = network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, scheduleRepeatPeriod: effectiveScheduleRepeatPeriod, quickReplyShortcutId: quickReplyShortcutId, richMessage: apiRichMessage))
+                }
+
+                return request
                 |> map { result -> Api.Updates? in
                     return result
                 }

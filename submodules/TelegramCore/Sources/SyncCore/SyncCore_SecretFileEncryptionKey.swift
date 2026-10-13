@@ -4,7 +4,11 @@ import Postbox
 public final class SecretFileEncryptionKey: PostboxCoding, Equatable {
     public let aesKey: Data
     public let aesIv: Data
-    
+
+    public var hasValidLength: Bool {
+        return self.aesKey.count == 32 && self.aesIv.count == 32
+    }
+
     public init(aesKey: Data, aesIv: Data) {
         self.aesKey = aesKey
         self.aesIv = aesIv

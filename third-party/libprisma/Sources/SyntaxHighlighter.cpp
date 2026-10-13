@@ -13,7 +13,7 @@ TokenList SyntaxHighlighter::tokenize(const std::string& text, const std::string
     const Grammar* grammar = m_tree->find(language);
     if (grammar)
     {
-        return tokenize(text, grammar);
+        return tokenize(text, grammar, 0);
     }
 
     return TokenList(text);
@@ -24,15 +24,21 @@ std::map<std::string, std::string> SyntaxHighlighter::languages() const
     return m_tree->keys();
 }
 
-TokenList SyntaxHighlighter::tokenize(std::string_view text, const Grammar* grammar)
+TokenList SyntaxHighlighter::tokenize(std::string_view text, const Grammar* grammar, size_t depth)
 {
     TokenList tokenList(text);
-    matchGrammar(text, tokenList, grammar, tokenList.head, 0, nullptr);
+
+    // Stop recursing into nested grammars once the depth cap is reached; the
+    // text is kept as-is rather than risking a stack-exhausting cycle.
+    if (depth <= kMaxTokenizeDepth)
+    {
+        matchGrammar(text, tokenList, grammar, tokenList.head, 0, nullptr, depth);
+    }
 
     return tokenList;
 }
 
-void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList, const Grammar* grammar, TokenListPtr startNode, size_t startPos, RematchOptions* rematch)
+void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList, const Grammar* grammar, TokenListPtr startNode, size_t startPos, RematchOptions* rematch, size_t depth)
 {
     for (const auto& token : grammar->tokens)
     {
@@ -155,7 +161,7 @@ void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList
                 TokenList tokenEntries = [&]() {
                     if (inside)
                     {
-                        return tokenize(match, inside);
+                        return tokenize(match, inside, depth + 1);
                     }
                     else
                     {
@@ -183,7 +189,7 @@ void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList
                         .j = x
                     };
 
-                    matchGrammar(text, tokenList, grammar, currentNode->prev, pos, &nestedRematch);
+                    matchGrammar(text, tokenList, grammar, currentNode->prev, pos, &nestedRematch, depth);
 
                     // the reach might have been extended because of the rematching
                     if (rematch && nestedRematch.reach > rematch->reach)

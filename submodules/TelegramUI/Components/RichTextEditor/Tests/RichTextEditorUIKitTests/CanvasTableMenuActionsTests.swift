@@ -34,7 +34,7 @@ final class CanvasTableMenuActionsTests: XCTestCase {
         return (v, pb)
     }
     private func tableBox(_ v: DocumentCanvasView) -> TableBlockBox { v.boxes.first { $0 is TableBlockBox } as! TableBlockBox }
-    private func putCaretInTable(_ v: DocumentCanvasView) { v.head = tableBox(v).cellTextStart(row: 0, column: 0)!; v.anchor = v.head }
+    private func putCaretInTable(_ v: DocumentCanvasView) { let p = tableBox(v).cellTextStart(row: 0, column: 0)!; v.setSelectionForTesting(anchor: p, head: p) }
     private func paraTexts(_ v: DocumentCanvasView) -> [String] {
         v.currentBlocks().compactMap { if case .paragraph(let p) = $0 { return p.text } else { return nil } }
     }
@@ -54,7 +54,7 @@ final class CanvasTableMenuActionsTests: XCTestCase {
 
     func test_copyCurrentTable_noopOutsideTable() {
         let (v, pb) = canvas()
-        v.anchor = 0; v.head = 0   // caret in "Top", not the table
+        v.setSelectionForTesting(anchor: 0, head: 0)   // caret in "Top", not the table
         v.copyCurrentTable()
         XCTAssertTrue(pb.items.isEmpty, "no-op when the caret isn't in a table")
     }

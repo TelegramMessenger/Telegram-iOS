@@ -809,6 +809,10 @@ public final class NavigationButtonNodeImpl: ContextControllerSourceNode, Naviga
         }
     }
     
+    var visibleItemCount: Int {
+        return self.nodes.filter({ $0.bounds.width != 0.0 }).count
+    }
+    
     var isEmpty: Bool {
         if self.isBack {
             return false

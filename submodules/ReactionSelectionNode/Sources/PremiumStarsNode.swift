@@ -29,7 +29,11 @@ public final class PremiumStarsNode: ASDisplayNode {
             self.addSubnode(node)
         }
         
-        Queue.mainQueue().async {
+        Queue.mainQueue().async { [weak self] in
+            guard let self else {
+                return
+            }
+
             self.setup(firstTime: true)
             
             self.timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in

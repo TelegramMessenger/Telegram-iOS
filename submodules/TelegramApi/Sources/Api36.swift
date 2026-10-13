@@ -1,4 +1,379 @@
 public extension Api.messages {
+    enum AffectedHistory: TypeConstructorDescription {
+        public class Cons_affectedHistory: TypeConstructorDescription {
+            public var pts: Int32
+            public var ptsCount: Int32
+            public var offset: Int32
+            public init(pts: Int32, ptsCount: Int32, offset: Int32) {
+                self.pts = pts
+                self.ptsCount = ptsCount
+                self.offset = offset
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("affectedHistory", [("pts", ConstructorParameterDescription(self.pts)), ("ptsCount", ConstructorParameterDescription(self.ptsCount)), ("offset", ConstructorParameterDescription(self.offset))])
+            }
+        }
+        case affectedHistory(Cons_affectedHistory)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .affectedHistory(let _data):
+                if boxed {
+                    buffer.appendInt32(-1269012015)
+                }
+                serializeInt32(_data.pts, buffer: buffer, boxed: false)
+                serializeInt32(_data.ptsCount, buffer: buffer, boxed: false)
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .affectedHistory(let _data):
+                return ("affectedHistory", [("pts", ConstructorParameterDescription(_data.pts)), ("ptsCount", ConstructorParameterDescription(_data.ptsCount)), ("offset", ConstructorParameterDescription(_data.offset))])
+            }
+        }
+
+        public static func parse_affectedHistory(_ reader: BufferReader) -> AffectedHistory? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.AffectedHistory.affectedHistory(Cons_affectedHistory(pts: _1!, ptsCount: _2!, offset: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
+    enum AffectedMessages: TypeConstructorDescription {
+        public class Cons_affectedMessages: TypeConstructorDescription {
+            public var pts: Int32
+            public var ptsCount: Int32
+            public init(pts: Int32, ptsCount: Int32) {
+                self.pts = pts
+                self.ptsCount = ptsCount
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("affectedMessages", [("pts", ConstructorParameterDescription(self.pts)), ("ptsCount", ConstructorParameterDescription(self.ptsCount))])
+            }
+        }
+        case affectedMessages(Cons_affectedMessages)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .affectedMessages(let _data):
+                if boxed {
+                    buffer.appendInt32(-2066640507)
+                }
+                serializeInt32(_data.pts, buffer: buffer, boxed: false)
+                serializeInt32(_data.ptsCount, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .affectedMessages(let _data):
+                return ("affectedMessages", [("pts", ConstructorParameterDescription(_data.pts)), ("ptsCount", ConstructorParameterDescription(_data.ptsCount))])
+            }
+        }
+
+        public static func parse_affectedMessages(_ reader: BufferReader) -> AffectedMessages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AffectedMessages.affectedMessages(Cons_affectedMessages(pts: _1!, ptsCount: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
+    enum AllStickers: TypeConstructorDescription {
+        public class Cons_allStickers: TypeConstructorDescription {
+            public var hash: Int64
+            public var sets: [Api.StickerSet]
+            public init(hash: Int64, sets: [Api.StickerSet]) {
+                self.hash = hash
+                self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("allStickers", [("hash", ConstructorParameterDescription(self.hash)), ("sets", ConstructorParameterDescription(self.sets))])
+            }
+        }
+        case allStickers(Cons_allStickers)
+        case allStickersNotModified
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .allStickers(let _data):
+                if boxed {
+                    buffer.appendInt32(-843329861)
+                }
+                serializeInt64(_data.hash, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.sets.count))
+                for item in _data.sets {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .allStickersNotModified:
+                if boxed {
+                    buffer.appendInt32(-395967805)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .allStickers(let _data):
+                return ("allStickers", [("hash", ConstructorParameterDescription(_data.hash)), ("sets", ConstructorParameterDescription(_data.sets))])
+            case .allStickersNotModified:
+                return ("allStickersNotModified", [])
+            }
+        }
+
+        public static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.StickerSet]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AllStickers.allStickers(Cons_allStickers(hash: _1!, sets: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
+            return Api.messages.AllStickers.allStickersNotModified
+        }
+    }
+}
+public extension Api.messages {
+    enum ArchivedStickers: TypeConstructorDescription {
+        public class Cons_archivedStickers: TypeConstructorDescription {
+            public var count: Int32
+            public var sets: [Api.StickerSetCovered]
+            public init(count: Int32, sets: [Api.StickerSetCovered]) {
+                self.count = count
+                self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("archivedStickers", [("count", ConstructorParameterDescription(self.count)), ("sets", ConstructorParameterDescription(self.sets))])
+            }
+        }
+        case archivedStickers(Cons_archivedStickers)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .archivedStickers(let _data):
+                if boxed {
+                    buffer.appendInt32(1338747336)
+                }
+                serializeInt32(_data.count, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.sets.count))
+                for item in _data.sets {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .archivedStickers(let _data):
+                return ("archivedStickers", [("count", ConstructorParameterDescription(_data.count)), ("sets", ConstructorParameterDescription(_data.sets))])
+            }
+        }
+
+        public static func parse_archivedStickers(_ reader: BufferReader) -> ArchivedStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.StickerSetCovered]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.ArchivedStickers.archivedStickers(Cons_archivedStickers(count: _1!, sets: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
+    enum AvailableEffects: TypeConstructorDescription {
+        public class Cons_availableEffects: TypeConstructorDescription {
+            public var hash: Int32
+            public var effects: [Api.AvailableEffect]
+            public var documents: [Api.Document]
+            public init(hash: Int32, effects: [Api.AvailableEffect], documents: [Api.Document]) {
+                self.hash = hash
+                self.effects = effects
+                self.documents = documents
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("availableEffects", [("hash", ConstructorParameterDescription(self.hash)), ("effects", ConstructorParameterDescription(self.effects)), ("documents", ConstructorParameterDescription(self.documents))])
+            }
+        }
+        case availableEffects(Cons_availableEffects)
+        case availableEffectsNotModified
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .availableEffects(let _data):
+                if boxed {
+                    buffer.appendInt32(-1109696146)
+                }
+                serializeInt32(_data.hash, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.effects.count))
+                for item in _data.effects {
+                    item.serialize(buffer, true)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.documents.count))
+                for item in _data.documents {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .availableEffectsNotModified:
+                if boxed {
+                    buffer.appendInt32(-772957605)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .availableEffects(let _data):
+                return ("availableEffects", [("hash", ConstructorParameterDescription(_data.hash)), ("effects", ConstructorParameterDescription(_data.effects)), ("documents", ConstructorParameterDescription(_data.documents))])
+            case .availableEffectsNotModified:
+                return ("availableEffectsNotModified", [])
+            }
+        }
+
+        public static func parse_availableEffects(_ reader: BufferReader) -> AvailableEffects? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.AvailableEffect]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableEffect.self)
+            }
+            var _3: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.AvailableEffects.availableEffects(Cons_availableEffects(hash: _1!, effects: _2!, documents: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_availableEffectsNotModified(_ reader: BufferReader) -> AvailableEffects? {
+            return Api.messages.AvailableEffects.availableEffectsNotModified
+        }
+    }
+}
+public extension Api.messages {
+    enum AvailableReactions: TypeConstructorDescription {
+        public class Cons_availableReactions: TypeConstructorDescription {
+            public var hash: Int32
+            public var reactions: [Api.AvailableReaction]
+            public init(hash: Int32, reactions: [Api.AvailableReaction]) {
+                self.hash = hash
+                self.reactions = reactions
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("availableReactions", [("hash", ConstructorParameterDescription(self.hash)), ("reactions", ConstructorParameterDescription(self.reactions))])
+            }
+        }
+        case availableReactions(Cons_availableReactions)
+        case availableReactionsNotModified
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .availableReactions(let _data):
+                if boxed {
+                    buffer.appendInt32(1989032621)
+                }
+                serializeInt32(_data.hash, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.reactions.count))
+                for item in _data.reactions {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .availableReactionsNotModified:
+                if boxed {
+                    buffer.appendInt32(-1626924713)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .availableReactions(let _data):
+                return ("availableReactions", [("hash", ConstructorParameterDescription(_data.hash)), ("reactions", ConstructorParameterDescription(_data.reactions))])
+            case .availableReactionsNotModified:
+                return ("availableReactionsNotModified", [])
+            }
+        }
+
+        public static func parse_availableReactions(_ reader: BufferReader) -> AvailableReactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.AvailableReaction]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableReaction.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AvailableReactions.availableReactions(Cons_availableReactions(hash: _1!, reactions: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_availableReactionsNotModified(_ reader: BufferReader) -> AvailableReactions? {
+            return Api.messages.AvailableReactions.availableReactionsNotModified
+        }
+    }
+}
+public extension Api.messages {
     enum BotApp: TypeConstructorDescription {
         public class Cons_botApp: TypeConstructorDescription {
             public var flags: Int32
@@ -1369,494 +1744,6 @@ public extension Api.messages {
         }
         public static func parse_emojiGameUnavailable(_ reader: BufferReader) -> EmojiGameInfo? {
             return Api.messages.EmojiGameInfo.emojiGameUnavailable
-        }
-    }
-}
-public extension Api.messages {
-    enum EmojiGameOutcome: TypeConstructorDescription {
-        public class Cons_emojiGameOutcome: TypeConstructorDescription {
-            public var seed: Buffer
-            public var stakeTonAmount: Int64
-            public var tonAmount: Int64
-            public init(seed: Buffer, stakeTonAmount: Int64, tonAmount: Int64) {
-                self.seed = seed
-                self.stakeTonAmount = stakeTonAmount
-                self.tonAmount = tonAmount
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("emojiGameOutcome", [("seed", ConstructorParameterDescription(self.seed)), ("stakeTonAmount", ConstructorParameterDescription(self.stakeTonAmount)), ("tonAmount", ConstructorParameterDescription(self.tonAmount))])
-            }
-        }
-        case emojiGameOutcome(Cons_emojiGameOutcome)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .emojiGameOutcome(let _data):
-                if boxed {
-                    buffer.appendInt32(-634726841)
-                }
-                serializeBytes(_data.seed, buffer: buffer, boxed: false)
-                serializeInt64(_data.stakeTonAmount, buffer: buffer, boxed: false)
-                serializeInt64(_data.tonAmount, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .emojiGameOutcome(let _data):
-                return ("emojiGameOutcome", [("seed", ConstructorParameterDescription(_data.seed)), ("stakeTonAmount", ConstructorParameterDescription(_data.stakeTonAmount)), ("tonAmount", ConstructorParameterDescription(_data.tonAmount))])
-            }
-        }
-
-        public static func parse_emojiGameOutcome(_ reader: BufferReader) -> EmojiGameOutcome? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.EmojiGameOutcome.emojiGameOutcome(Cons_emojiGameOutcome(seed: _1!, stakeTonAmount: _2!, tonAmount: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.messages {
-    enum EmojiGroups: TypeConstructorDescription {
-        public class Cons_emojiGroups: TypeConstructorDescription {
-            public var hash: Int32
-            public var groups: [Api.EmojiGroup]
-            public init(hash: Int32, groups: [Api.EmojiGroup]) {
-                self.hash = hash
-                self.groups = groups
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("emojiGroups", [("hash", ConstructorParameterDescription(self.hash)), ("groups", ConstructorParameterDescription(self.groups))])
-            }
-        }
-        case emojiGroups(Cons_emojiGroups)
-        case emojiGroupsNotModified
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .emojiGroups(let _data):
-                if boxed {
-                    buffer.appendInt32(-2011186869)
-                }
-                serializeInt32(_data.hash, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.groups.count))
-                for item in _data.groups {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .emojiGroupsNotModified:
-                if boxed {
-                    buffer.appendInt32(1874111879)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .emojiGroups(let _data):
-                return ("emojiGroups", [("hash", ConstructorParameterDescription(_data.hash)), ("groups", ConstructorParameterDescription(_data.groups))])
-            case .emojiGroupsNotModified:
-                return ("emojiGroupsNotModified", [])
-            }
-        }
-
-        public static func parse_emojiGroups(_ reader: BufferReader) -> EmojiGroups? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.EmojiGroup]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiGroup.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.EmojiGroups.emojiGroups(Cons_emojiGroups(hash: _1!, groups: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_emojiGroupsNotModified(_ reader: BufferReader) -> EmojiGroups? {
-            return Api.messages.EmojiGroups.emojiGroupsNotModified
-        }
-    }
-}
-public extension Api.messages {
-    enum ExportedChatInvite: TypeConstructorDescription {
-        public class Cons_exportedChatInvite: TypeConstructorDescription {
-            public var invite: Api.ExportedChatInvite
-            public var users: [Api.User]
-            public init(invite: Api.ExportedChatInvite, users: [Api.User]) {
-                self.invite = invite
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("exportedChatInvite", [("invite", ConstructorParameterDescription(self.invite)), ("users", ConstructorParameterDescription(self.users))])
-            }
-        }
-        public class Cons_exportedChatInviteReplaced: TypeConstructorDescription {
-            public var invite: Api.ExportedChatInvite
-            public var newInvite: Api.ExportedChatInvite
-            public var users: [Api.User]
-            public init(invite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite, users: [Api.User]) {
-                self.invite = invite
-                self.newInvite = newInvite
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("exportedChatInviteReplaced", [("invite", ConstructorParameterDescription(self.invite)), ("newInvite", ConstructorParameterDescription(self.newInvite)), ("users", ConstructorParameterDescription(self.users))])
-            }
-        }
-        case exportedChatInvite(Cons_exportedChatInvite)
-        case exportedChatInviteReplaced(Cons_exportedChatInviteReplaced)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .exportedChatInvite(let _data):
-                if boxed {
-                    buffer.appendInt32(410107472)
-                }
-                _data.invite.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .exportedChatInviteReplaced(let _data):
-                if boxed {
-                    buffer.appendInt32(572915951)
-                }
-                _data.invite.serialize(buffer, true)
-                _data.newInvite.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .exportedChatInvite(let _data):
-                return ("exportedChatInvite", [("invite", ConstructorParameterDescription(_data.invite)), ("users", ConstructorParameterDescription(_data.users))])
-            case .exportedChatInviteReplaced(let _data):
-                return ("exportedChatInviteReplaced", [("invite", ConstructorParameterDescription(_data.invite)), ("newInvite", ConstructorParameterDescription(_data.newInvite)), ("users", ConstructorParameterDescription(_data.users))])
-            }
-        }
-
-        public static func parse_exportedChatInvite(_ reader: BufferReader) -> ExportedChatInvite? {
-            var _1: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.ExportedChatInvite.exportedChatInvite(Cons_exportedChatInvite(invite: _1!, users: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_exportedChatInviteReplaced(_ reader: BufferReader) -> ExportedChatInvite? {
-            var _1: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _2: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.ExportedChatInvite.exportedChatInviteReplaced(Cons_exportedChatInviteReplaced(invite: _1!, newInvite: _2!, users: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.messages {
-    enum ExportedChatInvites: TypeConstructorDescription {
-        public class Cons_exportedChatInvites: TypeConstructorDescription {
-            public var count: Int32
-            public var invites: [Api.ExportedChatInvite]
-            public var users: [Api.User]
-            public init(count: Int32, invites: [Api.ExportedChatInvite], users: [Api.User]) {
-                self.count = count
-                self.invites = invites
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("exportedChatInvites", [("count", ConstructorParameterDescription(self.count)), ("invites", ConstructorParameterDescription(self.invites)), ("users", ConstructorParameterDescription(self.users))])
-            }
-        }
-        case exportedChatInvites(Cons_exportedChatInvites)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .exportedChatInvites(let _data):
-                if boxed {
-                    buffer.appendInt32(-1111085620)
-                }
-                serializeInt32(_data.count, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.invites.count))
-                for item in _data.invites {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .exportedChatInvites(let _data):
-                return ("exportedChatInvites", [("count", ConstructorParameterDescription(_data.count)), ("invites", ConstructorParameterDescription(_data.invites)), ("users", ConstructorParameterDescription(_data.users))])
-            }
-        }
-
-        public static func parse_exportedChatInvites(_ reader: BufferReader) -> ExportedChatInvites? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.ExportedChatInvite]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ExportedChatInvite.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.ExportedChatInvites.exportedChatInvites(Cons_exportedChatInvites(count: _1!, invites: _2!, users: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.messages {
-    enum FavedStickers: TypeConstructorDescription {
-        public class Cons_favedStickers: TypeConstructorDescription {
-            public var hash: Int64
-            public var packs: [Api.StickerPack]
-            public var stickers: [Api.Document]
-            public init(hash: Int64, packs: [Api.StickerPack], stickers: [Api.Document]) {
-                self.hash = hash
-                self.packs = packs
-                self.stickers = stickers
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("favedStickers", [("hash", ConstructorParameterDescription(self.hash)), ("packs", ConstructorParameterDescription(self.packs)), ("stickers", ConstructorParameterDescription(self.stickers))])
-            }
-        }
-        case favedStickers(Cons_favedStickers)
-        case favedStickersNotModified
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .favedStickers(let _data):
-                if boxed {
-                    buffer.appendInt32(750063767)
-                }
-                serializeInt64(_data.hash, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.packs.count))
-                for item in _data.packs {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.stickers.count))
-                for item in _data.stickers {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .favedStickersNotModified:
-                if boxed {
-                    buffer.appendInt32(-1634752813)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .favedStickers(let _data):
-                return ("favedStickers", [("hash", ConstructorParameterDescription(_data.hash)), ("packs", ConstructorParameterDescription(_data.packs)), ("stickers", ConstructorParameterDescription(_data.stickers))])
-            case .favedStickersNotModified:
-                return ("favedStickersNotModified", [])
-            }
-        }
-
-        public static func parse_favedStickers(_ reader: BufferReader) -> FavedStickers? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.StickerPack]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
-            }
-            var _3: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.FavedStickers.favedStickers(Cons_favedStickers(hash: _1!, packs: _2!, stickers: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_favedStickersNotModified(_ reader: BufferReader) -> FavedStickers? {
-            return Api.messages.FavedStickers.favedStickersNotModified
-        }
-    }
-}
-public extension Api.messages {
-    enum FeaturedStickers: TypeConstructorDescription {
-        public class Cons_featuredStickers: TypeConstructorDescription {
-            public var flags: Int32
-            public var hash: Int64
-            public var count: Int32
-            public var sets: [Api.StickerSetCovered]
-            public var unread: [Int64]
-            public init(flags: Int32, hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64]) {
-                self.flags = flags
-                self.hash = hash
-                self.count = count
-                self.sets = sets
-                self.unread = unread
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("featuredStickers", [("flags", ConstructorParameterDescription(self.flags)), ("hash", ConstructorParameterDescription(self.hash)), ("count", ConstructorParameterDescription(self.count)), ("sets", ConstructorParameterDescription(self.sets)), ("unread", ConstructorParameterDescription(self.unread))])
-            }
-        }
-        public class Cons_featuredStickersNotModified: TypeConstructorDescription {
-            public var count: Int32
-            public init(count: Int32) {
-                self.count = count
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("featuredStickersNotModified", [("count", ConstructorParameterDescription(self.count))])
-            }
-        }
-        case featuredStickers(Cons_featuredStickers)
-        case featuredStickersNotModified(Cons_featuredStickersNotModified)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .featuredStickers(let _data):
-                if boxed {
-                    buffer.appendInt32(-1103615738)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.hash, buffer: buffer, boxed: false)
-                serializeInt32(_data.count, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.sets.count))
-                for item in _data.sets {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.unread.count))
-                for item in _data.unread {
-                    serializeInt64(item, buffer: buffer, boxed: false)
-                }
-                break
-            case .featuredStickersNotModified(let _data):
-                if boxed {
-                    buffer.appendInt32(-958657434)
-                }
-                serializeInt32(_data.count, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .featuredStickers(let _data):
-                return ("featuredStickers", [("flags", ConstructorParameterDescription(_data.flags)), ("hash", ConstructorParameterDescription(_data.hash)), ("count", ConstructorParameterDescription(_data.count)), ("sets", ConstructorParameterDescription(_data.sets)), ("unread", ConstructorParameterDescription(_data.unread))])
-            case .featuredStickersNotModified(let _data):
-                return ("featuredStickersNotModified", [("count", ConstructorParameterDescription(_data.count))])
-            }
-        }
-
-        public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            var _5: [Int64]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.FeaturedStickers.featuredStickers(Cons_featuredStickers(flags: _1!, hash: _2!, count: _3!, sets: _4!, unread: _5!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.FeaturedStickers.featuredStickersNotModified(Cons_featuredStickersNotModified(count: _1!))
-            }
-            else {
-                return nil
-            }
         }
     }
 }

@@ -28,6 +28,7 @@ import ImageObjectSeparation
 import GlassBarButtonComponent
 import GlassControls
 import BundleIconComponent
+import UniformTypeIdentifiers
 
 public struct DrawingResultData {
     public let data: Data?
@@ -2955,7 +2956,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             statusBarHeight: statusBarHeight,
             inputHeight: inputHeight,
             inputHeightIsInteractivellyChanging: false,
-            inVoiceOver: false
+            inVoiceOver: false,
+            presentedInFormSheet: false
         )
         self.orientation = orientation
         self.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
@@ -2963,7 +2965,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
-        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+        return session.hasItemsConforming(toTypeIdentifiers: [UTType.image.identifier])
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
@@ -3317,6 +3319,29 @@ public final class DrawingToolsInteraction {
     }
     
     func presentEyedropper(retryLaterForVideo: Bool = true, dismissed: @escaping () -> Void) {
+        guard var contentWrapperView = self.contentWrapperView, let controllerView = self.getControllerNode()?.view else {
+            return
+        }
+
+        if contentWrapperView.frame.width.isZero {
+            guard let fallbackContentWrapperView = self.entitiesView.superview else {
+                return
+            }
+            contentWrapperView = fallbackContentWrapperView
+        }
+
+        var visibleFrame = contentWrapperView.convert(contentWrapperView.bounds, to: controllerView).intersection(controllerView.bounds)
+        var ancestorView = contentWrapperView.superview
+        while let view = ancestorView {
+            if view.clipsToBounds {
+                visibleFrame = visibleFrame.intersection(view.convert(view.bounds, to: controllerView))
+            }
+            ancestorView = view.superview
+        }
+        guard !visibleFrame.isEmpty else {
+            return
+        }
+
         self.entitiesView.pause()
         
         if self.isVideo && retryLaterForVideo {
@@ -3345,15 +3370,11 @@ public final class DrawingToolsInteraction {
             self.entitiesView.layer.render(in: context)
         }, opaque: true, scale: 1.0)
         
-        guard let sourceImage, var contentWrapperView = self.contentWrapperView, let controllerView = self.getControllerNode()?.view else {
+        guard let sourceImage else {
             return
         }
         
-        if contentWrapperView.frame.width.isZero {
-            contentWrapperView = self.entitiesView.superview!
-        }
-        
-        let eyedropperView = EyedropperView(containerSize: contentWrapperView.frame.size, drawingView: self.drawingView, sourceImage: sourceImage)
+        let eyedropperView = EyedropperView(containerSize: visibleFrame.size, drawingView: self.drawingView, sourceImage: sourceImage)
         eyedropperView.completed = { [weak self] color in
             if let self {
                 self.updateColor(color)
@@ -3369,7 +3390,7 @@ public final class DrawingToolsInteraction {
                 self.updateVideoPlayback(true)
             }
         }
-        eyedropperView.frame = contentWrapperView.convert(contentWrapperView.bounds, to: controllerView)
+        eyedropperView.frame = visibleFrame
         self.addSubview(eyedropperView)
         self.currentEyedropperView = eyedropperView
     }

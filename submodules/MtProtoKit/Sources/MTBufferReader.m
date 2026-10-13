@@ -40,28 +40,22 @@
     return [self readBytes:value length:8];
 }
 
+- (NSData *)readData:(NSUInteger)length
+{
+    if (length > _data.length - _offset)
+        return nil;
+
+    NSData *result = [_data subdataWithRange:NSMakeRange(_offset, length)];
+    _offset += length;
+    return result;
+}
+
 - (NSData *)readRest
 {
     return [_data subdataWithRange:NSMakeRange(_offset, _data.length - _offset)];
 }
 
 @end
-
-static inline int roundUpInput(int32_t numToRound, int32_t multiple)
-{
-    if (multiple == 0)
-    {
-        return numToRound;
-    }
-    
-    int remainder = numToRound % multiple;
-    if (remainder == 0)
-    {
-        return numToRound;
-    }
-    
-    return numToRound + multiple - remainder;
-}
 
 @implementation MTBufferReader (TL)
 
@@ -78,49 +72,45 @@ static inline int roundUpInput(int32_t numToRound, int32_t multiple)
     return false;
 }
 
+// TL `bytes`: a one-byte length (0..253), or 0xfe followed by a 3-byte
+// little-endian length (up to 0xffffff), then the bytes, then zero padding to a
+// 4-byte boundary counted from the first length byte.
 - (bool)readTLBytes:(__autoreleasing NSData **)value
 {
-    uint8_t tmp = 0;
-    if ([self readBytes:&tmp length:1])
+    uint8_t marker = 0;
+    if (![self readBytes:&marker length:1])
+        return false;
+
+    NSUInteger length = 0;
+    NSUInteger prefixLength = 0;
+    if (marker == 254)
     {
-        NSUInteger paddingBytes = 0;
-        
-        int32_t length = tmp;
-        if (length == 254)
-        {
-            length = 0;
-            
-            if (![self readBytes:((uint8_t *)&length) + 1 length:3])
-                return false;
-            
-            length >>= 8;
-            
-            paddingBytes = roundUpInput(length, 4) - length;
-        }
-        else
-        {
-            paddingBytes = roundUpInput(length + 1, 4) - (length + 1);
-        }
-        
-        uint8_t *bytes = (uint8_t *)malloc(length);
-        if (![self readBytes:bytes length:length])
+        uint8_t lengthBytes[3];
+        if (![self readBytes:lengthBytes length:3])
             return false;
-        
-        NSData *result = [NSData dataWithBytesNoCopy:bytes length:length freeWhenDone:true];
-        
-        for (int i = 0; i < paddingBytes; i++)
-        {
-            if (![self readBytes:&tmp length:1])
-                return false;
-        }
-        
-        if (value)
-            *value = result;
-        
-        return true;
+        // Assembled unsigned: a signed shift here used to turn 8 MiB and above negative.
+        length = ((NSUInteger)lengthBytes[0]) | (((NSUInteger)lengthBytes[1]) << 8) | (((NSUInteger)lengthBytes[2]) << 16);
+        prefixLength = 4;
     }
-    
-    return false;
+    else
+    {
+        length = marker;
+        prefixLength = 1;
+    }
+    NSUInteger paddingBytes = (4 - ((prefixLength + length) % 4)) % 4;
+
+    NSData *result = [self readData:length];
+    if (result == nil)
+        return false;
+
+    uint8_t padding[3];
+    if (paddingBytes != 0 && ![self readBytes:padding length:paddingBytes])
+        return false;
+
+    if (value)
+        *value = result;
+
+    return true;
 }
 
 @end

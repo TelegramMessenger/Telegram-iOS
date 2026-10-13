@@ -1,4 +1,6 @@
 
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
 objc_library(
     name = "Crc32",
     enable_modules = True,

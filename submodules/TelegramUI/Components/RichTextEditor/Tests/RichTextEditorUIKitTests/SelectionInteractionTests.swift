@@ -80,7 +80,7 @@ final class SelectionInteractionTests: XCTestCase {
         let v = canvasWithTwoParagraphs()
         _ = v.becomeFirstResponder()
         let head = v.boxes[0].textStart + 5            // select "First" in paragraph 1
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: head)
 
         let r = SelectionHandleView.knobRadius
@@ -103,7 +103,7 @@ final class SelectionInteractionTests: XCTestCase {
         let v = canvasWithTwoParagraphs()
         _ = v.becomeFirstResponder()
         let head = v.boxes[0].textStart + 5
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: head)
 
         let r = SelectionHandleView.knobRadius
@@ -162,7 +162,7 @@ final class SelectionInteractionTests: XCTestCase {
         // grabbed. So the long-press gate fails on a touch that lands on a handle (an "active item").
         let v = canvasWithInteraction()
         _ = v.becomeFirstResponder()
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: v.boxes[0].textStart + 5)
 
         let startCaret = v.caretRect(for: DocumentTextPosition(v.selFrom))
@@ -178,7 +178,7 @@ final class SelectionInteractionTests: XCTestCase {
         // the cursor (standard iOS: it collapses the selection at the pressed point).
         let v = canvasWithInteraction()
         _ = v.becomeFirstResponder()
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: v.boxes[0].textStart + 5)
 
         let endCaret = v.caretRect(for: DocumentTextPosition(v.selTo))
@@ -313,7 +313,7 @@ final class SelectionInteractionTests: XCTestCase {
         // No ranged selection → there is no grip, so the scroll never yields.
         XCTAssertFalse(scroll.yieldsToGrip(at: CGPoint(x: 20, y: 20)), "no selection ⇒ no grip ⇒ scroll, don't yield")
 
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: v.boxes[0].textStart + 5)
         let caret = v.caretRect(for: DocumentTextPosition(v.selFrom))
         XCTAssertTrue(scroll.yieldsToGrip(at: CGPoint(x: caret.midX, y: caret.midY)),
@@ -341,7 +341,7 @@ final class SelectionInteractionTests: XCTestCase {
         // interaction, these own-drawn `SelectionHandleView`s are the ONLY handles.
         let v = canvasWithInteraction()
         _ = v.becomeFirstResponder()
-        v.anchor = v.boxes[0].textStart; v.setSelectionHead(global: v.boxes[0].textStart + 5)
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head); v.setSelectionHead(global: v.boxes[0].textStart + 5)
         XCTAssertFalse(v.startHandleView.isHidden, "the app's own start handle shows for a range")
         XCTAssertFalse(v.endHandleView.isHidden, "the app's own end handle shows for a range")
     }
@@ -398,7 +398,7 @@ final class SelectionInteractionTests: XCTestCase {
     func test_caretHidden_whenRangedSelection() {
         let (v, _) = canvasWithWideTable()
         _ = v.becomeFirstResponder()
-        v.anchor = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.head)
         v.setSelectionHead(global: v.boxes[0].textStart + 4)   // a ranged (non-collapsed) selection
         XCTAssertTrue(v.caretView.isHidden || v.caretView.superview == nil,
                       "no blinking caret while a range is selected")
@@ -442,8 +442,7 @@ final class SelectionInteractionTests: XCTestCase {
     func test_dragAutoScroll_scrollsDocumentDown_whenHandleNearsBottomEdge() {
         let (v, scroll) = tallCanvasInScroll()
         // A non-collapsed selection whose HEAD we drag toward the bottom edge (no table involved).
-        v.anchor = v.boxes[0].textStart
-        v.head = v.boxes[1].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[1].textStart)
         let beforeY = scroll.contentOffset.y
         let beforeHead = v.head
 
@@ -464,8 +463,7 @@ final class SelectionInteractionTests: XCTestCase {
     func test_dragAutoScroll_scrollsDocumentUp_whenHandleNearsTopEdge() {
         let (v, scroll) = tallCanvasInScroll()
         scroll.contentOffset.y = 800   // scrolled into the middle so there is room to scroll UP
-        v.anchor = v.boxes[20].textStart
-        v.head = v.boxes[20].textStart + 1
+        v.setSelectionForTesting(anchor: v.boxes[20].textStart, head: v.boxes[20].textStart + 1)
         let beforeY = scroll.contentOffset.y
 
         // A drag point in the viewport's top band, in canvas coords.
@@ -483,8 +481,7 @@ final class SelectionInteractionTests: XCTestCase {
         let (v, scroll) = tallCanvasInScroll()
         // A range selection, then grab the ANCHOR (start) handle and drag it toward the bottom edge. The
         // auto-scroller must re-extend the endpoint being dragged (the anchor), leaving the head put.
-        v.anchor = v.boxes[2].textStart
-        v.head = v.boxes[1].textStart
+        v.setSelectionForTesting(anchor: v.boxes[2].textStart, head: v.boxes[1].textStart)
         v.draggingEndpoint = .anchor
         let headBefore = v.head
         let anchorBefore = v.anchor
@@ -502,8 +499,7 @@ final class SelectionInteractionTests: XCTestCase {
 
     func test_dragAutoScroll_doesNotScroll_whenHandleInViewportMiddle() {
         let (v, scroll) = tallCanvasInScroll()
-        v.anchor = v.boxes[0].textStart
-        v.head = v.boxes[1].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[1].textStart)
         let beforeY = scroll.contentOffset.y
 
         // A point in the middle of the viewport must not start the auto-scroller.

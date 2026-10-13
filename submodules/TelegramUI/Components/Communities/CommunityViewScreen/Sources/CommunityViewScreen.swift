@@ -2792,7 +2792,8 @@ private final class CommunityViewScreenComponent: Component {
                 statusBarHeight: mode.usesFullscreenPresentation ? environment.statusBarHeight : 0.0,
                 inputHeight: environment.inputHeight > 0.0 ? environment.inputHeight : nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false
+                inVoiceOver: false,
+                presentedInFormSheet: false
             )
         }
 
@@ -2801,13 +2802,13 @@ private final class CommunityViewScreenComponent: Component {
             if case .regular = environment.metrics.widthClass {
                 fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
             } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - environment.safeInsets.left * 2.0
             }
 
             return (fillingSize, floor((availableSize.width - fillingSize) * 0.5))
         }
 
-        private func updateNavigationBar(component: CommunityViewScreenComponent, availableSize: CGSize, statusBarHeight: CGFloat, sideInset: CGFloat, environment: EnvironmentType, transition: ComponentTransition) -> CGSize {
+        private func updateNavigationBar(component: CommunityViewScreenComponent, availableSize: CGSize, statusBarHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, environment: EnvironmentType, transition: ComponentTransition) -> CGSize {
             let theme: PresentationTheme
             switch component.mode {
             case .sheet:
@@ -2904,7 +2905,8 @@ private final class CommunityViewScreenComponent: Component {
                     theme: theme,
                     strings: environment.strings,
                     statusBarHeight: statusBarHeight,
-                    sideInset: sideInset,
+                    leftInset: leftInset,
+                    rightInset: rightInset,
                     search: component.mode.usesFullscreenPresentation && !component.mode.isPreview && component.selectionOptions == nil ? ChatListNavigationBar.Search(isEnabled: true) : nil,
                     activeSearch: self.isSearchDisplayControllerActive,
                     primaryContent: primaryContent,
@@ -3144,23 +3146,24 @@ private final class CommunityViewScreenComponent: Component {
             let currentSheetMetrics = self.sheetMetrics(availableSize: availableSize, environment: environment)
             let navigationAvailableSize: CGSize
             let navigationStatusBarHeight: CGFloat
-            let navigationSideInset: CGFloat
+            let navigationSideInsets: (left: CGFloat, right: CGFloat)
             switch component.mode {
             case .sheet:
                 navigationAvailableSize = CGSize(width: currentSheetMetrics.fillingSize, height: availableSize.height)
                 navigationStatusBarHeight = 0.0
-                navigationSideInset = 0.0
+                navigationSideInsets = (0.0, 0.0)
             case .fullscreen, .preview:
                 navigationAvailableSize = availableSize
                 navigationStatusBarHeight = environment.statusBarHeight
-                navigationSideInset = environment.safeInsets.left
+                navigationSideInsets = (environment.safeInsets.left, environment.safeInsets.right)
             }
 
             let navigationBarSize = self.updateNavigationBar(
                 component: component,
                 availableSize: navigationAvailableSize,
                 statusBarHeight: navigationStatusBarHeight,
-                sideInset: navigationSideInset,
+                leftInset: navigationSideInsets.left,
+                rightInset: navigationSideInsets.right,
                 environment: environment,
                 transition: transition
             )

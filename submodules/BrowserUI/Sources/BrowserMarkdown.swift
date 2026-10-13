@@ -1087,11 +1087,14 @@ private func richTextIsEntityExpressible(_ text: RichText) -> Bool {
         return false
     case .textCustomEmoji:
         return true
-    case .textAutoEmail(let inner), .textAutoPhone(let inner), .textAutoUrl(let inner), .textBankCard(let inner), .textBotCommand(let inner), .textCashtag(let inner), .textHashtag(let inner), .textMention(let inner), .textSpoiler(let inner):
+    case .textAutoEmail(let inner), .textAutoPhone(let inner), .textAutoUrl(let inner), .textBankCard(let inner), .textTonAddress(let inner), .textBotCommand(let inner), .textCashtag(let inner), .textHashtag(let inner), .textMention(let inner), .textSpoiler(let inner):
         return richTextIsEntityExpressible(inner)
     case .textMentionName(let inner, _):
         return richTextIsEntityExpressible(inner)
     case .textDate:
+        return false
+    case .textButton:
+        // No message entity can express a button, so its presence forces the rich path.
         return false
     }
 }
@@ -1379,7 +1382,7 @@ private func markdownBlocks(from node: MarkdownIntentNode, context: MarkdownConv
         guard !rows.isEmpty else {
             return []
         }
-        return [.table(title: .empty, rows: rows, bordered: true, striped: false)]
+        return [.table(title: .empty, rows: rows, bordered: true, striped: false, compact: false)]
     case let .header(level):
         guard let text = markdownRichText(from: node.attributedText, context: context) else {
             return nil
@@ -2156,7 +2159,10 @@ private func markdownDroppingPrefixLength(_ length: Int, from text: RichText) ->
         return dropped == .empty ? .empty : .anchor(text: dropped, name: name)
     case .textCustomEmoji:
         return text
-    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textTonAddress, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+        return text
+    case .textButton:
+        // An atom, like .image above: a prefix drop must not split a button's label.
         return text
     }
 }
@@ -2189,7 +2195,10 @@ private func markdownHasDisplayableContent(_ richText: RichText) -> Bool {
         return !latex.isEmpty
     case .textCustomEmoji:
         return true
-    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textTonAddress, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+        return true
+    case .textButton:
+        // A button is always displayable content, even if its label is empty — the pill shows.
         return true
     }
 }
@@ -2222,7 +2231,10 @@ private func markdownIsWhitespaceOnly(_ richText: RichText) -> Bool {
         return latex.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     case .textCustomEmoji:
         return false
-    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+    case .textAutoEmail, .textAutoPhone, .textAutoUrl, .textBankCard, .textTonAddress, .textBotCommand, .textCashtag, .textHashtag, .textMention, .textMentionName, .textSpoiler, .textDate:
+        return false
+    case .textButton:
+        // Never whitespace-only: a button is a visible element regardless of its label.
         return false
     }
 }
@@ -2260,7 +2272,7 @@ private func markdownPlainText(from block: InstantPageBlock, depth: Int = 0) -> 
         return text.plainText.isEmpty ? caption.plainText : text.plainText
     case let .kicker(text):
         return text.plainText
-    case let .table(title, _, _, _):
+    case let .table(title, _, _, _, _):
         return title.plainText
     case let .details(title, _, _):
         return title.plainText

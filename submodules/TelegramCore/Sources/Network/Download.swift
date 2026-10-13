@@ -37,70 +37,58 @@ private func wrapMethodBody(_ body: (FunctionDescription, Buffer, DeserializeFun
     return body
 }
 
-class Download: NSObject, MTRequestMessageServiceDelegate {
+class Download: NSObject {
     let datacenterId: Int
     let isCdn: Bool
     let context: MTContext
-    let mtProto: MTProto
-    let requestService: MTRequestMessageService
+    let session: NetworkEngineSession
+    let requestService: NetworkEngineRequestService
     let useRequestTimeoutTimers: Bool
-    private let logPrefix = Atomic<String?>(value: nil)
     
     private var shouldKeepConnectionDisposable: Disposable?
-    
-    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>, useRequestTimeoutTimers: Bool) {
+    private var isUserOnlineDisposable: Disposable?
+
+    init(queue: Queue, engine: NetworkEngine, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>, isUserOnline: Signal<Bool, NoError>, useRequestTimeoutTimers: Bool) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
         self.useRequestTimeoutTimers = useRequestTimeoutTimers
-
-        var requiredAuthToken: Any?
-        var authTokenMasterDatacenterId: Int = 0
-        if !isCdn && datacenterId != masterDatacenterId {
-            authTokenMasterDatacenterId = masterDatacenterId
-            requiredAuthToken = Int(datacenterId) as NSNumber
-        }
         
-        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo, requiredAuthToken: requiredAuthToken, authTokenMasterDatacenterId: authTokenMasterDatacenterId)
-        let logPrefix = self.logPrefix
-        self.mtProto.getLogPrefix = {
-            return logPrefix.with { $0 }
-        }
-        self.mtProto.cdn = isCdn
-        self.mtProto.useTempAuthKeys = self.context.useTempAuthKeys && !isCdn
-        self.mtProto.media = isMedia
-        self.requestService = MTRequestMessageService(context: self.context)
-        self.requestService.forceBackgroundRequests = true
+        self.session = engine.makeSession(datacenterId: datacenterId, role: .worker(masterDatacenterId: masterDatacenterId, isMedia: isMedia, isCdn: isCdn), usageCalculationInfo: usageInfo, delegate: nil)
+        self.requestService = self.session.requestService
         
         super.init()
         
-        self.requestService.delegate = self
-        self.mtProto.add(self.requestService)
-        
-        let mtProto = self.mtProto
-        self.shouldKeepConnectionDisposable = (shouldKeepConnection |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak mtProto] value in
-            if let mtProto = mtProto {
+        let session = self.session
+        self.shouldKeepConnectionDisposable = (shouldKeepConnection |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak session] value in
+            if let session = session {
                 if value {
                     Logger.shared.log("Network", "Resume worker network connection")
-                    mtProto.resume()
+                    session.setPaused(false)
                 } else {
                     Logger.shared.log("Network", "Pause worker network connection")
-                    mtProto.pause()
+                    session.setPaused(true)
                 }
             }
         })
+        self.isUserOnlineDisposable = (isUserOnline |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak session] value in
+            session?.setOnline(value)
+        })
     }
-    
+
     deinit {
-        self.mtProto.remove(self.requestService)
-        self.mtProto.stop()
-        self.mtProto.finalizeSession()
+        self.session.stop()
         self.shouldKeepConnectionDisposable?.dispose()
+        self.isUserOnlineDisposable?.dispose()
     }
     
-    func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
-        self.context.updateAuthTokenForDatacenter(withId: self.datacenterId, authToken: nil)
-        self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
+    private func addRequest(_ request: NetworkEngineRequest) -> Disposable {
+        let disposable = self.requestService.add(request)
+        return ActionDisposable {
+            withExtendedLifetime(self) {
+                disposable.dispose()
+            }
+        }
     }
     
     static func uploadPart(multiplexedManager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64, tag: MediaResourceFetchTag?, fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<Void, UploadPartError> {
@@ -132,8 +120,6 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     
     func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<Void, UploadPartError> {
         return Signal<Void, MTRpcError> { subscriber in
-            let request = MTRequest()
-            
             var saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
             if asBigPart {
                 let totalParts: Int32
@@ -149,41 +135,32 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             saveFilePart = wrapMethodBody(saveFilePart, useCompression: useCompression)
             
-            request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(saveFilePart.0)), responseParser: { response in
-                if let result = saveFilePart.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
+            let request = NetworkEngineRequest(
+                payload: saveFilePart.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(saveFilePart.0)),
+                parse: { [saveFilePart] response in
+                    if let result = saveFilePart.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
+                    }
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: true, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case .success:
+                        subscriber.putCompletion()
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
+                    }
                 }
-                return nil
-            })
+            )
             
-            request.dependsOnPasswordEntry = false
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                
-                return true
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    subscriber.putCompletion()
-                }
-            }
-            
-            let internalId: Any! = request.internalId
-            
-            self.requestService.add(request)
-            
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
-            }
+            return self.addRequest(request)
         } |> `catch` { value -> Signal<Void, UploadPartError> in
             if value.errorCode == 400 {
                 return .fail(.invalidMedia)
@@ -195,9 +172,6 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     
     func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
-            let request = MTRequest()
-            request.expectedResponseSize = Int32(length)
-            
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
                 updatedLength += 1
@@ -205,53 +179,47 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            request.needsTimeoutTimer = self.useRequestTimeoutTimers
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                return true
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? Api.upload.WebFile {
-                        switch result {
-                            case let .webFile(webFileData):
-                                let bytes = webFileData.bytes
-                                subscriber.putNext(bytes.makeData())
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
+                    }
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(expectedResponseSize: Int32(length), needsTimeoutTimer: self.useRequestTimeoutTimers),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: true, onFloodWaitError: nil, failOnServerErrors: false),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? Api.upload.WebFile {
+                            switch result {
+                                case let .webFile(webFileData):
+                                    let bytes = webFileData.bytes
+                                    subscriber.putNext(bytes.makeData())
+                            }
+                            subscriber.putCompletion()
                         }
-                        subscriber.putCompletion()
-                    }
-                    else {
-                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        else {
+                            subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
                     }
                 }
-            }
+            )
             
-            let internalId: Any! = request.internalId
-            
-            self.requestService.add(request)
-            
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
-            }
+            return self.addRequest(request)
         } |> retryRequest
     }
     
     func part(location: Api.InputFileLocation, offset: Int64, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
-            let request = MTRequest()
-            request.expectedResponseSize = Int32(length)
-            
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
                 updatedLength += 1
@@ -259,211 +227,157 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getFile(flags: 0, location: location, offset: offset, limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            request.needsTimeoutTimer = self.useRequestTimeoutTimers
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                return true
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? Api.upload.File {
-                        switch result {
-                            case let .file(fileData):
-                                let bytes = fileData.bytes
-                                subscriber.putNext(bytes.makeData())
-                            case .fileCdnRedirect:
-                                break
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
+                    }
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(expectedResponseSize: Int32(length), needsTimeoutTimer: self.useRequestTimeoutTimers),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: true, onFloodWaitError: nil, failOnServerErrors: false),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? Api.upload.File {
+                            switch result {
+                                case let .file(fileData):
+                                    let bytes = fileData.bytes
+                                    subscriber.putNext(bytes.makeData())
+                                case .fileCdnRedirect:
+                                    break
+                            }
+                            subscriber.putCompletion()
                         }
-                        subscriber.putCompletion()
-                    }
-                    else {
-                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        else {
+                            subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
                     }
                 }
-            }
+            )
             
-            let internalId: Any! = request.internalId
-            
-            self.requestService.add(request)
-            
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
-            }
+            return self.addRequest(request)
         }
         |> retryRequest
     }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), expectedResponseSize: Int32? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
-            let request = MTRequest()
-            request.expectedResponseSize = expectedResponseSize ?? 0
-            
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            request.needsTimeoutTimer = self.useRequestTimeoutTimers
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
-                    return false
-                }
-                return true
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext(result)
-                        subscriber.putCompletion()
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
                     }
-                    else {
-                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(expectedResponseSize: expectedResponseSize ?? 0, needsTimeoutTimer: self.useRequestTimeoutTimers),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? T {
+                            subscriber.putNext(result)
+                            subscriber.putCompletion()
+                        }
+                        else {
+                            subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
                     }
                 }
-            }
+            )
             
-            let internalId: Any! = request.internalId
-            
-            self.requestService.add(request)
-            
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
-            }
+            return self.addRequest(request)
         }
     }
     
     func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, failOnServerErrors: Bool = false, expectedResponseSize: Int32? = nil) -> Signal<(T, Double), (MTRpcError, Double)> {
         return Signal { subscriber in
-            let request = MTRequest()
-            request.expectedResponseSize = expectedResponseSize ?? 0
-            
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            request.needsTimeoutTimer = self.useRequestTimeoutTimers
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
-                    return false
-                }
-                if errorContext.internalServerErrorCount > 0 && failOnServerErrors {
-                    return false
-                }
-                return true
-            }
-            
-            request.completed = { (boxedResponse, info, error) -> () in
-                if let error = error {
-                    subscriber.putError((error, info?.timestamp ?? 0.0))
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext((result, info?.timestamp ?? 0.0))
-                        subscriber.putCompletion()
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
                     }
-                    else {
-                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), info?.timestamp ?? 0.0))
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(expectedResponseSize: expectedResponseSize ?? 0, needsTimeoutTimer: self.useRequestTimeoutTimers),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: failOnServerErrors),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? T {
+                            subscriber.putNext((result, response.info.timestamp))
+                            subscriber.putCompletion()
+                        }
+                        else {
+                            subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), response.info.timestamp))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError((failure.error, failure.info.timestamp))
                     }
                 }
-            }
+            )
             
-            let internalId: Any! = request.internalId
-            
-            self.requestService.add(request)
-            
-            return ActionDisposable {
-                self.requestService.removeRequest(byInternalId: internalId)
-            }
+            return self.addRequest(request)
         }
     }
     
     func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, failOnServerErrors: Bool = false, logPrefix: String = "", expectedResponseSize: Int32? = nil) -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
         let requestService = self.requestService
-        return Signal { subscriber in
-            let request = MTRequest()
-            request.expectedResponseSize = expectedResponseSize ?? 0
-            
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2(Buffer(data: response)) {
-                    return BoxedMessage(result)
+        return Signal { [requestService] subscriber in
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2(Buffer(data: response)) {
+                        return BoxedMessage(result)
+                    }
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(expectedResponseSize: expectedResponseSize ?? 0, needsTimeoutTimer: self.useRequestTimeoutTimers),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: failOnServerErrors),
+                dependsOn: nil,
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        let mappedInfo = NetworkResponseInfo(
+                            timestamp: response.info.timestamp,
+                            networkType: response.info.networkType == 0 ? .wifi : .cellular,
+                            networkDuration: response.info.duration
+                        )
+                        subscriber.putNext(((response.result as! BoxedMessage).body, mappedInfo))
+                        subscriber.putCompletion()
+                    case let .failure(failure):
+                        subscriber.putError((failure.error, failure.info.timestamp))
+                    }
                 }
-                return nil
-            })
+            )
             
-            request.dependsOnPasswordEntry = false
-            request.needsTimeoutTimer = self.useRequestTimeoutTimers
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
-                    return false
-                }
-                if errorContext.internalServerErrorCount > 0 && failOnServerErrors {
-                    return false
-                }
-                return true
-            }
-            
-            request.completed = { (boxedResponse, info, error) -> () in
-                if let error = error {
-                    subscriber.putError((error, info?.timestamp ?? 0))
-                } else {
-                    let mappedInfo = NetworkResponseInfo(
-                        timestamp: info?.timestamp ?? 0.0,
-                        networkType: info?.networkType == 0 ? .wifi : .cellular,
-                        networkDuration: info?.duration ?? 0.0
-                    )
-                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, mappedInfo))
-                    subscriber.putCompletion()
-                }
-            }
-            
-            let internalId: Any! = request.internalId
-            
-            requestService.add(request)
-            
-            return ActionDisposable { [weak requestService] in
-                requestService?.removeRequest(byInternalId: internalId)
-            }
+            return requestService.add(request)
         }
     }
 }

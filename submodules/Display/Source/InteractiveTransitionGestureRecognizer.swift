@@ -66,7 +66,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
-    private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
+    public private(set) var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
     
     public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections, edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth = .constant(16.0)) {
         self.allowedDirections = allowedDirections

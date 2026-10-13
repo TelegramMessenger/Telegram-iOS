@@ -92,6 +92,14 @@ public final class BatchVideoRenderingContext {
         
         var isFailed: Bool = false
         var reader: FFMpegFileReader?
+        // Whether the *current* reader has produced at least one frame. A reader that reaches
+        // `.endOfStream` without ever producing one describes a file this build cannot decode
+        // — every frame decodes but `FFMpegMediaVideoFrameDecoder` rejects the pixel layout
+        // (10-bit is the remaining class; the reported 4:4:4 case and 4:2:2 are now folded
+        // down to 420 in the decoder). Restarting such a reader below would decode the
+        // whole file again and never return from this call — pinning a core and leaving
+        // `isRendering` stuck true, which freezes every other target sharing the queue.
+        var readerDidProduceFrame: Bool = false
         
         init(dataPath: String) {
             self.dataPath = dataPath
@@ -106,6 +114,9 @@ public final class BatchVideoRenderingContext {
                     let reader = FFMpegFileReader(
                         source: .file(self.dataPath),
                         useHardwareAcceleration: false,
+                        // These render into ~93pt tiles, where deblocking is not visible but
+                        // is a large fraction of the decode cost of a grid of animating GIFs.
+                        skipLoopFilter: true,
                         selectedStream: .mediaType(.video),
                         seek: nil,
                         maxReadablePts: nil
@@ -115,6 +126,7 @@ public final class BatchVideoRenderingContext {
                         break outer
                     }
                     self.reader = reader
+                    self.readerDidProduceFrame = false
                 }
                 
                 guard let reader = self.reader else {
@@ -123,11 +135,19 @@ public final class BatchVideoRenderingContext {
                 
                 switch reader.readFrame() {
                 case let .frame(frame):
+                    self.readerDidProduceFrame = true
                     return createSampleBuffer(fromSampleBuffer: frame.sampleBuffer, withTimeOffset: .zero, duration: nil, displayImmediately: true)
                 case .error:
                     self.isFailed = true
                     break outer
                 case .endOfStream:
+                    if !self.readerDidProduceFrame {
+                        // Nothing decodable in the whole file — fail permanently instead of
+                        // looping. The target keeps its static thumbnail.
+                        self.isFailed = true
+                        break outer
+                    }
+                    // Loop the clip.
                     self.reader = nil
                 case .waitingForMoreData:
                     // Invariant: the reader is only constructed once the consumer's

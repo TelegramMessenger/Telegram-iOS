@@ -1036,3 +1036,21 @@ public extension UIView {
         transition.updateAlpha(layer: self.layer, alpha: alpha)
     }
 }
+
+public extension UIView {
+    /// `self.convert(rect, to: view)`, also between the app window and the keyboard window. On iOS 27 the keyboard
+    /// window is on a different `UIScreen` object than the app window, and UIKit refuses to convert between two
+    /// screens' coordinate spaces: it logs and returns `CGRect.null`, whose infinite origin then fails as a frame.
+    /// Both windows cover the same display, so they are related through their frames instead, which is what the
+    /// conversion would have done had UIKit accepted the pair (the identity for two full-screen windows). See
+    /// docs/ios27-windows-and-touches.md.
+    func convertAcrossWindows(_ rect: CGRect, to view: UIView) -> CGRect {
+        // A window's own `window` is nil, so either side may be a window itself.
+        guard let fromWindow = (self as? UIWindow) ?? self.window, let toWindow = (view as? UIWindow) ?? view.window, fromWindow !== toWindow, fromWindow.screen !== toWindow.screen else {
+            return self.convert(rect, to: view)
+        }
+        let rectInFromWindow = self.convert(rect, to: fromWindow)
+        let rectInToWindow = rectInFromWindow.offsetBy(dx: fromWindow.frame.minX - toWindow.frame.minX, dy: fromWindow.frame.minY - toWindow.frame.minY)
+        return view.convert(rectInToWindow, from: toWindow)
+    }
+}

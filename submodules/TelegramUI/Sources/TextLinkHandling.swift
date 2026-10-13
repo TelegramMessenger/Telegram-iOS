@@ -87,7 +87,14 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode, setupReply: false)))
                         }
                     case let .replyThreadMessage(replyThreadMessage, messageId):
-                        if let navigationController = controller.navigationController as? NavigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+                        if replyThreadMessage.isMonoforumPost {
+                            // A monoforum sublist is keyed by a packed `PeerId`, so it has no root message id: `effectiveMessageId`
+                            // would clamp the thread id into `Int32` and `openMessageReplies` would then rediscover a thread from a
+                            // message that does not exist. The resolver already produced the thread, so navigate with it directly.
+                            if let navigationController = controller.navigationController as? NavigationController {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always))
+                            }
+                        } else if let navigationController = controller.navigationController as? NavigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
                             let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { [weak controller] c, a in
                                 controller?.present(c, in: .window(.root), with: a)
                             }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
@@ -103,7 +110,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         let sourceLocation = InstantPageSourceLocation(userLocation: peerId.flatMap(MediaResourceUserLocation.peer) ?? .other, peerType: .group)
                         let browserController = context.sharedContext.makeInstantPageController(context: context, webPage: webPage, anchor: anchor, sourceLocation: sourceLocation)
                         (controller.navigationController as? NavigationController)?.pushViewController(browserController, animated: true)
-                    case .boost, .chatFolder, .join, .invoice, .proxy:
+                    case .boost, .chatFolder, .join, .invoice, .proxy, .sendGrams:
                         if let navigationController = controller.navigationController as? NavigationController {
                             openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peer, navigateToPeer in
                                 openResolvedPeerImpl(peer, navigateToPeer)
@@ -136,12 +143,16 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
             switch itemLink {
                 case .url(let url, var concealed):
                     let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: false)
-                    if parsedConcealed {
+                    // A login part hides the host the link opens (see `externalUrlWithLoginPart`).
+                    let loginPartUrl = externalUrlWithLoginPart(url)
+                    if parsedConcealed || loginPartUrl != nil {
                         concealed = true
                     }
                     
                     if concealed {
-                        var rawDisplayUrl: String = parsedString
+                        // For a login part the prompt shows the host the link really opens. The external-URL opener
+                        // asks about such a link as well, so accepting it here tells the opener it has been confirmed.
+                        var rawDisplayUrl: String = loginPartUrl.map { urlRemovingLoginPart($0).absoluteString } ?? parsedString
                         let maxLength = 180
                         if rawDisplayUrl.count > maxLength {
                             rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
@@ -149,6 +160,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         var displayUrl = rawDisplayUrl
                         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
                         controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                            if let loginPartUrl {
+                                noteLoginPartConfirmed(loginPartUrl)
+                            }
                             openLinkImpl(url)
                         })]), in: .window(.root))
                     } else {
@@ -181,7 +195,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                     let actionSheet = ActionSheetController(presentationData: presentationData)
                     let (displayUrl, _) = parseUrl(url: url, wasConcealed: false)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: displayUrl),
+                        ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? displayUrl),
                         ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             openLinkImpl(url)

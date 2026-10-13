@@ -97,13 +97,13 @@
 
 - (void)clear
 {
-    [_items enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(id<TGMediaSelectableItem> item, NSUInteger index, __unused BOOL *stop)
-    {
-        if (self.selectionUpdated != nil)
-            self.selectionUpdated(true, false, false, index);
-    }];
-    
+    if (_items.count == 0)
+        return;
+
     [_items removeAllObjects];
+
+    if (self.selectionUpdated != nil)
+        self.selectionUpdated(true, false, false, 0);
 }
 
 - (NSInteger)selectedCount

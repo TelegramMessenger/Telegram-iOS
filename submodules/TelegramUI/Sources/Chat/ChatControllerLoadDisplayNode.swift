@@ -419,6 +419,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedHasSearchTags(contentData.state.hasSearchTags)
             presentationInterfaceState = presentationInterfaceState.updatedIsPremiumRequiredForMessaging(contentData.state.isPremiumRequiredForMessaging)
             presentationInterfaceState = presentationInterfaceState.updatedSendPaidMessageStars(contentData.state.sendPaidMessageStars)
+            presentationInterfaceState = presentationInterfaceState.updatedGramAddress(contentData.state.gramAddress)
             presentationInterfaceState = presentationInterfaceState.updatedAlwaysShowGiftButton(contentData.state.alwaysShowGiftButton)
             presentationInterfaceState = presentationInterfaceState.updatedDisallowedGifts(contentData.state.disallowedGifts)
             presentationInterfaceState = presentationInterfaceState.updatedHasSavedChats(contentData.state.hasSavedChats)
@@ -929,7 +930,7 @@ extension ChatControllerImpl {
                         let _ = options.insert(.PreferSynchronousResourceLoading)
 
                         var deleteItems = transition.deleteItems
-                        var insertItems: [ListViewInsertItem] = []
+                        var insertItems: [ChatHistoryListViewInsertItem] = []
                         var stationaryItemRange: (Int, Int)?
                         var scrollToItem: ListViewScrollToItem?
 
@@ -949,7 +950,7 @@ extension ChatControllerImpl {
                                     maxInsertedItem = item.index
                                 }
                                 insertedIndex = item.index
-                                insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
+                                insertItems.append(ChatHistoryListViewInsertItem(index: item.index, previousIndex: item.previousIndex, stableId: item.stableId, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                             }
 
                             if isScheduledMessages, let insertedIndex {
@@ -987,7 +988,7 @@ extension ChatControllerImpl {
             guard let strongSelf = self else {
                 return
             }
-            
+
             var correlationIds: [Int64] = []
             for message in messages {
                 switch message {
@@ -1134,7 +1135,7 @@ extension ChatControllerImpl {
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     break
-                case .quickReplyMessageInput:
+                case .quickReplyMessageInput, .welcomeMessages:
                     customChatContents.enqueueMessages(messages: messages)
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 case let .businessLinkSetup(link):
@@ -1252,7 +1253,7 @@ extension ChatControllerImpl {
                     if case let .media(options) = editMessageState.content {
                         editMediaOptions = options
                     }
-                    strongSelf.presentEditingAttachmentMenu(editMediaOptions: editMediaOptions, editMediaReference: originalMediaReference)
+                    strongSelf.presentAttachmentMenu(subject: .edit(mediaOptions: editMediaOptions, mediaReference: originalMediaReference))
                 })
             } else {
                 strongSelf.presentAttachmentMenu(subject: .default)
@@ -2324,7 +2325,7 @@ extension ChatControllerImpl {
                 return
             }
             
-            let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
+            let _ = strongSelf.presentVoiceMessageDiscardAlert(action: { [strongSelf] in
                 var interactive = true
                 if strongSelf.chatDisplayNode.isInputViewFocused {
                     interactive = false
@@ -2683,7 +2684,11 @@ extension ChatControllerImpl {
                 strongSelf.startBot(payload)
             }
         }, botSwitchChatWithPayload: { [weak self] peerId, payload in
-            if let strongSelf = self, case let .peer(currentPeerId) = strongSelf.chatLocation {
+            // The location may be a forum topic or a comment thread, not only a plain peer; the
+            // thread id travels with the return address so the bot's switch-inline answer comes
+            // back to this composer rather than to the forum's topic list.
+            if let strongSelf = self, let currentPeerId = strongSelf.chatLocation.peerId {
+                let currentThreadId = strongSelf.chatLocation.threadId
                 var isScheduled = false
                 if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
                     isScheduled = true
@@ -2691,7 +2696,7 @@ extension ChatControllerImpl {
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).startStandalone(next: { peer in
                     if let strongSelf = self, let peer = peer {
-                        strongSelf.openPeer(peer: peer, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: currentPeerId, scheduled: isScheduled))), fromMessage: nil)
+                        strongSelf.openPeer(peer: peer, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .automatic(returnToPeerId: currentPeerId, returnToThreadId: currentThreadId, scheduled: isScheduled))), fromMessage: nil)
                     }
                 })
             }
@@ -2810,6 +2815,11 @@ extension ChatControllerImpl {
             strongSelf.beginMediaRecordingRequestId += 1
             strongSelf.lockMediaRecordingRequestId = nil
             strongSelf.stopMediaRecorder(pause: true)
+        }, stopIncomingStreamingMessage: { [weak self] in
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                return
+            }
+            let _ = strongSelf.context.engine.messages.stopIncomingTypingDraft(peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
         }, lockMediaRecording: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -4311,7 +4321,9 @@ extension ChatControllerImpl {
            }
         }, openWebView: { [weak self] buttonText, url, simple, source in
             if let strongSelf = self {
-                strongSelf.controllerInteraction?.openWebView(buttonText, url, simple, source)
+                // nil: this arrives from ChatPanelInterfaceInteraction (menu / inline-bot panels),
+                // which have no inline loading state and whose sources never raise the panel anyway.
+                strongSelf.controllerInteraction?.openWebView(buttonText, url, simple, source, nil)
             }
         }, updateShowWebView: { [weak self] f in
             if let strongSelf = self {
@@ -5414,9 +5426,13 @@ extension ChatControllerImpl {
             strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        historyNode.scrolledToIndex = { [weak self] toSubject, initial in
+        historyNode.scrolledToIndex = { [weak self, weak historyNode] toSubject, initial in
             if let strongSelf = self, case let .message(index) = toSubject.index {
-                if case let .message(messageSubject, _, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
+                // A history node created by an in-place thread switch carries its own `.message` subject while the
+                // controller's stays nil; the initial-scroll checks below must see that subject or a link to a
+                // missing message silently highlights its neighbour and a `?t=` timecode is dropped.
+                let initialSubject = strongSelf.subject ?? historyNode?.initialSubject
+                if case let .message(messageSubject, _, _, _) = initialSubject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
                     if messageId.peerId == index.id.peerId {
                         strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                     }
@@ -5467,7 +5483,7 @@ extension ChatControllerImpl {
                                     let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
                                 }
                             }
-                        } else if case let .message(_, _, maybeTimecode, _) = strongSelf.subject, let timecode = maybeTimecode, initial {
+                        } else if case let .message(_, _, maybeTimecode, _) = initialSubject, let timecode = maybeTimecode, initial {
                             Queue.mainQueue().after(0.2) {
                                 let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
                             }
@@ -5560,9 +5576,9 @@ extension ChatControllerImpl {
             downPressed: buttonAction
         )
 
-        historyNode.openNextChannelToRead = { [weak self] peer, threadData, location in
+        historyNode.openNextChannelToRead = { [weak self] peer, threadData, location -> Bool in
             guard let strongSelf = self else {
-                return
+                return false
             }
             if let navigationController = strongSelf.effectiveNavigationController {
                 let _ = ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).startStandalone()
@@ -5612,6 +5628,31 @@ extension ChatControllerImpl {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }, customChatNavigationStack: strongSelf.customChatNavigationStack))
+                // Navigation started: the caller may keep the overscroll control frozen, and the
+                // snapshot taken above now owns it.
+                return true
+            }
+            // Declined — no navigation controller to push onto. Reporting this is what stops the
+            // caller stranding a frozen control on a chat that is staying put.
+            return false
+        }
+        
+        // A flick that dismisses the keyboard (or the entity keyboard) is spent on that dismissal; the
+        // history must not also fling. Both dismissals are decided during touch delivery, so by the time
+        // this predicate is consulted — at the backend's release, in gesture action dispatch — the answer
+        // is already known. See `ChatControllerNode.dismissedInputByCurrentGesture`.
+        //
+        // Installed only on the CoreList backend, asked of the node rather than re-derived from the
+        // selection policy. `ListViewImpl` has the same hook and would honour it identically, but this
+        // is a deliberate behaviour change: there a dismissing flick still flings, stopped only by the
+        // snap-back at `ChatControllerNode.containerLayoutUpdated` — which needs the drag to have begun
+        // at the newest message, and lands a keyboard-animation later.
+        if historyNode.usesCoreListBackend {
+            historyNode.shouldStopScrolling = { [weak self] _ in
+                guard let self, self.isNodeLoaded else {
+                    return false
+                }
+                return self.chatDisplayNode.dismissedInputByCurrentGesture
             }
         }
         

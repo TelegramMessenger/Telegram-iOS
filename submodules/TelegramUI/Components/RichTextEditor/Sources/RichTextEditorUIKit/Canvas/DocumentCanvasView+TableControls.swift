@@ -33,7 +33,7 @@ extension DocumentCanvasView {
     /// Empty when the caret isn't in a table. `rect` is the hit/draw rect in canvas coordinates.
     func tableHandles() -> [(rect: CGRect, kind: TableStructuralSelection)] {
         guard let a = activeTable() else { return [] }
-        let b = TableBlockBox.border
+        let b = a.box.borderWidth   // 0 for an unbordered table, so the handles sit flush
         // The grip spans the active structural RANGE when one is selected, else the caret's single cell.
         let rowRange = structuralRowRange() ?? (a.row...a.row)
         let colRange = structuralColumnRange() ?? (a.col...a.col)
@@ -165,9 +165,16 @@ extension DocumentCanvasView {
         guard let a = activeTable(), let pos = a.box.cellTextStart(row: range.lowerBound, column: 0) else { return }
         // Bracket the caret move (like setCaret/selectImage) so the OS re-reads selectedTextRange = the parked
         // cell; without it a hardware Arrow navigates from the STALE prior caret instead of the selected row.
-        textInputDelegate?.selectionWillChange(self)
-        anchor = pos; head = pos
-        textInputDelegate?.selectionDidChange(self)
+        // TASK 26: unsuppressed selection bracket (this site never consulted the coalescing flag).
+        // TASK 39: `applyCaretOutcome` (`+Editing.swift`) inside the UNCHANGED bracket, not
+        // `setSelection` — Task 37's population C. This bracket opens no transaction and sets no
+        // suppression flag, so a publish takes the full path, and NONE of the three structural
+        // selectors calls `onSelectionChange?()` today: a publish would INVENT a host selection report
+        // on every row/column/cell selection, not merely double one. Axis 4 of Task 39's divergence
+        // audit applies verbatim — the bracket exists BECAUSE these sites never consulted the
+        // coalescing flag, and `setSelection` consults it. `selectTableColumns` and `selectTableCells`
+        // below are the same line for the same reasons.
+        inputBackend.notifyingSelectionChangeIgnoringCoalescing { applyCaretOutcome(.caret(at: pos)) }
         tableSelection = (a.box.id, .rows(range))
         refreshSelectionUI(); setNeedsDisplay()
     }
@@ -176,9 +183,8 @@ extension DocumentCanvasView {
         finalizeMarkedText()   // deliberate selection change finalizes marked text (uniform invariant)
         clearImageSelection()  // structural selections are mutually exclusive
         guard let a = activeTable(), let pos = a.box.cellTextStart(row: 0, column: range.lowerBound) else { return }
-        textInputDelegate?.selectionWillChange(self)   // see selectTableRows: keep the OS's selectedTextRange in sync
-        anchor = pos; head = pos
-        textInputDelegate?.selectionDidChange(self)
+        // see selectTableRows: keep the OS's selectedTextRange in sync
+        inputBackend.notifyingSelectionChangeIgnoringCoalescing { applyCaretOutcome(.caret(at: pos)) }   // TASK 39: see selectTableRows
         tableSelection = (a.box.id, .columns(range))
         refreshSelectionUI(); setNeedsDisplay()
     }
@@ -199,9 +205,7 @@ extension DocumentCanvasView {
         guard let pos = a.box.cellTextStart(row: expanded.top, column: expanded.left) else { return }
         // Bracket the caret move (like selectTableRows/selectTableColumns) so the OS re-reads
         // selectedTextRange = the parked cell.
-        textInputDelegate?.selectionWillChange(self)
-        anchor = pos; head = pos
-        textInputDelegate?.selectionDidChange(self)
+        inputBackend.notifyingSelectionChangeIgnoringCoalescing { applyCaretOutcome(.caret(at: pos)) }   // TASK 39: see selectTableRows
         tableSelection = (a.box.id, .cells(expanded))
         refreshSelectionUI(); setNeedsDisplay()
     }
@@ -292,7 +296,7 @@ extension DocumentCanvasView {
     private func cellOutlineRect(_ rect: TableRect, in box: TableBlockBox) -> CGRect? {
         guard let lo = box.cellRect(row: rect.top, column: rect.left),
               let hi = box.cellRect(row: rect.bottom, column: rect.right) else { return nil }
-        return lo.union(hi).insetBy(dx: -TableBlockBox.border, dy: -TableBlockBox.border)
+        return lo.union(hi).insetBy(dx: -box.borderWidth, dy: -box.borderWidth)
             .offsetBy(dx: -box.contentOffsetX, dy: 0)
     }
 
@@ -554,7 +558,10 @@ extension DocumentCanvasView {
     func selectFirstTableColumn() {
         guard let t = boxes.compactMap({ $0 as? TableBlockBox }).first,
               let pos = t.cellTextStart(row: 0, column: 0) else { return }
-        anchor = pos; head = pos
+        // TASK 39: applied IMMEDIATELY (not returned — there is no `editing { }` here at all), because
+        // `selectTableColumn(0)` on the next line resolves `activeTable()` through
+        // `cellLocation(containing: head)` and would otherwise see the PRE-move caret.
+        applyCaretOutcome(.caret(at: pos))
         selectTableColumn(0)
     }
 }

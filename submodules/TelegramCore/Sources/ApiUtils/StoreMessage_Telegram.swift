@@ -311,7 +311,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionStarGift, .messageActionStarGiftUnique, .messageActionPaidMessagesRefunded, .messageActionPaidMessagesPrice, .messageActionTodoCompletions, .messageActionTodoAppendTasks, .messageActionSuggestedPostApproval, .messageActionGiftTon, .messageActionSuggestedPostSuccess, .messageActionSuggestedPostRefund, .messageActionSuggestBirthday, .messageActionStarGiftPurchaseOffer, .messageActionStarGiftPurchaseOfferDeclined, .messageActionNoForwardsToggle, .messageActionNoForwardsRequest, .messageActionPollAppendAnswer, .messageActionPollDeleteAnswer:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionStarGift, .messageActionStarGiftUnique, .messageActionPaidMessagesRefunded, .messageActionPaidMessagesPrice, .messageActionTodoCompletions, .messageActionTodoAppendTasks, .messageActionSuggestedPostApproval, .messageActionGiftTon, .messageActionGramTransfer, .messageActionWalletTonConnectRequest, .messageActionSuggestedPostSuccess, .messageActionSuggestedPostRefund, .messageActionSuggestBirthday, .messageActionStarGiftPurchaseOffer, .messageActionStarGiftPurchaseOfferDeclined, .messageActionNoForwardsToggle, .messageActionNoForwardsRequest, .messageActionPollAppendAnswer, .messageActionPollDeleteAnswer:
                     break
                 case let .messageActionManagedBotCreated(messageActionManagedBotCreated):
                     let botId = messageActionManagedBotCreated.botId
@@ -366,14 +366,16 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     if let otherParticipants {
                         result.append(contentsOf: otherParticipants.map(\.peerId))
                     }
-                case let .messageActionNewCreatorPending(messageActionNewCreatorPending):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionNewCreatorPending.newCreatorId)))
-                case let .messageActionChangeCreator(messageActionChangeCreator):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionChangeCreator.newCreatorId)))
-                case let .messageActionChangeCommunity(messageActionChangeCommunity):
-                    if let communityId = messageActionChangeCommunity.communityId {
+                case let .messageActionNewCreatorPending(messageActionNewCreatorPendingData):
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionNewCreatorPendingData.newCreatorId)))
+                case let .messageActionChangeCreator(messageActionChangeCreatorData):
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionChangeCreatorData.newCreatorId)))
+                case let .messageActionChangeCommunity(messageActionChangeCommunityData):
+                    if let communityId = messageActionChangeCommunityData.communityId {
                         result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(communityId)))
                     }
+                case let .messageActionChatJoinedViaCommunity(messageActionChatJoinedViaCommunityData):
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(messageActionChatJoinedViaCommunityData.communityId)))
             }
         
             return result
@@ -392,9 +394,13 @@ func apiEphemeralMessagePeerIds(_ message: Api.EphemeralMessage) -> [PeerId] {
             }
         }
 
-        appendUnique(peerId.peerId)
+        if let peerId {
+            appendUnique(peerId.peerId)
+        }
         appendUnique(fromId.peerId)
-        appendUnique(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(receiverId)))
+        if receiverId != 0 {
+            appendUnique(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(receiverId)))
+        }
         if let replyTo {
             switch replyTo {
             case let .messageReplyHeader(messageReplyHeaderData):
@@ -482,15 +488,25 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
 }
 
 extension StoreMessage {
-    convenience init(apiEphemeralMessage: Api.EphemeralMessage) {
+    convenience init?(apiEphemeralMessage: Api.EphemeralMessage, namespace: MessageId.Namespace? = nil) {
         switch apiEphemeralMessage {
         case let .ephemeralMessage(messageData):
-            let (flags, id, fromId, apiPeerId, receiverId, topMsgId, text, entities, media, replyMarkup, replyTo) = (messageData.flags, messageData.id, messageData.fromId, messageData.peerId, messageData.receiverId, messageData.topMsgId, messageData.message, messageData.entities, messageData.media, messageData.replyMarkup, messageData.replyTo)
-            let peerId = apiPeerId.peerId
-            let authorId = fromId.peerId
+            let (flags, id, fromId, receiverId, topMsgId, text, entities, media, replyMarkup, replyTo, richMessage, anchorMsgId) = (messageData.flags, messageData.id, messageData.fromId, messageData.receiverId, messageData.topMsgId, messageData.message, messageData.entities, messageData.media, messageData.replyMarkup, messageData.replyTo, messageData.richMessage, messageData.anchorMsgId)
+            guard let peerId = apiEphemeralMessage.peerId else {
+                return nil
+            }
+            let isWelcomeTemplate = (flags & (1 << 5)) != 0
+            let authorId = isWelcomeTemplate ? peerId : fromId.peerId
+            let isForwardingDisabled = (flags & (1 << 12)) != 0
+            let anchorMessageId = anchorMsgId.flatMap { id -> MessageId? in
+                guard !isWelcomeTemplate else {
+                    return nil
+                }
+                return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
+            }
 
             var attributes: [MessageAttribute] = [
-                EphemeralMessageAttribute(receiverId: receiverId)
+                EphemeralMessageAttribute(receiverId: receiverId, isWelcomeTemplate: isWelcomeTemplate, anchorMessageId: anchorMessageId, isForwardingDisabled: isForwardingDisabled)
             ]
             var medias: [Media] = []
 
@@ -559,16 +575,33 @@ extension StoreMessage {
             if let replyMarkup {
                 attributes.append(ReplyMarkupMessageAttribute(apiMarkup: replyMarkup))
             }
+            if let richMessage {
+                attributes.append(RichTextMessageAttribute(apiRichMessage: richMessage))
+            }
+            if (flags & (1 << 7)) != 0 {
+                attributes.append(InvertMediaMessageAttribute())
+            }
 
             var date = messageData.date
             var storeFlags = StoreMessageFlags()
-            if (flags & (1 << 0)) == 0 {
+            if isWelcomeTemplate || (flags & (1 << 0)) == 0 {
                 storeFlags.insert(.Incoming)
                 date += 1
             }
 
+            let messageNamespace: MessageId.Namespace
+            if let namespace {
+                messageNamespace = namespace
+            } else if anchorMessageId != nil {
+                messageNamespace = Namespaces.Message.EphemeralAnchored
+            } else if isWelcomeTemplate {
+                messageNamespace = Namespaces.Message.WelcomeMessageCloud
+            } else {
+                messageNamespace = Namespaces.Message.EphemeralLocal
+            }
+
             self.init(
-                id: MessageId(peerId: peerId, namespace: Namespaces.Message.EphemeralLocal, id: id),
+                id: MessageId(peerId: peerId, namespace: messageNamespace, id: id),
                 customStableId: nil,
                 globallyUniqueId: nil,
                 groupingKey: nil,
@@ -1018,6 +1051,12 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
         case let .messageEntityBankCard(messageEntityBankCardData):
             let (offset, length) = (messageEntityBankCardData.offset, messageEntityBankCardData.length)
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BankCard))
+        case let .messageEntityTonAddress(data):
+            let upperBound = Int(data.offset) + Int(data.length)
+            guard data.offset >= 0, data.length > 0, upperBound <= Int(Int32.max) else {
+                continue
+            }
+            result.append(MessageTextEntity(range: Int(data.offset) ..< upperBound, type: .TonAddress))
         case let .messageEntitySpoiler(messageEntitySpoilerData):
             let (offset, length) = (messageEntitySpoilerData.offset, messageEntitySpoilerData.length)
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Spoiler))

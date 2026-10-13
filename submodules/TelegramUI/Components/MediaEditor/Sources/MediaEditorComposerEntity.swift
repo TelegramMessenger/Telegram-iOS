@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import AVFoundation
 import UIKit
 import CoreImage
@@ -280,7 +281,16 @@ final class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                                     strongSelf.videoFrameSource.set(.single(frameSource))
                                 } else {
                                     let frameSource = QueueLocalObject<AnimatedStickerDirectFrameSource>(queue: queue, generate: {
-                                        return AnimatedStickerDirectFrameSource(queue: queue, data: data, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil)!
+                                        // The media-editor export pipeline takes a Postbox (or nil,
+                                        // from CameraVideoSource) and never an AccountContext, at
+                                        // any level: composerEntitiesForDrawingEntity,
+                                        // MediaEditorComposer, MediaEditorVideoExport and
+                                        // CameraVideoSource are all account-less by construction.
+                                        // These frames are rasterized off-screen into an exported
+                                        // file rather than onto a live screen, so this surface stays
+                                        // on rlottie rather than widening four public initializers
+                                        // and the camera pipeline above them.
+                                        return AnimatedStickerDirectFrameSource(queue: queue, data: data, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil, lottieSettings: .noAccountFallback)!
                                     })
                                     frameSource.syncWith { frameSource in
                                         strongSelf.frameCount = frameSource.frameCount

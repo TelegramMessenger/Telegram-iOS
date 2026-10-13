@@ -59,5 +59,6 @@
 #import <MtProtoKit/MTProtoPersistenceInterface.h>
 #import <MtProtoKit/MTProtoEngine.h>
 #import <MtProtoKit/MTBindKeyMessageService.h>
+#import <MtProtoKit/MTQuickAck.h>
 #import <MtProtoKit/MTFileBasedKeychain.h>
 

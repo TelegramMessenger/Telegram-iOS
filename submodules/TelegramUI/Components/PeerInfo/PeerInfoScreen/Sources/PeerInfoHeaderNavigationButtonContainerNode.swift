@@ -338,6 +338,14 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
         transition.updateFrame(view: self.rightButtonsContainer, frame: CGRect(origin: CGPoint(), size: rightButtonsFrame.size))
         self.rightButtonsContainer.layer.cornerRadius = rightButtonsFrame.height * 0.5
         
+        // Normal and expanded buttons crossfade with expandFraction; the back button
+        // exists in both sets but is drawn as one.
+        func visibleButtonCount(_ buttons: [PeerInfoHeaderNavigationButtonSpec]) -> Int {
+            return Set(buttons.filter({ $0.key == .back || ($0.isForExpandedView ? expandFraction > 0.0 : expandFraction < 1.0) }).map(\.key)).count
+        }
+        self.leftButtonsBackground.morphsIntoContextMenu = visibleButtonCount(leftButtons) == 1
+        self.rightButtonsBackground.morphsIntoContextMenu = visibleButtonCount(rightButtons) == 1
+        
         self.updateBackgroundColors(transition: ComponentTransition(transition))
     }
     

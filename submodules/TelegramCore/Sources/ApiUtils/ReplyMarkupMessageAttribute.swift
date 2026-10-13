@@ -23,154 +23,138 @@ extension ReplyMarkupButtonAction.PeerTypes {
     }
 }
 
+extension ReplyMarkupButtonRequestPeerType {
+    init(apiType: Api.RequestPeerType) {
+        switch apiType {
+        case let .requestPeerTypeUser(data):
+            self = .user(ReplyMarkupButtonRequestPeerType.User(
+                isBot: data.bot.flatMap({ $0 == .boolTrue }),
+                isPremium: data.premium.flatMap({ $0 == .boolTrue })
+            ))
+        case let .requestPeerTypeChat(data):
+            self = .group(ReplyMarkupButtonRequestPeerType.Group(
+                isCreator: (data.flags & (1 << 0)) != 0,
+                hasUsername: data.hasUsername.flatMap({ $0 == .boolTrue }),
+                isForum: data.forum.flatMap({ $0 == .boolTrue }),
+                botParticipant: (data.flags & (1 << 5)) != 0,
+                userAdminRights: data.userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
+                botAdminRights: data.botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
+            ))
+        case let .requestPeerTypeBroadcast(data):
+            self = .channel(ReplyMarkupButtonRequestPeerType.Channel(
+                isCreator: (data.flags & (1 << 0)) != 0,
+                hasUsername: data.hasUsername.flatMap({ $0 == .boolTrue }),
+                userAdminRights: data.userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
+                botAdminRights: data.botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
+            ))
+        case let .requestPeerTypeCreateBot(data):
+            self = .createBot(ReplyMarkupButtonRequestPeerType.CreateBot(
+                suggestedName: data.suggestedName,
+                suggestedUsername: data.suggestedUsername
+            ))
+        }
+    }
+}
+
+public extension ReplyMarkupButtonAction {
+    /// Reply-keyboard button behaviours. `fwdText` is always nil here — only the urlAuth
+    /// constructors carry `fwd_text`, and those are inline-only.
+    static func from(apiType: Api.ButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
+        switch apiType {
+        case .buttonTypeDefault:
+            return (.text, nil)
+        case .buttonTypeRequestPhone:
+            return (.requestPhone, nil)
+        case .buttonTypeRequestGeoLocation:
+            return (.requestMap, nil)
+        case let .buttonTypeRequestPoll(data):
+            let isQuiz: Bool? = data.quiz.flatMap { $0 == .boolTrue }
+            return (.setupPoll(isQuiz: isQuiz), nil)
+        case let .buttonTypeRequestPeer(data):
+            return (.requestPeer(
+                peerType: ReplyMarkupButtonRequestPeerType(apiType: data.peerType),
+                buttonId: data.buttonId,
+                maxQuantity: data.maxQuantity
+            ), nil)
+        case let .inputButtonTypeRequestPeer(data):
+            return (.requestPeer(
+                peerType: ReplyMarkupButtonRequestPeerType(apiType: data.peerType),
+                buttonId: data.buttonId,
+                maxQuantity: data.maxQuantity
+            ), nil)
+        case let .buttonTypeSimpleWebView(data):
+            return (.openWebView(url: data.url, simple: true), nil)
+        }
+    }
+
+    /// Inline button behaviours. Stage 2 reuses this for InstantPage page buttons — the 10
+    /// distinct actions it can return are exactly the ones representable in the
+    /// `InstantPageButtonAction` FlatBuffers union.
+    static func from(apiType: Api.InlineButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
+        switch apiType {
+        case let .inlineButtonTypeUrl(data):
+            return (.url(data.url), nil)
+        case let .inlineButtonTypeUrlAuth(data):
+            return (.urlAuth(url: data.url, buttonId: data.buttonId), data.fwdText)
+        case let .inputInlineButtonTypeUrlAuth(data):
+            return (.urlAuth(url: data.url, buttonId: 0), data.fwdText)
+        case let .inlineButtonTypeWebView(data):
+            return (.openWebView(url: data.url, simple: false), nil)
+        case let .inlineButtonTypeCallback(data):
+            let memory = malloc(data.data.size)!
+            memcpy(memory, data.data.data, data.data.size)
+            let dataBuffer = MemoryBuffer(memory: memory, capacity: data.data.size, length: data.data.size, freeWhenDone: true)
+            return (.callback(requiresPassword: (data.flags & (1 << 0)) != 0, data: dataBuffer), nil)
+        case .inlineButtonTypeGame:
+            return (.openWebApp, nil)
+        case .inlineButtonTypeBuy:
+            return (.payment, nil)
+        case let .inlineButtonTypeSwitchInline(data):
+            var peerTypes = ReplyMarkupButtonAction.PeerTypes()
+            if let types = data.peerTypes {
+                peerTypes = ReplyMarkupButtonAction.PeerTypes(apiType: types)
+            }
+            return (.switchInline(samePeer: (data.flags & (1 << 0)) != 0, query: data.query, peerTypes: peerTypes), nil)
+        case let .inlineButtonTypeUserProfile(data):
+            return (.openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(data.userId))), nil)
+        case .inputInlineButtonTypeUserProfile:
+            return (.openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))), nil)
+        case let .inlineButtonTypeCopy(data):
+            return (.copyText(payload: data.copyText), nil)
+        case .inlineButtonTypeDisabled:
+            return (.disabled, nil)
+        }
+    }
+}
+
 extension ReplyMarkupButton {
+    // `style` sits at flags bit 10 on both `keyboardButton` and `keyboardInlineButton` — read once
+    // per initializer rather than per-behaviour as the pre-unification code did. The two are separate
+    // TL types (and so separate initializers), but they collapse to the same domain button here;
+    // `ReplyMarkupMessageFlags.inline` on the attribute is what distinguishes them downstream.
     init(apiButton: Api.KeyboardButton) {
         switch apiButton {
-        case let .keyboardButton(keyboardButtonData):
-            let text = keyboardButtonData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .text, style: keyboardButtonData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonCallback(keyboardButtonCallbackData):
-            let (flags, text, data) = (keyboardButtonCallbackData.flags, keyboardButtonCallbackData.text, keyboardButtonCallbackData.data)
-            let memory = malloc(data.size)!
-            memcpy(memory, data.data, data.size)
-            let dataBuffer = MemoryBuffer(memory: memory, capacity: data.size, length: data.size, freeWhenDone: true)
-            self.init(title: text, titleWhenForwarded: nil, action: .callback(requiresPassword: (flags & (1 << 0)) != 0, data: dataBuffer), style: keyboardButtonCallbackData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonRequestGeoLocation(keyboardButtonRequestGeoLocationData):
-            let text = keyboardButtonRequestGeoLocationData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .requestMap, style: keyboardButtonRequestGeoLocationData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonRequestPhone(keyboardButtonRequestPhoneData):
-            let text = keyboardButtonRequestPhoneData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .requestPhone, style: keyboardButtonRequestPhoneData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonSwitchInline(keyboardButtonSwitchInlineData):
-            let (flags, text, query, types) = (keyboardButtonSwitchInlineData.flags, keyboardButtonSwitchInlineData.text, keyboardButtonSwitchInlineData.query, keyboardButtonSwitchInlineData.peerTypes)
-            var peerTypes = ReplyMarkupButtonAction.PeerTypes()
-            if let types = types {
-                for type in types {
-                    switch type {
-                    case .inlineQueryPeerTypePM:
-                        peerTypes.insert(.users)
-                    case .inlineQueryPeerTypeBotPM:
-                        peerTypes.insert(.bots)
-                    case .inlineQueryPeerTypeBroadcast:
-                        peerTypes.insert(.channels)
-                    case .inlineQueryPeerTypeChat, .inlineQueryPeerTypeMegagroup:
-                        peerTypes.insert(.groups)
-                    case .inlineQueryPeerTypeSameBotPM:
-                        break
-                    }
-                }
-            }
-            self.init(title: text, titleWhenForwarded: nil, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query, peerTypes: peerTypes), style: keyboardButtonSwitchInlineData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonUrl(keyboardButtonUrlData):
-            let (text, url) = (keyboardButtonUrlData.text, keyboardButtonUrlData.url)
-            self.init(title: text, titleWhenForwarded: nil, action: .url(url), style: keyboardButtonUrlData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonGame(keyboardButtonGameData):
-            let text = keyboardButtonGameData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .openWebApp, style: keyboardButtonGameData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonBuy(keyboardButtonBuyData):
-            let text = keyboardButtonBuyData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .payment, style: keyboardButtonBuyData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonUrlAuth(keyboardButtonUrlAuthData):
-            let (text, fwdText, url, buttonId) = (keyboardButtonUrlAuthData.text, keyboardButtonUrlAuthData.fwdText, keyboardButtonUrlAuthData.url, keyboardButtonUrlAuthData.buttonId)
-            self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: buttonId), style: keyboardButtonUrlAuthData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .inputKeyboardButtonUrlAuth(inputKeyboardButtonUrlAuthData):
-            let (text, fwdText, url) = (inputKeyboardButtonUrlAuthData.text, inputKeyboardButtonUrlAuthData.fwdText, inputKeyboardButtonUrlAuthData.url)
-            self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: 0), style: inputKeyboardButtonUrlAuthData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonRequestPoll(keyboardButtonRequestPollData):
-            let (quiz, text) = (keyboardButtonRequestPollData.quiz, keyboardButtonRequestPollData.text)
-            let isQuiz: Bool? = quiz.flatMap { quiz in
-                if case .boolTrue = quiz {
-                    return true
-                } else {
-                    return false
-                }
-            }
-            self.init(title: text, titleWhenForwarded: nil, action: .setupPoll(isQuiz: isQuiz), style: keyboardButtonRequestPollData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonUserProfile(keyboardButtonUserProfileData):
-            let (text, userId) = (keyboardButtonUserProfileData.text, keyboardButtonUserProfileData.userId)
-            self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))), style: keyboardButtonUserProfileData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .inputKeyboardButtonUserProfile(inputKeyboardButtonUserProfileData):
-            let text = inputKeyboardButtonUserProfileData.text
-            self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))), style: inputKeyboardButtonUserProfileData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonWebView(keyboardButtonWebViewData):
-            let (text, url) = (keyboardButtonWebViewData.text, keyboardButtonWebViewData.url)
-            self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: false), style: keyboardButtonWebViewData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonSimpleWebView(keyboardButtonSimpleWebViewData):
-            let (text, url) = (keyboardButtonSimpleWebViewData.text, keyboardButtonSimpleWebViewData.url)
-            self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: true), style: keyboardButtonSimpleWebViewData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonRequestPeer(keyboardButtonRequestPeerData):
-            let (text, buttonId, peerType, maxQuantity) = (keyboardButtonRequestPeerData.text, keyboardButtonRequestPeerData.buttonId, keyboardButtonRequestPeerData.peerType, keyboardButtonRequestPeerData.maxQuantity)
-            let mappedPeerType: ReplyMarkupButtonRequestPeerType
-            switch peerType {
-            case let .requestPeerTypeUser(requestPeerTypeUserData):
-                let (bot, premium) = (requestPeerTypeUserData.bot, requestPeerTypeUserData.premium)
-                mappedPeerType = .user(ReplyMarkupButtonRequestPeerType.User(
-                    isBot: bot.flatMap({ $0 == .boolTrue }),
-                    isPremium: premium.flatMap({ $0 == .boolTrue })
-                ))
-            case let .requestPeerTypeChat(requestPeerTypeChatData):
-                let (flags, hasUsername, forum, userAdminRights, botAdminRights) = (requestPeerTypeChatData.flags, requestPeerTypeChatData.hasUsername, requestPeerTypeChatData.forum, requestPeerTypeChatData.userAdminRights, requestPeerTypeChatData.botAdminRights)
-                mappedPeerType = .group(ReplyMarkupButtonRequestPeerType.Group(
-                    isCreator: (flags & (1 << 0)) != 0,
-                    hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
-                    isForum: forum.flatMap({ $0 == .boolTrue }),
-                    botParticipant: (flags & (1 << 5)) != 0,
-                    userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
-                    botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
-                ))
-            case let .requestPeerTypeBroadcast(requestPeerTypeBroadcastData):
-                let (flags, hasUsername, userAdminRights, botAdminRights) = (requestPeerTypeBroadcastData.flags, requestPeerTypeBroadcastData.hasUsername, requestPeerTypeBroadcastData.userAdminRights, requestPeerTypeBroadcastData.botAdminRights)
-                mappedPeerType = .channel(ReplyMarkupButtonRequestPeerType.Channel(
-                    isCreator: (flags & (1 << 0)) != 0,
-                    hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
-                    userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
-                    botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
-                ))
-            case let .requestPeerTypeCreateBot(data):
-                mappedPeerType = .createBot(ReplyMarkupButtonRequestPeerType.CreateBot(
-                    suggestedName: data.suggestedName,
-                    suggestedUsername: data.suggestedUsername
-                ))
-            }
-            self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId, maxQuantity: maxQuantity), style: keyboardButtonRequestPeerData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .inputKeyboardButtonRequestPeer(inputKeyboardButtonRequestPeerData):
-            let (text, buttonId, peerType, maxQuantity) = (inputKeyboardButtonRequestPeerData.text, inputKeyboardButtonRequestPeerData.buttonId, inputKeyboardButtonRequestPeerData.peerType, inputKeyboardButtonRequestPeerData.maxQuantity)
-            let mappedPeerType: ReplyMarkupButtonRequestPeerType
-            switch peerType {
-            case let .requestPeerTypeUser(requestPeerTypeUserData):
-                let (bot, premium) = (requestPeerTypeUserData.bot, requestPeerTypeUserData.premium)
-                mappedPeerType = .user(ReplyMarkupButtonRequestPeerType.User(
-                    isBot: bot.flatMap({ $0 == .boolTrue }),
-                    isPremium: premium.flatMap({ $0 == .boolTrue })
-                ))
-            case let .requestPeerTypeChat(requestPeerTypeChatData):
-                let (flags, hasUsername, forum, userAdminRights, botAdminRights) = (requestPeerTypeChatData.flags, requestPeerTypeChatData.hasUsername, requestPeerTypeChatData.forum, requestPeerTypeChatData.userAdminRights, requestPeerTypeChatData.botAdminRights)
-                mappedPeerType = .group(ReplyMarkupButtonRequestPeerType.Group(
-                    isCreator: (flags & (1 << 0)) != 0,
-                    hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
-                    isForum: forum.flatMap({ $0 == .boolTrue }),
-                    botParticipant: (flags & (1 << 5)) != 0,
-                    userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
-                    botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
-                ))
-            case let .requestPeerTypeBroadcast(requestPeerTypeBroadcastData):
-                let (flags, hasUsername, userAdminRights, botAdminRights) = (requestPeerTypeBroadcastData.flags, requestPeerTypeBroadcastData.hasUsername, requestPeerTypeBroadcastData.userAdminRights, requestPeerTypeBroadcastData.botAdminRights)
-                mappedPeerType = .channel(ReplyMarkupButtonRequestPeerType.Channel(
-                    isCreator: (flags & (1 << 0)) != 0,
-                    hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
-                    userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
-                    botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
-                ))
-            case let .requestPeerTypeCreateBot(data):
-                mappedPeerType = .createBot(ReplyMarkupButtonRequestPeerType.CreateBot(
-                    suggestedName: data.suggestedName,
-                    suggestedUsername: data.suggestedUsername
-                ))
-            }
-            self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId, maxQuantity: maxQuantity), style: inputKeyboardButtonRequestPeerData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
-        case let .keyboardButtonCopy(keyboardButtonCopyData):
-            let (text, payload) = (keyboardButtonCopyData.text, keyboardButtonCopyData.copyText)
-            self.init(title: text, titleWhenForwarded: nil, action: .copyText(payload: payload), style: keyboardButtonCopyData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
+        case let .keyboardButton(data):
+            let mapped = ReplyMarkupButtonAction.from(apiType: data.type)
+            self.init(
+                title: data.text,
+                titleWhenForwarded: mapped.fwdText,
+                action: mapped.action,
+                style: data.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:))
+            )
+        }
+    }
+
+    init(apiInlineButton: Api.KeyboardInlineButton) {
+        switch apiInlineButton {
+        case let .keyboardInlineButton(data):
+            let mapped = ReplyMarkupButtonAction.from(apiType: data.type)
+            self.init(
+                title: data.text,
+                titleWhenForwarded: mapped.fwdText,
+                action: mapped.action,
+                style: data.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:))
+            )
         }
     }
 }
@@ -181,6 +165,14 @@ extension ReplyMarkupRow {
             case let .keyboardButtonRow(keyboardButtonRowData):
                 let buttons = keyboardButtonRowData.buttons
                 self.init(buttons: buttons.map { ReplyMarkupButton(apiButton: $0) })
+        }
+    }
+
+    init(apiInlineRow: Api.KeyboardInlineButtonRow) {
+        switch apiInlineRow {
+            case let .keyboardInlineButtonRow(keyboardInlineButtonRowData):
+                let buttons = keyboardInlineButtonRowData.buttons
+                self.init(buttons: buttons.map { ReplyMarkupButton(apiInlineButton: $0) })
         }
     }
 }
@@ -206,10 +198,17 @@ extension ReplyMarkupMessageAttribute {
                 if (markupFlags & (1 << 4)) != 0 {
                     flags.insert(.persistent)
                 }
+                if (markupFlags & (1 << 5)) != 0 {
+                    flags.insert(.setupReply)
+                }
                 placeholder = apiPlaceholder
             case let .replyInlineMarkup(replyInlineMarkupData):
+                let markupFlags = replyInlineMarkupData.flags
                 let apiRows = replyInlineMarkupData.rows
-                rows = apiRows.map { ReplyMarkupRow(apiRow: $0) }
+                rows = apiRows.map { ReplyMarkupRow(apiInlineRow: $0) }
+                if (markupFlags & (1 << 5)) != 0 {
+                    flags.insert(.setupReply)
+                }
                 flags.insert(.inline)
             case let .replyKeyboardForceReply(replyKeyboardForceReplyData):
                 let (forceReplyFlags, apiPlaceholder) = (replyKeyboardForceReplyData.flags, replyKeyboardForceReplyData.placeholder)

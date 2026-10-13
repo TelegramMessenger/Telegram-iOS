@@ -92,7 +92,8 @@ func makeMediaWrapper(
     theme: InstantPageTheme,
     openMedia: @escaping (InstantPageMedia) -> Void,
     longPressMedia: @escaping (InstantPageMedia) -> Void,
-    emptyColor: UIColor? = nil
+    emptyColor: UIColor? = nil,
+    fit: Bool = false
 ) -> InstantPageImageNode {
     let imageNode = InstantPageImageNode(
         context: renderContext.context,
@@ -103,7 +104,7 @@ func makeMediaWrapper(
         attributes: attributes,
         interactive: true,
         roundCorners: false,
-        fit: false,
+        fit: fit,
         openMedia: openMedia,
         longPressMedia: longPressMedia,
         activatePinchPreview: nil,
@@ -115,6 +116,7 @@ func makeMediaWrapper(
         emptyColor: emptyColor,
         getPreloadedResource: { _ in nil }
     )
+    imageNode.captureProtected = renderContext.captureProtected
     imageNode.frame = CGRect(origin: .zero, size: frame.size)
     return imageNode
 }
@@ -157,6 +159,7 @@ func handleOpenMediaTap(
         webPage: renderContext.webpage,
         context: renderContext.context,
         userLocation: renderContext.sourceLocation.userLocation,
+        captureProtected: renderContext.captureProtected,
         present: renderContext.present,
         push: renderContext.push,
         openUrl: renderContext.openUrl,
@@ -209,7 +212,8 @@ final class InstantPageV2MediaImageView: UIView, InstantPageItemView {
             renderContext: renderContext,
             theme: theme,
             openMedia: openMedia,
-            longPressMedia: { _ in }
+            longPressMedia: { _ in },
+            fit: item.fit
         )
 
         super.init(frame: item.frame)
@@ -241,11 +245,30 @@ final class InstantPageV2MediaImageView: UIView, InstantPageItemView {
     }
 
     func update(item: InstantPageV2MediaImageItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
+        let previousMedia = self.item.media
+        let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
+        // Re-read on every apply: copy protection can be toggled peer-side while the message is on
+        // screen, which does not rebuild this view (see `InstantPageV2RenderContext.captureProtected`).
+        self.wrappedNode.captureProtected = renderContext.captureProtected
+        // On the Local→Cloud send flip the media id changes but the view is reused (see the
+        // rich-bubble "Send-time media continuity" doc). Re-point the wrapped node's interactive
+        // bindings at the Cloud media so tap-to-open works without a rebuild; the image is not
+        // reloaded (no blink).
+        if item.media.media.id != previousMediaId {
+            self.wrappedNode.updateInteractiveMediaBinding(sourceLocation: renderContext.sourceLocation, media: item.media, imageReferenceForMedia: renderContext.imageReference, fileReferenceForMedia: renderContext.fileReference)
+        } else if item.media != previousMedia {
+            // Same medium, DIFFERENT surrounding value — caption/credit/url, or a photo that
+            // compares unequal under an unchanged id (a message edit, or the server round-trip
+            // returning different representations). The id check above does not cover it, and the
+            // node's `media` is the value a tap hands to the gallery's lookup, so letting it drift
+            // silently kills tap-to-open. See `updateMediaValue`.
+            self.wrappedNode.updateMediaValue(item.media)
+        }
         self.updateSpoiler(renderContext: renderContext)
     }
 
@@ -291,6 +314,9 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
     private var videoNode: UniversalVideoNode?
     // The media id the current `videoNode` was built for; drives teardown/rebuild on positional reuse.
     private var videoNodeMediaId: EngineMedia.Id?
+    // `captureProtected` baked into the current `videoNode`'s content. `NativeVideoContent` takes it
+    // at construction, so a peer-side copy-protection toggle has to rebuild the player.
+    private var videoNodeCaptureProtected = false
     // Whether the view currently intersects the visibility rect; gates `canAttachContent`.
     private var localIsVisible = false
     // One-shot auto-download fetch (download even when not autoplaying), keyed by media id.
@@ -325,7 +351,8 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
             renderContext: renderContext,
             theme: theme,
             openMedia: openMedia,
-            longPressMedia: { _ in }
+            longPressMedia: { _ in },
+            fit: item.fit
         )
 
         super.init(frame: item.frame)
@@ -344,11 +371,38 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
         registerInRootRegistry(wrapper: self, mediaIndex: self.item.media.index)
     }
 
+    /// The rect the inline player should occupy.
+    ///
+    /// The poster (`wrappedNode`) renders aspect-FIT over a blurred backdrop whenever `item.fit` is set,
+    /// which single media does: `instantPageV2MediaFrame` caps a portrait item's height at its display
+    /// width, so the box deliberately stops matching the media aspect. The player is layered ABOVE that
+    /// poster, so sizing it to the full bounds both squashes the video into the capped box and hides the
+    /// blurred backdrop — which is why video appeared square and stretched while images did not.
+    ///
+    /// Collage cells construct the item WITHOUT `fit`, so they keep filling their bounds (crop-to-fill,
+    /// matching image cells and the 1pt-bleed clipping note at the construction site).
+    private func inlineVideoFrame(in bounds: CGRect) -> CGRect {
+        guard self.item.fit,
+              case let .file(file) = self.item.media.media,
+              let dimensions = file.dimensions,
+              dimensions.width > 0, dimensions.height > 0 else {
+            return bounds
+        }
+        let fitted = dimensions.cgSize.aspectFitted(bounds.size)
+        return CGRect(
+            x: floorToScreenPixels((bounds.width - fitted.width) / 2.0),
+            y: floorToScreenPixels((bounds.height - fitted.height) / 2.0),
+            width: fitted.width,
+            height: fitted.height
+        )
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         self.wrappedNode.frame = self.bounds
-        self.videoNode?.frame = self.bounds
-        self.videoNode?.updateLayout(size: self.bounds.size, transition: .immediate)
+        let videoFrame = self.inlineVideoFrame(in: self.bounds)
+        self.videoNode?.frame = videoFrame
+        self.videoNode?.updateLayout(size: videoFrame.size, transition: .immediate)
         if let overlay = self.spoilerOverlay {
             overlay.updateLayout(size: self.bounds.size)
             if let blurNode = overlay.blurredImageNode {
@@ -359,11 +413,24 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
     }
 
     func update(item: InstantPageV2MediaVideoItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
+        let previousMedia = self.item.media
+        let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
+        self.wrappedNode.captureProtected = renderContext.captureProtected
+        // See the image view: refresh the poster node's `self.media` identity on the Local→Cloud
+        // send flip so the gallery centralIndex match (and transitionNode) use the Cloud media. The
+        // inline video node is rebuilt separately below (keyed by media id).
+        if item.media.media.id != previousMediaId {
+            self.wrappedNode.updateInteractiveMediaBinding(sourceLocation: renderContext.sourceLocation, media: item.media, imageReferenceForMedia: renderContext.imageReference, fileReferenceForMedia: renderContext.fileReference)
+        } else if item.media != previousMedia {
+            // See the image view: same medium, drifted value. A video's tap is ungated by fetch
+            // status, so this lookup is the ONLY thing standing between the tap and the gallery.
+            self.wrappedNode.updateMediaValue(item.media)
+        }
         self.updateSpoiler(renderContext: renderContext)
         self.updateInlineVideo(renderContext: renderContext)
     }
@@ -410,7 +477,7 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
         let wantAutoplay = renderContext.shouldAutoplayVideo(file) && !spoilerBlocks
 
         if wantAutoplay {
-            if self.videoNode != nil, self.videoNodeMediaId == mediaId {
+            if self.videoNode != nil, self.videoNodeMediaId == mediaId, self.videoNodeCaptureProtected == renderContext.captureProtected {
                 return
             }
             self.tearDownVideoNode()
@@ -434,6 +501,7 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
                 enableSound: false,
                 fetchAutomatically: true,
                 placeholderColor: .clear,
+                captureProtected: renderContext.captureProtected,
                 storeAfterDownload: nil
             )
             let videoNode = UniversalVideoNode(
@@ -447,10 +515,21 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
                 autoplay: true
             )
             videoNode.isUserInteractionEnabled = false
-            videoNode.frame = self.bounds
+            // Confine the player to the cell. `NativeVideoContentNode.updateLayout` deliberately
+            // inflates its `playerNode` to `bounds.insetBy(dx: -1, dy: -1)` (a seam hack so no hairline
+            // of backdrop shows at the video's edge), and nothing below us clips it: this path builds a
+            // `GalleryVideoDecoration`, whose `contentContainerNode.clipsToBounds` is only set inside
+            // `updateCorners`, which no one calls here. Unclipped, an autoplaying video paints 1pt past
+            // its item frame on every side — which in a `.collage` mosaic is exactly the 1pt gutter
+            // between cells, so a video cell visibly bleeds over its neighbours (image cells don't:
+            // they draw into `boundingSize == bounds.size`). Clipping here rather than on `self` keeps
+            // the wrapper's own `clipsToBounds` tied to `cornerRadius`, as the image view's is.
+            videoNode.clipsToBounds = true
+            videoNode.frame = self.inlineVideoFrame(in: self.bounds)
             self.addSubview(videoNode.view)
             self.videoNode = videoNode
             self.videoNodeMediaId = mediaId
+            self.videoNodeCaptureProtected = renderContext.captureProtected
             videoNode.canAttachContent = self.localIsVisible
             self.setNeedsLayout()
         } else {
@@ -464,6 +543,7 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
             videoNode.view.removeFromSuperview()
             self.videoNode = nil
             self.videoNodeMediaId = nil
+            self.videoNodeCaptureProtected = false
         }
     }
 
@@ -531,11 +611,20 @@ final class InstantPageV2MediaMapView: UIView, InstantPageItemView {
     }
 
     func update(item: InstantPageV2MediaMapItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
+        let previousMedia = self.item.media
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
+        self.wrappedNode.captureProtected = renderContext.captureProtected
+        // A map tap opens LocationViewController straight from the tapped value, so it does not go
+        // through the gallery's lookup — but `transitionNode` / `updateHiddenMedia` still match
+        // against the node's `media`, so keep it in step. There is no id-flip branch here: a map has
+        // no uploadable resource, so its media id never changes under a reused view.
+        if item.media != previousMedia {
+            self.wrappedNode.updateMediaValue(item.media)
+        }
     }
 
     func instantPageTransitionNode(for media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
@@ -594,11 +683,21 @@ final class InstantPageV2MediaCoverImageView: UIView, InstantPageItemView {
     }
 
     func update(item: InstantPageV2MediaCoverImageItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
+        let previousMedia = self.item.media
+        let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
+        self.wrappedNode.captureProtected = renderContext.captureProtected
+        // See the image view: refresh interactive bindings on the Local→Cloud send media-id flip.
+        if item.media.media.id != previousMediaId {
+            self.wrappedNode.updateInteractiveMediaBinding(sourceLocation: renderContext.sourceLocation, media: item.media, imageReferenceForMedia: renderContext.imageReference, fileReferenceForMedia: renderContext.fileReference)
+        } else if item.media != previousMedia {
+            // See the image view: same medium, drifted value.
+            self.wrappedNode.updateMediaValue(item.media)
+        }
     }
 
     func instantPageTransitionNode(for media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {

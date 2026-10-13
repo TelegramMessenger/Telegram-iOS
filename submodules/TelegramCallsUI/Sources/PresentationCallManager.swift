@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Display
 import DeviceAccess
 import TelegramPresentationData
+import PresentationDataUtils
 import TelegramAudio
 import TelegramVoip
 import TelegramUIPreferences
@@ -361,7 +362,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isVideoPossible: firstState.2.isVideoPossible,
                         enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
                         enableTCP: experimentalSettings.enableVoipTcp,
-                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                        preferredVideoCodec: nil
                     )
                     strongSelf.updateCurrentCall(call)
                 }))
@@ -410,7 +411,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isVideoPossible: firstState.2.isVideoPossible,
                         enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
                         enableTCP: experimentalSettings.enableVoipTcp,
-                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                        preferredVideoCodec: nil
                     )
                     strongSelf.updateCurrentCall(call)
                     
@@ -512,7 +513,18 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     if let peer = peer as? TelegramUser, let phone = peer.phone {
                         phoneNumber = formatPhoneNumber(context: context, number: phone)
                     }
-                    strongSelf.callKitIntegration?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, localContactId: localContactId, isVideo: isVideo, displayTitle: peer.debugDisplayTitle)
+                    strongSelf.callKitIntegration?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, localContactId: localContactId, isVideo: isVideo, displayTitle: peer.debugDisplayTitle, completion: { [weak self] error in
+                        guard error != nil, let strongSelf = self else {
+                            return
+                        }
+                        // CallKit refused the start action: the provider never performs it, so no
+                        // call object and no call screen ever appear. Without this the tap is a
+                        // silent no-op. The error itself is in the log ("error in requestTransaction").
+                        let (presentationData, present, _) = strongSelf.getDeviceAccessData()
+                        present(textAlertController(sharedContext: context.sharedContext, title: presentationData.strings.Call_StatusFailed, text: presentationData.strings.Call_SystemStartErrorMessage, actions: [
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]), nil)
+                    })
                 }))
             }
             if let currentCall = self.currentCall {
@@ -681,7 +693,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isVideoPossible: isVideoPossible,
                         enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
                         enableTCP: experimentalSettings.enableVoipTcp,
-                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                        preferredVideoCodec: nil
                     )
                     strongSelf.updateCurrentCall(call)
                 }

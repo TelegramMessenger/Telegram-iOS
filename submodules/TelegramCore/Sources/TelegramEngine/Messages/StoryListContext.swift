@@ -2121,6 +2121,7 @@ public final class SearchStoryListContext: StoryListContext {
         
         deinit {
             self.requestDisposable?.dispose()
+            self.updatesDisposable?.dispose()
         }
         
         func loadMore(completion: (() -> Void)?) {

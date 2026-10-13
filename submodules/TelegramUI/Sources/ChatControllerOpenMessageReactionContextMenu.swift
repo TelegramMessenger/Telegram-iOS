@@ -220,7 +220,7 @@ extension ChatControllerImpl {
                         reaction: value,
                         readStats: nil,
                         back: nil,
-                        openPeer: { peer, hasReaction in
+                        openPeer: { [weak self] peer, hasReaction in
                             dismissController?({ [weak self] in
                                 guard let self else {
                                     return

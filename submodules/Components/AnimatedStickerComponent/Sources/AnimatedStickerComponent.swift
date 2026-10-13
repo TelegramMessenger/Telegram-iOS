@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import ComponentFlow
 import AnimatedStickerNode
@@ -30,7 +31,10 @@ public final class AnimatedStickerComponent: Component {
     public let isAnimating: Bool
     public let size: CGSize
     
-    public init(account: Account, animation: Animation, tintColor: UIColor? = nil, isAnimating: Bool = true, size: CGSize) {
+    public let lottieSettings: LottieRenderingSettings
+
+    public init(account: Account, animation: Animation, tintColor: UIColor? = nil, isAnimating: Bool = true, size: CGSize, lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
         self.account = account
         self.animation = animation
         self.tintColor = tintColor
@@ -95,7 +99,7 @@ public final class AnimatedStickerComponent: Component {
             if self.component?.animation != component.animation {
                 self.animationNode?.view.removeFromSuperview()
                 
-                let animationNode = DefaultAnimatedStickerNodeImpl()
+                let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: component.lottieSettings)
                 let source: AnimatedStickerNodeSource
                 switch component.animation.source {
                     case let .bundle(name):

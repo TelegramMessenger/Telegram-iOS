@@ -357,7 +357,7 @@ final class AddressBarContentComponent: Component {
                     MultilineTextComponent(
                         text: .plain(NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationSearchBar.inputTextColor)),
                         horizontalAlignment: .center,
-                        truncationType: .end,
+                        truncationType: .start,
                         maximumNumberOfLines: 1
                     )
                 ),

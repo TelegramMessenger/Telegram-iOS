@@ -70,7 +70,7 @@ extension DocumentCanvasView {
     /// to whatever line sits under the finger).
     func captureSelectionDragOffset(endpoint: SelectionEndpoint, touch: CGPoint) {
         let pos = (endpoint == .anchor) ? anchor : head
-        let caret = caretRect(for: DocumentTextPosition(pos))
+        let caret = caretRect(atGlobal: pos)
         // Anchor on the caret's CENTER: at grab time `touch + offset == caret.center`, so the first map lands
         // exactly on the grabbed endpoint (no jump), and the constant offset is preserved for the rest of the drag.
         selectionDragGrabOffset = CGSize(width: caret.midX - touch.x, height: caret.midY - touch.y)
@@ -86,19 +86,23 @@ extension DocumentCanvasView {
     /// Select the word enclosing `pos` (Select menu item / double tap). No-op at a structural gap.
     func selectWord(at pos: Int) {
         guard let t = tokenizer as? DocumentTokenizer, let r = t.wordRange(at: pos) else { return }
-        applySelection(from: r.from.offset, to: r.to.offset)
+        applySelection(from: r.from, to: r.to)
     }
 
     /// Select the paragraph/region enclosing `pos` (triple tap). No-op at a structural gap.
     func selectParagraph(at pos: Int) {
         guard let t = tokenizer as? DocumentTokenizer, let r = t.paragraphRange(at: pos) else { return }
-        applySelection(from: r.from.offset, to: r.to.offset)
+        applySelection(from: r.from, to: r.to)
     }
 
     /// Select the whole document, bounded to renderable start/end (so the trailing caret is renderable).
     func selectAllText() {
-        let from = (beginningOfDocument as? DocumentTextPosition)?.offset ?? 0
-        let to = (endOfDocument as? DocumentTextPosition)?.offset ?? documentSize
+        // TASK 44: was `(beginningOfDocument as? DocumentTextPosition)?.offset`. Identical downcast,
+        // identical `nil` on failure — performed inside the backend now. Both fallbacks are kept
+        // VERBATIM and they differ from each other on purpose (`0` vs `documentSize`); neither is
+        // reachable, because both backend members return a `LegacyTextPosition` on every path.
+        let from = LegacyTextIdentity.globalOffset(of: beginningOfDocument) ?? 0
+        let to = LegacyTextIdentity.globalOffset(of: endOfDocument) ?? documentSize
         // If the RENDERABLE bounds collapse to a single caret, the whole document is one degenerate cell — a lone
         // 1×1 EMPTY table (its single empty cell is the only renderable position). Select the full STRUCTURAL
         // range instead, so Select-All is a real range Backspace can act on (→ the whole-document reset removes
@@ -115,9 +119,31 @@ extension DocumentCanvasView {
                                  // composition / dismiss a prediction first, else insertText would replace the
                                  // stale marked range instead of the new selection. clampGlobal below re-bounds.
         clearImageSelection()    // word/paragraph/Select-All deselects an atom-selected image
-        textInputDelegate?.selectionWillChange(self)
-        anchor = clampGlobal(from); head = clampGlobal(to)
-        textInputDelegate?.selectionDidChange(self)
+        // TASK 26: the UNSUPPRESSED selection bracket (`notifyingSelectionChangeIgnoringCoalescing`)
+        // — this site never consulted the coalescing flag, so routing it through the suppressed
+        // funnel bracket would be a behavior change.
+        // TASK 39: `applyCaretOutcome` (`+Editing.swift`) inside the UNCHANGED bracket — the Task-37
+        // population-C shape — and NOT `setSelection`. This bracket opens no transaction and sets no
+        // suppression flag, so both of `setSelection`'s escapes fall through and it takes the full
+        // publish path: `refreshSelectionUI()` and `onSelectionChange?()` are already delivered by the
+        // two statements below, so publishing here doubles BOTH. Axis 4 of the divergence audit bites
+        // hardest here: this bracket exists *because* this site never consulted the coalescing flag, and
+        // `setSelection` does consult it.
+        // **`.range`, NOT `.caret`** — Select-All / double-tap word / triple-tap paragraph is the
+        // canvas's canonical RANGE producer, and it is the best-pinned site in Task 39's population:
+        // `.caret(at: clampGlobal(to))` here reddens **37 tests across 11 suites**, measured on the full
+        // `Scripts/iostest.sh`. Both figures from the same log —
+        // `grep -cE 'Test Case .* failed' <log>` and that piped through
+        // `sed -E 's/.*\[RichTextEditorUIKitTests\.([A-Za-z]+) .*/\1/' | sort -u | wc -l` — because
+        // this comment said **10** until fix round 1 and a figure labelled "measured, not cited" is the
+        // last one a reader re-checks (Rule 14). The eleventh is `SpellCheckTapTests`, dropped when the
+        // list was typed by hand: `BlockQuoteEditTests`, `CanvasImageEditTests`,
+        // `CanvasPullQuoteEditTests`, `CanvasSelectAllTableDeleteTests`, `CanvasSelectionMenuTests`,
+        // `CommandRouterTests`, `ComposerBlockQuoteSelectionTests`, `MarkedTextTests`,
+        // `SelectionInteractionTests`, `SpellCheckTapTests`, `TelegramCommandInputClientTests`.
+        inputBackend.notifyingSelectionChangeIgnoringCoalescing {
+            applyCaretOutcome(.range(clampGlobal(from), clampGlobal(to)))
+        }
         setNeedsDisplay(); refreshSelectionUI()
         // A gesture-driven RANGE selection (double-tap word / triple-tap paragraph / Select All) is a
         // caret-moving op and MUST notify the host — exactly as setCaret does. The chat composer tracks the

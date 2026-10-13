@@ -176,9 +176,12 @@ static TGVideoEditAdjustments *TGMediaAssetsPatchedLivePhotoAdjustments(PGPhotoE
         _textView.numberOfLines = 3;
         
         _buttonView = [[TGModernButton alloc] init];
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _buttonView.adjustsImageWhenHighlighted = false;
         _buttonView.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
         _buttonView.contentEdgeInsets = UIEdgeInsetsMake(0.0, 15.0, 0.0, 0.0);
+        #pragma clang diagnostic pop
         _buttonView.titleLabel.font = TGSystemFontOfSize(17.0f);
         _buttonView.highlightBackgroundColor = UIColorRGB(0xebebeb);
         [_buttonView setTitle:TGLocalized(@"Media.LimitedAccessManage") forState:UIControlStateNormal];
@@ -245,7 +248,10 @@ static TGVideoEditAdjustments *TGMediaAssetsPatchedLivePhotoAdjustments(PGPhotoE
     _iconView.frame = CGRectMake(self.safeAreaInset.left + 15.0, 16.0, 20.0, 20.0);
     _labelView.frame = _iconView.frame;
     
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
     _buttonView.contentEdgeInsets = UIEdgeInsetsMake(0.0, self.safeAreaInset.left + 15.0, 0.0, 0.0);
+    #pragma clang diagnostic pop
     _titleView.frame = CGRectMake(self.safeAreaInset.left + 42.0, 15.0, _titleSize.width, _titleSize.height);
     _textView.frame = CGRectMake(self.safeAreaInset.left + 15.0, 46.0, _textSize.width, _textSize.height);
     _separatorView.frame = CGRectMake(self.safeAreaInset.left + 15.0, self.bounds.size.height - 46.0, self.bounds.size.width, TGScreenPixel);

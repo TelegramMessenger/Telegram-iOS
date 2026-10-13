@@ -1756,6 +1756,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum CurrencyRate: TypeConstructorDescription {
+        public class Cons_currencyRate: TypeConstructorDescription {
+            public var currency: String
+            public var rate: Double
+            public init(currency: String, rate: Double) {
+                self.currency = currency
+                self.rate = rate
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("currencyRate", [("currency", ConstructorParameterDescription(self.currency)), ("rate", ConstructorParameterDescription(self.rate))])
+            }
+        }
+        case currencyRate(Cons_currencyRate)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .currencyRate(let _data):
+                if boxed {
+                    buffer.appendInt32(819557436)
+                }
+                serializeString(_data.currency, buffer: buffer, boxed: false)
+                serializeDouble(_data.rate, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .currencyRate(let _data):
+                return ("currencyRate", [("currency", ConstructorParameterDescription(_data.currency)), ("rate", ConstructorParameterDescription(_data.rate))])
+            }
+        }
+
+        public static func parse_currencyRate(_ reader: BufferReader) -> CurrencyRate? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Double?
+            _2 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.CurrencyRate.currencyRate(Cons_currencyRate(currency: _1!, rate: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum DataJSON: TypeConstructorDescription {
         public class Cons_dataJSON: TypeConstructorDescription {
             public var data: String

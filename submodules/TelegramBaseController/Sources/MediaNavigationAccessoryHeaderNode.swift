@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -261,7 +262,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         self.actionButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.actionButton.displaysAsynchronously = false
         
-        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode = PlayPauseIconNode(lottieSettings: context.lottieRenderingSettings)
         self.playPauseIconNode.customColor = customTintColor ?? self.theme.rootController.navigationBar.accentTextColor
         
         self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: customTintColor ?? self.theme.rootController.navigationBar.accentTextColor, bufferingColor: (customTintColor ?? self.theme.rootController.navigationBar.accentTextColor).withAlphaComponent(0.5), chapters: []))
@@ -630,8 +631,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    init() {
-        super.init(size: CGSize(width: 28.0, height: 28.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 28.0, height: 28.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

@@ -28,6 +28,7 @@ extension DocumentCanvasView {
                 restyle(p)
             }
             recomputeSpans()   // symmetry with setList; a level bump leaves token spans unchanged
+            return .unchanged
         }
     }
 }

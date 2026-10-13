@@ -58,6 +58,42 @@ private func alignPartFetchRange(partRange: Range<Int64>, minPartSize: Int64, ma
     return (partRange, fetchRange)
 }
 
+private let fastDownloadMasterPendingParts = 16
+private let fastDownloadCdnPendingParts = 32
+private let fastDownloadInitialWindow = 6
+private let fastDownloadMinWindow = 2
+private let fastDownloadFastPartLatency = 1.0
+private let fastDownloadSlowPartLatency = 2.0
+private let fastDownloadSmallPartSize: Int64 = 128 * 1024
+private let fastDownloadLargePartSize: Int64 = 512 * 1024
+private let fastDownloadLargePartThroughput: Double = 4.0 * 1024.0 * 1024.0
+private let fastDownloadSmallPartThroughput: Double = 1.5 * 1024.0 * 1024.0
+private let maxCdnFailuresBeforeFallback = 4
+private let maxCdnReuploadsPerBlock = 3
+private let maxCdnTokenRefreshes = 3
+
+func cdnRedirectKeyMaterialIsValid(encryptionKey: Data, encryptionIv: Data) -> Bool {
+    return encryptionKey.count == 32 && encryptionIv.count == 16
+}
+
+private let cdnHashBlockLength: Int64 = 128 * 1024
+
+func cdnPartLengthIsAcceptable(offset: Int64, requestedLength: Int64, receivedLength: Int64, knownSize: Int64?) -> Bool {
+    if receivedLength > requestedLength {
+        return false
+    }
+    if let knownSize {
+        if offset + receivedLength > knownSize {
+            return false
+        }
+        return receivedLength == requestedLength || offset + receivedLength == knownSize
+    }
+    if receivedLength == requestedLength {
+        return true
+    }
+    return (offset + receivedLength) % cdnHashBlockLength != 0
+}
+
 private final class FetchImpl {
     private final class PendingPart {
         let partRange: Range<Int64>
@@ -102,6 +138,21 @@ private final class FetchImpl {
         
         init(range: Range<Int64>) {
             self.range = range
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+    }
+    
+    private final class PendingCdnReupload {
+        let block: Int64
+        var ranges: RangeSet<Int64>
+        var disposable: Disposable?
+        
+        init(block: Int64, range: Range<Int64>) {
+            self.block = block
+            self.ranges = RangeSet<Int64>(range)
         }
         
         deinit {
@@ -175,6 +226,10 @@ private final class FetchImpl {
                     Logger.shared.log("FetchV2", "\(loggingIdentifier): not decrypting part \(offset) ..< \(offset + data.count) (decryptedSize == 0)")
                     return nil
                 }
+                if self.aesKey.count != 32 || self.aesIv.count != 32 {
+                    Logger.shared.log("FetchV2", "\(loggingIdentifier): not decrypting part \(offset) ..< \(offset + data.count) (invalid key/iv length: key=\(self.aesKey.count) iv=\(self.aesIv.count))")
+                    return nil
+                }
                 if decryptedData.count % 16 != 0 {
                     Logger.shared.log("FetchV2", "\(loggingIdentifier): not decrypting part \(offset) ..< \(offset + data.count) (decryptedData.count % 16 != 0)")
                 }
@@ -200,7 +255,7 @@ private final class FetchImpl {
     
     private final class FetchingState {
         let fetchLocation: FetchLocation
-        let partSize: Int64
+        var partSize: Int64
         let minPartSize: Int64
         let maxPartSize: Int64
         let partAlignment: Int64
@@ -215,6 +270,10 @@ private final class FetchImpl {
         var completedHashRanges = RangeSet<Int64>()
         var pendingHashRanges: [PendingHashRange] = []
         var hashRanges: [Int64: HashRangeData] = [:]
+        var pendingCdnReuploads: [PendingCdnReupload] = []
+        var window: Int = fastDownloadInitialWindow
+        var lastWindowDecrease: Double = 0.0
+        var recentParts: [(time: Double, bytes: Int64)] = []
         
         var nextRangePriorityIndex: Int = 0
         
@@ -244,6 +303,9 @@ private final class FetchImpl {
             }
             for pendingHashRange in self.pendingHashRanges {
                 pendingHashRange.disposable?.dispose()
+            }
+            for pendingCdnReupload in self.pendingCdnReuploads {
+                pendingCdnReupload.disposable?.dispose()
             }
         }
     }
@@ -327,7 +389,17 @@ private final class FetchImpl {
         
         private let defaultPartSize: Int64
         private let cdnPartSize: Int64
+        private let fastDownloads: Bool
+        private let masterPendingParts: Int
+        private let cdnPendingParts: Int
+        private var cdnDisabled: Bool = false
+        private var cdnHashFailures: Int = 0
+        private var cdnVerificationFailures: Int = 0
+        private var cdnTokenRefreshes: Int = 0
+        private var cdnReuploadCounts: [Int64: Int] = [:]
+        private var cdnReuploadGenerations: [Int64: Int] = [:]
         private var state: State?
+        private var reportedFailure = false
         
         private let loggingIdentifier: String
         
@@ -387,12 +459,15 @@ private final class FetchImpl {
                 }
             }
             
+            self.fastDownloads = network.engineKind == .rust
             if isStory {
                 self.defaultPartSize = 512 * 1024
             } else {
                 self.defaultPartSize = 128 * 1024
             }
             self.cdnPartSize = 128 * 1024
+            self.masterPendingParts = self.fastDownloads ? fastDownloadMasterPendingParts : 6
+            self.cdnPendingParts = self.fastDownloads ? fastDownloadCdnPendingParts : 6
             
             if let resource = resource as? TelegramCloudMediaResource {
                 if let apiInputLocation = resource.apiInputLocation(fileReference: Data()) {
@@ -440,7 +515,7 @@ private final class FetchImpl {
                     maxPartSize: 1 * 1024 * 1024,
                     partAlignment: 4 * 1024,
                     partDivision: 1 * 1024 * 1024,
-                    maxPendingParts: 6,
+                    maxPendingParts: self.masterPendingParts,
                     decryptionState: decryptionState
                 ))
             }
@@ -521,6 +596,9 @@ private final class FetchImpl {
                                     self.commitPendingReadyPart(state: state, partRange: pendingReadyPart.partRange, fetchRange: pendingReadyPart.fetchRange, data: pendingReadyPart.cleanData)
                                 } else {
                                     Logger.shared.log("FetchV2", "\(self.loggingIdentifier): unable to find \(pendingReadyPart.fetchRange) hash check failed")
+                                    if self.fastDownloads {
+                                        self.cdnVerificationFailures += 1
+                                    }
                                 }
                             }
                         }
@@ -528,6 +606,12 @@ private final class FetchImpl {
                     for index in removedPendingReadyPartIndices.sorted(by: >) {
                         state.pendingReadyParts.remove(at: index)
                     }
+                }
+                
+                if self.fastDownloads, self.cdnVerificationFailures >= maxCdnFailuresBeforeFallback, case let .cdn(cdnData) = state.fetchLocation {
+                    self.fallBackToMaster(sourceDatacenterId: cdnData.sourceDatacenterId, reason: "\(self.cdnVerificationFailures) parts failed hash verification")
+                    self.update()
+                    return
                 }
                 
                 var requiredHashRanges = RangeSet<Int64>()
@@ -576,11 +660,22 @@ private final class FetchImpl {
                     for pendingReadyPart in state.pendingReadyParts {
                         filteredRequiredRanges[i].remove(contentsOf: pendingReadyPart.partRange)
                     }
+                    for pendingCdnReupload in state.pendingCdnReuploads {
+                        filteredRequiredRanges[i].subtract(pendingCdnReupload.ranges)
+                    }
                     
                     excludedInHigherPriorities.subtract(filteredRequiredRanges[i])
                 }
                 
-                if state.pendingParts.count < state.maxPendingParts && state.pendingReadyParts.count < state.maxPendingParts {
+                var maxPendingParts = state.maxPendingParts
+                if self.fastDownloads {
+                    maxPendingParts = min(maxPendingParts, state.window)
+                }
+                if self.knownSize == nil && state.completedRanges.isEmpty {
+                    maxPendingParts = 1
+                }
+                
+                if state.pendingParts.count < maxPendingParts && state.pendingReadyParts.count < state.maxPendingParts {
                     var debugRangesString = ""
                     for priorityIndex in 0 ..< 3 {
                         if filteredRequiredRanges[priorityIndex].isEmpty {
@@ -608,7 +703,7 @@ private final class FetchImpl {
                         Logger.shared.log("FetchV2", "\(self.loggingIdentifier): will fetch \(debugRangesString)")
                     }
                     
-                    while state.pendingParts.count < state.maxPendingParts && state.pendingReadyParts.count < state.maxPendingParts {
+                    while state.pendingParts.count < maxPendingParts && state.pendingReadyParts.count < state.maxPendingParts {
                         var found = false
                         inner: for i in 0 ..< filteredRequiredRanges.count {
                             let priorityIndex = (state.nextRangePriorityIndex + i) % filteredRequiredRanges.count
@@ -696,7 +791,7 @@ private final class FetchImpl {
                             maxPartSize: self.cdnPartSize * 2,
                             partAlignment: self.cdnPartSize,
                             partDivision: 1 * 1024 * 1024,
-                            maxPendingParts: 6,
+                            maxPendingParts: self.cdnPendingParts,
                             decryptionState: nil
                         ))
                         self.update()
@@ -705,6 +800,7 @@ private final class FetchImpl {
                             return
                         }
                         self.state = .failed
+                        self.update()
                     })
                 }
             case let .refreshingFileReference(state):
@@ -745,7 +841,7 @@ private final class FetchImpl {
                                 maxPartSize: self.defaultPartSize,
                                 partAlignment: 4 * 1024,
                                 partDivision: 1 * 1024 * 1024,
-                                maxPendingParts: 6,
+                                maxPendingParts: self.masterPendingParts,
                                 decryptionState: nil
                             ))
                             
@@ -757,10 +853,18 @@ private final class FetchImpl {
                             self.state = .failed
                             self.update()
                         })
+                    } else {
+                        Logger.shared.log("FetchV2", "\(self.loggingIdentifier): no way to refresh the file reference")
+                        self.state = .failed
+                        self.update()
                     }
                 }
             case .failed:
-                break
+                if !self.reportedFailure {
+                    self.reportedFailure = true
+                    Logger.shared.log("FetchV2", "\(self.loggingIdentifier): failed")
+                    self.onError(.generic)
+                }
             }
         }
         
@@ -773,6 +877,7 @@ private final class FetchImpl {
                 case data(data: Data, verifyPartHashData: VerifyPartHashData?)
                 case cdnRedirect(CdnData)
                 case cdnRefresh(cdnData: CdnData, refreshToken: Data)
+                case cdnFailure(sourceDatacenterId: Int, error: String)
                 case fileReferenceExpired
                 case failure
             }
@@ -780,6 +885,8 @@ private final class FetchImpl {
             let partRange = part.partRange
             let fetchRange = part.fetchRange
             let requestedLength = part.fetchRange.upperBound - part.fetchRange.lowerBound
+            let cdnBlock = fetchRange.lowerBound / (1 * 1024 * 1024)
+            let cdnReuploadGeneration = self.cdnReuploadGenerations[cdnBlock] ?? 0
             
             var filePartRequest: Signal<FilePartResult, NoError>?
             switch state.fetchLocation {
@@ -815,8 +922,11 @@ private final class FetchImpl {
                             }
                             
                             let fetchedData = bytes.makeData()
+                            guard let decryptedData = MTAesCtrDecrypt(fetchedData, cdnData.encryptionKey, partIv) else {
+                                return .failure
+                            }
                             return .data(
-                                data: MTAesCtrDecrypt(fetchedData, cdnData.encryptionKey, partIv)!,
+                                data: decryptedData,
                                 verifyPartHashData: VerifyPartHashData(fetchRange: fetchRange, fetchedData: fetchedData)
                             )
                         }
@@ -825,7 +935,10 @@ private final class FetchImpl {
                         return .cdnRefresh(cdnData: cdnData, refreshToken: requestToken.makeData())
                     }
                 }
-                |> `catch` { _ -> Signal<FilePartResult, NoError> in
+                |> `catch` { [fastDownloads = self.fastDownloads] error -> Signal<FilePartResult, NoError> in
+                    if fastDownloads {
+                        return .single(.cdnFailure(sourceDatacenterId: cdnData.sourceDatacenterId, error: error.errorDescription ?? ""))
+                    }
                     return .single(.failure)
                 }
             case let .datacenter(sourceDatacenterId):
@@ -843,7 +956,7 @@ private final class FetchImpl {
                             consumerId: self.consumerId,
                             resourceId: self.resource.id.stringRepresentation,
                             data: Api.functions.upload.getFile(
-                                flags: 0,
+                                flags: self.fastDownloads && !self.cdnDisabled ? (1 << 1) : 0,
                                 location: inputLocation,
                                 offset: part.fetchRange.lowerBound,
                                 limit: Int32(requestedLength)),
@@ -864,14 +977,17 @@ private final class FetchImpl {
                                 let bytes = fileData.bytes
                                 return .data(data: bytes.makeData(), verifyPartHashData: nil)
                             case let .fileCdnRedirect(fileCdnRedirectData):
-                                let (dcId, fileToken, encryptionKey, encryptionIv, fileHashes) = (fileCdnRedirectData.dcId, fileCdnRedirectData.fileToken, fileCdnRedirectData.encryptionKey, fileCdnRedirectData.encryptionIv, fileCdnRedirectData.fileHashes)
+                                let (dcId, fileToken, encryptionKey, encryptionIv, fileHashes) = (fileCdnRedirectData.dcId, fileCdnRedirectData.fileToken, fileCdnRedirectData.encryptionKey.makeData(), fileCdnRedirectData.encryptionIv.makeData(), fileCdnRedirectData.fileHashes)
                                 let _ = fileHashes
+                                if !cdnRedirectKeyMaterialIsValid(encryptionKey: encryptionKey, encryptionIv: encryptionIv) {
+                                    return .cdnFailure(sourceDatacenterId: sourceDatacenterId, error: "CDN_REDIRECT_KEY_INVALID")
+                                }
                                 return .cdnRedirect(CdnData(
                                     id: Int(dcId),
                                     sourceDatacenterId: sourceDatacenterId,
                                     fileToken: fileToken.makeData(),
-                                    encryptionKey: encryptionKey.makeData(),
-                                    encryptionIv: encryptionIv.makeData()
+                                    encryptionKey: encryptionKey,
+                                    encryptionIv: encryptionIv
                                 ))
                             }
                         }
@@ -887,9 +1003,10 @@ private final class FetchImpl {
             }
                 
             if let filePartRequest {
+                let requestStarted = CFAbsoluteTimeGetCurrent()
                 part.disposable = (filePartRequest
                 |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak part] result in
-                    guard let self, let state, case let .fetching(fetchingState) = self.state, fetchingState === state else {
+                    guard let self, let state, self.isCurrent(state) else {
                         return
                     }
                     
@@ -901,6 +1018,13 @@ private final class FetchImpl {
                     
                     switch result {
                     case let .data(data, verifyPartHashData):
+                        if case let .cdn(cdnData) = state.fetchLocation, !cdnPartLengthIsAcceptable(offset: fetchRange.lowerBound, requestedLength: requestedLength, receivedLength: Int64(data.count), knownSize: self.knownSize) {
+                            self.fallBackToMaster(sourceDatacenterId: cdnData.sourceDatacenterId, reason: "\(data.count) of \(requestedLength) bytes at \(fetchRange.lowerBound), known size \(String(describing: self.knownSize))")
+                            break
+                        }
+                        if self.fastDownloads {
+                            self.adaptWindow(state: state, latency: CFAbsoluteTimeGetCurrent() - requestStarted, bytes: Int64(data.count))
+                        }
                         if let verifyPartHashData {
                             Logger.shared.log("FetchV2", "\(self.loggingIdentifier): stashing data part \(partRange) (aligned as \(fetchRange)) for hash verification")
                             
@@ -928,23 +1052,45 @@ private final class FetchImpl {
                             )
                         }
                     case let .cdnRedirect(cdnData):
-                        self.state = .fetching(FetchImpl.FetchingState(
+                        self.cdnReuploadCounts.removeAll()
+                        self.cdnReuploadGenerations.removeAll()
+                        let cdnState = FetchImpl.FetchingState(
                             fetchLocation: .cdn(cdnData),
                             partSize: self.cdnPartSize,
                             minPartSize: self.cdnPartSize,
                             maxPartSize: self.cdnPartSize * 2,
                             partAlignment: self.cdnPartSize,
                             partDivision: 1 * 1024 * 1024,
-                            maxPendingParts: 6,
+                            maxPendingParts: self.cdnPendingParts,
                             decryptionState: nil
-                        ))
+                        )
+                        if self.fastDownloads {
+                            cdnState.completedRanges = state.completedRanges
+                        }
+                        self.state = .fetching(cdnState)
                     case let .cdnRefresh(cdnData, refreshToken):
-                        self.state = .reuploadingToCdn(ReuploadingToCdnState(
-                            cdnData: cdnData,
-                            refreshToken: refreshToken
-                        ))
+                        if self.fastDownloads {
+                            if (self.cdnReuploadGenerations[cdnBlock] ?? 0) <= cdnReuploadGeneration {
+                                self.reuploadCdnPart(state: state, cdnData: cdnData, refreshToken: refreshToken, partRange: partRange)
+                            }
+                        } else {
+                            self.state = .reuploadingToCdn(ReuploadingToCdnState(
+                                cdnData: cdnData,
+                                refreshToken: refreshToken
+                            ))
+                        }
+                    case let .cdnFailure(sourceDatacenterId, error):
+                        if error == "CDN_REDIRECT_KEY_INVALID" && self.cdnDisabled {
+                            self.state = .failed
+                            break
+                        }
+                        let tokenExpired = error == "FILE_TOKEN_INVALID" && self.cdnTokenRefreshes < maxCdnTokenRefreshes
+                        if tokenExpired {
+                            self.cdnTokenRefreshes += 1
+                        }
+                        self.fallBackToMaster(sourceDatacenterId: sourceDatacenterId, reason: error, allowRedirect: tokenExpired)
                     case .fileReferenceExpired:
-                        self.state = .refreshingFileReference(RefreshingFileReferenceState(fetchLocation: fetchingState.fetchLocation))
+                        self.state = .refreshingFileReference(RefreshingFileReferenceState(fetchLocation: state.fetchLocation))
                     case .failure:
                         self.state = .failed
                     }
@@ -985,7 +1131,36 @@ private final class FetchImpl {
             hashRange.disposable = (fetchRequest
             |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak hashRange] result in
                 queue.async {
-                    guard let self, let state, case let .fetching(fetchingState) = self.state, fetchingState === state else {
+                    guard let self, let state, self.isCurrent(state) else {
+                        return
+                    }
+                    
+                    if self.fastDownloads, case let .cdn(cdnData) = state.fetchLocation {
+                        let filledRange = result.map { self.storeHashes($0, into: state) } ?? RangeSet<Int64>()
+                        if let hashRange, let index = state.pendingHashRanges.firstIndex(where: { $0 === hashRange }) {
+                            if filledRange.contains(hashRange.range.lowerBound) {
+                                self.cdnHashFailures = 0
+                                state.pendingHashRanges.remove(at: index)
+                            } else {
+                                self.cdnHashFailures += 1
+                                if self.cdnHashFailures >= maxCdnFailuresBeforeFallback {
+                                    self.fallBackToMaster(sourceDatacenterId: cdnData.sourceDatacenterId, reason: "no usable hashes for \(hashRange.range)")
+                                    self.update()
+                                    return
+                                }
+                                let delay = min(8.0, 0.5 * pow(2.0, Double(self.cdnHashFailures - 1)))
+                                queue.after(delay, { [weak self, weak state, weak hashRange] in
+                                    guard let self, let state, let hashRange, self.isCurrent(state) else {
+                                        return
+                                    }
+                                    if let index = state.pendingHashRanges.firstIndex(where: { $0 === hashRange }) {
+                                        state.pendingHashRanges.remove(at: index)
+                                    }
+                                    self.update()
+                                })
+                            }
+                        }
+                        self.update()
                         return
                     }
                     
@@ -1016,6 +1191,121 @@ private final class FetchImpl {
                     self.update()
                 }
             })
+        }
+        
+        private func adaptWindow(state: FetchingState, latency: Double, bytes: Int64) {
+            let now = CFAbsoluteTimeGetCurrent()
+            if latency > fastDownloadSlowPartLatency {
+                if now - state.lastWindowDecrease > latency {
+                    state.window = max(fastDownloadMinWindow, state.window / 2)
+                    state.lastWindowDecrease = now
+                }
+            } else if latency < fastDownloadFastPartLatency {
+                state.window = min(state.maxPendingParts, state.window + 1)
+            }
+            
+            state.recentParts.append((now, bytes))
+            state.recentParts.removeAll(where: { now - $0.time > 2.0 })
+            guard case .datacenter = state.fetchLocation, state.recentParts.count >= 4 else {
+                return
+            }
+            let span = max(0.25, now - state.recentParts[0].time)
+            let throughput = Double(state.recentParts.reduce(Int64(0), { $0 + $1.bytes })) / span
+            if throughput >= fastDownloadLargePartThroughput {
+                state.partSize = min(state.maxPartSize, fastDownloadLargePartSize)
+            } else if throughput < fastDownloadSmallPartThroughput {
+                state.partSize = max(state.minPartSize, fastDownloadSmallPartSize)
+            }
+        }
+        
+        private func isCurrent(_ state: FetchingState) -> Bool {
+            if case let .fetching(current) = self.state {
+                return current === state
+            }
+            return false
+        }
+        
+        private func reuploadCdnPart(state: FetchingState, cdnData: CdnData, refreshToken: Data, partRange: Range<Int64>) {
+            let block = partRange.lowerBound / (1 * 1024 * 1024)
+            if let existing = state.pendingCdnReuploads.first(where: { $0.block == block }) {
+                existing.ranges.formUnion(RangeSet<Int64>(partRange))
+                return
+            }
+            let attempts = (self.cdnReuploadCounts[block] ?? 0) + 1
+            self.cdnReuploadCounts[block] = attempts
+            if attempts > maxCdnReuploadsPerBlock {
+                self.fallBackToMaster(sourceDatacenterId: cdnData.sourceDatacenterId, reason: "block \(block) still needs reupload after \(attempts - 1) reuploads")
+                return
+            }
+            
+            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): reuploading CDN block \(block)")
+            let reupload = PendingCdnReupload(block: block, range: partRange)
+            state.pendingCdnReuploads.append(reupload)
+            reupload.disposable = (self.network.multiplexedRequestManager.request(
+                to: .main(cdnData.sourceDatacenterId),
+                consumerId: self.consumerId,
+                resourceId: self.resource.id.stringRepresentation,
+                data: Api.functions.upload.reuploadCdnFile(
+                    fileToken: Buffer(data: cdnData.fileToken),
+                    requestToken: Buffer(data: refreshToken)
+                ),
+                tag: nil,
+                continueInBackground: self.continueInBackground,
+                expectedResponseSize: nil
+            )
+            |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak reupload] hashes in
+                guard let self, let state, let reupload, self.isCurrent(state) else {
+                    return
+                }
+                self.storeHashes(hashes, into: state)
+                self.cdnReuploadGenerations[reupload.block, default: 0] += 1
+                state.pendingCdnReuploads.removeAll(where: { $0 === reupload })
+                self.update()
+            }, error: { [weak self, weak state] error in
+                guard let self, let state, self.isCurrent(state) else {
+                    return
+                }
+                self.fallBackToMaster(sourceDatacenterId: cdnData.sourceDatacenterId, reason: "reupload failed: \(error.errorDescription ?? "")")
+                self.update()
+            })
+        }
+        
+        @discardableResult
+        private func storeHashes(_ hashes: [Api.FileHash], into state: FetchingState) -> RangeSet<Int64> {
+            var filledRange = RangeSet<Int64>()
+            for hashItem in hashes {
+                switch hashItem {
+                case let .fileHash(fileHashData):
+                    let rangeValue: Range<Int64> = fileHashData.offset ..< (fileHashData.offset + Int64(fileHashData.limit))
+                    if rangeValue.isEmpty {
+                        continue
+                    }
+                    filledRange.formUnion(RangeSet<Int64>(rangeValue))
+                    state.hashRanges[rangeValue.lowerBound] = HashRangeData(range: rangeValue, data: fileHashData.hash.makeData())
+                    state.completedHashRanges.formUnion(RangeSet<Int64>(rangeValue))
+                }
+            }
+            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): received hashes for \(filledRange)")
+            return filledRange
+        }
+        
+        private func fallBackToMaster(sourceDatacenterId: Int, reason: String, allowRedirect: Bool = false) {
+            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): CDN unusable (\(reason)), downloading from datacenter \(sourceDatacenterId)")
+            self.cdnDisabled = !allowRedirect
+            let masterState = FetchingState(
+                fetchLocation: .datacenter(sourceDatacenterId),
+                partSize: self.defaultPartSize,
+                minPartSize: 4 * 1024,
+                maxPartSize: 1 * 1024 * 1024,
+                partAlignment: 4 * 1024,
+                partDivision: 1 * 1024 * 1024,
+                maxPendingParts: self.masterPendingParts,
+                decryptionState: nil
+            )
+            if case let .fetching(previous) = self.state {
+                masterState.completedRanges = previous.completedRanges
+            }
+            self.state = .fetching(masterState)
         }
         
         private func commitPendingReadyPart(state: FetchingState, partRange: Range<Int64>, fetchRange: Range<Int64>, data: Data) {

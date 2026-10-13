@@ -22,7 +22,7 @@ final class BlockQuoteEditTests: XCTestCase {
             .paragraph(ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "aa")])),
             .paragraph(ParagraphBlock(id: BlockID("b"), runs: [TextRun(text: "bb")]))])
         // Select across both paragraphs using anchor/head seam (same idiom as other UIKit tests)
-        c.anchor = 0; c.head = c.documentSizeValue
+        c.setSelectionForTesting(anchor: 0, head: c.documentSizeValue)
         c.wrapInBlockQuote()
         let blocks = c.currentBlocks()
         XCTAssertEqual(blocks.count, 1, "both paragraphs should be wrapped into one block quote")
@@ -38,7 +38,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // Place caret inside the quote's child paragraph using the anchor/head seam
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart + 1
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.wrapInBlockQuote()
         let blocks = c.currentBlocks()
         guard case .blockQuote(let outer) = blocks[0] else { return XCTFail("outer block quote missing") }
@@ -54,7 +54,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let c = canvas([.blockQuote(bq)])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart + 1
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.unwrapBlockQuoteLevel()
         let blocks = c.currentBlocks()
         XCTAssertEqual(blocks.count, 2)                                  // children spliced to top level
@@ -68,7 +68,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let outerBox = c.boxes.first as! BlockQuoteBox
         let innerBox = outerBox.children.boxes.compactMap { $0 as? BlockQuoteBox }.first!
         let pos = innerBox.children.boxes[0].leafRegions().first!.globalStart + 1
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.unwrapBlockQuoteLevel()                                           // removes the INNER level only
         let blocks = c.currentBlocks()
         guard case .blockQuote(let stillOuter) = blocks[0] else { return XCTFail("outer quote gone") }
@@ -81,7 +81,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let c = canvas([.blockQuote(bq)])
         let box = c.boxes.first as! BlockQuoteBox
         let endOfChild = box.children.boxes[0].leafRegions().first!.globalStart + 2   // after "hi"
-        c.anchor = endOfChild; c.head = endOfChild
+        c.setSelectionForTesting(anchor: endOfChild, head: endOfChild)
         c.insertText("\n")                                   // Enter (use the same seam the other Enter tests use)
         guard case .blockQuote(let q) = c.currentBlocks()[0] else { return XCTFail() }
         XCTAssertEqual(q.children.count, 2)                         // Enter added a child paragraph (still inside the quote)
@@ -99,7 +99,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart + 4   // end of "text"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")                                    // Return: splits the child into ["text", ""]
 
         // Intermediate state: the quote now has 2 children, caret at the empty second child's start.
@@ -124,7 +124,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // iOS delivers Backspace at the START of a non-first quote child NOT as a collapsed caret but as an
         // object-replacement RANGE spanning the paragraph break (previous child's end .. this child's start) —
         // observed at runtime as `sel=3..5`. It must merge into the previous sibling, NOT fall to
-        // applySelectionReplace (which mis-resolves inside the degenerate container and edited the block AFTER
+        // applySelectionReplaceOutcome (which mis-resolves inside the degenerate container and edited the block AFTER
         // the quote — the reported "Return then Backspace deletes from the following paragraph" bug).
         let c = canvas([
             .blockQuote(BlockQuote(id: BlockID("q"), children: [
@@ -136,7 +136,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let box = c.boxes.first as! BlockQuoteBox
         let child1End = box.children.boxes[0].leafRegions().first!.globalStart + 4   // end of "text"
         let child2Start = box.children.boxes[1].leafRegions().first!.globalStart     // start of the empty 2nd child
-        c.anchor = child1End; c.head = child2Start                                   // the object-replacement range
+        c.setSelectionForTesting(anchor: child1End, head: child2Start)   // the object-replacement range
         c.deleteBackward()
 
         let doc = c.currentBlocks()
@@ -157,7 +157,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let mid = box.children.boxes[0].leafRegions().first!.globalStart + 3   // caret after "hel"
-        c.anchor = mid; c.head = mid
+        c.setSelectionForTesting(anchor: mid, head: mid)
         c.deleteBackward()   // delete the 'l' before the caret
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0], case .paragraph(let child) = q.children.first else { return XCTFail("quote gone") }
@@ -175,7 +175,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let start = box.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = start + 5; c.head = start + 11   // select " world"
+        c.setSelectionForTesting(anchor: start + 5, head: start + 11)   // select " world"
         c.deleteBackward()
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0], case .paragraph(let child) = q.children.first else { return XCTFail("quote gone") }
@@ -264,7 +264,7 @@ final class BlockQuoteEditTests: XCTestCase {
             .paragraph(ParagraphBlock(id: BlockID("h"), style: .heading1, runs: [TextRun(text: "Title")])),
             .paragraph(ParagraphBlock(id: BlockID("b"), style: .body, runs: [TextRun(text: "body")])),
         ])
-        c.anchor = 0; c.head = c.documentSizeValue
+        c.setSelectionForTesting(anchor: 0, head: c.documentSizeValue)
         c.deleteBackward()
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 1, "one block remains")
@@ -280,7 +280,7 @@ final class BlockQuoteEditTests: XCTestCase {
             ], collapsed: false, author: [])),
             .paragraph(ParagraphBlock(id: BlockID("b"), runs: [TextRun(text: "body")])),
         ])
-        c.anchor = 0; c.head = c.documentSizeValue
+        c.setSelectionForTesting(anchor: 0, head: c.documentSizeValue)
         c.deleteBackward()
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 1, "one block remains")
@@ -352,7 +352,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let mid = box.children.boxes[0].leafRegions().first!.globalStart + 1   // caret inside the quote line
-        c.anchor = mid; c.head = mid
+        c.setSelectionForTesting(anchor: mid, head: mid)
         return c
     }
 
@@ -394,7 +394,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let child1Start = box.children.boxes[1].leafRegions().first!.globalStart
-        c.anchor = child1Start; c.head = child1Start + 1   // the mid-text backspace range [local0, local1]
+        c.setSelectionForTesting(anchor: child1Start, head: child1Start + 1)   // the mid-text backspace range [local0, local1]
         c.deleteBackward()
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0] else { return XCTFail("quote gone") }
@@ -408,7 +408,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // Same object-replacement RANGE, but the block AFTER the quote is EMPTY — the actual device repro.
         // resolveBox mis-resolves the quote-child position to that empty following block; because a BlockQuoteBox
         // IS a non-paragraph atom, the "empty paragraph after an atom" handler REMOVES the following block (no log,
-        // never reaching applySelectionReplace). It must instead merge the quote's empty 2nd line and leave the
+        // never reaching applySelectionReplaceOutcome). It must instead merge the quote's empty 2nd line and leave the
         // following block alone.
         let c = canvas([
             .blockQuote(BlockQuote(id: BlockID("q"), children: [
@@ -420,7 +420,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let box = c.boxes.first as! BlockQuoteBox
         let child1End = box.children.boxes[0].leafRegions().first!.globalStart + 4
         let child2Start = box.children.boxes[1].leafRegions().first!.globalStart
-        c.anchor = child1End; c.head = child2Start
+        c.setSelectionForTesting(anchor: child1End, head: child2Start)
         c.deleteBackward()
 
         let doc = c.currentBlocks()
@@ -438,7 +438,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let c = canvas([.blockQuote(bq)])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[1].leafRegions().first!.globalStart      // caret on the empty trailing child
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 2)                        // quote + a body paragraph after it
@@ -452,7 +452,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let c = canvas([.blockQuote(bq)])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()                                  // Backspace (same seam as other backspace tests)
         let doc = c.currentBlocks()
         for b in doc { if case .blockQuote = b { return XCTFail("still quoted") } }   // un-quoted to a plain paragraph
@@ -468,7 +468,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let box = c.boxes.first as! BlockQuoteBox
         // Caret at local 0 (the very start of the child, before the "h")
         let pos = box.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         // The quote wrapper is gone — children are spliced to the parent
@@ -492,7 +492,7 @@ final class BlockQuoteEditTests: XCTestCase {
             return XCTFail("cell region not found")
         }
         let pos = cellRegion.globalStart + 2
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         let blocksBefore = c.currentBlocks()
         c.wrapInBlockQuote()
         // The document must be byte-identical to before — no block quote was created.
@@ -520,8 +520,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // Snapshot the author's rendered attributes before the toggle.
         let before = authorRegion.layout.attributedString.copy() as! NSAttributedString
         // Select the whole author line ("Ada") and toggle bold.
-        c.anchor = authorRegion.globalStart
-        c.head = authorRegion.globalStart + authorRegion.length
+        c.setSelectionForTesting(anchor: authorRegion.globalStart, head: authorRegion.globalStart + authorRegion.length)
         c.toggleBold()
         // The author's stored/rendered attributes are UNCHANGED — bold in the author region is inert.
         XCTAssertEqual(authorRegion.layout.attributedString, before,
@@ -542,7 +541,7 @@ final class BlockQuoteEditTests: XCTestCase {
         guard let authorRegion = box.leafRegions().first(where: { $0.ref == .quoteAuthor(BlockID("q")) }) else {
             return XCTFail("no author region")
         }
-        c.anchor = authorRegion.globalStart; c.head = authorRegion.globalStart   // caret at author local 0
+        c.setSelectionForTesting(anchor: authorRegion.globalStart, head: authorRegion.globalStart)   // caret at author local 0
         c.deleteBackward()
         // Quote still present, author intact, caret now at the end of the body child.
         guard case let .blockQuote(out) = box.currentBlock() else { return XCTFail("quote deleted") }
@@ -609,7 +608,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let bodyRegion = box.children.boxes[0].leafRegions().first!
         let bodyEnd = bodyRegion.globalStart + bodyRegion.length
         // Object-replacement RANGE: anchor at the previous child's text end, head at the author start.
-        c.anchor = bodyEnd; c.head = authorRegion.globalStart
+        c.setSelectionForTesting(anchor: bodyEnd, head: authorRegion.globalStart)
         c.deleteBackward()
         guard case let .blockQuote(out) = box.currentBlock() else { return XCTFail("quote deleted") }
         XCTAssertEqual(out.author.map(\.text).joined(), "Ada", "author preserved")
@@ -619,7 +618,7 @@ final class BlockQuoteEditTests: XCTestCase {
     }
 
     /// Runtime bug: the author is a SECOND leaf region on the box (outside its primary child stack), so
-    /// the plain `applyReplace`/`activeStack` insert path used to mis-route a collapsed-caret author
+    /// the plain `applyReplaceOutcome`/`activeStack` insert path used to mis-route a collapsed-caret author
     /// insert into the FOLLOWING top-level paragraph instead of the author.
     func test_insertText_atEmptyBlockQuoteAuthor_landsInAuthorNotNextParagraph() {
         let c = canvas([
@@ -632,7 +631,7 @@ final class BlockQuoteEditTests: XCTestCase {
         guard let authorRegion = box.leafRegions().first(where: { $0.ref == .quoteAuthor(BlockID("q")) }) else {
             return XCTFail("no author region")
         }
-        c.anchor = authorRegion.globalStart; c.head = authorRegion.globalStart   // caret at author local 0
+        c.setSelectionForTesting(anchor: authorRegion.globalStart, head: authorRegion.globalStart)   // caret at author local 0
         c.insertText("X")
         guard case let .blockQuote(out) = box.currentBlock() else { return XCTFail("expected .blockQuote") }
         XCTAssertEqual(out.author.map(\.text).joined(), "X", "typed char must land in the author line")
@@ -657,8 +656,7 @@ final class BlockQuoteEditTests: XCTestCase {
         guard let authorRegion = box.leafRegions().first(where: { $0.ref == .quoteAuthor(BlockID("q")) }) else {
             return XCTFail("no author region")
         }
-        c.anchor = authorRegion.globalStart
-        c.head = authorRegion.globalStart + authorRegion.length
+        c.setSelectionForTesting(anchor: authorRegion.globalStart, head: authorRegion.globalStart + authorRegion.length)
         c.insertText("Bob")
         guard case let .blockQuote(out) = box.currentBlock() else { return XCTFail("expected .blockQuote") }
         XCTAssertEqual(out.author.map(\.text).joined(), "Bob", "the replacement must land in the author line")
@@ -685,7 +683,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // which — independent of this feature — hits a pre-existing `resolveBox` limitation for a lone
         // top-level container box; see the Task 2 report). The selection-replace path correctly resolves
         // into the quote's child via `activeStack`/`leafRegions()`.
-        c.anchor = bodyStart; c.head = caretAfterType
+        c.setSelectionForTesting(anchor: bodyStart, head: caretAfterType)
         c.deleteBackward()
         XCTAssertFalse(box.shouldShowAuthor)
         XCTAssertEqual(c.head, bodyStart, "caret stays in the body, unmoved by the author toggle")
@@ -707,8 +705,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // this-feature) `resolveBox` limitation no-ops a collapsed-caret backspace inside a lone container box;
         // see the Task 2 report / `test_blockQuote_authorAppearsWhenBodyTyped_thenDisappears_caretUnmoved` above.
         let bodyRegion = box.children.boxes[0].leafRegions().first!
-        c.anchor = bodyRegion.globalStart
-        c.head = bodyRegion.globalStart + bodyRegion.length   // "ab"
+        c.setSelectionForTesting(anchor: bodyRegion.globalStart, head: bodyRegion.globalStart + bodyRegion.length)   // "ab"
         c.insertText("")   // delete the selection → body empty → author hides
         // 1. The author region is genuinely GONE.
         XCTAssertFalse(box.shouldShowAuthor)
@@ -730,13 +727,13 @@ final class BlockQuoteEditTests: XCTestCase {
         let c = canvas([.paragraph(ParagraphBlock(id: BlockID("top"), runs: [TextRun(text: "x")])), .blockQuote(outer)])
         // caret in the top-level paragraph → depth 0
         let topPos = c.boxes[0].leafRegions().first!.globalStart
-        c.anchor = topPos; c.head = topPos
+        c.setSelectionForTesting(anchor: topPos, head: topPos)
         XCTAssertEqual(c.blockQuoteDepth(at: c.head), 0)
         // caret inside the doubly-nested paragraph → depth 2
         let outerBox = c.boxes[1] as! BlockQuoteBox
         let innerBox = outerBox.children.boxes.compactMap { $0 as? BlockQuoteBox }.first!
         let deep = innerBox.children.boxes[0].leafRegions().first!.globalStart + 1
-        c.anchor = deep; c.head = deep
+        c.setSelectionForTesting(anchor: deep, head: deep)
         XCTAssertEqual(c.blockQuoteDepth(at: c.head), 2)
     }
 
@@ -753,7 +750,7 @@ final class BlockQuoteEditTests: XCTestCase {
             collapsed: false, author: []))])
         let box = c.boxes[0] as! BlockQuoteBox
         let pos = box.leafRegions()[0].globalStart + 2   // end of "ab"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         guard case .blockQuote(let out) = box.currentBlock() else { return XCTFail("quote gone") }
         guard case .paragraph(let p) = out.children.first else { return XCTFail("expected a paragraph child") }
@@ -771,7 +768,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes[0] as! BlockQuoteBox
         let pos = box.leafRegions()[0].globalStart + 2   // end of "ab"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         guard case .blockQuote(let out) = box.currentBlock() else { return XCTFail("quote gone") }
         guard case .paragraph(let p) = out.children.first else { return XCTFail("expected a paragraph child") }
@@ -792,7 +789,7 @@ final class BlockQuoteEditTests: XCTestCase {
             return XCTFail("no author region")
         }
         let pos = authorRegion.globalStart + authorRegion.length   // end of "Ada"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         guard case .blockQuote(let out) = box.currentBlock() else { return XCTFail("quote gone") }
         XCTAssertEqual(out.author.map(\.text).joined(), "Ad",
@@ -819,7 +816,7 @@ final class BlockQuoteEditTests: XCTestCase {
             return XCTFail("no author region")
         }
         let pos = authorRegion.globalStart + authorRegion.length   // end of "Ada Lovelace"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 3, "quote + new empty body paragraph + the untouched following paragraph")
@@ -849,7 +846,7 @@ final class BlockQuoteEditTests: XCTestCase {
             return XCTFail("no author region")
         }
         let pos = authorRegion.globalStart + 3   // after "Ada"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 3)
@@ -874,7 +871,7 @@ final class BlockQuoteEditTests: XCTestCase {
             return XCTFail("no author region")
         }
         let pos = authorRegion.globalStart + authorRegion.length   // end of "Ada"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 3, "pull quote + new empty body paragraph + the untouched following paragraph")
@@ -902,7 +899,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let box = c.boxes.first as! BlockQuoteBox
         let bodyRegion = box.children.boxes[0].leafRegions().first!
         let pos = bodyRegion.globalStart + 1   // between "a" and "b"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.insertText("\n")
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 2, "quote (now with 2 children) + the untouched following paragraph")
@@ -930,7 +927,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.leafRegions().first!.globalStart   // start of the empty first child (local 0)
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0] else { return XCTFail("quote gone") }
@@ -955,7 +952,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes.first as! BlockQuoteBox
         let pos = box.children.boxes[1].leafRegions().first!.globalStart   // start of "two"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0] else { return XCTFail("quote gone") }
@@ -983,7 +980,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes[1] as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart   // start of "First"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 3, "Intro, un-quoted First, and the quote (now just Second)")
@@ -1011,7 +1008,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes[0] as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart   // start of "First"
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         XCTAssertEqual(doc.count, 2, "un-quoted First, then the quote (now just Second)")
@@ -1040,7 +1037,7 @@ final class BlockQuoteEditTests: XCTestCase {
         let outerBox = c.boxes[0] as! BlockQuoteBox
         let innerBox = outerBox.children.boxes.compactMap { $0 as? BlockQuoteBox }.first!
         let pos = innerBox.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         guard case .blockQuote(let outer) = c.currentBlocks()[0] else { return XCTFail("outer quote gone") }
         XCTAssertEqual(outer.children.count, 3, "Lead, un-quoted First (now at the outer level), inner quote (now just Second)")
@@ -1070,7 +1067,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes[0] as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart   // start of the list item
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         var doc = c.currentBlocks()
         guard case .blockQuote(let q1) = doc[0] else { return XCTFail("quote gone after first backspace") }
@@ -1083,7 +1080,7 @@ final class BlockQuoteEditTests: XCTestCase {
         // A SECOND Backspace at the (still level-0) item start now breaks the list.
         let box2 = c.boxes[0] as! BlockQuoteBox
         let pos2 = box2.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = pos2; c.head = pos2
+        c.setSelectionForTesting(anchor: pos2, head: pos2)
         c.deleteBackward()
         doc = c.currentBlocks()
         guard case .blockQuote(let q2) = doc[0] else { return XCTFail("quote gone after second backspace") }
@@ -1106,7 +1103,7 @@ final class BlockQuoteEditTests: XCTestCase {
         ])
         let box = c.boxes[0] as! BlockQuoteBox
         let pos = box.children.boxes[0].leafRegions().first!.globalStart
-        c.anchor = pos; c.head = pos
+        c.setSelectionForTesting(anchor: pos, head: pos)
         c.deleteBackward()
         let doc = c.currentBlocks()
         guard case .blockQuote(let q) = doc[0] else { return XCTFail("quote gone") }

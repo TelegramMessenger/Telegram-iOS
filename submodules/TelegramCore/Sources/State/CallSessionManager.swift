@@ -837,7 +837,7 @@ private final class CallSessionManagerContext {
                     case .hangUp:
                         internalReason = .hangUp(0)
                     case .disconnect:
-                        internalReason = .disconnect
+                        internalReason = .disconnect(0)
                     case .missed:
                         internalReason = .missed
                     }
@@ -846,13 +846,17 @@ private final class CallSessionManagerContext {
                     dropData = (id, accessHash, .abort)
                     disposable.dispose()
                 case let .active(id, accessHash, beginTimestamp, _, _, _, _, _, _, _, _, _):
-                    let duration = max(0, Int32(CFAbsoluteTimeGetCurrent()) - beginTimestamp)
+                    // `beginTimestamp` is the server's `phoneCall.start_date`, i.e. a Unix
+                    // timestamp, so it has to be subtracted from server-synced Unix time.
+                    // `CFAbsoluteTimeGetCurrent()` is relative to 2001 and left this difference
+                    // permanently negative, so every duration this client reported was clamped to 0.
+                    let duration = max(0, self.network.getApproximateRemoteTimestamp() - beginTimestamp)
                     let internalReason: DropCallSessionReason
                     switch reason {
                     case .busy, .hangUp:
                         internalReason = .hangUp(duration)
                     case .disconnect:
-                        internalReason = .disconnect
+                        internalReason = .disconnect(duration)
                     case .missed:
                         internalReason = .missed
                     }
@@ -872,7 +876,7 @@ private final class CallSessionManagerContext {
                     case .busy, .hangUp:
                         internalReason = .missed
                     case .disconnect:
-                        internalReason = .disconnect
+                        internalReason = .disconnect(0)
                     case .missed:
                         internalReason = .missed
                     }
@@ -1085,53 +1089,55 @@ private final class CallSessionManagerContext {
                 remoteVersions = versions
             }
             if let internalId = self.contextIdByStableId[id] {
-                guard let selectedVersions = selectVersionOnAccept(localVersions: self.versions, remoteVersions: remoteVersions) else {
-                    self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
-                    return
-                }
-                
-                if let context = self.contexts[internalId] {
-                    switch context.state {
-                        case let .requested(_, accessHash, a, gA, config, _):
-                            let p = config.p.makeData()
-                            if !MTCheckIsSafeGAOrB(self.network.encryptionProvider, gA, p) {
-                                self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
-                            }
-                            var key = MTExp(self.network.encryptionProvider, gB.makeData(), a, p)!
-                            
-                            if key.count > 256 {
-                                key.count = 256
-                            } else  {
-                                while key.count < 256 {
-                                    key.insert(0, at: 0)
-                                }
-                            }
-                            
-                            let keyHash = MTSha1(key)
-                            
-                            var keyId: Int64 = 0
-                            keyHash.withUnsafeBytes { rawBytes -> Void in
-                                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                                memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
-                            }
-                            
-                            let keyVisualHash = MTSha256(key + gA)
-                            
-                            context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId, maxLayer: self.maxLayer, versions: selectedVersions) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
-                                if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
-                                    if let updatedCall = updatedCall {
-                                        strongSelf.updateSession(updatedCall, completion: { _ in })
-                                    } else {
-                                        strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                if let selectedVersions = selectVersionOnAccept(localVersions: self.versions, remoteVersions: remoteVersions) {
+                    if let context = self.contexts[internalId] {
+                        switch context.state {
+                            case let .requested(_, accessHash, a, gA, config, _):
+                                let p = config.p.makeData()
+                                let gBData = gB.makeData()
+                                
+                                if !MTCheckIsSafeGAOrB(self.network.encryptionProvider, gBData, p) {
+                                    self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                                } else {
+                                    var key = MTExp(self.network.encryptionProvider, gBData, a, p)!
+                                    
+                                    if key.count > 256 {
+                                        key.count = 256
+                                    } else  {
+                                        while key.count < 256 {
+                                            key.insert(0, at: 0)
+                                        }
                                     }
+                                    
+                                    let keyHash = MTSha1(key)
+                                    
+                                    var keyId: Int64 = 0
+                                    keyHash.withUnsafeBytes { rawBytes -> Void in
+                                        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                        memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
+                                    }
+                                    
+                                    let keyVisualHash = MTSha256(key + gA)
+                                    
+                                    context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId, maxLayer: self.maxLayer, versions: selectedVersions) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
+                                        if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
+                                            if let updatedCall = updatedCall {
+                                                strongSelf.updateSession(updatedCall, completion: { _ in })
+                                            } else {
+                                                strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                                            }
+                                        }
+                                    }))
+                                    self.contextUpdated(internalId: internalId)
                                 }
-                            }))
-                            self.contextUpdated(internalId: internalId)
-                        default:
-                            self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                            default:
+                                self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                        }
+                    } else {
+                        assertionFailure()
                     }
                 } else {
-                    assertionFailure()
+                    self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                 }
             }
         case let .phoneCallDiscarded(phoneCallDiscardedData):
@@ -1364,7 +1370,13 @@ private final class CallSessionManagerContext {
     }
     
     private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyVisualHash: Data)? {
-        var key = MTExp(self.network.encryptionProvider, gA, b, config.p.makeData())!
+        let p = config.p.makeData()
+        
+        if !MTCheckIsSafeGAOrB(self.network.encryptionProvider, gA, p) {
+            return nil
+        }
+        
+        var key = MTExp(self.network.encryptionProvider, gA, b, p)!
         
         if key.count > 256 {
             key.count = 256
@@ -1749,7 +1761,7 @@ private enum DropCallSessionReason {
     case abort
     case hangUp(Int32)
     case busy
-    case disconnect
+    case disconnect(Int32)
     case missed
     case switchToConference(slug: String)
 }
@@ -1765,7 +1777,8 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
         mappedReason = .phoneCallDiscardReasonHangup
     case .busy:
         mappedReason = .phoneCallDiscardReasonBusy
-    case .disconnect:
+    case let .disconnect(value):
+        duration = value
         mappedReason = .phoneCallDiscardReasonDisconnect
     case .missed:
         mappedReason = .phoneCallDiscardReasonMissed

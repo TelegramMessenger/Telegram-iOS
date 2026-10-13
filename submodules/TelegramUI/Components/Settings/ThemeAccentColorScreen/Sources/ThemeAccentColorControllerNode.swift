@@ -1013,7 +1013,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                 let itemNode = chatNodes[i]
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
@@ -1021,16 +1021,16 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                     itemNode.frame = nodeFrame
                     itemNode.isUserInteractionEnabled = false
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
             }
         } else {
             var chatNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 itemNode!.isUserInteractionEnabled = false
                 chatNodes.append(itemNode!)
@@ -1103,7 +1103,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                     return state
                 }, animated: true)
             }, clickThroughMessage: { _, _ in
-            }, backgroundNode: self.backgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)
+            }, backgroundNode: self.backgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false)
             return item
         }
         
@@ -1125,14 +1125,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                 
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
                     itemNode.insets = layout.insets
                     itemNode.frame = nodeFrame
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
             }
             self.crossfadeBubbles = false
@@ -1140,9 +1140,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 messageNodes.append(itemNode!)
                 self.messagesContainerNode.addSubnode(itemNode!)
@@ -1160,15 +1160,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
         var bottomOffset: CGFloat = 9.0 + bottomInset
         if let messageNodes = self.messageNodes {
             for itemNode in messageNodes {
-                let previousFrame = itemNode.frame
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
                 bottomOffset += itemNode.frame.height
                 
                 let relativeFrame = itemNode.frame.offsetBy(dx: 0.0, dy: relativeOffset)
                 itemNode.updateAbsoluteRect(relativeFrame, within: containerSize)
-                if case let .animated(duration, curve) = transition {
-                    itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -relativeFrame.minY + previousFrame.minY), animationCurve: curve, duration: duration)
-                }
             }
         }
         

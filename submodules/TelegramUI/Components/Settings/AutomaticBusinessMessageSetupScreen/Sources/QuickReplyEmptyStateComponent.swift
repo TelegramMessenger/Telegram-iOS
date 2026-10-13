@@ -1,4 +1,6 @@
 import Foundation
+import AccountContext
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -10,17 +12,22 @@ import BalancedTextComponent
 import LottieComponent
 
 final class QuickReplyEmptyStateComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let insets: UIEdgeInsets
     let action: () -> Void
     
     init(
+    
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         insets: UIEdgeInsets,
         action: @escaping () -> Void
     ) {
+    
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.insets = insets
@@ -110,7 +117,8 @@ final class QuickReplyEmptyStateComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "WriteEmoji"),
-                    loop: false
+                    loop: false,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 120.0)

@@ -87,6 +87,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
     public let animateOut: ActionSlot<Action<()>>
     public let onPan: () -> Void
     public let willDismiss: () -> Void
+    public let didAppear: () -> Void
     
     public init(
         content: AnyComponent<ChildEnvironmentType>,
@@ -100,6 +101,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         autoAnimateOut: Bool = true,
         externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>,
+        didAppear: @escaping () -> Void = {},
         onPan: @escaping () -> Void = {},
         willDismiss: @escaping () -> Void = {}
     ) {
@@ -116,6 +118,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         self.animateOut = animateOut
         self.onPan = onPan
         self.willDismiss = willDismiss
+        self.didAppear = didAppear
     }
     
     public static func ==(lhs: SheetComponent, rhs: SheetComponent) -> Bool {
@@ -189,6 +192,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         private let contentView: ComponentView<ChildEnvironmentType>
         private var headerView: ComponentView<Empty>?
         
+        private var isDimHidden: Bool = false
         private var isAnimatingOut: Bool = false
         private var previousIsDisplaying: Bool = false
         private var dismiss: ((Bool) -> Void)?
@@ -250,6 +254,17 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         public func dismissAnimated() {
             self.dismiss?(true)
         }
+
+        public func setDimHidden(_ hidden: Bool, animated: Bool) {
+            self.isDimHidden = hidden
+            let transition: ComponentTransition
+            if animated {
+                transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .linear))
+            } else {
+                transition = .immediate
+            }
+            transition.setAlpha(view: self.dimView, alpha: hidden ? 0.0 : 1.0)
+        }
         
         public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.component?.onPan()
@@ -308,7 +323,10 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         }
         
         private func animateIn() {
-            self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.dimView.alpha = self.isDimHidden ? 0.0 : 1.0
+            if !self.isDimHidden {
+                self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
             let targetPosition = self.scrollView.center
@@ -319,6 +337,11 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             self.scrollView.center = targetPosition.offsetBy(dx: 0.0, dy: offset)
             transition.animateView(allowUserInteraction: true, {
                 self.scrollView.center = targetPosition
+            }, completion: { [weak self] completed in
+                guard completed, let self, !self.isAnimatingOut else {
+                    return
+                }
+                self.component?.didAppear()
             })
             
             if let headerContent = self.headerView {
@@ -334,7 +357,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             self.isAnimatingOut = true
             
             self.isUserInteractionEnabled = false
-            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            ComponentTransition.easeInOut(duration: 0.3).setAlpha(view: self.dimView, alpha: 0.0)
             
             if let headerContent = self.headerView {
                 headerContent.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)

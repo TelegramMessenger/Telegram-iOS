@@ -1039,6 +1039,11 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox?.getPendingMessageAction(type: type, id: id)
     }
+
+    public func getPendingMessageActions(type: PendingMessageActionType) -> [PendingMessageActionsEntry] {
+        assert(!self.disposed)
+        return self.postbox?.pendingMessageActionsTable.getActions(type: type) ?? []
+    }
     
     public func getMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, customTag: MemoryBuffer?) -> MessageHistoryTagNamespaceSummary? {
         assert(!self.disposed)
@@ -1072,6 +1077,14 @@ public final class Transaction {
         }
     }
     
+    public func getMessages(peerId: PeerId, namespace: MessageId.Namespace, from: MessageIndex, includeFrom: Bool, to: MessageIndex, limit: Int) -> [Message] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, customTag: nil, threadId: nil, from: from, includeFrom: includeFrom, to: to, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), limit: limit).map(postbox.renderIntermediateMessage(_:))
+    }
+
     public func getMessagesWithThreadId(peerId: PeerId, namespace: MessageId.Namespace, threadId: Int64, from: MessageIndex, includeFrom: Bool, to: MessageIndex, limit: Int) -> [Message] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
@@ -1394,7 +1407,7 @@ public final class Transaction {
         self.postbox!.reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: peerId, threadId: threadId, tag: tag)
     }
     
-    public func getCurrentTypingDraft(location: PeerAndThreadId) -> (id: Int64, stableId: UInt32, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])? {
+    public func getCurrentTypingDraft(location: PeerAndThreadId) -> (id: Int64, stableId: UInt32, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)? {
         assert(!self.disposed)
         if let value = self.postbox!.currentTypingDrafts[location] {
             return (
@@ -1403,14 +1416,15 @@ public final class Transaction {
                 value.authorId,
                 value.timestamp,
                 value.text,
-                value.attributes
+                value.attributes,
+                value.isStopped
             )
         } else {
             return nil
         }
     }
     
-    public func combineTypingDrafts(locations: Set<PeerAndThreadId>, update: (PeerAndThreadId, (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])?) -> (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])?) {
+    public func combineTypingDrafts(locations: Set<PeerAndThreadId>, update: (PeerAndThreadId, (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)?) -> (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)?) {
         assert(!self.disposed)
         self.postbox!.combineTypingDrafts(locations: locations, update: update)
     }
@@ -1666,9 +1680,13 @@ final class PostboxImpl {
         var timestamp: Int32
         var text: String
         var attributes: [MessageAttribute]
+        // A draft whose author has stopped composing. It stays on screen, but it no
+        // longer gates outgoing messages (AllTypingDraftsView) and it never expires
+        // (restartTypingDraftExpirationTimerIfNeeded / processTypingDraftExpirations).
+        var isStopped: Bool
         var addedAtTimestamp: Double
-        
-        init(id: Int64, namespace: MessageId.Namespace, stableId: UInt32, stableVersion: UInt32, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], addedAtTimestamp: Double) {
+
+        init(id: Int64, namespace: MessageId.Namespace, stableId: UInt32, stableVersion: UInt32, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool, addedAtTimestamp: Double) {
             self.id = id
             self.namespace = namespace
             self.stableId = stableId
@@ -1678,6 +1696,7 @@ final class PostboxImpl {
             self.timestamp = timestamp
             self.text = text
             self.attributes = attributes
+            self.isStopped = isStopped
             self.addedAtTimestamp = addedAtTimestamp
         }
         
@@ -1701,6 +1720,9 @@ final class PostboxImpl {
                 return false
             }
             if lhs.text != rhs.text {
+                return false
+            }
+            if lhs.isStopped != rhs.isStopped {
                 return false
             }
             if lhs.attributes.count != rhs.attributes.count {
@@ -2495,12 +2517,12 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func combineTypingDrafts(locations: Set<PeerAndThreadId>, update: (PeerAndThreadId, (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])?) -> (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])?) {
+    fileprivate func combineTypingDrafts(locations: Set<PeerAndThreadId>, update: (PeerAndThreadId, (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)?) -> (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)?) {
         for location in locations {
-            var updated: (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute])?
+            var updated: (id: Int64, namespace: MessageId.Namespace, threadId: Int64?, authorId: PeerId, timestamp: Int32, text: String, attributes: [MessageAttribute], isStopped: Bool)?
             let current = self.currentTypingDrafts[location]
             if let current {
-                updated = update(location, (current.id, current.namespace, current.threadId, current.authorId, current.timestamp, current.text, current.attributes))
+                updated = update(location, (current.id, current.namespace, current.threadId, current.authorId, current.timestamp, current.text, current.attributes, current.isStopped))
             } else {
                 updated = update(location, nil)
             }
@@ -2514,7 +2536,7 @@ final class PostboxImpl {
                     stableId = self.messageHistoryMetadataTable.getNextStableMessageIndexId()
                     stableVersion = 100000
                 }
-                let mappedDraft = TypingDraft(id: updated.id, namespace: updated.namespace, stableId: stableId, stableVersion: stableVersion, threadId: updated.threadId, authorId: updated.authorId, timestamp: updated.timestamp, text: updated.text, attributes: updated.attributes, addedAtTimestamp: CFAbsoluteTimeGetCurrent())
+                let mappedDraft = TypingDraft(id: updated.id, namespace: updated.namespace, stableId: stableId, stableVersion: stableVersion, threadId: updated.threadId, authorId: updated.authorId, timestamp: updated.timestamp, text: updated.text, attributes: updated.attributes, isStopped: updated.isStopped, addedAtTimestamp: CFAbsoluteTimeGetCurrent())
                 if self.currentTypingDrafts[location] != mappedDraft {
                     self.currentTypingDrafts[location] = mappedDraft
                     self.currentUpdatedTypingDrafts[location] = TypingDraftUpdate(value: mappedDraft)
@@ -2531,6 +2553,9 @@ final class PostboxImpl {
         
         var nextTypingDraftExpirationTimestamp: Double?
         for (_, draft) in self.currentTypingDrafts {
+            if draft.isStopped {
+                continue
+            }
             if let nextTypingDraftExpirationTimestampValue = nextTypingDraftExpirationTimestamp {
                 nextTypingDraftExpirationTimestamp = min(draft.addedAtTimestamp + expirationTimeout, nextTypingDraftExpirationTimestampValue)
             } else {
@@ -2543,15 +2568,24 @@ final class PostboxImpl {
                 let timeout = nextTypingDraftExpirationTimestamp - CFAbsoluteTimeGetCurrent()
                 
                 self.nextTypingDraftExpirationTimer?.invalidate()
-                self.nextTypingDraftExpirationTimer = SwiftSignalKit.Timer(timeout: max(0.0, timeout - 0.1), repeat: false, completion: { [weak self] in
+                self.nextTypingDraftExpirationTimer = SwiftSignalKit.Timer(timeout: max(0.0, timeout), repeat: false, completion: { [weak self] in
                     guard let self else {
                         return
                     }
+                    // The timer has fired and is spent. Drop it *before* the sweep runs, so
+                    // that the rearm at the end of processTypingDraftExpirations (and the
+                    // commit-path rearm) both see "nothing armed" and arm a new one. Leaving
+                    // a fired timer in place here would let it masquerade as armed and
+                    // suppress its own replacement.
+                    self.nextTypingDraftExpirationTimer = nil
+                    self.nextTypingDraftExpirationTimestamp = nil
+
                     let _ = self.transaction { _ in
                         self.processTypingDraftExpirations(expirationTimeout: expirationTimeout)
                     }.startStandalone()
                 }, queue: self.queue)
                 self.nextTypingDraftExpirationTimer?.start()
+                self.nextTypingDraftExpirationTimestamp = nextTypingDraftExpirationTimestamp
             }
         } else {
             self.nextTypingDraftExpirationTimestamp = nil
@@ -2566,7 +2600,10 @@ final class PostboxImpl {
         let timestamp = CFAbsoluteTimeGetCurrent()
         var removedKeys: [PeerAndThreadId] = []
         for (key, draft) in self.currentTypingDrafts {
-            if draft.addedAtTimestamp + expirationTimeout >= timestamp {
+            if draft.isStopped {
+                continue
+            }
+            if timestamp - draft.addedAtTimestamp >= expirationTimeout {
                 removedKeys.append(key)
             }
         }
@@ -2576,6 +2613,11 @@ final class PostboxImpl {
                 self.currentUpdatedTypingDrafts[key] = TypingDraftUpdate(value: nil)
             }
         }
+        // Unconditional: the completion block cleared the armed timer, and a wakeup that
+        // landed a hair early removes nothing — so the commit-path rearm (gated on
+        // currentUpdatedTypingDrafts being non-empty) would not fire and nothing would be
+        // armed at all.
+        self.restartTypingDraftExpirationTimerIfNeeded()
     }
     
     func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {
@@ -2616,8 +2658,8 @@ final class PostboxImpl {
             var index = 0
             for (_, peer) in updatedPeers {
                 updatedPeerIdToIndex[peer.0.id] = index
+                index += 1
             }
-            index += 1
             for (peerId, change) in updatedContacts {
                 if let index = updatedPeerIdToIndex[peerId] {
                     if let (peer, _) = updatedPeers[index].0 {
@@ -2626,6 +2668,22 @@ final class PostboxImpl {
                     updatedPeers[index].1 = (updatedPeers[index].1.0, change.1)
                 } else if let peer = self.peerTable.get(peerId) {
                     updatedPeers.append(((peer, change.0), (peer, change.1)))
+                }
+                // A peer whose identity this one overrides (a secret chat) derives its summary
+                // counter tag from this contact status, so it has to be re-tagged too -- nothing
+                // else in this transaction reports it as updated.
+                for associatedPeerId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
+                    guard let associatedPeer = self.peerTable.get(associatedPeerId), associatedPeer.associatedPeerOverridesIdentity else {
+                        continue
+                    }
+                    if let index = updatedPeers.firstIndex(where: { $0.1.0.id == associatedPeerId }) {
+                        if let (existingPeer, _) = updatedPeers[index].0 {
+                            updatedPeers[index].0 = (existingPeer, change.0)
+                        }
+                        updatedPeers[index].1 = (updatedPeers[index].1.0, change.1)
+                    } else {
+                        updatedPeers.append(((associatedPeer, change.0), (associatedPeer, change.1)))
+                    }
                 }
             }
         }
@@ -3477,6 +3535,24 @@ final class PostboxImpl {
         }
     }
     
+    /// The peers a chat's cached data refers to, plus the chat's container peer. The
+    /// history view's initial load and its replay must produce the same map, so both
+    /// call this.
+    func cachedPeerDataPeers(peerId: PeerId, cachedData: CachedPeerData?) -> [PeerId: Peer] {
+        var peers: [PeerId: Peer] = [:]
+        for id in cachedData?.peerIds ?? Set() {
+            if let peer = self.peerTable.get(id) {
+                peers[id] = peer
+            }
+        }
+        if let peer = self.peerTable.get(peerId), let containerPeerId = peer.containerPeerId {
+            if let containerPeer = self.peerTable.get(containerPeerId) {
+                peers[containerPeerId] = containerPeer
+            }
+        }
+        return peers
+    }
+
     fileprivate func syncAroundMessageHistoryViewForPeerId(
         subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>,
         peerIds: MessageHistoryViewInput,
@@ -3548,18 +3624,7 @@ final class PostboxImpl {
                     }
                     additionalDataEntries.append(.cachedPeerDataMessages(peerId, messages))
                 case let .cachedPeerDataPeers(peerId):
-                    var peers: [PeerId: Peer] = [:]
-                    for id in self.cachedPeerDataTable.get(peerId)?.peerIds ?? Set() {
-                        if let peer = self.peerTable.get(peerId) {
-                            peers[id] = peer
-                        }
-                    }
-                    if let peer = self.peerTable.get(peerId), let containerPeerId = peer.containerPeerId {
-                        if let containerPeer = self.peerTable.get(containerPeerId) {
-                            peers[containerPeerId] = containerPeer
-                        }
-                    }
-                    additionalDataEntries.append(.cachedPeerDataPeers(peerId, peers))
+                    additionalDataEntries.append(.cachedPeerDataPeers(peerId, self.cachedPeerDataPeers(peerId: peerId, cachedData: self.cachedPeerDataTable.get(peerId))))
                 case let .message(id):
                     let messages = self.getMessageGroup(at: id)
                     additionalDataEntries.append(.message(id, messages ?? []))
@@ -3741,7 +3806,7 @@ final class PostboxImpl {
     }
     
     public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
+        return self.transactionSignal(userInteractive: userInteractive, { [self] subscriber, transaction in
             let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
             mutableView.render(postbox: self)
             
@@ -3764,7 +3829,7 @@ final class PostboxImpl {
     }
     
     public func contactPeerIdsView() -> Signal<ContactPeerIdsView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableContactPeerIdsView(remoteTotalCount: self.metadataTable.getRemoteContactCount(), peerIds: self.contactsTable.get())
             let (index, signal) = self.viewTracker.addContactPeerIdsView(view)
             
@@ -3884,7 +3949,7 @@ final class PostboxImpl {
     }
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutablePeerView(postbox: self, peerId: id, components: .all)
             let (index, signal) = self.viewTracker.addPeerView(view)
             
@@ -3906,7 +3971,7 @@ final class PostboxImpl {
     }
     
     public func multiplePeersView(_ ids: [PeerId]) -> Signal<MultiplePeersView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableMultiplePeersView(peerIds: ids, getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
             let (index, signal) = self.viewTracker.addMultiplePeersView(view)
             
@@ -3938,7 +4003,7 @@ final class PostboxImpl {
     }
     
     public func unreadMessageCountsView(items: [UnreadMessageCountsItem]) -> Signal<UnreadMessageCountsView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableUnreadMessageCountsView(postbox: self, items: items)
             let (index, signal) = self.viewTracker.addUnreadMessageCountsView(view)
             
@@ -3973,7 +4038,7 @@ final class PostboxImpl {
     }
     
     public func stateView() -> Signal<PostboxStateView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let mutableView = MutablePostboxStateView(state: self.getState())
             
             subscriber.putNext(PostboxStateView(mutableView))
@@ -4057,7 +4122,7 @@ final class PostboxImpl {
     }
     
     public func itemCollectionsView(orderedItemListCollectionIds: [Int32], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let itemListViews = orderedItemListCollectionIds.map { collectionId -> MutableOrderedItemListView in
                 return MutableOrderedItemListView(postbox: self, collectionId: collectionId)
             }
@@ -4084,7 +4149,7 @@ final class PostboxImpl {
     }
     
     public func mergedOperationLogView(tag: PeerOperationLogTag, filterByPeerId: PeerId?, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutablePeerMergedOperationLogView(postbox: self, tag: tag, filterByPeerId: filterByPeerId, limit: limit)
             
             subscriber.putNext(PeerMergedOperationLogView(view))
@@ -4107,7 +4172,7 @@ final class PostboxImpl {
     }
     
     public func timestampBasedMessageAttributesView(tag: UInt16) -> Signal<TimestampBasedMessageAttributesView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableTimestampBasedMessageAttributesView(postbox: self, tag: tag)
             let (index, signal) = self.viewTracker.addTimestampBasedMessageAttributesView(view)
             
@@ -4157,7 +4222,7 @@ final class PostboxImpl {
     }
     
     public func messageView(_ messageId: MessageId) -> Signal<MessageView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableMessageView(messageId: messageId, message: transaction.getMessage(messageId))
             
             subscriber.putNext(MessageView(view))
@@ -4180,7 +4245,7 @@ final class PostboxImpl {
     }
     
     public func preferencesView(keys: [ValueBoxKey]) -> Signal<PreferencesView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutablePreferencesView(postbox: self, keys: Set(keys))
             let (index, signal) = self.viewTracker.addPreferencesView(view)
             
@@ -4202,7 +4267,7 @@ final class PostboxImpl {
     }
     
     public func combinedView(keys: [PostboxViewKey]) -> Signal<CombinedView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             var views: [PostboxViewKey: MutablePostboxView] = [:]
             for key in keys {
                 views[key] = postboxViewForKey(postbox: self, key: key)
@@ -4313,7 +4378,7 @@ final class PostboxImpl {
                 peerIndices[peerId] = transaction.addChatHidden(peerId: peerId)
             }
             return peerIndices
-        }).start(next: { peerIndices in
+        }).start(next: { [self] peerIndices in
             disposable.set(ActionDisposable { [weak self] in
                 queue.async {
                     guard let `self` = self else {
@@ -4590,7 +4655,7 @@ final class PostboxImpl {
     }
     
     public func failedMessageIdsView(peerId: PeerId) -> Signal<FailedMessageIdsView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
+        return self.transactionSignal { [self] subscriber, transaction in
             let view = MutableFailedMessageIdsView(peerId: peerId, ids: self.failedMessageIds(for: peerId))
             let (index, signal) = self.viewTracker.addFailedMessageIdsView(view)
             subscriber.putNext(view.immutableView())

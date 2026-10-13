@@ -1,4 +1,5 @@
 import Foundation
+import WebProxyTransport
 import Postbox
 import TelegramApi
 import SwiftSignalKit
@@ -22,21 +23,6 @@ public func legacy_unarchiveDeprecated(data: Data) -> Any? {
     return MTDeprecated.unarchiveDeprecated(with: data)
 }
 
-private struct MTProtoConnectionFlags: OptionSet {
-    let rawValue: Int
-    
-    static let NetworkAvailable = MTProtoConnectionFlags(rawValue: 1)
-    static let Connected = MTProtoConnectionFlags(rawValue: 2)
-    static let UpdatingConnectionContext = MTProtoConnectionFlags(rawValue: 4)
-    static let PerformingServiceTasks = MTProtoConnectionFlags(rawValue: 8)
-    static let ProxyHasConnectionIssues = MTProtoConnectionFlags(rawValue: 16)
-}
-
-private struct MTProtoConnectionInfo: Equatable {
-    var flags: MTProtoConnectionFlags
-    var proxyAddress: String?
-}
-
 final class WrappedFunctionDescription: CustomStringConvertible {
     private let desc: FunctionDescription
     
@@ -46,6 +32,10 @@ final class WrappedFunctionDescription: CustomStringConvertible {
     
     var description: String {
         return apiFunctionDescription(of: self.desc)
+    }
+    
+    var name: String {
+        return self.desc.name
     }
 }
 
@@ -59,9 +49,13 @@ final class WrappedShortFunctionDescription: CustomStringConvertible {
     var description: String {
         return apiShortFunctionDescription(of: self.desc)
     }
+    
+    var name: String {
+        return self.desc.name
+    }
 }
 
-class WrappedRequestMetadata: NSObject {
+public class WrappedRequestMetadata: NSObject {
     let metadata: CustomStringConvertible
     let tag: NetworkRequestDependencyTag?
     
@@ -70,90 +64,36 @@ class WrappedRequestMetadata: NSObject {
         self.tag = tag
     }
     
-    override var description: String {
+    override public var description: String {
         return self.metadata.description
     }
 }
 
-class WrappedRequestShortMetadata: NSObject {
+public class WrappedRequestShortMetadata: NSObject {
     let shortMetadata: CustomStringConvertible
     
     init(shortMetadata: CustomStringConvertible) {
         self.shortMetadata = shortMetadata
     }
     
-    override var description: String {
+    override public var description: String {
         return self.shortMetadata.description
+    }
+    
+    /// The API method name alone, without parameters, or nil when the request is not an API function.
+    var functionName: String? {
+        if let value = self.shortMetadata as? WrappedShortFunctionDescription {
+            return value.name
+        } else if let value = self.shortMetadata as? WrappedFunctionDescription {
+            return value.name
+        } else {
+            return nil
+        }
     }
 }
 
 public protocol NetworkRequestDependencyTag {
     func shouldDependOn(other: NetworkRequestDependencyTag) -> Bool
-}
-
-private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
-    var action: (MTProtoConnectionInfo) -> () = { _ in }
-    let info = Atomic<MTProtoConnectionInfo>(value: MTProtoConnectionInfo(flags: [], proxyAddress: nil))
-    
-    @objc func mtProtoNetworkAvailabilityChanged(_ mtProto: MTProto!, isNetworkAvailable: Bool) {
-        self.action(self.info.modify { info in
-            var info = info
-            if isNetworkAvailable {
-                info.flags = info.flags.union([.NetworkAvailable])
-            } else {
-                info.flags = info.flags.subtracting([.NetworkAvailable])
-            }
-            return info
-        })
-    }
-    
-    @objc func mtProtoConnectionStateChanged(_ mtProto: MTProto!, state: MTProtoConnectionState!) {
-        self.action(self.info.modify { info in
-            var info = info
-            if let state = state {
-                if state.isConnected {
-                    info.flags.insert(.Connected)
-                    info.flags.remove(.ProxyHasConnectionIssues)
-                } else {
-                    info.flags.remove(.Connected)
-                    if state.proxyHasConnectionIssues {
-                        info.flags.insert(.ProxyHasConnectionIssues)
-                    } else {
-                        info.flags.remove(.ProxyHasConnectionIssues)
-                    }
-                }
-            } else {
-                info.flags.remove(.Connected)
-                info.flags.remove(.ProxyHasConnectionIssues)
-            }
-            info.proxyAddress = state?.proxyAddress
-            return info
-        })
-    }
-    
-    @objc func mtProtoConnectionContextUpdateStateChanged(_ mtProto: MTProto!, isUpdatingConnectionContext: Bool) {
-        self.action(self.info.modify { info in
-            var info = info
-            if isUpdatingConnectionContext {
-                info.flags = info.flags.union([.UpdatingConnectionContext])
-            } else {
-                info.flags = info.flags.subtracting([.UpdatingConnectionContext])
-            }
-            return info
-        })
-    }
-    
-    @objc func mtProtoServiceTasksStateChanged(_ mtProto: MTProto!, isPerformingServiceTasks: Bool) {
-        self.action(self.info.modify { info in
-            var info = info
-            if isPerformingServiceTasks {
-                info.flags = info.flags.union([.PerformingServiceTasks])
-            } else {
-                info.flags = info.flags.subtracting([.PerformingServiceTasks])
-            }
-            return info
-        })
-    }
 }
 
 private var registeredLoggingFunctions: Void = {
@@ -441,8 +381,9 @@ public struct NetworkInitializationArguments {
     public let deviceModelName: String?
     public let useBetaFeatures: Bool
     public let isICloudEnabled: Bool
+    public let networkEngineFactory: NetworkEngineFactory?
     
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, externalRequestVerificationStream: Signal<[String: String], NoError>, externalRecaptchaRequestVerification: @escaping (String, String) -> Signal<String?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool) {
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, externalRequestVerificationStream: Signal<[String: String], NoError>, externalRecaptchaRequestVerification: @escaping (String, String) -> Signal<String?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool, networkEngineFactory: NetworkEngineFactory? = nil) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -457,13 +398,95 @@ public struct NetworkInitializationArguments {
         self.deviceModelName = deviceModelName
         self.useBetaFeatures = useBetaFeatures
         self.isICloudEnabled = isICloudEnabled
+        self.networkEngineFactory = networkEngineFactory
     }
 }
 #if os(iOS)
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
 #endif
 
-func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
+func networkEngineRustDisabled(appConfiguration: AppConfiguration) -> Bool {
+    guard let data = appConfiguration.data, let value = data["mtproto_engine_rust_disabled"] else {
+        return false
+    }
+    switch value {
+    case let value as Bool:
+        return value
+    case let value as Double:
+        return value != 0.0
+    case let value as String:
+        return !["", "0", "false", "no"].contains(value.lowercased())
+    case is NSNull:
+        return false
+    default:
+        return true
+    }
+}
+
+private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, appConfiguration: AppConfiguration, isAppExtension: Bool) -> NetworkEngine {
+    let preferredEngine = settings?.engine ?? NetworkEngineSettings.defaultSettings.engine
+    guard let factory = factory else {
+        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (no factory, preferred \(preferredEngine.rawValue))")
+        return MtProtoKitEngine(context: context)
+    }
+    if networkEngineRustDisabled(appConfiguration: appConfiguration) {
+        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (mtproto_engine_rust_disabled, preferred \(preferredEngine.rawValue))")
+        return MtProtoKitEngine(context: context)
+    }
+    switch preferredEngine {
+    case .mtProtoKit:
+        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit")
+        return MtProtoKitEngine(context: context)
+    case .rust:
+        if let engine = factory.makeEngine(context: context, isAppExtension: isAppExtension) {
+            Logger.shared.log("Network", "Account \(accountId.int64): engine \(engine.kind.rawValue)")
+            return engine
+        } else {
+            Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (factory declined rust)")
+            return MtProtoKitEngine(context: context)
+        }
+    }
+}
+
+private final class NetworkMainSessionDelegate: NetworkEngineSessionDelegate {
+    private weak var connectionStatus: Promise<ConnectionStatus>?
+    weak var network: Network?
+    
+    init(connectionStatus: Promise<ConnectionStatus>) {
+        self.connectionStatus = connectionStatus
+    }
+    
+    func networkSessionConnectionStateChanged(_ state: NetworkEngineConnectionState) {
+        let connectionStatus = self.connectionStatus
+        if state.isConnected {
+            if state.isUpdatingConnectionContext || state.isPerformingServiceTasks {
+                connectionStatus?.set(.single(.updating(proxyAddress: state.proxyAddress)))
+            } else {
+                connectionStatus?.set(.single(.online(proxyAddress: state.proxyAddress)))
+            }
+        } else {
+            if !state.isNetworkAvailable {
+                connectionStatus?.set(.single(ConnectionStatus.waitingForNetwork))
+            } else if !state.isConnected {
+                connectionStatus?.set(.single(.connecting(proxyAddress: state.proxyAddress, proxyHasConnectionIssues: state.proxyHasConnectionIssues)))
+            } else if state.isUpdatingConnectionContext || state.isPerformingServiceTasks {
+                connectionStatus?.set(.single(.updating(proxyAddress: state.proxyAddress)))
+            } else {
+                connectionStatus?.set(.single(.online(proxyAddress: state.proxyAddress)))
+            }
+        }
+    }
+    
+    func networkSessionAuthorizationRequired() {
+        self.network?.mainSessionAuthorizationRequired()
+    }
+    
+    func networkSessionSoftAuthReset() {
+        self.network?.didReceiveSoftAuthResetError?()
+    }
+}
+
+func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, networkEngineSettings: NetworkEngineSettings?, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
@@ -506,6 +529,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             let useTempAuthKeys: Bool = true
             
             let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
+            context.refreshesTemporaryKeys = !supplementary
             
             if let networkSettings = networkSettings {
                 let useNetworkFramework: Bool
@@ -523,6 +547,17 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                             return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
                         }
                     }
+                }
+            }
+
+            let baseTcpConnectionInterfaceFactory = context.makeTcpConnectionInterface
+            let isAppExtension = Bundle.main.bundlePath.hasSuffix(".appex")
+            let initialActiveServer = proxySettings?.effectiveActiveServer
+            let initialWebProxyConfiguration = initialActiveServer?.webProxyConfiguration
+            WebProxyTransport.shared.apply(configuration: isAppExtension ? nil : initialWebProxyConfiguration)
+            if initialActiveServer?.isWebProxy == true {
+                context.makeTcpConnectionInterface = { delegate, delegateQueue in
+                    return WebProxyTransport.shared.makeConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
                 }
             }
             
@@ -618,42 +653,48 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.beginExplicitBackupAddressDiscovery()
             #endif*/
             
-            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil), requiredAuthToken: nil, authTokenMasterDatacenterId: 0)!
-            mtProto.useTempAuthKeys = context.useTempAuthKeys
-            mtProto.checkForProxyConnectionIssues = true
-            
-            let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
-            
-            let requestService = MTRequestMessageService(context: context)!
-            let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
-            connectionStatusDelegate.action = { [weak connectionStatus] info in
-                if info.flags.contains(.Connected) {
-                    if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                        connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
-                    } else {
-                        connectionStatus?.set(.single(.online(proxyAddress: info.proxyAddress)))
-                    }
-                } else {
-                    if !info.flags.contains(.NetworkAvailable) {
-                        connectionStatus?.set(.single(ConnectionStatus.waitingForNetwork))
-                    } else if !info.flags.contains(.Connected) {
-                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress, proxyHasConnectionIssues: info.flags.contains(.ProxyHasConnectionIssues))))
-                    } else if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                        connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
-                    } else {
-                        connectionStatus?.set(.single(.online(proxyAddress: info.proxyAddress)))
+            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngineSettings, appConfiguration: appConfiguration, isAppExtension: isAppExtension)
+            let rustEngineDisabled = networkEngineRustDisabled(appConfiguration: appConfiguration)
+            // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
+            // On iOS the engine changes only through the Debug Settings switch, at the next launch: no
+            // wrapper is created, so switchEngine/disableRustEngine have nothing to act on and the
+            // network runs the resolved engine directly, exactly as without a factory.
+            #if os(macOS)
+            let prefersRustEngine = (networkEngineSettings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
+            let rustEngineWaitsForWebProxy = arguments.networkEngineFactory != nil && !rustEngineDisabled && resolvedEngine.kind == .mtProtoKit && prefersRustEngine && initialActiveServer?.isWebProxy == true && arguments.networkEngineFactory?.supportsWebProxy != true
+            // Live switching only ever moves a network off Rust, or back to Rust after a WEB proxy, so it
+            // is needed only while Rust is in play; otherwise MtProtoKit runs directly.
+            let switchingEngine = arguments.networkEngineFactory != nil && (resolvedEngine.kind == .rust || rustEngineWaitsForWebProxy) ? SwitchingNetworkEngine(engine: resolvedEngine) : nil
+            #else
+            let rustEngineWaitsForWebProxy = false
+            let switchingEngine: SwitchingNetworkEngine? = nil
+            #endif
+            let telemetryDirectory = basePath + "/network-telemetry"
+            let telemetryConfiguration = NetworkTelemetryConfiguration.with(appConfiguration: appConfiguration)
+            let telemetry: NetworkTelemetry?
+            if networkTelemetryShouldRecord(supplementary: supplementary, isAppExtension: isAppExtension, configuration: telemetryConfiguration) {
+                telemetry = NetworkTelemetry.shared(directory: telemetryDirectory, layer: Int32(serialization.currentLayer()), app: arguments.appVersion, system: networkTelemetrySystemVersion(), variant: telemetryConfiguration.variant, stalledAfter: networkTelemetryOverrides.stalledAfter ?? NetworkTelemetry.stalledAfter, watchEvery: networkTelemetryOverrides.watchEvery ?? NetworkTelemetry.watchEvery)
+            } else {
+                telemetry = nil
+                if !supplementary && !isAppExtension {
+                    Queue.concurrentBackgroundQueue().async {
+                        try? FileManager.default.removeItem(atPath: telemetryDirectory)
                     }
                 }
             }
-            mtProto.delegate = connectionStatusDelegate
-            mtProto.add(requestService)
+            let engine: NetworkEngine = telemetry.flatMap { RecordingNetworkEngine(engine: switchingEngine ?? resolvedEngine, telemetry: $0) } ?? switchingEngine ?? resolvedEngine
+            
+            let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
+            
+            let mainSessionDelegate = NetworkMainSessionDelegate(connectionStatus: connectionStatus)
+            let mainSession = engine.makeSession(datacenterId: datacenterId, role: .main, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil), delegate: mainSessionDelegate)
             
             var useExperimentalFeatures = networkSettings?.useExperimentalDownload ?? true
             if let data = appConfiguration.data, let _ = data["ios_killswitch_disable_downloadv2"] {
                 useExperimentalFeatures = false
             }
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures)
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, engine: engine, switchingEngine: switchingEngine, engineFactory: arguments.networkEngineFactory, rustEngineDisabled: rustEngineDisabled, rustEngineWaitsForWebProxy: rustEngineWaitsForWebProxy, mainSession: mainSession, mainSessionDelegate: mainSessionDelegate, telemetry: telemetry, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures, baseTcpConnectionInterfaceFactory: baseTcpConnectionInterfaceFactory, isAppExtension: isAppExtension, initialWebProxyActive: initialActiveServer?.isWebProxy == true)
             
             if let data = appConfiguration.data, let notifyInterval = data["upload_premium_speedup_notify_period"] as? Double {
                 network.updateNetworkSpeedLimitedEventNotifyInterval(value: notifyInterval)
@@ -801,18 +842,31 @@ private final class NetworkSpeedLimitedEventState {
     }
 }
 
-public final class Network: NSObject, MTRequestMessageServiceDelegate {
+public final class Network: NSObject {
     public let encryptionProvider: EncryptionProvider
     
     private let queue: Queue
     public let datacenterId: Int
     public let context: MTContext
     private var networkHelper: NetworkHelper?
-    let mtProto: MTProto
-    let requestService: MTRequestMessageService
+    private let engine: NetworkEngine
+    private let switchingEngine: SwitchingNetworkEngine?
+    private let engineFactory: NetworkEngineFactory?
+    private let rustEngineDisabled: Atomic<Bool>
+    private let rustEngineWaitsForWebProxy: Atomic<Bool>
+    let mainSession: NetworkEngineSession
+    let requestService: NetworkEngineRequestService
     let basePath: String
-    private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
+    private let mainSessionDelegate: NetworkMainSessionDelegate
+    /// Records requests and failures of every session, whichever engine runs them. Nil unless
+    /// `network_telemetry_enabled` was set when the network started (always set in Debug builds).
+    public let telemetry: NetworkTelemetry?
     private let useRequestTimeoutTimers: Bool
+    private let baseTcpConnectionInterfaceFactory: ((MTTcpConnectionInterfaceDelegate, DispatchQueue) -> MTTcpConnectionInterface)?
+    private let isAppExtension: Bool
+    private let webProxyLeaseToken = UUID()
+    private let webProxyActive: ValuePromise<Bool>
+    private let webProxyCarrierDemandDisposable = MetaDisposable()
     public let useBetaFeatures: Bool
     public let useExperimentalFeatures: Bool
     
@@ -848,6 +902,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     public let shouldKeepBackgroundDownloadConnections = Promise<Bool>(false)
+
+    /// The user is actively using this account: the app is in the foreground and this is the
+    /// primary account (`Account.shouldKeepOnlinePresence`). Forwarded to every session through
+    /// `NetworkEngineSession.setOnline`, which engines use to choose keepalive timing.
+    public let isUserOnline = Promise<Bool>(false)
+    private let isUserOnlineDisposable = MetaDisposable()
     
     public var mockConnectionStatus: ConnectionStatus? {
         didSet {
@@ -864,28 +924,39 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool) {
+    public var engineKind: NetworkEngineKind {
+        return self.engine.kind
+    }
+    
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, engine: NetworkEngine, switchingEngine: SwitchingNetworkEngine?, engineFactory: NetworkEngineFactory?, rustEngineDisabled: Bool, rustEngineWaitsForWebProxy: Bool, mainSession: NetworkEngineSession, mainSessionDelegate: NetworkMainSessionDelegate, telemetry: NetworkTelemetry?, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool, baseTcpConnectionInterfaceFactory: ((MTTcpConnectionInterfaceDelegate, DispatchQueue) -> MTTcpConnectionInterface)?, isAppExtension: Bool, initialWebProxyActive: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
         self._contextProxyId = ValuePromise((context.apiEnvironment.socksProxySettings as MTSocksProxySettings?).flatMap(NetworkContextProxyId.init(settings:)), ignoreRepeated: true)
-        self.mtProto = mtProto
-        self.requestService = requestService
-        self.connectionStatusDelegate = connectionStatusDelegate
+        self.engine = engine
+        self.switchingEngine = switchingEngine
+        self.engineFactory = engineFactory
+        self.rustEngineDisabled = Atomic(value: rustEngineDisabled)
+        self.rustEngineWaitsForWebProxy = Atomic(value: rustEngineWaitsForWebProxy)
+        self.mainSession = mainSession
+        self.requestService = mainSession.requestService
+        self.mainSessionDelegate = mainSessionDelegate
+        self.telemetry = telemetry
         self._connectionStatus = _connectionStatus
         self.appDataDisposable = appDataDisposable
         self.basePath = basePath
         self.useRequestTimeoutTimers = useRequestTimeoutTimers
+        self.baseTcpConnectionInterfaceFactory = baseTcpConnectionInterfaceFactory
+        self.isAppExtension = isAppExtension
+        self.webProxyActive = ValuePromise<Bool>(initialWebProxyActive, ignoreRepeated: true)
         self.useBetaFeatures = useBetaFeatures
         self.useExperimentalFeatures = useExperimentalFeatures
         
         super.init()
         
-        self.requestService.didReceiveSoftAuthResetError = { [weak self] in
-            self?.didReceiveSoftAuthResetError?()
-        }
+        mainSessionDelegate.network = self
         
         let _contextProxyId = self._contextProxyId
         let networkHelper = NetworkHelper(requestPublicKeys: { [weak self] id in
@@ -934,9 +1005,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         })
         self.networkHelper = networkHelper
         context.add(networkHelper)
-        requestService.delegate = self
         
-        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target, tag, continueInBackground in
+        let fastDownloads = engine.kind == .rust
+        self._multiplexedRequestManager = MultiplexedRequestManager(cdnMaxRequestsPerWorker: fastDownloads ? 4 : 3, cdnMaxWorkersPerTarget: fastDownloads ? 8 : 4, takeWorker: { [weak self] target, tag, continueInBackground in
             if let strongSelf = self {
                 let datacenterId: Int
                 let isCdn: Bool
@@ -964,17 +1035,77 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             if let strongSelf = self {
                 if value {
                     Logger.shared.log("Network", "Resume network connection")
-                    strongSelf.mtProto.resume()
+                    strongSelf.mainSession.setPaused(false)
                 } else {
                     Logger.shared.log("Network", "Pause network connection")
-                    strongSelf.mtProto.pause()
+                    strongSelf.mainSession.setPaused(true)
                 }
             }
         }))
+
+        self.isUserOnlineDisposable.set((self.isUserOnline.get() |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak self] value in
+            self?.mainSession.setOnline(value)
+        }))
+
+        // The carrier runs exactly while MTProto does. SharedWakeupManager already folds
+        // foreground state, audio sessions, background extensions, processing tasks and the
+        // explicit-extension grace timer into shouldBeServiceTaskMaster, which reaches us as
+        // shouldKeepConnection - so riding it inherits every grace window that machinery
+        // implements, without a background mode or a timer of our own.
+        let webProxyCarrierDemand = combineLatest(queue: queue, self.webProxyActive.get(), self.shouldKeepConnection.get())
+        |> map { active, keepConnection -> Bool in
+            return active && keepConnection
+        }
+        |> distinctUntilChanged
+        let leaseToken = self.webProxyLeaseToken
+        let leaseIsAppExtension = self.isAppExtension
+        self.webProxyCarrierDemandDisposable.set(webProxyCarrierDemand.start(next: { wanted in
+            WebProxyTransport.shared.setCarrierDemand(leaseToken, wanted: wanted && !leaseIsAppExtension)
+        }))
+    }
+
+    func updateProxySettings(_ activeServer: ProxyServerSettings?) {
+        let webConfiguration = activeServer?.webProxyConfiguration
+        WebProxyTransport.shared.apply(configuration: self.isAppExtension ? nil : webConfiguration)
+        self.webProxyActive.set(activeServer?.isWebProxy == true)
+        if activeServer?.isWebProxy == true {
+            self.context.makeTcpConnectionInterface = { delegate, delegateQueue in
+                return WebProxyTransport.shared.makeConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
+            }
+        } else {
+            self.context.makeTcpConnectionInterface = self.baseTcpConnectionInterfaceFactory
+        }
+
+        let updated = activeServer?.mtProxySettings
+        self.context.updateApiEnvironment { environment in
+            let current = environment?.socksProxySettings
+            let updateNetwork: Bool
+            if let current, let updated {
+                updateNetwork = !current.isEqual(updated)
+            } else {
+                updateNetwork = (current != nil) != (updated != nil)
+            }
+            if updateNetwork {
+                self.dropConnectionStatus()
+                return environment?.withUpdatedSocksProxySettings(updated)
+            } else {
+                return nil
+            }
+        }
+        if activeServer?.isWebProxy == true {
+            if self.engineKind == .rust && self.engineFactory?.supportsWebProxy != true && self.switchEngine(to: .mtProtoKit, reason: "WEB proxy") {
+                let _ = self.rustEngineWaitsForWebProxy.swap(true)
+            }
+        } else if self.rustEngineWaitsForWebProxy.swap(false) {
+            self.switchEngine(to: .rust, reason: "WEB proxy turned off")
+        }
     }
     
     deinit {
         self.shouldKeepConnectionDisposable.dispose()
+        self.isUserOnlineDisposable.dispose()
+        self.webProxyCarrierDemandDisposable.dispose()
+        WebProxyTransport.shared.setCarrierDemand(self.webProxyLeaseToken, wanted: false)
         self.appDataDisposable.dispose()
     }
     
@@ -996,9 +1127,52 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
+    public var isRustEngineDisabled: Bool {
+        return self.rustEngineDisabled.with { $0 }
+    }
+
+    public func disableRustEngine(reason: String) {
+        let _ = self.rustEngineDisabled.swap(true)
+        let _ = self.rustEngineWaitsForWebProxy.swap(false)
+        self.switchEngine(to: .mtProtoKit, reason: reason)
+    }
+
+    @discardableResult
+    public func switchEngine(to kind: NetworkEngineKind, reason: String) -> Bool {
+        guard let switchingEngine = self.switchingEngine else {
+            return kind == self.engine.kind
+        }
+        if kind == .rust && self.rustEngineDisabled.with({ $0 }) {
+            Logger.shared.log("Network", "Engine switch to rust refused, the server disabled it: \(reason)")
+            return false
+        }
+        let context = self.context
+        let engineFactory = self.engineFactory
+        let isAppExtension = self.isAppExtension
+        return switchingEngine.switchEngine(to: kind, drainTimeout: 5.0, makeEngine: {
+            let replacement: NetworkEngine?
+            switch kind {
+            case .mtProtoKit:
+                replacement = MtProtoKitEngine(context: context)
+            case .rust:
+                replacement = engineFactory?.makeEngine(context: context, isAppExtension: isAppExtension)
+            }
+            if replacement == nil {
+                Logger.shared.log("Network", "Engine switch to \(kind.rawValue) declined: \(reason)")
+            } else {
+                Logger.shared.log("Network", "Switching the engine to \(kind.rawValue): \(reason)")
+            }
+            return replacement
+        })
+    }
+
+    fileprivate func mainSessionAuthorizationRequired() {
         Logger.shared.log("Network", "requestMessageServiceAuthorizationRequired")
         self.loggedOut?()
+    }
+    
+    func addUpdateSink(_ sink: NetworkEngineUpdateSink) {
+        self.mainSession.addUpdateSink(sink)
     }
     
     func download(datacenterId: Int, isMedia: Bool, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
@@ -1020,7 +1194,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections || (continueInBackground && shouldKeepBackgroundDownloadConnections)
         }
         |> distinctUntilChanged
-        return Download(queue: self.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection, useRequestTimeoutTimers: self.useRequestTimeoutTimers)
+        return Download(queue: self.queue, engine: self.engine, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection, isUserOnline: self.isUserOnline.get(), useRequestTimeoutTimers: self.useRequestTimeoutTimers)
     }
     
     private func worker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
@@ -1068,12 +1242,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     }
     
     public func getAuthKeyId() -> Signal<Int64, NoError> {
-        let mtContext = self.mtProto.context
+        let mtContext = self.context
         let datacenterId = self.datacenterId
         return Signal { subscriber in
             MTContext.contextQueue().dispatch(onQueue: {
                 var result: Int64 = 0
-                if let authInfo = mtContext?.authInfoForDatacenter(withId: datacenterId, selector: .persistent) {
+                if let authInfo = mtContext.authInfoForDatacenter(withId: datacenterId, selector: .persistent) {
                     result = authInfo.authKeyId
                 }
                 subscriber.putNext(result)
@@ -1085,133 +1259,85 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     public func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
         let requestService = self.requestService
-        return Signal { subscriber in
-            let request = MTRequest()
-            
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
-                    return false
-                }
-                return true
-            }
-            
-            request.acknowledgementReceived = {
-                if info.contains(.acknowledgement) {
-                    subscriber.putNext(.acknowledged)
-                }
-            }
-            
-            request.progressUpdated = { progress, packetSize in
-                if info.contains(.progress) {
-                    subscriber.putNext(.progress(progress, Int32(clamping: packetSize)))
-                }
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext(.result(result))
-                        subscriber.putCompletion()
+        return Signal { [requestService] subscriber in
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
                     }
-                    else {
-                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
+                dependsOn: networkRequestDependency(tag: tag),
+                acknowledged: {
+                    if info.contains(.acknowledgement) {
+                        subscriber.putNext(.acknowledged)
+                    }
+                },
+                progress: { progress, packetSize in
+                    if info.contains(.progress) {
+                        subscriber.putNext(.progress(progress, Int32(clamping: packetSize)))
+                    }
+                },
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? T {
+                            subscriber.putNext(.result(result))
+                            subscriber.putCompletion()
+                        }
+                        else {
+                            subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
                     }
                 }
-            }
+            )
             
-            if let tag = tag {
-                request.shouldDependOnRequest = { other in
-                    if let other = other, let metadata = other.metadata as? WrappedRequestMetadata, let otherTag = metadata.tag {
-                        return tag.shouldDependOn(other: otherTag)
-                    }
-                    return false
-                }
-            }
-            
-            let internalId: Any! = request.internalId
-            
-            requestService.add(request)
-            
-            return ActionDisposable { [weak requestService] in
-                requestService?.removeRequest(byInternalId: internalId)
-            }
+            return requestService.add(request)
         }
     }
     
     public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
-        return Signal { subscriber in
-            let request = MTRequest()
-            
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
-                if let result = data.2.parse(Buffer(data: response)) {
-                    return BoxedMessage(result)
-                }
-                return nil
-            })
-            
-            request.dependsOnPasswordEntry = false
-            
-            request.shouldContinueExecutionWithErrorContext = { errorContext in
-                guard let errorContext = errorContext else {
-                    return true
-                }
-                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
-                    onFloodWaitError(errorText)
-                }
-                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
-                    return false
-                }
-                return true
-            }
-            
-            request.completed = { (boxedResponse, timestamp, error) -> () in
-                if let error = error {
-                    subscriber.putError(error)
-                } else {
-                    if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext(result)
-                        subscriber.putCompletion()
+        return Signal { [requestService] subscriber in
+            let request = NetworkEngineRequest(
+                payload: data.1.makeData(),
+                metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag),
+                shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)),
+                parse: { response in
+                    if let result = data.2.parse(Buffer(data: response)) {
+                        return BoxedMessage(result)
                     }
-                    else {
-                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                    return nil
+                },
+                options: NetworkEngineRequestOptions(),
+                shouldContinueAfterError: networkRequestErrorPolicy(automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, failOnServerErrors: false),
+                dependsOn: networkRequestDependency(tag: tag),
+                acknowledged: nil,
+                progress: nil,
+                completed: { result in
+                    switch result {
+                    case let .success(response):
+                        if let result = (response.result as! BoxedMessage).body as? T {
+                            subscriber.putNext(result)
+                            subscriber.putCompletion()
+                        }
+                        else {
+                            subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                        }
+                    case let .failure(failure):
+                        subscriber.putError(failure.error)
                     }
                 }
-            }
+            )
             
-            if let tag = tag {
-                request.shouldDependOnRequest = { other in
-                    if let other = other, let metadata = other.metadata as? WrappedRequestMetadata, let otherTag = metadata.tag {
-                        return tag.shouldDependOn(other: otherTag)
-                    }
-                    return false
-                }
-            }
-            
-            let internalId: Any! = request.internalId
-            
-            requestService.add(request)
-            
-            return ActionDisposable { [weak requestService] in
-                requestService?.removeRequest(byInternalId: internalId)
-            }
+            return requestService.add(request)
         }
     }
     
@@ -1234,6 +1360,33 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.networkSpeedLimitedEventState.with { state in
             return state.markNotifyTimestamp()
         }
+    }
+}
+
+func networkRequestErrorPolicy(automaticFloodWait: Bool, onFloodWaitError: ((String) -> Void)?, failOnServerErrors: Bool) -> (NetworkEngineErrorContext) -> Bool {
+    return { errorContext in
+        if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
+            onFloodWaitError(errorText)
+        }
+        if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+            return false
+        }
+        if errorContext.internalServerErrorCount > 0 && failOnServerErrors {
+            return false
+        }
+        return true
+    }
+}
+
+private func networkRequestDependency(tag: NetworkRequestDependencyTag?) -> ((WrappedRequestMetadata) -> Bool)? {
+    guard let tag = tag else {
+        return nil
+    }
+    return { metadata in
+        if let otherTag = metadata.tag {
+            return tag.shouldDependOn(other: otherTag)
+        }
+        return false
     }
 }
 

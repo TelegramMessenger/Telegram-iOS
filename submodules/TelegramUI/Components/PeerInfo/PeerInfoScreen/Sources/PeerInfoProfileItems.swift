@@ -20,6 +20,24 @@ import BoostLevelIconComponent
 private let enabledPublicBioEntities: EnabledEntityTypes = [.allUrl, .mention, .hashtag]
 private let enabledPrivateBioEntities: EnabledEntityTypes = [.internalUrl, .mention, .hashtag]
 
+private func peerVerificationDescriptionEntities(_ verification: PeerVerification) -> [MessageTextEntity] {
+    var result = verification.descriptionEntities
+    for entity in generateTextEntities(verification.description, enabledTypes: [.allUrl]) {
+        let hasOverlappingLink = result.contains(where: { current in
+            switch current.type {
+            case .Url, .TextUrl, .Email:
+                return current.range.overlaps(entity.range)
+            default:
+                return false
+            }
+        })
+        if !hasOverlappingLink {
+            result.append(entity)
+        }
+    }
+    return result
+}
+
 enum InfoSection: Int, CaseIterable {
     case unofficial
     case community
@@ -112,7 +130,7 @@ func infoItems(
         let ItemCommunity = 10000
         
         if let cachedUserData = data.cachedData as? CachedUserData, cachedUserData.flags.contains(.unofficialSecurityRisk) {
-            items[.unofficial]!.append(PeerInfoScreenInfoItem(id: 0, title: "", text: .markdown(presentationData.strings.PeerInfo_UnofficialSecurityRisk(EnginePeer(user).compactDisplayTitle).string), style: .compact, linkAction: nil))
+            items[.unofficial]!.append(PeerInfoScreenInfoItem(id: 0, title: "", text: .plain(presentationData.strings.PeerInfo_UnofficialSecurityRisk(EnginePeer(user).compactDisplayTitle).string), style: .compact, linkAction: nil))
         }
         
         if !callMessages.isEmpty {
@@ -509,20 +527,10 @@ func infoItems(
                 }
                                 
                 if let verification = (data.cachedData as? CachedUserData)?.verification {
-                    let description: String
-                    let descriptionString = verification.description
-                    let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
-                    if let entity = entities.first {
-                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                        let url = (descriptionString as NSString).substring(with: range)
-                        description = descriptionString.replacingOccurrences(of: url, with: "[\(url)](\(url))")
-                    } else {
-                        description = descriptionString
-                    }
                     let attributedPrefix = NSMutableAttributedString(string: "  ")
                     attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSMakeRange(0, 1))
                     
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemVerification, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemVerification, text: verification.description, entities: peerVerificationDescriptionEntities(verification), attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
                         if case let .tap(url) = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
@@ -686,21 +694,10 @@ func infoItems(
                 }
                 
                 if let verification = (data.cachedData as? CachedChannelData)?.verification {
-                    let description: String
-                    let descriptionString = verification.description
-                    let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
-                    if let entity = entities.first {
-                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                        let url = (descriptionString as NSString).substring(with: range)
-                        description = descriptionString.replacingOccurrences(of: url, with: "[\(url)](\(url))")
-                    } else {
-                        description = descriptionString
-                    }
-                    
                     let attributedPrefix = NSMutableAttributedString(string: "  ")
                     attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSMakeRange(0, 1))
                     
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: verification.description, entities: peerVerificationDescriptionEntities(verification), attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
                         if case let .tap(url) = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
@@ -932,6 +929,8 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
     for section in Section.allCases {
         items[section] = []
     }
+
+    let welcomeMessagesLabel: PeerInfoScreenDisclosureItem.Label = .text(data?.firstWelcomeMessageText ?? presentationData.strings.WelcomeMessages_Off)
     
     if let data = data {
         if case let .user(user) = data.peer {
@@ -1131,10 +1130,11 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                 let ItemAddToCommunityInfo = 17
                 let ItemCommunity = 18
                 let ItemRemoveFromCommunity = 19
+                let ItemWelcomeMessages = 20
                 
                 let isCreator = channel.flags.contains(.isCreator)
-                
-                if isCreator {
+
+                if channel.hasPermission(.changeInfo) {
                     let linkText: String
                     if let _ = channel.addressName {
                         linkText = presentationData.strings.Channel_Setup_TypePublic
@@ -1158,7 +1158,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if channel.hasPermission(.changeInfo) {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
                         if let peer = data.linkedDiscussionPeer {
@@ -1179,7 +1179,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if channel.hasPermission(.changeInfo) {
                     let label: String
                     if let cachedData = data.cachedData as? CachedChannelData, case let .known(reactionSettings) = cachedData.reactionSettings {
                         switch reactionSettings.allowedReactions {
@@ -1207,7 +1207,13 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if channel.hasPermission(.manageWelcomeMessages) {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemWelcomeMessages, label: welcomeMessagesLabel, text: presentationData.strings.GroupInfo_WelcomeMessages, icon: PresentationResourcesSettings.welcome, action: {
+                        interaction.editingOpenWelcomeMessages()
+                    }))
+                }
+
+                if channel.hasPermission(.changeInfo) {
                     var colors: [PeerNameColors.Colors] = []
                     if let nameColor = channel.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
                         colors.append(nameColor)
@@ -1239,7 +1245,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if channel.hasPermission(.changeInfo) {
                     let labelString: NSAttributedString
                     if channel.linkedMonoforumId != nil {
                         if case let .channel(monoforumPeer) = data.linkedMonoforumPeer {
@@ -1416,6 +1422,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                 let ItemAddToCommunityInfo = 121
                 let ItemCommunity = 122
                 let ItemRemoveFromCommunity = 123
+                let ItemWelcomeMessages = 124
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.addressName != nil
@@ -1525,7 +1532,13 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                         }
                     }
                     
-                    if isCreator || channel.adminRights?.rights.contains(.canChangeInfo) == true {
+                    if channel.hasPermission(.manageWelcomeMessages) {
+                        items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemWelcomeMessages, label: welcomeMessagesLabel, text: presentationData.strings.GroupInfo_WelcomeMessages, icon: PresentationResourcesSettings.welcome, action: {
+                            interaction.editingOpenWelcomeMessages()
+                        }))
+                    }
+
+                    if channel.hasPermission(.changeInfo) {
                         var colors: [PeerNameColors.Colors] = []
                         if let nameColor = channel.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
                             colors.append(nameColor)
@@ -1545,7 +1558,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                             interaction.editingOpenNameColorSetup()
                         }))
                     }
-                    
+
                     if (isCreator || (channel.adminRights != nil && channel.hasPermission(.banMembers))) && cachedData.peerGeoLocation == nil, !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId, !channel.isForumOrMonoForum {
                         items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: PresentationResourcesSettings.chatHistory, action: {
                             interaction.editingOpenPreHistorySetup()
@@ -1684,8 +1697,10 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
             let ItemTopicsText = 109
             let ItemAddToCommunity = 110
             let ItemAddToCommunityInfo = 111
+            let ItemWelcomeMessages = 112
             
             var canViewAdminsAndBanned = false
+            let canManageWelcomeMessages = group.hasPermission(.manageWelcomeMessages)
             
             if case .creator = group.role {
                 if let cachedData = data.cachedData as? CachedGroupData {
@@ -1759,22 +1774,24 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                 
                 canViewAdminsAndBanned = true
             } else if case let .admin(rights, _) = group.role {
-                let label: String
-                if let cachedData = data.cachedData as? CachedGroupData, case let .known(reactionSettings) = cachedData.reactionSettings {
-                    switch reactionSettings.allowedReactions {
-                    case .all:
-                        label = presentationData.strings.PeerInfo_LabelAllReactions
-                    case .empty:
-                        label = presentationData.strings.PeerInfo_ReactionsDisabled
-                    case let .limited(reactions):
-                        label = "\(reactions.count)"
+                if rights.rights.contains(.canChangeInfo) {
+                    let label: String
+                    if let cachedData = data.cachedData as? CachedGroupData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                        switch reactionSettings.allowedReactions {
+                        case .all:
+                            label = presentationData.strings.PeerInfo_LabelAllReactions
+                        case .empty:
+                            label = presentationData.strings.PeerInfo_ReactionsDisabled
+                        case let .limited(reactions):
+                            label = "\(reactions.count)"
+                        }
+                    } else {
+                        label = ""
                     }
-                } else {
-                    label = ""
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: presentationData.strings.PeerInfo_Reactions, icon: PresentationResourcesSettings.reactions, action: {
+                        interaction.editingOpenReactionsSetup()
+                    }))
                 }
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: presentationData.strings.PeerInfo_Reactions, icon: PresentationResourcesSettings.reactions, action: {
-                    interaction.editingOpenReactionsSetup()
-                }))
                 
                 if rights.rights.contains(.canInviteUsers) {
                     let invitesText: String
@@ -1790,6 +1807,12 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                 }
                 
                 canViewAdminsAndBanned = true
+            }
+
+            if canManageWelcomeMessages {
+                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemWelcomeMessages, label: welcomeMessagesLabel, text: presentationData.strings.GroupInfo_WelcomeMessages, icon: PresentationResourcesSettings.welcome, action: {
+                    interaction.editingOpenWelcomeMessages()
+                }))
             }
             
             if canViewAdminsAndBanned {

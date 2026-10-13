@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
 swift_library(
     name = "SettingsUI",
@@ -11,6 +13,7 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
@@ -128,6 +131,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/PasskeysScreen",
         "//submodules/TelegramUI/Components/FaceScanScreen",
         "//submodules/ComponentFlow",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/ResizableSheetComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/Components/BundleIconComponent",
@@ -142,6 +147,38 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/Utils/DeviceModel",
+        "//submodules/PasscodeCore",
+        "//submodules/WalletContext",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+swift_library(
+    name = "SettingsUITestsLib",
+    testonly = True,
+    srcs = glob([
+        "Tests/**/*.swift",
+    ]),
+    deps = [
+        ":SettingsUI",
+        "//submodules/TelegramCore:TelegramCore",
+    ],
+)
+
+ios_test_runner(
+    name = "SettingsUITestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "SettingsUITests",
+    minimum_os_version = "15.0",
+    runner = ":SettingsUITestRunner",
+    deps = [
+        ":SettingsUITestsLib",
     ],
     visibility = [
         "//visibility:public",

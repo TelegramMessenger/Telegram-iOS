@@ -14,6 +14,7 @@ import MultilineTextComponent
 import EdgeEffect
 import RichTextEditorCore
 import RichTextEditorUIKit
+import RichTextButtonIcons
 import RichTextEditorMediaView
 import InstantPageUI
 import ContextUI
@@ -25,6 +26,8 @@ import ChatRichTextEditorComposer
 import ChatTextLinkEditUI
 import TextFormat
 import UndoUI
+import SwiftSignalKit
+import ChatSendMessageActionUI
 
 /// `RichTextChecklistMarkerView` host wrapper backing a checklist item's checkbox with a `CheckNode`
 /// (an `ASDisplayNode`, so we host its `.view` — this is a `UIView`, not a node). The editor frames this
@@ -54,12 +57,14 @@ private final class RichTextSendButtonComponent: Component {
     let isEnabled: Bool
     let isLocked: Bool
     let action: () -> Void
+    let longPressAction: (() -> Void)?
 
-    init(theme: PresentationTheme, isEnabled: Bool, isLocked: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, isEnabled: Bool, isLocked: Bool, action: @escaping () -> Void, longPressAction: (() -> Void)?) {
         self.theme = theme
         self.isEnabled = isEnabled
         self.isLocked = isLocked
         self.action = action
+        self.longPressAction = longPressAction
     }
 
     static func ==(lhs: RichTextSendButtonComponent, rhs: RichTextSendButtonComponent) -> Bool {
@@ -72,6 +77,9 @@ private final class RichTextSendButtonComponent: Component {
         if lhs.isLocked != rhs.isLocked {
             return false
         }
+        if (lhs.longPressAction == nil) != (rhs.longPressAction == nil) {
+            return false
+        }
         return true
     }
 
@@ -81,6 +89,7 @@ private final class RichTextSendButtonComponent: Component {
         private let buttonCutoutMaskView = UIImageView()
         private let lockBackgroundView = GlassBackgroundView()
         private let lockIconView = UIImageView()
+        private var longPressGestureRecognizer: UILongPressGestureRecognizer?
 
         private var component: RichTextSendButtonComponent?
 
@@ -96,14 +105,26 @@ private final class RichTextSendButtonComponent: Component {
             super.init(frame: frame)
 
             self.clipsToBounds = false
+            let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
+            longPressGestureRecognizer.isEnabled = false
+            self.longPressGestureRecognizer = longPressGestureRecognizer
+            self.addGestureRecognizer(longPressGestureRecognizer)
         }
 
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
 
+        @objc private func longPressed(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began, let component = self.component else {
+                return
+            }
+            component.longPressAction?()
+        }
+
         func update(component: RichTextSendButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.longPressGestureRecognizer?.isEnabled = component.longPressAction != nil
 
             let buttonSize = self.button.update(
                 transition: transition,
@@ -219,6 +240,22 @@ private final class RichTextSendButtonComponent: Component {
     }
 }
 
+public final class RichTextAttachmentScreenSendContextActions {
+    public let peerId: EnginePeer.Id
+    public let send: (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    public let schedule: (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
+
+    public init(
+        peerId: EnginePeer.Id,
+        send: @escaping (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    ) {
+        self.peerId = peerId
+        self.send = send
+        self.schedule = schedule
+    }
+}
+
 public class RichTextAttachmentScreen: ViewControllerComponentContainer, AttachmentContainable {
     public typealias Document = RichTextEditorCoreDocument
     
@@ -231,6 +268,28 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
         case image(ImageMediaReference)
         case file(FileMediaReference)
         case location(TelegramMediaMap)
+    }
+    
+    public struct MediaRequest {
+        public struct ImageOrVideo {
+            public let limit: Int
+            
+            public init(limit: Int) {
+                self.limit = limit
+            }
+        }
+        
+        public let imageOrVideo: ImageOrVideo?
+        public let music: Bool
+        public let file: Bool
+        public let location: Bool
+        
+        public init(imageOrVideo: ImageOrVideo?, music: Bool, file: Bool, location: Bool) {
+            self.imageOrVideo = imageOrVideo
+            self.music = music
+            self.file = file
+            self.location = location
+        }
     }
     
     public var requestAttachmentMenuExpansion: () -> Void = {}
@@ -257,13 +316,16 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
     private let context: AccountContext
     private let sendMessage: (Document, [String: Media], [Int64: TelegramMediaFile], Bool) -> Void
     private let syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)?
+    private let sendContextActions: RichTextAttachmentScreenSendContextActions?
 
     public convenience init(
         context: AccountContext,
         mode: Mode,
         sendMessage: @escaping (Document, [String: Media], [Int64: TelegramMediaFile]) -> Void,
         syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)? = nil,
-        presentAttachmentMenu: ((_ photoVideoOnly: Bool, @escaping (RichTextAttachmentScreen.RichTextAttachment) -> Void) -> Void)?,
+        sendContextActions: RichTextAttachmentScreenSendContextActions? = nil,
+        preuploadPeerId: EnginePeer.Id? = nil,
+        presentAttachmentMenu: ((_ request: RichTextAttachmentScreen.MediaRequest, @escaping ([RichTextAttachmentScreen.RichTextAttachment]) -> Void) -> Void)?,
         presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?
     ) {
         self.init(
@@ -273,6 +335,8 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
                 sendMessage(document, media, emojiFiles)
             },
             syncContent: syncContent,
+            sendContextActions: sendContextActions,
+            preuploadPeerId: preuploadPeerId,
             presentAttachmentMenu: presentAttachmentMenu,
             presentFormulaEditor: presentFormulaEditor
         )
@@ -283,21 +347,30 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
         mode: Mode,
         sendMessage: @escaping (Document, [String: Media], [Int64: TelegramMediaFile], Bool) -> Void,
         syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)? = nil,
-        presentAttachmentMenu: ((_ photoVideoOnly: Bool, @escaping (RichTextAttachmentScreen.RichTextAttachment) -> Void) -> Void)?,
-        presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?
+        sendContextActions: RichTextAttachmentScreenSendContextActions? = nil,
+        /// Peer whose chat this content will be sent to. Media attached here pre-uploads against it;
+        /// nil disables pre-upload (no peer to run `messages.uploadMedia` against).
+        preuploadPeerId: EnginePeer.Id? = nil,
+        presentAttachmentMenu: ((_ request: RichTextAttachmentScreen.MediaRequest, @escaping ([RichTextAttachmentScreen.RichTextAttachment]) -> Void) -> Void)?,
+        presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?,
+        pastedMarkdownParser: ((AccountContext, String) -> ChatInputContent?)? = nil
     ) {
         self.context = context
         self.sendMessage = sendMessage
         self.syncContent = syncContent
+        self.sendContextActions = sendContextActions
 
         let overNavigationContainer = SparseContainerView()
 
         super.init(context: context, component: RichTextAttachmentScreenComponent(
             context: context,
             mode: mode,
+            sendContextActions: sendContextActions,
+            preuploadPeerId: preuploadPeerId,
             overNavigationContainer: overNavigationContainer,
             presentAttachmentMenu: presentAttachmentMenu,
-            presentFormulaEditor: presentFormulaEditor
+            presentFormulaEditor: presentFormulaEditor,
+            pastedMarkdownParser: pastedMarkdownParser
         ), navigationBarAppearance: .transparent, theme: .default)
 
         self._hasGlassStyle = true
@@ -378,6 +451,110 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
         syncContent(componentView.currentDocument, componentView.currentMedia, componentView.currentEmojiFiles)
         self.dismiss()
     }
+
+    fileprivate func displayLongPressSendMenu(sourceSendButton: UIView) {
+        guard let sendContextActions = self.sendContextActions else {
+            return
+        }
+        let context = self.context
+        Task { @MainActor [weak self, weak sourceSendButton] in
+            guard let self, let sourceSendButton else {
+                return
+            }
+            let peerId = sendContextActions.peerId
+            let previousSupportedOrientations = self.supportedOrientations
+
+            let availableMessageEffects = await (context.availableMessageEffects |> take(1)).get()
+            let hasPremium = await (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                return user.isPremium
+            }).get()
+
+            let peerStatus = await (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Presence(id: peerId)
+            )).get()
+            guard let peer = await (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )).get() else {
+                return
+            }
+
+            let initialData = await ChatSendMessageContextScreen.initialData(context: context, currentMessageEffectId: nil).get()
+
+            var sendWhenOnlineAvailable = false
+            if let peerStatus, case let .present(until) = peerStatus.status {
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                if currentTime > until {
+                    sendWhenOnlineAvailable = true
+                }
+            }
+            if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                sendWhenOnlineAvailable = false
+            }
+
+            let messageActionsController = makeChatSendMessageActionSheetController(
+                initialData: initialData,
+                context: context,
+                updatedPresentationData: nil,
+                peerId: peerId,
+                params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                    isScheduledMessages: false,
+                    mediaPreview: nil,
+                    mediaCaptionIsAbove: nil,
+                    messageEffect: (nil, { _ in }),
+                    attachment: false,
+                    canSendWhenOnline: sendWhenOnlineAvailable,
+                    forwardMessageIds: [],
+                    canMakePaidContent: false,
+                    currentPrice: nil,
+                    hasTimers: false,
+                    sendPaidMessageStars: nil,
+                    isMonoforum: peer.isMonoForum
+                )),
+                hasEntityKeyboard: false,
+                gesture: nil,
+                sourceSendButton: sourceSendButton,
+                textInputSource: nil,
+                emojiViewProvider: nil,
+                completion: { [weak self] in
+                    self?.supportedOrientations = previousSupportedOrientations
+                },
+                sendMessage: { [weak self] mode, parameters in
+                    guard let self, let componentView = self.node.hostView.componentView as? RichTextAttachmentScreenComponent.View else {
+                        return
+                    }
+                    sendContextActions.send(componentView.currentDocument, componentView.currentMedia, componentView.currentEmojiFiles, false, mode, parameters)
+                    self.dismiss()
+                },
+                schedule: { [weak self] params in
+                    guard let self, let componentView = self.node.hostView.componentView as? RichTextAttachmentScreenComponent.View else {
+                        return
+                    }
+                    sendContextActions.schedule(componentView.currentDocument, componentView.currentMedia, componentView.currentEmojiFiles, false, params)
+                    self.dismiss()
+                },
+                editPrice: { _ in
+                },
+                openPremiumPaywall: { [weak self] c in
+                    guard let self else {
+                        return
+                    }
+                    if let parentController = self.parentController() {
+                        parentController.push(c)
+                    } else {
+                        self.push(c)
+                    }
+                },
+                reactionItems: nil,
+                availableMessageEffects: availableMessageEffects,
+                isPremium: hasPremium
+            )
+            self.present(messageActionsController, in: .window(.root))
+        }
+    }
 }
 
 final class RichTextAttachmentScreenComponent: Component {
@@ -387,16 +564,22 @@ final class RichTextAttachmentScreenComponent: Component {
     // its editor view into the View's content container.
     let context: AccountContext
     let mode: RichTextAttachmentScreen.Mode
+    let sendContextActions: RichTextAttachmentScreenSendContextActions?
     let overNavigationContainer: UIView
-    let presentAttachmentMenu: ((_ photoVideoOnly: Bool, @escaping (RichTextAttachmentScreen.RichTextAttachment) -> Void) -> Void)?
+    let preuploadPeerId: EnginePeer.Id?
+    let presentAttachmentMenu: ((_ request: RichTextAttachmentScreen.MediaRequest, @escaping ([RichTextAttachmentScreen.RichTextAttachment]) -> Void) -> Void)?
     let presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?
+    let pastedMarkdownParser: ((AccountContext, String) -> ChatInputContent?)?
 
-    init(context: AccountContext, mode: RichTextAttachmentScreen.Mode, overNavigationContainer: UIView, presentAttachmentMenu: ((_ photoVideoOnly: Bool, @escaping (RichTextAttachmentScreen.RichTextAttachment) -> Void) -> Void)?, presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?) {
+    init(context: AccountContext, mode: RichTextAttachmentScreen.Mode, sendContextActions: RichTextAttachmentScreenSendContextActions?, preuploadPeerId: EnginePeer.Id?, overNavigationContainer: UIView, presentAttachmentMenu: ((_ request: RichTextAttachmentScreen.MediaRequest, @escaping ([RichTextAttachmentScreen.RichTextAttachment]) -> Void) -> Void)?, presentFormulaEditor: ((_ initialValue: String?, _ completion: @escaping (String) -> Void) -> Void)?, pastedMarkdownParser: ((AccountContext, String) -> ChatInputContent?)?) {
         self.context = context
         self.mode = mode
+        self.sendContextActions = sendContextActions
         self.overNavigationContainer = overNavigationContainer
+        self.preuploadPeerId = preuploadPeerId
         self.presentAttachmentMenu = presentAttachmentMenu
         self.presentFormulaEditor = presentFormulaEditor
+        self.pastedMarkdownParser = pastedMarkdownParser
     }
 
     static func ==(lhs: RichTextAttachmentScreenComponent, rhs: RichTextAttachmentScreenComponent) -> Bool {
@@ -421,6 +604,129 @@ final class RichTextAttachmentScreenComponent: Component {
 
         /// Picked media keyed by the opaque `mediaID` handed to the editor. Read by `donePressed`.
         private var attachedMedia: [String: Media] = [:]
+
+        /// Held for as long as this screen is open. Reconciled from the LIVE document, so removing a
+        /// medium (or undoing its insertion) releases its need and the upload is grace-cancelled.
+        private var preuploadNeeds: MediaPreuploadNeeds?
+        /// One progress subscription per medium currently in the document.
+        private var preuploadObservers: [EngineMedia.Id: Disposable] = [:]
+
+        deinit {
+            for (_, disposable) in self.preuploadObservers {
+                disposable.dispose()
+            }
+        }
+
+        /// Every `mediaID` the document references, including inside tables, quotes and details.
+        private static func mediaIDs(in blocks: [Block], into result: inout [String]) {
+            for block in blocks {
+                switch block {
+                case let .media(mediaBlock):
+                    for item in mediaBlock.items {
+                        result.append(item.mediaID)
+                    }
+                case let .blockQuote(quote):
+                    mediaIDs(in: quote.children, into: &result)
+                case let .details(details):
+                    mediaIDs(in: details.children, into: &result)
+                case let .table(table):
+                    for row in table.rows {
+                        for cell in row.cells {
+                            mediaIDs(in: cell.blocks, into: &result)
+                        }
+                    }
+                case .paragraph, .code, .pullQuote, .buttonRow:
+                    break
+                }
+            }
+        }
+
+        /// Bring the set of uploading media in line with what the document currently references,
+        /// and (re)bind a progress subscription for each. Cheap enough to run on every edit: it is a
+        /// walk of the block tree plus dictionary work, no conversion.
+        private func reconcilePreupload() {
+            guard let component = self.component, let peerId = component.preuploadPeerId else {
+                return
+            }
+
+            var ids: [String] = []
+            Self.mediaIDs(in: self.editor.document.blocks, into: &ids)
+
+            var media: [EngineMedia] = []
+            var live = Set<EngineMedia.Id>()
+            for mediaID in ids {
+                guard let value = self.attachedMedia[mediaID], let id = value.id, !live.contains(id) else {
+                    continue
+                }
+                live.insert(id)
+                media.append(EngineMedia(value))
+            }
+
+            let needs: MediaPreuploadNeeds
+            if let existing = self.preuploadNeeds {
+                needs = existing
+            } else {
+                needs = component.context.engine.messages.makeMediaPreuploadNeeds()
+                self.preuploadNeeds = needs
+            }
+            needs.update(peerId: peerId, media: media)
+
+            for (id, disposable) in self.preuploadObservers where !live.contains(id) {
+                disposable.dispose()
+                self.preuploadObservers.removeValue(forKey: id)
+            }
+            for id in live where self.preuploadObservers[id] == nil {
+                self.preuploadObservers[id] = (component.context.engine.messages.mediaPreuploadState(id: id)
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    self?.applyPreuploadState(state, for: id)
+                })
+            }
+        }
+
+        /// Apply one medium's pre-upload state.
+        ///
+        /// On `.done` the local `Media` is REPLACED BY the cloud one **at the key the document
+        /// already references** — the editor addresses media by an opaque `mediaID` string, so the
+        /// value swap promotes the medium everywhere downstream with no document mutation, no undo
+        /// entry and no relayout. Re-deriving the key from the cloud media would be a bug: promotion
+        /// changes the `MediaId`, so the new key is one the document does not reference and the
+        /// medium would silently vanish on read-back.
+        private func applyPreuploadState(_ state: EngineMediaPreuploadState?, for id: EngineMedia.Id) {
+            guard let component = self.component else {
+                return
+            }
+            switch state {
+            case .progress:
+                // Progress display is owned by RichTextMediaContentComponent, which subscribes to the
+                // same state itself. This observer exists ONLY for the promotion write-back below.
+                return
+            case let .done(cloudMedia):
+                let raw = cloudMedia._asMedia()
+                guard let key = self.attachedMedia.first(where: { $0.value.id == id })?.key,
+                      let localMedia = self.attachedMedia[key] else {
+                    return
+                }
+                // Let the already-downloaded local bytes serve the cloud resource, so the promoted
+                // medium does not flash a placeholder.
+                if let localResource = preuploadPrimaryResource(localMedia), let cloudResource = preuploadPrimaryResource(raw) {
+                    component.context.engine.resources.moveResourceData(
+                        from: EngineMediaResource.Id(localResource.id),
+                        to: EngineMediaResource.Id(cloudResource.id),
+                        synchronous: true
+                    )
+                }
+                self.attachedMedia[key] = raw
+            case .failed, .none:
+                return
+            }
+            // Guarded like `editor.onChange`: this can land during a layout pass (the first progress
+            // value often arrives synchronously on subscribe), and re-entering `update` from inside
+            // it is what the composer's requestLayout re-entry guard exists to prevent.
+            guard !self.isUpdating else {
+                return
+            }
+            self.componentState?.updated(transition: .immediate)
+        }
 
         /// The picked media map, keyed by the editor's `mediaID`. Read by the controller's `donePressed`.
         var currentMedia: [String: Media] {
@@ -447,6 +753,7 @@ final class RichTextAttachmentScreenComponent: Component {
         private let actionBar = ComponentView<Empty>()
         private let aiButton = ComponentView<Empty>()
         private let sendButton = ComponentView<Empty>()
+        private let sendButtonExtractedContainer = ContextExtractedContentContainingView()
 
         private var emojiKeyboard: RichTextEmojiKeyboardController?
         private var componentState: EmptyComponentState?
@@ -484,58 +791,93 @@ final class RichTextAttachmentScreenComponent: Component {
         /// Picks one medium via the host attachment menu, registers its raw `Media` in `attachedMedia` (so the
         /// media-view provider can resolve it), and hands back the editor-facing `(mediaID, naturalSize, kind,
         /// caption)`. Callers decide what to do with it (insert a new block, or append to an existing one).
-        private func pickMedia(photoVideoOnly: Bool, completion: @escaping (_ mediaID: String, _ naturalSize: CGSize, _ kind: MediaKind, _ caption: [TextRun]) -> Void) {
+        private func pickMedia(request: RichTextAttachmentScreen.MediaRequest, completion: @escaping (_ items: [(mediaID: String, naturalSize: CGSize, kind: MediaKind, caption: [TextRun])]) -> Void) {
             guard let component = self.component else {
                 return
             }
-            component.presentAttachmentMenu?(photoVideoOnly, { [weak self] attachment in
+            component.presentAttachmentMenu?(request, { [weak self] attachments in
                 guard let self else {
                     return
                 }
-                let media: Media
-                let kind: MediaKind
-                let naturalSize: CGSize
-                switch attachment {
-                case let .image(imageReference):
-                    let image = imageReference.media
-                    media = image
-                    kind = .image
-                    naturalSize = image.representations.last?.dimensions.cgSize ?? CGSize(width: 1, height: 1)
-                case let .file(fileReference):
-                    let file = fileReference.media
-                    if file.isVideo {
-                        media = file
-                        kind = .video
-                        naturalSize = file.dimensions?.cgSize ?? CGSize(width: 1, height: 1)
-                    } else if file.isMusic || file.isVoice {
-                        // Audio (music from the Audio picker; voice only via edit round-trips). The block is a
-                        // fixed-height row, so naturalSize is ignored by MediaBlockBox — pass a 1x1 placeholder.
-                        media = file
-                        kind = .audio
-                        naturalSize = CGSize(width: 1.0, height: 1.0)
-                    } else {
-                        return   // unsupported document type
+                var results: [(mediaID: String, naturalSize: CGSize, kind: MediaKind, caption: [TextRun])] = []
+                for attachment in attachments {
+                    let media: Media
+                    let kind: MediaKind
+                    let naturalSize: CGSize
+                    switch attachment {
+                    case let .image(imageReference):
+                        let image = imageReference.media
+                        media = image
+                        kind = .image
+                        naturalSize = image.representations.last?.dimensions.cgSize ?? CGSize(width: 1, height: 1)
+                    case let .file(fileReference):
+                        let file = fileReference.media
+                        if file.isVideo {
+                            media = file
+                            kind = .video
+                            naturalSize = file.dimensions?.cgSize ?? CGSize(width: 1, height: 1)
+                        } else if file.isMusic || file.isVoice {
+                            // Audio (music from the Audio picker; voice only via edit round-trips). The block is a
+                            // fixed-height row, so naturalSize is ignored by MediaBlockBox — pass a 1x1 placeholder.
+                            media = file
+                            kind = .audio
+                            naturalSize = CGSize(width: 1.0, height: 1.0)
+                        } else {
+                            // Everything else from the Files tab is a document row — including an image-mime
+                            // file, matching that tab's "send as file" meaning. Also a fixed-height row, so
+                            // naturalSize is ignored by MediaBlockBox; pass the same 1x1 placeholder as audio.
+                            media = file
+                            kind = .document
+                            naturalSize = CGSize(width: 1.0, height: 1.0)
+                        }
+                    case let .location(map):
+                        // A map is id-less, so mint a deterministic key from its coordinates; the venue title (if any)
+                        // seeds the caption (a raw dropped pin has no venue -> empty caption). Self-contained, since
+                        // the shared `media.id` path below can't key an id-less medium.
+                        let mediaID = "map:\(map.latitude):\(map.longitude)"
+                        self.attachedMedia[mediaID] = map
+                        let caption: [TextRun] = map.venue?.title.isEmpty == false ? [TextRun(text: map.venue!.title)] : []
+                        results.append((mediaID, CGSize(width: 600.0, height: 300.0), .location, caption))
+                        continue
                     }
-                case let .location(map):
-                    // A map is id-less, so mint a deterministic key from its coordinates; the venue title (if any)
-                    // seeds the caption (a raw dropped pin has no venue -> empty caption). Self-contained insert,
-                    // since the shared `media.id` path below can't key an id-less medium.
-                    let mediaID = "map:\(map.latitude):\(map.longitude)"
-                    self.attachedMedia[mediaID] = map
-                    let caption: [TextRun] = map.venue?.title.isEmpty == false ? [TextRun(text: map.venue!.title)] : []
-                    completion(mediaID, CGSize(width: 600.0, height: 300.0), .location, caption)
-                    return
+                    guard let mediaId = media.id else { continue }
+                    let mediaID = "\(mediaId.namespace):\(mediaId.id)"
+                    self.attachedMedia[mediaID] = media
+                    results.append((mediaID, naturalSize, kind, []))
                 }
-                guard let mediaId = media.id else { return }
-                let mediaID = "\(mediaId.namespace):\(mediaId.id)"
-                self.attachedMedia[mediaID] = media
-                completion(mediaID, naturalSize, kind, [])
+                // Called here as well as from onChange: attachedMedia is populated in this closure,
+                // so the need is held from the earliest possible moment. The onChange reconcile that
+                // follows the insert is then a no-op for these ids.
+                self.reconcilePreupload()
+                completion(results)
             })
         }
 
         private func presentImagePicker() {
-            self.pickMedia(photoVideoOnly: false) { [weak self] mediaID, naturalSize, kind, caption in
-                self?.editor.insertMedia(mediaID: mediaID, naturalSize: naturalSize, kind: kind, caption: caption)
+            self.pickMedia(request: RichTextAttachmentScreen.MediaRequest(
+                imageOrVideo: RichTextAttachmentScreen.MediaRequest.ImageOrVideo(limit: 10),
+                music: true,
+                file: true,
+                location: true
+            )) { [weak self] items in
+                guard let self else { return }
+                if items.count == 1 {
+                    let item = items[0]
+                    self.editor.insertMedia(mediaID: item.mediaID, naturalSize: item.naturalSize, kind: item.kind, caption: item.caption)
+                } else if items.count >= 2 {
+                    // Multi-select only ever surfaces photos/videos (the gallery tab is the only
+                    // multiselect-enabled source; music/location are single). So a >=2 batch is always a
+                    // valid photo/video album -> one mosaic MediaBlock, inserted as one undo step.
+                    let mediaItems = items.map { item in
+                        MediaItem(
+                            mediaID: item.mediaID,
+                            kind: item.kind,
+                            naturalSize: Size2D(width: Double(item.naturalSize.width), height: Double(item.naturalSize.height))
+                        )
+                    }
+                    let block = MediaBlock(id: BlockID.generate(), items: mediaItems)
+                    self.editor.insertDocument(Document(blocks: [.media(block)]))
+                }
             }
         }
 
@@ -631,10 +973,22 @@ final class RichTextAttachmentScreenComponent: Component {
                 self.editor.setList(.checklist)
             })))
 
+            // "Detail Block" — an INSERT action (no checkmark, unlike the marker toggles above): inserts a
+            // fresh, expanded folding block at the caret. Not premium-gated (matches its list-menu siblings).
+            items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_Menu_List_Detail, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, f in
+                f(.default)
+                guard let self else {
+                    return
+                }
+                self.editor.insertDetailsBlock()
+            })))
+
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let contextController = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: controller.view)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
@@ -885,26 +1239,53 @@ final class RichTextAttachmentScreenComponent: Component {
                 c?.dismiss(completion: nil)
             })))
             
+            // Buttons. With a SELECTION the item converts it into one inline pill (the Link flow's
+            // analogue); with no selection it drops a block row, whose sheet the user opens by tapping
+            // the pill.
+            if editorState.hasSelection {
+                items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuInlineButton, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    self?.editor.makeSelectionInlineButton()
+                })))
+            } else {
+                items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_MenuButtonRow, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    guard let self else {
+                        return
+                    }
+                    // No caret: drop the row at the document end, not at offset 0 — same rule as insertTable.
+                    self.focusEditorAtDocumentEndIfNeeded(hasCursor: hasCursor)
+                    self.editor.insertButtonRow()
+                })))
+            }
+
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let contextController = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: controller.view)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
             (controller.parentController() ?? controller).presentInGlobalOverlay(contextController)
         }
 
-        private func presentActionMenu(from sourceView: UIView, items: [ContextMenuItem]) {
+        private func presentActionMenu(from sourceView: UIView, items: [ContextMenuItem], actionsPosition: ContextControllerReferenceViewInfo.ActionsPosition = .top) {
             guard let component = self.component else { return }
+            guard let selfController = self.environment?.controller() else {
+                return
+            }
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let controller = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: selfController.view, actionsPosition: actionsPosition)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
-            self.environment?.controller()?.presentInGlobalOverlay(controller)
+            selfController.presentInGlobalOverlay(controller)
         }
 
         /// Maps the app theme to the editor's render colors. Every value is `PresentationTheme`-derived —
@@ -913,6 +1294,11 @@ final class RichTextAttachmentScreenComponent: Component {
         /// screen's surface is `list.plainBackgroundColor`.
         private static func mapEditorTheme(_ theme: PresentationTheme) -> RichTextEditorTheme {
             let codeFill = theme.list.itemAccentColor.withMultipliedAlpha(0.1)
+            // A code BLOCK's band takes the highlighted-table-cell fill, not an accent tint — one
+            // local so the two cannot drift (the renderer binds them the same way, via
+            // `tableHeaderColor`). Inline code keeps `codeFill`: a run-level pill inside body text
+            // is a different surface from a full-width block band.
+            let tableHighlightFill = theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05)
             
             let shadowCursorColor: UIColor
             if theme.overallDarkAppearance {
@@ -927,8 +1313,8 @@ final class RichTextAttachmentScreenComponent: Component {
                 placeholder: theme.list.itemPlaceholderTextColor,
                 accent: theme.list.itemAccentColor,
                 tableBorder: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1),
-                tableHeaderBackground: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05),
-                codeBackground: codeFill,
+                tableHeaderBackground: tableHighlightFill,
+                codeBackground: tableHighlightFill,
                 listMarker: theme.list.itemPrimaryTextColor,
                 inlineCodeBackground: codeFill,
                 markedTextUnderline: theme.list.itemPrimaryTextColor,
@@ -936,7 +1322,14 @@ final class RichTextAttachmentScreenComponent: Component {
                 containerPlaceholder: theme.list.itemPlaceholderTextColor.mixedWith(theme.list.itemAccentColor, alpha: 0.15).withMultipliedBrightnessBy(theme.overallDarkAppearance ? 1.1 : 0.9),
                 shadowCursor: shadowCursorColor,
                 quoteAuthorText: theme.list.itemAccentColor,
-                quoteAuthorPlaceholder: theme.list.itemPlaceholderTextColor.mixedWith(theme.list.itemAccentColor, alpha: 0.15).withMultipliedBrightnessBy(theme.overallDarkAppearance ? 1.1 : 0.9)
+                quoteAuthorPlaceholder: theme.list.itemPlaceholderTextColor.mixedWith(theme.list.itemAccentColor, alpha: 0.15).withMultipliedBrightnessBy(theme.overallDarkAppearance ? 1.1 : 0.9),
+                // Pill colours, mirroring `instantPageButtonColors`: the neutral pill takes the panel
+                // fill + accent label, and danger/success carry the LABEL colour (the editor derives
+                // their 15% fills itself, as the renderer does).
+                buttonNeutralFill: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.08),
+                buttonNeutralLabel: theme.list.itemAccentColor,
+                buttonDanger: theme.list.itemDestructiveColor,
+                buttonSuccess: theme.list.itemDisclosureActions.constructive.fillColor
             )
         }
 
@@ -969,7 +1362,16 @@ final class RichTextAttachmentScreenComponent: Component {
             defer { self.isUpdating = false }
 
             if self.component == nil {
-                editor.placeholders = RichTextEditorPlaceholders(body: environment.strings.RichText_PlaceholderBody, listEnd: "", listOutdent: "", pullQuote: environment.strings.RichText_PlaceholderQuote, blockQuote: environment.strings.RichText_PlaceholderQuote, codeBlock: environment.strings.RichText_PlaceholderCode)
+                editor.placeholders = RichTextEditorPlaceholders(body: environment.strings.RichText_PlaceholderBody, listEnd: "", listOutdent: "", pullQuote: environment.strings.RichText_PlaceholderQuote, blockQuote: environment.strings.RichText_PlaceholderQuote, codeBlock: environment.strings.RichText_PlaceholderCode, codeLanguage: environment.strings.RichText_PlaceholderCodeLanguage, detailsTitle: environment.strings.RichText_PlaceholderDetailTitle, quoteAuthor: environment.strings.RichText_PlaceholderQuoteAuthor, caption: environment.strings.RichText_PlaceholderCaption)
+                editor.editMenuStrings = RichTextEditorMenuStrings(
+                    format: environment.strings.TextFormat_Format,
+                    bold: environment.strings.TextFormat_Bold,
+                    italic: environment.strings.TextFormat_Italic,
+                    underline: environment.strings.TextFormat_Underline,
+                    lookUp: environment.strings.Conversation_ContextMenuLookUp,
+                    translate: environment.strings.Conversation_ContextMenuTranslate,
+                    share: environment.strings.Conversation_ContextMenuShare
+                )
                 
                 // The screen paints `list.plainBackgroundColor` (below); clear the editor's opaque default
                 // `.systemBackground` so that themed surface shows through.
@@ -982,6 +1384,12 @@ final class RichTextAttachmentScreenComponent: Component {
                 // is a no-op on this first pass since `appliedTheme` is now set, and handles later theme
                 // changes when the frame — and a working reload width — exists.)
                 editor.theme = Self.mapEditorTheme(environment.theme)
+                // Lay text out with the exact numbers the recipient's renderer will use. This document is
+                // sent as a rich message, so the counterpart surface is the chat bubble — the same metrics
+                // the composer uses. Set alongside `theme` and BEFORE `editor.document`, per the
+                // host-ordering invariant: the document setter bakes the current mapper into each block's
+                // attributed string.
+                editor.renderMetrics = InstantPageTheme.chatMessageRenderMetrics()
                 self.appliedTheme = environment.theme
                 // Quote geometry for the full-page article editor. Defaults == the editor's built-in look;
                 // tune here to diverge from the chat composer.
@@ -991,6 +1399,18 @@ final class RichTextAttachmentScreenComponent: Component {
                 if let collapse = UIImage(bundleImageName: "Media Gallery/Minimize")?.precomposed().withRenderingMode(.alwaysTemplate),
                    let expand = UIImage(bundleImageName: "Media Gallery/Fullscreen")?.precomposed().withRenderingMode(.alwaysTemplate) {
                     editor.quoteCollapseIcons = RichTextEditorQuoteCollapseIcons(collapse: collapse, expand: expand)
+                }
+                // Detail-block fold chevron — the same vertical arrow the InstantPage V2 renderer uses.
+                editor.detailsChevronImage = UIImage(bundleImageName: "Item List/ExpandingItemVerticalRegularArrow")?.withRenderingMode(.alwaysTemplate)
+                // Markdown-on-paste: plain pasted text that parses as markdown with formatting/structure is
+                // spliced as rich content instead of literal text. The parser is injected by the host (only
+                // the monolith can reach the BrowserUI-backed markdown pipeline); nil falls back to the
+                // editor's built-in plain-text paste.
+                editor.plainTextFragmentTransformer = { [weak self] text in
+                    guard let self, let component = self.component, let parser = component.pastedMarkdownParser, let content = parser(component.context, text) else {
+                        return nil
+                    }
+                    return pasteFragmentDocument(fromChatInputContent: content)
                 }
                 // A selection-handle ("knob") drag must NOT be hijacked by the interactive keyboard-/modal-
                 // dismiss gestures. These Display flags can only be set host-side (the editor package can't
@@ -1036,9 +1456,14 @@ final class RichTextAttachmentScreenComponent: Component {
                         }
                     case .add:
                         guard let addMore = request.addMore else { break }
-                        self.pickMedia(photoVideoOnly: true) { mediaID, naturalSize, kind, _ in
-                            guard kind == .image || kind == .video else { return }   // mosaic is photo/video only
-                            addMore(mediaID, naturalSize, kind)
+                        self.pickMedia(request: RichTextAttachmentScreen.MediaRequest(
+                            imageOrVideo: RichTextAttachmentScreen.MediaRequest.ImageOrVideo(limit: 1),
+                            music: false,
+                            file: false,
+                            location: false
+                        )) { items in
+                            guard let item = items.first, item.kind == .image || item.kind == .video else { return }   // mosaic is photo/video only
+                            addMore(item.mediaID, item.naturalSize, item.kind)
                         }
                     case .delete:
                         request.delete()
@@ -1081,6 +1506,23 @@ final class RichTextAttachmentScreenComponent: Component {
                 // custom emoji carried in from the chat composer renders, and its file survives back out.
                 emojiKeyboard.seedEmojiFiles(initialEmojiFiles)
 
+                // The host owns "(language, text) -> colours": `asyncStanaloneSyntaxHighlight` runs libprisma off
+                // the main queue and returns the same cache model the message path stores, baking the LIGHT
+                // palette — so what the editor shows is what the sent message will show. The editor cannot do
+                // this itself; it cannot see TextFormat or libprisma.
+                editor.registerSyntaxHighlighter { language, text, completion in
+                    let spec = CachedMessageSyntaxHighlight.Spec(language: language, text: text)
+                    let _ = (asyncStanaloneSyntaxHighlight(current: nil, specs: [spec])
+                    |> deliverOnMainQueue).start(next: { result in
+                        let entities = result.values[spec]?.entities ?? []
+                        completion(entities.map { entity in
+                            RichTextSyntaxToken(
+                                range: NSRange(location: entity.range.lowerBound,
+                                               length: entity.range.upperBound - entity.range.lowerBound),
+                                color: UIColor(rgb: UInt32(bitPattern: entity.color)))
+                        })
+                    })
+                }
                 editor.registerEmojiViewProvider { [weak self] id, size in
                     return self?.emojiKeyboard?.customEmojiView(forId: id, size: size)
                 }
@@ -1102,6 +1544,10 @@ final class RichTextAttachmentScreenComponent: Component {
                     )
                 }
 
+                // A pill's type icon is also its geometry — an inline pill grows to hold it — so this
+                // must be registered before the first reload, alongside the other providers.
+                editor.registerButtonIconProvider(richTextEditorButtonIcon)
+
                 editor.onEditFormulaRequested = { [weak self] latex, completion in
                     guard let self, let component = self.component else {
                         return
@@ -1112,6 +1558,102 @@ final class RichTextAttachmentScreenComponent: Component {
                             self?.editor.becomeFirstResponder()
                         }
                     })
+                }
+
+                // Tapping EITHER pill kind opens the property sheet. `completion(nil)` deletes the pill —
+                // and its row, when it was the last one.
+                editor.onEditButtonRequested = { [weak self] button, isBlockPill, completion in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let controller = ButtonEditorScreen(context: component.context, button: button,
+                                                        isBlockPill: isBlockPill) { [weak self] updated in
+                        completion(updated)
+                        DispatchQueue.main.async { [weak self] in
+                            self?.editor.becomeFirstResponder()
+                        }
+                    }
+                    self.environment?.controller()?.present(controller, in: .window(.root))
+                }
+
+                // The row's "…" menu: Add Button / Alignment (submenu) / Delete Row. Alignment uses the
+                // project-standard `pushItems` submenu, exactly as the Add menu's Heading item does.
+                editor.onRequestButtonRowMenu = { [weak self] request in
+                    guard let self, let environment = self.environment, let component = self.component else {
+                        return
+                    }
+                    let strings = environment.strings
+                    var items: [ContextMenuItem] = []
+
+                    items.append(.action(ContextMenuActionItem(text: strings.RichText_ButtonRowAdd, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: nil)
+                        request.addButton()
+                    })))
+
+                    items.append(.action(ContextMenuActionItem(text: strings.RichText_ButtonRowAlignment, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AlignVCenter"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        var subItems: [ContextMenuItem] = []
+                        subItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                        }, iconPosition: .left, action: { c, _ in
+                            c?.popItems()
+                        })))
+                        subItems.append(.separator)
+                        let alignments: [(ButtonRowAlignment, String)] = [
+                            (.justify, strings.RichText_ButtonRowAlignJustify),
+                            (.left, strings.RichText_ButtonRowAlignLeft),
+                            (.center, strings.RichText_ButtonRowAlignCenter),
+                            (.right, strings.RichText_ButtonRowAlignRight),
+                        ]
+                        for (alignment, title) in alignments {
+                            subItems.append(.action(ContextMenuActionItem(text: title, icon: { _ in nil },
+                                additionalLeftIcon: { theme in
+                                    return alignment == request.alignment
+                                        ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                                        : UIImage()
+                                }, iconPosition: .left, action: { c, _ in
+                                    c?.dismiss(completion: nil)
+                                    request.setAlignment(alignment)
+                                })))
+                        }
+                        c?.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                    })))
+
+                    items.append(.separator)
+                    items.append(.action(ContextMenuActionItem(text: strings.RichText_ButtonRowDelete, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: nil)
+                        request.deleteRow()
+                    })))
+
+                    // Anchor to the "…" rect, NOT to the editor view: `presentActionMenu` uses the whole
+                    // source view as the reference, so passing `self.editor` positioned the menu against
+                    // the entire editor and it landed offscreen. Same transient-anchor technique the
+                    // table structural menu uses (`presentTableStructuralMenu`): a zero-interaction view
+                    // at `request.sourceRect` inside the canvas, removed when the controller dismisses.
+                    guard let anchorParent = request.view else {
+                        return
+                    }
+                    guard let selfController = self.environment?.controller() else {
+                        return
+                    }
+                    let anchor = UIView(frame: request.sourceRect)
+                    anchor.isUserInteractionEnabled = false
+                    anchorParent.addSubview(anchor)
+
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = makeContextController(
+                        presentationData: presentationData,
+                        source: .reference(RichTextActionContextReferenceSource(sourceView: anchor, containerView: selfController.view, actionsPosition: .bottom)),
+                        items: .single(ContextController.Items(content: .list(items))),
+                        gesture: nil
+                    )
+                    controller.dismissed = { [weak anchor] in anchor?.removeFromSuperview() }
+                    selfController.presentInGlobalOverlay(controller)
                 }
 
                 editor.registerMediaViewProvider { [weak self] items, _, displayMode, existing in
@@ -1125,9 +1667,16 @@ final class RichTextAttachmentScreenComponent: Component {
                         title: theme.list.itemPrimaryTextColor,
                         description: theme.list.itemSecondaryTextColor
                     )
-                    let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool)] = items.compactMap { item in
+                    // Same `list.item*` sources as the audio row; ignored for image/map media.
+                    let documentColors = InstantPageDocumentColorOverride(
+                        control: theme.list.itemAccentColor,
+                        controlForeground: theme.list.itemCheckColors.foregroundColor,
+                        title: theme.list.itemPrimaryTextColor,
+                        description: theme.list.itemSecondaryTextColor
+                    )
+                    let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)] = items.compactMap { item in
                         guard let media = self.attachedMedia[item.mediaID] else { return nil }
-                        return (EngineMedia(media), item.naturalSize, item.isSpoiler)
+                        return (EngineMedia(media), item.naturalSize, item.isSpoiler, item.kind)
                     }
                     guard !resolved.isEmpty else { return nil }
                     // In-place update: reuse the existing container (surviving photo/video cells keep their bound
@@ -1136,7 +1685,10 @@ final class RichTextAttachmentScreenComponent: Component {
                         view.updateResolvedItems(resolved, displayMode: displayMode)
                         return view
                     }
-                    return MediaItemNodeView(context: component.context, items: resolved, audioColorOverride: audioColors, displayMode: displayMode)
+                    return MediaItemNodeView(context: component.context, items: resolved,
+                                             audioColorOverride: audioColors,
+                                             documentColorOverride: documentColors,
+                                             displayMode: displayMode)
                 }
 
                 // Host the checklist checkbox with a `CheckNode` themed from the standard app checkbox palette
@@ -1167,6 +1719,7 @@ final class RichTextAttachmentScreenComponent: Component {
                 editor.onChange = { [weak self] in
                     guard let self, !self.isUpdating else { return }
                     self.componentState?.updated(transition: .spring(duration: 0.4))
+                    self.reconcilePreupload()
                 }
 
                 self.addSubview(editor)
@@ -1375,6 +1928,31 @@ final class RichTextAttachmentScreenComponent: Component {
                                 f(.default)
                                 self?.editor.convertCurrentTableToText()
                             })))
+                            // One state read for both items: `currentState()` walks the whole TableBlock.
+                            let tableState = self.editor.currentState()
+                            let tableIsCompact = tableState.isTableCompact
+                            items.append(.action(ContextMenuActionItem(
+                                text: tableIsCompact ? environment.strings.RichText_Menu_Table_CompactOff : environment.strings.RichText_Menu_Table_CompactOn,
+                                icon: { _ in
+                                    return nil
+                                },
+                                action: { [weak self] _, f in
+                                    f(.default)
+                                    self?.editor.toggleTableCompact()
+                                })))
+                            let tableIsBordered = tableState.isTableBordered
+                            items.append(.action(ContextMenuActionItem(
+                                text: tableIsBordered ? environment.strings.RichText_Menu_Table_BordersOff : environment.strings.RichText_Menu_Table_BordersOn,
+                                icon: { _ in
+                                    // No borders/grid asset exists in Images.xcassets; the sibling
+                                    // Compact item is likewise icon-less. A made-up bundleImageName
+                                    // would silently render nothing (UIImage returns nil).
+                                    return nil
+                                },
+                                action: { [weak self] _, f in
+                                    f(.default)
+                                    self?.editor.toggleTableBordered()
+                                })))
                             items.append(.action(ContextMenuActionItem(text: environment.strings.RichText_Menu_Table_Delete, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
                                 f(.default); self?.editor.deleteTable()
                             })))
@@ -1530,6 +2108,7 @@ final class RichTextAttachmentScreenComponent: Component {
                 isSendEnabled = false
             }
             
+            let longPressSendAvailable = component.sendContextActions != nil && isSendEnabled && !isSendRichFormattingLocked
             let sendButtonSize = self.sendButton.update(
                 transition: transition,
                 component: AnyComponent(RichTextSendButtonComponent(
@@ -1541,7 +2120,13 @@ final class RichTextAttachmentScreenComponent: Component {
                             return
                         }
                         controller.donePressed()
-                    }
+                    },
+                    longPressAction: longPressSendAvailable ? { [weak self] in
+                        guard let self, let controller = self.environment?.controller() as? RichTextAttachmentScreen else {
+                            return
+                        }
+                        controller.displayLongPressSendMenu(sourceSendButton: self.sendButtonExtractedContainer)
+                    } : nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: 44.0, height: 44.0)
@@ -1569,12 +2154,19 @@ final class RichTextAttachmentScreenComponent: Component {
             }
             
             let sendButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - (sideInset + environment.safeInsets.left) - sendButtonSize.width, y: availableSize.height - bottomInset - 6.0 - sendButtonSize.height), size: sendButtonSize)
+            if self.sendButtonExtractedContainer.superview == nil {
+                self.addSubview(self.sendButtonExtractedContainer)
+            }
             if let sendButtonView = self.sendButton.view {
                 if sendButtonView.superview == nil {
-                    self.addSubview(sendButtonView)
+                    self.sendButtonExtractedContainer.contentView.addSubview(sendButtonView)
                 }
-                transition.setFrame(view: sendButtonView, frame: sendButtonFrame)
+                sendButtonView.frame = CGRect(origin: CGPoint(), size: sendButtonFrame.size)
             }
+            transition.setPosition(view: self.sendButtonExtractedContainer, position: sendButtonFrame.center)
+            transition.setBounds(view: self.sendButtonExtractedContainer, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
+            transition.setPosition(view: self.sendButtonExtractedContainer.contentView, position: CGPoint(x: sendButtonFrame.width * 0.5, y: sendButtonFrame.height * 0.5))
+            transition.setBounds(view: self.sendButtonExtractedContainer.contentView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
             
             let actionBarFrame = CGRect(origin: CGPoint(x: sideInset + environment.safeInsets.left + aiButtonSize.width + actionBarSpacing, y: availableSize.height - bottomInset - 6.0 - actionBarSize.height), size: actionBarSize)
             if let actionBarView = self.actionBar.view {
@@ -1629,10 +2221,29 @@ final class RichTextAttachmentScreenComponent: Component {
 @available(iOS 13.0, *)
 private final class RichTextActionContextReferenceSource: ContextReferenceContentSource {
     private let sourceView: UIView
-    init(sourceView: UIView) { self.sourceView = sourceView }
+    private let containerView: UIView
+    private let actionsPosition: ContextControllerReferenceViewInfo.ActionsPosition
+    init(sourceView: UIView, containerView: UIView, actionsPosition: ContextControllerReferenceViewInfo.ActionsPosition = .top) {
+        self.sourceView = sourceView
+        self.containerView = containerView
+        self.actionsPosition = actionsPosition
+    }
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
-            insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0), actionsPosition: .top)
+            contentAreaInScreenSpace: self.containerView.convert(self.containerView.bounds, to: nil),
+            insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0),
+            actionsPosition: self.actionsPosition)
     }
+}
+
+/// The resource carrying a medium's main bytes — the one whose data is worth moving when a local
+/// medium is promoted to its cloud twin.
+private func preuploadPrimaryResource(_ media: Media) -> MediaResource? {
+    if let image = media as? TelegramMediaImage {
+        return largestImageRepresentation(image.representations)?.resource
+    }
+    if let file = media as? TelegramMediaFile {
+        return file.resource
+    }
+    return nil
 }

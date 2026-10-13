@@ -279,8 +279,7 @@ final class GreetingMessageListItemComponent: Component {
                         return current
                     },
                     params: params,
-                    previousItem: nil,
-                    nextItem: nil, animation: .None,
+                    neighbors: .none, animation: .None,
                     completion: { layout, apply in
                         let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                         
@@ -288,7 +287,7 @@ final class GreetingMessageListItemComponent: Component {
                         current.insets = layout.insets
                         current.frame = nodeFrame
                         
-                        apply(ListViewItemApply(isOnScreen: true))
+                        apply(ListViewItemApply())
                     })
             } else {
                 var outItemNode: ListViewItemNode?
@@ -296,11 +295,10 @@ final class GreetingMessageListItemComponent: Component {
                     async: { f in f() },
                     params: params,
                     synchronousLoads: true,
-                    previousItem: nil,
-                    nextItem: nil,
+                    neighbors: .none,
                     completion: { node, apply in
                         outItemNode = node
-                        apply().1(ListViewItemApply(isOnScreen: true))
+                        apply().1(ListViewItemApply())
                     }
                 )
                 itemNode = outItemNode

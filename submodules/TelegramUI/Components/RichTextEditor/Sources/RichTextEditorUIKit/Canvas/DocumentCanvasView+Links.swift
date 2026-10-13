@@ -16,18 +16,31 @@ extension DocumentCanvasView {
     func applyCharacterAttribute(_ mutate: (NSTextStorage, NSRange) -> Void) {
         let covered = characterFormatTargets()
         guard !covered.isEmpty else { return }
-        editing {
-            for c in covered {
-                mutate(c.storage, c.range)
-                // Direct NSTextStorage mutation bypasses BlockLayout's renderVersion bump sites, so a
-                // view-backed paragraph wouldn't repaint (its renderSignature wouldn't change). Bump here.
-                c.layout.bumpRenderVersion()
+        // TASK 39b: same shape and same policy as `applyCharacterToggle` — see its call site for the
+        // one statement of why. (It used to say "and for the disclosed `.preserveIfRebasable`
+        // degradation"; TASK 41 closed that gap and also measured this site unable to reach it —
+        // `editing { }` finalizes any composition first. The corrected statement is at that call site;
+        // this one is pinned by `MarkedStateAuthorityTests
+        // .test_aSetLinkDuringACompositionCommitsIt_asItAlreadyDidAtBase`, a separate arm because
+        // `applyCharacterAttribute` is a separate call site.)
+        synchronizingExternalChange(reason: .formatting, markedTextPolicy: .preserveIfRebasable) {
+            editing {
+                for c in covered {
+                    mutate(c.storage, c.range)
+                    // Direct NSTextStorage mutation bypasses BlockLayout's renderVersion bump sites, so a
+                    // view-backed paragraph wouldn't repaint (its renderSignature wouldn't change). Bump here.
+                    c.layout.bumpRenderVersion()
+                }
+                return .unchanged
             }
         }
     }
 
     /// Sets `url` as the link over the selection, with the render-only blue styling (no underline).
     func setLink(_ url: String) {
+        // A code block's language is a plain string on the wire — a link there would be dropped on
+        // read-back (an inert edit that still dirties the model).
+        if selectionIsEntirelyInCodeLanguageRegion() { return }
         applyCharacterAttribute { storage, range in
             storage.addAttribute(.link, value: url, range: range)
             storage.addAttribute(.foregroundColor, value: self.mapper.theme.accent, range: range)

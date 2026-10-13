@@ -1,4 +1,534 @@
 public extension Api {
+    enum WalletTransactionPeer: TypeConstructorDescription {
+        public class Cons_walletTransactionPeerAddress: TypeConstructorDescription {
+            public var flags: Int32
+            public var address: String
+            public var domain: String?
+            public init(flags: Int32, address: String, domain: String?) {
+                self.flags = flags
+                self.address = address
+                self.domain = domain
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("walletTransactionPeerAddress", [("flags", ConstructorParameterDescription(self.flags)), ("address", ConstructorParameterDescription(self.address)), ("domain", ConstructorParameterDescription(self.domain))])
+            }
+        }
+        public class Cons_walletTransactionPeerOnramp: TypeConstructorDescription {
+            public var flags: Int32
+            public var address: String
+            public var domain: String?
+            public var providerName: String
+            public init(flags: Int32, address: String, domain: String?, providerName: String) {
+                self.flags = flags
+                self.address = address
+                self.domain = domain
+                self.providerName = providerName
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("walletTransactionPeerOnramp", [("flags", ConstructorParameterDescription(self.flags)), ("address", ConstructorParameterDescription(self.address)), ("domain", ConstructorParameterDescription(self.domain)), ("providerName", ConstructorParameterDescription(self.providerName))])
+            }
+        }
+        public class Cons_walletTransactionPeerUser: TypeConstructorDescription {
+            public var flags: Int32
+            public var userId: Int64
+            public var address: String
+            public var domain: String?
+            public init(flags: Int32, userId: Int64, address: String, domain: String?) {
+                self.flags = flags
+                self.userId = userId
+                self.address = address
+                self.domain = domain
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("walletTransactionPeerUser", [("flags", ConstructorParameterDescription(self.flags)), ("userId", ConstructorParameterDescription(self.userId)), ("address", ConstructorParameterDescription(self.address)), ("domain", ConstructorParameterDescription(self.domain))])
+            }
+        }
+        case walletTransactionPeerAddress(Cons_walletTransactionPeerAddress)
+        case walletTransactionPeerOnramp(Cons_walletTransactionPeerOnramp)
+        case walletTransactionPeerUnsupported
+        case walletTransactionPeerUser(Cons_walletTransactionPeerUser)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .walletTransactionPeerAddress(let _data):
+                if boxed {
+                    buffer.appendInt32(103596476)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.address, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.domain!, buffer: buffer, boxed: false)
+                }
+                break
+            case .walletTransactionPeerOnramp(let _data):
+                if boxed {
+                    buffer.appendInt32(-443213714)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.address, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.domain!, buffer: buffer, boxed: false)
+                }
+                serializeString(_data.providerName, buffer: buffer, boxed: false)
+                break
+            case .walletTransactionPeerUnsupported:
+                if boxed {
+                    buffer.appendInt32(1921772890)
+                }
+                break
+            case .walletTransactionPeerUser(let _data):
+                if boxed {
+                    buffer.appendInt32(-722833299)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeString(_data.address, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.domain!, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .walletTransactionPeerAddress(let _data):
+                return ("walletTransactionPeerAddress", [("flags", ConstructorParameterDescription(_data.flags)), ("address", ConstructorParameterDescription(_data.address)), ("domain", ConstructorParameterDescription(_data.domain))])
+            case .walletTransactionPeerOnramp(let _data):
+                return ("walletTransactionPeerOnramp", [("flags", ConstructorParameterDescription(_data.flags)), ("address", ConstructorParameterDescription(_data.address)), ("domain", ConstructorParameterDescription(_data.domain)), ("providerName", ConstructorParameterDescription(_data.providerName))])
+            case .walletTransactionPeerUnsupported:
+                return ("walletTransactionPeerUnsupported", [])
+            case .walletTransactionPeerUser(let _data):
+                return ("walletTransactionPeerUser", [("flags", ConstructorParameterDescription(_data.flags)), ("userId", ConstructorParameterDescription(_data.userId)), ("address", ConstructorParameterDescription(_data.address)), ("domain", ConstructorParameterDescription(_data.domain))])
+            }
+        }
+
+        public static func parse_walletTransactionPeerAddress(_ reader: BufferReader) -> WalletTransactionPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _3 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WalletTransactionPeer.walletTransactionPeerAddress(Cons_walletTransactionPeerAddress(flags: _1!, address: _2!, domain: _3))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_walletTransactionPeerOnramp(_ reader: BufferReader) -> WalletTransactionPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _3 = parseString(reader)
+            }
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WalletTransactionPeer.walletTransactionPeerOnramp(Cons_walletTransactionPeerOnramp(flags: _1!, address: _2!, domain: _3, providerName: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_walletTransactionPeerUnsupported(_ reader: BufferReader) -> WalletTransactionPeer? {
+            return Api.WalletTransactionPeer.walletTransactionPeerUnsupported
+        }
+        public static func parse_walletTransactionPeerUser(_ reader: BufferReader) -> WalletTransactionPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _4 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WalletTransactionPeer.walletTransactionPeerUser(Cons_walletTransactionPeerUser(flags: _1!, userId: _2!, address: _3!, domain: _4))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum WalletUserAddress: TypeConstructorDescription {
+        public class Cons_walletUserAddress: TypeConstructorDescription {
+            public var flags: Int32
+            public var userId: Int64?
+            public var address: String
+            public var publicKey: Buffer
+            public init(flags: Int32, userId: Int64?, address: String, publicKey: Buffer) {
+                self.flags = flags
+                self.userId = userId
+                self.address = address
+                self.publicKey = publicKey
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("walletUserAddress", [("flags", ConstructorParameterDescription(self.flags)), ("userId", ConstructorParameterDescription(self.userId)), ("address", ConstructorParameterDescription(self.address)), ("publicKey", ConstructorParameterDescription(self.publicKey))])
+            }
+        }
+        case walletUserAddress(Cons_walletUserAddress)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .walletUserAddress(let _data):
+                if boxed {
+                    buffer.appendInt32(-25628980)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeInt64(_data.userId!, buffer: buffer, boxed: false)
+                }
+                serializeString(_data.address, buffer: buffer, boxed: false)
+                serializeBytes(_data.publicKey, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .walletUserAddress(let _data):
+                return ("walletUserAddress", [("flags", ConstructorParameterDescription(_data.flags)), ("userId", ConstructorParameterDescription(_data.userId)), ("address", ConstructorParameterDescription(_data.address)), ("publicKey", ConstructorParameterDescription(_data.publicKey))])
+            }
+        }
+
+        public static func parse_walletUserAddress(_ reader: BufferReader) -> WalletUserAddress? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _2 = reader.readInt64()
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WalletUserAddress.walletUserAddress(Cons_walletUserAddress(flags: _1!, userId: _2, address: _3!, publicKey: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum WebAuthorization: TypeConstructorDescription {
+        public class Cons_webAuthorization: TypeConstructorDescription {
+            public var hash: Int64
+            public var botId: Int64
+            public var domain: String
+            public var browser: String
+            public var platform: String
+            public var dateCreated: Int32
+            public var dateActive: Int32
+            public var ip: String
+            public var region: String
+            public init(hash: Int64, botId: Int64, domain: String, browser: String, platform: String, dateCreated: Int32, dateActive: Int32, ip: String, region: String) {
+                self.hash = hash
+                self.botId = botId
+                self.domain = domain
+                self.browser = browser
+                self.platform = platform
+                self.dateCreated = dateCreated
+                self.dateActive = dateActive
+                self.ip = ip
+                self.region = region
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("webAuthorization", [("hash", ConstructorParameterDescription(self.hash)), ("botId", ConstructorParameterDescription(self.botId)), ("domain", ConstructorParameterDescription(self.domain)), ("browser", ConstructorParameterDescription(self.browser)), ("platform", ConstructorParameterDescription(self.platform)), ("dateCreated", ConstructorParameterDescription(self.dateCreated)), ("dateActive", ConstructorParameterDescription(self.dateActive)), ("ip", ConstructorParameterDescription(self.ip)), ("region", ConstructorParameterDescription(self.region))])
+            }
+        }
+        case webAuthorization(Cons_webAuthorization)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .webAuthorization(let _data):
+                if boxed {
+                    buffer.appendInt32(-1493633966)
+                }
+                serializeInt64(_data.hash, buffer: buffer, boxed: false)
+                serializeInt64(_data.botId, buffer: buffer, boxed: false)
+                serializeString(_data.domain, buffer: buffer, boxed: false)
+                serializeString(_data.browser, buffer: buffer, boxed: false)
+                serializeString(_data.platform, buffer: buffer, boxed: false)
+                serializeInt32(_data.dateCreated, buffer: buffer, boxed: false)
+                serializeInt32(_data.dateActive, buffer: buffer, boxed: false)
+                serializeString(_data.ip, buffer: buffer, boxed: false)
+                serializeString(_data.region, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .webAuthorization(let _data):
+                return ("webAuthorization", [("hash", ConstructorParameterDescription(_data.hash)), ("botId", ConstructorParameterDescription(_data.botId)), ("domain", ConstructorParameterDescription(_data.domain)), ("browser", ConstructorParameterDescription(_data.browser)), ("platform", ConstructorParameterDescription(_data.platform)), ("dateCreated", ConstructorParameterDescription(_data.dateCreated)), ("dateActive", ConstructorParameterDescription(_data.dateActive)), ("ip", ConstructorParameterDescription(_data.ip)), ("region", ConstructorParameterDescription(_data.region))])
+            }
+        }
+
+        public static func parse_webAuthorization(_ reader: BufferReader) -> WebAuthorization? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: String?
+            _9 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.WebAuthorization.webAuthorization(Cons_webAuthorization(hash: _1!, botId: _2!, domain: _3!, browser: _4!, platform: _5!, dateCreated: _6!, dateActive: _7!, ip: _8!, region: _9!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum WebDocument: TypeConstructorDescription {
+        public class Cons_webDocument: TypeConstructorDescription {
+            public var url: String
+            public var accessHash: Int64
+            public var size: Int32
+            public var mimeType: String
+            public var attributes: [Api.DocumentAttribute]
+            public init(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute]) {
+                self.url = url
+                self.accessHash = accessHash
+                self.size = size
+                self.mimeType = mimeType
+                self.attributes = attributes
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("webDocument", [("url", ConstructorParameterDescription(self.url)), ("accessHash", ConstructorParameterDescription(self.accessHash)), ("size", ConstructorParameterDescription(self.size)), ("mimeType", ConstructorParameterDescription(self.mimeType)), ("attributes", ConstructorParameterDescription(self.attributes))])
+            }
+        }
+        public class Cons_webDocumentNoProxy: TypeConstructorDescription {
+            public var url: String
+            public var size: Int32
+            public var mimeType: String
+            public var attributes: [Api.DocumentAttribute]
+            public init(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute]) {
+                self.url = url
+                self.size = size
+                self.mimeType = mimeType
+                self.attributes = attributes
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("webDocumentNoProxy", [("url", ConstructorParameterDescription(self.url)), ("size", ConstructorParameterDescription(self.size)), ("mimeType", ConstructorParameterDescription(self.mimeType)), ("attributes", ConstructorParameterDescription(self.attributes))])
+            }
+        }
+        case webDocument(Cons_webDocument)
+        case webDocumentNoProxy(Cons_webDocumentNoProxy)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .webDocument(let _data):
+                if boxed {
+                    buffer.appendInt32(475467473)
+                }
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
+                serializeInt32(_data.size, buffer: buffer, boxed: false)
+                serializeString(_data.mimeType, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.attributes.count))
+                for item in _data.attributes {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .webDocumentNoProxy(let _data):
+                if boxed {
+                    buffer.appendInt32(-104284986)
+                }
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeInt32(_data.size, buffer: buffer, boxed: false)
+                serializeString(_data.mimeType, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.attributes.count))
+                for item in _data.attributes {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .webDocument(let _data):
+                return ("webDocument", [("url", ConstructorParameterDescription(_data.url)), ("accessHash", ConstructorParameterDescription(_data.accessHash)), ("size", ConstructorParameterDescription(_data.size)), ("mimeType", ConstructorParameterDescription(_data.mimeType)), ("attributes", ConstructorParameterDescription(_data.attributes))])
+            case .webDocumentNoProxy(let _data):
+                return ("webDocumentNoProxy", [("url", ConstructorParameterDescription(_data.url)), ("size", ConstructorParameterDescription(_data.size)), ("mimeType", ConstructorParameterDescription(_data.mimeType)), ("attributes", ConstructorParameterDescription(_data.attributes))])
+            }
+        }
+
+        public static func parse_webDocument(_ reader: BufferReader) -> WebDocument? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: [Api.DocumentAttribute]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.WebDocument.webDocument(Cons_webDocument(url: _1!, accessHash: _2!, size: _3!, mimeType: _4!, attributes: _5!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webDocumentNoProxy(_ reader: BufferReader) -> WebDocument? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.DocumentAttribute]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WebDocument.webDocumentNoProxy(Cons_webDocumentNoProxy(url: _1!, size: _2!, mimeType: _3!, attributes: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum WebDomainException: TypeConstructorDescription {
+        public class Cons_webDomainException: TypeConstructorDescription {
+            public var flags: Int32
+            public var domain: String
+            public var url: String
+            public var title: String
+            public var favicon: Int64?
+            public init(flags: Int32, domain: String, url: String, title: String, favicon: Int64?) {
+                self.flags = flags
+                self.domain = domain
+                self.url = url
+                self.title = title
+                self.favicon = favicon
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("webDomainException", [("flags", ConstructorParameterDescription(self.flags)), ("domain", ConstructorParameterDescription(self.domain)), ("url", ConstructorParameterDescription(self.url)), ("title", ConstructorParameterDescription(self.title)), ("favicon", ConstructorParameterDescription(self.favicon))])
+            }
+        }
+        case webDomainException(Cons_webDomainException)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .webDomainException(let _data):
+                if boxed {
+                    buffer.appendInt32(-1824741993)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.domain, buffer: buffer, boxed: false)
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeString(_data.title, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeInt64(_data.favicon!, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .webDomainException(let _data):
+                return ("webDomainException", [("flags", ConstructorParameterDescription(_data.flags)), ("domain", ConstructorParameterDescription(_data.domain)), ("url", ConstructorParameterDescription(_data.url)), ("title", ConstructorParameterDescription(_data.title)), ("favicon", ConstructorParameterDescription(_data.favicon))])
+            }
+        }
+
+        public static func parse_webDomainException(_ reader: BufferReader) -> WebDomainException? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _5 = reader.readInt64()
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.WebDomainException.webDomainException(Cons_webDomainException(flags: _1!, domain: _2!, url: _3!, title: _4!, favicon: _5))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum WebPage: TypeConstructorDescription {
         public class Cons_webPage: TypeConstructorDescription {
             public var flags: Int32
@@ -1448,515 +1978,6 @@ public extension Api.account {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.account.EmailVerified.emailVerifiedLogin(Cons_emailVerifiedLogin(email: _1!, sentCode: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum EmojiStatuses: TypeConstructorDescription {
-        public class Cons_emojiStatuses: TypeConstructorDescription {
-            public var hash: Int64
-            public var statuses: [Api.EmojiStatus]
-            public init(hash: Int64, statuses: [Api.EmojiStatus]) {
-                self.hash = hash
-                self.statuses = statuses
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("emojiStatuses", [("hash", ConstructorParameterDescription(self.hash)), ("statuses", ConstructorParameterDescription(self.statuses))])
-            }
-        }
-        case emojiStatuses(Cons_emojiStatuses)
-        case emojiStatusesNotModified
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .emojiStatuses(let _data):
-                if boxed {
-                    buffer.appendInt32(-1866176559)
-                }
-                serializeInt64(_data.hash, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.statuses.count))
-                for item in _data.statuses {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .emojiStatusesNotModified:
-                if boxed {
-                    buffer.appendInt32(-796072379)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .emojiStatuses(let _data):
-                return ("emojiStatuses", [("hash", ConstructorParameterDescription(_data.hash)), ("statuses", ConstructorParameterDescription(_data.statuses))])
-            case .emojiStatusesNotModified:
-                return ("emojiStatusesNotModified", [])
-            }
-        }
-
-        public static func parse_emojiStatuses(_ reader: BufferReader) -> EmojiStatuses? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.EmojiStatus]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiStatus.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.EmojiStatuses.emojiStatuses(Cons_emojiStatuses(hash: _1!, statuses: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_emojiStatusesNotModified(_ reader: BufferReader) -> EmojiStatuses? {
-            return Api.account.EmojiStatuses.emojiStatusesNotModified
-        }
-    }
-}
-public extension Api.account {
-    enum PaidMessagesRevenue: TypeConstructorDescription {
-        public class Cons_paidMessagesRevenue: TypeConstructorDescription {
-            public var starsAmount: Int64
-            public init(starsAmount: Int64) {
-                self.starsAmount = starsAmount
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("paidMessagesRevenue", [("starsAmount", ConstructorParameterDescription(self.starsAmount))])
-            }
-        }
-        case paidMessagesRevenue(Cons_paidMessagesRevenue)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .paidMessagesRevenue(let _data):
-                if boxed {
-                    buffer.appendInt32(504403720)
-                }
-                serializeInt64(_data.starsAmount, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .paidMessagesRevenue(let _data):
-                return ("paidMessagesRevenue", [("starsAmount", ConstructorParameterDescription(_data.starsAmount))])
-            }
-        }
-
-        public static func parse_paidMessagesRevenue(_ reader: BufferReader) -> PaidMessagesRevenue? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.PaidMessagesRevenue.paidMessagesRevenue(Cons_paidMessagesRevenue(starsAmount: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum PasskeyRegistrationOptions: TypeConstructorDescription {
-        public class Cons_passkeyRegistrationOptions: TypeConstructorDescription {
-            public var options: Api.DataJSON
-            public init(options: Api.DataJSON) {
-                self.options = options
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("passkeyRegistrationOptions", [("options", ConstructorParameterDescription(self.options))])
-            }
-        }
-        case passkeyRegistrationOptions(Cons_passkeyRegistrationOptions)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .passkeyRegistrationOptions(let _data):
-                if boxed {
-                    buffer.appendInt32(-513057567)
-                }
-                _data.options.serialize(buffer, true)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .passkeyRegistrationOptions(let _data):
-                return ("passkeyRegistrationOptions", [("options", ConstructorParameterDescription(_data.options))])
-            }
-        }
-
-        public static func parse_passkeyRegistrationOptions(_ reader: BufferReader) -> PasskeyRegistrationOptions? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.PasskeyRegistrationOptions.passkeyRegistrationOptions(Cons_passkeyRegistrationOptions(options: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum Passkeys: TypeConstructorDescription {
-        public class Cons_passkeys: TypeConstructorDescription {
-            public var passkeys: [Api.Passkey]
-            public init(passkeys: [Api.Passkey]) {
-                self.passkeys = passkeys
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("passkeys", [("passkeys", ConstructorParameterDescription(self.passkeys))])
-            }
-        }
-        case passkeys(Cons_passkeys)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .passkeys(let _data):
-                if boxed {
-                    buffer.appendInt32(-119494116)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.passkeys.count))
-                for item in _data.passkeys {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .passkeys(let _data):
-                return ("passkeys", [("passkeys", ConstructorParameterDescription(_data.passkeys))])
-            }
-        }
-
-        public static func parse_passkeys(_ reader: BufferReader) -> Passkeys? {
-            var _1: [Api.Passkey]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Passkey.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.Passkeys.passkeys(Cons_passkeys(passkeys: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum Password: TypeConstructorDescription {
-        public class Cons_password: TypeConstructorDescription {
-            public var flags: Int32
-            public var currentAlgo: Api.PasswordKdfAlgo?
-            public var srpB: Buffer?
-            public var srpId: Int64?
-            public var hint: String?
-            public var emailUnconfirmedPattern: String?
-            public var newAlgo: Api.PasswordKdfAlgo
-            public var newSecureAlgo: Api.SecurePasswordKdfAlgo
-            public var secureRandom: Buffer
-            public var pendingResetDate: Int32?
-            public var loginEmailPattern: String?
-            public init(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?, loginEmailPattern: String?) {
-                self.flags = flags
-                self.currentAlgo = currentAlgo
-                self.srpB = srpB
-                self.srpId = srpId
-                self.hint = hint
-                self.emailUnconfirmedPattern = emailUnconfirmedPattern
-                self.newAlgo = newAlgo
-                self.newSecureAlgo = newSecureAlgo
-                self.secureRandom = secureRandom
-                self.pendingResetDate = pendingResetDate
-                self.loginEmailPattern = loginEmailPattern
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("password", [("flags", ConstructorParameterDescription(self.flags)), ("currentAlgo", ConstructorParameterDescription(self.currentAlgo)), ("srpB", ConstructorParameterDescription(self.srpB)), ("srpId", ConstructorParameterDescription(self.srpId)), ("hint", ConstructorParameterDescription(self.hint)), ("emailUnconfirmedPattern", ConstructorParameterDescription(self.emailUnconfirmedPattern)), ("newAlgo", ConstructorParameterDescription(self.newAlgo)), ("newSecureAlgo", ConstructorParameterDescription(self.newSecureAlgo)), ("secureRandom", ConstructorParameterDescription(self.secureRandom)), ("pendingResetDate", ConstructorParameterDescription(self.pendingResetDate)), ("loginEmailPattern", ConstructorParameterDescription(self.loginEmailPattern))])
-            }
-        }
-        case password(Cons_password)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .password(let _data):
-                if boxed {
-                    buffer.appendInt32(-1787080453)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 2) != 0 {
-                    _data.currentAlgo!.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 2) != 0 {
-                    serializeBytes(_data.srpB!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 2) != 0 {
-                    serializeInt64(_data.srpId!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 3) != 0 {
-                    serializeString(_data.hint!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 4) != 0 {
-                    serializeString(_data.emailUnconfirmedPattern!, buffer: buffer, boxed: false)
-                }
-                _data.newAlgo.serialize(buffer, true)
-                _data.newSecureAlgo.serialize(buffer, true)
-                serializeBytes(_data.secureRandom, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 5) != 0 {
-                    serializeInt32(_data.pendingResetDate!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 6) != 0 {
-                    serializeString(_data.loginEmailPattern!, buffer: buffer, boxed: false)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .password(let _data):
-                return ("password", [("flags", ConstructorParameterDescription(_data.flags)), ("currentAlgo", ConstructorParameterDescription(_data.currentAlgo)), ("srpB", ConstructorParameterDescription(_data.srpB)), ("srpId", ConstructorParameterDescription(_data.srpId)), ("hint", ConstructorParameterDescription(_data.hint)), ("emailUnconfirmedPattern", ConstructorParameterDescription(_data.emailUnconfirmedPattern)), ("newAlgo", ConstructorParameterDescription(_data.newAlgo)), ("newSecureAlgo", ConstructorParameterDescription(_data.newSecureAlgo)), ("secureRandom", ConstructorParameterDescription(_data.secureRandom)), ("pendingResetDate", ConstructorParameterDescription(_data.pendingResetDate)), ("loginEmailPattern", ConstructorParameterDescription(_data.loginEmailPattern))])
-            }
-        }
-
-        public static func parse_password(_ reader: BufferReader) -> Password? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.PasswordKdfAlgo?
-            if Int(_1 ?? 0) & Int(1 << 2) != 0 {
-                if let signature = reader.readInt32() {
-                    _2 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
-                }
-            }
-            var _3: Buffer?
-            if Int(_1 ?? 0) & Int(1 << 2) != 0 {
-                _3 = parseBytes(reader)
-            }
-            var _4: Int64?
-            if Int(_1 ?? 0) & Int(1 << 2) != 0 {
-                _4 = reader.readInt64()
-            }
-            var _5: String?
-            if Int(_1 ?? 0) & Int(1 << 3) != 0 {
-                _5 = parseString(reader)
-            }
-            var _6: String?
-            if Int(_1 ?? 0) & Int(1 << 4) != 0 {
-                _6 = parseString(reader)
-            }
-            var _7: Api.PasswordKdfAlgo?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
-            }
-            var _8: Api.SecurePasswordKdfAlgo?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.SecurePasswordKdfAlgo
-            }
-            var _9: Buffer?
-            _9 = parseBytes(reader)
-            var _10: Int32?
-            if Int(_1 ?? 0) & Int(1 << 5) != 0 {
-                _10 = reader.readInt32()
-            }
-            var _11: String?
-            if Int(_1 ?? 0) & Int(1 << 6) != 0 {
-                _11 = parseString(reader)
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1 ?? 0) & Int(1 << 2) == 0) || _2 != nil
-            let _c3 = (Int(_1 ?? 0) & Int(1 << 2) == 0) || _3 != nil
-            let _c4 = (Int(_1 ?? 0) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1 ?? 0) & Int(1 << 3) == 0) || _5 != nil
-            let _c6 = (Int(_1 ?? 0) & Int(1 << 4) == 0) || _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = (Int(_1 ?? 0) & Int(1 << 5) == 0) || _10 != nil
-            let _c11 = (Int(_1 ?? 0) & Int(1 << 6) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.account.Password.password(Cons_password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10, loginEmailPattern: _11))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum PasswordInputSettings: TypeConstructorDescription {
-        public class Cons_passwordInputSettings: TypeConstructorDescription {
-            public var flags: Int32
-            public var newAlgo: Api.PasswordKdfAlgo?
-            public var newPasswordHash: Buffer?
-            public var hint: String?
-            public var email: String?
-            public var newSecureSettings: Api.SecureSecretSettings?
-            public init(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?) {
-                self.flags = flags
-                self.newAlgo = newAlgo
-                self.newPasswordHash = newPasswordHash
-                self.hint = hint
-                self.email = email
-                self.newSecureSettings = newSecureSettings
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("passwordInputSettings", [("flags", ConstructorParameterDescription(self.flags)), ("newAlgo", ConstructorParameterDescription(self.newAlgo)), ("newPasswordHash", ConstructorParameterDescription(self.newPasswordHash)), ("hint", ConstructorParameterDescription(self.hint)), ("email", ConstructorParameterDescription(self.email)), ("newSecureSettings", ConstructorParameterDescription(self.newSecureSettings))])
-            }
-        }
-        case passwordInputSettings(Cons_passwordInputSettings)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .passwordInputSettings(let _data):
-                if boxed {
-                    buffer.appendInt32(-1036572727)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    _data.newAlgo!.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeBytes(_data.newPasswordHash!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeString(_data.hint!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 1) != 0 {
-                    serializeString(_data.email!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 2) != 0 {
-                    _data.newSecureSettings!.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .passwordInputSettings(let _data):
-                return ("passwordInputSettings", [("flags", ConstructorParameterDescription(_data.flags)), ("newAlgo", ConstructorParameterDescription(_data.newAlgo)), ("newPasswordHash", ConstructorParameterDescription(_data.newPasswordHash)), ("hint", ConstructorParameterDescription(_data.hint)), ("email", ConstructorParameterDescription(_data.email)), ("newSecureSettings", ConstructorParameterDescription(_data.newSecureSettings))])
-            }
-        }
-
-        public static func parse_passwordInputSettings(_ reader: BufferReader) -> PasswordInputSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.PasswordKdfAlgo?
-            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                if let signature = reader.readInt32() {
-                    _2 = Api.parse(reader, signature: signature) as? Api.PasswordKdfAlgo
-                }
-            }
-            var _3: Buffer?
-            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                _3 = parseBytes(reader)
-            }
-            var _4: String?
-            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                _4 = parseString(reader)
-            }
-            var _5: String?
-            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
-                _5 = parseString(reader)
-            }
-            var _6: Api.SecureSecretSettings?
-            if Int(_1 ?? 0) & Int(1 << 2) != 0 {
-                if let signature = reader.readInt32() {
-                    _6 = Api.parse(reader, signature: signature) as? Api.SecureSecretSettings
-                }
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1 ?? 0) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.PasswordInputSettings.passwordInputSettings(Cons_passwordInputSettings(flags: _1!, newAlgo: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSettings: _6))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.account {
-    enum PasswordSettings: TypeConstructorDescription {
-        public class Cons_passwordSettings: TypeConstructorDescription {
-            public var flags: Int32
-            public var email: String?
-            public var secureSettings: Api.SecureSecretSettings?
-            public init(flags: Int32, email: String?, secureSettings: Api.SecureSecretSettings?) {
-                self.flags = flags
-                self.email = email
-                self.secureSettings = secureSettings
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("passwordSettings", [("flags", ConstructorParameterDescription(self.flags)), ("email", ConstructorParameterDescription(self.email)), ("secureSettings", ConstructorParameterDescription(self.secureSettings))])
-            }
-        }
-        case passwordSettings(Cons_passwordSettings)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .passwordSettings(let _data):
-                if boxed {
-                    buffer.appendInt32(-1705233435)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeString(_data.email!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 1) != 0 {
-                    _data.secureSettings!.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .passwordSettings(let _data):
-                return ("passwordSettings", [("flags", ConstructorParameterDescription(_data.flags)), ("email", ConstructorParameterDescription(_data.email)), ("secureSettings", ConstructorParameterDescription(_data.secureSettings))])
-            }
-        }
-
-        public static func parse_passwordSettings(_ reader: BufferReader) -> PasswordSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                _2 = parseString(reader)
-            }
-            var _3: Api.SecureSecretSettings?
-            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
-                if let signature = reader.readInt32() {
-                    _3 = Api.parse(reader, signature: signature) as? Api.SecureSecretSettings
-                }
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.account.PasswordSettings.passwordSettings(Cons_passwordSettings(flags: _1!, email: _2, secureSettings: _3))
             }
             else {
                 return nil

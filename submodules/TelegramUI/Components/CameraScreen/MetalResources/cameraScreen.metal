@@ -72,15 +72,11 @@ fragment half4 cameraBlobFragment(RasterizerData in[[stage_in]],
                                            secondaryParameters, secondaryOffset));
     
     float bound = max(primaryParameters.x, primaryParameters.y) + 0.05;
-    if (abs(axis) > bound) {
-        float extra = min(1.0, (abs(axis) - bound) * 2.4);
-        coverage = mix(0.0, coverage, extra);
-    }
+    float whiteFraction = clamp((abs(axis) - bound) * 2.4, 0.0, 1.0);
+    float3 color = mix(clamp(primaryColor, 0.0, 1.0), float3(1.0), whiteFraction);
+    float3 rgb = color * coverage;
     
-    float  alpha = coverage;
-    float3 rgb = clamp(primaryColor, 0.0, 1.0) * alpha;
-    
-    return half4(half3(rgb), half(alpha));
+    return half4(half3(rgb), half(coverage));
 }
 
 struct Rectangle {

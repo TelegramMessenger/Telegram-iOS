@@ -177,13 +177,22 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: maxTextWidth, height: self.bounds.height))
+        let textHasRTL = self.textNode.cachedLayout?.hasRTL ?? false
         
         var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - textSize.width) / 2.0), y: floorToScreenPixels((self.bounds.height - textSize.height) / 2.0)), size: textSize)
         if let iconView = self.icon?.view {
             let contentX = floor((size.width - textSize.width - iconSize.width - iconSpacing) * 0.5)
-            textFrame.origin.x = contentX + iconSize.width + iconSpacing
+            // The icon leads the title in reading order, so it follows the title visually in RTL.
+            let iconX: CGFloat
+            if textHasRTL {
+                textFrame.origin.x = contentX
+                iconX = contentX + textSize.width + iconSpacing
+            } else {
+                textFrame.origin.x = contentX + iconSize.width + iconSpacing
+                iconX = contentX
+            }
             
-            let iconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - iconSize.height) * 0.5)), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: iconX, y: floor((size.height - iconSize.height) * 0.5)), size: iconSize)
             if iconView.superview == nil {
                 iconView.isUserInteractionEnabled = false
                 self.view.addSubview(iconView)
@@ -426,7 +435,7 @@ public final class ChatButtonKeyboardInputNode: ChatInputNode, UIScrollViewDeleg
                     break
                 case let .urlAuth(url, buttonId):
                     if let message = self.message {
-                        self.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message.id, buttonId: buttonId))
+                        self.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message._asMessage().callbackTargetMessageId, buttonId: buttonId))
                     }
                 case let .setupPoll(isQuiz):
                     self.controllerInteraction.openPollCreation(nil, isQuiz)
@@ -439,13 +448,19 @@ public final class ChatButtonKeyboardInputNode: ChatInputNode, UIScrollViewDeleg
                         self.controllerInteraction.openPeer(peer, .info(nil), nil, .default)
                     })
                 case let .openWebView(url, simple):
-                    self.controllerInteraction.openWebView(markupButton.title, url, simple, .generic)
+                    // nil: a reply-keyboard button has no inline loading state, so the
+                    // `.requestInProgress` title panel stays its progress indicator.
+                    self.controllerInteraction.openWebView(markupButton.title, url, simple, .generic, nil)
                 case let .requestPeer(peerType, buttonId, maxQuantity):
                     if let message = self.message {
                         self.controllerInteraction.openRequestedPeerSelection(message.id, peerType, buttonId, maxQuantity)
                     }
                 case let .copyText(payload):
                     self.controllerInteraction.copyText(payload)
+                case .disabled:
+                    // A forward stripped this button's behaviour; tapping does nothing, and it
+                    // must not dismiss a once-keyboard either (dismissIfOnce stays false).
+                    break
             }
             if dismissIfOnce {
                 if let message = self.message {

@@ -698,6 +698,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum RichButtonStyle: TypeConstructorDescription {
+        public class Cons_richButtonStyle: TypeConstructorDescription {
+            public var flags: Int32
+            public init(flags: Int32) {
+                self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("richButtonStyle", [("flags", ConstructorParameterDescription(self.flags))])
+            }
+        }
+        case richButtonStyle(Cons_richButtonStyle)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .richButtonStyle(let _data):
+                if boxed {
+                    buffer.appendInt32(63312061)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .richButtonStyle(let _data):
+                return ("richButtonStyle", [("flags", ConstructorParameterDescription(_data.flags))])
+            }
+        }
+
+        public static func parse_richButtonStyle(_ reader: BufferReader) -> RichButtonStyle? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.RichButtonStyle.richButtonStyle(Cons_richButtonStyle(flags: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum RichMessage: TypeConstructorDescription {
         public class Cons_richMessage: TypeConstructorDescription {
             public var flags: Int32
@@ -842,6 +886,21 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("textBotCommand", [("text", ConstructorParameterDescription(self.text))])
+            }
+        }
+        public class Cons_textButton: TypeConstructorDescription {
+            public var flags: Int32
+            public var text: Api.RichText
+            public var type: Api.InlineButtonType
+            public var style: Api.RichButtonStyle?
+            public init(flags: Int32, text: Api.RichText, type: Api.InlineButtonType, style: Api.RichButtonStyle?) {
+                self.flags = flags
+                self.text = text
+                self.type = type
+                self.style = style
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("textButton", [("flags", ConstructorParameterDescription(self.flags)), ("text", ConstructorParameterDescription(self.text)), ("type", ConstructorParameterDescription(self.type)), ("style", ConstructorParameterDescription(self.style))])
             }
         }
         public class Cons_textCashtag: TypeConstructorDescription {
@@ -1042,6 +1101,15 @@ public extension Api {
                 return ("textSuperscript", [("text", ConstructorParameterDescription(self.text))])
             }
         }
+        public class Cons_textTonAddress: TypeConstructorDescription {
+            public var text: Api.RichText
+            public init(text: Api.RichText) {
+                self.text = text
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("textTonAddress", [("text", ConstructorParameterDescription(self.text))])
+            }
+        }
         public class Cons_textUnderline: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
@@ -1071,6 +1139,7 @@ public extension Api {
         case textBankCard(Cons_textBankCard)
         case textBold(Cons_textBold)
         case textBotCommand(Cons_textBotCommand)
+        case textButton(Cons_textButton)
         case textCashtag(Cons_textCashtag)
         case textConcat(Cons_textConcat)
         case textCustomEmoji(Cons_textCustomEmoji)
@@ -1092,6 +1161,7 @@ public extension Api {
         case textStrike(Cons_textStrike)
         case textSubscript(Cons_textSubscript)
         case textSuperscript(Cons_textSuperscript)
+        case textTonAddress(Cons_textTonAddress)
         case textUnderline(Cons_textUnderline)
         case textUrl(Cons_textUrl)
 
@@ -1139,6 +1209,17 @@ public extension Api {
                     buffer.appendInt32(50276819)
                 }
                 _data.text.serialize(buffer, true)
+                break
+            case .textButton(let _data):
+                if boxed {
+                    buffer.appendInt32(-1345872682)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                _data.text.serialize(buffer, true)
+                _data.type.serialize(buffer, true)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.style!.serialize(buffer, true)
+                }
                 break
             case .textCashtag(let _data):
                 if boxed {
@@ -1278,6 +1359,12 @@ public extension Api {
                 }
                 _data.text.serialize(buffer, true)
                 break
+            case .textTonAddress(let _data):
+                if boxed {
+                    buffer.appendInt32(1020437354)
+                }
+                _data.text.serialize(buffer, true)
+                break
             case .textUnderline(let _data):
                 if boxed {
                     buffer.appendInt32(-1054465340)
@@ -1311,6 +1398,8 @@ public extension Api {
                 return ("textBold", [("text", ConstructorParameterDescription(_data.text))])
             case .textBotCommand(let _data):
                 return ("textBotCommand", [("text", ConstructorParameterDescription(_data.text))])
+            case .textButton(let _data):
+                return ("textButton", [("flags", ConstructorParameterDescription(_data.flags)), ("text", ConstructorParameterDescription(_data.text)), ("type", ConstructorParameterDescription(_data.type)), ("style", ConstructorParameterDescription(_data.style))])
             case .textCashtag(let _data):
                 return ("textCashtag", [("text", ConstructorParameterDescription(_data.text))])
             case .textConcat(let _data):
@@ -1353,6 +1442,8 @@ public extension Api {
                 return ("textSubscript", [("text", ConstructorParameterDescription(_data.text))])
             case .textSuperscript(let _data):
                 return ("textSuperscript", [("text", ConstructorParameterDescription(_data.text))])
+            case .textTonAddress(let _data):
+                return ("textTonAddress", [("text", ConstructorParameterDescription(_data.text))])
             case .textUnderline(let _data):
                 return ("textUnderline", [("text", ConstructorParameterDescription(_data.text))])
             case .textUrl(let _data):
@@ -1449,6 +1540,34 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.RichText.textBotCommand(Cons_textBotCommand(text: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_textButton(_ reader: BufferReader) -> RichText? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.RichText?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            var _3: Api.InlineButtonType?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InlineButtonType
+            }
+            var _4: Api.RichButtonStyle?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.RichButtonStyle
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.RichText.textButton(Cons_textButton(flags: _1!, text: _2!, type: _3!, style: _4))
             }
             else {
                 return nil
@@ -1733,6 +1852,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.RichText.textSuperscript(Cons_textSuperscript(text: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_textTonAddress(_ reader: BufferReader) -> RichText? {
+            var _1: Api.RichText?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.RichText.textTonAddress(Cons_textTonAddress(text: _1!))
             }
             else {
                 return nil

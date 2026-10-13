@@ -42,7 +42,7 @@ extension ChatControllerImpl {
                 }
             }
             
-            guard let topMessage = messages.first else {
+            guard let topMessage = updatedMessages.first else {
                 return
             }
 
@@ -219,84 +219,88 @@ extension ChatControllerImpl {
                 
                 var disableTransitionAnimations = false
                 var actionsSignal: Signal<ContextController.Items, NoError> = .single(actions)
+                var emojiFileIds: [Int64] = []
                 if let entitiesAttribute = message.textEntitiesAttribute {
-                    var emojiFileIds: [Int64] = []
                     for entity in entitiesAttribute.entities {
                         if case let .CustomEmoji(_, fileId) = entity.type {
                             emojiFileIds.append(fileId)
                         }
                     }
+                }
+                // A rich message carries its custom emoji inside the page rather than as entities.
+                // The full page when one is cached, so emoji behind "Show More" count too.
+                if let richText = message.richText {
+                    emojiFileIds.append(contentsOf: (richText.fullInstantPage ?? richText.instantPage).customEmojiFileIds)
+                }
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                
+                if !emojiFileIds.isEmpty && !premiumConfiguration.isPremiumDisabled {
+                    tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                    actions.tip = tip
+                    disableTransitionAnimations = true
                     
-                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                    
-                    if !emojiFileIds.isEmpty && !premiumConfiguration.isPremiumDisabled {
-                        tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
-                        actions.tip = tip
-                        disableTransitionAnimations = true
-                        
-                        let context = self.context
-                        actionsSignal = .single(actions)
-                        |> then(
-                            context.engine.stickers.resolveInlineStickers(fileIds: emojiFileIds)
-                            |> mapToSignal { files -> Signal<ContextController.Items, NoError> in
-                                var packReferences: [StickerPackReference] = []
-                                var existingIds = Set<Int64>()
-                                for (_, file) in files {
-                                    loop: for attribute in file.attributes {
-                                        if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
-                                            if case let .id(id, _) = packReference, !existingIds.contains(id) {
-                                                packReferences.append(packReference)
-                                                existingIds.insert(id)
-                                            }
-                                            break loop
+                    let context = self.context
+                    actionsSignal = .single(actions)
+                    |> then(
+                        context.engine.stickers.resolveInlineStickers(fileIds: emojiFileIds)
+                        |> mapToSignal { [weak self] files -> Signal<ContextController.Items, NoError> in
+                            var packReferences: [StickerPackReference] = []
+                            var existingIds = Set<Int64>()
+                            for (_, file) in files {
+                                loop: for attribute in file.attributes {
+                                    if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
+                                        if case let .id(id, _) = packReference, !existingIds.contains(id) {
+                                            packReferences.append(packReference)
+                                            existingIds.insert(id)
                                         }
+                                        break loop
                                     }
-                                }
-                                
-                                let action = { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.presentEmojiList(references: packReferences)
-                                }
-                                
-                                if packReferences.count > 1 {
-                                    actions.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
-                                    return .single(actions)
-                                } else if let reference = packReferences.first {
-                                    return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
-                                    |> filter { result in
-                                        if case .result = result {
-                                            return true
-                                        } else {
-                                            return false
-                                        }
-                                    }
-                                    |> mapToSignal { result in
-                                        if case let .result(info, items, _) = result, let presentationContext = presentationContext {
-                                            actions.tip = .animatedEmoji(
-                                                text: presentationData.strings.ChatContextMenu_EmojiSetSingle(info.title).string,
-                                                arguments: TextNodeWithEntities.Arguments(
-                                                    context: context,
-                                                    cache: presentationContext.animationCache,
-                                                    renderer: presentationContext.animationRenderer,
-                                                    placeholderColor: .clear,
-                                                    attemptSynchronous: true
-                                                ),
-                                                file: items.first?.file._parse(),
-                                                action: action)
-                                            return .single(actions)
-                                        } else {
-                                            return .complete()
-                                        }
-                                    }
-                                } else {
-                                    actions.tip = nil
-                                    return .single(actions)
                                 }
                             }
-                        )
-                    }
+                            
+                            let action = { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.presentEmojiList(references: packReferences)
+                            }
+                            
+                            if packReferences.count > 1 {
+                                actions.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
+                                return .single(actions)
+                            } else if let reference = packReferences.first {
+                                return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                                |> filter { result in
+                                    if case .result = result {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                |> mapToSignal { result in
+                                    if case let .result(info, items, _) = result, let presentationContext = presentationContext {
+                                        actions.tip = .animatedEmoji(
+                                            text: presentationData.strings.ChatContextMenu_EmojiSetSingle(info.title).string,
+                                            arguments: TextNodeWithEntities.Arguments(
+                                                context: context,
+                                                cache: presentationContext.animationCache,
+                                                renderer: presentationContext.animationRenderer,
+                                                placeholderColor: .clear,
+                                                attemptSynchronous: true
+                                            ),
+                                            file: items.first?.file._parse(),
+                                            action: action)
+                                        return .single(actions)
+                                    } else {
+                                        return .complete()
+                                    }
+                                }
+                            } else {
+                                actions.tip = nil
+                                return .single(actions)
+                            }
+                        }
+                    )
                 }
                 
                 var keepDefaultContentTouches = false

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import TelegramCore
@@ -145,7 +146,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     if let currentAnimationNode = self.animationNode {
                         animationNode = currentAnimationNode
                     } else {
-                        animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
                         animationNode.transform = self.imageNode.transform
                         animationNode.visibility = self.isVisibleInGrid
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))

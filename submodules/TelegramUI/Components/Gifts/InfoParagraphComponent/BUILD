@@ -18,6 +18,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/AppBundle",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BalancedTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/Markdown",
         "//submodules/TextFormat",

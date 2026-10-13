@@ -21,13 +21,13 @@ final class MessageHistorySynchronizeReadStateTable: Table {
     
     private func lowerBound() -> ValueBoxKey {
         let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: 0)
+        key.setInt64(0, value: Int64.min)
         return key
     }
     
     private func upperBound() -> ValueBoxKey {
         let key = ValueBoxKey(length: 8)
-        memset(key.memory, 0xff, key.length)
+        key.setInt64(0, value: Int64.max)
         return key
     }
     

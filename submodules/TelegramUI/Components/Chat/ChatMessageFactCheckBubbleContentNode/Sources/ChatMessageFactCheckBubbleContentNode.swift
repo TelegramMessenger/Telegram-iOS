@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -60,7 +61,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     
     private var countryName: String?
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.titleNode = TextNode()
         self.titleBadgeLabel = TextNode()
         self.textClippingNode = ASDisplayNode()
@@ -70,7 +71,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         self.statusNode = ChatMessageDateAndStatusNode()
         self.lineNode = ASDisplayNode()
 
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.textClippingNode.clipsToBounds = true
         self.addSubnode(self.textClippingNode)
@@ -274,10 +275,10 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         let currentIsExpanded = self.isExpanded
         let currentCountryName = self.countryName
         
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let message = item.message
                 
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
@@ -468,7 +469,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 suggestedBoundingWidth += (sideInsets - 2.0) * 2.0
                 
-                return (suggestedBoundingWidth, { boundingWidth in
+                return (suggestedBoundingWidth, { [weak self] boundingWidth in
                     var boundingSize: CGSize
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)

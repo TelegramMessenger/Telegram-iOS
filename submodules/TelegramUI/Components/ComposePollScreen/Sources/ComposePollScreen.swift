@@ -814,7 +814,7 @@ final class ComposePollScreenComponent: Component {
                     targetFrame.origin.y = availableSize.height
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.3) {
+                            Queue.mainQueue().after(0.3) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -960,8 +960,8 @@ final class ComposePollScreenComponent: Component {
                         parentController.present(c, in: .window(.root))
                     }
                 },
-                completion: { [weak self] media in
-                guard let self else {
+                completion: { [weak self] mediaReferences in
+                guard let self, let media = mediaReferences.first else {
                     return
                 }
                 let attachedMedia = AttachedMedia(media: media)
@@ -1681,7 +1681,11 @@ final class ComposePollScreenComponent: Component {
             
             var pollOptionsSectionReadyItems: [ListSectionContentView.ReadyItem] = []
             
-            let processPollOptionItem: (Int) -> Void = { i in
+            // Strong capture on purpose: this closure never escapes update(). Swift 6.4
+            // miscompiles `[weak self]` here (a local closure that also captures a mutable
+            // local): the weak slot is destroyed before the closure is called, so an
+            // NSObject-derived self traps in objc_loadWeak ("not in the weak references table").
+            let processPollOptionItem: (Int) -> Void = { [self] i in
                 let pollOption = self.pollOptions[i]
                 
                 let optionId = pollOption.id

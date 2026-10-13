@@ -141,7 +141,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     let curve: ListViewAnimationCurve = scrollAnimationCurve ?? .Default(duration: nil)
     
     var isSavedMusic = false
-    if case let .custom(_, _, _, isSavedMusicValue, _, _) = source {
+    if case let .custom(_, _, _, isSavedMusicValue, _, _, _) = source {
         isSavedMusic = isSavedMusicValue
     }
     

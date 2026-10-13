@@ -26,7 +26,7 @@
 #import <LegacyComponents/TGMediaPickerModernGalleryMixin.h>
 #import <LegacyComponents/TGMediaPickerGalleryItem.h>
 
-@interface TGMediaAssetsPickerController () <UIViewControllerPreviewingDelegate>
+@interface TGMediaAssetsPickerController ()
 {
     TGMediaAssetsControllerIntent _intent;
     TGMediaAssetsLibrary *_assetsLibrary;
@@ -38,12 +38,8 @@
     TGModernBarButton *_searchBarButton;
     
     TGMediaPickerModernGalleryMixin *_galleryMixin;
-    TGMediaPickerModernGalleryMixin *_previewGalleryMixin;
-    NSIndexPath *_previewIndexPath;
     
     id<SDisposable> _selectionChangedDisposable;
-    
-    bool _checked3dTouch;
     
     id<LegacyComponentsContext> _context;
     bool _saveEditedPhotos;
@@ -246,7 +242,6 @@
 {
     [super viewWillAppear:animated];
     
-    [self setup3DTouch];
     [self setLeftBarButtonItem:[(TGMediaAssetsController *)self.navigationController leftBarButtonItem]];
     [self setRightBarButtonItem:[(TGMediaAssetsController *)self.navigationController rightBarButtonItem]];
 }
@@ -540,52 +535,6 @@
         _galleryMixin = [self galleryMixinForIndexPath:indexPath previewMode:false outAsset:NULL];
         [_galleryMixin present];
     }
-}
-
-#pragma mark - 
-
-- (void)setup3DTouch
-{
-    if (_checked3dTouch)
-        return;
-    
-    _checked3dTouch = true;
-    
-    if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || _intent == TGMediaAssetsControllerSetCustomWallpaperIntent) {
-        return;
-    }
-}
-
-- (UIViewController *)previewingContext:(id<UIViewControllerPreviewing>)previewingContext viewControllerForLocation:(CGPoint)location
-{
-    CGPoint point = [self.view convertPoint:location toView:_collectionView];
-    NSIndexPath *indexPath = [_collectionView indexPathForItemAtPoint:point];
-    if (indexPath == nil)
-        return nil;
-    
-    [self _cancelSelectionGestureRecognizer];
-    
-    CGRect cellFrame = [_collectionView.collectionViewLayout layoutAttributesForItemAtIndexPath:indexPath].frame;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    previewingContext.sourceRect = [self.view convertRect:cellFrame fromView:_collectionView];
-#pragma clang diagnostic pop
-    
-    TGMediaAsset *asset = nil;
-    _previewGalleryMixin = [self galleryMixinForIndexPath:indexPath previewMode:true outAsset:&asset];
-    UIViewController *controller = [_previewGalleryMixin galleryController];
-    controller.preferredContentSize = TGFitSize(asset.dimensions, self.view.frame.size);
-    [_previewGalleryMixin setPreviewMode];
-    return controller;
-}
-
-- (void)previewingContext:(id<UIViewControllerPreviewing>)__unused previewingContext commitViewController:(UIViewController *)__unused viewControllerToCommit
-{
-    _galleryMixin = _previewGalleryMixin;
-    _previewGalleryMixin = nil;
-    
-    [self _setupGalleryMixin:_galleryMixin];
-    [_galleryMixin present];
 }
 
 #pragma mark - Asset Image Preheating

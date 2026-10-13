@@ -88,39 +88,6 @@ final class StarsStatisticsScreenComponent: Component {
                 return super.contentOffset
             }
         }
-                
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
-                return true
-            }
-            return false
-        }
-        
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return false
-        }
-        
-        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer is UIPanGestureRecognizer, let gestureRecognizers = gestureRecognizer.view?.gestureRecognizers {
-                for otherGestureRecognizer in gestureRecognizers {
-                    if otherGestureRecognizer !== gestureRecognizer, let panGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer.minimumNumberOfTouches == 2 {
-                        return gestureRecognizer.numberOfTouches < 2
-                    }
-                }
-                
-                if let view = gestureRecognizer.view?.hitTest(gestureRecognizer.location(in: gestureRecognizer.view), with: nil) as? UIControl {
-                    if view is UIButton {
-                        return true
-                    } else {
-                        return !view.isTracking
-                    }
-                }
-                
-                return true
-            } else {
-                return true
-            }
-        }
     }
     
     class View: UIView, UIScrollViewDelegate {
@@ -157,8 +124,6 @@ final class StarsStatisticsScreenComponent: Component {
         private var enableVelocityTracking: Bool = false
         private var previousVelocityM1: CGFloat = 0.0
         private var previousVelocity: CGFloat = 0.0
-        
-        private var listIsExpanded = false
         
         private var ignoreScrolling: Bool = false
         
@@ -257,15 +222,8 @@ final class StarsStatisticsScreenComponent: Component {
         }
         
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-            guard let navigationMetrics = self.navigationMetrics else {
-                return
-            }
-            
-            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
-                let paneAreaExpansionFinalPoint: CGFloat = panelContainerView.frame.minY - navigationMetrics.navigationHeight
-                if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
-                    panelContainerView.transferVelocity(self.previousVelocityM1)
-                }
+            if !"".isEmpty, self.isLockedAtPanels(scrollBounds: scrollView.bounds), let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                panelContainerView.transferVelocity(self.previousVelocityM1)
             }
         }
         
@@ -286,26 +244,38 @@ final class StarsStatisticsScreenComponent: Component {
                 
         private var lastScrollBounds: CGRect?
         private var lastBottomOffset: CGFloat?
+
+        private func isLockedAtPanels(scrollBounds: CGRect) -> Bool {
+            guard let panelContainerView = self.panelContainer.view, panelContainerView.superview != nil, let navigationMetrics = self.navigationMetrics else {
+                return false
+            }
+            let pinnedOffset = max(0.0, panelContainerView.frame.minY - navigationMetrics.navigationHeight)
+            return abs(scrollBounds.minY - pinnedOffset) <= 1.0
+        }
+
         private func updateScrolling(transition: ComponentTransition) {
             let scrollBounds = self.scrollView.bounds
             
-            let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
+            let isLockedAtPanels = self.isLockedAtPanels(scrollBounds: scrollBounds)
+            var topContentAlpha: CGFloat = 1.0
             
             if let _ = self.navigationMetrics {
                 let expansionDistance: CGFloat = 32.0
                 var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+                expansionDistanceFactor = isLockedAtPanels ? 0.0 : max(0.0, min(1.0, expansionDistanceFactor))
+
+                if self.panelContainer.view?.superview != nil {
+                    topContentAlpha = expansionDistanceFactor
+                }
                 
                 if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
                     panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
                 }
-                   
-                let listIsExpanded = expansionDistanceFactor == 0.0
-                if listIsExpanded != self.listIsExpanded {
-                    self.listIsExpanded = listIsExpanded
-                    if !self.isUpdating {
-                        self.state?.updated(transition: .init(animation: .curve(duration: 0.25, curve: .slide)))
-                    }
+            }
+
+            for view in [self.chartView.view, self.proceedsView.view, self.balanceView.view] {
+                if let view {
+                    transition.setAlpha(view: view, alpha: topContentAlpha)
                 }
             }
             
@@ -391,6 +361,8 @@ final class StarsStatisticsScreenComponent: Component {
                 })
             }
                         
+            let wasLockedAtPanels = self.isLockedAtPanels(scrollBounds: self.scrollView.bounds)
+
             self.controller = environment.controller
             
             self.navigationMetrics = (environment.navigationHeight, environment.statusBarHeight)
@@ -732,17 +704,11 @@ final class StarsStatisticsScreenComponent: Component {
                 ))
             }
             
-            var wasLockedAtPanels = false
-            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
-                if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
-                    wasLockedAtPanels = true
-                }
-            }
-            
             let panelTransition = transition
             if !panelItems.isEmpty {
-                let panelContainerInset: CGFloat = self.listIsExpanded ? 0.0 : 16.0
-                let panelContainerCornerRadius: CGFloat = self.listIsExpanded ? 0.0 : 26.0
+                contentHeight = balanceFrame.maxY + 22.0
+                let panelContainerInset: CGFloat = 16.0
+                let panelContainerCornerRadius: CGFloat = 26.0
                 
                 let panelContainerSize = self.panelContainer.update(
                     transition: panelTransition,
@@ -778,7 +744,8 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             self.ignoreScrolling = true
-            
+
+            let contentOffset = self.scrollView.bounds.minY
             transition.setPosition(view: self.scrollView, position: CGRect(origin: CGPoint(), size: availableSize).center)
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.contentSize != contentSize {
@@ -788,8 +755,16 @@ final class StarsStatisticsScreenComponent: Component {
             
             var scrollViewBounds = self.scrollView.bounds
             scrollViewBounds.size = availableSize
+            if wasLockedAtPanels, let panelContainerView = self.panelContainer.view {
+                scrollViewBounds.origin.y = panelContainerView.frame.minY - environment.navigationHeight
+            }
             transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)
-                        
+
+            if !wasLockedAtPanels && !transition.animation.isImmediate && self.scrollView.bounds.minY != contentOffset {
+                let deltaOffset = self.scrollView.bounds.minY - contentOffset
+                transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -deltaOffset), to: CGPoint(), additive: true)
+            }
+
             self.ignoreScrolling = false
             
             self.updateScrolling(transition: transition)

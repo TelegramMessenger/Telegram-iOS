@@ -377,7 +377,7 @@ public func standaloneColorPickerController(
     openGallery: @escaping () -> Void
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false)
-    controller.requestController = { _, present in
+    controller.requestController = { [weak controller] _, present in
         let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
         colorPickerController.pushController = { controller in
             push(controller)

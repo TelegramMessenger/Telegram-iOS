@@ -189,6 +189,7 @@ public final class ListActionItemComponent: Component {
     public let titleAlignment: Alignment
     public let verticalAlignment: VerticalAlignment
     public let contentInsets: UIEdgeInsets
+    public let separatorInset: CGFloat?
     public let leftIcon: LeftIcon?
     public let icon: Icon?
     public let accessory: Accessory?
@@ -206,6 +207,7 @@ public final class ListActionItemComponent: Component {
         titleAlignment: Alignment = .default,
         verticalAlignment: VerticalAlignment = .default,
         contentInsets: UIEdgeInsets = UIEdgeInsets(top: 12.0, left: 0.0, bottom: 12.0, right: 0.0),
+        separatorInset: CGFloat? = nil,
         leftIcon: LeftIcon? = nil,
         icon: Icon? = nil,
         accessory: Accessory? = .arrow,
@@ -222,6 +224,7 @@ public final class ListActionItemComponent: Component {
         self.titleAlignment = titleAlignment
         self.verticalAlignment = verticalAlignment
         self.contentInsets = contentInsets
+        self.separatorInset = separatorInset
         self.leftIcon = leftIcon
         self.icon = icon
         self.accessory = accessory
@@ -252,6 +255,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.contentInsets != rhs.contentInsets {
+            return false
+        }
+        if lhs.separatorInset != rhs.separatorInset {
             return false
         }
         if lhs.leftIcon != rhs.leftIcon {
@@ -1010,7 +1016,7 @@ public final class ListActionItemComponent: Component {
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             
-            self.separatorInset = originalContentLeftInset
+            self.separatorInset = component.separatorInset ?? originalContentLeftInset
             
             if let backgroundComponent = component.background {
                 var backgroundTransition = transition

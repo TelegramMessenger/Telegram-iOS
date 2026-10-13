@@ -1202,8 +1202,7 @@ final class StickerAttachmentScreen: ViewControllerComponentContainer, Attachmen
                 case .option:
                     subtitle = "Add emoji to this option"
                 case .richText:
-                    //TODO:localize
-                    subtitle = "Add emoji"
+                    subtitle = presentationData.strings.RichText_AddEmoji
                 }
             }
             let titleView = CounterControllerTitleView(theme: presentationData.theme, verticalOffset: -2.0)

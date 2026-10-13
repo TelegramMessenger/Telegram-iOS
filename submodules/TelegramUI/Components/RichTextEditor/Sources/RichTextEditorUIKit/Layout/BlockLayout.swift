@@ -76,26 +76,16 @@ final class BlockLayout: BlockLayoutEngine {
         container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
     }
 
-    /// The paragraph's render line-height multiple (uniform per block — the `StyleSheet` injects 1.05–1.10);
-    /// 1 when unset/absent. TextKit adds a `lineHeightMultiple`'s extra leading entirely ABOVE the glyphs, so
-    /// without compensation the text sits low in the line/selection box. See `centeringDelta`.
-    private var lineHeightMultiple: CGFloat {
-        guard length > 0,
-              let ps = attributedString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
-              ps.lineHeightMultiple > 1 else { return 1 }
-        return ps.lineHeightMultiple
-    }
-
-    /// Half the extra leading `lineHeightMultiple` adds to a line of box height `lineHeight` — the amount to
-    /// raise the glyphs by so they CENTER in the (full-height) line box instead of sitting against its bottom.
-    /// The box height that caret/selection use is left untouched, so line spacing is preserved; only the glyph
-    /// VISUALS + baseline-derived geometry (`drawText`, `attachmentBox`, `firstLineBaselineFromTop`) shift up.
-    /// 0 when there is no multiple. Mirrored by `BlockLayoutTK1`'s layout-manager delegate. See
-    /// `LineHeightCenteringTests` and the project CLAUDE.md.
-    func centeringDelta(lineHeight: CGFloat) -> CGFloat {
-        let m = lineHeightMultiple
-        guard m > 1, lineHeight > 0 else { return 0 }
-        return lineHeight * (1 - 1 / m) / 2
+    /// The baseline TextKit actually produced for the first line, relative to the layout top, with NO
+    /// correction applied. `BlockLayoutEngine`'s shared extension derives `baselineDelta` from it.
+    var rawFirstBaselineFromTop: CGFloat? {
+        var result: CGFloat?
+        layoutManager.enumerateTextLayoutFragments(from: nil, options: [.ensuresLayout]) { fragment in
+            guard let line = fragment.textLineFragments.first else { return true }
+            result = fragment.layoutFragmentFrame.minY + line.glyphOrigin.y
+            return false
+        }
+        return result
     }
 
     var boundingHeight: CGFloat {
@@ -130,10 +120,9 @@ final class BlockLayout: BlockLayoutEngine {
         var result: CGFloat?
         layoutManager.enumerateTextLayoutFragments(from: nil, options: [.ensuresLayout]) { fragment in
             guard let line = fragment.textLineFragments.first else { return true }
-            // Match the centered glyph baseline (drawn `centeringDelta` higher), so a list marker aligned to
-            // this value tracks the centered text rather than the raw bottom-biased baseline.
-            result = fragment.layoutFragmentFrame.minY + line.glyphOrigin.y
-                   - self.centeringDelta(lineHeight: line.typographicBounds.height)
+            // Report the CORRECTED baseline (raised by `baselineDelta`), so a list marker aligned to
+            // this value tracks the drawn glyphs and lands where V2 puts the baseline.
+            result = fragment.layoutFragmentFrame.minY + line.glyphOrigin.y - self.baselineDelta
             return false
         }
         return result
@@ -232,9 +221,9 @@ final class BlockLayout: BlockLayoutEngine {
         // attachment's own `attachmentBounds` is baseline-relative with +y up (bottom = descender, top =
         // ascender), so in container coords (y down) the box top = baseline − bounds.maxY.
         layoutManager.enumerateTextSegments(in: range, type: .selection, options: []) { _, frame, baselinePosition, container in
-            // Raise the baseline by the line-centering delta so the inline attachment (emoji) tracks the
-            // centered text glyphs, not the bottom-biased default position.
-            let baseline = frame.minY + baselinePosition - self.centeringDelta(lineHeight: frame.height)
+            // Raise the baseline by `baselineDelta` so the inline attachment (emoji) tracks the drawn
+            // text glyphs, not TextKit's uncorrected position inside the pinned box.
+            let baseline = frame.minY + baselinePosition - self.baselineDelta
             let bounds = attachment.attachmentBounds(for: attrs, location: range.location,
                                                      textContainer: container, proposedLineFragment: frame,
                                                      position: CGPoint(x: frame.minX, y: baseline))
@@ -284,10 +273,10 @@ final class BlockLayout: BlockLayoutEngine {
         ctx.saveGState()
         ctx.translateBy(x: origin.x, y: origin.y)
         layoutManager.enumerateTextLayoutFragments(from: nil, options: [.ensuresLayout]) { fragment in
-            // Raise the fragment's glyphs by the line-centering delta so they sit centered in the line box
-            // (whose height — caret/selection geometry — is untouched). The delta is uniform per paragraph,
-            // so the first line's value applies to every wrapped line of the fragment.
-            let delta = fragment.textLineFragments.first.map { self.centeringDelta(lineHeight: $0.typographicBounds.height) } ?? 0
+            // Raise the fragment's glyphs by `baselineDelta` so the first baseline lands at the font's
+            // ascender, where V2 puts it (the box height — caret/selection geometry — is untouched). The
+            // delta is uniform per paragraph, so one value applies to every wrapped line.
+            let delta = self.baselineDelta
             ctx.saveGState()
             ctx.translateBy(x: 0, y: -delta)
             fragment.draw(at: fragment.layoutFragmentFrame.origin, in: ctx)

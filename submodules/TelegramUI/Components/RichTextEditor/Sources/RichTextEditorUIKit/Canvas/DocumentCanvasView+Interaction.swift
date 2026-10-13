@@ -31,6 +31,7 @@ extension DocumentCanvasView {
             // so the handle pan can grab the knob instead of the loupe collapsing the selection.
             longPress.delegate = self
             loupeLongPress = longPress
+            selectionTap = tap   // TASK 32: held so `legacyRemoveSelectionInteractions()` can remove it by identity
             [tap, longPress].forEach { addGestureRecognizer($0) }
             // Arbitration with the enclosing UIScrollView's pan is intentionally gate-only (see
             // gestureRecognizerShouldBegin) pending on-device verification — do NOT add require(toFail:) or
@@ -65,6 +66,52 @@ extension DocumentCanvasView {
         // stale across our view virtualization / edits and crashes (use-after-free in `setActivated:`). Instead a
         // FRESH interaction is created per loupe drag and torn down on release (see `handleLongPress`), so nothing
         // survives between drags to be corrupted, and `removeInteraction` clears its chrome.
+    }
+
+    /// TASK 32 (Family 9, D24 clause (a)) — the inverse of `installSelectionInteractions()`'s recognizer
+    /// half. **NEW code, not a moved body**: install has been one-way since it was written, which
+    /// `ResponderLifecycleCharacterizationTests.test_installSelectionInteractions_isOneWay_thereIsNoRemovalPath`
+    /// recorded as observed behaviour. It is reached ONLY from `LegacyRichTextInputBackend.removeInteractions()`,
+    /// which `performDetachSteps()` calls as step 4 (plus `attach(to:)`'s catch path) — and `detach()` has
+    /// exactly one production caller, `DocumentCanvasView.deinit`. **Deviation D18 forbids wiring it into
+    /// `resignFirstResponder()`**: doing so would fix a teardown gap Task 6 pinned, which is a behaviour
+    /// change. Rule R19 (`InputBackendSourceBoundaryTests`) enforces that at the source level.
+    ///
+    /// **BY IDENTITY, never "remove everything" — and that distinction was MEASURED, not reasoned.** The
+    /// first version of this method removed every entry of `gestureRecognizers`, on the argument that
+    /// `installSelectionInteractions()` is all-or-nothing behind `if gestureRecognizers?.isEmpty ?? true`
+    /// and nothing else in the package calls `addGestureRecognizer` on a canvas. **That argument is
+    /// false, and the count says so:** a freshly attached canvas reports **six** recognizers, not three,
+    /// and a first-responder one reports **eight**. The extras are UIKit's own —
+    /// `UIEditMenuInteraction` (installed by `installSelectionInteractions()`'s iOS-16 tail, outside the
+    /// recognizer guard) attaches recognizers to its view, and the first-responder machinery adds more.
+    /// A blanket sweep would remove those too, which is a behaviour change nobody asked for and which no
+    /// count-free assertion would have caught. The three below are exactly the three install adds.
+    ///
+    /// **The stored references are cleared, and that is load-bearing rather than tidiness.**
+    /// `gestureRecognizerShouldBegin(_:)` arbitrates by comparing `g === loupeLongPress` /
+    /// `g === selectionHandlePan`. Leaving those pointing at recognizers that are no longer on any view
+    /// is a dangling gate no test would see. Clearing them also restores install's own
+    /// `gestureRecognizers?.isEmpty` precondition to the extent it can be restored — see the asymmetry
+    /// note below for the part that cannot.
+    ///
+    /// **DISCLOSED ASYMMETRY, not fixed here.** `installSelectionInteractions()` ALSO installs the
+    /// iOS-16+ `UIEditMenuInteraction`, and this method does NOT remove it — the task brief scopes this
+    /// hook to "the recognizers `installSelectionInteractions` added". Two consequences follow and are
+    /// stated rather than left to be discovered: the interaction's own recognizers survive (so
+    /// `gestureRecognizers` is NOT empty afterwards), and a subsequent `installSelectionInteractions()`
+    /// would therefore still skip its recognizer block. Making this a full inverse means also clearing
+    /// `editMenuInteractionStorage`, or `installEditMenuInteraction()`'s `guard editMenuInteraction == nil`
+    /// would refuse to reinstall. Unobservable today for the same single reason D18 rests on — this runs
+    /// at `deinit`, where the interaction dies with the view — so whoever gives `detach()` a second,
+    /// live-canvas caller owns closing it.
+    func legacyRemoveSelectionInteractions() {
+        for recognizer in [selectionTap as UIGestureRecognizer?, loupeLongPress, selectionHandlePan] {
+            if let recognizer { removeGestureRecognizer(recognizer) }
+        }
+        selectionTap = nil
+        loupeLongPress = nil
+        selectionHandlePan = nil
     }
 
     /// The loupe "shadow" cursor tint — the desaturated snapped real-caret shown while the accent-colored cursor
@@ -122,7 +169,7 @@ extension DocumentCanvasView {
     /// horizontally-scrolled table cell. Returns false when there's no real caret (e.g. `head` at a media gap).
     func isPointNearCursor(_ point: CGPoint) -> Bool {
         guard isFirstResponder else { return false }   // no visible caret to grab until the field is focused
-        let caret = caretRect(for: DocumentTextPosition(head))
+        let caret = caretRect(atGlobal: head)
         guard caret != .zero else { return false }
         let dx = point.x - caret.midX, dy = point.y - caret.midY
         return dx * dx + dy * dy <= Self.loupeNearCursorRadius * Self.loupeNearCursorRadius
@@ -139,6 +186,14 @@ extension DocumentCanvasView {
     /// window starts a fresh count. One handler means there is no UIKit firing-order race between separate
     /// single/double/triple recognizers — and no ~0.35s `require(toFail:)` caret-placement lag.
     func handleTap(at point: CGPoint, time now: TimeInterval) {
+        // A detail-block chevron is a CONTROL, not text — route every tap on it to the single-tap handler
+        // (which toggles fold) and bypass multi-tap escalation, so no tap count ever moves/selects the cursor
+        // (mirrors checkboxes / table controls / the image-atom bypass below).
+        if firstDetailsGlyphHit(at: point) != nil {
+            lastTapTime = now; lastTapLocation = point; tapCount = 1
+            performSingleTap(at: point)
+            return
+        }
         // An image atom has no word/paragraph to escalate to — route EVERY tap on an image to the
         // single-tap (two-step select/menu) handler, bypassing multi-tap escalation.
         if let img = mediaBox(atGap: closestGlobalPosition(to: point)), img.mediaRect().contains(point) {
@@ -244,6 +299,12 @@ extension DocumentCanvasView {
             toggleCollapsed(box: bq)
             return
         }
+        // A tap on a DetailsBox's chevron folds/unfolds it (title stays visible either way).
+        if let details = firstDetailsGlyphHit(at: point) {
+            clearStructuralSelections()
+            toggleDetailsExpanded(box: details)
+            return
+        }
         if let checklist = checklistBox(atCanvasPoint: point) {
             ensureFirstResponder()
             toggleChecklistItem(box: checklist)
@@ -265,6 +326,9 @@ extension DocumentCanvasView {
                     onRequestTableStructuralMenu?(request)
                 }
             }
+            return
+        }
+        if handleButtonTapIfNeeded(at: point) {
             return
         }
         if handleFormulaTapIfNeeded(at: point) {
@@ -384,7 +448,7 @@ extension DocumentCanvasView {
                 positionLoupeShadow(fingerX: point.x, snappedGlobal: p)
                 // At an image gap caretRect(for:) is .zero; the loupe wants CGRectNull there (no caret) so it
                 // tracks the touch instead of snapping toward the view origin. No real caret sits at {0,0}.
-                let caret = caretRect(for: DocumentTextPosition(p))
+                let caret = caretRect(atGlobal: p)
                 loupeSession?.move(to: point, withCaretRect: caret == .zero ? .null : caret,
                                    trackingCaret: caret != .zero)
             }
@@ -559,8 +623,8 @@ extension DocumentCanvasView: UIGestureRecognizerDelegate {
         if tableSelection != nil, tableResizeKnob(at: point) != nil { return true }   // a table row/column knob drag
         guard selFrom != selTo else { return false }          // no text selection → no handle drag → a drag scrolls
         let tol: CGFloat = 22
-        let startRect = caretRect(for: DocumentTextPosition(selFrom))
-        let endRect = caretRect(for: DocumentTextPosition(selTo))
+        let startRect = caretRect(atGlobal: selFrom)
+        let endRect = caretRect(atGlobal: selTo)
         return startRect.insetBy(dx: -tol, dy: -tol).contains(point)
             || endRect.insetBy(dx: -tol, dy: -tol).contains(point)
     }

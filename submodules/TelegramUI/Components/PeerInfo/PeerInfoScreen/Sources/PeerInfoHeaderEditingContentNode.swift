@@ -55,7 +55,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         safeInset: CGFloat,
         statusBarHeight: CGFloat,
         navigationHeight: CGFloat,
-        isModalOverlay: Bool,
+        presentedInFormSheet: Bool,
         peer: EnginePeer?,
         threadData: MessageHistoryThreadData?,
         chatLocation: ChatLocation,
@@ -65,7 +65,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         presentationData: PresentationData,
         transition: ContainedViewLayoutTransition
     ) -> CGFloat {
-        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
+        let avatarSize: CGFloat = presentedInFormSheet ? 200.0 : 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
         transition.updateFrameAdditiveToCenter(node: self.avatarNode, frame: CGRect(origin: avatarFrame.center, size: CGSize()))
         

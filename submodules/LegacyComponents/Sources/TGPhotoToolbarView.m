@@ -55,7 +55,10 @@
         CGSize buttonSize = CGSizeMake(49.0f, 49.0f);
         _cancelButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
         _cancelButton.exclusiveTouch = true;
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _cancelButton.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         [self setBackButtonType:backButton];
         [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_cancelButton];
@@ -73,7 +76,10 @@
         } else {
             _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
             _doneButton.exclusiveTouch = true;
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
             _doneButton.adjustsImageWhenHighlighted = false;
+            #pragma clang diagnostic pop
             [self setDoneButtonType:doneButton];
             [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_backgroundView addSubview:_doneButton];

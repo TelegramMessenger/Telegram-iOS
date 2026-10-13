@@ -8,6 +8,7 @@
 #import "v2/InstanceV2Impl.h"
 #import "v2/InstanceV2ReferenceImpl.h"
 #import "v2/InstanceV2CompatImpl.h"
+#import "v2wasm/InstanceV2PumpImpl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -43,6 +44,9 @@
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
 #include "rtc_base/logging.h"
+#include "api/task_queue/pending_task_safety_flag.h"
+#include "api/units/time_delta.h"
+#include <atomic>
 
 #import <TdBinding/TdBinding.h>
 
@@ -132,7 +136,10 @@ public:
 public:
     virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> audioDeviceModule() = 0;
     virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule(bool isActive) = 0;
+    // Starts the real device, retrying a bounded number of times on failure. Idempotent once running.
     virtual void start() = 0;
+    // Stops the real device for good; later start() calls are ignored.
+    virtual void stop() = 0;
 };
 
 }
@@ -650,7 +657,67 @@ public:
     }
     
 public:
-    virtual void Start() {
+    // Starts the real device. Returns true only when playout and recording are both running.
+    //
+    // Every step is checked and a failure is rolled back with Terminate(), so the next call
+    // retries from a fresh AudioDeviceIOS instead of inheriting half-initialized state. The
+    // previous version latched _isStarted before knowing the outcome, ignored the results of
+    // StartPlayout/StartRecording and slept for up to 3 s on the worker thread: one failed
+    // AudioOutputUnitStart left the whole call silent, with no retry and no log.
+    virtual bool Start(std::string &failureDescription) {
+        if (_isStarted) {
+            return true;
+        }
+        auto instance = WrappedInstance();
+        const auto fail = [&](const char *step, int32_t result) {
+            failureDescription = std::string(step) + " failed with " + std::to_string(result);
+            instance->StopPlayout();
+            instance->StopRecording();
+            instance->Terminate();
+            return false;
+        };
+        
+        int32_t result = instance->Init();
+        if (result != 0) {
+            return fail("Init", result);
+        }
+        // Init() may have created a fresh AudioDeviceBuffer, so re-register every attempt.
+        instance->RegisterAudioCallback(this);
+        
+        if (!instance->Playing()) {
+            result = instance->InitPlayout();
+            if (result != 0) {
+                return fail("InitPlayout", result);
+            }
+            result = instance->StartPlayout();
+            if (result != 0) {
+                return fail("StartPlayout", result);
+            }
+        }
+        if (!instance->Recording()) {
+            result = instance->InitRecording();
+            if (result != 0) {
+                return fail("InitRecording", result);
+            }
+            result = instance->StartRecording();
+            if (result != 0) {
+                return fail("StartRecording", result);
+            }
+        }
+        
+        _isStarted = true;
+        RTC_LOG(LS_WARNING) << "SharedAudioDeviceModule: audio device started";
+        return true;
+    }
+    
+    bool isStarted() const {
+        return _isStarted;
+    }
+    
+    // The pre-2026-09-05 start, kept verbatim behind ios_killswitch_disable_call_audio_device_fixes:
+    // latches _isStarted first, ignores the StartPlayout/StartRecording results and blocks the worker
+    // thread for up to 3 s while InitPlayout keeps failing.
+    virtual void StartLegacy() {
         if (!_isStarted) {
             _isStarted = true;
             WrappedInstance()->Init();
@@ -684,12 +751,11 @@ public:
     }
     
     virtual void ActualStop() {
-        if (_isStarted) {
-            _isStarted = false;
-            WrappedInstance()->StopPlayout();
-            WrappedInstance()->StopRecording();
-            WrappedInstance()->Terminate();
-        }
+        RTC_LOG(LS_WARNING) << "SharedAudioDeviceModule: stopping the audio device (wasStarted=" << _isStarted << ")";
+        _isStarted = false;
+        WrappedInstance()->StopPlayout();
+        WrappedInstance()->StopRecording();
+        WrappedInstance()->Terminate();
     }
     
 private:
@@ -743,18 +809,28 @@ private:
 
 class SharedAudioDeviceModuleImpl: public tgcalls::SharedAudioDeviceModule {
 public:
-    SharedAudioDeviceModuleImpl(bool disableAudioInput, bool enableSystemMute) {
+    // Consecutive failed attempts before giving up until the next start() request. Together with
+    // the retry interval this covers the same ~3 s window the old blocking sleep loop covered.
+    static constexpr int kMaxConsecutiveStartAttempts = 6;
+    static constexpr int kStartRetryIntervalMs = 500;
+    
+    SharedAudioDeviceModuleImpl(bool disableAudioInput, bool enableSystemMute, bool legacyBehavior, std::function<void(bool started, std::string const &failure, int failedAttempts)> onStartResult) :
+    _legacyBehavior(legacyBehavior),
+    _onStartResult(std::move(onStartResult)) {
         RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
+        _safety = webrtc::PendingTaskSafetyFlag::Create();
         auto sourceDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, enableSystemMute, disableAudioInput ? 2 : 1);
         _audioDeviceModule = rtc::make_ref_counted<WrappedAudioDeviceModuleIOS>(sourceDeviceModule);
     }
     
     virtual ~SharedAudioDeviceModuleImpl() override {
         if (tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent()) {
+            _safety->SetNotAlive();
             _audioDeviceModule->ActualStop();
             _audioDeviceModule = nullptr;
         } else {
             tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
+                _safety->SetNotAlive();
                 _audioDeviceModule->ActualStop();
                 _audioDeviceModule = nullptr;
             });
@@ -772,29 +848,118 @@ public:
     
     virtual void start() override {
         RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
-        
-        _audioDeviceModule->Start();
+        if (_legacyBehavior) {
+            _audioDeviceModule->StartLegacy();
+            return;
+        }
+        if (_isStopped || _isRetryScheduled) {
+            // _isStopped is permanent: a device stopped once can never serve another call.
+            RTC_LOG(LS_WARNING) << "SharedAudioDeviceModule: start ignored (stopped=" << _isStopped
+                                << " retryScheduled=" << _isRetryScheduled << ")";
+            return;
+        }
+        // A new activation re-arms an exhausted budget: this is the retry path for a device that
+        // failed to come up while the audio session was in the wrong state.
+        if (_failedStartAttempts >= kMaxConsecutiveStartAttempts) {
+            _failedStartAttempts = 0;
+        }
+        attemptStart();
+    }
+    
+    virtual void stop() override {
+        RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
+        if (_isStopped) {
+            return;
+        }
+        _isStopped = true;
+        _safety->SetNotAlive();
+        _audioDeviceModule->ActualStop();
+    }
+    
+private:
+    void attemptStart() {
+        _isRetryScheduled = false;
+        if (_isStopped || _audioDeviceModule->isStarted()) {
+            return;
+        }
+        std::string failure;
+        if (_audioDeviceModule->Start(failure)) {
+            if (_onStartResult) {
+                _onStartResult(true, std::string(), _failedStartAttempts);
+            }
+            _failedStartAttempts = 0;
+            return;
+        }
+        _failedStartAttempts += 1;
+        RTC_LOG(LS_ERROR) << "SharedAudioDeviceModule: start attempt " << _failedStartAttempts << " failed: " << failure;
+        if (_onStartResult) {
+            _onStartResult(false, failure, _failedStartAttempts);
+        }
+        if (_failedStartAttempts < kMaxConsecutiveStartAttempts) {
+            _isRetryScheduled = true;
+            tgcalls::StaticThreads::getThreads()->getWorkerThread()->PostDelayedTask(webrtc::SafeTask(_safety, [this]() {
+                attemptStart();
+            }), webrtc::TimeDelta::Millis(kStartRetryIntervalMs));
+        }
     }
     
 private:
     rtc::scoped_refptr<WrappedAudioDeviceModuleIOS> _audioDeviceModule;
+    bool _legacyBehavior = false;
+    std::function<void(bool started, std::string const &failure, int failedAttempts)> _onStartResult;
+    rtc::scoped_refptr<webrtc::PendingTaskSafetyFlag> _safety;
+    int _failedStartAttempts = 0;
+    bool _isRetryScheduled = false;
+    bool _isStopped = false;
 };
+
+static std::atomic<bool> sharedCallAudioDeviceLegacyBehavior{false};
 
 @implementation SharedCallAudioDevice {
     std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>> _audioDeviceModule;
+    bool _legacyBehavior;
+    bool _didReceiveAudioSessionState;
+    bool _isAudioSessionActive;
+    bool _isStopped;
+}
+
++ (void)setLegacyBehaviorEnabled:(bool)enabled {
+    sharedCallAudioDeviceLegacyBehavior.store(enabled);
+    [RTCAudioSession setLegacyDeactivationEnabled:enabled];
+}
+
++ (bool)legacyBehaviorEnabled {
+    return sharedCallAudioDeviceLegacyBehavior.load();
 }
 
 - (instancetype _Nonnull)initWithDisableRecording:(bool)disableRecording enableSystemMute:(bool)enableSystemMute {
     self = [super init];
     if (self != nil) {
-        _audioDeviceModule.reset(new tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>(tgcalls::StaticThreads::getThreads()->getWorkerThread(), [disableRecording, enableSystemMute]() mutable {
-            return std::static_pointer_cast<tgcalls::SharedAudioDeviceModule>(std::make_shared<SharedAudioDeviceModuleImpl>(disableRecording, enableSystemMute));
+        _legacyBehavior = sharedCallAudioDeviceLegacyBehavior.load();
+        bool legacyBehavior = _legacyBehavior;
+        __weak SharedCallAudioDevice *weakSelf = self;
+        std::function<void(bool, std::string const &, int)> onStartResult = [weakSelf](bool started, std::string const &failure, int failedAttempts) {
+            __strong SharedCallAudioDevice *strongSelf = weakSelf;
+            if (strongSelf == nil) {
+                return;
+            }
+            void (^handler)(bool, NSString * _Nullable, int) = strongSelf.startResultHandler;
+            if (handler) {
+                handler(started, failure.empty() ? nil : [NSString stringWithUTF8String:failure.c_str()], failedAttempts);
+            }
+        };
+        _audioDeviceModule.reset(new tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>(tgcalls::StaticThreads::getThreads()->getWorkerThread(), [disableRecording, enableSystemMute, legacyBehavior, onStartResult]() mutable {
+            return std::static_pointer_cast<tgcalls::SharedAudioDeviceModule>(std::make_shared<SharedAudioDeviceModuleImpl>(disableRecording, enableSystemMute, legacyBehavior, onStartResult));
         }));
     }
     return self;
 }
 
 - (void)dealloc {
+    if (!_legacyBehavior && _isAudioSessionActive && !_isStopped) {
+        // Balance the activation this device reported; see setManualAudioSessionIsActive:.
+        [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+    }
     _audioDeviceModule.reset();
 }
 
@@ -826,10 +991,42 @@ private:
 }
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive {
-    if (isAudioSessionActive) {
-        [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
-    } else {
-        [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+    if (_isStopped) {
+        return;
+    }
+    if (_legacyBehavior) {
+        // Pre-2026-09-05 behaviour, kept verbatim behind the killswitch.
+        if (isAudioSessionActive) {
+            [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+        } else {
+            [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+        }
+        [RTCAudioSession sharedInstance].isAudioEnabled = isAudioSessionActive;
+        
+        if (isAudioSessionActive) {
+            _audioDeviceModule->perform([](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
+                audioDeviceModule->start();
+            });
+        }
+        return;
+    }
+    // Forward only transitions to RTCAudioSession. The signal feeding this re-emits the same value
+    // several times per call, and every unconditional audioSessionDidDeactivate decremented the
+    // shared activation count without a matching activation (the count went negative within the
+    // first call and drifted further with each one). The start request below is deliberately not
+    // deduplicated: it is idempotent once the device runs and re-arms a failed start otherwise.
+    bool wasActive = _didReceiveAudioSessionState && _isAudioSessionActive;
+    bool isTransition = !_didReceiveAudioSessionState || _isAudioSessionActive != isAudioSessionActive;
+    _didReceiveAudioSessionState = true;
+    _isAudioSessionActive = isAudioSessionActive;
+    
+    if (isTransition) {
+        RTC_LOG(LS_WARNING) << "SharedCallAudioDevice: audio session active -> " << isAudioSessionActive;
+        if (isAudioSessionActive) {
+            [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+        } else if (wasActive) {
+            [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+        }
     }
     [RTCAudioSession sharedInstance].isAudioEnabled = isAudioSessionActive;
     
@@ -838,6 +1035,21 @@ private:
             audioDeviceModule->start();
         });
     }
+}
+
+- (void)stop {
+    if (_isStopped) {
+        return;
+    }
+    _isStopped = true;
+    if (!_legacyBehavior && _isAudioSessionActive) {
+        // Balance the activation this device reported. isAudioEnabled is left alone: it is
+        // process-wide and now belongs to the device that replaces this one.
+        [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+    }
+    _audioDeviceModule->perform([](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
+        audioDeviceModule->stop();
+    });
 }
 
 @end
@@ -1612,14 +1824,19 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 + (void)applyServerConfig:(NSString *)string {
 }
 
-+ (void)setupAudioSession {
++ (void)setupSharedAudioSessionConfiguration {
     RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
     sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
     sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
     sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionAllowBluetoothA2DP;
     sharedConfiguration.outputNumberOfChannels = 1;
     [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
+}
+
++ (void)setupAudioSession {
+    [self setupSharedAudioSessionConfiguration];
     
+    RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
     [[RTCAudioSession sharedInstance] lockForConfiguration];
     [[RTCAudioSession sharedInstance] setConfiguration:sharedConfiguration active:false error:nil disableRecording:false];
     [[RTCAudioSession sharedInstance] unlockForConfiguration];
@@ -1636,6 +1853,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         tgcalls::Register<tgcalls::InstanceV2Impl>();
         tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
         tgcalls::Register<tgcalls::InstanceV2CompatImpl>();
+        // 18.0.0 (native core) / 19.0.0 (embedded wasm core). Advertised
+        // unconditionally: the server reconciles both endpoints' lists and
+        // returns one version, so no client-side gating is needed.
+        tgcalls::Register<tgcalls::InstanceV2PumpImpl>();
     });
 }
 
@@ -2704,6 +2925,18 @@ useReferenceImpl:(bool)useReferenceImpl {
             .e2eEncryptDecrypt = mappedEncryptDecrypt,
             .isConference = isConference
         };
+        if (_videoContentType == tgcalls::VideoContentType::Screencast && !useReferenceImpl) {
+            // The screencast context has no microphone. Its audio is the app-audio stream
+            // handed over by the broadcast extension (addExternalAudioData), which
+            // GroupInstanceCustomImpl consumes through its FakeAudioDeviceModule — and it
+            // only creates that module when no audio device hook is supplied. A real
+            // AudioDeviceModuleIOS with recording disabled never delivers capture frames,
+            // so with the hooks set the injected samples were buffered and never sent
+            // (bugs.telegram.org/c/22966). GroupInstanceReferenceImpl has no such branch and
+            // ignores external audio altogether, so this applies to the custom impl only.
+            descriptor.createAudioDeviceModule = nullptr;
+            descriptor.createWrappedAudioDeviceModule = nullptr;
+        }
         if (useReferenceImpl) {
             _instance.reset(new tgcalls::GroupInstanceReferenceImpl(std::move(descriptor)));
         } else {

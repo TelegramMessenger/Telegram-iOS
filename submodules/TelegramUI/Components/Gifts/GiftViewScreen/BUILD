@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/TelegramCore",
         "//submodules/SSignalKit/SwiftSignalKit",
@@ -61,6 +62,7 @@ swift_library(
         "//submodules/BotPaymentsUI",
         "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/TelegramUI/Components/Gifts/GiftRemainingCountComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftSetupScreen",
         "//submodules/TelegramUI/Components/Gifts/InfoParagraphComponent",
         "//submodules/TelegramUI/Components/Gifts/TableComponent",
         "//submodules/TelegramUI/Components/Gifts/PeerTableCellComponent",
@@ -70,7 +72,12 @@ swift_library(
         "//submodules/TelegramUI/Components/AlertComponent/AlertTableComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertInputFieldComponent",
         "//submodules/TelegramUI/Components/GlassControls",
+        "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/Components/ResizableSheetComponent",
+        "//submodules/Pasteboard",
+        "//submodules/Speak",
+        "//submodules/TextSelectionNode",
+        "//submodules/TranslateUI",
     ],
     visibility = [
         "//visibility:public",

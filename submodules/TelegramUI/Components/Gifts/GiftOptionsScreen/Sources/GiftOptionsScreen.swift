@@ -936,26 +936,37 @@ final class GiftOptionsScreenComponent: Component {
                                     }
                                 }
                                 navigationController.setViewControllers(controllers, animated: true)
+                                if let completion = component.completion {
+                                    completion()
+                                }
                             } else {
-                                var controllers = navigationController.viewControllers
-                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                                var foundController = false
-                                for controller in controllers.reversed() {
-                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                let navigateToChat = {
+                                    var controllers = navigationController.viewControllers
+                                    controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                    var foundController = false
+                                    for controller in controllers.reversed() {
+                                        if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                            chatController.hintPlayNextOutgoingGift()
+                                            foundController = true
+                                            break
+                                        }
+                                    }
+                                    if !foundController {
+                                        let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                                         chatController.hintPlayNextOutgoingGift()
-                                        foundController = true
-                                        break
+                                        controllers.append(chatController)
+                                    }
+                                    navigationController.setViewControllers(controllers, animated: true)
+                                    if let completion = component.completion {
+                                        completion()
                                     }
                                 }
-                                if !foundController {
-                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                    chatController.hintPlayNextOutgoingGift()
-                                    controllers.append(chatController)
+                                if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                    let _ = (ApplicationSpecificNotice.incrementDismissedBirthdayPremiumGiftTip(accountManager: component.context.sharedContext.accountManager, peerId: component.peerId, timestamp: Int32(Date().timeIntervalSince1970))
+                                    |> deliverOnMainQueue).startStandalone(completed: navigateToChat)
+                                } else {
+                                    navigateToChat()
                                 }
-                                navigationController.setViewControllers(controllers, animated: true)
-                            }
-                            if let completion = component.completion {
-                                completion()
                             }
                         }
                     }

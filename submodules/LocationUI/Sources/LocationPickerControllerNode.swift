@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1295,7 +1296,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         if let searchContainerNode = self.searchContainerNode {
             searchContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-            searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationHeight, transition: transition)
+            searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationHeight, transition: transition)
         }
         
         if self.locationAccessDenied {
@@ -1321,7 +1322,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 }
                 self.placeholderBackgroundNode = backgroundNode
                 
-                placeholderNode = LocationPlaceholderNode(content: .intro)
+                placeholderNode = LocationPlaceholderNode(content: .intro, lottieSettings: self.context.lottieRenderingSettings)
                 placeholderNode.settingsPressed = { [weak self] in
                     self?.context.sharedContext.applicationBindings.openSettings()
                 }

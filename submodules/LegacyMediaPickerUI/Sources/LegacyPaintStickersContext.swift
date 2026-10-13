@@ -235,7 +235,12 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 }
             }))
         } else {
-            self.queue.async {
+            self.queue.async { [weak self] in
+                guard let self else {
+                    completion(nil)
+                    return
+                }
+
                 var image: CIImage?
                 if let cachedImage = self.cachedCIImage {
                     image = cachedImage

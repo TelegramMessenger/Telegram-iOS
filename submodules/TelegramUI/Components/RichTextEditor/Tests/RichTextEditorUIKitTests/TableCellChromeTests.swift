@@ -48,21 +48,21 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_focusedOrSelectedCellRect_prefersCommittedSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         XCTAssertEqual(v.focusedOrSelectedCellRect(), TableRect(top: 0, left: 0, bottom: 1, right: 1))
     }
 
     func test_focusedOrSelectedCellRect_fallsBackToCaretCell_whenNoSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 2, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 2, column: 1)!, head: t.cellTextStart(row: 2, column: 1)!)
         XCTAssertNil(v.tableSelection)
         XCTAssertEqual(v.focusedOrSelectedCellRect(), TableRect(top: 2, left: 1, bottom: 2, right: 1))
     }
 
     func test_focusedOrSelectedCellRect_mergedCell_reportsWholeFootprint() {
         let v = canvas(mergedTopLeftColspan2()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor   // caret in the merged (0,0)-(0,1) cell
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)   // caret in the merged (0,0)-(0,1) cell
         XCTAssertNil(v.tableSelection)
         XCTAssertEqual(v.focusedOrSelectedCellRect(), TableRect(top: 0, left: 0, bottom: 0, right: 1))
     }
@@ -71,7 +71,7 @@ final class TableCellChromeTests: XCTestCase {
         let v = DocumentCanvasView()
         v.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "Hi")])), .table(dense3x3())], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 600); v.layoutIfNeeded()
-        v.anchor = 0; v.head = 0
+        v.setSelectionForTesting(anchor: 0, head: 0)
         XCTAssertNil(v.focusedOrSelectedCellRect())
     }
 
@@ -79,7 +79,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_focusedCell_showsFakeChrome_whenNoSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         XCTAssertNil(v.tableSelection, "precondition: no committed selection")
 
         let outline = v.tableSelectionOutlineRect()
@@ -95,7 +95,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_focusedCell_insideMergedCell_showsWholeMergedCellChrome() {
         let v = canvas(mergedTopLeftColspan2()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor   // caret inside the merged (0,0)-(0,1) cell
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)   // caret inside the merged (0,0)-(0,1) cell
         XCTAssertNil(v.tableSelection)
 
         let outline = v.tableSelectionOutlineRect()!
@@ -109,7 +109,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_focusedCell_atTableCorner_roundsThatCornerOnly() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor   // top-left cell, no selection
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)   // top-left cell, no selection
         XCTAssertNil(v.tableSelection)
         let corners = v.tableSelectionOutlineCorners()
         XCTAssertTrue(corners.contains(.topLeft))
@@ -118,7 +118,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_focusedCell_interior_roundsNoCorners() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor   // interior cell of a 3x3 table
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)   // interior cell of a 3x3 table
         XCTAssertTrue(v.tableSelectionOutlineCorners().isEmpty)
     }
 
@@ -126,7 +126,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_committedCellsSelection_outlineUnionExpanded_enclosesMergedCell() {
         let v = canvas(mergedTopLeftColspan2()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 2)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 2)!, head: t.cellTextStart(row: 1, column: 2)!)
         // (0,1)-(1,2) bisects the merged (0,0)-(0,1) cell along its right half → auto-expands left to col 0.
         v.selectTableCells(TableRect(top: 0, left: 1, bottom: 1, right: 2))
         guard case .cells(let committed) = v.tableSelection?.kind else { return XCTFail("expected .cells") }
@@ -148,7 +148,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_cellSelection_knobs_atSideCenters() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         // Knobs center on the outline STROKE's centerline (raw rect inset by half the line width).
         let inset = DocumentCanvasView.selectionOutlineWidth / 2
@@ -180,7 +180,7 @@ final class TableCellChromeTests: XCTestCase {
         let v = DocumentCanvasView()
         v.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "Hello")])), .table(dense3x3())], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 600); v.layoutIfNeeded()
-        v.anchor = 0; v.head = 0   // caret in the paragraph, not the table
+        v.setSelectionForTesting(anchor: 0, head: 0)   // caret in the paragraph, not the table
         XCTAssertNil(v.tableSelectionOutlineRect())
         XCTAssertTrue(v.tableResizeKnobs().isEmpty)
         XCTAssertTrue(v.tableSelectionOutlineCorners().isEmpty)
@@ -190,7 +190,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_denseParity_columnSelection_stillTwoRangeEndKnobs_notFourCorners() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)
         let knobs = v.tableResizeKnobs()
         XCTAssertEqual(knobs.count, 2, "a committed column selection keeps its 2 range-end knobs, not 4 corner knobs")
@@ -201,7 +201,7 @@ final class TableCellChromeTests: XCTestCase {
 
     func test_denseParity_rowSelection_outlineAndKnobsUnchanged() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         let outline = v.tableSelectionOutlineRect()!
         let expected = t.cellRect(row: 1, column: 0)!.union(t.cellRect(row: 1, column: 2)!)

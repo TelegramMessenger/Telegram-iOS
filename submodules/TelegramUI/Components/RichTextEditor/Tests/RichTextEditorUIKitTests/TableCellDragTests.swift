@@ -56,7 +56,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_extendCellSelection_fromFocusedCell_commitsCellsSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         XCTAssertNil(v.tableSelection, "precondition: no committed selection, only the fake chrome")
 
         let target = CGPoint(x: bandMidX(t, column: 1), y: bandMidY(t, row: 1))
@@ -71,7 +71,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_extendCellSelection_snapsToWholeMergedCell() {
         let v = canvas(mergedTopLeftColspan2()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 2, column: 2)!; v.head = v.anchor   // focused cell (2,2), no selection
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 2, column: 2)!, head: t.cellTextStart(row: 2, column: 2)!)   // focused cell (2,2), no selection
         XCTAssertNil(v.tableSelection)
 
         // Drag the topLeft corner toward physical (row 0, col 1) — part of the merged (0,0)-(0,1) cell's
@@ -88,14 +88,14 @@ final class TableCellDragTests: XCTestCase {
 
     func test_extendCellSelection_clampsToGrid() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
 
         v.extendCellSelection(corner: .topLeft, toward: CGPoint(x: -9999, y: -9999))
         guard case .cells(let low) = v.tableSelection?.kind else { return XCTFail() }
         XCTAssertEqual(low, TableRect(top: 0, left: 0, bottom: 1, right: 1), "clamped to row/column 0")
 
         v.clearTableSelection()
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.extendCellSelection(corner: .bottomRight, toward: CGPoint(x: 9999, y: 9999))
         guard case .cells(let high) = v.tableSelection?.kind else { return XCTFail() }
         XCTAssertEqual(high, TableRect(top: 1, left: 1, bottom: 2, right: 2), "clamped to the last row/column")
@@ -105,7 +105,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_extendCellSelection_fixedCornerIsOppositeDraggedCorner() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
 
         // Drag bottomRight out to (2,2): fixed corner is the focused cell's topLeft (1,1).
         v.extendCellSelection(corner: .bottomRight, toward: CGPoint(x: bandMidX(t, column: 2), y: bandMidY(t, row: 2)))
@@ -120,7 +120,7 @@ final class TableCellDragTests: XCTestCase {
 
         // And the reverse: dragging topRight/bottomLeft keep their own opposite corner fixed too.
         v.clearTableSelection()
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.extendCellSelection(corner: .topRight, toward: CGPoint(x: bandMidX(t, column: 0), y: bandMidY(t, row: 0)))
         guard case .cells(let rect3) = v.tableSelection?.kind else { return XCTFail() }
         // fixed = bottomLeft of the focused cell (1,1); moved = (0,0) → rect spans rows 0...1, cols 0...1.
@@ -131,7 +131,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_denseParity_extendTableSelection_columnsUnaffectedByCellDragCode() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumn(0)
         v.extendTableSelection(end: .upper, toward: CGPoint(x: bandMidX(t, column: 1), y: 0))
         XCTAssertEqual(v.tableSelection?.kind, .columns(0...1))
@@ -139,7 +139,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_denseParity_extendTableSelection_rowsUnaffectedByCellDragCode() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRow(0)
         v.extendTableSelection(end: .upper, toward: CGPoint(x: 0, y: bandMidY(t, row: 1)))
         XCTAssertEqual(v.tableSelection?.kind, .rows(0...1))
@@ -149,7 +149,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_tableResizeCornerKnob_hitsKnob_committedCellsSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         let knob = v.tableResizeKnobs().first { $0.corner == .bottomRight }!
         XCTAssertEqual(v.tableResizeCornerKnob(at: CGPoint(x: knob.rect.midX, y: knob.rect.midY)), .bottomRight)
@@ -157,7 +157,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_tableResizeCornerKnob_hitsKnob_focusedCellFakeChrome() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         XCTAssertNil(v.tableSelection, "precondition: fake chrome, no committed selection")
         let knob = v.tableResizeKnobs().first { $0.corner == .topLeft }!
         XCTAssertEqual(v.tableResizeCornerKnob(at: CGPoint(x: knob.rect.midX, y: knob.rect.midY)), .topLeft)
@@ -172,7 +172,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_isSelectionDragTouch_trueForCornerKnob_focusedCellFakeChrome() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         XCTAssertNil(v.tableSelection)
         let knob = v.tableResizeKnobs().first { $0.corner == .bottomRight }!
         XCTAssertTrue(v.isSelectionDragTouch(CGPoint(x: knob.rect.midX, y: knob.rect.midY)),
@@ -181,7 +181,7 @@ final class TableCellDragTests: XCTestCase {
 
     func test_isSelectionDragTouch_trueForCornerKnob_committedCellsSelection() {
         let v = canvas(dense3x3()); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         let knob = v.tableResizeKnobs().first { $0.corner == .topLeft }!
         XCTAssertTrue(v.isSelectionDragTouch(CGPoint(x: knob.rect.midX, y: knob.rect.midY)))

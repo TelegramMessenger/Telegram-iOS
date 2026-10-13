@@ -12,13 +12,19 @@ import AnimatedTextComponent
 private final class NewSessionInfoSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
+    
     let newSessionReview: NewSessionReview
     let dismiss: () -> Void
     
     init(
+    
+        context: AccountContext,
         newSessionReview: NewSessionReview,
         dismiss: @escaping () -> Void
     ) {
+    
+        self.context = context
         self.newSessionReview = newSessionReview
         self.dismiss = dismiss
     }
@@ -80,6 +86,7 @@ private final class NewSessionInfoSheetContentComponent: Component {
             let contentSize = self.content.update(
                 transition: transition,
                 component: AnyComponent(NewSessionInfoContentComponent(
+                    context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
                     newSessionReview: component.newSessionReview
@@ -228,6 +235,7 @@ private final class NewSessionInfoScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(NewSessionInfoSheetContentComponent(
+                        context: component.context,
                         newSessionReview: component.newSessionReview,
                         dismiss: { [weak self] in
                             guard let self else {

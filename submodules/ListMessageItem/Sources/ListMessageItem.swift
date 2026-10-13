@@ -74,6 +74,8 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
     let isGlobalSearchResult: Bool
     let isDownloadList: Bool
     let isSavedMusic: Bool
+    /// Non-nil when this row is a synthesized track of a rich message's audio queue.
+    let richMessageQueueId: EngineMessage.Id?
     let isStoryMusic: Bool
     let isAttachMusic: Bool
     let displayFileInfo: Bool
@@ -82,6 +84,18 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: false,
+            headerId: self.header?.id,
+            headerFamily: .listMessage
+        ))
+    }
     
     public var sectionId: ItemListSectionId
     
@@ -108,6 +122,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         displayFileInfo: Bool = true,
         displayBackground: Bool = false,
         canReorder: Bool = false,
+        richMessageQueueId: EngineMessage.Id? = nil,
         style: ItemListStyle = .plain,
         sectionId: ItemListSectionId = 0
     ) {
@@ -131,6 +146,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         self.isGlobalSearchResult = isGlobalSearchResult
         self.isDownloadList = isDownloadList
         self.isSavedMusic = isSavedMusic
+        self.richMessageQueueId = richMessageQueueId
         self.isStoryMusic = isStoryMusic
         self.isAttachMusic = isAttachMusic
         self.displayFileInfo = displayFileInfo
@@ -140,7 +156,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ListMessageSnippetItemNode.self
         
         if !self.hintIsLink {
@@ -170,21 +186,21 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
             let nodeLayout = node.asyncLayout()
             
             var topMerged = false
-            if let previousItem {
-                if let previousItem = previousItem as? ItemListItem, previousItem.sectionId == self.sectionId && !previousItem.isAlwaysPlain {
+            if neighbors.previous != nil {
+                if let previousItem = neighbors.previous?.base(ItemListNeighborFacet.self), previousItem.sectionId == self.sectionId && !previousItem.isAlwaysPlain {
                     topMerged = true
                 }
             }
             
             var bottomMerged = false
-            if let nextItem {
-                if let nextItem = nextItem as? ItemListItem, nextItem.sectionId == self.sectionId && !nextItem.isAlwaysPlain {
+            if neighbors.next != nil {
+                if let nextItem = neighbors.next?.base(ItemListNeighborFacet.self), nextItem.sectionId == self.sectionId && !nextItem.isAlwaysPlain {
                     bottomMerged = true
                 }
             }
             
             
-            let (top, bottom, dateAtBottom) = (topMerged, bottomMerged, self.getDateAtBottom(top: previousItem, bottom: nextItem))
+            let (top, bottom, dateAtBottom) = (topMerged, bottomMerged, self.getDateAtBottom(top: neighbors.previous))
             let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
@@ -207,7 +223,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ListMessageNode {
                 nodeValue.setupItem(self)
@@ -217,21 +233,21 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 var topMerged = false
-                if let previousItem {
-                    if let previousItem = previousItem as? ItemListItem, previousItem.sectionId == self.sectionId && !previousItem.isAlwaysPlain {
+                if neighbors.previous != nil {
+                    if let previousItem = neighbors.previous?.base(ItemListNeighborFacet.self), previousItem.sectionId == self.sectionId && !previousItem.isAlwaysPlain {
                         topMerged = true
                     }
                 }
                 
                 var bottomMerged = false
-                if let nextItem {
-                    if let nextItem = nextItem as? ItemListItem, nextItem.sectionId == self.sectionId && !nextItem.isAlwaysPlain {
+                if neighbors.next != nil {
+                    if let nextItem = neighbors.next?.base(ItemListNeighborFacet.self), nextItem.sectionId == self.sectionId && !nextItem.isAlwaysPlain {
                         bottomMerged = true
                     }
                 }
                 
                 async {
-                    let (top, bottom, dateAtBottom) = (topMerged, bottomMerged, self.getDateAtBottom(top: previousItem, bottom: nextItem))
+                    let (top, bottom, dateAtBottom) = (topMerged, bottomMerged, self.getDateAtBottom(top: neighbors.previous))
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
@@ -273,10 +289,10 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         }
     }
     
-    func getDateAtBottom(top: ListViewItem?, bottom: ListViewItem?) -> Bool {
+    func getDateAtBottom(top: AnyEquatable?) -> Bool {
         var dateAtBottom = false
-        if let top = top as? ListMessageItem, top.header != nil {
-            if top.header?.id != self.header?.id {
+        if let top = top?.base(HeaderNeighborFacet.self), top.headerFamily == .listMessage, top.headerId != nil {
+            if top.headerId != self.header?.id {
                 dateAtBottom = true
             }
         } else {
@@ -293,4 +309,8 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
             return "(ListMessageItem empty)"
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let listMessage = ListViewItemHeaderFamily("listMessage")
 }

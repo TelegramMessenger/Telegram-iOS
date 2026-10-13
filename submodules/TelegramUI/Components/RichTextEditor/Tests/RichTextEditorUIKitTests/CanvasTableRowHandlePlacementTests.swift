@@ -19,7 +19,7 @@ final class CanvasTableRowHandlePlacementTests: XCTestCase {
             ])]))], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 400); v.layoutIfNeeded()
         let t = v.boxes.first { $0 is TableBlockBox } as! TableBlockBox
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head   // activeTable() → this cell
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)   // activeTable() → this cell
         return v
     }
     private func rowGrip(_ v: DocumentCanvasView) -> CGRect? {

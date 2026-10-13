@@ -1,4 +1,6 @@
 import Foundation
+import AccountContext
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -12,15 +14,20 @@ import TelegramCore
 import LottieComponent
 
 public final class NewSessionInfoContentComponent: Component {
+    let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let newSessionReview: NewSessionReview
     
     public init(
+    
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         newSessionReview: NewSessionReview
     ) {
+    
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.newSessionReview = newSessionReview
@@ -138,7 +145,8 @@ public final class NewSessionInfoContentComponent: Component {
                 transition: transition,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "SessionReviewIcon"),
-                    color: .white
+                    color: .white,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: 70.0, height: 70.0)

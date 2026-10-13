@@ -328,16 +328,29 @@ public func chatMessageGalleryControllerData(
                     }
                 }
                 
-                var openChatLocation = chatLocation ?? .peer(id: message.id.peerId)
-                var openChatLocationContextHolder = chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
-                if chatLocation?.peerId != message.id.peerId {
-                    openChatLocation = .peer(id: message.id.peerId)
-                    openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                // A message from another chat (a channel post atop its comments thread) is browsed
+                // in its own chat. A message of the group a channel was migrated from stays in the
+                // channel: the channel's history views include the group's, and the group is read
+                // from the same cached data they use.
+                let isInChatLocationHistory: Signal<Bool, NoError>
+                if case let .peer(peerId)? = chatLocation, peerId != message.id.peerId {
+                    isInChatLocationHistory = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.MigratedFromGroupId(id: peerId))
+                    |> map { groupId -> Bool in
+                        return groupId == message.id.peerId
+                    }
+                } else {
+                    isInChatLocationHistory = .single(chatLocation?.peerId == message.id.peerId)
                 }
                 
-                return .gallery(startState
+                return .gallery(combineLatest(startState, isInChatLocationHistory)
                 |> deliverOnMainQueue
-                |> map { startState in
+                |> map { [navigationController] startState, isInChatLocationHistory in
+                    var openChatLocation = chatLocation ?? .peer(id: message.id.peerId)
+                    var openChatLocationContextHolder = chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
+                    if !isInChatLocationHistory {
+                        openChatLocation = .peer(id: message.id.peerId)
+                        openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                    }
                     let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message, mediaSubject) : .peerMessagesAtId(messageId: message.id, chatLocation: openChatLocation, customTag: chatFilterTag, chatLocationContextHolder: openChatLocationContextHolder)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)

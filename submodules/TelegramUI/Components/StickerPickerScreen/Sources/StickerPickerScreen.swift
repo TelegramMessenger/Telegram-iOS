@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -2254,7 +2255,8 @@ private final class InteractiveStickerButtonContent: Component {
                                 content: LottieComponent.ResourceContent(context: component.context, file: iconFile, attemptSynchronously: true, providesPlaceholder: true),
                                 color: nil,
                                 placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.4),
-                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? "")
+                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? ""),
+                                lottieSettings: component.context.lottieRenderingSettings
                             )
                         ),
                         environment: {},
@@ -2375,12 +2377,14 @@ private final class InteractiveReactionButtonContent: Component {
             return PassthroughLayer.self
         }
                 
-        private var icon: ComponentView<Empty>
+        private var outline: ComponentView<Empty>
+        private var heart: ComponentView<Empty>
         
         private var component: InteractiveReactionButtonContent?
     
         override init(frame: CGRect) {
-            self.icon = ComponentView<Empty>()
+            self.outline = ComponentView<Empty>()
+            self.heart = ComponentView<Empty>()
             
             super.init(frame: frame)
             
@@ -2392,23 +2396,41 @@ private final class InteractiveReactionButtonContent: Component {
         }
         
         func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
-            let iconSize = self.icon.update(
+            let bounds = CGRect(origin: .zero, size: CGSize(width: 52.0, height: 52.0))
+            let outlineSize = self.outline.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Media Editor/Reaction",
-                    tintColor: nil,
-                    maxSize: CGSize(width: 52.0, height: 52.0)
+                    name: "Stories/ReactionOutline",
+                    tintColor: .white,
+                    maxSize: CGSize(width: 62.0, height: 62.0)
                 )),
                 environment: {},
                 containerSize: availableSize
             )
-            
-            if let view = self.icon.view {
+            let outlineFrame = outlineSize.centered(in: bounds)
+            if let view = self.outline.view {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 2.0, y: 0.0), size: iconSize))
+                transition.setFrame(view: view, frame: outlineFrame)
+            }
+
+            let heartSize = self.heart.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: "❤️",
+                    font: Font.regular(26.0),
+                    color: .white
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+
+            if let view = self.heart.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: heartSize.centered(in: outlineFrame).offsetBy(dx: 1.0 - UIScreenPixel, dy: 1.0))
             }
  
             return bounds.size

@@ -13,8 +13,14 @@ import MultilineTextComponent
 import GiftItemComponent
 
 public final class StarsAvatarComponent: Component {
+    public enum Direction: Equatable {
+        case incoming
+        case outgoing
+    }
+
     public enum Peer: Equatable {
         case transactionPeer(StarsContext.State.Transaction.Peer)
+        case transaction(Direction)
         case search
     }
     
@@ -76,7 +82,45 @@ public final class StarsAvatarComponent: Component {
     }
 
     public final class View: UIView {
+        private struct AvatarState: Equatable {
+            let context: AccountContext
+            let theme: PresentationTheme
+            let peerId: EnginePeer.Id
+            let isDeleted: Bool
+            let photo: TelegramMediaImageRepresentation?
+            let nameColor: PeerColor?
+            let displayLetters: [String]
+
+            static func ==(lhs: AvatarState, rhs: AvatarState) -> Bool {
+                if lhs.context !== rhs.context {
+                    return false
+                }
+                if lhs.theme !== rhs.theme {
+                    return false
+                }
+                if lhs.peerId != rhs.peerId {
+                    return false
+                }
+                if lhs.isDeleted != rhs.isDeleted {
+                    return false
+                }
+                if lhs.photo != rhs.photo {
+                    return false
+                }
+                if lhs.photo == nil {
+                    if lhs.nameColor != rhs.nameColor {
+                        return false
+                    }
+                    if lhs.displayLetters != rhs.displayLetters {
+                        return false
+                    }
+                }
+                return true
+            }
+        }
+
         private let avatarNode: AvatarNode
+        private var avatarState: AvatarState?
         private let backgroundView = UIImageView()
         private let iconView = UIImageView()
         private var imageNode: TransformImageNode?
@@ -116,6 +160,9 @@ public final class StarsAvatarComponent: Component {
             let size = component.size ?? CGSize(width: 40.0, height: 40.0)
             var iconInset: CGFloat = 3.0
             var iconOffset: CGFloat = 0.0
+            var iconRotation: CGFloat = 0.0
+
+            self.iconView.transform = .identity
             
             var dimensions = size
             
@@ -267,12 +314,32 @@ public final class StarsAvatarComponent: Component {
                 switch peer {
                 case let .peer(peer):
                     if !didSetup {
-                        self.avatarNode.setPeer(
+                        let isDeleted = peer.isDeleted
+                        let photo: TelegramMediaImageRepresentation?
+                        if !isDeleted && peer.restrictionText(platform: "ios", contentSettings: component.context.currentContentSettings.with { $0 }) == nil {
+                            photo = peer.smallProfileImage
+                        } else {
+                            photo = nil
+                        }
+                        let avatarState = AvatarState(
                             context: component.context,
                             theme: component.theme,
-                            peer: peer,
-                            synchronousLoad: true
+                            peerId: peer.id,
+                            isDeleted: isDeleted,
+                            photo: photo,
+                            nameColor: peer.nameColor,
+                            displayLetters: peer.displayLetters
                         )
+                        if self.avatarState != avatarState {
+                            self.avatarNode.setPeer(
+                                context: component.context,
+                                theme: component.theme,
+                                peer: peer,
+                                overrideImage: isDeleted ? .deletedIcon : nil,
+                                synchronousLoad: true
+                            )
+                            self.avatarState = avatarState
+                        }
                         self.backgroundView.isHidden = true
                         self.iconView.isHidden = true
                         self.avatarNode.isHidden = false
@@ -368,6 +435,33 @@ public final class StarsAvatarComponent: Component {
                     self.avatarNode.isHidden = true
                     self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
                 }
+            case let .transaction(direction):
+                iconInset = 6.0
+                switch direction {
+                case .incoming:
+                    self.backgroundView.image = generateGradientFilledCircleImage(
+                        diameter: size.width,
+                        colors: [
+                            UIColor(rgb: 0x32b83b).cgColor,
+                            UIColor(rgb: 0x87d93b).cgColor
+                        ],
+                        direction: .vertical
+                    )
+                    iconRotation = .pi
+                case .outgoing:
+                    self.backgroundView.image = generateGradientFilledCircleImage(
+                        diameter: size.width,
+                        colors: [
+                            UIColor(rgb: 0x2a9ef1).cgColor,
+                            UIColor(rgb: 0x72d5fd).cgColor
+                        ],
+                        direction: .vertical
+                    )
+                }
+                self.backgroundView.isHidden = false
+                self.iconView.isHidden = false
+                self.avatarNode.isHidden = true
+                self.iconView.image = UIImage(bundleImageName: "Wallet/TransactionArrow")
             case .search:
                 iconInset = 6.0
                 self.backgroundView.image = generateGradientFilledCircleImage(
@@ -386,6 +480,7 @@ public final class StarsAvatarComponent: Component {
             
             self.avatarNode.frame = CGRect(origin: .zero, size: size)
             self.iconView.frame = CGRect(origin: .zero, size: size).insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
+            self.iconView.transform = CGAffineTransform(rotationAngle: iconRotation)
             self.backgroundView.frame = CGRect(origin: .zero, size: size)
 
             return size

@@ -50,9 +50,46 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
     } |> runOn(Queue.mainQueue())
 }
 
+// UIKit can deliver userDidTakeScreenshotNotification more than once for a single screenshot
+// (observed: two back-to-back deliveries to the same observer), which reported every secret-chat
+// screenshot twice. Each observer drops a repeat that arrives within this interval of the previous
+// one. The state is per observer, never shared: a shared stamp would make the second of two
+// legitimate observers (a chat and a gallery over it) discard the same screenshot.
+private let screenshotRepeatInterval: CFAbsoluteTime = 0.5
+
+private final class ScreenshotNotificationObserver {
+    private var observer: NSObjectProtocol?
+    private var lastTimestamp: CFAbsoluteTime?
+    
+    init(_ f: @escaping () -> Void) {
+        self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if let lastTimestamp = self.lastTimestamp, timestamp - lastTimestamp < screenshotRepeatInterval {
+                return
+            }
+            self.lastTimestamp = timestamp
+            f()
+        })
+    }
+    
+    func clear() {
+        if let observer = self.observer {
+            self.observer = nil
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
+    deinit {
+        self.clear()
+    }
+}
+
 public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
     return Signal { subscriber in
-        let observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { _ in
+        let observer = ScreenshotNotificationObserver({
             subscriber.putNext(.still)
         })
         
@@ -68,7 +105,7 @@ public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
         
         return ActionDisposable {
             Queue.mainQueue().async {
-                NotificationCenter.default.removeObserver(observer)
+                observer.clear()
                 screenRecordingDisposable.dispose()
             }
         }
@@ -77,14 +114,14 @@ public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
 }
 
 public final class ScreenCaptureDetectionManager {
-    private var observer: NSObjectProtocol?
+    private var observer: ScreenshotNotificationObserver?
     private var screenRecordingDisposable: Disposable?
     private var screenRecordingCheckTimer: SwiftSignalKit.Timer?
     
     public var isRecordingActive = false
     
     public init(check: @escaping () -> Bool) {
-        self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
+        self.observer = ScreenshotNotificationObserver({ [weak self] in
             guard let _ = self else {
                 return
             }
@@ -123,9 +160,7 @@ public final class ScreenCaptureDetectionManager {
     }
     
     deinit {
-        if let observer = self.observer {
-            NotificationCenter.default.removeObserver(observer)
-        }
+        self.observer?.clear()
         self.screenRecordingDisposable?.dispose()
         self.screenRecordingCheckTimer?.invalidate()
         self.screenRecordingCheckTimer = nil

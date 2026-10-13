@@ -9,7 +9,10 @@ block to one of these views via a host-registered provider, then positions/sizes
 
 ## Types
 
-- **`MediaItemNodeView`** — the `RichTextMediaItemView` adapter + **3-way dispatcher** by media kind,
+- **`MediaItemNodeView`** — the `RichTextMediaItemView` adapter + **4-way dispatcher**, keyed on the
+  editor's `MediaKind` (threaded through the resolved-items tuple as `kind:`) — **not** by sniffing the
+  resolved `Media`. Sniffing would route an image-mime `.file` picked from the Files tab to the photo
+  pool, whereas the editor calls it a document. Dispatched by media kind,
   created once per media occurrence at three call sites (`RichTextAttachmentScreen`, `ChatControllerNode`,
   `ChatInterfaceStateInputPanels`). Accepts a `cornerRadius: CGFloat = 0` init param: when > 0 and the
   audio branch was NOT taken, sets `layer.cornerRadius` + `masksToBounds` on the container (child fills
@@ -22,6 +25,10 @@ block to one of these views via a host-registered provider, then positions/sizes
   identically to before. See "Mosaic containers" below.
   - **audio** (`.file` && (`isMusic` || `isVoice`)) → `StandaloneInstantPageAudioView` (a playable,
     themeable row; `audioColorOverride` themes it to the editor accent/text scheme).
+  - **document** (`kind == .document`) → `StandaloneInstantPageDocumentView` (a static file row —
+    authoring mode: no fetch control, inert tap; `documentColorOverride` themes it like audio's).
+    Stays square (excluded from `cornerRadius`) and non-interactive, so editor taps pass through to
+    caret placement / tap-select.
   - **location** (`.geo`) → `StandaloneInstantPageImageView` + an `InstantPageMapAttribute`
     (600×300, zoom 15) — the InstantPage `.geo` snapshot+pin path.
   - **photo / video** (everything else, incl. image-mime `.file`) → **`RichTextMediaContentComponent`**
@@ -34,10 +41,26 @@ block to one of these views via a host-registered provider, then positions/sizes
 
 ## Load-bearing invariants
 
-- **`RichTextMediaContentComponent.==` compares identity only** (`context ===` + `media.id`), NOT any
-  per-layout value. The editor calls `update(size:)` every layout pass; equality must hold across resizes
-  so the fetch signal is **bound once** (a `didBind`/`boundMediaId` guard in the `View`). Comparing a
-  changing value here would re-issue the fetch every pass → flicker / wasted fetches.
+- **`RichTextMediaContentComponent.==` compares identity only** (`context ===` + `media.id`) plus
+  `isSpoiler`. The editor calls `update(size:)` every layout pass, so equality must hold across resizes.
+  - **Every `update` re-issues the image fetch** — `fetchDisposable.set(…)` runs unconditionally. The
+    `didBind` / `boundMediaId` / `currentSize` fields declared in the `View` are **dead** (assigned
+    nowhere before 2026-08-25); an earlier version of this file claimed they guard the fetch, and that
+    was wrong. So `==` is the ONLY thing limiting refetches: **anything you add to it refetches the
+    poster every time it changes.** `isSpoiler` is acceptable because a spoiler toggle is a rare user
+    action; a per-frame value would not be.
+  - **Do not route frequently-changing state through the component.** Pre-upload progress was tried that
+    way and failed twice over: the host cannot deliver it (see the seam note below), and putting it in
+    `==` would refetch on every tick. It is now owned by the `View`, which subscribes to
+    `engine.messages.mediaPreuploadState(id:)` itself — like its own fetch — and updates the status node
+    **directly**, never through `state.updated()` (which would re-enter `update` and refetch).
+  - **`usesAspectFit` is the counter-example** — it DOES vary with layout, so it stays out of `==` and
+    is re-set by the host every pass.
+- **The media-view provider seam is ONE-SHOT — the host cannot push per-frame state into a live view.**
+  `DocumentCanvasView+Media.syncMediaItemViews` calls the provider only when a block's `itemsSignature`
+  (`displayMode | mediaID#kind#WxH#spoiler`) changes; otherwise it reuses the hosted view untouched.
+  Anything not in that signature — upload progress, download state, playback — will never reach a view
+  through the provider. Such state must be subscribed to by the view itself.
 - **Interaction is control-scoped via `hitTest` — the poster passes through to the editor.** The component
   now carries interactive chrome (a glass "more" button); to make it tappable WITHOUT stealing the editor's
   own taps (caret placement / media-select highlight), the whole media path is a **hit-test pass-through**:

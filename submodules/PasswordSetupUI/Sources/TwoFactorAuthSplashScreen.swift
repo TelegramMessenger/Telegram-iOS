@@ -1,8 +1,10 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
-import SolidRoundedButtonNode
+import ComponentFlow
+import ButtonComponent
 import SwiftSignalKit
 import OverlayStatusController
 import AnimatedStickerNode
@@ -56,8 +58,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
-        let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        let navigationBarTheme = NavigationBarTheme(overallDarkAppearance: defaultTheme.overallDarkAppearance, buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor, accentButtonColor: defaultTheme.accentButtonColor, accentDisabledButtonColor: defaultTheme.accentDisabledButtonColor, accentForegroundColor: defaultTheme.accentForegroundColor)
+        let navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, enableBackgroundBlur: false, hideBackground: true, edgeEffectColor: .clear, style: .glass)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
 
@@ -145,12 +146,14 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
     private let titleNode: ImmediateTextNode
     private let textNodes: [ImmediateTextNode]
     private let textArrowNodes: [ASImageNode]
-    let buttonNode: SolidRoundedButtonNode
+    private let button = ComponentView<Empty>()
+    private let buttonText: String
+    private let action: () -> Void
     
     var inProgress: Bool = false {
         didSet {
-            self.buttonNode.isUserInteractionEnabled = !self.inProgress
-            self.buttonNode.alpha = self.inProgress ? 0.6 : 1.0
+            self.button.view?.isUserInteractionEnabled = !self.inProgress
+            self.button.view?.alpha = self.inProgress ? 0.6 : 1.0
         }
     }
     
@@ -158,7 +161,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.mode = mode
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         
         let title: String
         let texts: [NSAttributedString]
@@ -244,9 +247,9 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
 
             return iconNode
         }
-        
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 11.0, isShimmering: false)
-        self.buttonNode.isHidden = buttonText.isEmpty
+
+        self.buttonText = buttonText
+        self.action = action
         
         super.init()
         
@@ -256,11 +259,6 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         self.addSubnode(self.titleNode)
         self.textNodes.forEach(self.addSubnode)
         self.textArrowNodes.forEach(self.addSubnode)
-        self.addSubnode(self.buttonNode)
-        
-        self.buttonNode.pressed = {
-            action()
-        }
     }
     
     override func didLoad() {
@@ -272,7 +270,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         let buttonSideInset: CGFloat = 48.0
         let iconSpacing: CGFloat = 8.0
         let titleSpacing: CGFloat = 19.0
-        let buttonHeight: CGFloat = 50.0
+        let buttonHeight: CGFloat = 52.0
         
         let iconSize: CGSize = self.animationSize
         var iconOffset = CGPoint()
@@ -303,8 +301,38 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
-        transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.button.update(
+            transition: ComponentTransition(transition),
+            component: AnyComponent(ButtonComponent(
+                background: ButtonComponent.Background(
+                    style: .glass,
+                    color: self.presentationData.theme.list.itemCheckColors.fillColor,
+                    foreground: self.presentationData.theme.list.itemCheckColors.foregroundColor,
+                    pressedColor: self.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                    cornerRadius: 26.0
+                ),
+                content: AnyComponentWithIdentity(
+                    id: AnyHashable("button"),
+                    component: AnyComponent(Text(
+                        text: self.buttonText,
+                        font: Font.semibold(17.0),
+                        color: self.presentationData.theme.list.itemCheckColors.foregroundColor
+                    ))
+                ),
+                action: self.action
+            )),
+            environment: {},
+            containerSize: buttonFrame.size
+        )
+        if let buttonView = self.button.view {
+            if buttonView.superview == nil {
+                self.view.addSubview(buttonView)
+            }
+            transition.updateFrame(view: buttonView, frame: buttonFrame)
+            buttonView.isHidden = self.buttonText.isEmpty
+            buttonView.isUserInteractionEnabled = !self.inProgress
+            buttonView.alpha = self.inProgress ? 0.6 : 1.0
+        }
         
         let maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
         

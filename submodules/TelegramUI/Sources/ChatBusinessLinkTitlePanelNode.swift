@@ -196,6 +196,8 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
                 self.link = link
             case .hashTagSearch:
                 break
+            case .welcomeMessages:
+                break
             }
         default:
             break

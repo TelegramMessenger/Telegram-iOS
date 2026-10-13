@@ -53,14 +53,16 @@ public extension Api {
 public extension Api {
     enum SendMessageAction: TypeConstructorDescription {
         public class Cons_inputSendMessageRichMessageDraftAction: TypeConstructorDescription {
+            public var flags: Int32
             public var randomId: Int64
             public var richMessage: Api.InputRichMessage
-            public init(randomId: Int64, richMessage: Api.InputRichMessage) {
+            public init(flags: Int32, randomId: Int64, richMessage: Api.InputRichMessage) {
+                self.flags = flags
                 self.randomId = randomId
                 self.richMessage = richMessage
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputSendMessageRichMessageDraftAction", [("randomId", ConstructorParameterDescription(self.randomId)), ("richMessage", ConstructorParameterDescription(self.richMessage))])
+                return ("inputSendMessageRichMessageDraftAction", [("flags", ConstructorParameterDescription(self.flags)), ("randomId", ConstructorParameterDescription(self.randomId)), ("richMessage", ConstructorParameterDescription(self.richMessage))])
             }
         }
         public class Cons_sendMessageEmojiInteraction: TypeConstructorDescription {
@@ -95,25 +97,38 @@ public extension Api {
             }
         }
         public class Cons_sendMessageRichMessageDraftAction: TypeConstructorDescription {
+            public var flags: Int32
             public var randomId: Int64
             public var richMessage: Api.RichMessage
-            public init(randomId: Int64, richMessage: Api.RichMessage) {
+            public init(flags: Int32, randomId: Int64, richMessage: Api.RichMessage) {
+                self.flags = flags
                 self.randomId = randomId
                 self.richMessage = richMessage
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("sendMessageRichMessageDraftAction", [("randomId", ConstructorParameterDescription(self.randomId)), ("richMessage", ConstructorParameterDescription(self.richMessage))])
+                return ("sendMessageRichMessageDraftAction", [("flags", ConstructorParameterDescription(self.flags)), ("randomId", ConstructorParameterDescription(self.randomId)), ("richMessage", ConstructorParameterDescription(self.richMessage))])
+            }
+        }
+        public class Cons_sendMessageStopDraftAction: TypeConstructorDescription {
+            public var randomId: Int64
+            public init(randomId: Int64) {
+                self.randomId = randomId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("sendMessageStopDraftAction", [("randomId", ConstructorParameterDescription(self.randomId))])
             }
         }
         public class Cons_sendMessageTextDraftAction: TypeConstructorDescription {
+            public var flags: Int32
             public var randomId: Int64
             public var text: Api.TextWithEntities
-            public init(randomId: Int64, text: Api.TextWithEntities) {
+            public init(flags: Int32, randomId: Int64, text: Api.TextWithEntities) {
+                self.flags = flags
                 self.randomId = randomId
                 self.text = text
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("sendMessageTextDraftAction", [("randomId", ConstructorParameterDescription(self.randomId)), ("text", ConstructorParameterDescription(self.text))])
+                return ("sendMessageTextDraftAction", [("flags", ConstructorParameterDescription(self.flags)), ("randomId", ConstructorParameterDescription(self.randomId)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_sendMessageUploadAudioAction: TypeConstructorDescription {
@@ -174,6 +189,7 @@ public extension Api {
         case sendMessageRecordRoundAction
         case sendMessageRecordVideoAction
         case sendMessageRichMessageDraftAction(Cons_sendMessageRichMessageDraftAction)
+        case sendMessageStopDraftAction(Cons_sendMessageStopDraftAction)
         case sendMessageTextDraftAction(Cons_sendMessageTextDraftAction)
         case sendMessageTypingAction
         case sendMessageUploadAudioAction(Cons_sendMessageUploadAudioAction)
@@ -187,8 +203,9 @@ public extension Api {
             switch self {
             case .inputSendMessageRichMessageDraftAction(let _data):
                 if boxed {
-                    buffer.appendInt32(-491635887)
+                    buffer.appendInt32(-1455962178)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.randomId, buffer: buffer, boxed: false)
                 _data.richMessage.serialize(buffer, true)
                 break
@@ -254,15 +271,23 @@ public extension Api {
                 break
             case .sendMessageRichMessageDraftAction(let _data):
                 if boxed {
-                    buffer.appendInt32(-1563745031)
+                    buffer.appendInt32(1381386387)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.randomId, buffer: buffer, boxed: false)
                 _data.richMessage.serialize(buffer, true)
                 break
+            case .sendMessageStopDraftAction(let _data):
+                if boxed {
+                    buffer.appendInt32(-67566928)
+                }
+                serializeInt64(_data.randomId, buffer: buffer, boxed: false)
+                break
             case .sendMessageTextDraftAction(let _data):
                 if boxed {
-                    buffer.appendInt32(929929052)
+                    buffer.appendInt32(909162586)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.randomId, buffer: buffer, boxed: false)
                 _data.text.serialize(buffer, true)
                 break
@@ -312,7 +337,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputSendMessageRichMessageDraftAction(let _data):
-                return ("inputSendMessageRichMessageDraftAction", [("randomId", ConstructorParameterDescription(_data.randomId)), ("richMessage", ConstructorParameterDescription(_data.richMessage))])
+                return ("inputSendMessageRichMessageDraftAction", [("flags", ConstructorParameterDescription(_data.flags)), ("randomId", ConstructorParameterDescription(_data.randomId)), ("richMessage", ConstructorParameterDescription(_data.richMessage))])
             case .sendMessageCancelAction:
                 return ("sendMessageCancelAction", [])
             case .sendMessageChooseContactAction:
@@ -336,9 +361,11 @@ public extension Api {
             case .sendMessageRecordVideoAction:
                 return ("sendMessageRecordVideoAction", [])
             case .sendMessageRichMessageDraftAction(let _data):
-                return ("sendMessageRichMessageDraftAction", [("randomId", ConstructorParameterDescription(_data.randomId)), ("richMessage", ConstructorParameterDescription(_data.richMessage))])
+                return ("sendMessageRichMessageDraftAction", [("flags", ConstructorParameterDescription(_data.flags)), ("randomId", ConstructorParameterDescription(_data.randomId)), ("richMessage", ConstructorParameterDescription(_data.richMessage))])
+            case .sendMessageStopDraftAction(let _data):
+                return ("sendMessageStopDraftAction", [("randomId", ConstructorParameterDescription(_data.randomId))])
             case .sendMessageTextDraftAction(let _data):
-                return ("sendMessageTextDraftAction", [("randomId", ConstructorParameterDescription(_data.randomId)), ("text", ConstructorParameterDescription(_data.text))])
+                return ("sendMessageTextDraftAction", [("flags", ConstructorParameterDescription(_data.flags)), ("randomId", ConstructorParameterDescription(_data.randomId)), ("text", ConstructorParameterDescription(_data.text))])
             case .sendMessageTypingAction:
                 return ("sendMessageTypingAction", [])
             case .sendMessageUploadAudioAction(let _data):
@@ -357,16 +384,19 @@ public extension Api {
         }
 
         public static func parse_inputSendMessageRichMessageDraftAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Api.InputRichMessage?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.InputRichMessage?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputRichMessage
+                _3 = Api.parse(reader, signature: signature) as? Api.InputRichMessage
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendMessageAction.inputSendMessageRichMessageDraftAction(Cons_inputSendMessageRichMessageDraftAction(randomId: _1!, richMessage: _2!))
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SendMessageAction.inputSendMessageRichMessageDraftAction(Cons_inputSendMessageRichMessageDraftAction(flags: _1!, randomId: _2!, richMessage: _3!))
             }
             else {
                 return nil
@@ -438,32 +468,49 @@ public extension Api {
             return Api.SendMessageAction.sendMessageRecordVideoAction
         }
         public static func parse_sendMessageRichMessageDraftAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Api.RichMessage?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.RichMessage?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.RichMessage
+                _3 = Api.parse(reader, signature: signature) as? Api.RichMessage
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendMessageAction.sendMessageRichMessageDraftAction(Cons_sendMessageRichMessageDraftAction(randomId: _1!, richMessage: _2!))
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SendMessageAction.sendMessageRichMessageDraftAction(Cons_sendMessageRichMessageDraftAction(flags: _1!, randomId: _2!, richMessage: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sendMessageStopDraftAction(_ reader: BufferReader) -> SendMessageAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SendMessageAction.sendMessageStopDraftAction(Cons_sendMessageStopDraftAction(randomId: _1!))
             }
             else {
                 return nil
             }
         }
         public static func parse_sendMessageTextDraftAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Api.TextWithEntities?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.TextWithEntities?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendMessageAction.sendMessageTextDraftAction(Cons_sendMessageTextDraftAction(randomId: _1!, text: _2!))
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SendMessageAction.sendMessageTextDraftAction(Cons_sendMessageTextDraftAction(flags: _1!, randomId: _2!, text: _3!))
             }
             else {
                 return nil

@@ -266,17 +266,25 @@ extension ChatControllerImpl {
     }
     
     public func presentReactionDeletionOptions(author: EnginePeer, messageId: EngineMessage.Id) {
-        guard self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudChannel, author.id != self.context.account.peerId  else {
+        guard let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudChannel, author.id != self.context.account.peerId  else {
             return
         }
-        let _ = (self.context.sharedContext.chatAvailableMessageActions(
-            engine: self.context.engine,
-            accountPeerId: self.context.account.peerId,
-            messageIds: Set([messageId]),
-            keepUpdated: false
+        let _ = (combineLatest(
+            self.context.sharedContext.chatAvailableMessageActions(
+                engine: self.context.engine,
+                accountPeerId: self.context.account.peerId,
+                messageIds: Set([messageId]),
+                keepUpdated: false
+            ),
+            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.LinkedDiscussionPeerId(id: peerId))
         )
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] actions in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] actions, linkedDiscussionPeerId in
             guard let self, !actions.options.isEmpty else {
+                return
+            }
+            if case .channel = author, !chatChannelAuthorIsBannable(authorId: author.id, chatPeerId: peerId, linkedDiscussionPeerId: linkedDiscussionPeerId) {
+                // The group itself or its linked channel cannot be banned from this group; remove the reaction alone.
+                let _ = self.context.engine.messages.deleteReaction(messageId: messageId, authorId: author.id).startStandalone()
                 return
             }
             self.presentBanMessageOptions(

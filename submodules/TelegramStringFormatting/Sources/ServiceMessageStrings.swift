@@ -639,7 +639,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = mutableString
-            case let .phoneCall(_, discardReason, _, _):
+            case let .phoneCall(_, discardReason, duration, _):
                 var titleString: String
                 let incoming: Bool
                 if message.flags.contains(.Incoming) {
@@ -649,10 +649,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     titleString = strings.Notification_CallOutgoing
                     incoming = false
                 }
+                let callConnected = (duration ?? 0) > 0
                 if let discardReason = discardReason {
                     switch discardReason {
                     case .disconnect:
-                        titleString = strings.Notification_CallCanceled
+                        // A connected call whose transport died at the end is not a cancelled call
+                        // (see ChatMessageCallBubbleContentNode).
+                        if !callConnected {
+                            titleString = strings.Notification_CallCanceled
+                        }
                     case .missed, .busy:
                         titleString = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
                     case .hangup:
@@ -1298,10 +1303,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
-            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, isPrepaidUpgrade, peerId, senderId, _, resaleStars, _, _, _, assigned, fromOffer, _, isCrafted):
+            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, isPrepaidUpgrade, peerId, senderId, _, resaleStars, _, _, _, assigned, fromOffer, _, isCrafted, text, entities, nameHidden):
                 if case let .unique(gift) = gift {
-                    if !forAdditionalServiceMessage && !"".isEmpty {
-                        attributedString = NSAttributedString(string: "\(gift.title) #\(formatCollectibleNumber(gift.number, dateTimeFormat: dateTimeFormat))", font: titleFont, textColor: primaryTextColor)
+                    if !forAdditionalServiceMessage, let text, !text.isEmpty {
+                        attributedString = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false, message: message._asMessage())
                     } else if let messagePeer = message.peers[message.id.peerId] {
                         var peerName = EnginePeer(messagePeer).compactDisplayTitle
                         var peerIds: [(Int, EnginePeer.Id?)] = [(0, messagePeer.id)]
@@ -1356,6 +1361,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                                 let attributes: [Int: MarkdownAttributeSet] = [0: boldAttributes]
                                 let giftTitle = "\(gift.title) #\(formatCollectibleNumber(gift.number, dateTimeFormat: dateTimeFormat))"
                                 attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Assigned(giftTitle)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                            } else if !"".isEmpty, nameHidden && senderId != accountPeerId && message.author?.id != accountPeerId {
+                                attributedString = NSAttributedString(string: strings.Notification_StarsGift_SentSomeone, font: titleFont, textColor: primaryTextColor)
                             } else if message.id.peerId.isTelegramNotifications && senderId == nil {
                                 attributedString = NSAttributedString(string: strings.Notification_StarsGift_SentSomeone, font: titleFont, textColor: primaryTextColor)
                             } else if message.author?.id == accountPeerId {
@@ -1682,6 +1689,36 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
+            case let .walletTonConnectRequest(flags, _, _, _, _, dappName):
+                let text: String
+                //TODO:
+                if flags & (1 << 3) != 0 {
+                    text = dappName.map { "Wallet request from \($0) declined" } ?? "Wallet request declined"
+                } else if flags & (1 << 2) != 0 {
+                    text = dappName.map { "Wallet request from \($0) accepted" } ?? "Wallet request accepted"
+                } else {
+                    text = dappName.map { "Wallet request from \($0)" } ?? "Wallet request"
+                }
+                attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
+            case let .gramTransfer(amount, _, _, _, _):
+                let amountText = formatTonAmountText(
+                    amount,
+                    dateTimeFormat: dateTimeFormat,
+                    maxDecimalPositions: 3,
+                    formatString: strings.Currency_Grams
+                )
+                let text: String
+                if message.effectivelyIncoming(accountPeerId) {
+                    if message.id.peerId.isTelegramNotifications {
+                        text = strings.Notification_GramTransferUnknown(amountText).string
+                    } else {
+                        text = strings.Notification_GramTransfer(compactAuthorName, amountText).string
+                    }
+                } else {
+                    let conversationPeerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? compactAuthorName
+                    text = strings.Notification_GramTransferYou(conversationPeerName, amountText).string
+                }
+                attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
             case let .starGiftPurchaseOffer(gift, amount, _, _, _):
                 let peerName = message.peers[message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 
@@ -1944,6 +1981,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = NSAttributedString(string: rawText, font: titleFont, textColor: primaryTextColor)
                     }
                 }
+            case .joinedViaCommunity:
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: strings.Notification_JoinedGroupViaCommunityYou, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupViaCommunity(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                }
             case .unknown:
                 attributedString = nil
             }
@@ -2029,4 +2072,29 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
     }
     
     return attributedString
+}
+
+public func incomingGramTransferPreview(message: EngineMessage, accountPeerId: EnginePeer.Id, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, includeDiamond: Bool = false) -> (text: String, amountRanges: [NSRange])? {
+    guard message.effectivelyIncoming(accountPeerId) else {
+        return nil
+    }
+    for media in message.media {
+        guard let media = media as? TelegramMediaAction, case let .gramTransfer(amount, _, _, _, _) = media.action else {
+            continue
+        }
+        let amountText = formatTonAmountText(amount, dateTimeFormat: dateTimeFormat, maxDecimalPositions: 3, formatString: strings.Currency_Grams)
+        let prefix = includeDiamond ? "💎" : ""
+        let formatted: PresentationStrings.FormattedString
+        if message.id.peerId.isTelegramNotifications {
+            formatted = strings.Notification_GramTransferUnknown(prefix + amountText)
+        } else {
+            formatted = strings.Notification_GramTransfer_Compact(prefix + amountText)
+        }
+        let prefixLength = (prefix as NSString).length
+        let amountRanges = formatted.ranges.filter { $0.index == 0 }.map { item in
+            return NSRange(location: item.range.location + prefixLength, length: item.range.length - prefixLength)
+        }
+        return (formatted.string, amountRanges)
+    }
+    return nil
 }

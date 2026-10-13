@@ -43,7 +43,7 @@ public extension Camera {
                 self = .iPhone15ProMax
             case .iPhone17:
                 self = .iPhone17
-            case .iPhone17Pro, .iPhone17ProMax:
+            case .iPhone17Pro, .iPhone17ProMax, .iPhone18Pro, .iPhone18ProMax:
                 self = .iPhone17Pro
             case .iPhoneAir:
                 self = .iPhoneAir

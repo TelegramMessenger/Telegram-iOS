@@ -63,20 +63,20 @@ public class ItemListInviteRequestItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             var firstWithHeader = false
             var last = false
             if self.style == .plain {
-                if previousItem == nil {
+                if neighbors.previous == nil {
                     firstWithHeader = true
                 }
-                if nextItem == nil {
+                if neighbors.next == nil {
                     last = true
                 }
             }
             let node = ItemListInviteRequestItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -89,7 +89,7 @@ public class ItemListInviteRequestItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListInviteRequestItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -98,15 +98,15 @@ public class ItemListInviteRequestItem: ListViewItem, ItemListItem {
                     var firstWithHeader = false
                     var last = false
                     if self.style == .plain {
-                        if previousItem == nil {
+                        if neighbors.previous == nil {
                             firstWithHeader = true
                         }
-                        if nextItem == nil {
+                        if neighbors.next == nil {
                             last = true
                         }
                     }
                     
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -522,7 +522,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         
         let currentItem = self.layoutParams?.0
                 
-        return { item, params, neighbors, firstWithHeader, last in
+        return { [weak self] item, params, neighbors, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
         
             let titleFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)
@@ -734,7 +734,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.avatarNode.frame = avatarFrame
                     
                     if let importer = item.importer, let peer = importer.peer.peer.flatMap({ EnginePeer($0) }) {
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false, storeUnrounded: true)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false, storeUnrounded: true)
                     }
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size))

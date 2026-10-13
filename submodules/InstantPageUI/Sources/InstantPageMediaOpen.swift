@@ -28,12 +28,16 @@ import LocationUI
 ///     the swipe-back animation; return `nil` if the source view is not on screen.
 ///   - hiddenMediaCallback: invoked while the gallery is foregrounded so callers can hide the
 ///     source so the gallery's transitioning image isn't double-visible.
+///   - captureProtected: open a SECURE gallery — screenshot-excluded content, no share/save. Passed
+///     through by the chat bubble for a copy-protected rich message; defaults to `false` for V1
+///     Instant View and web IV, whose pages are public web content.
 public func openInstantPageMedia(
     media: InstantPageMedia,
     allMedias: [InstantPageMedia],
     webPage: TelegramMediaWebpage,
     context: AccountContext,
     userLocation: MediaResourceUserLocation,
+    captureProtected: Bool = false,
     present: (ViewController, Any?) -> Void,
     push: (ViewController) -> Void,
     openUrl: @escaping (InstantPageUrlItem) -> Void,
@@ -91,9 +95,26 @@ public func openInstantPageMedia(
             break
         }
     }
+    if centralIndex == nil {
+        // `media` is the value the TAPPED view holds, and `entries` come from the CURRENT layout, so
+        // a strict `==` here means every field of `InstantPageMedia` (caption, credit, url, and a
+        // deep media compare) has to still agree. When it doesn't, this function returns having done
+        // nothing at all — the tap is swallowed with no gallery, no error and no visible state, and
+        // it stays that way until the item view is rebuilt. That is too sharp an edge for a
+        // presentation lookup, so fall back to the identity notion the REST of the pipeline already
+        // uses for exactly this cross-reference: `transitionNode` and `updateHiddenMedia` both match
+        // on `instantPageMediaMatchesNodeIdentity`, which keeps the index/url/caption/credit checks
+        // but compares the media itself by id instead of deeply.
+        for i in 0 ..< entries.count {
+            if instantPageMediaMatchesNodeIdentity(entries[i].media, media) {
+                centralIndex = i
+                break
+            }
+        }
+    }
 
     if let centralIndex = centralIndex {
-        let controller = InstantPageGalleryController(context: context, userLocation: userLocation, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
+        let controller = InstantPageGalleryController(context: context, userLocation: userLocation, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, captureProtected: captureProtected, replaceRootController: { _, _ in
         }, baseNavigationController: baseNavigationController())
         let hiddenMediaDisposable = MetaDisposable()
         hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { entry in

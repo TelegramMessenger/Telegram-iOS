@@ -129,7 +129,7 @@ public final class DrawingMessageRenderer {
                 mockPresentationData = mockPresentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkTheme.chat.defaultWallpaper)
             }
             
-            let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+            let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false)
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             let _ = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             
@@ -232,7 +232,7 @@ public final class DrawingMessageRenderer {
             } else {
                 avatarHeaderItem = nil
             }
-            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages.map { $0._asMessage() }, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)]
+            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages.map { $0._asMessage() }, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false)]
         
             let inset: CGFloat = 16.0
             var leftInset: CGFloat = 37.0
@@ -251,7 +251,7 @@ public final class DrawingMessageRenderer {
                     let itemNode = messageNodes[i]
                     items[i].updateNode(async: { $0() }, node: {
                         return itemNode
-                    }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                    }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None, completion: { (layout, apply) in
                         let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: layout.size.height))
                         
                         itemNode.contentSize = layout.contentSize
@@ -259,16 +259,16 @@ public final class DrawingMessageRenderer {
                         itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
                         
-                        apply(ListViewItemApply(isOnScreen: true))
+                        apply(ListViewItemApply())
                     })
                 }
             } else {
                 var messageNodes: [ListViewItemNode] = []
                 for i in 0 ..< items.count {
                     var itemNode: ListViewItemNode?
-                    items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                         itemNode = node
-                        apply().1(ListViewItemApply(isOnScreen: true))
+                        apply().1(ListViewItemApply())
                     })
                     itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                     itemNode!.isUserInteractionEnabled = false

@@ -9,6 +9,7 @@ private final class LinkHelperClass: NSObject {
 public extension TelegramGroup {
     enum Permission {
         case sendSomething
+        case manageWelcomeMessages
     }
     
     func hasPermission(_ permission: Permission) -> Bool {
@@ -37,6 +38,15 @@ public extension TelegramGroup {
                 return false
             }
             return true
+        case .manageWelcomeMessages:
+            switch self.role {
+            case .creator:
+                return true
+            case let .admin(rights, _):
+                return rights.rights.contains(.canManageWelcomeMessages)
+            case .member:
+                return false
+            }
         }
     }
     

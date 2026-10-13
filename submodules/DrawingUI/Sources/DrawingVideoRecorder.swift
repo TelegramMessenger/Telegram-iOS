@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Camera
+import CameraLegacy
 import MediaEditor
 import AVFoundation
 
@@ -11,7 +12,7 @@ public final class EntityVideoRecorder {
 
     private let maxDuration: Double
     
-    private let camera: Camera
+    private let camera: CameraProtocol
     private let previewView: CameraSimplePreviewView
     private let entity: DrawingStickerEntity
     private weak var entityView: DrawingStickerEntityView?
@@ -40,7 +41,8 @@ public final class EntityVideoRecorder {
         self.entitiesView = entitiesView
 
         self.maxDuration = min(60.0, mediaEditor.duration ?? 60.0)
-        self.previewView = CameraSimplePreviewView(frame: .zero, main: true)
+        let cameraImpl = LegacyCameraImpl.shared
+        self.previewView = cameraImpl.makeCameraSimplePreviewView(frame: .zero, main: true, roundVideo: false)
         
         self.entity = DrawingStickerEntity(content: .dualVideoReference(true))
         
@@ -52,7 +54,7 @@ public final class EntityVideoRecorder {
             }
         }
         
-        self.camera = Camera(
+        self.camera = cameraImpl.makeCamera(
             configuration: Camera.Configuration(
                 preset: .hd1920x1080,
                 position: .front,

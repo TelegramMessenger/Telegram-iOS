@@ -1507,13 +1507,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (void)layoutControllerForSize:(CGSize)__unused size duration:(NSTimeInterval)__unused duration {
 }
 
-- (NSArray<id<UIPreviewActionItem>> *)previewActionItems {
-    if (self.externalPreviewActionItems != nil)
-        return self.externalPreviewActionItems();
-    
-    return [super previewActionItems];
-}
-
 - (BOOL)shouldAutomaticallyForwardAppearanceMethods {
     return !self.customAppearanceMethodsForwarding;
 }

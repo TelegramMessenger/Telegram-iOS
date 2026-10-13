@@ -8,7 +8,6 @@ final class MeasuredContentHeightTests: XCTestCase {
         e.contentPageMargin = 0.0
         e.minimumContentHeight = 0.0
         e.blockVerticalInset = 0.0
-        e.textLayoutMetrics = .compact
     }
 
     private func liveHeight(lineCount: Int, width: CGFloat) -> CGFloat {

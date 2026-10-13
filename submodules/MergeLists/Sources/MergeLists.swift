@@ -173,6 +173,12 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
     }
     
     #if DEBUG
+    if currentList != rightList {
+        // The merge assumes both lists are sorted ascending by `<` and that stableIds are unique
+        // within each list. Name the violated invariant instead of just failing the comparison —
+        // the bare precondition says the result is wrong but not which input was malformed.
+        mergeListsReportMalformedInput(leftList: leftList, rightList: rightList, currentList: currentList)
+    }
     precondition(currentList == rightList, "currentList == rightList")
     #else
     assert(currentList == rightList, "currentList == rightList")
@@ -180,6 +186,48 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
     
     return (removeIndices, insertItems, updatedIndices)
 }
+
+#if DEBUG
+/// Diagnostic for `mergeListsStableWithUpdates` precondition failures.
+///
+/// The precondition only reports that the reconstructed list differs from the input. It is almost
+/// always caused by malformed *input* rather than a bug in the merge: an unsorted list, or a
+/// duplicate stableId. This prints which.
+@inlinable
+public func mergeListsReportMalformedInput<T>(leftList: [T], rightList: [T], currentList: [T]) where T: Comparable, T: Identifiable {
+    func describeSortedness(_ list: [T], _ name: String) {
+        for i in 1 ..< max(list.count, 1) where i < list.count {
+            if list[i] < list[i - 1] {
+                print("[MergeLists] \(name) is NOT sorted at index \(i): \(list[i - 1].stableId) then \(list[i].stableId)")
+                return
+            }
+        }
+        print("[MergeLists] \(name) sorted OK (\(list.count) items)")
+    }
+    func describeDuplicates(_ list: [T], _ name: String) {
+        var seen: [T.T: Int] = [:]
+        for (i, item) in list.enumerated() {
+            if let first = seen[item.stableId] {
+                print("[MergeLists] \(name) has DUPLICATE stableId \(item.stableId) at indices \(first) and \(i)")
+                return
+            }
+            seen[item.stableId] = i
+        }
+        print("[MergeLists] \(name) stableIds unique (\(list.count) items)")
+    }
+
+    print("[MergeLists] ---- merge produced a list that does not match rightList ----")
+    describeSortedness(leftList, "leftList")
+    describeSortedness(rightList, "rightList")
+    describeDuplicates(leftList, "leftList")
+    describeDuplicates(rightList, "rightList")
+    print("[MergeLists] result count \(currentList.count) vs expected \(rightList.count)")
+    for (i, (a, b)) in zip(currentList, rightList).enumerated() where a != b {
+        print("[MergeLists] first divergence at \(i): result stableId \(a.stableId) vs expected \(b.stableId)")
+        break
+    }
+}
+#endif
 
 //@inlinable
 public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess: (T, T) -> Bool, isEqual: (T, T) -> Bool, getId: (T) -> AnyHashable, allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) {

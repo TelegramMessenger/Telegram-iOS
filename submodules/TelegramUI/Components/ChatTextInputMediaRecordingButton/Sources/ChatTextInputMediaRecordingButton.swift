@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -16,8 +17,12 @@ import LottieComponent
 import LegacyInstantVideoController
 import GlassBackgroundComponent
 import ComponentDisplayAdapters
+import LiquidGlassShapes
 
 private let offsetThreshold: CGFloat = 10.0
+
+/// The recording decoration's size; the Objective-C button centres it on itself.
+private let micDecorationSize = CGSize(width: 220.0, height: 220.0)
 private let dismissOffsetThreshold: CGFloat = 70.0
 
 private func findTargetView(_ view: UIView, point: CGPoint) -> UIView? {
@@ -245,9 +250,12 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         }
     }
 
+    /// The recording blob and its centre circle: the part that becomes the sent voice message's play button.
     public var contentContainer: (UIView, CGRect)? {
         if let _ = self.currentPresenter {
-            return (self.micDecoration, self.micDecoration.bounds)
+            let decoration = self.micDecoration
+            let diameter = decoration.bounds.width * CGFloat(ChatRecordingBlobAppearance.centreScale)
+            return (decoration, CGSize(width: diameter, height: diameter).centered(in: decoration.bounds))
         } else {
             return nil
         }
@@ -308,24 +316,43 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         }
     }
     
-    private var micDecorationValue: VoiceBlobView?
+    /// Whether the server has switched the liquid glass blob off, bringing back the previous one.
+    private var isGlassRecordingBlobDisabled: Bool {
+        return ChatRecordingBlobKillswitch.isActive(appConfigurationValue: self.context.getAppConfigValue)
+    }
+
+    private var micDecorationValue: (UIView & TGModernConversationInputMicButtonDecoration)?
+    /// Set from `animateOut` until the next `animateIn`: the recording UI is going away, the blob can no longer fly.
+    private var isAnimatingOut = false
+    private var isDecorationFlying = false
+    private var decorationFlightId = 0
     private var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) {
         if let micDecorationValue = self.micDecorationValue {
             return micDecorationValue
-        } else {
+        }
+        let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
+        let decoration: UIView & TGModernConversationInputMicButtonDecoration
+        if self.isGlassRecordingBlobDisabled {
             let blobView = VoiceBlobView(
-                frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)),
+                frame: CGRect(origin: CGPoint(), size: micDecorationSize),
                 maxLevel: 4,
                 smallBlobRange: (0.45, 0.55),
                 mediumBlobRange: (0.52, 0.87),
                 bigBlobRange: (0.57, 1.00)
             )
-            let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
             blobView.setColor(theme.chat.inputPanel.actionControlFillColor)
             blobView.hitTestSize = 110.0
-            self.micDecorationValue = blobView
-            return blobView
+            decoration = blobView
+        } else {
+            let blobView = ChatRecordingBlobView(frame: CGRect(origin: CGPoint(), size: micDecorationSize))
+            blobView.hitTestSize = 110.0
+            blobView.isDarkAppearance = theme.overallDarkAppearance
+            blobView.isFlat = !self.context.sharedContext.energyUsageSettings.fullTranslucency
+            blobView.setColor(theme.chat.inputPanel.actionControlFillColor)
+            decoration = blobView
         }
+        self.micDecorationValue = decoration
+        return decoration
     }
     
     private var micLockValue: (UIView & TGModernConversationInputMicButtonLock)?
@@ -363,6 +390,10 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.isExclusiveTouch = false;
         
         self.centerOffset = CGPoint(x: 0.0, y: -1.0 + UIScreenPixel)
+        
+        if !self.isGlassRecordingBlobDisabled {
+            prewarmLiquidGlassShapes([.radial])
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -426,7 +457,8 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             transition: .immediate,
             component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: animationName),
-                color: animationTintColor
+                color: animationTintColor,
+                lottieSettings: self.context.lottieRenderingSettings
             )),
             environment: {},
             containerSize: animationFrame.size
@@ -458,7 +490,9 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.updateAnimation(previousMode: self.mode)
         
         self.pallete = legacyInputMicPalette(from: theme)
-        self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        let decorationTheme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
+        self.micDecorationValue?.setColor(decorationTheme.chat.inputPanel.actionControlFillColor)
+        (self.micDecorationValue as? ChatRecordingBlobView)?.isDarkAppearance = decorationTheme.overallDarkAppearance
         (self.micLockValue as? LockView)?.updateTheme(theme)
     }
     
@@ -565,8 +599,15 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     }
     
     override public func animateIn() {
+        // A recording started before the last blob arrived in its message: that flight's recording UI goes now.
+        if self.isDecorationFlying {
+            self.finishDecorationFlight(flightId: self.decorationFlightId)
+        }
+        self.isAnimatingOut = false
+        
         super.animateIn()
         
+        (micDecoration as? ChatRecordingBlobView)?.isFlat = !self.context.sharedContext.energyUsageSettings.fullTranslucency
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
             micDecoration.isHidden = false
             micDecoration.startAnimating()
@@ -585,14 +626,19 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     }
 
     override public func animateOut(_ toSmallSize: Bool) {
+        self.isAnimatingOut = true
         super.animateOut(toSmallSize)
         
         micDecoration.stopAnimating()
         
         if toSmallSize {
-            micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.03, delay: 0.15, removeOnCompletion: false)
+            if !self.isDecorationFlying {
+                micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.03, delay: 0.15, removeOnCompletion: false)
+            }
         } else {
-            micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
+            if !self.isDecorationFlying {
+                micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
+            }
             let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
             if let layer = self.animationView.view?.layer {
                 transition.updateAlpha(layer: layer, alpha: 1.0)
@@ -604,6 +650,61 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 }
             }
         }
+    }
+    
+    /// Flies the recording blob from where it is, in its own container, towards `targetRect` in `targetView` (the sent
+    /// message's play button), shrinking it so its centre circle would land on the button, and fades it out at once:
+    /// the play button, flying the same way in the chat, takes over.
+    /// The send transition calls it before `animateOut`, which then leaves the blob alone and does not dismiss the
+    /// recording UI; the flight does, once the blob has arrived. Returns false when the blob cannot fly (the recording
+    /// UI is already going away), and the caller animates without it.
+    public func animateDecorationToSentMessage(targetRect: CGRect, in targetView: UIView, duration: Double, horizontalCurve: ContainedViewLayoutTransitionCurve, verticalCurve: ContainedViewLayoutTransitionCurve) -> Bool {
+        guard !self.isAnimatingOut, !self.isDecorationFlying, let decoration = self.micDecorationValue, let container = decoration.superview, decoration.window != nil else {
+            return false
+        }
+        // With the keyboard up the blob is in the keyboard's window and the message in the app's.
+        let target = targetView.convertAcrossWindows(targetRect, to: container)
+        let centreDiameter = decoration.bounds.width * CGFloat(ChatRecordingBlobAppearance.centreScale)
+        guard centreDiameter > 0.0, target.width > 0.0, target.midX.isFinite, target.midY.isFinite else {
+            return false
+        }
+        
+        self.isDecorationFlying = true
+        self.decorationAnimatesOutExternally = true
+        self.decorationFlightId += 1
+        let flightId = self.decorationFlightId
+        
+        let fromPosition = decoration.layer.position
+        let toPosition = CGPoint(x: target.midX, y: target.midY)
+        let fromScale = sqrt(decoration.transform.a * decoration.transform.a + decoration.transform.c * decoration.transform.c)
+        let toScale = target.width / centreDiameter
+        
+        // The same path and timing as the play button's flight in the chat: each axis on its own curve.
+        decoration.layer.position = toPosition
+        decoration.layer.animatePosition(from: CGPoint(x: fromPosition.x - toPosition.x, y: 0.0), to: CGPoint(), duration: duration, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
+        decoration.layer.animatePosition(from: CGPoint(x: 0.0, y: fromPosition.y - toPosition.y), to: CGPoint(), duration: duration, mediaTimingFunction: verticalCurve.mediaTimingFunction, additive: true)
+        decoration.transform = CGAffineTransform(scaleX: toScale, y: toScale)
+        decoration.layer.animateScale(from: fromScale, to: toScale, duration: duration, mediaTimingFunction: verticalCurve.mediaTimingFunction)
+        
+        let fadeDuration = min(0.06, duration)
+        // The blob's look is a backdrop refracted by a displacement map under multiply and additive layers. Opacity
+        // passed down to each of them separately does not fade that (the map's values are scaled with it), so the
+        // blob fades as one group.
+        decoration.layer.allowsGroupOpacity = true
+        decoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: fadeDuration, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.finishDecorationFlight(flightId: flightId)
+        })
+        return true
+    }
+    
+    private func finishDecorationFlight(flightId: Int) {
+        guard self.isDecorationFlying, flightId == self.decorationFlightId else {
+            return
+        }
+        self.isDecorationFlying = false
+        self.micDecorationValue?.layer.allowsGroupOpacity = false
+        self.decorationAnimatesOutExternally = false
+        self.dismiss()
     }
     
     private var previousSize = CGSize()

@@ -6,7 +6,7 @@ import RichTextEditorCore
 
 /// Select-All → Backspace over a document that contains a table (at ANY position) must reset to a SINGLE empty
 /// body paragraph — dropping the table and every paragraph, exactly like the image cases in `CanvasImageEditTests`.
-/// Regression: the whole-document reset in `applySelectionReplace` was skipped whenever a Select-All endpoint
+/// Regression: the whole-document reset in `applySelectionReplaceOutcome` was skipped whenever a Select-All endpoint
 /// landed inside a table cell (table first/last/only block), so the delete fell through to the per-region clear,
 /// which cleared each region's text but KEPT the block structure — the table and paragraphs stayed, empty.
 final class CanvasSelectAllTableDeleteTests: XCTestCase {
@@ -90,8 +90,7 @@ final class CanvasSelectAllTableDeleteTests: XCTestCase {
         let v = canvas([table()])
         let t = v.boxes.first { $0 is TableBlockBox } as! TableBlockBox
         // cell(0,0) → cell(1,0): covers some, not all, cells (never reaches the last cell).
-        v.anchor = t.cellTextStart(row: 0, column: 0)!
-        v.head = t.cellTextStart(row: 1, column: 0)!
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.deleteBackward()
         v.layoutIfNeeded()
         XCTAssertNotNil(v.boxes.first { $0 is TableBlockBox }, "a partial in-table selection keeps the table")

@@ -1548,8 +1548,8 @@ public extension Api {
         public class Cons_botVerification: TypeConstructorDescription {
             public var botId: Int64
             public var icon: Int64
-            public var description: String
-            public init(botId: Int64, icon: Int64, description: String) {
+            public var description: Api.TextWithEntities
+            public init(botId: Int64, icon: Int64, description: Api.TextWithEntities) {
                 self.botId = botId
                 self.icon = icon
                 self.description = description
@@ -1564,11 +1564,11 @@ public extension Api {
             switch self {
             case .botVerification(let _data):
                 if boxed {
-                    buffer.appendInt32(-113453988)
+                    buffer.appendInt32(-147976487)
                 }
                 serializeInt64(_data.botId, buffer: buffer, boxed: false)
                 serializeInt64(_data.icon, buffer: buffer, boxed: false)
-                serializeString(_data.description, buffer: buffer, boxed: false)
+                _data.description.serialize(buffer, true)
                 break
             }
         }
@@ -1585,8 +1585,10 @@ public extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -1605,8 +1607,8 @@ public extension Api {
             public var flags: Int32
             public var icon: Int64
             public var company: String
-            public var customDescription: String?
-            public init(flags: Int32, icon: Int64, company: String, customDescription: String?) {
+            public var customDescription: Api.TextWithEntities?
+            public init(flags: Int32, icon: Int64, company: String, customDescription: Api.TextWithEntities?) {
                 self.flags = flags
                 self.icon = icon
                 self.company = company
@@ -1622,13 +1624,13 @@ public extension Api {
             switch self {
             case .botVerifierSettings(let _data):
                 if boxed {
-                    buffer.appendInt32(-1328716265)
+                    buffer.appendInt32(-1591021569)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.icon, buffer: buffer, boxed: false)
                 serializeString(_data.company, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeString(_data.customDescription!, buffer: buffer, boxed: false)
+                    _data.customDescription!.serialize(buffer, true)
                 }
                 break
             }
@@ -1648,9 +1650,11 @@ public extension Api {
             _2 = reader.readInt64()
             var _3: String?
             _3 = parseString(reader)
-            var _4: String?
+            var _4: Api.TextWithEntities?
             if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                _4 = parseString(reader)
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                }
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil

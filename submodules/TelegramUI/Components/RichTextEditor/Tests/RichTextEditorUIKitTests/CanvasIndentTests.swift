@@ -22,7 +22,7 @@ final class CanvasIndentTests: XCTestCase {
     }
     func caretIn(_ v: DocumentCanvasView, _ id: String) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart; v.head = r.globalStart
+        v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart)
     }
 
     func test_indent_bumpsListLevel() {
@@ -74,7 +74,7 @@ final class CanvasIndentTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("a")) }!
         let b = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("b")) }!
-        v.anchor = a.globalStart; v.head = b.globalStart + b.length   // span both list items
+        v.setSelectionForTesting(anchor: a.globalStart, head: b.globalStart + b.length)   // span both list items
         v.indent()
         XCTAssertEqual(level(v, "a"), 1)
         XCTAssertEqual(level(v, "b"), 1)

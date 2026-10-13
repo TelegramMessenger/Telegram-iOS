@@ -8,7 +8,8 @@ import AccountContext
 import TelegramPresentationData
 import UIKit
 import WebPBinding
-import RLottieBinding
+import LottieBinding
+import LottieSettings
 import GZip
 import AnimationCache
 import EmojiTextAttachmentView
@@ -91,7 +92,7 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                 guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
                     return
                 }
-                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
+                guard let instance = makeLottieInstance(data: unpackedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: context.lottieRenderingSettings) else {
                     return
                 }
                 

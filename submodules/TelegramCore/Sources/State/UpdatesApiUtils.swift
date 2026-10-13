@@ -199,17 +199,41 @@ extension Api.Message {
 }
 
 extension Api.EphemeralMessage {
-    var peerId: PeerId {
+    var peerId: PeerId? {
         switch self {
         case let .ephemeralMessage(messageData):
-            return messageData.peerId.peerId
+            let peerId = messageData.peerId?.peerId
+            if (messageData.flags & (1 << 5)) != 0 {
+                return peerId
+            }
+            let receiverPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageData.receiverId))
+            if (messageData.flags & (1 << 0)) != 0 {
+                return peerId ?? receiverPeerId
+            }
+            // Preserve the chat where the bot was invoked. Only a missing peer or
+            // the recipient's own peer identifies an incoming private bot dialog.
+            if let peerId, peerId != receiverPeerId {
+                return peerId
+            }
+            return messageData.fromId.peerId
         }
     }
 
-    var id: MessageId {
+    var id: MessageId? {
         switch self {
         case let .ephemeralMessage(messageData):
-            return MessageId(peerId: messageData.peerId.peerId, namespace: Namespaces.Message.EphemeralLocal, id: messageData.id)
+            guard let peerId = self.peerId else {
+                return nil
+            }
+            let namespace: MessageId.Namespace
+            if (messageData.flags & (1 << 5)) != 0 {
+                namespace = Namespaces.Message.WelcomeMessageCloud
+            } else if messageData.anchorMsgId != nil {
+                namespace = Namespaces.Message.EphemeralAnchored
+            } else {
+                namespace = Namespaces.Message.EphemeralLocal
+            }
+            return MessageId(peerId: peerId, namespace: namespace, id: messageData.id)
         }
     }
 
@@ -378,6 +402,12 @@ extension Api.Update {
     
     var peerIds: [PeerId] {
         switch self {
+            case let .updateSentWalletTransaction(data):
+                if case let .walletTransaction(value)? = data.transaction,
+                   case let .walletTransactionPeerUser(peer) = value.peer {
+                    return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(peer.userId))]
+                }
+                return []
             case let .updateChannel(updateChannelData):
                 let channelId = updateChannelData.channelId
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]

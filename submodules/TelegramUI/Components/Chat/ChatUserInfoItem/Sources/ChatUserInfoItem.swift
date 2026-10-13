@@ -26,7 +26,12 @@ public final class ChatUserInfoItem: ListViewItem {
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
     fileprivate let context: AccountContext
-    
+
+    // Decodes to nil on the chat side, which is the same branch a missing neighbor takes.
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     public init(
         peer: EnginePeer,
         verification: PeerVerification?,
@@ -47,7 +52,7 @@ public final class ChatUserInfoItem: ListViewItem {
         self.context = context
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = {
             let node = ChatUserInfoItemNode()
             
@@ -72,7 +77,7 @@ public final class ChatUserInfoItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatUserInfoItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
@@ -94,6 +99,19 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
     public var controllerInteraction: ChatControllerInteraction?
     
     public let offsetContainer: ASDisplayNode
+
+    /// The vertical offset the LIST last asked this node to hold, via `updateTrailingItemSpace`.
+    ///
+    /// Remembered because the layout apply below rewrites `offsetContainer.frame` — it is the only
+    /// place the container's SIZE is set — and would otherwise discard the offset on every re-layout.
+    /// The list does re-issue the value at the end of the same pass, so the discard is invisible while
+    /// that re-issue is immediate; on a pass whose transition is animated it is not, and the block
+    /// springs from the discarded zero back to the position it never actually left. Holding the value
+    /// here means nothing needs restoring: an unchanged offset re-applies as a no-op
+    /// (`CALayer.animateFrame` returns early on `from == to`), while a genuine change still travels on
+    /// the pass transition.
+    private var trailingItemSpaceOffset: CGFloat = 0.0
+
     public let titleNode: TextNode
     public let subtitleNode: TextNode
     
@@ -238,12 +256,6 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
         super.updateAbsoluteRect(rect, within: containerSize)
         
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += containerSize.height - rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     @objc private func groupsPressed() {
@@ -393,7 +405,30 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
             
             let disclaimerText: NSMutableAttributedString
             if let verification = item.verification {
-                disclaimerText = NSMutableAttributedString(string: " #  \(verification.description)", font: Font.regular(13.0), textColor: subtitleColor)
+                let textFont = Font.regular(13.0)
+                let iconPrefix = " #  "
+                let iconPrefixLength = (iconPrefix as NSString).length
+                let descriptionEntities = verification.descriptionEntities.map { entity in
+                    return MessageTextEntity(
+                        range: (entity.range.lowerBound + iconPrefixLength) ..< (entity.range.upperBound + iconPrefixLength),
+                        type: entity.type
+                    )
+                }
+                disclaimerText = NSMutableAttributedString(attributedString: stringWithAppliedEntities(
+                    iconPrefix + verification.description,
+                    entities: descriptionEntities,
+                    baseColor: subtitleColor,
+                    linkColor: subtitleColor,
+                    baseFont: textFont,
+                    linkFont: textFont,
+                    boldFont: Font.semibold(13.0),
+                    italicFont: Font.italic(13.0),
+                    boldItalicFont: Font.semiboldItalic(13.0),
+                    fixedFont: Font.monospace(13.0),
+                    blockQuoteFont: textFont,
+                    message: nil,
+                    paragraphAlignment: .center
+                ))
                 if let range = disclaimerText.string.range(of: "#") {
                     disclaimerText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSRange(range, in: disclaimerText.string))
                     disclaimerText.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(range, in: disclaimerText.string))
@@ -460,7 +495,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                                         
                     strongSelf.controllerInteraction = item.controllerInteraction
                     
-                    strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
+                    strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.trailingItemSpaceOffset), size: itemLayout.contentSize)
                     
                     let _ = titleApply()
                     var contentOriginY = backgroundFrame.origin.y + verticalInset
@@ -581,12 +616,6 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                     if let backgroundContent = strongSelf.backgroundContent {
                         backgroundContent.cornerRadius = item.presentationData.chatBubbleCorners.mainRadius
                         backgroundContent.frame = backgroundFrame
-                        if let (rect, containerSize) = strongSelf.absolutePosition {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += containerSize.height - rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                     }
                 }
             })
@@ -594,11 +623,8 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
     }
     
     override public func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
-        if height.isLessThanOrEqualTo(0.0) {
-            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(), size: self.offsetContainer.bounds.size))
-        } else {
-            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: -floorToScreenPixels(height / 2.0)), size: self.offsetContainer.bounds.size))
-        }
+        self.trailingItemSpaceOffset = height.isLessThanOrEqualTo(0.0) ? 0.0 : -floorToScreenPixels(height / 2.0)
+        transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: self.trailingItemSpaceOffset), size: self.offsetContainer.bounds.size))
     }
     
     override public func animateAdded(_ currentTimestamp: Double, duration: Double) {

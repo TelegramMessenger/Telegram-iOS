@@ -509,7 +509,10 @@ static UIImage *pagerLeftButtonHighlightedImage() {
             titleInset.right = 9.0f;
         }
         
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         buttonView.titleEdgeInsets = titleInset;
+        #pragma clang diagnostic pop
     }
 }
 

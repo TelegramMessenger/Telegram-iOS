@@ -276,7 +276,8 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                         source: .bundle(name: "CreateStream"),
                         loop: true
                     ),
-                    size: CGSize(width: 138.0, height: 138.0)
+                    size: CGSize(width: 138.0, height: 138.0),
+                    lottieSettings: state.context.lottieRenderingSettings
                 ),
                 availableSize: CGSize(width: 138.0, height: 138.0),
                 transition: context.transition

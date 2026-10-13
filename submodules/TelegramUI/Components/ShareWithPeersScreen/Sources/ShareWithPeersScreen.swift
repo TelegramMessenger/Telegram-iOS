@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -341,6 +342,15 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
+        private var isCompleting = false
+
+        func setIsCompleting(_ isCompleting: Bool) {
+            guard self.isCompleting != isCompleting else {
+                return
+            }
+            self.isCompleting = isCompleting
+            self.state?.updated(transition: .immediate)
+        }
         
         private var sendAsPeerId: EnginePeer.Id?
         private var isCustomTarget = false
@@ -497,6 +507,9 @@ final class ShareWithPeersScreenComponent: Component {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if !self.bounds.contains(point) {
                 return nil
+            }
+            if self.isCompleting {
+                return self
             }
             if !self.backgroundView.frame.contains(point) {
                 return self.dimView
@@ -2122,7 +2135,8 @@ final class ShareWithPeersScreenComponent: Component {
                 let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     environment: {},
                     containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
@@ -2975,9 +2989,9 @@ final class ShareWithPeersScreenComponent: Component {
                             ))
                         ),
                         isEnabled: true,
-                        displaysProgress: false,
+                        displaysProgress: self.isCompleting,
                         action: { [weak self] in
-                            guard let self, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+                            guard let self, !self.isCompleting, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                                 return
                             }
                             
@@ -2995,6 +3009,12 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                             
                             let proceed = {
+                                guard !controller.isCompleting else {
+                                    return
+                                }
+                                if !controller.automaticallyDismissOnCompletion {
+                                    controller.isCompleting = true
+                                }
                                 var savePeers = true
                                 if component.stateContext.editing {
                                     savePeers = false
@@ -3017,7 +3037,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     }
                                 }
                                 
-                                let complete = {
+                                let complete = { [controller, component] in
                                     let peers = component.context.engine.data.get(EngineDataMap(selectedPeers.map { id in
                                         return TelegramEngine.EngineData.Item.Peer.Peer(id: id)
                                     }))
@@ -3041,7 +3061,9 @@ final class ShareWithPeersScreenComponent: Component {
                                         )
                                         
                                         controller.dismissAllTooltips()
-                                        controller.dismiss()
+                                        if controller.automaticallyDismissOnCompletion {
+                                            controller.dismiss()
+                                        }
                                     })
                                     
                                 }
@@ -3277,6 +3299,15 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     private var isDismissed: Bool = false
     
     public var dismissed: () -> Void = {}
+    // An asynchronous completion keeps the screen open until its owner dismisses it.
+    public var automaticallyDismissOnCompletion = true
+    public var isCompleting = false {
+        didSet {
+            if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
+                componentView.setIsCompleting(self.isCompleting)
+            }
+        }
+    }
     
     public init(
         context: AccountContext,
@@ -3526,6 +3557,9 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     }
     
     func requestDismiss() {
+        guard !self.isCompleting else {
+            return
+        }
         self.dismissAllTooltips()
         self.dismissed()
         self.dismiss()

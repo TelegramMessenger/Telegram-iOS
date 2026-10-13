@@ -649,6 +649,10 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         }
     }
     
+    var isTransitioning: Bool {
+        return self.state.transition != nil
+    }
+
     public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil

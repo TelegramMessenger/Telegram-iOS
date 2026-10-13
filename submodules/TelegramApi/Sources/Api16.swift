@@ -776,6 +776,15 @@ public extension Api {
                 return ("messageActionChatJoinedByLink", [("inviterId", ConstructorParameterDescription(self.inviterId))])
             }
         }
+        public class Cons_messageActionChatJoinedViaCommunity: TypeConstructorDescription {
+            public var communityId: Int64
+            public init(communityId: Int64) {
+                self.communityId = communityId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("messageActionChatJoinedViaCommunity", [("communityId", ConstructorParameterDescription(self.communityId))])
+            }
+        }
         public class Cons_messageActionChatMigrateTo: TypeConstructorDescription {
             public var channelId: Int64
             public init(channelId: Int64) {
@@ -941,6 +950,23 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("messageActionGiveawayResults", [("flags", ConstructorParameterDescription(self.flags)), ("winnersCount", ConstructorParameterDescription(self.winnersCount)), ("unclaimedCount", ConstructorParameterDescription(self.unclaimedCount))])
+            }
+        }
+        public class Cons_messageActionGramTransfer: TypeConstructorDescription {
+            public var flags: Int32
+            public var amount: Int64
+            public var peerAddress: String
+            public var transactionId: String
+            public var comment: String?
+            public init(flags: Int32, amount: Int64, peerAddress: String, transactionId: String, comment: String?) {
+                self.flags = flags
+                self.amount = amount
+                self.peerAddress = peerAddress
+                self.transactionId = transactionId
+                self.comment = comment
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("messageActionGramTransfer", [("flags", ConstructorParameterDescription(self.flags)), ("amount", ConstructorParameterDescription(self.amount)), ("peerAddress", ConstructorParameterDescription(self.peerAddress)), ("transactionId", ConstructorParameterDescription(self.transactionId)), ("comment", ConstructorParameterDescription(self.comment))])
             }
         }
         public class Cons_messageActionGroupCall: TypeConstructorDescription {
@@ -1300,7 +1326,8 @@ public extension Api {
             public var canResellAt: Int32?
             public var dropOriginalDetailsStars: Int64?
             public var canCraftAt: Int32?
-            public init(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?, resaleAmount: Api.StarsAmount?, canTransferAt: Int32?, canResellAt: Int32?, dropOriginalDetailsStars: Int64?, canCraftAt: Int32?) {
+            public var message: Api.TextWithEntities?
+            public init(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?, resaleAmount: Api.StarsAmount?, canTransferAt: Int32?, canResellAt: Int32?, dropOriginalDetailsStars: Int64?, canCraftAt: Int32?, message: Api.TextWithEntities?) {
                 self.flags = flags
                 self.gift = gift
                 self.canExportAt = canExportAt
@@ -1313,9 +1340,10 @@ public extension Api {
                 self.canResellAt = canResellAt
                 self.dropOriginalDetailsStars = dropOriginalDetailsStars
                 self.canCraftAt = canCraftAt
+                self.message = message
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("messageActionStarGiftUnique", [("flags", ConstructorParameterDescription(self.flags)), ("gift", ConstructorParameterDescription(self.gift)), ("canExportAt", ConstructorParameterDescription(self.canExportAt)), ("transferStars", ConstructorParameterDescription(self.transferStars)), ("fromId", ConstructorParameterDescription(self.fromId)), ("peer", ConstructorParameterDescription(self.peer)), ("savedId", ConstructorParameterDescription(self.savedId)), ("resaleAmount", ConstructorParameterDescription(self.resaleAmount)), ("canTransferAt", ConstructorParameterDescription(self.canTransferAt)), ("canResellAt", ConstructorParameterDescription(self.canResellAt)), ("dropOriginalDetailsStars", ConstructorParameterDescription(self.dropOriginalDetailsStars)), ("canCraftAt", ConstructorParameterDescription(self.canCraftAt))])
+                return ("messageActionStarGiftUnique", [("flags", ConstructorParameterDescription(self.flags)), ("gift", ConstructorParameterDescription(self.gift)), ("canExportAt", ConstructorParameterDescription(self.canExportAt)), ("transferStars", ConstructorParameterDescription(self.transferStars)), ("fromId", ConstructorParameterDescription(self.fromId)), ("peer", ConstructorParameterDescription(self.peer)), ("savedId", ConstructorParameterDescription(self.savedId)), ("resaleAmount", ConstructorParameterDescription(self.resaleAmount)), ("canTransferAt", ConstructorParameterDescription(self.canTransferAt)), ("canResellAt", ConstructorParameterDescription(self.canResellAt)), ("dropOriginalDetailsStars", ConstructorParameterDescription(self.dropOriginalDetailsStars)), ("canCraftAt", ConstructorParameterDescription(self.canCraftAt)), ("message", ConstructorParameterDescription(self.message))])
             }
         }
         public class Cons_messageActionSuggestBirthday: TypeConstructorDescription {
@@ -1421,6 +1449,25 @@ public extension Api {
                 return ("messageActionTopicEdit", [("flags", ConstructorParameterDescription(self.flags)), ("title", ConstructorParameterDescription(self.title)), ("iconEmojiId", ConstructorParameterDescription(self.iconEmojiId)), ("closed", ConstructorParameterDescription(self.closed)), ("hidden", ConstructorParameterDescription(self.hidden))])
             }
         }
+        public class Cons_messageActionWalletTonConnectRequest: TypeConstructorDescription {
+            public var flags: Int32
+            public var sessionId: Int64
+            public var expires: Int32
+            public var topic: String?
+            public var traceId: String?
+            public var dappName: String?
+            public init(flags: Int32, sessionId: Int64, expires: Int32, topic: String?, traceId: String?, dappName: String?) {
+                self.flags = flags
+                self.sessionId = sessionId
+                self.expires = expires
+                self.topic = topic
+                self.traceId = traceId
+                self.dappName = dappName
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("messageActionWalletTonConnectRequest", [("flags", ConstructorParameterDescription(self.flags)), ("sessionId", ConstructorParameterDescription(self.sessionId)), ("expires", ConstructorParameterDescription(self.expires)), ("topic", ConstructorParameterDescription(self.topic)), ("traceId", ConstructorParameterDescription(self.traceId)), ("dappName", ConstructorParameterDescription(self.dappName))])
+            }
+        }
         public class Cons_messageActionWebViewDataSent: TypeConstructorDescription {
             public var text: String
             public init(text: String) {
@@ -1455,6 +1502,7 @@ public extension Api {
         case messageActionChatEditTitle(Cons_messageActionChatEditTitle)
         case messageActionChatJoinedByLink(Cons_messageActionChatJoinedByLink)
         case messageActionChatJoinedByRequest
+        case messageActionChatJoinedViaCommunity(Cons_messageActionChatJoinedViaCommunity)
         case messageActionChatMigrateTo(Cons_messageActionChatMigrateTo)
         case messageActionConferenceCall(Cons_messageActionConferenceCall)
         case messageActionContactSignUp
@@ -1468,6 +1516,7 @@ public extension Api {
         case messageActionGiftTon(Cons_messageActionGiftTon)
         case messageActionGiveawayLaunch(Cons_messageActionGiveawayLaunch)
         case messageActionGiveawayResults(Cons_messageActionGiveawayResults)
+        case messageActionGramTransfer(Cons_messageActionGramTransfer)
         case messageActionGroupCall(Cons_messageActionGroupCall)
         case messageActionGroupCallScheduled(Cons_messageActionGroupCallScheduled)
         case messageActionHistoryClear
@@ -1507,6 +1556,7 @@ public extension Api {
         case messageActionTodoCompletions(Cons_messageActionTodoCompletions)
         case messageActionTopicCreate(Cons_messageActionTopicCreate)
         case messageActionTopicEdit(Cons_messageActionTopicEdit)
+        case messageActionWalletTonConnectRequest(Cons_messageActionWalletTonConnectRequest)
         case messageActionWebViewDataSent(Cons_messageActionWebViewDataSent)
         case messageActionWebViewDataSentMe(Cons_messageActionWebViewDataSentMe)
 
@@ -1612,6 +1662,12 @@ public extension Api {
                 if boxed {
                     buffer.appendInt32(-339958837)
                 }
+                break
+            case .messageActionChatJoinedViaCommunity(let _data):
+                if boxed {
+                    buffer.appendInt32(1250688640)
+                }
+                serializeInt64(_data.communityId, buffer: buffer, boxed: false)
                 break
             case .messageActionChatMigrateTo(let _data):
                 if boxed {
@@ -1758,6 +1814,18 @@ public extension Api {
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.winnersCount, buffer: buffer, boxed: false)
                 serializeInt32(_data.unclaimedCount, buffer: buffer, boxed: false)
+                break
+            case .messageActionGramTransfer(let _data):
+                if boxed {
+                    buffer.appendInt32(-1825969613)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.amount, buffer: buffer, boxed: false)
+                serializeString(_data.peerAddress, buffer: buffer, boxed: false)
+                serializeString(_data.transactionId, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.comment!, buffer: buffer, boxed: false)
+                }
                 break
             case .messageActionGroupCall(let _data):
                 if boxed {
@@ -2049,7 +2117,7 @@ public extension Api {
                 break
             case .messageActionStarGiftUnique(let _data):
                 if boxed {
-                    buffer.appendInt32(-423422686)
+                    buffer.appendInt32(2115768711)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.gift.serialize(buffer, true)
@@ -2082,6 +2150,9 @@ public extension Api {
                 }
                 if Int(_data.flags) & Int(1 << 15) != 0 {
                     serializeInt32(_data.canCraftAt!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 18) != 0 {
+                    _data.message!.serialize(buffer, true)
                 }
                 break
             case .messageActionSuggestBirthday(let _data):
@@ -2177,6 +2248,23 @@ public extension Api {
                     _data.hidden!.serialize(buffer, true)
                 }
                 break
+            case .messageActionWalletTonConnectRequest(let _data):
+                if boxed {
+                    buffer.appendInt32(1773716671)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.sessionId, buffer: buffer, boxed: false)
+                serializeInt32(_data.expires, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.topic!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeString(_data.traceId!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 4) != 0 {
+                    serializeString(_data.dappName!, buffer: buffer, boxed: false)
+                }
+                break
             case .messageActionWebViewDataSent(let _data):
                 if boxed {
                     buffer.appendInt32(-1262252875)
@@ -2223,6 +2311,8 @@ public extension Api {
                 return ("messageActionChatJoinedByLink", [("inviterId", ConstructorParameterDescription(_data.inviterId))])
             case .messageActionChatJoinedByRequest:
                 return ("messageActionChatJoinedByRequest", [])
+            case .messageActionChatJoinedViaCommunity(let _data):
+                return ("messageActionChatJoinedViaCommunity", [("communityId", ConstructorParameterDescription(_data.communityId))])
             case .messageActionChatMigrateTo(let _data):
                 return ("messageActionChatMigrateTo", [("channelId", ConstructorParameterDescription(_data.channelId))])
             case .messageActionConferenceCall(let _data):
@@ -2249,6 +2339,8 @@ public extension Api {
                 return ("messageActionGiveawayLaunch", [("flags", ConstructorParameterDescription(_data.flags)), ("stars", ConstructorParameterDescription(_data.stars))])
             case .messageActionGiveawayResults(let _data):
                 return ("messageActionGiveawayResults", [("flags", ConstructorParameterDescription(_data.flags)), ("winnersCount", ConstructorParameterDescription(_data.winnersCount)), ("unclaimedCount", ConstructorParameterDescription(_data.unclaimedCount))])
+            case .messageActionGramTransfer(let _data):
+                return ("messageActionGramTransfer", [("flags", ConstructorParameterDescription(_data.flags)), ("amount", ConstructorParameterDescription(_data.amount)), ("peerAddress", ConstructorParameterDescription(_data.peerAddress)), ("transactionId", ConstructorParameterDescription(_data.transactionId)), ("comment", ConstructorParameterDescription(_data.comment))])
             case .messageActionGroupCall(let _data):
                 return ("messageActionGroupCall", [("flags", ConstructorParameterDescription(_data.flags)), ("call", ConstructorParameterDescription(_data.call)), ("duration", ConstructorParameterDescription(_data.duration))])
             case .messageActionGroupCallScheduled(let _data):
@@ -2308,7 +2400,7 @@ public extension Api {
             case .messageActionStarGiftPurchaseOfferDeclined(let _data):
                 return ("messageActionStarGiftPurchaseOfferDeclined", [("flags", ConstructorParameterDescription(_data.flags)), ("gift", ConstructorParameterDescription(_data.gift)), ("price", ConstructorParameterDescription(_data.price))])
             case .messageActionStarGiftUnique(let _data):
-                return ("messageActionStarGiftUnique", [("flags", ConstructorParameterDescription(_data.flags)), ("gift", ConstructorParameterDescription(_data.gift)), ("canExportAt", ConstructorParameterDescription(_data.canExportAt)), ("transferStars", ConstructorParameterDescription(_data.transferStars)), ("fromId", ConstructorParameterDescription(_data.fromId)), ("peer", ConstructorParameterDescription(_data.peer)), ("savedId", ConstructorParameterDescription(_data.savedId)), ("resaleAmount", ConstructorParameterDescription(_data.resaleAmount)), ("canTransferAt", ConstructorParameterDescription(_data.canTransferAt)), ("canResellAt", ConstructorParameterDescription(_data.canResellAt)), ("dropOriginalDetailsStars", ConstructorParameterDescription(_data.dropOriginalDetailsStars)), ("canCraftAt", ConstructorParameterDescription(_data.canCraftAt))])
+                return ("messageActionStarGiftUnique", [("flags", ConstructorParameterDescription(_data.flags)), ("gift", ConstructorParameterDescription(_data.gift)), ("canExportAt", ConstructorParameterDescription(_data.canExportAt)), ("transferStars", ConstructorParameterDescription(_data.transferStars)), ("fromId", ConstructorParameterDescription(_data.fromId)), ("peer", ConstructorParameterDescription(_data.peer)), ("savedId", ConstructorParameterDescription(_data.savedId)), ("resaleAmount", ConstructorParameterDescription(_data.resaleAmount)), ("canTransferAt", ConstructorParameterDescription(_data.canTransferAt)), ("canResellAt", ConstructorParameterDescription(_data.canResellAt)), ("dropOriginalDetailsStars", ConstructorParameterDescription(_data.dropOriginalDetailsStars)), ("canCraftAt", ConstructorParameterDescription(_data.canCraftAt)), ("message", ConstructorParameterDescription(_data.message))])
             case .messageActionSuggestBirthday(let _data):
                 return ("messageActionSuggestBirthday", [("birthday", ConstructorParameterDescription(_data.birthday))])
             case .messageActionSuggestProfilePhoto(let _data):
@@ -2327,6 +2419,8 @@ public extension Api {
                 return ("messageActionTopicCreate", [("flags", ConstructorParameterDescription(_data.flags)), ("title", ConstructorParameterDescription(_data.title)), ("iconColor", ConstructorParameterDescription(_data.iconColor)), ("iconEmojiId", ConstructorParameterDescription(_data.iconEmojiId))])
             case .messageActionTopicEdit(let _data):
                 return ("messageActionTopicEdit", [("flags", ConstructorParameterDescription(_data.flags)), ("title", ConstructorParameterDescription(_data.title)), ("iconEmojiId", ConstructorParameterDescription(_data.iconEmojiId)), ("closed", ConstructorParameterDescription(_data.closed)), ("hidden", ConstructorParameterDescription(_data.hidden))])
+            case .messageActionWalletTonConnectRequest(let _data):
+                return ("messageActionWalletTonConnectRequest", [("flags", ConstructorParameterDescription(_data.flags)), ("sessionId", ConstructorParameterDescription(_data.sessionId)), ("expires", ConstructorParameterDescription(_data.expires)), ("topic", ConstructorParameterDescription(_data.topic)), ("traceId", ConstructorParameterDescription(_data.traceId)), ("dappName", ConstructorParameterDescription(_data.dappName))])
             case .messageActionWebViewDataSent(let _data):
                 return ("messageActionWebViewDataSent", [("text", ConstructorParameterDescription(_data.text))])
             case .messageActionWebViewDataSentMe(let _data):
@@ -2500,6 +2594,17 @@ public extension Api {
         }
         public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionChatJoinedByRequest
+        }
+        public static func parse_messageActionChatJoinedViaCommunity(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionChatJoinedViaCommunity(Cons_messageActionChatJoinedViaCommunity(communityId: _1!))
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionChatMigrateTo(_ reader: BufferReader) -> MessageAction? {
             var _1: Int64?
@@ -2769,6 +2874,31 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionGiveawayResults(Cons_messageActionGiveawayResults(flags: _1!, winnersCount: _2!, unclaimedCount: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionGramTransfer(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _5 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageAction.messageActionGramTransfer(Cons_messageActionGramTransfer(flags: _1!, amount: _2!, peerAddress: _3!, transactionId: _4!, comment: _5))
             }
             else {
                 return nil
@@ -3393,6 +3523,12 @@ public extension Api {
             if Int(_1 ?? 0) & Int(1 << 15) != 0 {
                 _12 = reader.readInt32()
             }
+            var _13: Api.TextWithEntities?
+            if Int(_1 ?? 0) & Int(1 << 18) != 0 {
+                if let signature = reader.readInt32() {
+                    _13 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1 ?? 0) & Int(1 << 3) == 0) || _3 != nil
@@ -3405,8 +3541,9 @@ public extension Api {
             let _c10 = (Int(_1 ?? 0) & Int(1 << 10) == 0) || _10 != nil
             let _c11 = (Int(_1 ?? 0) & Int(1 << 12) == 0) || _11 != nil
             let _c12 = (Int(_1 ?? 0) & Int(1 << 15) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.MessageAction.messageActionStarGiftUnique(Cons_messageActionStarGiftUnique(flags: _1!, gift: _2!, canExportAt: _3, transferStars: _4, fromId: _5, peer: _6, savedId: _7, resaleAmount: _8, canTransferAt: _9, canResellAt: _10, dropOriginalDetailsStars: _11, canCraftAt: _12))
+            let _c13 = (Int(_1 ?? 0) & Int(1 << 18) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.MessageAction.messageActionStarGiftUnique(Cons_messageActionStarGiftUnique(flags: _1!, gift: _2!, canExportAt: _3, transferStars: _4, fromId: _5, peer: _6, savedId: _7, resaleAmount: _8, canTransferAt: _9, canResellAt: _10, dropOriginalDetailsStars: _11, canCraftAt: _12, message: _13))
             }
             else {
                 return nil
@@ -3573,6 +3710,38 @@ public extension Api {
             let _c5 = (Int(_1 ?? 0) & Int(1 << 3) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.MessageAction.messageActionTopicEdit(Cons_messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3, closed: _4, hidden: _5))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionWalletTonConnectRequest(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _4 = parseString(reader)
+            }
+            var _5: String?
+            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
+                _5 = parseString(reader)
+            }
+            var _6: String?
+            if Int(_1 ?? 0) & Int(1 << 4) != 0 {
+                _6 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = (Int(_1 ?? 0) & Int(1 << 4) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MessageAction.messageActionWalletTonConnectRequest(Cons_messageActionWalletTonConnectRequest(flags: _1!, sessionId: _2!, expires: _3!, topic: _4, traceId: _5, dappName: _6))
             }
             else {
                 return nil

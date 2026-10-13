@@ -25,6 +25,7 @@ import ItemListUI
 import StarsWithdrawalScreen
 import PremiumDiamondComponent
 import StatisticsUI
+import EdgeEffect
 
 private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
@@ -99,6 +100,7 @@ final class StarsTransactionsScreenComponent: Component {
     
     class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollViewImpl
+        private let topEdgeEffectView: EdgeEffectView
         
         private var currentSelectedPanelId: AnyHashable?
                 
@@ -124,14 +126,12 @@ final class StarsTransactionsScreenComponent: Component {
                                 
         private var component: StarsTransactionsScreenComponent?
         private weak var state: EmptyComponentState?
-        private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
+        private var navigationMetrics: (navigationHeight: CGFloat, titleCenterY: CGFloat)?
         private var controller: (() -> ViewController?)?
         
         private var enableVelocityTracking: Bool = false
         private var previousVelocityM1: CGFloat = 0.0
         private var previousVelocity: CGFloat = 0.0
-        
-        private var listIsExpanded = false
         
         private var ignoreScrolling: Bool = false
         
@@ -157,6 +157,7 @@ final class StarsTransactionsScreenComponent: Component {
         override init(frame: CGRect) {
             self.scrollContainerView = UIView()
             self.scrollView = ScrollViewImpl()
+            self.topEdgeEffectView = EdgeEffectView()
                                     
             super.init(frame: frame)
             
@@ -178,6 +179,10 @@ final class StarsTransactionsScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContainerView)
+
+            self.topEdgeEffectView.alpha = 0.0
+            self.topEdgeEffectView.isUserInteractionEnabled = false
+            self.addSubview(self.topEdgeEffectView)
         }
         
         required init?(coder: NSCoder) {
@@ -231,15 +236,8 @@ final class StarsTransactionsScreenComponent: Component {
         }
         
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-            guard let navigationMetrics = self.navigationMetrics else {
-                return
-            }
-            
-            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
-                let paneAreaExpansionFinalPoint: CGFloat = panelContainerView.frame.minY - navigationMetrics.navigationHeight
-                if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
-                    panelContainerView.transferVelocity(self.previousVelocityM1)
-                }
+            if !"".isEmpty, self.isLockedAtPanels(scrollBounds: scrollView.bounds), let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                panelContainerView.transferVelocity(self.previousVelocityM1)
             }
         }
         
@@ -263,18 +261,30 @@ final class StarsTransactionsScreenComponent: Component {
                 self.scrollView.setContentOffset(.zero, animated: true)
             }
         }
+
+        private func isLockedAtPanels(scrollBounds: CGRect) -> Bool {
+            guard let panelContainerView = self.panelContainer.view, panelContainerView.superview != nil, let navigationMetrics = self.navigationMetrics else {
+                return false
+            }
+            let pinnedOffset = max(0.0, panelContainerView.frame.minY - navigationMetrics.navigationHeight)
+            return abs(scrollBounds.minY - pinnedOffset) <= 1.0
+        }
                 
         private func updateScrolling(transition: ComponentTransition) {
             let scrollBounds = self.scrollView.bounds
+
+            let edgeEffectAlpha = max(0.0, min(1.0, scrollBounds.minY / 20.0))
+            transition.setAlpha(view: self.topEdgeEffectView, alpha: edgeEffectAlpha)
             
-            let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
+            let isLockedAtPanels = self.isLockedAtPanels(scrollBounds: scrollBounds)
+            var topContentAlpha: CGFloat = 1.0
             
             if let navigationMetrics = self.navigationMetrics {
                 let topInset: CGFloat = navigationMetrics.navigationHeight - 56.0
                 
                 let titleOffset: CGFloat
                 let titleScale: CGFloat
-                let titleOffsetDelta = (topInset + 160.0) - (navigationMetrics.statusBarHeight + (navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0)
+                let titleOffsetDelta = (topInset + 160.0) - navigationMetrics.titleCenterY
                 
                 var topContentOffset = self.scrollView.contentOffset.y
                 
@@ -285,14 +295,8 @@ final class StarsTransactionsScreenComponent: Component {
                 
                 let headerTransition: ComponentTransition = .immediate
                 
-                if let starView = self.starView.view {
-                    let starPosition = CGPoint(x: self.scrollView.frame.width / 2.0, y: topInset + starView.bounds.height / 2.0 - 30.0 - titleOffset * titleScale)
-                    headerTransition.setPosition(view: starView, position: starPosition)
-                    headerTransition.setScale(view: starView, scale: titleScale)
-                }
-                
                 if let titleView = self.titleView.view {
-                    let titlePosition = CGPoint(x: scrollBounds.width / 2.0, y: max(topInset + 160.0 - titleOffset, navigationMetrics.statusBarHeight + (navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0))
+                    let titlePosition = CGPoint(x: scrollBounds.width / 2.0, y: max(topInset + 160.0 - titleOffset, navigationMetrics.titleCenterY))
                     
                     headerTransition.setPosition(view: titleView, position: titlePosition)
                     headerTransition.setScale(view: titleView, scale: titleScale)
@@ -300,7 +304,11 @@ final class StarsTransactionsScreenComponent: Component {
                 
                 let expansionDistance: CGFloat = 32.0
                 var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+                expansionDistanceFactor = isLockedAtPanels ? 0.0 : max(0.0, min(1.0, expansionDistanceFactor))
+
+                if self.panelContainer.view?.superview != nil {
+                    topContentAlpha = expansionDistanceFactor
+                }
                 
                 if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
                     panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
@@ -316,13 +324,11 @@ final class StarsTransactionsScreenComponent: Component {
                 if let view = self.topBalanceIconView.view {
                     view.alpha = topBalanceAlpha
                 }
-                
-                let listIsExpanded = expansionDistanceFactor == 0.0
-                if listIsExpanded != self.listIsExpanded {
-                    self.listIsExpanded = listIsExpanded
-                    if !self.isUpdating {
-                        self.state?.updated(transition: .init(animation: .curve(duration: 0.25, curve: .slide)))
-                    }
+            }
+
+            for view in [self.descriptionView.view, self.proceedsView.view, self.balanceView.view, self.earnStarsSection.view, self.subscriptionsView.view] {
+                if let view {
+                    transition.setAlpha(view: view, alpha: topContentAlpha)
                 }
             }
             
@@ -400,18 +406,33 @@ final class StarsTransactionsScreenComponent: Component {
                 }
             }
             
-            var wasLockedAtPanels = false
-            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
-                if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
-                    wasLockedAtPanels = true
-                }
-            }
+            let wasLockedAtPanels = self.isLockedAtPanels(scrollBounds: self.scrollView.bounds)
             
             self.controller = environment.controller
             
-            self.navigationMetrics = (environment.navigationHeight, environment.statusBarHeight)
+            let navigationTitleCenterY: CGFloat
+            if environment.metrics.widthClass == .regular {
+                navigationTitleCenterY = environment.navigationHeight - 60.0 / 2.0 + 2.0
+            } else {
+                navigationTitleCenterY = environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0
+            }
+            self.navigationMetrics = (environment.navigationHeight, navigationTitleCenterY)
             
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
+
+            let topEdgeEffectFrame = CGRect(
+                origin: CGPoint(x: 0.0, y: -20.0),
+                size: CGSize(width: availableSize.width, height: environment.navigationHeight + 44.0)
+            )
+            transition.setFrame(view: self.topEdgeEffectView, frame: topEdgeEffectFrame)
+            self.topEdgeEffectView.update(
+                content: environment.theme.list.blocksBackgroundColor,
+                blur: true,
+                rect: CGRect(origin: .zero, size: topEdgeEffectFrame.size),
+                edge: .top,
+                edgeSize: 64.0,
+                transition: transition
+            )
             
             var contentHeight: CGFloat = 0.0
                         
@@ -493,18 +514,15 @@ final class StarsTransactionsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)
             )
-            let starFrame = CGRect(origin: .zero, size: starSize)
+            let starFrame = CGRect(
+                origin: CGPoint(x: (availableSize.width - starSize.width) / 2.0, y: environment.navigationHeight - 56.0 - 30.0),
+                size: starSize
+            )
             if let starView = self.starView.view {
                 if starView.superview == nil {
-                    if let navigationBar = environment.controller()?.navigationBar {
-                        if let titleView = self.titleView.view, titleView.superview != nil {
-                            navigationBar.view.insertSubview(starView, belowSubview: titleView)
-                        } else {
-                            navigationBar.view.insertSubview(starView, aboveSubview: navigationBar.backgroundView)
-                        }
-                    }
+                    self.scrollView.addSubview(starView)
                 }
-                starTransition.setBounds(view: starView, bounds: starFrame)
+                starTransition.setFrame(view: starView, frame: starFrame)
             }
             
             let titleString: String
@@ -575,16 +593,15 @@ final class StarsTransactionsScreenComponent: Component {
             let topBalanceIconSize = self.topBalanceIconView.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: component.starsContext.ton ? "Ads/TonBig" : "Premium/Stars/StarSmall",
-                    tintColor: component.starsContext.ton ? environment.theme.list.itemAccentColor : nil,
+                    name: component.starsContext.ton ? "Ads/GramBig" : "Premium/Stars/StarSmall",
+                    tintColor:  nil,
                     maxSize: component.starsContext.ton ? CGSize(width: 12.0, height: 12.0) : nil
                 )),
                 environment: {},
                 containerSize: availableSize
             )
             
-            let navigationHeight = environment.navigationHeight - environment.statusBarHeight
-            let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - topBalanceTitleSize.height - topBalanceValueSize.height) / 2.0
+            let topBalanceOriginY = navigationTitleCenterY - (topBalanceTitleSize.height + topBalanceValueSize.height) / 2.0
             let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right, y: topBalanceOriginY), size: topBalanceTitleSize)
             if let topBalanceTitleView = self.topBalanceTitleView.view {
                 if topBalanceTitleView.superview == nil {
@@ -661,6 +678,7 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += 29.0
             
             let withdrawAvailable = (self.revenueState?.balances.overallRevenue.amount.value ?? 0) > 0
+            let tonWithdrawAvailable = (self.revenueState?.balances.availableBalance.amount ?? StarsAmount.zero) > StarsAmount.zero
              
             if component.starsContext.ton {
                 let proceedsSize = self.proceedsView.update(
@@ -758,7 +776,7 @@ final class StarsTransactionsScreenComponent: Component {
                             currency: component.starsContext.ton ? .ton : .stars,
                             rate: nil,
                             actionTitle: component.starsContext.ton ? environment.strings.Ton_WithdrawViaFragment : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),
-                            actionAvailable: (!premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled),
+                            actionAvailable: (!premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled) && (!component.starsContext.ton || tonWithdrawAvailable),
                             actionIsEnabled: true,
                             actionIcon: component.starsContext.ton ? nil : PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
                             action: { [weak self] in
@@ -814,6 +832,7 @@ final class StarsTransactionsScreenComponent: Component {
             }
             contentHeight += balanceSize.height
             contentHeight += 34.0
+            var lastSectionMaxY = balanceFrame.maxY
             
             var canJoinRefProgram = false
             if !component.starsContext.ton, let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
@@ -865,6 +884,7 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 contentHeight += earnStarsSectionSize.height
                 contentHeight += 44.0
+                lastSectionMaxY = earnStarsSectionFrame.maxY
             }
             
             let fontBaseDisplaySize = 17.0
@@ -1048,6 +1068,7 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 contentHeight += subscriptionsSize.height
                 contentHeight += 44.0
+                lastSectionMaxY = subscriptionsFrame.maxY
             }
             
             let initialTransactions = self.starsState?.transactions ?? []
@@ -1123,8 +1144,9 @@ final class StarsTransactionsScreenComponent: Component {
             }
             
             if !panelItems.isEmpty {
-                let panelContainerInset: CGFloat = self.listIsExpanded ? 0.0 : 16.0
-                let panelContainerCornerRadius: CGFloat = self.listIsExpanded ? 0.0 : 26.0
+                contentHeight = lastSectionMaxY + 22.0
+                let panelContainerInset: CGFloat = 16.0
+                let panelContainerCornerRadius: CGFloat = 26.0
                 
                 let panelContainerSize = self.panelContainer.update(
                     transition: panelTransition,
@@ -1251,7 +1273,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             gift: {
                 giftImpl?()
             }
-        ), navigationBarAppearance: .default)
+        ), navigationBarAppearance: .transparent)
         
         self.navigationPresentation = .modalInLargeLayout
         
@@ -1467,12 +1489,12 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                                 navigationController.setViewControllers(controllers, animated: true)
                             }
                             
-                            Queue.mainQueue().after(2.0) {
+                            Queue.mainQueue().after(2.0) { [weak self] in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let resultController = UndoOverlayController(
                                     presentationData: presentationData,
                                     content: .universal(
-                                        animation: "StarsSend",
+                                        animation: "star_reaction_appear",
                                         scale: 0.066,
                                         colors: [:],
                                         title: nil,
@@ -1482,7 +1504,11 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                                     ),
                                     elevatedLayout: false,
                                     action: { [weak self] action in
-                                        if case .undo = action, let navigationController = self?.navigationController as? NavigationController {
+                                        guard let self else {
+                                            return false
+                                        }
+
+                                        if case .undo = action, let navigationController = self.navigationController as? NavigationController {
                                             let _ = (context.engine.data.get(
                                                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                                             )
@@ -1495,7 +1521,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                                         }
                                         return true
                                     })
-                                self.present(resultController, in: .window(.root))
+                                self?.present(resultController, in: .window(.root))
                             }
                         }
                     )
@@ -1528,5 +1554,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     
     public func update() {
         self.subscriptionsContext?.loadMore()
+    }
+
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
     }
 }

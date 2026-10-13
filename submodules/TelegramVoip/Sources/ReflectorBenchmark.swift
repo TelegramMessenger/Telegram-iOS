@@ -2,7 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Network
 
-@available(macOS 10.14, *)
+@available(macOS 14.0, *)
 public final class ReflectorBenchmark {
     public struct Results {
         public let bandwidthBytesPerSecond: Int
@@ -15,7 +15,7 @@ public final class ReflectorBenchmark {
             self.averageDelay = averageDelay
         }
     }
-    @available(macOS 10.14, *)
+    @available(macOS 14.0, *)
     private final class Impl {
         let queue: Queue
         let address: String

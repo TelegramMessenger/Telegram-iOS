@@ -46,35 +46,29 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
         self.toggleReaction = toggleReaction
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+        Queue.mainQueue().async {
             let node = ReactionChatPreviewItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in apply(.None) })
-                })
-            }
+            completion(node, {
+                return (nil, { _ in apply(.None) })
+            })
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ReactionChatPreviewItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
-                async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                    Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply(animation)
-                        })
-                    }
-                }
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
+                completion(layout, { _ in
+                    apply(animation)
+                })
             }
         }
     }
@@ -289,7 +283,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         let previousItem = self.item
         var currentBackgroundNode = self.backgroundNode
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
                 currentBackgroundNode?.update(wallpaper: item.wallpaper, animated: false)
@@ -320,25 +314,25 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                 attributes.append(ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [MessageReaction(value: reaction, count: 1, chosenOrder: 0)], recentPeers: recentPeers, topPeers: []))
             }
             
-            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [EngineRawMessage(stableId: 1, stableVersion: 0, id: EngineMessage.Id(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, accountPeer: item.accountPeer, isCentered: true, isPreview: item.reaction == nil, isStandalone: false, rank: nil, rankRole: nil)
+            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [EngineRawMessage(stableId: 1, stableVersion: 0, id: EngineMessage.Id(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, accountPeer: item.accountPeer, isCentered: true, isPreview: item.reaction == nil, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false)
             
             var node: ListViewItemNode?
             if let current = currentNode {
                 node = current
-                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
+                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, neighbors: .none, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     current.contentSize = layout.contentSize
                     current.insets = layout.insets
                     current.frame = nodeFrame
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
             } else {
-                messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { messageNode, apply in
+                messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: .none, completion: { messageNode, apply in
                     node = messageNode
                     
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 node?.isUserInteractionEnabled = false
             }

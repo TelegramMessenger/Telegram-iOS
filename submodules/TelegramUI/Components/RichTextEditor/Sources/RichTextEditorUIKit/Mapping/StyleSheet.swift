@@ -8,27 +8,20 @@ import RichTextEditorCore
 public struct StyleSheet {
     public init() {}
     public static let `default` = StyleSheet()
-    /// A style sheet for content inside table cells: the body base size is reduced from the
-    /// document's 17pt to 15pt (quotes are already a fixed 15pt; headings and captions keep their
-    /// fixed sizes), so a table reads denser than surrounding body text. Selected per-cell via
+    /// A style sheet for content inside table cells: body content renders at the metrics' `table`
+    /// size (15pt) instead of the document's body size, so a table reads denser than surrounding
+    /// text. Headings and captions keep their own sizes. Selected per-cell via
     /// `AttributedStringMapper.tableCellVariant()`.
-    public static let tableCells: StyleSheet = { var s = StyleSheet(); s.bodyBaseSize = 15; return s }()
+    public static let tableCells: StyleSheet = {
+        var s = StyleSheet()
+        s.metrics.body = s.metrics.table
+        return s
+    }()
 
-    /// Base point size for body paragraphs — 17pt in the document body, 15pt inside table
-    /// cells (see `tableCells`). Quotes (fixed 15pt), headings, and captions are independent of this.
-    public var bodyBaseSize: CGFloat = 17
-    /// Render-only line-height multiple for body & caption paragraphs. Default 1.10 (the reference
-    /// document look); a compact host (the chat composer) sets 1.0 so text reads tight like a plain text
-    /// field. An explicit per-paragraph `lineHeightMultiple` in the model still overrides this. Host-set
-    /// via `RichTextEditorView.textLayoutMetrics`.
-    public var bodyLineHeightMultiple: CGFloat = 1.10
-    /// Paragraph spacing above each body & caption paragraph, in points. Default 0. Host-set via
-    /// `RichTextEditorView.textLayoutMetrics`.
-    public var bodyParagraphSpacingBefore: CGFloat = 0
-    /// Paragraph spacing below each body & caption paragraph, in points. Default 8 (the document
-    /// inter-paragraph gap); a compact host sets 0 so multi-line composer text reads tight. Host-set via
-    /// `RichTextEditorView.textLayoutMetrics`.
-    public var bodyParagraphSpacingAfter: CGFloat = 8
+    /// The render metrics this sheet projects — fonts, per-style line-spacing factors, and the
+    /// block-rhythm scalars. Defaults to the chat-message look. A host overrides it with the exact
+    /// numbers its counterpart renderer will use, via `RichTextEditorView.renderMetrics`.
+    public var metrics: RichTextRenderMetrics = .default
     /// Leading indent (points) of a quote paragraph's text past its fill's left edge — the gap that
     /// holds the quote bar. Default 16 (the reference design). Per-host via `QuoteStyle.leadingInset`.
     public var quoteIndent: CGFloat = 16
@@ -48,6 +41,21 @@ public struct StyleSheet {
     /// Interior BOTTOM padding (points) of a top-level quote run — the gap between the last text line and
     /// the fill's bottom edge. `nil` (default) keeps the current behavior. Per-host via `QuoteStyle.bottomInset`.
     public var quoteBottomInset: CGFloat?
+
+    /// Visible gap from a code band's top/bottom edge to its glyphs. Defaults to the shared render
+    /// metrics; `CodeStyle.verticalInset` overrides it per host. A code block no longer borrows the
+    /// quote's insets — its side padding is the paragraph inset by construction, so these two are the
+    /// only geometry it still owns.
+    public var codeVerticalInset: CGFloat = RichTextCodeMetrics.default.verticalInset
+    /// Gap between a code block's bold language line and its first code line. Defaults to the shared
+    /// render metrics; `CodeStyle.languageSpacing` overrides it per host.
+    public var codeLanguageSpacing: CGFloat = RichTextCodeMetrics.default.languageSpacing
+    /// Extra inset of code text inward from its band's edges. 0 = the text sits at the paragraph
+    /// inset (the renderer's rule). Per-host via `CodeStyle.horizontalInset`.
+    public var codeHorizontalInset: CGFloat = 0
+    /// Corner radius of a code band. 0 = square (the renderer's look). Per-host via
+    /// `CodeStyle.cornerRadius`.
+    public var codeCornerRadius: CGFloat = 0
 
     /// Points of indentation per list nesting level (where each level's marker hangs).
     public static let listIndentStep: CGFloat = 24
@@ -70,47 +78,16 @@ public struct StyleSheet {
     /// bottom, and right (the left edge stays anchored at the marker gutter). Tunable.
     public static let checklistMarkerScale: CGFloat = 1.4
 
-    private func baseSize(_ style: ParagraphStyleName) -> CGFloat {
-        switch style {
-        case .heading1: return 24
-        case .heading2: return 21
-        case .heading3: return 19
-        case .heading4: return 18
-        case .heading5: return 17
-        case .heading6: return 16
-        case .body: return bodyBaseSize
-        case .caption: return 15
-        case .pullQuote: return 15   // pull quotes read at 15pt (like block quotes), not the ambient body size
-        }
-    }
-
-    /// Render-only per-style spacing/line-height (model values are 0/1.0). Validated against the reference design.
-    private struct StyleMetrics { var spacingBefore: CGFloat; var spacingAfter: CGFloat; var lineHeightMultiple: CGFloat }
-    private func metrics(for style: ParagraphStyleName) -> StyleMetrics {
-        switch style {
-        case .heading1: return StyleMetrics(spacingBefore: 18, spacingAfter: 6, lineHeightMultiple: 1.05)
-        case .heading2: return StyleMetrics(spacingBefore: 16, spacingAfter: 6, lineHeightMultiple: 1.05)
-        case .heading3: return StyleMetrics(spacingBefore: 14, spacingAfter: 6, lineHeightMultiple: 1.05)
-        case .heading4: return StyleMetrics(spacingBefore: bodyParagraphSpacingBefore, spacingAfter: bodyParagraphSpacingAfter, lineHeightMultiple: bodyLineHeightMultiple)
-        case .heading5: return StyleMetrics(spacingBefore: bodyParagraphSpacingBefore, spacingAfter: bodyParagraphSpacingAfter, lineHeightMultiple: bodyLineHeightMultiple)
-        case .heading6: return StyleMetrics(spacingBefore: bodyParagraphSpacingBefore, spacingAfter: bodyParagraphSpacingAfter, lineHeightMultiple: bodyLineHeightMultiple)
-        case .body:     return StyleMetrics(spacingBefore: bodyParagraphSpacingBefore, spacingAfter: bodyParagraphSpacingAfter, lineHeightMultiple: bodyLineHeightMultiple)
-        case .caption:  return StyleMetrics(spacingBefore: bodyParagraphSpacingBefore, spacingAfter: bodyParagraphSpacingAfter, lineHeightMultiple: bodyLineHeightMultiple)
-        // Pull quote: tight, no inter-paragraph spacing (box insets provide padding); runs read close together.
-        case .pullQuote: return StyleMetrics(spacingBefore: 0, spacingAfter: 0, lineHeightMultiple: 1.10)
-        }
-    }
-
     public func font(for style: ParagraphStyleName, attributes: CharacterAttributes) -> UIFont {
-        let size = attributes.fontSize.map { CGFloat($0) } ?? baseSize(style)
-        // Headings are NOT bold by default — they read as regular-weight serif at a larger size.
-        // Bold is purely user emphasis (`CharacterAttributes.bold`), so it stays an independent toggle
-        // that round-trips uniformly in every style (no style-injected weight to leak into the model).
-        let bold = attributes.bold
-        // Pull quotes force italic render — the italic is ambient (render-only), stripped on read-back.
+        var spec = self.metrics.spec(for: style)
+        // An explicit per-run size overrides the style's size, keeping the style's family and weight.
+        if let size = attributes.fontSize { spec.size = CGFloat(size) }
+        // Headings are NOT bold by default — the weight comes from the spec. Bold stays pure user
+        // emphasis (`CharacterAttributes.bold`), so it round-trips uniformly in every style and no
+        // style-injected weight can leak into the model.
+        // Pull quotes force italic render — ambient (render-only), stripped on read-back.
         let italic = attributes.italic || style == .pullQuote
-        let serif = style == .heading1 || style == .heading2 || style == .heading3 || style == .heading4 || style == .heading5 || style == .heading6
-        return FontResolver.font(family: attributes.fontFamily, size: size, bold: bold, italic: italic, serif: serif)
+        return FontResolver.font(spec: spec, bold: attributes.bold, italic: italic, family: attributes.fontFamily)
     }
 
     public func paragraphStyle(for style: ParagraphStyleName, attributes: ParagraphAttributes,
@@ -132,10 +109,19 @@ public struct StyleSheet {
         ps.paragraphSpacingBefore = CGFloat(attributes.paragraphSpacingBefore)
         ps.paragraphSpacing = CGFloat(attributes.paragraphSpacingAfter)
         ps.lineHeightMultiple = CGFloat(attributes.lineHeightMultiple)
-        let m = metrics(for: style)
-        ps.paragraphSpacingBefore += m.spacingBefore
-        ps.paragraphSpacing += m.spacingAfter
-        if ps.lineHeightMultiple == 1 { ps.lineHeightMultiple = m.lineHeightMultiple }
+        // Pin the line box to V2's pitch. A `lineHeightMultiple` cannot express this: at the Instant
+        // Page reader's heading factor (0.685) V2 wants a pitch TIGHTER than the font's natural line
+        // height, and `NSParagraphStyle.lineSpacing` cannot go negative. `minimumLineHeight ==
+        // maximumLineHeight` expresses both directions with one mechanism. An explicit model-level
+        // multiple is user content and takes over instead — the two must not combine, or the box is
+        // scaled twice. See `LineHeightCenteringTests`.
+        if ps.lineHeightMultiple == 1 {
+            ps.lineHeightMultiple = 0
+            let font = self.font(for: style, attributes: .plain)
+            let pitch = RichTextRenderMetrics.linePitch(font, factor: self.metrics.spec(for: style).lineSpacingFactor)
+            ps.minimumLineHeight = pitch
+            ps.maximumLineHeight = pitch
+        }
         var indent: CGFloat = 0
         if let list = list {
             // Marker sits at the level's indent; text hangs `listMarkerSpacing` past it. Ordered

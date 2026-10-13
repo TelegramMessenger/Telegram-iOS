@@ -237,7 +237,11 @@ private final class SheetContent: CombinedComponent {
                                 return false
                             }
                             |> take(1)
-                            |> deliverOnMainQueue).start(next: { _ in
+                            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+
                                 Queue.mainQueue().after(0.1, { [weak self] in
                                     if let self, let balance = self.balance, balance < StarsAmount(value: self.invoice.totalAmount, nanos: 0) {
                                         self.inProgress = false
@@ -591,7 +595,7 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: true,
                     displaysProgress: state.inProgress,
                     action: { [weak state, weak controller] in
-                        state?.buy(requestTopUp: { [weak controller] completion in
+                        state?.buy(requestTopUp: { [weak controller, starsContext] completion in
                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: accountContext.currentAppConfiguration.with { $0 })
                             if !premiumConfiguration.isPremiumDisabled {
                                 let purpose: StarsPurchasePurpose
@@ -645,7 +649,7 @@ private final class SheetContent: CombinedComponent {
                                             let resultController = UndoOverlayController(
                                                 presentationData: presentationData,
                                                 content: .universal(
-                                                    animation: "StarsSend",
+                                                    animation: "star_reaction_appear",
                                                     scale: 0.066,
                                                     colors: [:],
                                                     title: title,

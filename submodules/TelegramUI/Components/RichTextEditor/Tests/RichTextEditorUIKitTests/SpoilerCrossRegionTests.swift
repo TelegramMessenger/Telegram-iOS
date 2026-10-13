@@ -51,11 +51,11 @@ final class SpoilerCrossRegionTests: XCTestCase {
         let v = tableCanvas()
         // Spoiler the body cell (row 1, col 0 = "Alpha"; "cp" is its first paragraph).
         let cellRegion = leaf(v, "cp")
-        v.anchor = cellRegion.globalStart; v.head = cellRegion.globalStart + 5   // "Alpha"
+        v.setSelectionForTesting(anchor: cellRegion.globalStart, head: cellRegion.globalStart + 5)   // "Alpha"
         v.toggleSpoiler()
         XCTAssertTrue(v.documentHasSpoilers)
         // Move the caret OUT of the cell (to document start) so the spoiler hides.
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         v.layoutIfNeeded()
         v.refreshSelectionUI()
 
@@ -71,7 +71,7 @@ final class SpoilerCrossRegionTests: XCTestCase {
         // Park the caret in the table, then structurally select a BODY row (row 1; the char-format row
         // test uses row 1 too — the header row's render-only bold is irrelevant to spoiler, which persists).
         let cellRegion = leaf(v, "cp")
-        v.anchor = cellRegion.globalStart; v.head = cellRegion.globalStart
+        v.setSelectionForTesting(anchor: cellRegion.globalStart, head: cellRegion.globalStart)
         v.selectTableRow(1)
         XCTAssertNotNil(v.tableSelection)
         v.toggleSpoiler()                       // no text selection — drives off the row selection
@@ -85,7 +85,7 @@ final class SpoilerCrossRegionTests: XCTestCase {
         // A TEXT selection spanning two body cells (row 1): anchor in "Alpha", head in "Beta".
         let a = leaf(v, "cp")   // "Alpha"
         let b = leaf(v, "dp")   // "Beta"
-        v.anchor = a.globalStart + 1; v.head = b.globalStart + 3   // "lpha" + "Bet"
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: b.globalStart + 3)   // "lpha" + "Bet"
         v.toggleSpoiler()
         XCTAssertEqual(spoileredText(v, 1, 0), "lpha")
         XCTAssertEqual(spoileredText(v, 1, 1), "Bet")
@@ -118,11 +118,11 @@ final class SpoilerCrossRegionTests: XCTestCase {
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let cap = v.allLeafRegions().first { $0.ref == .caption(BlockID("i")) }!
-        v.anchor = cap.globalStart; v.head = cap.globalStart + 7   // "Caption"
+        v.setSelectionForTesting(anchor: cap.globalStart, head: cap.globalStart + 7)   // "Caption"
         v.toggleSpoiler()
         XCTAssertTrue(v.documentHasSpoilers)
         // Move the caret out of the caption so the spoiler hides.
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         v.layoutIfNeeded()
         v.refreshSelectionUI()
         XCTAssertEqual(v.spoilerDustCountForTesting, 1, "a hidden caption spoiler realizes dust (canvas overlay)")

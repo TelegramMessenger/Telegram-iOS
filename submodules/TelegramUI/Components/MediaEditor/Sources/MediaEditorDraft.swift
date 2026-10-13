@@ -6,6 +6,7 @@ import TelegramCore
 import TelegramUIPreferences
 import PersistentStringHash
 import AccountContext
+import Postbox
 
 public struct MediaEditorResultPrivacy: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
@@ -87,6 +88,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         case locationLatitude
         case locationLongitude
         case expiresOn
+        case collage
     }
     
     public let path: String
@@ -101,8 +103,9 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let timestamp: Int32
     public let location: CLLocationCoordinate2D?
     public let expiresOn: Int32?
+    public let collage: MediaEditorCollageDraft?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, forwardInfo: EngineStoryId?, timestamp: Int32, location: CLLocationCoordinate2D?, expiresOn: Int32?) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, forwardInfo: EngineStoryId?, timestamp: Int32, location: CLLocationCoordinate2D?, expiresOn: Int32?, collage: MediaEditorCollageDraft? = nil) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
@@ -115,6 +118,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         self.timestamp = timestamp
         self.location = location
         self.expiresOn = expiresOn
+        self.collage = collage
     }
     
     public init(from decoder: Decoder) throws {
@@ -158,6 +162,11 @@ public final class MediaEditorDraft: Codable, Equatable {
         }
         
         self.expiresOn = try container.decodeIfPresent(Int32.self, forKey: .expiresOn)
+        if let data = try container.decodeIfPresent(Data.self, forKey: .collage) {
+            self.collage = try JSONDecoder().decode(MediaEditorCollageDraft.self, from: data)
+        } else {
+            self.collage = nil
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -198,6 +207,10 @@ public final class MediaEditorDraft: Codable, Equatable {
             try container.encodeNil(forKey: .locationLongitude)
         }
         try container.encodeIfPresent(self.expiresOn, forKey: .expiresOn)
+        if let collage = self.collage {
+            // Postbox cannot directly encode the geometry, ranges and enums in the manifest.
+            try container.encode(try JSONEncoder().encode(collage), forKey: .collage)
+        }
     }
 }
 
@@ -229,13 +242,50 @@ private struct MediaEditorDraftItemId {
 }
 
 public func addStoryDraft(engine: TelegramEngine, item: MediaEditorDraft) {
+    let _ = storeStoryDraft(engine: engine, item: item).start()
+}
+
+public func storeStoryDraft(engine: TelegramEngine, item: MediaEditorDraft, replacingPath: String? = nil) -> Signal<Never, NoError> {
     let itemId = MediaEditorDraftItemId(item.path.persistentHashValue)
-    let _ = engine.orderedLists.addOrMoveToFirstPosition(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts, id: itemId.rawValue, item: item, removeTailIfCountExceeds: 50).start()
+    return engine.account.postbox.transaction { transaction -> [String] in
+        guard let contents = CodableEntry(item) else {
+            return []
+        }
+        let collectionId = ApplicationSpecificOrderedItemListCollectionId.storyDrafts
+        let previous = transaction.getOrderedListItems(collectionId: collectionId)
+        let remaining = previous.filter { entry in
+            if entry.id == itemId.rawValue {
+                return false
+            }
+            if let replacingPath, entry.contents.get(MediaEditorDraft.self)?.path == replacingPath {
+                return false
+            }
+            return true
+        }
+        let updated = [OrderedItemListEntry(id: itemId.rawValue, contents: contents)] + Array(remaining.prefix(49))
+        transaction.replaceOrderedItemListItems(collectionId: collectionId, items: updated)
+        return previous.filter { entry in !updated.contains(where: { $0.id == entry.id }) }.compactMap { $0.contents.get(MediaEditorDraft.self)?.path }
+    }
+    |> afterNext { paths in
+        for path in paths {
+            deleteStoryDraftFiles(engine: engine, path: path)
+        }
+    }
+    |> ignoreValues
+}
+
+public func deleteStoryDraftFiles(engine: TelegramEngine, path: String) {
+    let components = path.split(separator: "/")
+    if components.count == 3, components[0] == "collages", UUID(uuidString: String(components[1])) != nil {
+        MediaEditorDraftFileLease.delete(path: fullDraftPath(peerId: engine.account.peerId, path: "collages/\(components[1])"))
+    } else {
+        try? FileManager.default.removeItem(atPath: fullDraftPath(peerId: engine.account.peerId, path: path))
+    }
 }
 
 public func removeStoryDraft(engine: TelegramEngine, path: String, delete: Bool) {
     if delete {
-        try? FileManager.default.removeItem(atPath: fullDraftPath(peerId: engine.account.peerId, path: path))
+        deleteStoryDraftFiles(engine: engine, path: path)
     }
     let itemId = MediaEditorDraftItemId(path.persistentHashValue)
     let _ = engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts, id: itemId.rawValue).start()
@@ -279,6 +329,32 @@ public func updateStoryDrafts(engine: TelegramEngine) {
                 if let expiresOn = draft.expiresOn, expiresOn < currentTimestamp {
                     removeStoryDraft(engine: engine, path: draft.path, delete: true)
                 }
+            }
+        }
+    })
+}
+
+public func cleanupStoryDraftPackages(engine: TelegramEngine, retaining sourcePaths: [String]) {
+    let _ = engine.data.get(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts)).start(next: { items in
+        let drafts = items.compactMap { $0.contents.get(MediaEditorDraft.self) }
+        guard drafts.count == items.count else {
+            return
+        }
+        let retained = Set((sourcePaths + drafts.map(\.path)).map { URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent })
+        let directory = fullDraftPath(peerId: engine.account.peerId, path: "collages")
+        Queue.concurrentDefaultQueue().async {
+            guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
+                return
+            }
+            for name in names {
+                guard !retained.contains(name), UUID(uuidString: name) != nil || name.hasPrefix(".pending-") else {
+                    continue
+                }
+                let path = directory + "/" + name
+                guard !MediaEditorDraftFileLease.isInUse(path: path), let attributes = try? FileManager.default.attributesOfItem(atPath: path), let date = attributes[.modificationDate] as? Date, date.timeIntervalSinceNow < -3600.0 else {
+                    continue
+                }
+                MediaEditorDraftFileLease.delete(path: path)
             }
         }
     })

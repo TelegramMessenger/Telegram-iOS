@@ -683,11 +683,15 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         return nil
     }
     
-    public func traceVisibility() -> Bool {
+    /// - Parameter ignoringScreenDimOverlay: pass `true` only when the question is "is this the
+    ///   controller the user is currently on", not "can the user see it right now". The proximity dim
+    ///   overlay blanks the screen while the phone is at the user's ear; a caller that latches
+    ///   one-shot UI must leave this `false` or it will spend that UI invisibly.
+    public func traceVisibility(ignoringScreenDimOverlay: Bool = false) -> Bool {
         if !self.isViewLoaded {
             return false
         }
-        return traceViewVisibility(view: self.view, rect: self.view.bounds)
+        return traceViewVisibility(view: self.view, rect: self.view.bounds, ignoringScreenDimOverlay: ignoringScreenDimOverlay)
     }
     
     open func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
@@ -743,7 +747,19 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     }
 }
 
-func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
+/// A layer carrying this name is the proximity dim overlay: the black surface shown while the device
+/// is held to the user's ear, standing in for the screen being switched off.
+///
+/// Callers that ask "is this controller the one the user is currently on" want to look through it -
+/// raise-to-listen must keep working with the phone at the ear. Callers that ask "can the user
+/// actually see this right now" must not, or a one-shot tooltip gets burned while the screen is
+/// blanked. So the exemption is opt-in per query, never global.
+let screenDimOverlayLayerName = "ScreenDimOverlay"
+
+func traceIsOpaque(layer: CALayer, rect: CGRect, ignoringScreenDimOverlay: Bool = false) -> Bool {
+    if ignoringScreenDimOverlay && layer.name == screenDimOverlayLayerName {
+        return false
+    }
     if layer.bounds.contains(rect) {
         if layer.isHidden {
             return false
@@ -761,7 +777,7 @@ func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
         if let sublayers = layer.sublayers {
             for sublayer in sublayers {
                 let sublayerRect = layer.convert(rect, to: sublayer)
-                if traceIsOpaque(layer: sublayer, rect: sublayerRect) {
+                if traceIsOpaque(layer: sublayer, rect: sublayerRect, ignoringScreenDimOverlay: ignoringScreenDimOverlay) {
                     return true
                 }
             }
@@ -772,7 +788,7 @@ func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
     }
 }
 
-private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
+private func traceViewVisibility(view: UIView, rect: CGRect, ignoringScreenDimOverlay: Bool) -> Bool {
     if view.isHidden {
         return false
     }
@@ -787,12 +803,12 @@ private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
             for i in (index + 1) ..< siblings.count {
                 if siblings[i].frame.contains(viewFrame) {
                     let siblingSubframe = view.layer.convert(viewFrame, to: siblings[i])
-                    if traceIsOpaque(layer: siblings[i], rect: siblingSubframe) {
+                    if traceIsOpaque(layer: siblings[i], rect: siblingSubframe, ignoringScreenDimOverlay: ignoringScreenDimOverlay) {
                         return false
                     }
                 }
             }
-            return traceViewVisibility(view: superview, rect: viewFrame)
+            return traceViewVisibility(view: superview, rect: viewFrame, ignoringScreenDimOverlay: ignoringScreenDimOverlay)
         } else {
             return false
         }

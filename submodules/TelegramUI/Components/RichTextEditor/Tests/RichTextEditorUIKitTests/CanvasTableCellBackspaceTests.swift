@@ -37,12 +37,12 @@ final class CanvasTableCellBackspaceTests: XCTestCase {
     func test_backspace_afterTypingInCell_deletesChar_notAdjacentEmptyParagraph() {
         let v = mk()
         // Caret in cell(0,0); type "X".
-        v.head = tableBox(v).cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: tableBox(v).cellTextStart(row: 0, column: 0)!, head: tableBox(v).cellTextStart(row: 0, column: 0)!)
         v.insertText("X")
         XCTAssertEqual(cell00Text(v), "X", "precondition: X typed into the cell")
         // iOS delivers Backspace as a 1-char range [caret-1, caret], both inside the cell.
         let caret = v.head
-        v.anchor = caret - 1; v.head = caret
+        v.setSelectionForTesting(anchor: caret - 1, head: caret)
         v.deleteBackward()
         v.layoutIfNeeded()
         XCTAssertEqual(cell00Text(v), "", "the typed character is deleted from the cell")

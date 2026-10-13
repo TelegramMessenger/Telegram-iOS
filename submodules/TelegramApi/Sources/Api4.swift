@@ -43,56 +43,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelCategory: TypeConstructorDescription {
-        public class Cons_channelCategory: TypeConstructorDescription {
-            public var id: Int32
-            public var title: String
-            public init(id: Int32, title: String) {
-                self.id = id
-                self.title = title
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("channelCategory", [("id", ConstructorParameterDescription(self.id)), ("title", ConstructorParameterDescription(self.title))])
-            }
-        }
-        case channelCategory(Cons_channelCategory)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .channelCategory(let _data):
-                if boxed {
-                    buffer.appendInt32(206065458)
-                }
-                serializeInt32(_data.id, buffer: buffer, boxed: false)
-                serializeString(_data.title, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .channelCategory(let _data):
-                return ("channelCategory", [("id", ConstructorParameterDescription(_data.id)), ("title", ConstructorParameterDescription(_data.title))])
-            }
-        }
-
-        public static func parse_channelCategory(_ reader: BufferReader) -> ChannelCategory? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelCategory.channelCategory(Cons_channelCategory(id: _1!, title: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
     enum ChannelLocation: TypeConstructorDescription {
         public class Cons_channelLocation: TypeConstructorDescription {
             public var geoPoint: Api.GeoPoint

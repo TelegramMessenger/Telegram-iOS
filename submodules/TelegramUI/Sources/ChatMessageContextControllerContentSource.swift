@@ -249,16 +249,17 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                     isPreview: false,
                     isStandalone: true,
                     rank: nil,
-                    rankRole: nil
+                    rankRole: nil,
+                    isGiftMessageComposerPreview: false
                 )
                 
                 let width = chatNode.historyNode.frame.width
                 let params = ListViewItemLayoutParams(width: width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, availableHeight: chatNode.historyNode.frame.height, isStandalone: false)
                 var node: ListViewItemNode?
                 
-                messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { messageNode, apply in
+                messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: .none, completion: { messageNode, apply in
                     node = messageNode
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 
                 if let messageNode = node as? ChatMessageItemView, let copyContentNode = messageNode.getMessageContextSourceNode(stableId: self.message.stableId) {
@@ -273,8 +274,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                     bubbleWidth = copyContentNode.contentNode.subnodes?.first?.frame.width ?? messageNode.frame.width
                     
                     if isVideo {
-                        messageItem.updateNode(async: { $0() }, node: { return messageNode }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
-                            apply(ListViewItemApply(isOnScreen: true))
+                        messageItem.updateNode(async: { $0() }, node: { return messageNode }, params: params, neighbors: .none, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
+                            apply(ListViewItemApply())
                         })
                     }
                 }

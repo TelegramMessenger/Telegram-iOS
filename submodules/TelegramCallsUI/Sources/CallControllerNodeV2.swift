@@ -65,6 +65,16 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var emojiKey: (data: Data, resolvedKey: [String])?
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     
+    /// The physical orientation of the device, tracked here because `CallController` is
+    /// portrait-locked and the interface never rotates on iPhone. Only the four orientations that
+    /// say which way the screen faces the user are stored; face up, face down and unknown keep the
+    /// previous value, as the interface itself would. `nil` until the device has reported one,
+    /// which on a device lying flat can take until the user picks it up; the layout then assumes
+    /// the orientation the interface reports, which is what a surface that follows the device
+    /// would have said and yields no correction.
+    private var deviceOrientation: UIDeviceOrientation?
+    private var deviceOrientationObserver: NSObjectProtocol?
+    
     private var currentPeer: EnginePeer?
     private var peerAvatarDisposable: Disposable?
     
@@ -105,6 +115,30 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         
         self.view.addSubview(self.containerView)
         self.containerView.addSubview(self.callScreen)
+        
+        // UIKit posts orientation changes only while someone generates them; the camera capturer
+        // does so only while the local camera is on, and the remote video must follow the phone
+        // even with our camera off.
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        self.deviceOrientation = CallControllerNodeV2.trackedDeviceOrientation(UIDevice.current.orientation)
+        self.deviceOrientationObserver = NotificationCenter.default.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            guard let deviceOrientation = CallControllerNodeV2.trackedDeviceOrientation(UIDevice.current.orientation) else {
+                return
+            }
+            if self.deviceOrientation != deviceOrientation {
+                self.deviceOrientation = deviceOrientation
+                if let layout = self.validLayout?.layout, case .tablet = layout.deviceMetrics.type {
+                    // The interface follows the device here and its own layout pass carries the
+                    // new value. Relayouting now would correct the remote video against the
+                    // outgoing interface orientation until that pass arrives.
+                } else {
+                    self.update(transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+            }
+        })
         
         self.callScreen.speakerAction = { [weak self] in
             guard let self else {
@@ -259,6 +293,10 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
     
     deinit {
+        if let deviceOrientationObserver = self.deviceOrientationObserver {
+            NotificationCenter.default.removeObserver(deviceOrientationObserver)
+        }
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
         self.peerAvatarDisposable?.dispose()
         self.isMicrophoneMutedDisposable?.dispose()
         self.audioLevelDisposable?.dispose()
@@ -747,6 +785,15 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
     }
     
+    private static func trackedDeviceOrientation(_ orientation: UIDeviceOrientation) -> UIDeviceOrientation? {
+        switch orientation {
+        case .portrait, .portraitUpsideDown, .landscapeLeft, .landscapeRight:
+            return orientation
+        default:
+            return nil
+        }
+    }
+    
     private func update(transition: ContainedViewLayoutTransition) {
         guard let (layout, navigationBarHeight) = self.validLayout else {
             return
@@ -785,10 +832,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.localVideo = nil
                 callScreenState.remoteVideo = nil
             }
+            let interfaceOrientation = layout.metrics.orientation ?? .portrait
             self.callScreen.update(
                 size: layout.size,
                 insets: layout.insets(options: [.statusBar]),
-                interfaceOrientation: layout.metrics.orientation ?? .portrait,
+                interfaceOrientation: interfaceOrientation,
+                deviceOrientation: self.deviceOrientation ?? deviceOrientationMatching(interfaceOrientation),
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
                 state: callScreenState,
                 transition: ComponentTransition(transition)

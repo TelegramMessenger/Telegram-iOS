@@ -3,12 +3,20 @@ import Postbox
 import TelegramApi
 
 public final class SparseMessageList {
-    private final class Impl {
+    /// One peer's shared media: its newest local messages (the top section) joined with the
+    /// server skeleton. The group a channel was migrated from gets a segment of the same kind:
+    /// `SparseItemGrid` requests holes only once some cell holds a loaded message, so a list of
+    /// placeholders alone (a group's skeleton behind a channel without media of its own) would
+    /// never load.
+    private final class PeerSegment {
+        let peerId: PeerId
         private let queue: Queue
         private let account: Account
-        private let peerId: PeerId
         private let threadId: Int64?
         private let messageTag: MessageTags
+        private let initialMessageIndex: MessageIndex?
+
+        private var stateUpdated: ((SparseMessageList.State) -> Void)?
 
         private struct TopSection: Equatable {
             var messages: [Message]
@@ -29,55 +37,13 @@ public final class SparseMessageList {
             }
         }
 
-        private struct SparseItems: Equatable {
-            enum Item: Equatable {
-                case range(count: Int)
-                case anchor(id: MessageId, timestamp: Int32, message: Message?)
-
-                static func ==(lhs: Item, rhs: Item) -> Bool {
-                    switch lhs {
-                    case let .range(count):
-                        if case .range(count) = rhs {
-                            return true
-                        } else {
-                            return false
-                        }
-                    case let .anchor(lhsId, lhsTimestamp, lhsMessage):
-                        if case let .anchor(rhsId, rhsTimestamp, rhsMessage) = rhs {
-                            if lhsId != rhsId {
-                                return false
-                            }
-                            if lhsTimestamp != rhsTimestamp {
-                                return false
-                            }
-                            if let lhsMessage = lhsMessage, let rhsMessage = rhsMessage {
-                                if lhsMessage.id != rhsMessage.id {
-                                    return false
-                                }
-                                if lhsMessage.stableVersion != rhsMessage.stableVersion {
-                                    return false
-                                }
-                            } else if (lhsMessage != nil) != (rhsMessage != nil) {
-                                return false
-                            }
-                            return true
-                        } else {
-                            return false
-                        }
-                    }
-                }
-            }
-
-            var items: [Item]
-        }
-
         private var topSectionItemRequestCount: Int = 100
         private var topSection: TopSection?
         private var topItemsDisposable = MetaDisposable()
 
         private var deletedMessagesDisposable: Disposable?
 
-        private var sparseItems: SparseItems?
+        private var sparseItems: SparseMessageSkeleton?
         private var sparseItemsDisposable: Disposable?
 
         private struct LoadingHole: Equatable {
@@ -86,12 +52,11 @@ public final class SparseMessageList {
         }
         private let loadHoleDisposable = MetaDisposable()
         private var loadingHole: LoadingHole?
+        private var loadingHoleCompletion: (() -> Void)?
         private var isLoadingInitial: Bool = false
 
         private var loadingPlaceholders: [MessageId: Disposable] = [:]
         private var loadedPlaceholders: [MessageId: Message] = [:]
-
-        let statePromise = Promise<SparseMessageList.State>()
 
         init(queue: Queue, account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags, initialMessageIndex: MessageIndex?) {
             self.queue = queue
@@ -99,6 +64,25 @@ public final class SparseMessageList {
             self.peerId = peerId
             self.threadId = threadId
             self.messageTag = messageTag
+            self.initialMessageIndex = initialMessageIndex
+        }
+
+        deinit {
+            self.topItemsDisposable.dispose()
+            self.sparseItemsDisposable?.dispose()
+            self.loadHoleDisposable.dispose()
+            self.deletedMessagesDisposable?.dispose()
+        }
+
+        /// Starts loading. Kept out of `init`: `deliverOn` runs inline when already on the queue,
+        /// so a state can be reported before the owner has stored this segment.
+        func start(stateUpdated: @escaping (SparseMessageList.State) -> Void) {
+            self.stateUpdated = stateUpdated
+
+            let account = self.account
+            let peerId = self.peerId
+            let messageTag = self.messageTag
+            let initialMessageIndex = self.initialMessageIndex
 
             self.resetTopSection()
 
@@ -107,65 +91,33 @@ public final class SparseMessageList {
                     self.isLoadingInitial = true
                     self.updateState()
                 }
-                
-                self.sparseItemsDisposable = (self.account.postbox.transaction { transaction -> Api.InputPeer? in
+
+                self.sparseItemsDisposable = (account.postbox.transaction { transaction -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }
-                |> mapToSignal { inputPeer -> Signal<SparseItems, NoError> in
+                |> mapToSignal { inputPeer -> Signal<SparseMessageSkeleton, NoError> in
                     guard let inputPeer = inputPeer else {
-                        return .single(SparseItems(items: []))
+                        return .single(SparseMessageSkeleton(items: []))
                     }
                     guard let messageFilter = messageFilterForTagMask(messageTag) else {
-                        return .single(SparseItems(items: []))
+                        return .single(SparseMessageSkeleton(items: []))
                     }
-                    
+
                     return account.network.request(Api.functions.messages.getSearchResultsPositions(flags: 0, peer: inputPeer, savedPeerId: nil, filter: messageFilter, offsetId: 0, limit: 1000))
-                    |> map { result -> SparseItems in
+                    |> map { result -> SparseMessageSkeleton in
                         switch result {
                         case let .searchResultsPositions(searchResultsPositionsData):
-                            let (totalCount, apiPositions) = (searchResultsPositionsData.count, searchResultsPositionsData.positions)
-                            struct Position: Equatable {
-                                var id: Int32
-                                var date: Int32
-                                var offset: Int
-                            }
-                            var positions: [Position] = apiPositions.map { position -> Position in
+                            let positions = searchResultsPositionsData.positions.map { position -> SparseMessagePosition in
                                 switch position {
                                 case let .searchResultPosition(searchResultPositionData):
-                                    let (id, date, offset) = (searchResultPositionData.msgId, searchResultPositionData.date, searchResultPositionData.offset)
-                                    return Position(id: id, date: date, offset: Int(offset))
+                                    return SparseMessagePosition(id: searchResultPositionData.msgId, date: searchResultPositionData.date, offset: Int(searchResultPositionData.offset))
                                 }
                             }
-                            positions.sort(by: { lhs, rhs in
-                                return lhs.id > rhs.id
-                            })
-                            
-                            var result = SparseItems(items: [])
-                            for i in 0 ..< positions.count {
-                                if i == 0 {
-                                    if initialMessageIndex != nil && positions[i].offset != 0 {
-                                        result.items.append(.range(count: positions[i].offset))
-                                    }
-                                } else {
-                                    let deltaCount = positions[i].offset - 1 - positions[i - 1].offset
-                                    if deltaCount > 0 {
-                                        result.items.append(.range(count: deltaCount))
-                                    }
-                                }
-                                result.items.append(.anchor(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: positions[i].id), timestamp: positions[i].date, message: nil))
-                                if i == positions.count - 1 {
-                                    let remainingCount = Int(totalCount) - 1 - positions[i].offset
-                                    if remainingCount > 0 {
-                                        result.items.append(.range(count: remainingCount))
-                                    }
-                                }
-                            }
-                            
-                            return result
+                            return sparseMessageSkeleton(peerId: peerId, positions: positions, totalCount: Int(searchResultsPositionsData.count), includeLeadingRange: initialMessageIndex != nil)
                         }
                     }
-                    |> `catch` { _ -> Signal<SparseItems, NoError> in
-                        return .single(SparseItems(items: []))
+                    |> `catch` { _ -> Signal<SparseMessageSkeleton, NoError> in
+                        return .single(SparseMessageSkeleton(items: []))
                     }
                 }
                 |> deliverOn(self.queue)).start(next: { [weak self] sparseItems in
@@ -216,11 +168,29 @@ public final class SparseMessageList {
             })
         }
 
-        deinit {
+        /// The server skeleton, once it has arrived.
+        var skeleton: SparseMessageSkeleton? {
+            return self.sparseItems
+        }
+
+        /// Whether this segment's count is its full length (`sparseMessageListSegmentCountIsFinal`).
+        var countIsFinal: Bool {
+            return sparseMessageListSegmentCountIsFinal(peerId: self.peerId, topMessages: self.topSection?.messages ?? [], skeleton: self.sparseItems)
+        }
+
+        /// Stops the segment for good. A hole load in flight is reported complete, so the grid's
+        /// request for it finishes instead of waiting forever.
+        func cancel() {
+            self.stateUpdated = nil
             self.topItemsDisposable.dispose()
             self.sparseItemsDisposable?.dispose()
-            self.loadHoleDisposable.dispose()
             self.deletedMessagesDisposable?.dispose()
+            self.loadHoleDisposable.dispose()
+            self.loadingHole = nil
+            if let completion = self.loadingHoleCompletion {
+                self.loadingHoleCompletion = nil
+                completion()
+            }
         }
 
         private func resetTopSection() {
@@ -385,6 +355,7 @@ public final class SparseMessageList {
                 return
             }
             self.loadingHole = loadingHole
+            self.loadingHoleCompletion = completion
 
             let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.upperBound), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.lowerBound - 1))
 
@@ -461,6 +432,7 @@ public final class SparseMessageList {
 
                 if strongSelf.loadingHole == loadingHole {
                     strongSelf.loadingHole = nil
+                    strongSelf.loadingHoleCompletion = nil
                 }
 
                 completion()
@@ -634,73 +606,135 @@ public final class SparseMessageList {
         }
 
         private func updateState() {
+            guard let stateUpdated = self.stateUpdated else {
+                return
+            }
             if self.isLoadingInitial {
-                self.statePromise.set(.single(SparseMessageList.State(
+                stateUpdated(SparseMessageList.State(
                     items: [],
                     totalCount: 0,
                     isLoading: true
-                )))
-                
+                ))
                 return
             }
-            
-            var items: [SparseMessageList.State.Item] = []
-            var minMessageId: MessageId?
-            if let topSection = self.topSection {
-                for i in 0 ..< topSection.messages.count {
-                    let message = topSection.messages[i]
-                    items.append(SparseMessageList.State.Item(index: items.count, content: .message(message: message, isLocal: true)))
-                    if let minMessageIdValue = minMessageId {
-                        if message.id < minMessageIdValue {
-                            minMessageId = message.id
-                        }
-                    } else {
-                        minMessageId = message.id
-                    }
-                }
-            }
 
-            let topItemCount = items.count
-            var totalCount = items.count
-            if let sparseItems = self.sparseItems {
-                var sparseIndex = 0
-
-                for i in 0 ..< sparseItems.items.count {
-                    switch sparseItems.items[i] {
-                    case let .anchor(id, timestamp, message):
-                        if sparseIndex >= topItemCount {
-                            if let message = message {
-                                items.append(SparseMessageList.State.Item(index: totalCount, content: .message(message: message, isLocal: false)))
-                            } else {
-                                items.append(SparseMessageList.State.Item(index: totalCount, content: .placeholder(id: id, timestamp: timestamp)))
-                            }
-                            totalCount += 1
-                        }
-                        sparseIndex += 1
-                    case let .range(count):
-                        if sparseIndex >= topItemCount {
-                            totalCount += count
-                        } else {
-                            let overflowCount = sparseIndex + count - topItemCount
-                            if overflowCount > 0 {
-                                totalCount += count
-                            }
-                        }
-                        sparseIndex += count
-                    }
-                }
-            }
-
-            self.statePromise.set(.single(SparseMessageList.State(
-                items: items,
-                totalCount: totalCount,
+            let layout = sparseMessageListSegmentItems(peerId: self.peerId, topMessages: self.topSection?.messages ?? [], skeleton: self.sparseItems)
+            stateUpdated(SparseMessageList.State(
+                items: layout.items,
+                totalCount: layout.totalCount,
                 isLoading: self.topSection == nil
-            )))
+            ))
         }
     }
 
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
+
+    /// The shared media of a peer and, for a channel migrated from a basic group, of that group
+    /// after it: one `PeerSegment` per peer, published as one list (`mergedSparseMessageListState`).
+    private final class Impl {
+        private let queue: Queue
+        private let account: Account
+        private let messageTag: MessageTags
+
+        private let mainSegment: PeerSegment
+        private var mainState: SparseMessageList.State?
+        private var legacySegment: PeerSegment?
+        private var legacyState: SparseMessageList.State?
+        /// The initial focus while it is another peer's message, which only the group's segment
+        /// can hold. Cleared when the cached data names no such group, and once delivered.
+        private var legacyFocus: MessageIndex?
+        private var legacyPeerDisposable: Disposable?
+
+        let statePromise = Promise<SparseMessageList.State>()
+
+        init(queue: Queue, account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags, initialMessageIndex: MessageIndex?) {
+            self.queue = queue
+            self.account = account
+            self.messageTag = messageTag
+
+            let focus = sparseMessageListFocus(initialMessageIndex: initialMessageIndex, peerId: peerId, threadId: threadId)
+            self.legacyFocus = focus.legacy
+
+            self.mainSegment = PeerSegment(queue: queue, account: account, peerId: peerId, threadId: threadId, messageTag: messageTag, initialMessageIndex: focus.main)
+            self.mainSegment.start(stateUpdated: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.mainState = state
+                strongSelf.updateState()
+            })
+
+            if threadId == nil {
+                // The group is read the way Postbox's history views read it.
+                let key: PostboxViewKey = .cachedPeerData(peerId: peerId)
+                self.legacyPeerDisposable = (account.postbox.combinedView(keys: [key])
+                |> map { views -> PeerId? in
+                    return channelMigratedFromGroupId(channelId: peerId, cachedData: (views.views[key] as? CachedPeerDataView)?.cachedPeerData)
+                }
+                |> distinctUntilChanged
+                |> deliverOn(queue)).start(next: { [weak self] legacyPeerId in
+                    self?.updateLegacyPeer(legacyPeerId)
+                })
+            }
+        }
+
+        deinit {
+            self.legacyPeerDisposable?.dispose()
+        }
+
+        private func updateLegacyPeer(_ legacyPeerId: PeerId?) {
+            let change = sparseMessageListLegacyPeerChange(currentPeerId: self.legacySegment?.peerId, updatedPeerId: legacyPeerId, focus: self.legacyFocus)
+            self.legacyFocus = change.focus
+            if change.replacesSegment {
+                self.legacySegment?.cancel()
+                self.legacySegment = nil
+                self.legacyState = nil
+
+                if let legacyPeerId {
+                    let segment = PeerSegment(queue: self.queue, account: self.account, peerId: legacyPeerId, threadId: nil, messageTag: self.messageTag, initialMessageIndex: self.legacyFocus)
+                    self.legacySegment = segment
+                    segment.start(stateUpdated: { [weak self] state in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.legacyState = state
+                        strongSelf.updateState()
+                    })
+                }
+            }
+            self.updateState()
+        }
+
+        private func updateState() {
+            guard let state = mergedSparseMessageListState(main: self.mainState, mainCountIsFinal: self.mainSegment.countIsFinal, legacy: self.legacyState, holdForLegacyFocus: self.legacyFocus != nil) else {
+                return
+            }
+            self.legacyFocus = sparseMessageListHeldFocus(afterPublishing: state, focus: self.legacyFocus)
+            self.statePromise.set(.single(state))
+        }
+
+        func loadMoreFromTopSection() {
+            self.mainSegment.loadMoreFromTopSection()
+        }
+
+        func loadHole(anchor requestedAnchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
+            guard let target = sparseMessageListHoleTarget(requested: requestedAnchor, mainPeerId: self.mainSegment.peerId, mainSkeleton: self.mainSegment.skeleton, legacyPeerId: self.legacySegment?.peerId, legacySkeleton: self.legacySegment?.skeleton) else {
+                completion()
+                return
+            }
+            switch target.segment {
+            case .main:
+                self.mainSegment.loadHole(anchor: target.anchor, direction: direction, completion: completion)
+            case .legacy:
+                if let legacySegment = self.legacySegment {
+                    legacySegment.loadHole(anchor: target.anchor, direction: direction, completion: completion)
+                } else {
+                    completion()
+                }
+            }
+        }
+    }
 
     public struct State {
         public final class Item {
@@ -762,14 +796,73 @@ public final class SparseMessageList {
     }
 }
 
+/// One page of `peer`'s `messages.getSearchResultsCalendar`, with its messages stored. A failed
+/// request ends that peer's paging, as it ended the whole calendar before.
+private func loadSparseCalendarPage(account: Account, peer: Peer, messageTag: MessageTags, offset: Int32) -> Signal<SparseCalendarPagingState.Page, NoError> {
+    let accountPeerId = account.peerId
+    let peerId = peer.id
+    let emptyPage = SparseCalendarPagingState.Page(peerId: peerId, messagesByDay: [:], nextOffset: nil, bounds: nil)
+    guard let inputPeer = apiInputPeer(peer), let messageFilter = messageFilterForTagMask(messageTag) else {
+        return .single(emptyPage)
+    }
+
+    return account.network.request(Api.functions.messages.getSearchResultsCalendar(flags: 0, peer: inputPeer, savedPeerId: nil, filter: messageFilter, offsetId: offset, offsetDate: 0))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.SearchResultsCalendar?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<SparseCalendarPagingState.Page, NoError> in
+        guard let result = result else {
+            return .single(emptyPage)
+        }
+        return account.postbox.transaction { transaction -> SparseCalendarPagingState.Page in
+            switch result {
+            case let .searchResultsCalendar(searchResultsCalendarData):
+                var parsedMessages: [StoreMessage] = []
+
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: searchResultsCalendarData.chats, users: searchResultsCalendarData.users)
+
+                for message in searchResultsCalendarData.messages {
+                    if let parsedMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) {
+                        parsedMessages.append(parsedMessage)
+                    }
+                }
+
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                let _ = transaction.addMessages(parsedMessages, location: .Random)
+
+                var minMessageId: Int32?
+                var messagesByDay: [Int32: SparseMessageCalendar.Entry] = [:]
+                for period in searchResultsCalendarData.periods {
+                    switch period {
+                    case let .searchResultsCalendarPeriod(searchResultsCalendarPeriodData):
+                        let (date, minMsgId, count) = (searchResultsCalendarPeriodData.date, searchResultsCalendarPeriodData.minMsgId, searchResultsCalendarPeriodData.count)
+                        if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId)) {
+                            messagesByDay[date] = SparseMessageCalendar.Entry(message: message, count: Int(count))
+                        }
+                        if let minMessageIdValue = minMessageId {
+                            if minMsgId < minMessageIdValue {
+                                minMessageId = minMsgId
+                            }
+                        } else {
+                            minMessageId = minMsgId
+                        }
+                    }
+                }
+
+                return SparseCalendarPagingState.Page(
+                    peerId: peerId,
+                    messagesByDay: messagesByDay,
+                    nextOffset: minMessageId,
+                    bounds: SparseCalendarPeerBounds(minDate: searchResultsCalendarData.minDate, count: searchResultsCalendarData.count)
+                )
+            }
+        }
+    }
+}
+
 public final class SparseMessageCalendar {
     private final class Impl {
-        struct InternalState {
-            var nextRequestOffset: Int32?
-            var minTimestamp: Int32?
-            var messagesByDay: [Int32: SparseMessageCalendar.Entry]
-        }
-
         private let queue: Queue
         private let account: Account
         private let peerId: PeerId
@@ -777,8 +870,8 @@ public final class SparseMessageCalendar {
         private let messageTag: MessageTags
         private let displayMedia: Bool
 
-        private var state: InternalState
-        let statePromise = Promise<InternalState>()
+        private var state: SparseCalendarPagingState
+        let statePromise = Promise<SparseCalendarPagingState>()
 
         private let disposable = MetaDisposable()
         private var isLoadingMore: Bool = false {
@@ -800,7 +893,7 @@ public final class SparseMessageCalendar {
             self.messageTag = messageTag
             self.displayMedia = displayMedia
 
-            self.state = InternalState(nextRequestOffset: 0, minTimestamp: nil, messagesByDay: [:])
+            self.state = SparseCalendarPagingState(mainPeerId: peerId)
             self.statePromise.set(.single(self.state))
 
             self.maybeLoadMore()
@@ -818,15 +911,7 @@ public final class SparseMessageCalendar {
         }
 
         func removeMessagesInRange(minTimestamp: Int32, maxTimestamp: Int32, type: InteractiveHistoryClearingType, completion: @escaping () -> Void) -> Disposable {
-            var removeKeys: [Int32] = []
-            for (id, entry) in self.state.messagesByDay {
-                if entry.message.timestamp >= minTimestamp && entry.message.timestamp <= maxTimestamp {
-                    removeKeys.append(id)
-                }
-            }
-            for id in removeKeys {
-                self.state.messagesByDay.removeValue(forKey: id)
-            }
+            self.state.removeMessages(minTimestamp: minTimestamp, maxTimestamp: maxTimestamp)
 
             self.statePromise.set(.single(self.state))
 
@@ -836,7 +921,7 @@ public final class SparseMessageCalendar {
         }
 
         private func loadMore() {
-            guard let nextRequestOffset = self.state.nextRequestOffset else {
+            if !self.state.hasMore {
                 return
             }
             if self.threadId != nil {
@@ -849,95 +934,44 @@ public final class SparseMessageCalendar {
             self.isLoadingMore = true
 
             struct LoadResult {
-                var messagesByDay: [Int32: SparseMessageCalendar.Entry]
-                var nextOffset: Int32?
-                var minMessageId: MessageId?
-                var minTimestamp: Int32?
+                /// The peers that could be requested, in list order.
+                var peerIds: [PeerId]
+                var pages: [SparseCalendarPagingState.Page]
             }
 
             let account = self.account
-            let accountPeerId = account.peerId
             let peerId = self.peerId
             let messageTag = self.messageTag
-            self.disposable.set((self.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peerId)
+            let state = self.state
+            self.disposable.set((account.postbox.transaction { transaction -> [Peer] in
+                // The channel, then the group it was migrated from, read as the history views
+                // read it.
+                var peers: [Peer] = []
+                if let peer = transaction.getPeer(peerId) {
+                    peers.append(peer)
+                }
+                if let legacyPeerId = channelMigratedFromGroupId(channelId: peerId, cachedData: transaction.getPeerCachedData(peerId: peerId)), let legacyPeer = transaction.getPeer(legacyPeerId) {
+                    peers.append(legacyPeer)
+                }
+                return peers
             }
-            |> mapToSignal { peer -> Signal<LoadResult, NoError> in
-                guard let peer = peer else {
-                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
-                }
-                guard let inputPeer = apiInputPeer(peer) else {
-                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
-                }
-                guard let messageFilter = messageFilterForTagMask(messageTag) else {
-                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
-                }
-                //TODO:api
-                return self.account.network.request(Api.functions.messages.getSearchResultsCalendar(flags: 0, peer: inputPeer, savedPeerId: nil, filter: messageFilter, offsetId: nextRequestOffset, offsetDate: 0))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.messages.SearchResultsCalendar?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<LoadResult, NoError> in
-                    return account.postbox.transaction { transaction -> LoadResult in
-                        guard let result = result else {
-                            return LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil)
-                        }
-
-                        switch result {
-                        case let .searchResultsCalendar(searchResultsCalendarData):
-                            let (minDate, minMsgId, periods, messages, chats, users) = (searchResultsCalendarData.minDate, searchResultsCalendarData.minMsgId, searchResultsCalendarData.periods, searchResultsCalendarData.messages, searchResultsCalendarData.chats, searchResultsCalendarData.users)
-                            var parsedMessages: [StoreMessage] = []
-                            
-                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-
-                            for message in messages {
-                                if let parsedMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) {
-                                    parsedMessages.append(parsedMessage)
-                                }
-                            }
-
-                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                            let _ = transaction.addMessages(parsedMessages, location: .Random)
-
-                            var minMessageId: Int32?
-                            var messagesByDay: [Int32: SparseMessageCalendar.Entry] = [:]
-                            for period in periods {
-                                switch period {
-                                case let .searchResultsCalendarPeriod(searchResultsCalendarPeriodData):
-                                    let (date, minMsgId, count) = (searchResultsCalendarPeriodData.date, searchResultsCalendarPeriodData.minMsgId, searchResultsCalendarPeriodData.count)
-                                    if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId)) {
-                                        messagesByDay[date] = SparseMessageCalendar.Entry(message: message, count: Int(count))
-                                    }
-                                    if let minMessageIdValue = minMessageId {
-                                        if minMsgId < minMessageIdValue {
-                                            minMessageId = minMsgId
-                                        }
-                                    } else {
-                                        minMessageId = minMsgId
-                                    }
-                                }
-                            }
-
-                            return LoadResult(messagesByDay: messagesByDay, nextOffset: minMessageId, minMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId), minTimestamp: minDate)
-                        }
+            |> mapToSignal { peers -> Signal<LoadResult, NoError> in
+                let pages = state.requests(peerIds: peers.map { $0.id }).compactMap { request -> Signal<SparseCalendarPagingState.Page, NoError>? in
+                    guard let peer = peers.first(where: { $0.id == request.peerId }) else {
+                        return nil
                     }
+                    return loadSparseCalendarPage(account: account, peer: peer, messageTag: messageTag, offset: request.offset)
+                }
+                return combineLatest(pages)
+                |> map { pages -> LoadResult in
+                    return LoadResult(peerIds: peers.map { $0.id }, pages: pages)
                 }
             }
             |> deliverOn(self.queue)).start(next: { [weak self] result in
                 guard let strongSelf = self else {
                     return
                 }
-
-                if let minTimestamp = result.minTimestamp {
-                    strongSelf.state.minTimestamp = minTimestamp
-                }
-                strongSelf.state.nextRequestOffset = result.nextOffset
-
-                for (timestamp, entry) in result.messagesByDay {
-                    strongSelf.state.messagesByDay[timestamp] = entry
-                }
-
+                strongSelf.state.apply(peerIds: result.peerIds, pages: result.pages)
                 strongSelf.statePromise.set(.single(strongSelf.state))
                 strongSelf.isLoadingMore = false
             }))
@@ -986,7 +1020,7 @@ public final class SparseMessageCalendar {
                     subscriber.putNext(State(
                         messagesByDay: state.messagesByDay,
                         minTimestamp: state.minTimestamp,
-                        hasMore: state.nextRequestOffset != nil
+                        hasMore: state.hasMore
                     ))
                 }))
             }

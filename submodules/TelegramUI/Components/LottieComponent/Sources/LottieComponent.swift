@@ -3,7 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 import HierarchyTrackingLayer
-import RLottieBinding
+import LottieBinding
+import LottieSettings
 import SwiftSignalKit
 import AppBundle
 import GZip
@@ -92,6 +93,7 @@ public final class LottieComponent: Component {
     public let renderingScale: CGFloat?
     public let loop: Bool
     public let playOnce: ActionSlot<Void>?
+    public let lottieSettings: LottieRenderingSettings
     
     public init(
         content: Content,
@@ -101,7 +103,8 @@ public final class LottieComponent: Component {
         size: CGSize? = nil,
         renderingScale: CGFloat? = nil,
         loop: Bool = false,
-        playOnce: ActionSlot<Void>? = nil
+        playOnce: ActionSlot<Void>? = nil,
+        lottieSettings: LottieRenderingSettings
     ) {
         self.content = content
         self.color = color
@@ -111,9 +114,17 @@ public final class LottieComponent: Component {
         self.renderingScale = renderingScale
         self.loop = loop
         self.playOnce = playOnce
+        self.lottieSettings = lottieSettings
     }
     
     public static func ==(lhs: LottieComponent, rhs: LottieComponent) -> Bool {
+        // Load-bearing: the view builds its LottieInstance lazily from stored
+        // state, so without this a settings change (the killswitch arriving, or
+        // the debug switch being toggled) would not re-render an existing
+        // component and the flip would appear not to work.
+        if lhs.lottieSettings != rhs.lottieSettings {
+            return false
+        }
         if lhs.content != rhs.content {
             return false
         }
@@ -143,7 +154,7 @@ public final class LottieComponent: Component {
         private var component: LottieComponent?
         
         private var scheduledPlayOnce: Bool = false
-        private var isPlaying: Bool = false
+        public private(set) var isPlaying: Bool = false
         
         private var playOnceCompletion: (() -> Void)?
         private var animationInstance: LottieInstance?
@@ -238,7 +249,7 @@ public final class LottieComponent: Component {
             }
         }
         
-        public func playOnce(delay: Double = 0.0, force: Bool = false,  completion: (() -> Void)? = nil) {
+        public func playOnce(delay: Double = 0.0, force: Bool = false, completion: (() -> Void)? = nil) {
             self.playOnceCompletion = completion
             
             guard let _ = self.animationInstance, let animationFrameRange = self.animationFrameRange else {
@@ -288,6 +299,27 @@ public final class LottieComponent: Component {
                 }
             }
         }
+
+        public func stop(at position: StartingPosition? = nil) {
+            self.scheduledPlayOnce = false
+            self.playOnceCompletion = nil
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+            self.currentFrameStartTime = nil
+            self.isPlaying = false
+
+            guard let position, let range = self.animationFrameRange else {
+                return
+            }
+            switch position {
+            case .begin:
+                self.setFrameIndex(index: range.lowerBound)
+            case .end:
+                self.setFrameIndex(index: max(range.lowerBound, range.upperBound - 1))
+            case let .fraction(fraction):
+                self.setFrameIndex(index: range.lowerBound + Int(floor(Double(range.count) * fraction)))
+            }
+        }
         
         public func setFrameIndex(index: Int) {
             guard let _ = self.animationInstance, let animationFrameRange = self.animationFrameRange else {
@@ -323,8 +355,8 @@ public final class LottieComponent: Component {
             }
         }
         
-        private func loadAnimation(data: Data, cacheKey: String?, startingPosition: StartingPosition, frameRange: Range<Double>) {
-            self.animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: cacheKey ?? "")
+        private func loadAnimation(data: Data, cacheKey: String?, startingPosition: StartingPosition, frameRange: Range<Double>, lottieSettings: LottieRenderingSettings) {
+            self.animationInstance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: cacheKey ?? "", settings: lottieSettings)
             if let animationInstance = self.animationInstance {
                 self.animationFrameRange = Int(floor(frameRange.lowerBound * Double(animationInstance.frameCount))) ..< Int(floor(frameRange.upperBound * Double(animationInstance.frameCount)))
             } else {
@@ -463,7 +495,7 @@ public final class LottieComponent: Component {
                         case let .placeholder(data):
                             self.loadPlaceholder(data: data)
                         case let .animation(data, cacheKey):
-                            self.loadAnimation(data: data, cacheKey: cacheKey, startingPosition: component.startingPosition, frameRange: frameRange)
+                            self.loadAnimation(data: data, cacheKey: cacheKey, startingPosition: component.startingPosition, frameRange: frameRange, lottieSettings: component.lottieSettings)
                         }
                     }
                 }

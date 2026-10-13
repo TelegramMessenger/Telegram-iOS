@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -243,6 +244,9 @@ public final class MessageInputPanelComponent: Component {
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
     public let useGrayBackground: Bool
+    public let displayGiftSendButton: Bool
+    public let returnKeyType: UIReturnKeyType?
+    public let returnKeyAction: (() -> Void)?
     public let resetInputContents: SendMessageInput?
     public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
@@ -313,6 +317,9 @@ public final class MessageInputPanelComponent: Component {
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
         useGrayBackground: Bool = false,
+        displayGiftSendButton: Bool = false,
+        returnKeyType: UIReturnKeyType? = nil,
+        returnKeyAction: (() -> Void)? = nil,
         resetInputContents: SendMessageInput?,
         nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
@@ -383,6 +390,9 @@ public final class MessageInputPanelComponent: Component {
         self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.useGrayBackground = useGrayBackground
+        self.displayGiftSendButton = displayGiftSendButton
+        self.returnKeyType = returnKeyType
+        self.returnKeyAction = returnKeyAction
         self.resetInputContents = resetInputContents
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
@@ -475,6 +485,15 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.useGrayBackground != rhs.useGrayBackground {
+            return false
+        }
+        if lhs.displayGiftSendButton != rhs.displayGiftSendButton {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
+            return false
+        }
+        if (lhs.returnKeyAction == nil) != (rhs.returnKeyAction == nil) {
             return false
         }
         if lhs.resetInputContents != rhs.resetInputContents {
@@ -1224,6 +1243,8 @@ public final class MessageInputPanelComponent: Component {
             }
             
             let baseFieldHeight: CGFloat = 40.0
+            let giftSendButtonContainerSize = CGSize(width: 40.0, height: 40.0)
+            let giftSendButtonRightInset: CGFloat = 2.0
             
             var transition = transition
             let previousComponent = self.component
@@ -1277,6 +1298,18 @@ public final class MessageInputPanelComponent: Component {
                 formatMenuAvailability = .available([.bold, .italic, .strikethrough, .underline, .spoiler])
             }
             self.textField.parentState = state
+
+            let returnKeyType = component.returnKeyType ?? ([.videoChat, .gift].contains(component.style) ? UIReturnKeyType.send : UIReturnKeyType.default)
+            let returnKeyAction: (() -> Void)?
+            if let customReturnKeyAction = component.returnKeyAction {
+                returnKeyAction = customReturnKeyAction
+            } else if [.videoChat, .gift].contains(component.style) {
+                returnKeyAction = { [weak self] in
+                    self?.sendMessageAction()
+                }
+            } else {
+                returnKeyAction = nil
+            }
             
             let textColor: UIColor
             let accentColor: UIColor
@@ -1311,7 +1344,7 @@ public final class MessageInputPanelComponent: Component {
                     isOneLineWhenUnfocused: component.style == .media,
                     emptyLineHandling: [.videoChat, .gift].contains(component.style) ? .notAllowed : .allowed,
                     formatMenuAvailability: formatMenuAvailability,
-                    returnKeyType: [.videoChat, .gift].contains(component.style) ? .send : .default,
+                    returnKeyType: returnKeyType,
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
                     },
@@ -1321,9 +1354,7 @@ public final class MessageInputPanelComponent: Component {
                     paste: { data in
                         component.paste(data)
                     },
-                    returnKeyAction: [.videoChat, .gift].contains(component.style) ? { [weak self] in
-                        self?.sendMessageAction()
-                    } : nil
+                    returnKeyAction: returnKeyAction
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize
@@ -1851,7 +1882,10 @@ public final class MessageInputPanelComponent: Component {
                     containerSize: availableTextFieldSize
                 )
                 var counterFrame = CGRect(origin: CGPoint(x: availableSize.width - insets.right + floorToScreenPixels((insets.right - counterSize.width) * 0.5), y: size.height - insets.bottom - baseFieldHeight - counterSize.height - 5.0), size: counterSize)
-                if case .videoChat = component.style {
+                if component.style == .gift && component.displayGiftSendButton {
+                    let giftSendButtonCenterX = fieldBackgroundFrame.maxX - giftSendButtonRightInset - giftSendButtonContainerSize.width * 0.5
+                    counterFrame.origin.x = floorToScreenPixels(giftSendButtonCenterX - counterSize.width * 0.5)
+                } else if case .videoChat = component.style {
                     counterFrame.origin.x -= 7.0
                 }
                 if let counterView = self.counter.view {
@@ -1975,7 +2009,8 @@ public final class MessageInputPanelComponent: Component {
                         content: AnyComponent(LottieComponent(
                             content: LottieComponent.AppBundleContent(name: "BinBlue"),
                             color: .white,
-                            startingPosition: .begin
+                            startingPosition: .begin,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )),
                         action: { [weak self] in
                             guard let self, let component = self.component else {
@@ -2032,8 +2067,11 @@ public final class MessageInputPanelComponent: Component {
             var inputActionButtonAlpha = 1.0
             let inputActionButtonMode: MessageInputActionButtonComponent.Mode
             if case .gift = component.style {
-                inputActionButtonAlpha = 0.0
-                inputActionButtonMode = .apply
+                inputActionButtonAlpha = component.displayGiftSendButton ? 1.0 : 0.0
+                inputActionButtonMode = component.displayGiftSendButton ? .send : .apply
+                if component.displayGiftSendButton {
+                    inputActionButtonAvailableSize = giftSendButtonContainerSize
+                }
             } else if case .editor = component.style {
                 if isEditing {
                     inputActionButtonMode = .apply
@@ -2074,7 +2112,9 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             let inputActionButtonStyle: MessageInputActionButtonComponent.Style
-            if component.style == .videoChat {
+            if component.style == .gift && component.displayGiftSendButton {
+                inputActionButtonStyle = .accent
+            } else if component.style == .videoChat {
                 inputActionButtonStyle = .glass(isTinted: true)
             } else if component.style == .story {
                 inputActionButtonStyle = .legacy
@@ -2103,7 +2143,7 @@ public final class MessageInputPanelComponent: Component {
                                     component.sendMessageAction(nil)
                                 } else if component.hasRecordedVideoPreview {
                                     component.sendMessageAction(nil)
-                                } else if case let .text(string) = self.getSendMessageInput(), string.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                } else if !(component.style == .gift && component.displayGiftSendButton), case let .text(string) = self.getSendMessageInput(), string.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 } else {
                                     self.sendMessageAction()
                                 }
@@ -2206,7 +2246,9 @@ public final class MessageInputPanelComponent: Component {
                     inputActionButtonOriginX -= 46.0
                 }
             } else {
-                if component.setMediaRecordingActive != nil || isEditing || component.style == .videoChat {
+                if component.style == .gift && component.displayGiftSendButton {
+                    inputActionButtonOriginX = fieldBackgroundFrame.maxX - inputActionButtonSize.width - giftSendButtonRightInset
+                } else if component.setMediaRecordingActive != nil || isEditing || component.style == .videoChat {
                     switch component.style {
                     case .videoChat:
                         inputActionButtonOriginX = fieldBackgroundFrame.maxX + 6.0
@@ -2297,6 +2339,9 @@ public final class MessageInputPanelComponent: Component {
             }
         
             var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0
+            if component.style == .gift && component.displayGiftSendButton {
+                fieldIconNextX = fieldBackgroundFrame.maxX - inputActionButtonSize.width - 4.0
+            }
             
             var inputModeVisible = false
             if isEditing {
@@ -2371,7 +2416,8 @@ public final class MessageInputPanelComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: animationName),
-                        color: stickerButtonColor
+                        color: stickerButtonColor,
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     action: { [weak self] in
                         guard let self else {

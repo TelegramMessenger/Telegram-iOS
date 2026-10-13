@@ -20,8 +20,9 @@ public struct ChatMessageEntryAttributes: Equatable {
     public var authorStoryStats: EnginePeerStoryStats?
     public var displayContinueThreadFooter: Bool
     public var pinToTop: Bool
+    public var isGiftMessageComposerPreview: Bool
     
-    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool) {
+    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool, isGiftMessageComposerPreview: Bool = false) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
@@ -31,6 +32,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.authorStoryStats = authorStoryStats
         self.displayContinueThreadFooter = displayContinueThreadFooter
         self.pinToTop = pinToTop
+        self.isGiftMessageComposerPreview = isGiftMessageComposerPreview
     }
     
     public init() {
@@ -43,6 +45,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.authorStoryStats = nil
         self.displayContinueThreadFooter = false
         self.pinToTop = false
+        self.isGiftMessageComposerPreview = false
     }
 }
 

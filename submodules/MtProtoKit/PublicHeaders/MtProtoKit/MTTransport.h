@@ -45,6 +45,7 @@
 @property (nonatomic, strong, readonly) MTSocksProxySettings * _Nullable proxySettings;
 @property (nonatomic) bool simultaneousTransactionsEnabled;
 @property (nonatomic) bool reportTransportConnectionContextUpdateStates;
+@property (atomic) bool incomingDataIsUnauthenticated;
 @property (nonatomic, strong) NSString * _Nullable (^ _Nullable getLogPrefix)();
 
 - (instancetype _Nonnull)initWithDelegate:(id<MTTransportDelegate> _Nullable)delegate context:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId schemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes proxySettings:(MTSocksProxySettings * _Null_unspecified)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo * _Nullable)usageCalculationInfo getLogPrefix:(NSString * _Nullable (^ _Nullable)())getLogPrefix;
@@ -67,3 +68,12 @@
 - (void)simulateDisconnection;
 
 @end
+
+// Largest payload accepted in one intermediate-framed transport packet, and the
+// bound applied to each msg_container child.
+FOUNDATION_EXTERN NSUInteger const MTMaxTransportPayloadLength;
+
+// Largest inflated size accepted for a gzip_packed message body. The transport
+// limit above bounds the *compressed* frame, so this is a separate policy; it
+// matches tdesktop's kMaxUnpackedMessageLength.
+FOUNDATION_EXTERN NSUInteger const MTMaxUnpackedMessageLength;

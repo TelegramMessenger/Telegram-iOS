@@ -2,12 +2,27 @@ import Foundation
 
 // MARK: - Task 3: insertingFragment helpers
 
-/// True for a fragment block that pastes by folding its runs INLINE into the host paragraph
-/// (plain body / headings, not a list item). Quotes, list items, and code blocks paste as own block.
-public func isInlineMergeable(_ block: Block) -> Bool {
-    guard case .paragraph(let p) = block else { return false }
+/// True for a fragment block that pastes by folding its runs INLINE into the host paragraph, which
+/// keeps the HOST's paragraph style. Quotes, list items, and code blocks always paste as their own
+/// block.
+///
+/// **The two directions are not symmetric, and treating them as one destroys headings.** Folding
+/// discards the fragment paragraph's own style, so it is lossless only when the fragment has no style
+/// to lose:
+///   - a plain BODY paragraph carries no block structure → always folds. This is the case that MUST
+///     keep folding: pasting text into a heading has to stay in the heading.
+///   - a HEADING paragraph loses its level when folded → folds only into a host that is already that
+///     same style (`# X` pasted inside an H1 should not shatter it into three blocks). Anywhere else
+///     it stands as its own block, and the caller's split-and-assemble path places it.
+///
+/// This used to accept every heading level unconditionally, so a fragment beginning (or ending) with a
+/// heading folded into the body paragraph it was pasted into — the reported "pasting a copied rich
+/// message loses its headings", since the chat composer's host paragraph is always body.
+public func isInlineMergeable(_ block: Block, intoHostStyle hostStyle: ParagraphStyleName) -> Bool {
+    guard case .paragraph(let p) = block, p.list == nil else { return false }
     switch p.style {
-    case .body, .heading1, .heading2, .heading3, .heading4, .heading5, .heading6: return p.list == nil
+    case .body: return true
+    case .heading1, .heading2, .heading3, .heading4, .heading5, .heading6: return p.style == hostStyle
     case .caption, .pullQuote: return false
     }
 }
@@ -28,17 +43,24 @@ private func regeneratingIDs(_ blocks: [Block]) -> [Block] {
             return .pullQuote(PullQuote(id: .generate(), runs: pq.runs, author: pq.author))
         case .blockQuote(let bq):
             return .blockQuote(BlockQuote(id: .generate(), children: regeneratingIDs(bq.children), collapsed: bq.collapsed, author: bq.author))
+        case .details(let d):
+            return .details(DetailsBlock(id: .generate(), title: d.title,
+                                         children: regeneratingIDs(d.children), expanded: d.expanded))
         case .table(let t):
             // Regenerate the table AND its nested row/cell/inner-block IDs — a pasted "Copy Table" carries the
             // source table's IDs verbatim, and block views are keyed by BlockID, so a duplicate-ID paste would
             // steal the original table's view and make the original disappear.
+            // Only the IDENTITIES are regenerated — every table/cell ATTRIBUTE is forwarded. Omitting one
+            // silently changes the pasted table: `compact`/`bordered` reset to their defaults (a copied
+            // unbordered table pastes back bordered) and `colspan`/`rowspan` reset to 1, splitting merged
+            // cells apart.
             return .table(TableBlock(id: .generate(), columns: t.columns, rows: t.rows.map { row in
                 Row(id: .generate(), height: row.height, cells: row.cells.map { cell in
                     Cell(id: .generate(), blocks: regeneratingIDs(cell.blocks), background: cell.background,
                          horizontalAlignment: cell.horizontalAlignment, verticalAlignment: cell.verticalAlignment,
-                         isHeader: cell.isHeader)
+                         isHeader: cell.isHeader, colspan: cell.colspan, rowspan: cell.rowspan)
                 })
-            }))
+            }, compact: t.compact, bordered: t.bordered))
         case .media(let m):
             // Regenerate the block id only; `mediaID` is the host's content key (may legitimately repeat across
             // blocks), and the caption is inline `[TextRun]` with no nested BlockID. Use the container init and
@@ -47,6 +69,10 @@ private func regeneratingIDs(_ blocks: [Block]) -> [Block] {
             // fix in DocumentCanvasView+Editing.swift, which hit the same legacy-single-item-init trap).
             return .media(MediaBlock(id: .generate(), items: m.items,
                                      displayWidth: m.displayWidth, alignment: m.alignment, caption: m.caption))
+        case .buttonRow(let r):
+            // Regenerate the row id only. A `ButtonRef` carries no `BlockID` of its own (a pill is
+            // identified positionally, by its index in the row), so the buttons pass through wholesale.
+            return .buttonRow(ButtonRowBlock(id: .generate(), buttons: r.buttons, alignment: r.alignment))
         }
     }
 }
@@ -79,7 +105,7 @@ extension Document {
         let (headHalf, tailHalf) = host.split(at: locus.local, newID: .generate())
 
         // Single inline-mergeable paragraph → fold its runs into the host paragraph.
-        if frag.count == 1, isInlineMergeable(frag[0]), case .paragraph(let only) = frag[0] {
+        if frag.count == 1, isInlineMergeable(frag[0], intoHostStyle: host.style), case .paragraph(let only) = frag[0] {
             let merged = ParagraphBlock(id: host.id, style: host.style, paragraph: host.paragraph,
                                         list: host.list, runs: headHalf.runs + only.runs + tailHalf.runs)
             newBlocks[locus.index] = .paragraph(merged)
@@ -93,11 +119,12 @@ extension Document {
                                       list: host.list, runs: tailHalf.runs)
         var caretInTail = 0
 
-        if let first = middle.first, isInlineMergeable(first), case .paragraph(let fp) = first {
+        // Both split halves carry the host's style, so both ends test against it.
+        if let first = middle.first, isInlineMergeable(first, intoHostStyle: host.style), case .paragraph(let fp) = first {
             headBlock = .paragraph(headHalf.merging(fp))
             middle.removeFirst()
         }
-        if let last = middle.last, isInlineMergeable(last), case .paragraph(let lp) = last {
+        if let last = middle.last, isInlineMergeable(last, intoHostStyle: host.style), case .paragraph(let lp) = last {
             tailPara = ParagraphBlock(id: tailPara.id, style: tailPara.style, paragraph: tailPara.paragraph,
                                       list: tailPara.list, runs: lp.runs + tailPara.runs)
             caretInTail = lp.utf16Count
@@ -148,6 +175,11 @@ extension Document {
     }
 }
 
+/// The global offset from a top-level block's own start to its editable CODE text. A code block is a
+/// container of [languagePara, codePara] (see `DocumentTree.node(for:)`), so its code text sits three
+/// tokens past where a bare paragraph's would: language open + language text + language close + code open.
+func codeTextStartOffset(_ code: CodeBlock) -> Int { 4 + code.languageUTF16Count }
+
 /// Plain text of a paragraph/code/blockQuote block (empty for media/table). Used for the code-destination flatten.
 public func blockPlainText(_ block: Block) -> String {
     switch block {
@@ -155,6 +187,10 @@ public func blockPlainText(_ block: Block) -> String {
     case .code(let c): return c.text
     case .pullQuote(let pq): return pq.text
     case .blockQuote(let bq): return bq.children.map(blockPlainText).joined(separator: "\n")
+    case .details(let d):
+        let titleText = d.title.map(\.text).joined()
+        let body = d.children.map(blockPlainText).joined(separator: "\n")
+        return body.isEmpty ? titleText : titleText + "\n" + body
     default: return ""
     }
 }
@@ -180,7 +216,10 @@ extension Document {
             case .paragraph(let p):
                 if caret >= textStart && caret <= textStart + p.utf16Count { return (i, caret - textStart) }
             case .code(let c):
-                if caret >= textStart && caret <= textStart + c.utf16Count { return (i, caret - textStart) }
+                // The LANGUAGE line is deliberately not a locus here: a fragment paste into it falls
+                // through to the caller's plain-text flatten, which is what the language line accepts.
+                let codeStart = cursor + codeTextStartOffset(c)
+                if caret >= codeStart && caret <= codeStart + c.utf16Count { return (i, caret - codeStart) }
             default: break
             }
             cursor += size
@@ -188,15 +227,55 @@ extension Document {
         return nil
     }
 
+    /// The nearest top-level paragraph/code text position for a caret that falls OUTSIDE the document's
+    /// editable text range — below the first text block's start, or above the last text block's end. Returns
+    /// nil for a caret INSIDE the range that simply isn't a top-level text locus (e.g. a table cell / media
+    /// caption), so callers keep their in-cell behavior. Recovers a paste whose caret was reported as 0 — a
+    /// freshly-latched chat composer sets its selection before its layout boxes exist, so the flat→global map
+    /// yields 0 (below the first text start), which `insertingFragment` cannot resolve.
+    public func nearestTopLevelTextPosition(to caret: Int) -> Int? {
+        var cursor = 0
+        var firstStart: Int? = nil
+        var lastTextEnd: Int? = nil
+        for i in blocks.indices {
+            let size = DocumentTree.documentSize(Document(blocks: [blocks[i]]))
+            let textStart = cursor + 1
+            switch blocks[i] {
+            case .paragraph(let p):
+                if firstStart == nil { firstStart = textStart }
+                lastTextEnd = textStart + p.utf16Count
+            case .code(let c):
+                let codeStart = cursor + codeTextStartOffset(c)
+                if firstStart == nil { firstStart = codeStart }
+                lastTextEnd = codeStart + c.utf16Count
+            default: break
+            }
+            cursor += size
+        }
+        let documentSize = cursor
+        guard let firstStart, let lastTextEnd else { return nil }   // no top-level text block to land in
+        if caret < firstStart { return firstStart }        // e.g. the freshly-latched composer caret == 0
+        if caret > documentSize { return lastTextEnd }      // beyond the whole document
+        // Inside the document but not a top-level text locus — e.g. a caret in a table cell / media caption,
+        // INCLUDING one that sits past the last text paragraph. Return nil so the caller keeps its in-cell
+        // (flatten) behavior rather than redirecting the paste to a paragraph.
+        return nil
+    }
+
     /// The global position of the first editable text offset of the top-level block at `index`.
-    /// A paragraph/code block's text sits one token in (the block's own container-open token) —
-    /// `cursor + 1`. A pull quote is a `.blockQuote(children: [pullTextPara, authorPara])`
-    /// container (see `DocumentTree.node(for:)`), so its pull text is nested one level deeper —
-    /// `cursor + 2` (the pull-quote container's open token, THEN the pull-text paragraph's own).
+    /// A paragraph's text sits one token in (the block's own container-open token) — `cursor + 1`. A pull
+    /// quote is a `.blockQuote(children: [pullTextPara, authorPara])` container (see
+    /// `DocumentTree.node(for:)`), so its pull text is nested one level deeper — `cursor + 2` (the
+    /// pull-quote container's open token, THEN the pull-text paragraph's own). A CODE block is likewise a
+    /// container, `[languagePara, codePara]`, and its editable code text sits past the whole language
+    /// child — `cursor + 4 + languageUTF16Count`.
     public func globalTextStart(ofBlockAt index: Int) -> Int {
         let cursor = DocumentTree.documentSize(Document(blocks: Array(blocks[..<index])))
         if case .pullQuote = blocks[index] {
             return cursor + 2
+        }
+        if case .code(let c) = blocks[index] {
+            return cursor + codeTextStartOffset(c)
         }
         return cursor + 1
     }
@@ -364,9 +443,13 @@ extension Document {
                                                           paragraph: p.paragraph, list: p.list, runs: r)))
                 }
             case .code(let c):
-                let a = max(lo, textStart), b = min(hi, textStart + c.utf16Count)
+                // Container now, like a pull quote: the code text starts past the language line, NOT at
+                // the shared `textStart`. A partial copy carries the language, which is block metadata
+                // rather than flat text — the same rule the pull quote applies to its author.
+                let codeStart = cursor + codeTextStartOffset(c)
+                let a = max(lo, codeStart), b = min(hi, codeStart + c.utf16Count)
                 if a < b {
-                    let r = sliceRuns(c.runs, fromUTF16: a - textStart, toUTF16: b - textStart)
+                    let r = sliceRuns(c.runs, fromUTF16: a - codeStart, toUTF16: b - codeStart)
                     out.append(.code(CodeBlock(id: .generate(), language: c.language, runs: r)))
                 }
                 // Note: empty code blocks (utf16Count == 0) are intentionally not captured — they
@@ -396,7 +479,14 @@ extension Document {
                                                       collapsed: bq.collapsed,
                                                       author: bq.author)))
                 }
-            case .media, .table:
+            case .details(let d):
+                // Capture the whole detail block only on full coverage (mirrors `.blockQuote`). Interactive
+                // copy/paste of details is deferred (v1); this arm keeps the AI-edit full-range path lossless.
+                if lo <= cursor && hi >= cursor + size {
+                    out.append(.details(DetailsBlock(id: .generate(), title: d.title,
+                                                     children: regeneratingIDs(d.children), expanded: d.expanded)))
+                }
+            case .media, .table, .buttonRow:
                 // Carried only for the AI-edit path, and only when the selection FULLY covers the block's
                 // span [cursor, cursor+size) — mirrors the `.blockQuote` full-coverage rule above. After the
                 // caller's range expansion these are always fully covered. `regeneratingIDs` gives fresh IDs.

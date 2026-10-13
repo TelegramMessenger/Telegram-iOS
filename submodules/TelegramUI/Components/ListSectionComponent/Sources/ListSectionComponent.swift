@@ -54,6 +54,7 @@ public final class ListSectionContentView: UIView {
         public let displaySeparators: Bool
         public let extendsItemHighlightToSection: Bool
         public let background: ListSectionComponent.Background
+        public let backgroundColor: UIColor?
         
         public init(
             theme: PresentationTheme,
@@ -61,7 +62,8 @@ public final class ListSectionContentView: UIView {
             isModal: Bool = false,
             displaySeparators: Bool,
             extendsItemHighlightToSection: Bool,
-            background: ListSectionComponent.Background
+            background: ListSectionComponent.Background,
+            backgroundColor: UIColor? = nil
         ) {
             self.theme = theme
             self.style = style
@@ -69,6 +71,7 @@ public final class ListSectionContentView: UIView {
             self.displaySeparators = displaySeparators
             self.extendsItemHighlightToSection = extendsItemHighlightToSection
             self.background = background
+            self.backgroundColor = backgroundColor
         }
     }
     
@@ -131,7 +134,7 @@ public final class ListSectionContentView: UIView {
                 backgroundColor = configuration.theme.list.itemHighlightedBackgroundColor
             } else {
                 transition = .easeInOut(duration: 0.2)
-                backgroundColor = configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor
+                backgroundColor = configuration.backgroundColor ?? (configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor)
             }
             
             self.externalContentBackgroundView.updateColor(color: backgroundColor, transition: transition)
@@ -159,7 +162,9 @@ public final class ListSectionContentView: UIView {
         if self.highlightedItemId != nil && configuration.extendsItemHighlightToSection {
             backgroundColor = configuration.theme.list.itemHighlightedBackgroundColor
         } else {
-            if case .plain = configuration.style {
+            if let customBackgroundColor = configuration.backgroundColor {
+                backgroundColor = customBackgroundColor
+            } else if case .plain = configuration.style {
                 backgroundColor = configuration.theme.list.plainBackgroundColor
             } else {
                 backgroundColor = configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor
@@ -361,6 +366,7 @@ public final class ListSectionComponent: Component {
     public let theme: PresentationTheme
     public let style: Style
     public let background: Background
+    public let backgroundColor: UIColor?
     public let header: AnyComponent<Empty>?
     public let footer: AnyComponent<Empty>?
     public let items: [AnyComponentWithIdentity<Empty>]
@@ -372,6 +378,7 @@ public final class ListSectionComponent: Component {
         theme: PresentationTheme,
         style: Style = .legacy,
         background: Background = .all,
+        backgroundColor: UIColor? = nil,
         header: AnyComponent<Empty>?,
         footer: AnyComponent<Empty>?,
         items: [AnyComponentWithIdentity<Empty>],
@@ -382,6 +389,7 @@ public final class ListSectionComponent: Component {
         self.theme = theme
         self.style = style
         self.background = background
+        self.backgroundColor = backgroundColor
         self.header = header
         self.footer = footer
         self.items = items
@@ -398,6 +406,9 @@ public final class ListSectionComponent: Component {
             return false
         }
         if lhs.background != rhs.background {
+            return false
+        }
+        if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
         if lhs.header != rhs.header {
@@ -532,7 +543,8 @@ public final class ListSectionComponent: Component {
                     isModal: component.isModal,
                     displaySeparators: component.displaySeparators,
                     extendsItemHighlightToSection: component.extendsItemHighlightToSection,
-                    background: component.background
+                    background: component.background,
+                    backgroundColor: component.backgroundColor
                 ),
                 width: availableSize.width,
                 leftInset: 0.0,

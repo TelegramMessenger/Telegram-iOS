@@ -101,6 +101,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var closeButton: ComponentView<Empty>?
     
     private var inlineStickerLayers: [InlineStickerItemLayer] = []
+    private var giftEmojiLayer: InlineStickerItemLayer?
+    private var giftEmojiFileId: Int64?
     
     private var inlineMediaValue: InlineMedia?
     
@@ -133,6 +135,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 self.contentInstantVideo?.visibility = self.visibility != .none
                 
                 self.inlineStickerLayers.forEach({ $0.isVisibleForAnimations = self.visibility != .none })
+                self.giftEmojiLayer?.isVisibleForAnimations = self.visibility != .none
                 
                 switch self.visibility {
                 case .none:
@@ -183,7 +186,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         return progress
     }
     
-    public func asyncLayout() -> AsyncLayout {
+    public func asyncLayout(displayGiftIcon: Bool = false) -> AsyncLayout {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.title)
         let makeSubtitleLayout = TextNodeWithEntities.asyncLayout(self.subtitle)
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.text)
@@ -240,11 +243,15 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             let nameColors: PeerNameColors.Colors?
+            var giftEmojiFileId: Int64?
             switch author?.nameColor {
             case let .preset(nameColor):
                 nameColors = context.peerNameColors.get(nameColor, dark: presentationData.theme.theme.overallDarkAppearance)
             case let .collectible(collectibleColor):
                 nameColors = collectibleColor.peerNameColors(dark: presentationData.theme.theme.overallDarkAppearance)
+                if displayGiftIcon && displayLine && !isAd {
+                    giftEmojiFileId = collectibleColor.giftEmojiFileId
+                }
             default:
                 nameColors = nil
             }
@@ -524,6 +531,16 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if !isPreview, actionTitle != nil {
                     contentLayoutOrder.append(.actionButton)
                 }
+
+                let giftLayerSize = CGSize(width: 18.0, height: 18.0)
+                let giftTextItem = giftEmojiFileId == nil ? nil : contentLayoutOrder.first(where: { item in
+                    switch item {
+                    case .title, .subtitle, .text:
+                        return true
+                    case .media, .file, .actionButton:
+                        return false
+                    }
+                })
                 
                 var actualWidth: CGFloat = 0.0
                 
@@ -541,14 +558,19 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     cutoutWidth = inlineMediaSize.width + inlineMediaEdgeInset
                 }
                 for item in contentLayoutOrder {
+                    var textCutoutSize = CGSize()
+                    if remainingCutoutHeight > 0.0 {
+                        textCutoutSize = CGSize(width: cutoutWidth, height: remainingCutoutHeight)
+                    }
+                    if item == giftTextItem {
+                        textCutoutSize.width += giftLayerSize.width + 4.0
+                        textCutoutSize.height = max(textCutoutSize.height, giftLayerSize.height)
+                    }
+                    let cutout: TextNodeCutout? = textCutoutSize.height > 0.0 ? TextNodeCutout(topRight: textCutoutSize) : nil
+
                     switch item {
                     case .title:
                         if let title = title, !title.isEmpty {
-                            var cutout: TextNodeCutout?
-                            if remainingCutoutHeight > 0.0 {
-                                cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
-                            }
-                            
                             let titleString = NSAttributedString(string: title, font: titleFont, textColor: mainColor)
                             let titleLayoutAndApplyValue = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             titleLayoutAndApply = titleLayoutAndApplyValue
@@ -562,11 +584,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     case .subtitle:
                         if let subtitle = subtitle, !subtitle.string.isEmpty {
-                            var cutout: TextNodeCutout?
-                            if remainingCutoutHeight > 0.0 {
-                                cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
-                            }
-                            
                             let subtitleString = NSMutableAttributedString(attributedString: subtitle)
                             subtitleString.addAttribute(.foregroundColor, value: messageTheme.primaryTextColor, range: NSMakeRange(0, subtitle.length))
                             subtitleString.addAttribute(.font, value: titleFont, range: NSMakeRange(0, subtitle.length))
@@ -578,10 +595,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     case .text:
                         if let text = text, !text.isEmpty {
-                            var cutout: TextNodeCutout?
-                            if remainingCutoutHeight > 0.0 {
-                                cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
-                            }
                             var maximumNumberOfLines: Int = 12
                             if isPreview {
                                 maximumNumberOfLines = mediaAndFlags != nil ? 4 : 6
@@ -848,7 +861,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     offsetY: actualSize.height
                                 ))
                                 
-                                actualSize.height += titleLayout.size.height - titleLayout.insets.top - titleLayout.insets.bottom
+                                actualSize.height += max(titleLayout.size.height - titleLayout.insets.top - titleLayout.insets.bottom, item == giftTextItem ? giftLayerSize.height : 0.0)
                             }
                         case .subtitle:
                             if let (subtitleLayout, _) = subtitleLayoutAndApply {
@@ -865,7 +878,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     offsetY: actualSize.height
                                 ))
                                 
-                                actualSize.height += subtitleLayout.size.height - subtitleLayout.insets.top - subtitleLayout.insets.bottom
+                                actualSize.height += max(subtitleLayout.size.height - subtitleLayout.insets.top - subtitleLayout.insets.bottom, item == giftTextItem ? giftLayerSize.height : 0.0)
                             }
                         case .text:
                             if let (textLayout, _) = textLayoutAndApply {
@@ -882,7 +895,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     offsetY: actualSize.height
                                 ))
                                 
-                                actualSize.height += textLayout.size.height - textLayout.insets.top - textLayout.insets.bottom
+                                actualSize.height += max(textLayout.size.height - textLayout.insets.top - textLayout.insets.bottom, item == giftTextItem ? giftLayerSize.height : 0.0)
                             }
                         case .media:
                             if let (contentMediaSize, _) = contentMediaSizeAndApply {
@@ -943,6 +956,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                     
+                    var giftLayerFrame: CGRect?
+                    if let giftTextItem, let item = contentDisplayOrder.first(where: { $0.item == giftTextItem }) {
+                        let mediaInset = inlineMediaAndSize.map { $0.1.width + inlineMediaEdgeInset } ?? 0.0
+                        giftLayerFrame = CGRect(origin: CGPoint(x: actualSize.width - backgroundInsets.right - mediaInset - giftLayerSize.width - 4.0, y: item.offsetY), size: giftLayerSize)
+                    }
+
                     if !contentLayoutOrder.isEmpty {
                         switch contentLayoutOrder[contentLayoutOrder.count - 1] {
                         case .title, .subtitle, .text:
@@ -982,7 +1001,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                     
-                    return (actualSize, { animation, synchronousLoads, applyInfo in
+                    return (actualSize, { [controllerInteraction] animation, synchronousLoads, applyInfo in
                         guard let self else {
                             return
                         }
@@ -1554,6 +1573,28 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
+                        if let giftEmojiFileId, let giftLayerFrame {
+                            let giftEmojiLayer: InlineStickerItemLayer
+                            if let current = self.giftEmojiLayer, self.giftEmojiFileId == giftEmojiFileId {
+                                giftEmojiLayer = current
+                                animation.animator.updateFrame(layer: giftEmojiLayer, frame: giftLayerFrame, completion: nil)
+                            } else {
+                                self.giftEmojiLayer?.removeFromSuperlayer()
+                                giftEmojiLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: giftEmojiFileId, file: nil, custom: nil, enableAnimation: true), file: nil, cache: context.animationCache, renderer: context.animationRenderer, unique: false, placeholderColor: messageTheme.mediaPlaceholderColor, pointSize: CGSize(width: giftLayerSize.width * 2.0, height: giftLayerSize.height * 2.0), dynamicColor: nil, loopCount: 2)
+                                self.giftEmojiLayer = giftEmojiLayer
+                                self.giftEmojiFileId = giftEmojiFileId
+                                self.transformContainer.layer.addSublayer(giftEmojiLayer)
+                                giftEmojiLayer.frame = giftLayerFrame
+                            }
+                            giftEmojiLayer.isVisibleForAnimations = self.visibility != .none
+
+                            patternTopRightPosition = CGPoint(x: backgroundFrame.maxX - giftLayerFrame.maxX - 4.0, y: giftLayerFrame.minY - backgroundFrame.minY - 3.0)
+                        } else if let giftEmojiLayer = self.giftEmojiLayer {
+                            self.giftEmojiLayer = nil
+                            self.giftEmojiFileId = nil
+                            giftEmojiLayer.removeFromSuperlayer()
+                        }
+
                         if displayLine {
                             var pattern: MessageInlineBlockBackgroundView.Pattern?
                             if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
@@ -1565,7 +1606,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     file: message.associatedMedia[EngineMedia.Id(
                                         namespace: Namespaces.Media.CloudFile,
                                         id: backgroundEmojiId
-                                    )] as? TelegramMediaFile
+                                    )] as? TelegramMediaFile,
+                                    emptyCorner: giftLayerFrame != nil
                                 )
                             }
                             

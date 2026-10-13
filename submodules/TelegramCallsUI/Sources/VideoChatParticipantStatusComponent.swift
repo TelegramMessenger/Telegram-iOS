@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -177,7 +178,8 @@ final class VideoChatParticipantStatusComponent: Component {
                             name: "anim_hand1"
                         ),
                         color: component.theme.list.itemAccentColor,
-                        size: CGSize(width: 48.0, height: 48.0)
+                        size: CGSize(width: 48.0, height: 48.0),
+                        lottieSettings: .noAccountFallback
                     )),
                     environment: {},
                     containerSize: CGSize(width: 48.0, height: 48.0)

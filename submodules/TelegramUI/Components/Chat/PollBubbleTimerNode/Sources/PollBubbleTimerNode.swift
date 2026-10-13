@@ -2,17 +2,17 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
-private func textForTimeout(value: Int) -> String {
-    //TODO: localize
+private func textForTimeout(value: Int, strings: PresentationStrings) -> String {
     if value > 60 * 60 {
         let hours = value / (60 * 60)
-        return "\(hours)h"
+        return strings.MessageTimer_ShortHours(Int32(clamping: hours))
     } else {
         let minutes = value / 60
         let seconds = value % 60
         let secondsPadding = seconds < 10 ? "0" : ""
-        return "\(minutes):\(secondsPadding)\(seconds)"
+        return strings.Poll_Timer_MinutesSeconds(String(minutes), "\(secondsPadding)\(seconds)").string
     }
 }
 
@@ -40,7 +40,8 @@ private struct ContentParticle {
 }
 
 public final class PollBubbleTimerNode: ASDisplayNode {
-    private struct Params: Equatable {
+    private struct Params {
+        var strings: PresentationStrings
         var regularColor: UIColor
         var proximityColor: UIColor
         var timeout: Int32
@@ -89,8 +90,9 @@ public final class PollBubbleTimerNode: ASDisplayNode {
         self.animator?.invalidate()
     }
     
-    public func update(regularColor: UIColor, proximityColor: UIColor, timeout: Int32, deadlineTimestamp: Int32?) {
+    public func update(strings: PresentationStrings, regularColor: UIColor, proximityColor: UIColor, timeout: Int32, deadlineTimestamp: Int32?) {
         let params = Params(
+            strings: strings,
             regularColor: regularColor,
             proximityColor: proximityColor,
             timeout: timeout,
@@ -124,7 +126,7 @@ public final class PollBubbleTimerNode: ASDisplayNode {
         let isTimer = timeout <= Int(timerInterval)
         
         let color = isProximity ? params.proximityColor : params.regularColor
-        self.textNode.attributedText = NSAttributedString(string: textForTimeout(value: timeout), font: Font.with(size: 14.0, traits: .monospacedNumbers), textColor: color)
+        self.textNode.attributedText = NSAttributedString(string: textForTimeout(value: timeout, strings: params.strings), font: Font.with(size: 14.0, traits: .monospacedNumbers), textColor: color)
         let textSize = textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: -22.0 - textSize.width, y: 0.0), size: textSize)
         

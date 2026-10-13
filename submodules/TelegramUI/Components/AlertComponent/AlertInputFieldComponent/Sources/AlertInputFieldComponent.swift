@@ -273,7 +273,7 @@ public final class AlertInputFieldComponent: Component {
                 transition.setFrame(view: backgroundView, frame: backgroundFrame)
             }
             
-            let textFieldSize = CGSize(width: availableSize.width - 24.0, height: 50.0)
+            let textFieldSize = CGSize(width: availableSize.width + (component.hasClearButton ? -24.0 : 24.0), height: 50.0)
             let textFieldFrame = CGRect(origin: CGPoint(x: -12.0, y: topInset), size: textFieldSize)
             transition.setFrame(view: self.textField, frame: textFieldFrame)
             

@@ -39,10 +39,17 @@ extension PeerVerification {
         switch apiBotVerification {
         case let .botVerification(botVerificationData):
             let (botId, icon, description) = (botVerificationData.botId, botVerificationData.icon, botVerificationData.description)
+            var text: String = ""
+            var entities: [MessageTextEntity] = []
+            if case let .textWithEntities(textWithEntitiesData) = description {
+                text = textWithEntitiesData.text
+                entities = messageTextEntitiesFromApiEntities(textWithEntitiesData.entities)
+            }
             self.init(
                 botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)),
                 iconFileId: icon,
-                description: description
+                description: text,
+                descriptionEntities: entities
             )
         }
     }

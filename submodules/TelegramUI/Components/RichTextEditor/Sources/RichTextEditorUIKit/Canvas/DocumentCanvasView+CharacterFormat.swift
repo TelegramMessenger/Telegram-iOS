@@ -37,12 +37,33 @@ extension DocumentCanvasView {
         let covered = characterFormatTargets()
         guard !covered.isEmpty else { return }
         let allOn = covered.allSatisfy { isSet($0.storage, $0.range) }
-        editing {
-            for c in covered {
-                setOn(c.storage, c.range, allOn)
-                // Direct NSTextStorage mutation bypasses BlockLayout's renderVersion bump sites, so a
-                // view-backed paragraph wouldn't repaint (its renderSignature wouldn't change). Bump here.
-                c.layout.bumpRenderVersion()
+        // TASK 39b: a host-originated ATTRIBUTE-ONLY mutation. `.formatting` / `.preserveIfRebasable`
+        // — the text length does not change, so a marked range survives in principle.
+        //
+        // **TASK 41 CLOSED THE GAP THIS COMMENT USED TO DISCLOSE, AND THEN MEASURED THAT THIS SITE
+        // CANNOT REACH IT ANYWAY.** The disclosure read: "against the real document client
+        // `.preserveIfRebasable` degrades to `.discard` here, because `.formatting` still bumps the
+        // revision and D32's rebase is identity-or-nil. The policy states the INTENT; closing that gap
+        // is that method's business, not this call site's." Both halves are now false:
+        //   * the gap is closed — `reconcileMarkedTextForExternalChange` keys its fast path on
+        //     `change.reason.preservesTextOffsets`, and `.formatting` answers "offsets unmoved", so the
+        //     rebase is never attempted and nothing degrades; "in principle" is now the mechanism.
+        //   * and it was unreachable from here regardless: `performEditing` (`+Editing.swift`) opens
+        //     with `finalizeMarkedText()`, so the `editing { }` below COMMITS any live composition
+        //     BEFORE the mutation runs, and the policy is reached with no marked range at all.
+        //     MEASURED at BASE and pinned by `MarkedStateAuthorityTests
+        //     .test_aBoldToggleDuringACompositionCommitsIt_asItAlreadyDidAtBase`.
+        // The policy declaration stays: it is the honest description of the change, and it is what a
+        // future caller that does NOT go through `editing { }` would rely on.
+        synchronizingExternalChange(reason: .formatting, markedTextPolicy: .preserveIfRebasable) {
+            editing {
+                for c in covered {
+                    setOn(c.storage, c.range, allOn)
+                    // Direct NSTextStorage mutation bypasses BlockLayout's renderVersion bump sites, so a
+                    // view-backed paragraph wouldn't repaint (its renderSignature wouldn't change). Bump here.
+                    c.layout.bumpRenderVersion()
+                }
+                return .unchanged
             }
         }
     }
@@ -157,9 +178,29 @@ extension DocumentCanvasView {
         }
     }
 
+    /// True when every character-format target lies in a `.codeLanguage` region. A code block's language is
+    /// a PLAIN string on the wire (`.Pre` carries no nested entities), so every inline format there is
+    /// either dropped on read-back — an inert edit that still dirties the model — or survives in the layout
+    /// and corrupts what `currentCode()` reads back. Mirrors `selectionIsEntirelyInAuthorRegion`.
+    func selectionIsEntirelyInCodeLanguageRegion() -> Bool {
+        let targets = characterFormatTargets()
+        guard !targets.isEmpty else {
+            // Collapsed caret (no format targets): check the region under `head`.
+            if let (region, _) = leafRegion(containingGlobal: head), case .codeLanguage = region.ref { return true }
+            return false
+        }
+        let regions = allLeafRegions()
+        return targets.allSatisfy { target in
+            guard let region = regions.first(where: { $0.layout === target.layout }) else { return false }
+            if case .codeLanguage = region.ref { return true }
+            return false
+        }
+    }
+
     func toggleBold() {
         // The author line is always-bold (ambient); a bold toggle there is inert — never un-bold it.
         if selectionIsEntirelyInAuthorRegion() { return }
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsBold(s, r) }, setOn: { storage, range, allOn in
             storage.enumerateAttribute(.font, in: range, options: []) { v, sub, _ in
                 let f = (v as? UIFont) ?? UIFont.systemFont(ofSize: 16)
@@ -180,6 +221,7 @@ extension DocumentCanvasView {
         // A pull-quote author line is always-italic (ambient), in addition to always-bold; an italic toggle
         // there is inert — never un-italicize it. (Block-quote authors are bold-only, so they stay toggleable.)
         if selectionIsEntirelyInPullQuoteAuthorRegion() { return }
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsItalic(s, r) }, setOn: { storage, range, allOn in
             storage.enumerateAttribute(.font, in: range, options: []) { v, sub, _ in
                 let f = (v as? UIFont) ?? UIFont.systemFont(ofSize: 16)
@@ -193,6 +235,7 @@ extension DocumentCanvasView {
     }
 
     func toggleStrikethrough() {
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsStrikethrough(s, r) }, setOn: { storage, range, allOn in
             if allOn { storage.removeAttribute(.strikethroughStyle, range: range) }
             else { storage.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: range) }
@@ -200,6 +243,7 @@ extension DocumentCanvasView {
     }
 
     func toggleUnderline() {
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsUnderline(s, r) }, setOn: { storage, range, allOn in
             if allOn { storage.removeAttribute(.underlineStyle, range: range) }
             else { storage.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range) }
@@ -210,6 +254,7 @@ extension DocumentCanvasView {
     /// `characterFormatTargets`). Additive — it touches no font/colour, so it composes with every other
     /// format. The display-only hide + dust overlay are driven separately by `syncSpoilers`.
     func toggleSpoiler() {
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsSpoiler(s, r) }, setOn: { storage, range, allOn in
             if allOn { storage.removeAttribute(.rtSpoiler, range: range) }
             else { storage.addAttribute(.rtSpoiler, value: true, range: range) }
@@ -220,6 +265,7 @@ extension DocumentCanvasView {
     /// carry emphasis, so toggling off restores a plain system font at the same size (any bold/italic
     /// inside is intentionally dropped); the named-style font returns on the next model round-trip.
     func toggleInlineCode() {
+        if selectionIsEntirelyInCodeLanguageRegion() { return }   // a language is a plain string on the wire
         applyCharacterToggle(isSet: { s, r in self.rangeIsInlineCode(s, r) }, setOn: { storage, range, allOn in
             storage.enumerateAttribute(.font, in: range, options: []) { v, sub, _ in
                 let size = ((v as? UIFont) ?? UIFont.systemFont(ofSize: 16)).pointSize

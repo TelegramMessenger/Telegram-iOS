@@ -804,7 +804,8 @@ final class QuickReplySetupScreenComponent: Component {
                     theme: theme,
                     strings: strings,
                     statusBarHeight: statusBarHeight,
-                    sideInset: insets.left,
+                    leftInset: insets.left,
+                    rightInset: insets.right,
                     search: ChatListNavigationBar.Search(isEnabled: !self.isEditing),
                     activeSearch: self.isSearchDisplayControllerActive ? ChatListNavigationBar.ActiveSearch(isExternal: false) : nil,
                     primaryContent: headerContent,
@@ -947,6 +948,7 @@ final class QuickReplySetupScreenComponent: Component {
                 let _ = emptyState.update(
                     transition: emptyStateTransition,
                     component: AnyComponent(QuickReplyEmptyStateComponent(
+                        context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
                         insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom + environment.additionalInsets.bottom, right: environment.safeInsets.right),
@@ -1361,6 +1363,16 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer, Atta
         self.dismiss()
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
+    }
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     }

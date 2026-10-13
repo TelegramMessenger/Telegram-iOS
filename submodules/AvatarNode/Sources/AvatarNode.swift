@@ -31,6 +31,10 @@ public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
     return Font.with(size: size, design: .round, weight: .bold)
 }
 
+public func generateDeletedAccountAvatarImage(size: CGSize) -> UIImage? {
+    return generateAvatarImage(size: size, icon: deletedIcon, iconScale: size.width / 60.0, color: .blue, customColors: AvatarNode.grayscaleColors)
+}
+
 public enum AvatarNodeClipStyle {
     case none
     case round
@@ -561,7 +565,7 @@ public final class AvatarNode: ASDisplayNode {
             if var size = animationNode.preferredSize() {
                 size = CGSize(width: ceil(size.width), height: ceil(size.height))
                 animationNode.frame = CGRect(x: floor((self.bounds.width - size.width) / 2.0) + 1.0, y: floor((self.bounds.height - size.height) / 2.0), width: size.width, height: size.height)
-                Queue.mainQueue().after(0.15, {
+                Queue.mainQueue().after(0.15, { [animationBackgroundNode, animationNode] in
                     animationNode.play()
                     animationNode.completion = { [weak animationNode, weak animationBackgroundNode] in
                         animationNode?.removeFromSupernode()

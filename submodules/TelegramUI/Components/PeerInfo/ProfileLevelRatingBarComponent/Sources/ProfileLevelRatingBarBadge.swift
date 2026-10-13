@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import TelegramPresentationData
@@ -280,7 +281,8 @@ final class ProfileLevelRatingBarBadge: Component {
                     size: badgeShapeSize,
                     renderingScale: UIScreenScale,
                     loop: false,
-                    playOnce: nil
+                    playOnce: nil,
+                    lottieSettings: .noAccountFallback
                 )),
                 environment: {},
                 containerSize: badgeShapeSize

@@ -4,30 +4,22 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-private final class UnauthorizedUpdateMessageService: NSObject, MTMessageService {
+private final class UnauthorizedUpdateMessageService: NSObject, NetworkEngineUpdateSink {
     let pipe: ValuePipe<[Api.Update]> = ValuePipe()
-    var mtProto: MTProto?
     
     override init() {
         super.init()
     }
     
-    func mtProtoWillAdd(_ mtProto: MTProto!) {
-        self.mtProto = mtProto
-    }
-    
-    func mtProtoDidChangeSession(_ mtProto: MTProto!) {
-    }
-    
-    func mtProtoServerDidChangeSession(_ mtProto: MTProto!, firstValidMessageId: Int64, otherValidMessageIds: [Any]!) {
+    func networkSessionDidReset() {
     }
     
     func putNext(_ updates: [Api.Update]) {
         self.pipe.putNext(updates)
     }
     
-    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector, networkType: Int32) {
-        if let updates = (message.body as? BoxedMessage)?.body as? Api.Updates {
+    func networkSessionDidReceive(message: Any) {
+        if let updates = (message as? BoxedMessage)?.body as? Api.Updates {
             self.addUpdates(updates)
         }
     }
@@ -107,7 +99,7 @@ final class UnauthorizedAccountStateManager {
                         }
                     }
                 }))
-                self.network.mtProto.add(self.updateService)
+                self.network.addUpdateSink(self.updateService!)
             }
         }
     }

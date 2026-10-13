@@ -38,6 +38,12 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
             }
         }
         self.entries = internalEntries
+        // `currentText` is what Translate / Share / Look Up receive for a selection, so the inline-attachment
+        // placeholder (`U+FFFC`) must not reach them as a literal object-replacement box. Substituting a
+        // space is safe for every OTHER consumer because it is length-preserving in UTF-16 — the offsets
+        // `attributesAtPoint` and `textRangeRects(in:)` hand out stay valid — and `markdownForRange` reads
+        // the per-entry strings, not this one, so the emoji marker it emits is unaffected.
+        combined.replaceOccurrences(ofPlaceholder: instantPageInlineAttachmentPlaceholder, with: " ")
         self.combinedString = combined
         super.init()
         self.isUserInteractionEnabled = false
@@ -253,6 +259,28 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
     }
 }
 
+private extension NSMutableAttributedString {
+    /// Swaps every occurrence of a ONE-character placeholder for another one-character string, keeping
+    /// each occurrence's attributes (`replaceCharacters(in:with:)` inherits them from the first replaced
+    /// character) and, because both sides are one UTF-16 unit, every offset into the string.
+    func replaceOccurrences(ofPlaceholder placeholder: String, with replacement: String) {
+        guard placeholder.utf16.count == 1, replacement.utf16.count == 1 else {
+            assertionFailure("both sides must be one UTF-16 unit or offsets shift")
+            return
+        }
+        var searchRange = NSRange(location: 0, length: self.length)
+        while true {
+            let found = (self.string as NSString).range(of: placeholder, options: [], range: searchRange)
+            guard found.location != NSNotFound else {
+                return
+            }
+            self.replaceCharacters(in: found, with: replacement)
+            let next = found.upperBound
+            searchRange = NSRange(location: next, length: self.length - next)
+        }
+    }
+}
+
 private func escapeSelectionMarkdown(_ string: String) -> String {
     var result = ""
     result.reserveCapacity(string.count)
@@ -280,14 +308,21 @@ private func inlineMarkdown(from slice: NSAttributedString) -> String {
     var result = ""
 
     slice.enumerateAttributes(in: fullRange, options: []) { attributes, range, _ in
-        let substring = (slice.string as NSString).substring(with: range)
+        // Every inline attachment (emoji / image / formula / button pill) occupies one
+        // `instantPageInlineAttachmentPlaceholder` (`U+FFFC`) cell. That character is layout machinery
+        // and must never reach the clipboard: the emoji branch below replaces it with its marker, and
+        // for the attachments this converter has no markdown for (image / formula / pill) a space is
+        // what a reader expects to see in its place — which is also the pre-`U+FFFC` behaviour.
+        let substring = (slice.string as NSString)
+            .substring(with: range)
+            .replacingOccurrences(of: instantPageInlineAttachmentPlaceholder, with: " ")
 
         // Custom emoji: emit the shared marker carrying the fileId. The display
-        // placeholder may have no real alt (often a single space), so alt is
-        // best-effort; whole-message copy / edit reconstruction have the true alt.
+        // placeholder carries no real alt, so alt is best-effort; whole-message copy /
+        // edit reconstruction have the true alt.
         if let emojiAttribute = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
             // Non-empty link text required: CommonMark drops `[](url)` on re-parse.
-            let alt = substring.isEmpty ? " " : substring
+            let alt = substring.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : substring
             result += "[\(escapeCustomEmojiMarkdownAlt(alt))](\(customEmojiMarkdownURL(fileId: emojiAttribute.fileId)))"
             return
         }

@@ -1,0 +1,3773 @@
+{
+  "frames" : [
+    {
+      "groundTruthOffset" : [
+        0,
+        9.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -551.742382459231
+      ],
+      "t" : 1.1161100836470723,
+      "translation" : [
+        0,
+        -9.371871948242188
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        20
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -629.7253957516242
+      ],
+      "t" : 1.132452541962266,
+      "translation" : [
+        0,
+        -19.824935913085938
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        29.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -616.9861421246318
+      ],
+      "t" : 1.1491356254555285,
+      "translation" : [
+        0,
+        -29.439056396484375
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        37.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -560.0830339390261
+      ],
+      "t" : 1.1657823333516717,
+      "translation" : [
+        0,
+        -37.69328308105469
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        44
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -472.38731056506816
+      ],
+      "t" : 1.1824177503585815,
+      "translation" : [
+        0,
+        -44.02976989746094
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        51
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -389.2573265963773
+      ],
+      "t" : 1.1991315418854356,
+      "translation" : [
+        0,
+        -51.14341735839844
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        56
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -401.983460067298
+      ],
+      "t" : 1.2157265837304294,
+      "translation" : [
+        0,
+        -56.175140380859375
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        62.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -321.30596505160713
+      ],
+      "t" : 1.2323976252228022,
+      "translation" : [
+        0,
+        -62.598175048828125
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        70
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -391.75776702494323
+      ],
+      "t" : 1.2490463335998356,
+      "translation" : [
+        0,
+        -69.86001586914062
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        77.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -437.6976464032933
+      ],
+      "t" : 1.2658872921019793,
+      "translation" : [
+        0,
+        -77.28300476074219
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        85.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -457.0019953882762
+      ],
+      "t" : 1.2824574587866664,
+      "translation" : [
+        0,
+        -85.67814636230469
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        94
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -502.26194228165946
+      ],
+      "t" : 1.2990950420498848,
+      "translation" : [
+        0,
+        -93.95756530761719
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        102.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -497.97989512866036
+      ],
+      "t" : 1.3157671252265573,
+      "translation" : [
+        0,
+        -102.34315490722656
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        110.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -501.8570363678741
+      ],
+      "t" : 1.332470708526671,
+      "translation" : [
+        0,
+        -110.61712646484375
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        119
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -497.206272880938
+      ],
+      "t" : 1.349139875266701,
+      "translation" : [
+        0,
+        -118.96182250976562
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        126
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -484.53921409362755
+      ],
+      "t" : 1.3658290836028755,
+      "translation" : [
+        0,
+        -125.94741821289062
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        133
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -418.74009489382286
+      ],
+      "t" : 1.382478208746761,
+      "translation" : [
+        0,
+        -132.83523559570312
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        137
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -383.20388688220913
+      ],
+      "t" : 1.3990917918272316,
+      "translation" : [
+        0,
+        -136.98077392578125
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        142
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -258.8193027980387
+      ],
+      "t" : 1.4158291253261268,
+      "translation" : [
+        0,
+        -142.13328552246094
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        146.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -302.08590027896975
+      ],
+      "t" : 1.4324589585885406,
+      "translation" : [
+        0,
+        -146.69248962402344
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        153
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -294.7791161903284
+      ],
+      "t" : 1.4491071668453515,
+      "translation" : [
+        0,
+        -153.02330017089844
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        159.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -378.9851475466469
+      ],
+      "t" : 1.4657746250741184,
+      "translation" : [
+        0,
+        -159.2792510986328
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        165.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -375.60502822988286
+      ],
+      "t" : 1.4824209585785866,
+      "translation" : [
+        0,
+        -165.5581817626953
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        173
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -388.31529324906745
+      ],
+      "t" : 1.4990982920862734,
+      "translation" : [
+        0,
+        -172.80287170410156
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        180.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -441.6357042290772
+      ],
+      "t" : 1.5157206254079938,
+      "translation" : [
+        0,
+        -180.62701416015625
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        189.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -484.80537265558894
+      ],
+      "t" : 1.532480583526194,
+      "translation" : [
+        0,
+        -189.73367309570312
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        198.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -541.481377643647
+      ],
+      "t" : 1.5491232085041702,
+      "translation" : [
+        0,
+        -198.429443359375
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        211.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        0,
+        -576.5892438678525
+      ],
+      "t" : 1.5657901670783758,
+      "translation" : [
+        0,
+        -211.5277862548828
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        224.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        14.417384819614034,
+        -792.1325305455252
+      ],
+      "t" : 1.5824524168856442,
+      "translation" : [
+        1.21624755859375,
+        -224.6437225341797
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        236.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        57.66953927845615,
+        -765.0766604856499
+      ],
+      "t" : 1.599133750423789,
+      "translation" : [
+        1.21624755859375,
+        -236.5761260986328
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        249.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        4.11695801644363,
+        -728.0577334009829
+      ],
+      "t" : 1.6158213336020708,
+      "translation" : [
+        1.559295654296875,
+        -249.52239990234375
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        262.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        29.667077765839007,
+        -777.0968266794089
+      ],
+      "t" : 1.632400166708976,
+      "translation" : [
+        2.6597442626953125,
+        -262.4966125488281
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        276
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        77.972066647031,
+        -786.4390763878978
+      ],
+      "t" : 1.6490976670756936,
+      "translation" : [
+        4.7567291259765625,
+        -276.15435791015625
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        288
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        113.79095337630241,
+        -800.7095620075106
+      ],
+      "t" : 1.6657729167491198,
+      "translation" : [
+        5.8479766845703125,
+        -288.2287292480469
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        302
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        77.18711330404243,
+        -744.0949012298266
+      ],
+      "t" : 1.6824553334154189,
+      "translation" : [
+        7.916107177734375,
+        -301.9512939453125
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        314
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        117.93452719508919,
+        -802.7435224527949
+      ],
+      "t" : 1.6991081670857966,
+      "translation" : [
+        9.469146728515625,
+        -313.9410095214844
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        328
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        100.52309750779497,
+        -746.0991561429868
+      ],
+      "t" : 1.7158086667768657,
+      "translation" : [
+        11.635009765625,
+        -328.1644744873047
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        344
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        129.05801626203845,
+        -871.749849066416
+      ],
+      "t" : 1.732421875,
+      "translation" : [
+        13.72967529296875,
+        -343.9375915527344
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        359.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        125.66517973085502,
+        -945.8561432639315
+      ],
+      "t" : 1.7491394584067166,
+      "translation" : [
+        15.82073974609375,
+        -359.64862060546875
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        376
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        145.41340342516708,
+        -953.2181452924442
+      ],
+      "t" : 1.7658164585009217,
+      "translation" : [
+        19.57293701171875,
+        -376.22486877441406
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        394.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        229.66135937836412,
+        -1013.4012341483094
+      ],
+      "t" : 1.7824254585430026,
+      "translation" : [
+        23.707550048828125,
+        -394.3918914794922
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        412.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        247.46250795474572,
+        -1090.5755441923222
+      ],
+      "t" : 1.7991971666924655,
+      "translation" : [
+        27.787673950195312,
+        -412.5906066894531
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        432
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        243.9114720002054,
+        -1109.1277491334579
+      ],
+      "t" : 1.8157722502946854,
+      "translation" : [
+        31.792633056640625,
+        -432.2203674316406
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        461.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        262.10875316949955,
+        -1295.9681039599827
+      ],
+      "t" : 1.832453333772719,
+      "translation" : [
+        37.54188537597656,
+        -461.32818603515625
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        487.5
+      ],
+      "phase" : "dragging",
+      "recognizerVelocity" : [
+        325.15817235135904,
+        -1723.7572525385856
+      ],
+      "t" : 1.8491334170103073,
+      "translation" : [
+        41.41181945800781,
+        -487.4607391357423
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        510.4688269846314
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.8659322084859014,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        532.68404578316
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.8830207083374262,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        554.1703829022232
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.8996205418370664,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        574.9517518003207
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.9154760004021227,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        595.0512831047741
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.9321337919682264,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        614.4913479359069
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.9487977917306125,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        633.2935834166373
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.965475166682154,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        651.4789167549643
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.9821279584430158,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        669.0675885363062
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 1.99880037503317,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        686.0791757188506
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.0154589167796075,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        702.5326115382554
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.032143958378583,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        718.4462094316174
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.0488077918998897,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        733.8376815041522
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.06546354200691,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        748.7241587261534
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.0821284586563706,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        763.1222100000537
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.0987920835614204,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        777.0478606018952
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.115475333761424,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        790.5166100177346
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.1321416250430048,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        803.543449552625
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.148806208744645,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        816.1428775728945
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.16546425037086,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        828.328917826229
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.1821309169754386,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        840.1151335827691
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.1988180419430137,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        851.5146431011871
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.215468458365649,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        862.5401342295329
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.2321444586850703,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        873.2038785270246
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.2487954585812986,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        883.5177452057796
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.2654617917723954,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        893.4932131987323
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.2821317920461297,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        903.1413856643719
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.2988011250272393,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        912.4730011828107
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.315475208684802,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        921.4984460008926
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.3321396252140403,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        930.2277655922628
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.348798875231296,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        938.6706758381507
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.3654675418511033,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        946.8365738413111
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.3821436669677496,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        954.7345486020823
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.398801500443369,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        962.373390259548
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.4154541669413447,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        969.761601198725
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.4321385002695024,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        976.9074046240944
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.44881158368662,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        983.8187539364504
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.465463625267148,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        990.5033415851702
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.482154375407845,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        996.9686076300411
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.4988015834242105,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1003.2217481939202
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.515478666871786,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1009.2697227793294
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.532138000242412,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1015.1192630624577
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.54879662534222,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1020.7768796811666
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.565465958788991,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1026.248869659014
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.582136958371848,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1031.5413234139476
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.5988067500293255,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1036.6601315370447
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.6154638337902725,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1041.61099134884
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.6321376669220626,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1046.3994133720566
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.648807791993022,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1051.0307269343834
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.6654660836793482,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1055.5100869025925
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.6821330417878926,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1059.8424788805426
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.698809583671391,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1064.0327248942178
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.7154759587720037,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1068.0854887587261
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.7321372502483428,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1072.005281269204
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.7487957919947803,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1075.796465325536
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.7654747921042144,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1079.4632603682946
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.782143250107765,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1083.0097477104105
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.7988011250272393,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1086.4398746526365
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.8154597501270473,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1089.7574589846213
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.8321388750337064,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1092.9661932341728
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.848798875231296,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1096.0696487771056
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.8654670417308807,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1099.0712798122424
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.8821407919749618,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1101.9744272857333
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.898802500218153,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1104.7823222879329
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.915469833649695,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1107.498090136195
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.932135167066008,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1110.1247535263421
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.9487977917306125,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1112.6652359794184
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.9654758754186332,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1115.122365095619
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.982144166715443,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1117.4988757014569
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 2.9988140002824366,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1119.797412956802
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.0154701666906476,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1122.0205350443246
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.0321315000765026,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1124.1707164020056
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.0488115837797523,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1126.2503502182803
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.0654757916927338,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1128.2617511609699
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.082143791951239,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1130.2071579535464
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.098805833607912,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1132.08873586687
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.115472166799009,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1133.9085791291718
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.1321405419148505,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1135.66871330531
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.1488130004145205,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1137.3710973562434
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.165469833649695,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1139.0176261143692
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.182143125217408,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1140.61013219421
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.1988109587691724,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1142.150388082128
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2154733752831817,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1143.6401081091333
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2321182917803526,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1145.0809503589624
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2488181251101196,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1146.4745185518295
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2654565004631877,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1147.8223636749954
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2821329585276544,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1149.1259859425886
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.2988005420193076,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1150.3868363083732
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.315486625302583,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1151.606318120259
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.332121416926384,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1152.7857886822515
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.3488093335181475,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1153.926560765154
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.36546445870772,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1155.0299040677044
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.3821332920342684,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1156.097046659081
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.398794333450496,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1157.1291762275307
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.415469416882843,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1158.1274415811288
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.432130708359182,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1159.0929538061985
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.4488114584237337,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1160.0267875342738
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.465475458651781,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1160.9299821381828
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.4821295416913927,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1161.803542888887
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.498800958506763,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1162.6484420975708
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.5154639170505106,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1163.46562010423
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.5321305003017187,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1164.255986465883
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.548802458681166,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1165.0204208737382
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.565474916715175,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1165.7597741562975
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.5821454585529864,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1166.474869226344
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.598792125005275,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1167.166501996858
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.6154789584688842,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1167.8354422668804
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.632128667086363,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1168.4824345960835
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.648796083405614,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1169.1081990617952
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.6654766253195703,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1169.7134321688857
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.682138125412166,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1170.2988075521007
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.6988029167987406,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1170.8649767442016
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.715472625102848,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1171.4125699011322
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.732134083751589,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1171.9421965033932
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.7487908750772476,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1172.4544460484733
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.7654687501490116,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1172.9498886502163
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.782138750422746,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1173.429075759214
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.798803750425577,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1173.8925407188715
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.8154604583978653,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1174.3407993735748
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.8321443335153162,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1174.7743506428335
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.8488160837441683,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1175.1936770765867
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.8654736666940153,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1175.59924539229
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.8821104583330452,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1175.9915070051527
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.898793916683644,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1176.3708984871114
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.9154794584028423,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1176.7378421184796
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.9321350837126374,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1177.0927463137625
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.948785333428532,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1177.4360060873678
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.965462500229478,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1177.768003493264
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.98212766693905,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1178.0891080502124
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 3.9988123336806893,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1178.3996771615784
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.015428791753948,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1178.700056478718
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.032125250436366,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1178.990580337741
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.048771041911095,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1179.2715720966457
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.065462250262499,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1179.5433445040408
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.082148416899145,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1179.8062000472394
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.098774041980505,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1180.0604312889336
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.11545900022611,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1180.306321192821
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.132127375341952,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1180.5441434450804
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.148807250428945,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1180.7741627326393
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.165452583692968,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1180.9966350776322
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.182116542011499,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1181.211808095564
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.198757333680987,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1181.4199212776648
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.215430500451475,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1181.6212062574473
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.232126000337303,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1181.8158870685186
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.248768458608538,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.0041803991055
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.26545387506485,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.18629581237
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.282100083772093,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.3624360112126
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.298765916842967,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.5327970426715
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.315458375029266,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.6975685214734
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.332109625451267,
+      "translation" : [
+        0,
+        0
+      ]
+    },
+    {
+      "groundTruthOffset" : [
+        0,
+        1182.5
+      ],
+      "phase" : "decelerating",
+      "recognizerVelocity" : [
+        0,
+        0
+      ],
+      "t" : 4.332121250219643,
+      "translation" : [
+        0,
+        0
+      ]
+    }
+  ],
+  "geometry" : {
+    "boundsHeight" : 1032,
+    "boundsWidth" : 1376,
+    "contentHeight" : 6000,
+    "contentWidth" : 1032,
+    "decelerationRate" : 0.998,
+    "insetBottom" : 0,
+    "insetLeft" : 0,
+    "insetRight" : 0,
+    "insetTop" : 0,
+    "scale" : 2
+  },
+  "name" : "slow-drag-release",
+  "releaseTime" : 1.8660034169442952,
+  "rubberBandSamples" : [
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 9.371871948242188,
+      "out" : 9.371871948242188,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 19.824935913085938,
+      "out" : 19.824935913085938,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 29.439056396484375,
+      "out" : 29.439056396484375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 37.69328308105469,
+      "out" : 37.69328308105469,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 44.02976989746094,
+      "out" : 44.02976989746094,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 51.14341735839844,
+      "out" : 51.14341735839844,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 56.175140380859375,
+      "out" : 56.175140380859375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 62.598175048828125,
+      "out" : 62.598175048828125,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 69.86001586914062,
+      "out" : 69.86001586914062,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 77.28300476074219,
+      "out" : 77.28300476074219,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 85.67814636230469,
+      "out" : 85.67814636230469,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 93.95756530761719,
+      "out" : 93.95756530761719,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 102.34315490722656,
+      "out" : 102.34315490722656,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 110.61712646484375,
+      "out" : 110.61712646484375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 118.96182250976562,
+      "out" : 118.96182250976562,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 125.94741821289062,
+      "out" : 125.94741821289062,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 132.83523559570312,
+      "out" : 132.83523559570312,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 136.98077392578125,
+      "out" : 136.98077392578125,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 142.13328552246094,
+      "out" : 142.13328552246094,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 146.69248962402344,
+      "out" : 146.69248962402344,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 153.02330017089844,
+      "out" : 153.02330017089844,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 159.2792510986328,
+      "out" : 159.2792510986328,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 165.5581817626953,
+      "out" : 165.5581817626953,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 172.80287170410156,
+      "out" : 172.80287170410156,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 180.62701416015625,
+      "out" : 180.62701416015625,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 189.73367309570312,
+      "out" : 189.73367309570312,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 198.429443359375,
+      "out" : 198.429443359375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 211.5277862548828,
+      "out" : 211.5277862548828,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 224.6437225341797,
+      "out" : 224.6437225341797,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 236.5761260986328,
+      "out" : 236.5761260986328,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 249.52239990234375,
+      "out" : 249.52239990234375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 262.4966125488281,
+      "out" : 262.4966125488281,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 276.15435791015625,
+      "out" : 276.15435791015625,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 288.2287292480469,
+      "out" : 288.2287292480469,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 301.9512939453125,
+      "out" : 301.9512939453125,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 313.9410095214844,
+      "out" : 313.9410095214844,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 328.16448974609375,
+      "out" : 328.16448974609375,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 343.9375915527344,
+      "out" : 343.9375915527344,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 359.64862060546875,
+      "out" : 359.64862060546875,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 376.224853515625,
+      "out" : 376.224853515625,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 394.39190673828125,
+      "out" : 394.39190673828125,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 412.5906066894531,
+      "out" : 412.5906066894531,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 432.2203674316406,
+      "out" : 432.2203674316406,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 461.32818603515625,
+      "out" : 461.32818603515625,
+      "range" : 1032
+    },
+    {
+      "max" : -344,
+      "min" : 0,
+      "offset" : 0,
+      "out" : 0,
+      "range" : 1376
+    },
+    {
+      "max" : 4968,
+      "min" : 0,
+      "offset" : 487.46075439453125,
+      "out" : 487.46075439453125,
+      "range" : 1032
+    }
+  ],
+  "touches" : [
+
+  ]
+}

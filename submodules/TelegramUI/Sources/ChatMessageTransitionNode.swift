@@ -22,51 +22,187 @@ import ChatMediaInputStickerGridItem
 import AccountContext
 import ChatInputAccessoryPanel
 
-private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
-    if let presentationLayer = fromView.layer.presentation() {
-        return presentationLayer.convert(rect, to: toView?.layer)
-    } else {
-        return fromView.layer.convert(rect, to: toView?.layer)
+/// The eased progress `animation` will be at when the frame this runloop turn is composing hits the
+/// screen — 0.0 for one that has not started yet.
+///
+/// A brand-new animation has `beginTime == 0.0`: CoreAnimation stamps it at commit, so it renders its
+/// start value. CoreList instead stamps every track in a pass with the time that pass BEGAN
+/// (`ListAnimationController.now()`, via `CoreAnimationCompiler.animation(for:property:)`), which is
+/// already some milliseconds in the past by the time a transaction completion runs — such a track is
+/// partway through on its very first rendered frame, and reading its `fromValue` would over-correct by
+/// that much.
+///
+/// Times are taken in the layer's own space, which is what CoreAnimation evaluates in, so a
+/// speed/timeOffset anywhere up the tree (Slow Animations) does not skew the result. A curve this
+/// cannot evaluate — a `CASpringAnimation`, whose value needs the spring solution rather than a
+/// bezier — reports 0.0 and therefore contributes its start value: the same answer this file gave for
+/// every animation before, and an under- rather than over-correction.
+private func pendingAnimationProgress(_ animation: CAAnimation, on layer: CALayer) -> CGFloat {
+    guard animation.beginTime > 0.0 else {
+        return 0.0
+    }
+    guard let timingFunction = animation.timingFunction, !(animation is CASpringAnimation) else {
+        return 0.0
+    }
+    let speed = animation.speed == 0.0 ? 1.0 : Double(animation.speed)
+    let elapsed = (layer.convertTime(CACurrentMediaTime(), from: nil) - animation.beginTime) * speed + animation.timeOffset
+    guard elapsed > 0.0, animation.duration > 0.0 else {
+        return elapsed > 0.0 ? 1.0 : 0.0
+    }
+    return CGFloat(timingFunction.solveOutput(atInput: min(1.0, elapsed / animation.duration)))
+}
+
+private extension CAMediaTimingFunction {
+    /// The cubic bezier's y for a given x, both on [0, 1] — the curve's output at a fraction of its
+    /// duration. Newton-Raphson on x, which converges in a couple of steps for the shallow curves
+    /// used here; the clamp keeps a degenerate control point (a zero derivative) from diverging.
+    func solveOutput(atInput input: Double) -> Double {
+        var rawPoint = [Float](repeating: 0.0, count: 2)
+        self.getControlPoint(at: 1, values: &rawPoint)
+        let control1 = (x: Double(rawPoint[0]), y: Double(rawPoint[1]))
+        self.getControlPoint(at: 2, values: &rawPoint)
+        let control2 = (x: Double(rawPoint[0]), y: Double(rawPoint[1]))
+
+        func bezier(_ t: Double, _ a: Double, _ b: Double) -> Double {
+            let inverseT = 1.0 - t
+            return 3.0 * inverseT * inverseT * t * a + 3.0 * inverseT * t * t * b + t * t * t
+        }
+
+        var t = input
+        for _ in 0 ..< 8 {
+            let error = bezier(t, control1.x, control2.x) - input
+            if abs(error) < 1.0e-5 {
+                break
+            }
+            let inverseT = 1.0 - t
+            let derivative = 3.0 * inverseT * inverseT * control1.x + 6.0 * inverseT * t * (control2.x - control1.x) + 3.0 * t * t * (1.0 - control2.x)
+            if abs(derivative) < 1.0e-6 {
+                break
+            }
+            t = min(1.0, max(0.0, t - error / derivative))
+        }
+        return bezier(t, control1.y, control2.y)
     }
 }
 
-private func pendingAdditiveSublayerTranslation(_ layer: CALayer) -> CGPoint {
-    guard let keys = layer.animationKeys() else { return .zero }
+/// The per-axis value an animation's endpoint describes, or nil on an axis the keyPath does not
+/// drive. Only the geometry keyPaths the list backends actually emit are decoded; anything else
+/// reports nothing and is skipped by the caller.
+private func animatedGeometryValue(_ value: Any?, keyPath: String) -> (x: CGFloat?, y: CGFloat?) {
+    guard let value = value else {
+        return (nil, nil)
+    }
+    let nsValueType = (value as? NSValue).map { String(cString: $0.objCType) } ?? ""
+    switch keyPath {
+    case "sublayerTransform", "transform":
+        guard nsValueType.contains("CATransform3D"), let value = value as? NSValue else {
+            return (nil, nil)
+        }
+        let transform = value.caTransform3DValue
+        return (transform.m41, transform.m42)
+    case "bounds":
+        guard nsValueType.contains("CGRect"), let value = value as? NSValue else {
+            return (nil, nil)
+        }
+        return (value.cgRectValue.origin.x, value.cgRectValue.origin.y)
+    case "bounds.origin", "position":
+        guard nsValueType.contains("CGPoint"), let value = value as? NSValue else {
+            return (nil, nil)
+        }
+        return (value.cgPointValue.x, value.cgPointValue.y)
+    default:
+        guard let value = value as? NSNumber else {
+            return (nil, nil)
+        }
+        if keyPath.hasSuffix(".x") {
+            return (CGFloat(value.doubleValue), nil)
+        } else if keyPath.hasSuffix(".y") {
+            return (nil, CGFloat(value.doubleValue))
+        } else {
+            return (nil, nil)
+        }
+    }
+}
+
+/// How far `layer`'s animations on one geometry property displace it from its MODEL value, as the
+/// next frame will render it. Zero when nothing is animating that property — which is what keeps a
+/// model value written in this same turn WITHOUT an animation (CoreList rebases its container that
+/// way) from being counted: that write renders immediately, so the model already is the truth for it.
+private func pendingGeometryDisplacement(_ layer: CALayer, keyPathPrefixes: [String], modelValue: CGPoint) -> CGPoint {
+    guard let keys = layer.animationKeys() else {
+        return .zero
+    }
     var result = CGPoint.zero
     for key in keys {
-        guard let anim = layer.animation(forKey: key) as? CABasicAnimation,
-              anim.keyPath == "sublayerTransform",
-              anim.isAdditive,
-              let fromValue = anim.fromValue as? NSValue else {
+        guard let animation = layer.animation(forKey: key) as? CABasicAnimation, let keyPath = animation.keyPath else {
             continue
         }
-        let t = fromValue.caTransform3DValue
-        result.x += t.m41
-        result.y += t.m42
+        guard keyPathPrefixes.contains(where: { keyPath == $0 || keyPath.hasPrefix("\($0).") }) else {
+            continue
+        }
+        let progress = pendingAnimationProgress(animation, on: layer)
+        let from = animatedGeometryValue(animation.fromValue, keyPath: keyPath)
+        let to = animatedGeometryValue(animation.toValue, keyPath: keyPath)
+        // An additive animation's endpoints are displacements from the model value, so its
+        // contribution is the interpolated value itself; a plain one's are absolute, and the model
+        // value stands in for an omitted endpoint as it does for CoreAnimation.
+        let baseX = animation.isAdditive ? 0.0 : modelValue.x
+        let baseY = animation.isAdditive ? 0.0 : modelValue.y
+        let currentX = (from.x ?? baseX) + ((to.x ?? baseX) - (from.x ?? baseX)) * progress
+        let currentY = (from.y ?? baseY) + ((to.y ?? baseY) - (from.y ?? baseY)) * progress
+        result.x += currentX - baseX
+        result.y += currentY - baseY
     }
     return result
 }
 
+/// The translation, in `parent`'s bounds coordinate space, between where `child` and its contents
+/// RENDER on the next frame and where the model geometry `CALayer.convert` reads puts them.
+///
+/// Every list movement in the chat leaves the model at the destination and carries the travel in an
+/// animation, so this is what separates "where the content is" from "where it is going". The chat has
+/// one backend per mechanism: `ListViewImpl` scrolls by animating its own `sublayerTransform`
+/// additively (Display/Source/ListView.swift:3775), while CoreList parks its content host's model
+/// `bounds.origin.y` at the settled offset and carries the travel in an additive `bounds.origin.y`
+/// track, moving individual rows with additive `position` tracks
+/// (CoreListDemo/CoreAnimationCompiler.swift `keyPath(for:)`). Reading the mechanism off the layers
+/// rather than asking the list keeps this correct for either backend — and for a row that is moving
+/// under its own track while the viewport moves too.
+///
+/// A `bounds.origin` displacement enters NEGATED: it is the origin of the coordinate space the
+/// children are positioned in, so scrolling it down moves them up.
+private func pendingRenderedTranslation(parent: CALayer, child: CALayer) -> CGPoint {
+    let sublayerTransformModel = CGPoint(x: parent.sublayerTransform.m41, y: parent.sublayerTransform.m42)
+    let sublayerTransform = pendingGeometryDisplacement(parent, keyPathPrefixes: ["sublayerTransform"], modelValue: sublayerTransformModel)
+    let boundsOrigin = pendingGeometryDisplacement(parent, keyPathPrefixes: ["bounds"], modelValue: parent.bounds.origin)
+    let position = pendingGeometryDisplacement(child, keyPathPrefixes: ["position"], modelValue: child.position)
+
+    return CGPoint(
+        x: sublayerTransform.x - boundsOrigin.x + position.x,
+        y: sublayerTransform.y - boundsOrigin.y + position.y
+    )
+}
+
 /// Convert a rect expressed in window coordinates to `toView`'s local coordinates,
-/// accounting for pending additive `sublayerTransform` animations on any ancestor
-/// of `toView`. Returns the position in `toView.bounds` that will render at
-/// `windowRect` visually at t=0 of the pending animations (once CA commits them).
+/// accounting for the movement any ancestor of `toView` is in the middle of. Returns
+/// the position in `toView.bounds` that `windowRect` renders at on the next frame.
 ///
-/// Standard `toView.layer.convert(windowRect, from: nil)` reads model transforms
-/// only, so it yields the position that will render at `windowRect` *at t=end* of
-/// any pending additive animations (since additive animations don't change model
-/// values). For source-side morph calibration, where the snapshot was captured at
-/// pre-animation state, the t=0 position is what we want.
+/// Standard `toView.layer.convert(windowRect, from: nil)` reads model geometry only,
+/// so it yields the position that will render at `windowRect` once every animation in
+/// flight has FINISHED — a list schedules its scroll and leaves the model at the
+/// destination. For source-side morph calibration, where the snapshot was captured at
+/// pre-animation state, the position it renders at when the morph starts is what we
+/// want; taking the settled one instead offsets the bubble by the list's whole travel.
 ///
-/// Walks the layer chain top-down from the root to `toView`. At each parent→child
-/// step it subtracts the parent's pending additive `sublayerTransform` translation
-/// *in the parent's own bounds coord space*, then does the standard one-step
-/// `convert(_:to:)` into the child. Applying the correction at the right level
-/// (rather than flat-summing the translations in the destination space) lets
-/// `CALayer.convert` propagate each correction through any remaining
-/// transforms — child `transform`, further ancestors' own model
-/// `sublayerTransform`, etc. — so the result is correct even when the chain
-/// contains non-translation transforms (rotations, scales).
+/// Walks the layer chain top-down from the root to `toView`. At each parent→child step
+/// it subtracts that step's pending rendered-minus-model translation *in the parent's
+/// own bounds coord space*, then does the standard one-step `convert(_:to:)` into the
+/// child. Applying the correction at the right level (rather than flat-summing the
+/// translations in the destination space) lets `CALayer.convert` propagate each
+/// correction through any remaining transforms — child `transform`, further ancestors'
+/// own model `sublayerTransform`, etc. — so the result is correct even when the chain
+/// contains non-translation transforms, and both chat list backends put a π rotation in
+/// it twice over.
 private func convertAnimatingSourceRectFromWindow(_ windowRect: CGRect, toView: UIView) -> CGRect {
     var chain: [CALayer] = []
     var layer: CALayer? = toView.layer
@@ -81,11 +217,30 @@ private func convertAnimatingSourceRectFromWindow(_ windowRect: CGRect, toView: 
         let parent = chain[i]
         let child = chain[i + 1]
 
-        let pending = pendingAdditiveSublayerTranslation(parent)
+        let pending = pendingRenderedTranslation(parent: parent, child: child)
         let adjustedR = r.offsetBy(dx: -pending.x, dy: -pending.y)
         r = parent.convert(adjustedR, to: child)
     }
     return r
+}
+
+/// `rect` of `sourceView` as it renders now, converted into `toView` as it renders now. The source is read through its
+/// presentation layers when it is in `toView`'s window, and through the windows' frames when it is in another one (the
+/// keyboard's, see `convertAcrossWindows`); then `convertAnimatingSourceRectFromWindow` accounts for any movement
+/// `toView`'s ancestors are in the middle of. An animation that runs inside a chat item needs this: the list leaves
+/// the item's model at its destination while it scrolls a new message in, so a plain conversion starts the flight off
+/// by the remaining scroll.
+private func convertRenderedSourceRect(_ rect: CGRect, from sourceView: UIView, toAnimatingView toView: UIView) -> CGRect {
+    guard let toWindow = toView.window else {
+        return sourceView.convertAcrossWindows(rect, to: toView)
+    }
+    let windowRect: CGRect
+    if sourceView.window === toWindow, let presentationLayer = sourceView.layer.presentation() {
+        windowRect = presentationLayer.convert(rect, to: nil)
+    } else {
+        windowRect = sourceView.convertAcrossWindows(rect, to: toWindow)
+    }
+    return convertAnimatingSourceRectFromWindow(windowRect, toView: toView)
 }
 
 private final class OverlayTransitionContainerNode: ViewControllerTracingNode {
@@ -490,7 +645,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
-                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                let targetAbsoluteRect = self.contextSourceNode.view.convertAcrossWindows(self.contextSourceNode.contentRect, to: self.view)
 
                 let sourceRect = convertAnimatingSourceRectFromWindow(initialTextInput.sourceRect, toView: self.view)
                 let sourceBackgroundAbsoluteRect = initialTextInput.backgroundView.frame.offsetBy(dx: sourceRect.minX, dy: sourceRect.minY)
@@ -508,7 +663,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     if let storedFrameBeforeDismissed = replyPanel.storedFrameBeforeDismissed {
                         replySourceAbsoluteFrame = convertAnimatingSourceRectFromWindow(storedFrameBeforeDismissed, toView: self.view)
                     } else {
-                        replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanelFrame, to: self.view)
+                        replySourceAbsoluteFrame = replyPanelParentView.convertAcrossWindows(replyPanelFrame, to: self.view)
                     }
 
                     replySourceAbsoluteFrame.origin.x -= sourceAbsoluteRect.minX - self.contextSourceNode.contentRect.minX
@@ -549,8 +704,6 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 })
                 self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
                 
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), horizontalCurve, horizontalDuration)
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), verticalCurve, verticalDuration)
 
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                     itemNode.animateContentFromTextInputField(
@@ -635,19 +788,19 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 switch stickerMediaInput {
                 case let .inputPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: sourceItemNode.placeholderNode, imageLayer: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(sourceItemNode.imageNode.frame, to: self.view)
+                    sourceAbsoluteRect = convertRenderedSourceRect(sourceItemNode.imageNode.frame, from: sourceItemNode.view, toAnimatingView: self.view)
                 case let .mediaPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: sourceItemNode.placeholderNode, imageLayer: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(sourceItemNode.imageNode.frame, to: self.view)
+                    sourceAbsoluteRect = convertRenderedSourceRect(sourceItemNode.imageNode.frame, from: sourceItemNode.view, toAnimatingView: self.view)
                 case let .universal(sourceContainerView, sourceRect, sourceLayer):
                     stickerSource = Sticker(imageNode: nil, animationNode: nil, placeholderNode: nil, imageLayer: sourceLayer, relativeSourceRect: sourceLayer.frame)
-                    sourceAbsoluteRect = convertAnimatingSourceRect(sourceRect, fromView: sourceContainerView, toView: self.view)
+                    sourceAbsoluteRect = convertRenderedSourceRect(sourceRect, from: sourceContainerView, toAnimatingView: self.view)
                 case let .emptyPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.stickerNode.imageNode, animationNode: sourceItemNode.stickerNode.animationNode, placeholderNode: nil, imageLayer: nil, relativeSourceRect: sourceItemNode.stickerNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.stickerNode.view.convert(sourceItemNode.stickerNode.imageNode.frame, to: self.view)
+                    sourceAbsoluteRect = convertRenderedSourceRect(sourceItemNode.stickerNode.imageNode.frame, from: sourceItemNode.stickerNode.view, toAnimatingView: self.view)
                 }
 
-                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                let targetAbsoluteRect = self.contextSourceNode.view.convertAcrossWindows(self.contextSourceNode.contentRect, to: self.view)
 
                 var sourceReplyPanel: ReplyPanel?
                 if let replyPanel, let replyPanelTransitionData = replyPanel.transitionData, let replyPanelParentView = replyPanel.superview {
@@ -657,7 +810,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     if let storedFrameBeforeDismissed = replyPanel.storedFrameBeforeDismissed {
                         replySourceAbsoluteFrame = self.view.convert(storedFrameBeforeDismissed, from: nil)
                     } else {
-                        replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanelFrame, to: self.view)
+                        replySourceAbsoluteFrame = replyPanelParentView.convertAcrossWindows(replyPanelFrame, to: self.view)
                     }
                     
                     replySourceAbsoluteFrame.origin.x -= sourceAbsoluteRect.midX - self.contextSourceNode.contentRect.midX
@@ -736,8 +889,6 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     }
                     strongSelf.endAnimation()
                 })
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), ChatMessageTransitionNodeImpl.horizontalAnimationCurve, horizontalDuration)
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), ChatMessageTransitionNodeImpl.verticalAnimationCurve, verticalDuration)
                 self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
 
                 switch stickerMediaInput {
@@ -750,40 +901,37 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 }
             case let .audioMicInput(audioMicInput):
                 if let (container, localRect) = audioMicInput.micButton.contentContainer {
-                    let snapshotView = container.snapshotView(afterScreenUpdates: false)
-                    if let snapshotView = snapshotView {
-                        let sourceAbsoluteRect = container.convert(localRect, to: self.view)
-                        snapshotView.frame = sourceAbsoluteRect
+                    // No snapshot of the blob: it flies itself, in its own container, along the same path as the
+                    // play button here in the chat, crossfading into it at the start.
+                    let sourceAbsoluteRect = convertRenderedSourceRect(localRect, from: container, toAnimatingView: self.view)
 
-                        container.isHidden = true
+                    let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNodeImpl.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNodeImpl.verticalAnimationCurve))
 
-                        let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNodeImpl.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNodeImpl.verticalAnimationCurve))
+                    if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
+                        if let contextContainer = itemNode.animateFromMicInput(sourceSize: sourceAbsoluteRect.size, transition: combinedTransition) {
+                            self.containerNode.addSubnode(contextContainer.contentNode)
 
-                        if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                            if let contextContainer = itemNode.animateFromMicInput(micInputNode: snapshotView, transition: combinedTransition) {
-                                self.containerNode.addSubnode(contextContainer.contentNode)
+                            let targetAbsoluteRect = contextContainer.view.convertAcrossWindows(contextContainer.contentRect, to: self.view)
 
-                                let targetAbsoluteRect = contextContainer.view.convert(contextContainer.contentRect, to: self.view)
+                            self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -contextContainer.contentRect.minX, dy: -contextContainer.contentRect.minY)
+                            contextContainer.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
 
-                                self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -contextContainer.contentRect.minX, dy: -contextContainer.contentRect.minY)
-                                contextContainer.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
-                                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self, weak contextContainer, weak container] _ in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    if let contextContainer = contextContainer {
-                                        contextContainer.isExtractedToContextPreview = false
-                                        contextContainer.isExtractedToContextPreviewUpdated?(false)
-                                        contextContainer.addSubnode(contextContainer.contentNode)
-                                    }
+                            let _ = audioMicInput.micButton.animateDecorationToSentMessage(targetRect: targetAbsoluteRect, in: self.view, duration: verticalDuration, horizontalCurve: ChatMessageTransitionNodeImpl.horizontalAnimationCurve, verticalCurve: ChatMessageTransitionNodeImpl.verticalAnimationCurve)
 
-                                    container?.isHidden = false
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self, weak contextContainer] _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if let contextContainer = contextContainer {
+                                    contextContainer.isExtractedToContextPreview = false
+                                    contextContainer.isExtractedToContextPreviewUpdated?(false)
+                                    contextContainer.addSubnode(contextContainer.contentNode)
+                                }
 
-                                    strongSelf.endAnimation()
-                                })
+                                strongSelf.endAnimation()
+                            })
 
-                                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
-                            }
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
                         }
                     }
                 }
@@ -799,7 +947,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
                     let sourceAbsoluteRect = videoMessage.view.frame
-                    let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                    let targetAbsoluteRect = self.contextSourceNode.view.convertAcrossWindows(self.contextSourceNode.contentRect, to: self.view)
 
                     videoMessage.view.frame = videoMessage.view.frame.offsetBy(dx: targetAbsoluteRect.midX - sourceAbsoluteRect.midX, dy: targetAbsoluteRect.midY - sourceAbsoluteRect.midY)
 
@@ -818,7 +966,11 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 }
             case let .mediaInput(mediaInput):
                 if let snapshotView = mediaInput.extractSnapshot() {
-                    Queue.mainQueue().justDispatch {
+                    Queue.mainQueue().justDispatch { [snapshotView, weak self] in
+                        guard let self else {
+                            return
+                        }
+
                         if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                             itemNode.cancelInsertionAnimations()
 
@@ -827,7 +979,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                             self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
-                            let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                            let targetAbsoluteRect = self.contextSourceNode.view.convertAcrossWindows(self.contextSourceNode.contentRect, to: self.view)
                             let sourceBackgroundAbsoluteRect = snapshotView.frame
                             let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
 
@@ -860,8 +1012,6 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                                 snapshotView?.removeFromSuperview()
                             })
 
-                            self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNodeImpl.horizontalAnimationCurve, horizontalDuration)
-                            self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNodeImpl.verticalAnimationCurve, verticalDuration)
                         }
                     }
                 } else {
@@ -873,7 +1023,11 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     self.endAnimation()
                     return
                 }
-                Queue.mainQueue().justDispatch {
+                Queue.mainQueue().justDispatch { [weak self] in
+                    guard let self else {
+                        return
+                    }
+
                     if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                         itemNode.cancelInsertionAnimations()
 
@@ -889,7 +1043,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                             targetContentRects = itemNode.animateContentFromGroupedMediaInput(transition: combinedTransition)
                         }
                         
-                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                        let targetAbsoluteRect = self.contextSourceNode.view.convertAcrossWindows(self.contextSourceNode.contentRect, to: self.view)
 
                         func boundingRect(for views: [UIView]) -> CGRect {
                             var minX: CGFloat = .greatestFiniteMagnitude
@@ -949,8 +1103,6 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                             index += 1
                         }
                         
-                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNodeImpl.horizontalAnimationCurve, horizontalDuration)
-                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNodeImpl.verticalAnimationCurve, verticalDuration)
                     }
                 }
             }
@@ -1158,7 +1310,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             
             self.animatingItemNodes.append(animatingItemNode)
             switch source {
-            case .audioMicInput, .videoMessage, .mediaInput, .groupedMediaInput:
+            // Voice messages animate inside the chat, as text does: the blob flies itself, above it.
+            case .videoMessage, .mediaInput, .groupedMediaInput:
                 let overlayController = OverlayTransitionContainerController()
                 overlayController.displayNode.addSubnode(animatingItemNode)
                 animatingItemNode.overlayController = overlayController

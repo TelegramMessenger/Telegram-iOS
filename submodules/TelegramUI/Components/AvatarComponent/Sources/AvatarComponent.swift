@@ -15,16 +15,18 @@ public final class AvatarComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
-    let peer: EnginePeer
+    let peer: EnginePeer?
     let clipStyle: ClipStyle
+    let overrideImage: AvatarNodeImageOverride?
     let icon: AnyComponent<Empty>?
     let size: CGSize?
 
     public init(
         context: AccountContext,
         theme: PresentationTheme,
-        peer: EnginePeer,
+        peer: EnginePeer?,
         clipStyle: ClipStyle = .round,
+        overrideImage: AvatarNodeImageOverride? = nil,
         icon: AnyComponent<Empty>? = nil,
         size: CGSize? = nil
     ) {
@@ -32,6 +34,7 @@ public final class AvatarComponent: Component {
         self.theme = theme
         self.peer = peer
         self.clipStyle = clipStyle
+        self.overrideImage = overrideImage
         self.icon = icon
         self.size = size
     }
@@ -47,6 +50,9 @@ public final class AvatarComponent: Component {
             return false
         }
         if lhs.clipStyle != rhs.clipStyle {
+            return false
+        }
+        if lhs.overrideImage != rhs.overrideImage {
             return false
         }
         if lhs.icon != rhs.icon {
@@ -122,6 +128,7 @@ public final class AvatarComponent: Component {
                 context: component.context,
                 theme: component.theme,
                 peer: component.peer,
+                overrideImage: component.overrideImage,
                 clipStyle: clipStyle,
                 synchronousLoad: true,
                 displayDimensions: size,

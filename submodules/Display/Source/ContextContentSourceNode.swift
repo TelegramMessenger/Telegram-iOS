@@ -2,7 +2,42 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
+private var morphsIntoContextMenuKey: UInt8 = 0
+
+public extension UIView {
+    /// Opts this view in to UIKit's liquid morph (iOS 26+) when it is the reference
+    /// view of a context menu; every other source keeps the standard presentation.
+    /// For now only navigation-header glass capsules holding a single button set it.
+    var morphsIntoContextMenu: Bool {
+        get {
+            return (objc_getAssociatedObject(self, &morphsIntoContextMenuKey) as? Bool) ?? false
+        }
+        set {
+            objc_setAssociatedObject(self, &morphsIntoContextMenuKey, newValue ? true : nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+}
+
 open class ContextReferenceContentNode: ASDisplayNode {
+    /// Source decorations rendered outside this node (for example, a shared blur mask).
+    public var additionalContextMenuSourceViews: [UIView] = []
+    /// Visible source outline in this node's bounds, including separately drawn backdrops.
+    public var contextMenuSourcePath: UIBezierPath?
+    /// Supplies a live foreground/backdrop container for sources with a shared background.
+    public var makeContextMenuSourceContent: (() -> ContextMenuSourceContent?)?
+
+    public static func makeSourceContent(for view: UIView) -> (() -> ContextMenuSourceContent?)? {
+        return (view.asyncdisplaykit_node as? ContextReferenceContentNode)?.makeContextMenuSourceContent
+    }
+
+    public static func sourcePath(for view: UIView) -> UIBezierPath? {
+        return (view.asyncdisplaykit_node as? ContextReferenceContentNode)?.contextMenuSourcePath
+    }
+
+    public static func additionalSourceViews(for view: UIView) -> [UIView] {
+        return (view.asyncdisplaykit_node as? ContextReferenceContentNode)?.additionalContextMenuSourceViews ?? []
+    }
+
     override public init() {
         super.init()
     }
@@ -15,8 +50,6 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
     public var willUpdateIsExtractedToContextPreview: ((Bool, ContainedViewLayoutTransition) -> Void)?
     public var isExtractedToContextPreviewUpdated: ((Bool) -> Void)?
     public var updateAbsoluteRect: ((CGRect, CGSize) -> Void)?
-    public var applyAbsoluteOffset: ((CGPoint, ContainedViewLayoutTransitionCurve, Double) -> Void)?
-    public var applyAbsoluteOffsetSpring: ((CGFloat, Double, CGFloat) -> Void)?
     public var layoutUpdated: ((CGSize, ListViewItemUpdateAnimation) -> Void)?
     public var updateDistractionFreeMode: ((Bool) -> Void)?
     public var requestDismiss: (() -> Void)?
@@ -82,8 +115,6 @@ public final class ContextExtractedContentContainingView: UIView {
     public var willUpdateIsExtractedToContextPreview: ((Bool, ContainedViewLayoutTransition) -> Void)?
     public var isExtractedToContextPreviewUpdated: ((Bool) -> Void)?
     public var updateAbsoluteRect: ((CGRect, CGSize) -> Void)?
-    public var applyAbsoluteOffset: ((CGPoint, ContainedViewLayoutTransitionCurve, Double) -> Void)?
-    public var applyAbsoluteOffsetSpring: ((CGFloat, Double, CGFloat) -> Void)?
     public var layoutUpdated: ((CGSize, ListViewItemUpdateAnimation) -> Void)?
     public var updateDistractionFreeMode: ((Bool) -> Void)?
     public var requestDismiss: (() -> Void)?

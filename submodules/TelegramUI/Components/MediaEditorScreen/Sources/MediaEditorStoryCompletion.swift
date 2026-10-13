@@ -26,18 +26,18 @@ private func additionalVideoMirroring(at timestamp: Double, changes: [VideoMirro
 
 extension MediaEditorScreenImpl {
     func requestStoryCompletion(animated: Bool) {
-        guard let mediaEditor = self.node.mediaEditor, !self.didComplete else {
+        guard !self.didComplete else {
+            return
+        }
+        guard let mediaEditor = self.node.mediaEditor else {
+            self.failStoryCompletion()
             return
         }
         
         self.didComplete = true
-        
+
         self.updateMediaEditorEntities()
-        
-        mediaEditor.stop()
-        mediaEditor.invalidate()
-        self.node.entitiesView.invalidate()
-        
+
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
@@ -87,17 +87,88 @@ extension MediaEditorScreenImpl {
         self.dismissAllTooltips()
     }
     
-    private func processSingleItem() {
+    private func processSingleItem(preparedRandomId: Int64? = nil, collagePrepared: Bool = false) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, let actualSubject = self.node.actualSubject else {
+            self.failStoryCompletion()
             return
         }
         
+        if let collage = self.collage, preparedRandomId == nil, !collagePrepared {
+            self.collageMediaDisposable.set((collage.prepareVideoSources()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] success in
+                guard let self else {
+                    return
+                }
+                if success {
+                    self.processSingleItem(collagePrepared: true)
+                } else {
+                    self.failStoryCompletion()
+                }
+            }))
+            return
+        }
+        if self.collage != nil, preparedRandomId == nil {
+            let randomId: Int64
+            if case let .draft(_, id) = actualSubject, let id {
+                randomId = id
+            } else {
+                randomId = Int64.random(in: .min ... .max)
+            }
+            self.saveCollageDraft(id: randomId, completion: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                switch result {
+                case let .success(draft):
+                    let engine = self.context.engine
+                    Queue.concurrentDefaultQueue().async { [weak self] in
+                        // Resolve and compose full-size media without blocking the Post Story spinner.
+                        let prepared = Swift.Result { () -> (MediaEditorCollage, Subject) in
+                            guard let resolved = try draft.collage?.resolve(engine: engine), resolved.missingCount == 0, let collage = resolved.collage, let subject = mediaEditorCollageSubject(collage) else {
+                                throw MediaEditorCollageDraftSaveError.mediaUnavailable
+                            }
+                            return (collage, subject)
+                        }
+                        Queue.mainQueue().async {
+                            guard let self else {
+                                return
+                            }
+                            switch prepared {
+                            case let .success((collage, subject)):
+                                if let lease = self.collage?.fileLease {
+                                    self.collageSourceLeases.append(lease)
+                                }
+                                self.collage = collage
+                                self.collagePublicationImagePath = collage.isVideo ? nil : draft.fullPath(engine: engine)
+                                self.node.subject = subject
+                                mediaEditor.updateCollageSources(collage, values: draft.values)
+                                self.processSingleItem(preparedRandomId: randomId)
+                            case .failure:
+                                self.failStoryCompletion()
+                            }
+                        }
+                    }
+                case let .failure(error):
+                    self.didComplete = false
+                    if error == .cancelled {
+                        return
+                    }
+                    let strings = self.context.sharedContext.currentPresentationData.with { $0 }.strings
+                    self.presentCollageAlert(text: strings.Login_UnknownError)
+                }
+            })
+            return
+        }
+
         var caption = self.node.getCaption()
         caption = convertMarkdownToAttributes(caption)
         
         var hasEntityChanges = false
         let randomId: Int64
-        if case let .draft(_, id) = actualSubject, let id {
+        if let preparedRandomId {
+            randomId = preparedRandomId
+        } else if case let .draft(_, id) = actualSubject, let id {
             randomId = id
         } else {
             randomId = Int64.random(in: .min ... .max)
@@ -142,15 +213,12 @@ extension MediaEditorScreenImpl {
         }
         
         if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
-            self.saveDraft(id: randomId, isEdit: true)
+            if self.collage == nil {
+                self.saveDraft(id: randomId, isEdit: true)
+            }
             
             self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: mediaEditor.values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                    self?.dismiss()
-                    Queue.mainQueue().justDispatch {
-                        finished()
-                    }
-                })
+                self?.finishStoryCompletion(finished)
             })
             return
         }
@@ -167,7 +235,9 @@ extension MediaEditorScreenImpl {
         }
         
         if mediaEditor.resultIsVideo {
-            self.saveDraft(id: randomId)
+            if self.collage == nil {
+                self.saveDraft(id: randomId)
+            }
             
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
             let firstFrameTime: CMTime
@@ -197,8 +267,8 @@ extension MediaEditorScreenImpl {
                 
                 firstFrame = .single((image, nil))
             case let .image(image, _, _, _, _):
-                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
-                if let data = image.jpegData(compressionQuality: 0.85) {
+                let tempImagePath = self.collagePublicationImagePath ?? NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                if self.collagePublicationImagePath == nil, let data = image.jpegData(compressionQuality: 0.85) {
                     try? data.write(to: URL(fileURLWithPath: tempImagePath))
                 }
                 videoResult = .single(.imageFile(path: tempImagePath))
@@ -251,6 +321,10 @@ extension MediaEditorScreenImpl {
             case let .videoCollage(items):
                 var maxDurationItem: (Double, Subject.VideoCollageItem)?
                 for item in items {
+                    if item.isMain {
+                        maxDurationItem = (item.content.duration, item)
+                        break
+                    }
                     switch item.content {
                     case .image:
                         break
@@ -446,7 +520,7 @@ extension MediaEditorScreenImpl {
                 duration = 3.0
                 
                 firstFrame = .single((image, nil))
-            case .multiple:
+            case .multiple, .collage:
                 fatalError()
             }
             
@@ -486,30 +560,36 @@ extension MediaEditorScreenImpl {
 
                     makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
+                            if self.collage != nil && coverImage == nil {
+                                self.failStoryCompletion()
+                                return
+                            }
                             self.willComplete(coverImage, true, { [weak self] in
                                 guard let self else {
                                     return
                                 }
+                                self.node.mediaEditor?.stop()
+                                self.node.mediaEditor?.invalidate()
+                                self.node.entitiesView.invalidate()
                                 Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                                 self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                                    self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                        self?.dismiss()
-                                        Queue.mainQueue().justDispatch {
-                                            finished()
-                                        }
-                                    })
+                                    self?.finishStoryCompletion(finished)
                                 })
+                            }, { [weak self] in
+                                self?.didComplete = false
                             })
                         }
                     })
                 }
             })
         
-            if case let .draft(draft, id) = actualSubject, id == nil {
+            if self.collage == nil, case let .draft(draft, id) = actualSubject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
             }
         } else if let image = mediaEditor.resultImage {
-            self.saveDraft(id: randomId)
+            if self.collage == nil {
+                self.saveDraft(id: randomId)
+            }
             
             var values = mediaEditor.values
             var outputDimensions: CGSize?
@@ -527,27 +607,56 @@ extension MediaEditorScreenImpl {
                 time: .zero,
                 textScale: 2.0,
                 completion: { [weak self] resultImage in
-                if let self, let resultImage {
+                guard let self else {
+                    return
+                }
+                if let resultImage {
                     self.willComplete(resultImage, false, { [weak self] in
                         guard let self else {
                             return
                         }
+                        self.node.mediaEditor?.stop()
+                        self.node.mediaEditor?.invalidate()
+                        self.node.entitiesView.invalidate()
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                            self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                self?.dismiss()
-                                Queue.mainQueue().justDispatch {
-                                    finished()
-                                }
-                            })
+                            self?.finishStoryCompletion(finished)
                         })
-                        if case let .draft(draft, id) = actualSubject, id == nil {
+                        if self.collage == nil, case let .draft(draft, id) = actualSubject, id == nil {
                             removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
                         }
+                    }, { [weak self] in
+                        self?.didComplete = false
                     })
+                } else if self.collage != nil {
+                    self.failStoryCompletion()
                 }
             })
+        } else if self.collage != nil {
+            self.failStoryCompletion()
         }
+    }
+
+    private func failStoryCompletion() {
+        self.didComplete = false
+        self.presentCollageAlert(text: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Login_UnknownError)
+    }
+
+    private func finishStoryCompletion(_ finished: @escaping () -> Void) {
+        self.removePublishedCollageDraft()
+        if let privacyScreen = self.storyPrivacyScreen {
+            self.storyPrivacyScreen = nil
+            privacyScreen.dismissed = {}
+            privacyScreen.customModalStyleOverlayTransitionFactorUpdated = nil
+            self.node.updateModalTransitionFactor(0.0, transition: .immediate)
+            privacyScreen.dismiss()
+        }
+        self.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+            self?.dismiss()
+            Queue.mainQueue().justDispatch {
+                finished()
+            }
+        })
     }
     
     private func processMultipleItems(items: [EditingItem], isLongVideo: Bool) {
@@ -614,7 +723,11 @@ extension MediaEditorScreenImpl {
             }
         }
         
-        dispatchGroup.notify(queue: .main) {
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            guard let self else {
+                return
+            }
+
             let results = multipleResults.with { $0 }
             if results.count == totalItems {
                 var orderedResults: [MediaEditorScreenImpl.Result] = []

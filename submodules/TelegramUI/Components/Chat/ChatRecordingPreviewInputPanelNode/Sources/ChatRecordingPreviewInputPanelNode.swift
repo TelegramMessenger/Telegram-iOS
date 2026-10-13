@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -84,7 +85,7 @@ final class PlayButtonNode: ASDisplayNode {
         self.playButton = HighlightableButtonNode()
         self.playButton.displaysAsynchronously = false
         
-        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode = PlayPauseIconNode(lottieSettings: .noAccountFallback)
         self.playPauseIconNode.enqueueState(.play, animated: false)
         self.playPauseIconNode.customColor = theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.7)
         
@@ -677,8 +678,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    init() {
-        super.init(size: CGSize(width: 21.0, height: 21.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 21.0, height: 21.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

@@ -29,16 +29,25 @@ extension DocumentCanvasView {
                 if wasCollapsed {   // EXPANDING: caret into the first child leaf
                     let caret = newBox.children.boxes.first?.leafRegions().first?.globalStart
                         ?? (newBox.nodeStart + 1)
-                    anchor = caret; head = caret
+                    return .caret(at: caret)
                 } else {            // COLLAPSING: focus the caret on the collapsed quote's own leading gap —
                     // the atom's cursor slot (where a tap on the folded quote lands via `closestPosition`),
                     // NOT a trailing body paragraph. The folded quote is a block and owns this position.
-                    anchor = newBox.nodeStart; head = newBox.nodeStart
+                    return .caret(at: newBox.nodeStart)
                 }
             } else {                // caret outside — preserve, shifted by the size delta
                 let delta = newBox.nodeSize - oldSize
                 func remap(_ p: Int) -> Int { p < oldStart ? p : p + delta }
-                anchor = remap(beforeAnchor); head = remap(beforeHead)
+                // A RANGE, not a caret: this arm PRESERVES the pre-fold selection, which need not be
+                // collapsed. `.range` does not normalize its arguments, so a reversed selection stays
+                // reversed — the same pair of writes, in the same order. **Collapsing it to `.caret(at:)`
+                // is a live behaviour change that the whole suite passes** — measured; the numbers are on
+                // the twin arm in `+Details.swift`'s `toggleDetailsExpanded`, not restated here.
+                // **TASK 39 STEP 0a pinned this arm**:
+                // `BlockQuoteBoxTests.test_toggleCollapsed_withARangeSelectionOutsideTheQuote_preservesBOTHEndpoints`
+                // and its reversed twin, both proven red against the `.caret` spelling with the mutation
+                // confirmed present first. The arming record is on the `+Details.swift` arm.
+                return .range(remap(beforeAnchor), remap(beforeHead))
             }
         }
     }
@@ -50,6 +59,7 @@ extension DocumentCanvasView {
             for (i, b) in stack.boxes.enumerated() {
                 if b === box { return (stack, i) }
                 if let bq = b as? BlockQuoteBox, let found = descend(bq.children) { return found }
+                if let d = b as? DetailsBox, let found = descend(d.children) { return found }
                 if let t = b as? TableBlockBox {
                     for row in t.cells { for cell in row { if let found = descend(cell) { return found } } }
                 }

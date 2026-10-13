@@ -70,6 +70,10 @@ final class AccountTaskManager {
                     tasks.add(managedSynchronizePeerReadStates(network: self.stateManager.network, postbox: self.stateManager.postbox, stateManager: self.stateManager).start())
                     tasks.add(managedSynchronizeGroupMessageStats(network: self.stateManager.network, postbox: self.stateManager.postbox, stateManager: self.stateManager).start())
                     
+                    tasks.add((self.stateManager.postbox.transaction { transaction -> Void in
+                        reindexUnreadCountersIfNeeded(transaction: transaction)
+                    }).start())
+                    
                     tasks.add(managedGlobalNotificationSettings(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager, tag: OperationLogTags.SynchronizePinnedChats).start())
                     tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager, tag: OperationLogTags.SynchronizePinnedSavedChats).start())

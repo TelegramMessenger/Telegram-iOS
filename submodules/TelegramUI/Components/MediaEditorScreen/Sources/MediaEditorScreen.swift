@@ -55,6 +55,7 @@ import SaveToCameraRoll
 import GlassBarButtonComponent
 import GlassBackgroundComponent
 import Weather
+import UniformTypeIdentifiers
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -1091,7 +1092,7 @@ final class MediaEditorScreenComponent: Component {
                             return
                         }
                         mediaEditor.setCrop(
-                            offset: mediaEditor.values.cropOffset,
+                            offset: CGPoint(x: mediaEditor.values.cropOffset.y, y: -mediaEditor.values.cropOffset.x),
                             scale: mediaEditor.values.cropScale,
                             rotation: mediaEditor.values.cropRotation - .pi / 2.0,
                             mirroring: mediaEditor.values.cropMirroring
@@ -1122,11 +1123,14 @@ final class MediaEditorScreenComponent: Component {
                         guard !controller.node.recording.isActive else {
                             return
                         }
+                        let values = mediaEditor.values
+                        let imageOffset = values.cropOffset.applying(CGAffineTransform(rotationAngle: -values.cropRotation))
+                        let mirroredOffset = CGPoint(x: -imageOffset.x, y: imageOffset.y).applying(CGAffineTransform(rotationAngle: values.cropRotation))
                         mediaEditor.setCrop(
-                            offset: mediaEditor.values.cropOffset,
-                            scale: mediaEditor.values.cropScale,
-                            rotation: mediaEditor.values.cropRotation,
-                            mirroring: !mediaEditor.values.cropMirroring
+                            offset: mirroredOffset,
+                            scale: values.cropScale,
+                            rotation: values.cropRotation,
+                            mirroring: !values.cropMirroring
                         )
                     }
                 )),
@@ -1361,7 +1365,7 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                     if let inputMediaNode {
-                        Queue.mainQueue().after(0.2) {
+                        Queue.mainQueue().after(0.2) { [inputMediaNode] in
                             inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                 inputMediaNode?.view.removeFromSuperview()
                             })
@@ -1707,37 +1711,31 @@ final class MediaEditorScreenComponent: Component {
                 
                 let saveButtonSize = self.saveButton.update(
                     transition: transition,
-                    component: AnyComponent(
-                        GlassBarButtonComponent(
-                            size: CGSize(width: 44.0, height: 44.0),
-                            backgroundColor: nil,
-                            isDark: true,
-                            state: .glass,
-                            isVisible: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities && topButtonsAlpha > 0.0,
-                            component: saveContentComponent,
-                            action: { [weak self, weak controller] _ in
-                                guard let self, let controller else {
-                                    return
-                                }
-                                guard !controller.node.recording.isActive else {
-                                    return
-                                }
-                                if let view = self.saveButton.findTaggedView(tag: saveButtonTag) as? LottieAnimationComponent.View {
-                                    view.playOnce()
-                                }
-                                controller.requestSave()
+                    component: AnyComponent(CameraButton(
+                        content: saveContentComponent,
+                        action: { [weak self, weak controller] in
+                            guard let self, let controller else {
+                                return
                             }
-                        )
-                    ),
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
+                            if let view = self.saveButton.findTaggedView(tag: saveButtonTag) as? LottieAnimationComponent.View {
+                                view.playOnce()
+                            }
+                            controller.requestSave()
+                        }
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let saveButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 16.0 - saveButtonSize.width, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                    origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                     size: saveButtonSize
                 )
                 if let saveButtonView = self.saveButton.view {
                     if saveButtonView.superview == nil {
+                        setupButtonShadow(saveButtonView)
                         self.addSubview(saveButtonView)
                     }
 
@@ -1747,7 +1745,7 @@ final class MediaEditorScreenComponent: Component {
                     buttonTransition.setPosition(view: saveButtonView, position: saveButtonFrame.center)
                     buttonTransition.setBounds(view: saveButtonView, bounds: CGRect(origin: .zero, size: saveButtonFrame.size))
                     transition.setScale(view: saveButtonView, scale: displayTopButtons ? 1.0 : 0.01)
-                    transition.setAlpha(view: saveButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities && saveButtonAlpha > 0.0 ? saveButtonAlpha : 1.0)
+                    transition.setAlpha(view: saveButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? saveButtonAlpha : 0.0)
                 }
                  
                 var topButtonOffsetX: CGFloat = 0.0
@@ -3132,11 +3130,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         fileprivate let previewScrollView: UIScrollView
         fileprivate let previewContentContainerView: PortalSourceView
         private var transitionInView: UIImageView?
+        private var mediaEditorHasDisplayed = false
         
         private let gradientView: UIImageView
         private var gradientColorsDisposable: Disposable?
         
         fileprivate var cropScrollView: CropScrollView?
+        private var cropScrollViewFrame: CGRect = .zero
         fileprivate var stickerBackgroundView: UIImageView?
         private var stickerOverlayLayer: SimpleShapeLayer?
         private var stickerFrameLayer: SimpleShapeLayer?
@@ -3154,6 +3154,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         var mediaEditor: MediaEditor?
         fileprivate var mediaEditorPromise = Promise<MediaEditor?>()
         private var mediaEntityInitialValues: (position: CGPoint, scale: CGFloat, rotation: CGFloat)?
+        private var isUpdatingCrop = false
         
         let ciContext = CIContext(options: [.workingColorSpace : NSNull()])
         
@@ -3329,12 +3330,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 
                 let cropScrollView = CropScrollView(frame: .zero)
                 cropScrollView.updated = { [weak self] position, scale in
-                    guard let self, let mediaEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView, let mediaEntity = mediaEntityView.entity as? DrawingMediaEntity, let (initialPosition, initialScale, _) = self.mediaEntityInitialValues else {
+                    guard let self, let mediaEditor = self.mediaEditor, self.previewView.bounds.width > 0.0 else {
                         return
                     }
-                    mediaEntity.position = initialPosition.offsetBy(dx: position.x * initialScale, dy: position.y * initialScale)
-                    mediaEntity.scale = initialScale * scale
-                    mediaEntityView.update(animated: false)
+                    let previewScale = self.previewView.bounds.width / storyDimensions.width
+                    mediaEditor.setCrop(
+                        offset: CGPoint(x: position.x / previewScale, y: position.y / previewScale),
+                        scale: scale,
+                        rotation: mediaEditor.values.cropRotation,
+                        mirroring: mediaEditor.values.cropMirroring
+                    )
                 }
                 self.cropScrollView = cropScrollView
             default:
@@ -3381,6 +3386,24 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             ).start(next: { [weak self] subject in
                 if let self, let subject {
                     self.actualSubject = subject
+                    if case let .collage(collage) = subject {
+                        // The subject can arrive synchronously while the controller's node is still being created.
+                        Queue.mainQueue().justDispatch { [weak self] in
+                            self?.controller?.openCollage(collage, draft: nil)
+                        }
+                        return
+                    } else if case let .draft(draft, _) = subject, draft.collage != nil {
+                        self.subject = subject
+                        Queue.mainQueue().justDispatch { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            // Start the picker transition before resolving the full-size sources.
+                            self.readyForCollage()
+                            self.controller?.resolveCollageDraft(draft)
+                        }
+                        return
+                    }
                     
                     var effectiveSubject = subject
                     switch subject {
@@ -3424,7 +3447,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             })
             
             let stickerPickerInputData = self.stickerPickerInputData
-            Queue.concurrentDefaultQueue().after(0.5, {
+            Queue.concurrentDefaultQueue().after(0.5, { [weak self] in
                 let emojiItems = EmojiPagerContentComponent.emojiInputData(
                     context: controller.context,
                     animationCache: controller.context.animationCache,
@@ -3539,6 +3562,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.availableReactionsDisposable?.dispose()
             self.stickerCutoutStatusDisposable?.dispose()
         }
+
+        func readyForCollage() {
+            self.readyValue.set(.single(true))
+        }
         
         func setup(
             subject: MediaEditorScreenImpl.Subject,
@@ -3570,7 +3597,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             case let .video(_, _, _, _, _, _, _, _, _, fromCamera):
                 isFromCamera = fromCamera
                 isSavingAvailable = !controller.isEmbeddedEditor
-            case .draft, .message,. gift:
+            case .draft, .message, .gift, .videoCollage:
                 isSavingAvailable = true
             default:
                 isSavingAvailable = false
@@ -3644,7 +3671,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
                 self.entitiesView.sendSubviewToBack(mediaEntityView)
                 mediaEntityView.updated = { [weak self, weak mediaEntity] in
-                    if let self, let mediaEditor = self.mediaEditor, let mediaEntity {
+                    if let self, !self.isUpdatingCrop, let mediaEditor = self.mediaEditor, let mediaEntity {
                         let rotation = mediaEntity.rotation - initialRotation
                         let position = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
                         let scale = mediaEntity.scale / initialScale
@@ -3697,7 +3724,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     break
                 }
             }
-            mediaEditor.valuesUpdated = { [weak self] values in
+            mediaEditor.valuesUpdated = { [weak self, weak mediaEditor] values in
+                if let self, let mediaEditor, self.mediaEditor === mediaEditor {
+                    self.updateCrop()
+                }
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
                     if !isSavingAvailable && controller.previousSavedValues == nil {
                         controller.previousSavedValues = values
@@ -3736,18 +3766,35 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
                 }
             }
+            self.mediaEditorHasDisplayed = false
+            mediaEditor.onFirstDisplay = { [weak self, weak controller] in
+                guard let self else {
+                    return
+                }
+                self.mediaEditorHasDisplayed = true
+                self.removeTransitionImage()
+                if let caption {
+                    self.componentHostView?.setInputText(caption)
+                }
+                if controller?.isEmbeddedEditor == true {
+                    if subject.isPhoto {
+                        self.previewContainerView.layer.allowsGroupOpacity = true
+                        self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                            self.previewContainerView.layer.allowsGroupOpacity = false
+                            self.previewContainerView.alpha = 1.0
+                            self.backgroundDimView.isHidden = false
+                        })
+                    } else {
+                        self.previewContainerView.alpha = 1.0
+                        self.backgroundDimView.isHidden = false
+                    }
+                }
+            }
             mediaEditor.attachPreviewView(self.previewView, andPlay: !(self.controller?.isEditingStoryCover ?? false))
             
             if case .empty = subject {
                 self.stickerMaskDrawingView?.emptyColor = .black
                 self.stickerMaskDrawingView?.clearWithEmptyColor()
-            }
-            
-            switch subject {
-            case .message, .gift:
-                break
-            default:
-                self.readyValue.set(.single(true))
             }
             
             switch subject {
@@ -3789,7 +3836,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 }
             case let .videoCollage(items):
-                mediaEditor.setupCollage(items.map { $0.editorItem })
+                mediaEditor.setupCollage(items.map { $0.editorItem }, restoredValues: controller.collage.flatMap { $0.hasSavedSettings ? $0.videoValues() : nil })
             case let .sticker(_, emoji):
                 controller.stickerSelectedEmoji = emoji
             case .message, .gift:
@@ -3810,7 +3857,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 } else if case let .gift(gift) = subject {
                     isGift = true
-                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, isPrepaidUpgrade: false, peerId: nil, senderId: nil, savedId: nil, resaleAmount: nil, canTransferDate: nil, canResaleDate: nil, dropOriginalDetailsStars: nil, assigned: false, fromOffer: false, canCraftAt: nil, isCrafted: false))]
+                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, isPrepaidUpgrade: false, peerId: nil, senderId: nil, savedId: nil, resaleAmount: nil, canTransferDate: nil, canResaleDate: nil, dropOriginalDetailsStars: nil, assigned: false, fromOffer: false, canCraftAt: nil, isCrafted: false, text: nil, entities: nil, nameHidden: false))]
                     let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     messages = .single([message])
                 } else {
@@ -3926,7 +3973,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         if self.controller?.isEmbeddedEditor == true {
                             
                         } else {
-                            if case .videoCollage = subject {
+                            if case .videoCollage = subject, !isDraft {
                                 Queue.mainQueue().after(0.7) {
                                     self.previewContainerView.alpha = 1.0
                                     self.previewContainerView.layer.allowsGroupOpacity = true
@@ -3936,7 +3983,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                         self.backgroundDimView.isHidden = false
                                     })
                                 }
-                            } else if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject, self.items.isEmpty {
+                            } else if !isDraft, CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject, self.items.isEmpty {
                                 self.previewContainerView.alpha = 1.0
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
@@ -3953,38 +4000,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             })
             self.mediaEditor = mediaEditor
+            self.updateCrop()
             self.mediaEditorPromise.set(.single(mediaEditor))
-            
-            if controller.isEmbeddedEditor {
-                mediaEditor.onFirstDisplay = { [weak self] in
-                    if let self {
-                        if let transitionInView = self.transitionInView  {
-                            self.transitionInView = nil
-                            transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
-                                transitionInView?.removeFromSuperview()
-                            })
-                        }
-                        
-                        if subject.isPhoto {
-                            self.previewContainerView.layer.allowsGroupOpacity = true
-                            self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
-                                self.previewContainerView.layer.allowsGroupOpacity = false
-                                self.previewContainerView.alpha = 1.0
-                                self.backgroundDimView.isHidden = false
-                            })
-                        } else {
-                            self.previewContainerView.alpha = 1.0
-                            self.backgroundDimView.isHidden = false
-                        }
-                    }
-                }
-            } else {
-                if let caption {
-                    mediaEditor.onFirstDisplay = { [weak self] in
-                        self?.componentHostView?.setInputText(caption)
-                    }
-                }
-            }
             
             mediaEditor.onPlaybackAction = { [weak self] action in
                 if let self {
@@ -4002,8 +4019,57 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let initialLink = controller.initialLink {
                 self.addInitialLink(initialLink)
             }
+
+            // Readiness may synchronously start animateIn(), so install the editor and its callbacks first.
+            switch subject {
+            case .message, .gift:
+                break
+            default:
+                self.readyValue.set(.single(true))
+            }
         }
         
+        private func updateCrop(frame: CGRect? = nil) {
+            if let frame {
+                self.cropScrollViewFrame = frame
+            }
+            guard let cropScrollView = self.cropScrollView, let mediaEditor = self.mediaEditor, let mediaEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView, let mediaEntity = mediaEntityView.entity as? DrawingMediaEntity, let (initialPosition, initialScale, initialRotation) = self.mediaEntityInitialValues else {
+                return
+            }
+
+            let values = mediaEditor.values
+            let position = initialPosition.offsetBy(dx: values.cropOffset.x, dy: values.cropOffset.y)
+            let scale = initialScale * values.cropScale
+            let rotation = initialRotation + values.cropRotation
+            if mediaEntity.position != position || mediaEntity.scale != scale || mediaEntity.rotation != rotation || mediaEntity.mirrored != values.cropMirroring {
+                self.isUpdatingCrop = true
+                mediaEntity.position = position
+                mediaEntity.scale = scale
+                mediaEntity.rotation = rotation
+                mediaEntity.mirrored = values.cropMirroring
+                mediaEntityView.update(animated: false)
+                self.isUpdatingCrop = false
+            }
+
+            let previewScale = self.previewView.bounds.width / storyDimensions.width
+            guard previewScale > 0.0 else {
+                return
+            }
+            let baseSize = CGSize(width: mediaEntity.size.width * initialScale * previewScale, height: mediaEntity.size.height * initialScale * previewScale)
+            let contentSize = CGRect(origin: .zero, size: baseSize).applying(CGAffineTransform(rotationAngle: rotation)).size
+            if let updatedCrop = cropScrollView.update(
+                frame: self.cropScrollViewFrame,
+                contentSize: contentSize,
+                offset: CGPoint(x: values.cropOffset.x * previewScale, y: values.cropOffset.y * previewScale),
+                scale: values.cropScale
+            ) {
+                let offset = CGPoint(x: updatedCrop.offset.x / previewScale, y: updatedCrop.offset.y / previewScale)
+                if abs(offset.x - values.cropOffset.x) > 0.001 || abs(offset.y - values.cropOffset.y) > 0.001 || abs(updatedCrop.scale - values.cropScale) > 0.00001 {
+                    mediaEditor.setCrop(offset: offset, scale: updatedCrop.scale, rotation: values.cropRotation, mirroring: values.cropMirroring)
+                }
+            }
+        }
+
         private var initialMaskScale: CGFloat = .zero
         private var initialMaskPosition: CGPoint = .zero
         private func setupMaskDrawingView(size: CGSize) {
@@ -4526,8 +4592,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             })
         }
         
+        private func removeTransitionImage() {
+            guard let transitionInView = self.transitionInView else {
+                return
+            }
+            self.transitionInView = nil
+            transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                transitionInView?.removeFromSuperview()
+            })
+        }
+
         private func setupTransitionImage(_ image: UIImage) {
-            guard let controller = self.controller else {
+            guard !self.mediaEditorHasDisplayed, let controller = self.controller else {
                 return
             }
             self.previewContainerView.alpha = 1.0
@@ -4554,15 +4630,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             transitionInView.transform = CGAffineTransformMakeScale(initialScale, initialScale)
             self.previewContainerView.addSubview(transitionInView)
             self.transitionInView = transitionInView
-            
-            self.mediaEditor?.onFirstDisplay = { [weak self] in
-                if let self, let transitionInView = self.transitionInView  {
-                    self.transitionInView = nil
-                    transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
-                        transitionInView?.removeFromSuperview()
-                    })
-                }
-            }
         }
         
         func animateIn() {
@@ -5556,7 +5623,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         
         func addInitialLink(_ link: (url: String, name: String?)) {
             guard self.context.isPremium else {
-                Queue.mainQueue().after(0.3) {
+                Queue.mainQueue().after(0.3) { [weak self] in
+                    guard let self else {
+                        return
+                    }
+
                     let context = self.context
                     var replaceImpl: ((ViewController) -> Void)?
                     let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .stories, forceDark: true, action: {
@@ -6562,15 +6633,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 stickerBackgroundView.layer.cornerRadius = stickerFrameWidth / 8.0
                 
                 if let cropScrollView = self.cropScrollView {
-                    cropScrollView.frame = cropScrollRect
                     if cropScrollView.superview == nil {
                         self.previewContainerView.addSubview(cropScrollView)
-                        
-                        if let dimensions = self.subject?.dimensions {
-                            let filledCropSize = dimensions.cgSize.aspectFilled(cropScrollRect.size)
-                            cropScrollView.setContentSize(filledCropSize)
-                        }
                     }
+                    self.updateCrop(frame: cropScrollRect)
                 }
             }
             
@@ -6649,6 +6715,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             }
             public let content: Content
+            public let id: Int64
+            public let isMain: Bool
             public let frame: CGRect
             public let contentScale: CGFloat
             public let contentOffset: CGPoint
@@ -6658,7 +6726,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     content: self.content.editorContent,
                     frame: self.frame,
                     contentScale: self.contentScale,
-                    contentOffset: self.contentOffset
+                    contentOffset: self.contentOffset,
+                    id: self.id,
+                    isMain: self.isMain
                 )
             }
             
@@ -6666,9 +6736,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 content: Content,
                 frame: CGRect,
                 contentScale: CGFloat,
-                contentOffset: CGPoint
+                contentOffset: CGPoint,
+                id: Int64 = Int64.random(in: .min ... .max),
+                isMain: Bool = false
             ) {
                 self.content = content
+                self.id = id
+                self.isMain = isMain
                 self.frame = frame
                 self.contentScale = contentScale
                 self.contentOffset = contentOffset
@@ -6679,6 +6753,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         case image(image: UIImage, dimensions: PixelDimensions, additionalImage: UIImage?, additionalImagePosition: PIPPosition, fromCamera: Bool)
         case video(videoPath: String, thumbnail: UIImage?, mirror: Bool, additionalVideoPath: String?, additionalThumbnail: UIImage?, dimensions: PixelDimensions, duration: Double, videoPositionChanges: [(Bool, Double)], additionalVideoPosition: PIPPosition, fromCamera: Bool)
         case videoCollage(items: [VideoCollageItem])
+        case collage(MediaEditorCollage)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         case message([MessageId])
@@ -6709,7 +6784,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
             case let .draft(draft, _):
                 return draft.dimensions
-            case .message, .gift, .sticker, .videoCollage, .multiple:
+            case .message, .gift, .sticker, .videoCollage, .collage, .multiple:
                 return PixelDimensions(storyDimensions)
             }
         }
@@ -6727,6 +6802,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return .video(videoPath, transitionImage, mirror, additionalVideoPath, dimensions, duration)
             case let .videoCollage(items):
                 return .videoCollage(items.map { $0.editorItem })
+            case let .collage(collage):
+                guard let subject = mediaEditorCollageSubject(collage) else {
+                    preconditionFailure("Collage sources must be resolved before creating the editor")
+                }
+                return subject.editorSubject
             case let .asset(asset):
                 return .asset(asset)
             case let .draft(draft, _):
@@ -6756,6 +6836,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return true
             case .videoCollage:
                 return true
+            case let .collage(collage):
+                return collage.isVideo
             case let .asset(asset):
                 return asset.mediaType == .video
             case let .draft(draft, _):
@@ -6853,10 +6935,28 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
-    var didComplete = false
+    var didComplete = false {
+        didSet {
+            if !self.didComplete {
+                self.storyPrivacyScreen?.isCompleting = false
+            }
+        }
+    }
+    weak var storyPrivacyScreen: ShareWithPeersScreen?
+    var collage: MediaEditorCollage?
+    var collageResolutionId = UUID()
+    var collageDraftSaveOperation: MediaEditorCollageDraftSaveOperation?
+    var collageDraftPreparing = false
+    var collageSaveGeneration = UUID()
+    var collageSourceLeases: [MediaEditorDraftFileLease] = []
+    var collagePublicationImagePath: String?
+    var collageSaveAlert: MediaEditorDraftSaveAlert?
+    let collageMediaDisposable = MetaDisposable()
+    var collageMediaAlert: MediaEditorDraftSaveAlert?
     
     public var cancelled: (Bool) -> Void = { _ in }
-    public var willComplete: (UIImage?, Bool, @escaping () -> Void) -> Void
+    public var collageDraftSaved: () -> Void = {}
+    public var willComplete: (UIImage?, Bool, @escaping () -> Void, @escaping () -> Void) -> Void
     public var completion: ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
@@ -6890,7 +6990,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         initialLink: (url: String, name: String?)? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        willComplete: @escaping (UIImage?, Bool, @escaping () -> Void) -> Void = { _, _, commit in commit() },
+        willComplete: @escaping (UIImage?, Bool, @escaping () -> Void, @escaping () -> Void) -> Void = { _, _, commit, _ in commit() },
         completion: @escaping ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
@@ -6972,6 +7072,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     
     deinit {
         self.exportDisposable.dispose()
+        self.collageMediaDisposable.dispose()
+        self.collageDraftSaveOperation?.cancel()
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
         self.myStickerPacksDisposable?.dispose()
@@ -7216,6 +7318,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
+            }
+            if self.collage != nil {
+                controller.automaticallyDismissOnCompletion = false
+                self.storyPrivacyScreen = controller
             }
             self.push(controller)
             
@@ -7604,6 +7710,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             text = presentationData.strings.Story_Editor_DiscardText
         }
         
+        if self.collage != nil, let save {
+            self.presentCollageDraftSaveAlert(title: title, text: text, saveTitle: save)
+            return
+        }
+
         var actions: [TextAlertAction] = []
         actions.append(TextAlertAction(type: .destructiveAction, title: presentationData.strings.Story_Editor_DraftDiscard, action: { [weak self] in
             if let self {
@@ -7631,18 +7742,35 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         self.present(controller, in: .window(.root))
     }
     
-    func requestDismiss(saveDraft: Bool, animated: Bool) {
+    func requestDismiss(saveDraft: Bool, animated: Bool, draftSaved: Bool = false, discardDraft: Bool = true) {
+        guard self.storyPrivacyScreen?.isCompleting != true else {
+            return
+        }
+        if saveDraft, self.collage != nil, !draftSaved {
+            self.maybePresentDiscardAlert()
+            return
+        }
+        if self.collageDraftPreparing, !self.cancelCollageDraftSave() {
+            return
+        }
+        self.collageResolutionId = UUID()
+        self.collageMediaDisposable.set(nil)
+        self.collageMediaAlert?.close()
+        self.collageMediaAlert = nil
         self.dismissAllTooltips()
         
         var showDraftTooltip = saveDraft
         if let subject = self.node.actualSubject, case .draft = subject {
             showDraftTooltip = false
         }
-        if saveDraft {
+        if saveDraft && !draftSaved {
             self.saveDraft(id: nil)
-        } else {
+        } else if !saveDraft && discardDraft {
             if case let .draft(draft, id) = self.node.actualSubject, id == nil {
-                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                // Closing while collage sources are being resolved must not discard the saved draft.
+                if draft.collage == nil || self.node.mediaEditor != nil {
+                    removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                }
             }
         }
         
@@ -7650,7 +7778,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             mediaEditor.invalidate()
         }
         self.node.entitiesView.invalidate()
-        
+
+        if saveDraft, draftSaved, self.collage != nil {
+            self.collageDraftSaved()
+        }
         self.cancelled(showDraftTooltip)
         
         self.willDismiss()
@@ -8327,8 +8458,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         })
     }
         
-    private func performSave(toStickerResource: MediaResource? = nil) {
+    private func performSave(toStickerResource: MediaResource? = nil, collagePrepared: Bool = false) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
+            return
+        }
+        if let collage = self.collage, !collagePrepared {
+            self.prepareCollageMedia(collage) { [weak self] success in
+                if success {
+                    self?.performSave(toStickerResource: toStickerResource, collagePrepared: true)
+                }
+            }
             return
         }
         
@@ -8382,6 +8521,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             case let .videoCollage(items):
                 var maxDurationItem: (Double, Subject.VideoCollageItem)?
                 for item in items {
+                    if item.isMain {
+                        maxDurationItem = (item.content.duration, item)
+                        break
+                    }
                     switch item.content {
                     case .image:
                         break
@@ -8485,7 +8628,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             case let .sticker(file, _):
                 exportSubject = .single(.sticker(file: file))
-            case .multiple:
+            case .multiple, .collage:
                 fatalError()
             }
             
@@ -8615,7 +8758,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
-        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+        return session.hasItemsConforming(toTypeIdentifiers: [UTType.image.identifier])
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)

@@ -10,6 +10,7 @@ final class ChildWindowHostView: UIView, WindowHost {
     var invalidatePrefersOnScreenNavigationHiddenImpl: (() -> Void)?
     var invalidateSupportedOrientationsImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
+    var dismissedKeyboardByCurrentGestureImpl: (() -> Bool)?
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
     
@@ -45,6 +46,10 @@ final class ChildWindowHostView: UIView, WindowHost {
     
     func cancelInteractiveKeyboardGestures() {
         self.cancelInteractiveKeyboardGesturesImpl?()
+    }
+
+    var dismissedKeyboardByCurrentGesture: Bool {
+        return self.dismissedKeyboardByCurrentGestureImpl?() ?? false
     }
     
     func forEachController(_ f: (ContainableController) -> Void) {
@@ -119,6 +124,10 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     
     view.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
         hostView?.cancelInteractiveKeyboardGestures?()
+    }
+
+    view.dismissedKeyboardByCurrentGestureImpl = { [weak hostView] in
+        return hostView?.dismissedKeyboardByCurrentGesture?() ?? false
     }
     
     view.forEachControllerImpl = { [weak hostView] f in

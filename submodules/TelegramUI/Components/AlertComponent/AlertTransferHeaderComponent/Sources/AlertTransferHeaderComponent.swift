@@ -13,6 +13,7 @@ public final class AlertTransferHeaderComponent: Component {
     public enum IconType {
         case transfer
         case take
+        case overlap
     }
     
     let fromComponent: AnyComponentWithIdentity<Empty>
@@ -46,6 +47,7 @@ public final class AlertTransferHeaderComponent: Component {
         private let from = ComponentView<Empty>()
         private let to = ComponentView<Empty>()
         private let arrow = ComponentView<Empty>()
+        private let toMask = CAShapeLayer()
         
         private var component: AlertTransferHeaderComponent?
         private weak var state: EmptyComponentState?
@@ -57,7 +59,7 @@ public final class AlertTransferHeaderComponent: Component {
             let environment = environment[AlertComponentEnvironment.self]
             
             let size: CGSize
-            let iconName: String
+            let iconName: String?
             switch component.type {
             case .transfer:
                 iconName = "Peer Info/AlertArrow"
@@ -65,6 +67,9 @@ public final class AlertTransferHeaderComponent: Component {
             case .take:
                 iconName = "Media Editor/CutoutUndo"
                 size = CGSize(width: 154.0, height: 60.0)
+            case .overlap:
+                iconName = nil
+                size = CGSize(width: 110.0, height: 60.0)
             }
             let sideInset = floorToScreenPixels((availableSize.width - size.width) / 2.0)
             
@@ -82,20 +87,24 @@ public final class AlertTransferHeaderComponent: Component {
                 transition.setFrame(view: fromView, frame: fromFrame)
             }
             
-            let arrowSize = self.arrow.update(
-                transition: transition,
-                component: AnyComponent(
-                    BundleIconComponent(name: iconName, tintColor: environment.theme.actionSheet.primaryTextColor.withMultipliedAlpha(0.2))
-                ),
-                environment: {},
-                containerSize: availableSize
-            )
-            let arrowFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - arrowSize.width) / 2.0), y: floorToScreenPixels((size.height - arrowSize.height) / 2.0)), size: arrowSize)
-            if let arrowView = self.arrow.view {
-                if arrowView.superview == nil {
-                    self.addSubview(arrowView)
+            if let iconName {
+                let arrowSize = self.arrow.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        BundleIconComponent(name: iconName, tintColor: environment.theme.actionSheet.primaryTextColor.withMultipliedAlpha(0.2))
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let arrowFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - arrowSize.width) / 2.0), y: floorToScreenPixels((size.height - arrowSize.height) / 2.0)), size: arrowSize)
+                if let arrowView = self.arrow.view {
+                    if arrowView.superview == nil {
+                        self.addSubview(arrowView)
+                    }
+                    transition.setFrame(view: arrowView, frame: arrowFrame)
                 }
-                transition.setFrame(view: arrowView, frame: arrowFrame)
+            } else {
+                self.arrow.view?.removeFromSuperview()
             }
             
             let toSize = self.to.update(
@@ -110,6 +119,28 @@ public final class AlertTransferHeaderComponent: Component {
                     self.addSubview(toView)
                 }
                 transition.setFrame(view: toView, frame: toFrame)
+
+                if case .overlap = component.type {
+                    let maskBounds = CGRect(origin: .zero, size: toSize)
+                    let cutoutFrame = fromFrame.offsetBy(dx: -toFrame.minX, dy: -toFrame.minY).insetBy(dx: -3.0, dy: -3.0)
+                    let maskPath = UIBezierPath(rect: maskBounds)
+                    maskPath.append(UIBezierPath(ovalIn: cutoutFrame))
+                    self.toMask.frame = maskBounds
+                    self.toMask.fillColor = UIColor.black.cgColor
+                    self.toMask.fillRule = .evenOdd
+                    self.toMask.masksToBounds = true
+                    self.toMask.path = maskPath.cgPath
+                    toView.layer.mask = self.toMask
+
+                    if let fromView = self.from.view {
+                        self.bringSubviewToFront(fromView)
+                    }
+                } else {
+                    if toView.layer.mask === self.toMask {
+                        toView.layer.mask = nil
+                    }
+                    self.bringSubviewToFront(toView)
+                }
             }
             
             return CGSize(width: availableSize.width, height: size.height + 11.0)

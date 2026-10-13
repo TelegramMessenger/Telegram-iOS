@@ -11,6 +11,7 @@ import AccountContext
 import TelegramCore
 import PresentationDataUtils
 import Camera
+import CameraLegacy
 import MultilineTextComponent
 import BlurredBackgroundComponent
 import Photos
@@ -346,6 +347,7 @@ private final class CameraScreenComponent: CombinedComponent {
         var previousFlashMode: Camera.FlashMode?
         
         var displayingCollageSelection = false
+        private var didDisplayCollageDisableTooltip = false
         
         private let hapticFeedback = HapticFeedback()
         
@@ -369,8 +371,6 @@ private final class CameraScreenComponent: CombinedComponent {
             
             super.init()
                                    
-            self.setupVolumeButtonsHandler()
-            
             toggleCameraPositionAction.connect({ [weak self] in
                 if let self {
                     self.togglePosition(self.animateFlipAction)
@@ -494,6 +494,12 @@ private final class CameraScreenComponent: CombinedComponent {
         
         var volumeButtonsListenerActive = false {
             didSet {
+                guard self.volumeButtonsListenerActive != oldValue else {
+                    return
+                }
+                if self.volumeButtonsListenerActive {
+                    self.setupVolumeButtonsHandler()
+                }
                 self.volumeButtonsListenerShouldBeActive.set(self.volumeButtonsListenerActive)
             }
         }
@@ -719,6 +725,13 @@ private final class CameraScreenComponent: CombinedComponent {
                 controller.updateCameraState({
                     $0.updatedIsCollageEnabled(isEnabled).updatedCollageProgress(0.0).updatedIsDualCameraEnabled(false)
                 }, transition: .spring(duration: 0.3))
+
+                if !self.didDisplayCollageDisableTooltip {
+                    self.didDisplayCollageDisableTooltip = true
+                    Queue.mainQueue().after(0.2) {
+                        controller.node.presentCollageDisableTooltip()
+                    }
+                }
             }
             self.hapticFeedback.impact(.light)
         }
@@ -757,7 +770,7 @@ private final class CameraScreenComponent: CombinedComponent {
         var isRecording: Bool {
             return self.cameraState?.recording != CameraState.Recording.none
         }
-        
+
         var isTakingPhoto = false
         func takePhoto() {
             guard let controller = self.getController(), let camera = controller.camera, let cameraState = self.cameraState else {
@@ -776,13 +789,8 @@ private final class CameraScreenComponent: CombinedComponent {
             if self.displayingCollageSelection {
                 self.displayingCollageSelection = false
                 self.updated(transition: .spring(duration: 0.3))
-                
-                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let tooltipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Camera_CollageManagementTooltip, timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in
-                    return true
-                })
-                controller.present(tooltipController, in: .current)
             }
+            controller.node.presentCollageManagementTooltipIfNeeded()
             
             let takePhoto = { [weak self] in
                 guard let self else {
@@ -902,7 +910,11 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.updated(transition: .spring(duration: 0.3))
             }
             
-            let startRecording = {
+            let startRecording = { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.resultDisposable.set((camera.startRecording()
                 |> deliverOnMainQueue).start(next: { [weak self] recordingData in
                     if let self, let controller = self.getController() {
@@ -1338,6 +1350,7 @@ private final class CameraScreenComponent: CombinedComponent {
         let collageCarousel = Child(CollageIconCarouselComponent.self)
         let modeControl = Child(ModeComponent.self)
         let hintLabel = Child(HintLabelComponent.self)
+        let collageReorderHint = Child(MultilineTextComponent.self)
         let flashTintControl = Child(FlashTintControlComponent.self)
         let timeBackground = Child(RoundedRectangle.self)
         let timeLabel = Child(MultilineTextComponent.self)
@@ -1874,7 +1887,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     
                     if !isSticker && !isAvatar && !isTablet {
                         var nextButtonX = availableSize.width - topControlSideInset - rightMostButtonWidth / 2.0 - 100.0
-                        if Camera.isDualCameraSupported(forRoundVideo: false) && !component.cameraState.isCollageEnabled && component.cameraState.isStreaming == .none {
+                        if LegacyCameraImpl.shared.isDualCameraSupported(forRoundVideo: false) && !component.cameraState.isCollageEnabled && component.cameraState.isStreaming == .none {
                             let dualButton = dualButton.update(
                                 component: CameraButton(
                                     content: AnyComponentWithIdentity(
@@ -2107,6 +2120,23 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             
+            if !isTablet, component.cameraState.isCollageEnabled, component.cameraState.collageProgress > 1.0 - .ulpOfOne, case .none = component.cameraState.recording, !state.isTransitioning {
+                let collageReorderHint = collageReorderHint.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: environment.strings.Camera_CollageReorderHint, font: Font.regular(13.0), textColor: UIColor(rgb: 0x8e8e93))),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    ),
+                    availableSize: CGSize(width: availableSize.width - 32.0, height: availableSize.height),
+                    transition: context.transition
+                )
+                context.add(collageReorderHint
+                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + 16.0 + collageReorderHint.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+            }
+
             if !isSticker, case .none = component.cameraState.recording, component.cameraState.isStreaming == .none && !state.isTransitioning && hasAllRequiredAccess && component.cameraState.collageProgress < 1.0 - .ulpOfOne {
                 let availableModeControlSize: CGSize
                 if isTablet {
@@ -2249,6 +2279,14 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             public let image: UIImage
             public let additionalImage: UIImage?
             public let additionalImagePosition: CameraScreenImpl.PIPPosition
+            public let originalAssetIdentifier: String?
+
+            public init(image: UIImage, additionalImage: UIImage?, additionalImagePosition: CameraScreenImpl.PIPPosition, originalAssetIdentifier: String? = nil) {
+                self.image = image
+                self.additionalImage = additionalImage
+                self.additionalImagePosition = additionalImagePosition
+                self.originalAssetIdentifier = originalAssetIdentifier
+            }
         }
         
         public struct Video {
@@ -2282,6 +2320,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         case image(Image)
         case video(Video)
         case videoCollage(VideoCollage)
+        case collage(MediaEditorCollage)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         case assets([PHAsset])
@@ -2289,7 +2328,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         func withPIPPosition(_ position: CameraScreenImpl.PIPPosition) -> Result {
             switch self {
             case let .image(result):
-                return .image(Image(image: result.image, additionalImage: result.additionalImage, additionalImagePosition: position))
+                return .image(Image(image: result.image, additionalImage: result.additionalImage, additionalImagePosition: position, originalAssetIdentifier: result.originalAssetIdentifier))
             case let .video(result):
                 return .video(Video(videoPath: result.videoPath, coverImage: result.coverImage, mirror: result.mirror, additionalVideoPath: result.additionalVideoPath, additionalCoverImage: result.additionalCoverImage, dimensions: result.dimensions, duration: result.duration, positionChangeTimestamps: result.positionChangeTimestamps, additionalVideoPosition: position))
             default:
@@ -2339,7 +2378,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: CameraScreenImpl?
         private let context: AccountContext
-        fileprivate var camera: Camera?
+        private let cameraImpl: CameraImpl
+        fileprivate var camera: CameraProtocol?
         private let updateState: ActionSlot<CameraState>
         private let toggleCameraPositionAction: ActionSlot<Void>
         fileprivate let dismissCollageSelection: ActionSlot<Void>
@@ -2475,6 +2515,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         init(controller: CameraScreenImpl) {
             self.controller = controller
             self.context = controller.context
+            let cameraImpl = LegacyCameraImpl.shared
+            self.cameraImpl = cameraImpl
             self.updateState = ActionSlot<CameraState>()
             self.toggleCameraPositionAction = ActionSlot<Void>()
             self.dismissCollageSelection = ActionSlot<Void>()
@@ -2502,7 +2544,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.mainPreviewBlurView = BlurView()
             self.mainPreviewBlurView.isUserInteractionEnabled = false
             
-            var isDualCameraEnabled = Camera.isDualCameraSupported(forRoundVideo: false)
+            var isDualCameraEnabled = cameraImpl.isDualCameraSupported(forRoundVideo: false)
             if isDualCameraEnabled {
                 if let isDualCameraEnabledValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraIsDualEnabled") as? NSNumber {
                     isDualCameraEnabled = isDualCameraEnabledValue.boolValue
@@ -2530,7 +2572,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             self.mainPreviewContainerView = PortalSourceView()
             self.mainPreviewContainerView.clipsToBounds = true
-            self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true)
+            self.mainPreviewView = cameraImpl.makeCameraSimplePreviewView(frame: .zero, main: true, roundVideo: false)
             
             self.mainPreviewAnimationWrapperView = UIView()
             self.mainPreviewAnimationWrapperView.clipsToBounds = true
@@ -2538,7 +2580,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             self.additionalPreviewContainerView = UIView()
             self.additionalPreviewContainerView.clipsToBounds = true
-            self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false)
+            self.additionalPreviewView = cameraImpl.makeCameraSimplePreviewView(frame: .zero, main: false, roundVideo: false)
             
             if isDualCameraEnabled {
                 self.mainPreviewView.resetPlaceholder(front: false)
@@ -2703,7 +2745,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }
             }
             
-            self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
+            if controller.isCameraActivated {
+                self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
+            }
             
             self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .camera(.video))
             |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -2765,9 +2809,17 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         }
         
         private func maybeSetupCamera() {
+            guard self.controller?.isCameraActivated == true else {
+                return
+            }
             if case .allowed = self.cameraAuthorizationStatus, case .allowed = self.microphoneAuthorizationStatus {
                 self.setupCamera()
             }
+        }
+
+        func activateCamera() {
+            self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
+            self.maybeSetupCamera()
         }
         
         private func requestDeviceAccess() {
@@ -2785,13 +2837,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             
             var isNew = false
-            let camera: Camera
+            let camera: CameraProtocol
             if let cameraHolder = controller.holder {
                 camera = cameraHolder.camera
                 self.mainPreviewView = cameraHolder.previewView
                 self.mainPreviewAnimationWrapperView.addSubview(self.mainPreviewView)
             } else {
-                camera = Camera(
+                camera = self.cameraImpl.makeCamera(
                     configuration: Camera.Configuration(
                         preset: .hd1920x1080,
                         position: self.cameraState.position,
@@ -2816,7 +2868,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }
                 let previousState = self.cameraState
                 self.cameraState = self.cameraState.updatedPosition(position).updatedFlashMode(flashMode)
-                if !self.animatingDualCameraPositionSwitch {
+                if self.cameraState != previousState && !self.animatingDualCameraPositionSwitch {
                     var transition: ComponentTransition = .easeInOut(duration: 0.2)
                     if previousState.flashMode != flashMode {
                         transition = transition.withUserData(CameraScreenTransition.flashModeChanged)
@@ -3544,6 +3596,20 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.controller?.present(tooltipController, in: .current)
         }
         
+        func presentCollageDisableTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: disableCollageButtonTag) else {
+                return
+            }
+
+            let parentFrame = self.view.convert(self.bounds, to: nil)
+            let location = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Camera_CollageRemoveHint), textAlignment: .center, location: .point(location, .top), displayDuration: .custom(5.0), inset: 16.0, shouldDismissOnTouch: { _, _ in
+                return .ignore
+            })
+            self.controller?.present(tooltipController, in: .current)
+        }
+
         func presentCameraTooltip() {
             guard let sourceView = self.componentHost.findTaggedView(tag: captureControlsTag) else {
                 return
@@ -3567,6 +3633,17 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.controller?.present(tooltipController, in: .current)
         }
         
+        func presentCollageManagementTooltipIfNeeded() {
+            guard self.cameraState.isCollageEnabled, self.collage?.results.isEmpty ?? true else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let tooltipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Camera_CollageManagementTooltip, timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                return true
+            })
+            self.controller?.present(tooltipController, in: .current)
+        }
+
         func maybePresentTooltips() {
             guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
@@ -3837,7 +3914,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 if let current = self.collageView {
                     collageView = current
                 } else {
-                    collageView = CameraCollageView(context: self.context, collage: collage, cameraVideoSource: self.cameraVideoSource, cameraContainerView: self.mainPreviewContainerView)
+                    collageView = CameraCollageView(context: self.context, collage: collage, cornerRadius: self.previewContainerView.layer.cornerRadius, cameraVideoSource: self.cameraVideoSource, cameraContainerView: self.mainPreviewContainerView)
                     collageView.getOverlayViews = { [weak self] in
                         guard let self, let view = self.componentHost.view else {
                             return []
@@ -3883,7 +3960,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
 
                 if let collageView = self.collageView {
                     collageView.animateOut(transition: transition, completion: { [weak collageView] in
-                        self.previewContainerView.addSubview(self.mainPreviewContainerView)
+                        self.previewContainerView.insertSubview(self.mainPreviewContainerView, at: 0)
                         collageView?.removeFromSuperview()
                         self.collageContainerView.isHidden = true
                     })
@@ -4082,7 +4159,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     
     private var validLayout: ContainerViewLayout?
     
-    fileprivate var camera: Camera? {
+    fileprivate var camera: CameraProtocol? {
         return self.node.camera
     }
     
@@ -4128,10 +4205,47 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         
         self.navigationPresentation = .flatModal
         
+        if mode != .story || holder != nil || resumeLiveStream || transitionIn != nil {
+            self.activateCamera()
+        }
+    }
+
+    fileprivate private(set) var isCameraActivated = false
+    private var cameraActivationLink: SharedDisplayLinkDriver.Link?
+
+    private func scheduleCameraActivation() {
+        guard !self.isCameraActivated, !self.isDismissed, self.cameraActivationLink == nil else {
+            return
+        }
+        var hasPresentedFrame = false
+        self.cameraActivationLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max) { [weak self] _ in
+            guard let self, self.isViewLoaded, self.view.window != nil else {
+                return
+            }
+            guard hasPresentedFrame else {
+                hasPresentedFrame = true
+                return
+            }
+            self.cameraActivationLink?.invalidate()
+            self.cameraActivationLink = nil
+            guard !self.isDismissed else {
+                return
+            }
+            self.activateCamera()
+        }
+    }
+
+    private func activateCamera() {
+        guard !self.isCameraActivated else {
+            return
+        }
+        self.isCameraActivated = true
         self.requestAudioSession()
-        
-        if case .story = mode {
+        if case .story = self.mode {
             self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
+        }
+        if self.isNodeLoaded {
+            self.node.activateCamera()
         }
     }
 
@@ -4140,12 +4254,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     }
     
     deinit {
+        self.cameraActivationLink?.invalidate()
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
         self.codeDisposable?.dispose()
         self.resolveCodeDisposable?.dispose()
         self.resolvePeerDisposable.dispose()
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, *), self.isCameraActivated {
             try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
         }
     }
@@ -4279,6 +4394,15 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     public func returnFromEditor() {
         self.node.animateInFromEditor(toGallery: self.galleryController?.displayNode.supernode != nil)
     }
+
+    public func resetCollage() {
+        guard self.cameraState.isCollageEnabled else {
+            return
+        }
+        self.node.dismissAllTooltips()
+        self.updateCameraState({ $0.updatedIsCollageEnabled(false).updatedCollageProgress(0.0) }, transition: .immediate)
+        self.node.dismissCollageSelection.invoke(Void())
+    }
     
     private var didStopCameraCapture = false
     func presentGallery(fromGesture: Bool = false) {
@@ -4325,17 +4449,18 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         
         var dismissControllerImpl: ((Bool) -> Void)?
         let dismissArgs = DismissArgs()
+        let forCollage = self.cameraState.isCollageEnabled
         
         let controller: ViewController
-        if let current = self.galleryController {
+        if let current = self.galleryController, !forCollage {
             controller = current
         } else {
             var selectionLimit: Int?
-            if self.cameraState.isCollageEnabled, let collage = self.node.collage {
+            if forCollage, let collage = self.node.collage {
                 selectionLimit = collage.grid.count - collage.results.count
             } else {
-                if self.cameraState.isCollageEnabled {
-                    selectionLimit = 6
+                if forCollage {
+                    selectionLimit = self.cameraState.collageGrid.count
                 } else {
                     if let remainingStoryCount = self.remainingStoryCount {
                         selectionLimit = min(Int(remainingStoryCount), 10)
@@ -4347,7 +4472,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             controller = self.context.sharedContext.makeStoryMediaPickerScreen(
                 context: self.context,
                 isDark: true,
-                forCollage: self.cameraState.isCollageEnabled,
+                forCollage: forCollage,
                 selectionLimit: selectionLimit,
                 getSourceRect: { [weak self] in
                     if let self {
@@ -4362,6 +4487,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
                     if let self {
                         if self.cameraState.isCollageEnabled {
+                            self.node.presentCollageManagementTooltipIfNeeded()
+
                             if let asset = result as? PHAsset {
                                 if asset.mediaType == .video && asset.duration > 1.0 {
                                     self.node.collage?.addResult(.single(.asset(asset)), snapshotView: nil)
@@ -4371,7 +4498,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                                         |> runOn(Queue.concurrentDefaultQueue())
                                         |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
                                             if let image {
-                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
+                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft, originalAssetIdentifier: asset.mediaType == .image ? asset.localIdentifier : nil)))
                                             } else {
                                                 return .complete()
                                             }
@@ -4419,6 +4546,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     }
                             
                     if collage {
+                        if self.cameraState.isCollageEnabled {
+                            self.node.presentCollageManagementTooltipIfNeeded()
+                        }
+
                         if !self.cameraState.isCollageEnabled {
                             var selectedGrid: Camera.CollageGrid = collageGrids.first!
                             for grid in collageGrids {
@@ -4443,7 +4574,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                                         |> runOn(Queue.concurrentDefaultQueue())
                                         |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
                                             if let image {
-                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
+                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft, originalAssetIdentifier: asset.mediaType == .image ? asset.localIdentifier : nil)))
                                             } else {
                                                 return .complete()
                                             }
@@ -4468,6 +4599,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         resumeCameraCapture()
                     }
                     if let self {
+                        if forCollage {
+                            self.galleryController = nil
+                        }
                         self.node.hasGallery = false
                         self.node.requestUpdateLayout(transition: .immediate)
                     }
@@ -4505,6 +4639,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         guard !self.isDismissed else {
             return
         }
+        self.cameraActivationLink?.invalidate()
+        self.cameraActivationLink = nil
         
         self.node.dismissAllTooltips()
         
@@ -4659,6 +4795,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     }
     
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        self.cameraActivationLink?.invalidate()
+        self.cameraActivationLink = nil
         if !flag {
             self.galleryController?.dismiss(animated: false)
         }
@@ -4677,6 +4815,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
 
         if !self.isDismissed {
             (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
+            self.scheduleCameraActivation()
         }
     }
 }

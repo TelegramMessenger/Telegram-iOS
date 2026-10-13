@@ -1307,6 +1307,9 @@ final class HistoryViewLoadedState {
     let ignoreMessageIds: Set<MessageId>
     let halfLimit: Int
     let seedConfiguration: SeedConfiguration
+    /// The peers whose histories the view shows: one, or a channel and the group it was
+    /// migrated from (`.associated`).
+    let peerIds: [PeerId]
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
     var threadSummaries: [Int64: Int32]
     var holes: HistoryViewHoles
@@ -1380,6 +1383,7 @@ final class HistoryViewLoadedState {
             }
         }
         self.input = input
+        self.peerIds = peerIds
         
         for peerId in peerIds {
             for namespace in postbox.messageHistoryIndexTable.existingNamespaces(peerId: peerId) {
@@ -1449,7 +1453,20 @@ final class HistoryViewLoadedState {
             let messageIndex = first.index
             let previousCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
             let nextCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
-            let initialLocation = MessageHistoryEntryLocation(index: previousCount - 1, count: previousCount + nextCount - 1)
+            var initialLocation = MessageHistoryEntryLocation(index: previousCount - 1, count: previousCount + nextCount - 1)
+            // A view over a channel and the group it was migrated from numbers its messages
+            // across both (the gallery's "N of M"): the other peer's messages before this one
+            // come first, and all of them count. Other namespaces of the same peer keep their
+            // own numbering, as before.
+            for peerId in self.peerIds where peerId != space.peerId {
+                for namespace in postbox.messageHistoryIndexTable.existingNamespaces(peerId: peerId) where self.namespaces.contains(namespace) {
+                    let lowerBound = MessageIndex.lowerBound(peerId: peerId, namespace: namespace)
+                    let upperBound = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
+                    let before = self.input.getMessageCountInRange(postbox: postbox, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: messageIndex.withPeerId(peerId).withNamespace(namespace))
+                    let total = self.input.getMessageCountInRange(postbox: postbox, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+                    initialLocation = MessageHistoryEntryLocation(index: initialLocation.index + before, count: initialLocation.count + total)
+                }
+            }
             var nextLocation = initialLocation
             
             let _ = entries.mutableScan { entry in
@@ -1557,15 +1574,7 @@ final class HistoryViewLoadedState {
                         let message = value.message
                         var reloadPeers = reloadPeers
                         
-                        var rebuild = false
-                        for media in message.media {
-                            if let mediaId = media.id, let _ = updatedMedia[mediaId] {
-                                rebuild = true
-                                break
-                            }
-                        }
-                        
-                        if rebuild {
+                        if message.referencesAnyMedia(in: updatedMedia) {
                             var messageMedia: [Media] = []
                             for media in message.media {
                                 if let mediaId = media.id, let updated = updatedMedia[mediaId] {
@@ -1836,7 +1845,13 @@ final class HistoryViewLoadedState {
     
     func completeAndSample(postbox: PostboxImpl, clipHoles: Bool) -> HistoryViewLoadedSample {
         if !self.spacesWithRemovals.isEmpty {
-            for space in self.spacesWithRemovals {
+            var refilledSpaces = self.spacesWithRemovals
+            if self.peerIds.count > 1 && self.statistics.contains(.combinedLocation) {
+                // Every space's locations count the other peers' messages (`fillSpace`), so a
+                // removal in one of them renumbers all of them.
+                refilledSpaces.formUnion(self.orderedEntriesBySpace.keys)
+            }
+            for space in refilledSpaces {
                 self.fillSpace(space: space, postbox: postbox)
             }
             self.spacesWithRemovals.removeAll()

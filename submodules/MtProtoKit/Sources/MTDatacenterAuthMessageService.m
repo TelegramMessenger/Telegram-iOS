@@ -12,8 +12,14 @@
 #import <MtProtoKit/MTDatacenterAuthInfo.h>
 #import <MtProtoKit/MTDatacenterSaltInfo.h>
 #import "MTBuffer.h"
+#import "MTBufferReader.h"
 #import <MtProtoKit/MTEncryption.h>
+#import <MtProtoKit/MTTimer.h>
+#import <MtProtoKit/MTQueue.h>
+#import <MtProtoKit/MTTransportScheme.h>
 #import <CommonCrypto/CommonCrypto.h>
+
+#import "MTInternalInterfaces.h"
 
 #import "MTInternalMessageParser.h"
 #import "MTServerDhInnerDataMessage.h"
@@ -77,18 +83,81 @@ static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys(bool isProduction
     }
 }
 
+NSArray<NSString *> *MTDatacenterAuthDefaultPublicKeys(bool isProduction) {
+    NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
+    for (MTDatacenterAuthPublicKey *key in defaultPublicKeys(isProduction)) {
+        [result addObject:key.publicKey];
+    }
+    return result;
+}
+
 static MTDatacenterAuthPublicKey *selectPublicKey(id<EncryptionProvider> encryptionProvider, NSArray<NSNumber *> *fingerprints, NSArray<MTDatacenterAuthPublicKey *> *publicKeys) {
+    NSMutableArray<NSNumber *> *keyFingerprints = [[NSMutableArray alloc] init];
+    for (MTDatacenterAuthPublicKey *key in publicKeys) {
+        [keyFingerprints addObject:@([key fingerprintWithEncryptionProvider:encryptionProvider])];
+    }
+    
     for (NSNumber *nFingerprint in fingerprints) {
-        for (MTDatacenterAuthPublicKey *key in publicKeys) {
-            uint64_t keyFingerprint = [key fingerprintWithEncryptionProvider:encryptionProvider];
-            
-            if ([nFingerprint unsignedLongLongValue] == keyFingerprint) {
-                return key;
+        for (NSUInteger i = 0; i < publicKeys.count; i++) {
+            if ([nFingerprint unsignedLongLongValue] == [keyFingerprints[i] unsignedLongLongValue]) {
+                return publicKeys[i];
             }
         }
     }
 
     return nil;
+}
+
+static NSTimeInterval MTDatacenterAuthRetryDelay(NSUInteger failureCount) {
+    if (failureCount <= 1) {
+        return 0.0;
+    }
+    return pow(2.0, (double)MIN(failureCount - 2, (NSUInteger)4));
+}
+
+int32_t MTDatacenterAuthInnerDataDatacenterId(NSInteger datacenterId, bool isTestingEnvironment, bool media, bool cdn) {
+    int32_t datacenter = (int32_t)datacenterId;
+    if (isTestingEnvironment) {
+        datacenter += 10000;
+    }
+    if (media && !cdn) {
+        datacenter = -datacenter;
+    }
+    return datacenter;
+}
+
+NSData *MTDatacenterAuthInnerData(NSData *pq, NSData *p, NSData *q, NSData *nonce, NSData *serverNonce, NSData *newNonce, int32_t datacenterId, bool temporary, int32_t expiresIn) {
+    MTBuffer *buffer = [[MTBuffer alloc] init];
+    [buffer appendInt32:temporary ? (int32_t)0x56fddf88 : (int32_t)0xa9f55f95];
+    [buffer appendTLBytes:pq];
+    [buffer appendTLBytes:p];
+    [buffer appendTLBytes:q];
+    [buffer appendBytes:nonce.bytes length:nonce.length];
+    [buffer appendBytes:serverNonce.bytes length:serverNonce.length];
+    [buffer appendBytes:newNonce.bytes length:newNonce.length];
+    [buffer appendInt32:datacenterId];
+    if (temporary) {
+        [buffer appendInt32:expiresIn];
+    }
+    return buffer.data;
+}
+
+static NSUInteger serverDhInnerDataLength(NSData *data) {
+    MTBufferReader *reader = [[MTBufferReader alloc] initWithData:data];
+    int32_t signature = 0;
+    if (![reader readInt32:&signature] || signature != (int32_t)0xb5890dba) {
+        return 0;
+    }
+    if (![reader readBytes:NULL length:16 + 16 + 4]) {
+        return 0;
+    }
+    if (![reader readTLBytes:NULL] || ![reader readTLBytes:NULL]) {
+        return 0;
+    }
+    if (![reader readInt32:NULL]) {
+        return 0;
+    }
+    return data.length - [reader readRest].length;
 }
 
 typedef enum {
@@ -120,9 +189,16 @@ typedef enum {
     NSData *_dhEncryptedData;
     
     MTDatacenterAuthKey *_authKey;
+    int64_t _serverSalt;
     NSData *_encryptedClientData;
     
     NSArray<MTDatacenterAuthPublicKey *> *_publicKeys;
+    
+    NSUInteger _failureCount;
+    MTTimer *_retryTimer;
+    bool _transactionSchemeIsMedia;
+    int32_t _tempKeyValidUntilTimestamp;
+    bool _cdnPublicKeysRefetched;
 }
 
 @end
@@ -138,6 +214,11 @@ typedef enum {
         _tempAuth = tempAuth;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    [_retryTimer invalidate];
 }
 
 - (NSArray<MTDatacenterAuthPublicKey *> *)convertPublicKeysFromDictionaries:(NSArray<NSDictionary *> *)list {
@@ -167,6 +248,7 @@ typedef enum {
     _dhEncryptedData = nil;
     
     _authKey = nil;
+    _serverSalt = 0;
     _encryptedClientData = nil;
     
     if (mtProto.cdn) {
@@ -183,7 +265,37 @@ typedef enum {
     }
     
     [mtProto requestSecureTransportReset];
-    [mtProto requestTransportTransaction];
+    if (_retryTimer == nil) {
+        [mtProto requestTransportTransaction];
+    }
+}
+
+- (void)fail:(MTProto *)mtProto
+{
+    _failureCount += 1;
+    [_retryTimer invalidate];
+    _retryTimer = nil;
+    
+    NSTimeInterval delay = MTDatacenterAuthRetryDelay(_failureCount);
+    if (delay > 0.0) {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTDatacenterAuthMessageService#%p failure %d, retrying in %.0f s]", self, (int)_failureCount, delay);
+        }
+        __weak MTDatacenterAuthMessageService *weakSelf = self;
+        __weak MTProto *weakMtProto = mtProto;
+        _retryTimer = [[MTTimer alloc] initWithTimeout:delay repeat:false completion:^{
+            __strong MTDatacenterAuthMessageService *strongSelf = weakSelf;
+            if (strongSelf == nil) {
+                return;
+            }
+            strongSelf->_retryTimer = nil;
+            __strong MTProto *strongMtProto = weakMtProto;
+            [strongMtProto requestTransportTransaction];
+        } queue:[MTProto managerQueue].nativeQueue];
+        [_retryTimer start];
+    }
+    
+    [self reset:mtProto];
 }
 
 - (void)mtProtoDidAddService:(MTProto *)mtProto
@@ -213,6 +325,11 @@ typedef enum {
         MTLog(@"[MTDatacenterAuthMessageService#%p mtProto#%p (media: %s) mtProtoMessageTransaction scheme:%@]", self, mtProto, mtProto.media ? "true" : "false", scheme);
     }
 
+    if (_retryTimer != nil) {
+        return nil;
+    }
+    _transactionSchemeIsMedia = scheme.media;
+    
     if (_currentStageTransactionId == nil)
     {
         switch (_stage)
@@ -224,7 +341,10 @@ typedef enum {
                 if (_nonce == nil)
                 {
                     uint8_t nonceBytes[16];
-                    __unused int result = SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes);
+                    if (SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes) != errSecSuccess) {
+                        [self fail:mtProto];
+                        return nil;
+                    }
                     _nonce = [[NSData alloc] initWithBytes:nonceBytes length:16];
                 }
                 
@@ -329,7 +449,23 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
 
     NSData *dataWithPaddingReversed = reversedBytes(dataWithPadding);
 
-    while (true) {
+    id<MTBignumContext> bignumContext = [encryptionProvider createBignumContext];
+    if (bignumContext == nil) {
+        return nil;
+    }
+    id<MTRsaPublicKey> rsaPublicKey = [encryptionProvider parseRSAPublicKey:publicKey];
+    if (rsaPublicKey == nil) {
+        return nil;
+    }
+    id<MTBignum> rsaModule = [bignumContext rsaGetN:rsaPublicKey];
+    if (rsaModule == nil) {
+        return nil;
+    }
+    if ([bignumContext getBin:rsaModule].length != 256) {
+        return nil;
+    }
+
+    for (int attempt = 0; attempt < 4096; attempt++) {
         int randomResult = 0;
         NSMutableData *tempKey = [[NSMutableData alloc] initWithLength:32];
         randomResult = SecRandomCopyBytes(kSecRandomDefault, tempKey.length, tempKey.mutableBytes);
@@ -372,18 +508,6 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
             return nil;
         }
 
-        id<MTBignumContext> bignumContext = [encryptionProvider createBignumContext];
-        if (bignumContext == nil) {
-            return nil;
-        }
-        id<MTRsaPublicKey> rsaPublicKey = [encryptionProvider parseRSAPublicKey:publicKey];
-        if (rsaPublicKey == nil) {
-            return nil;
-        }
-        id<MTBignum> rsaModule = [bignumContext rsaGetN:rsaPublicKey];
-        if (rsaModule == nil) {
-            return nil;
-        }
         id<MTBignum> bignumKeyAesEncrypted = [bignumContext create];
         if (bignumKeyAesEncrypted == nil) {
             return nil;
@@ -395,6 +519,9 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
         }
 
         NSData *encryptedData = [encryptionProvider rsaEncryptWithPublicKey:publicKey data:keyAesEncrypted];
+        if (encryptedData == nil || encryptedData.length > 256) {
+            return nil;
+        }
         NSMutableData *paddedEncryptedData = [[NSMutableData alloc] init];
         [paddedEncryptedData appendData:encryptedData];
         while (paddedEncryptedData.length < 256) {
@@ -408,6 +535,8 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
 
         return paddedEncryptedData;
     }
+    
+    return nil;
 }
 
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType
@@ -420,7 +549,24 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
         {
             MTDatacenterAuthPublicKey *publicKey = selectPublicKey(_encryptionProvider, resPqMessage.serverPublicKeyFingerprints, _publicKeys);
             
+            if (publicKey == nil && mtProto.cdn && !_cdnPublicKeysRefetched)
+            {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p no CDN key matches the server, fetching the CDN keys again]", self);
+                }
+                _cdnPublicKeysRefetched = true;
+                [self reset:mtProto];
+                _stage = MTDatacenterAuthStageWaitingForPublicKeys;
+                _publicKeys = nil;
+                [mtProto.context publicKeysForDatacenterWithIdRequired:mtProto.datacenterId];
+                
+                return;
+            }
+            
             if (publicKey == nil && mtProto.cdn && resPqMessage.serverPublicKeyFingerprints.count == 1 && _publicKeys.count == 1) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p no CDN key matches the server after a refetch, using the only CDN key the main datacenter gave]", self);
+                }
                 publicKey = _publicKeys[0];
             }
             
@@ -429,11 +575,20 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 if (MTLogEnabled()) {
                     MTLog(@"[MTDatacenterAuthMessageService#%p couldn't find valid server public key]", self);
                 }
-                [self reset:mtProto];
+                [self fail:mtProto];
             }
             else
             {
                 NSData *pqBytes = resPqMessage.pq;
+                if (pqBytes.length == 0 || pqBytes.length > 8)
+                {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p invalid pq length %d]", self, (int)pqBytes.length);
+                    }
+                    [self fail:mtProto];
+                    
+                    return;
+                }
                 
                 uint64_t pq = 0;
                 for (int i = 0; i < (int)pqBytes.length; i++)
@@ -444,9 +599,9 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 
                 uint64_t factP = 0;
                 uint64_t factQ = 0;
-                if (!MTFactorize(pq, &factP, &factQ))
+                if (pq < 4 || pq >= ((uint64_t)1 << 63) || !MTFactorize(pq, &factP, &factQ))
                 {
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -474,7 +629,11 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 _dhPublicKeyFingerprint = [publicKey fingerprintWithEncryptionProvider:_encryptionProvider];
                 
                 uint8_t nonceBytes[32];
-                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
+                if (SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes) != errSecSuccess) {
+                    [self fail:mtProto];
+                    
+                    return;
+                }
                 _newNonce = [[NSData alloc] initWithBytes:nonceBytes length:32];
                 
                 /*
@@ -482,52 +641,19 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                  p_q_inner_data_temp_dc#56fddf88 pq:string p:string q:string nonce:int128 server_nonce:int128 new_nonce:int256 dc:int expires_in:int = P_Q_inner_data;
                  */
                 
+                int32_t innerDataDatacenterId = MTDatacenterAuthInnerDataDatacenterId(mtProto.datacenterId, mtProto.context.isTestingEnvironment, _transactionSchemeIsMedia, mtProto.cdn);
+                
                 if (_tempAuth) {
-                    MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
-                    [innerDataBuffer appendInt32:(int32_t)0x3c6a84d4];
-                    [innerDataBuffer appendTLBytes:pqBytes];
-                    [innerDataBuffer appendTLBytes:_dhP];
-                    [innerDataBuffer appendTLBytes:_dhQ];
-                    [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
-                    [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
-                    [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
-                    [innerDataBuffer appendInt32:mtProto.context.tempKeyExpiration];
-                    
-                    NSData *innerDataBytes = innerDataBuffer.data;
-                    NSData *encryptedData = nil;
-
-                    encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-
-                    if (MTLogEnabled()) {
-                        MTLog(@"[MTDatacenterAuthMessageService#%p encryptedData length %d]", self, (int)encryptedData.length);
-                    }
-
-                    _dhEncryptedData = encryptedData;
-                } else {
-                    MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
-                    [innerDataBuffer appendInt32:(int32_t)0x83c95aec];
-                    [innerDataBuffer appendTLBytes:pqBytes];
-                    [innerDataBuffer appendTLBytes:_dhP];
-                    [innerDataBuffer appendTLBytes:_dhQ];
-                    [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
-                    [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
-                    [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
-                    
-                    NSData *innerDataBytes = innerDataBuffer.data;
-
-                    NSData *encryptedData = nil;
-
-                    encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-                    
-                    _dhEncryptedData = encryptedData;
+                    _tempKeyValidUntilTimestamp = ((int32_t)([NSDate date].timeIntervalSince1970)) + mtProto.context.tempKeyExpiration;
+                }
+                NSData *innerDataBytes = MTDatacenterAuthInnerData(pqBytes, _dhP, _dhQ, _nonce, _serverNonce, _newNonce, innerDataDatacenterId, _tempAuth, mtProto.context.tempKeyExpiration);
+                _dhEncryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthMessageService#%p inner data for dc %d (%s), encryptedData length %d]", self, (int)innerDataDatacenterId, _tempAuth ? "temporary" : "permanent", (int)_dhEncryptedData.length);
                 }
 
                 if (_dhEncryptedData == nil) {
-                    _stage = MTDatacenterAuthStagePQ;
-                    _currentStageMessageId = 0;
-                    _currentStageMessageSeqNo = 0;
-                    _currentStageTransactionId = nil;
-                    [mtProto requestTransportTransaction];
+                    [self fail:mtProto];
                 } else {
                     _stage = MTDatacenterAuthStageReqDH;
                     _currentStageMessageId = 0;
@@ -576,28 +702,35 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 [tmpAesIv appendData:newNonce0_4];
                 
                 NSData *answerWithHash = MTAesDecrypt(((MTServerDhParamsOkMessage *)serverDhParamsMessage).encryptedResponse, tmpAesKey, tmpAesIv);
-                NSData *answerHash = [[NSData alloc] initWithBytes:((uint8_t *)answerWithHash.bytes) length:20];
-                
-                NSMutableData *answerData = [[NSMutableData alloc] initWithBytes:(((uint8_t *)answerWithHash.bytes) + 20) length:(answerWithHash.length - 20)];
-                bool hashVerified = false;
-                for (int i = 0; i < 16; i++)
-                {
-                    NSData *computedAnswerHash = MTSha1(answerData);
-                    if ([computedAnswerHash isEqualToData:answerHash])
-                    {
-                        hashVerified = true;
-                        break;
+                if (answerWithHash == nil || answerWithHash.length < 20) {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't decrypt DH params]", self);
                     }
+                    [self fail:mtProto];
                     
-                    [answerData replaceBytesInRange:NSMakeRange(answerData.length - 1, 1) withBytes:NULL length:0];
+                    return;
                 }
+                NSData *answerHash = [answerWithHash subdataWithRange:NSMakeRange(0, 20)];
+                NSData *answerAndPadding = [answerWithHash subdataWithRange:NSMakeRange(20, answerWithHash.length - 20)];
+                NSUInteger answerLength = serverDhInnerDataLength(answerAndPadding);
                 
-                if (!hashVerified)
+                if (answerLength == 0 || answerAndPadding.length - answerLength >= 16)
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p couldn't decode DH params]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
+                    
+                    return;
+                }
+                
+                NSData *answerData = [answerAndPadding subdataWithRange:NSMakeRange(0, answerLength)];
+                if (![MTSha1(answerData) isEqualToData:answerHash])
+                {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't verify DH params]", self);
+                    }
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -609,7 +742,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p couldn't parse decoded DH params]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -619,7 +752,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH nonce]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -629,7 +762,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH server nonce]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -640,7 +773,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -652,7 +785,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g_a]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -662,7 +795,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g (2)]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
@@ -672,22 +805,56 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH prime]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                     
                     return;
                 }
-                
-                uint8_t bBytes[256];
-                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 256, bBytes);
-                NSData *b = [[NSData alloc] initWithBytes:bBytes length:256];
                 
                 int32_t tmpG = innerDataG;
                 tmpG = (int32_t)OSSwapInt32(tmpG);
                 NSData *g = [[NSData alloc] initWithBytes:&tmpG length:4];
                 
-                NSData *g_b = MTExp(_encryptionProvider, g, b, innerDataDhPrime);
+                NSData *b = nil;
+                NSData *g_b = nil;
+                for (int attempt = 0; attempt < 8 && g_b == nil; attempt++)
+                {
+                    uint8_t bBytes[256];
+                    if (SecRandomCopyBytes(kSecRandomDefault, 256, bBytes) != errSecSuccess) {
+                        break;
+                    }
+                    NSData *candidateB = [[NSData alloc] initWithBytes:bBytes length:256];
+                    NSData *candidateGB = MTExp(_encryptionProvider, g, candidateB, innerDataDhPrime);
+                    if (candidateGB != nil && MTCheckIsSafeGAOrB(_encryptionProvider, candidateGB, innerDataDhPrime)) {
+                        b = candidateB;
+                        g_b = candidateGB;
+                    }
+                }
+                
+                if (g_b == nil)
+                {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't generate DH g_b]", self);
+                    }
+                    [self fail:mtProto];
+                    
+                    return;
+                }
                 
                 NSData *authKey = MTExp(_encryptionProvider, innerDataGA, b, innerDataDhPrime);
+                if (authKey != nil && authKey.length < 256) {
+                    NSMutableData *paddedAuthKey = [[NSMutableData alloc] initWithLength:256 - authKey.length];
+                    [paddedAuthKey appendData:authKey];
+                    authKey = paddedAuthKey;
+                }
+                if (authKey.length != 256)
+                {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p couldn't compute DH auth key]", self);
+                    }
+                    [self fail:mtProto];
+                    
+                    return;
+                }
                 
                 NSData *authKeyHash = MTSha1(authKey);
                 
@@ -701,8 +868,9 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     int8_t x = a ^ b;
                     [serverSaltData appendBytes:&x length:1];
                 }
+                memcpy(&_serverSalt, serverSaltData.bytes, 8);
                 
-                int32_t validUntilTimestamp = ((int32_t)([NSDate date].timeIntervalSince1970)) + mtProto.context.tempKeyExpiration;
+                int32_t validUntilTimestamp = _tempAuth ? _tempKeyValidUntilTimestamp : INT32_MAX;
                 _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId validUntilTimestamp:validUntilTimestamp notBound:_tempAuth];
                 
                 MTBuffer *clientDhInnerDataBuffer = [[MTBuffer alloc] init];
@@ -725,6 +893,12 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 }
                 
                 _encryptedClientData = MTAesEncrypt(clientDataWithHash, tmpAesKey, tmpAesIv);
+                if (_encryptedClientData == nil)
+                {
+                    [self fail:mtProto];
+                    
+                    return;
+                }
                 
                 _stage = MTDatacenterAuthStageKeyVerification;
                 _currentStageMessageId = 0;
@@ -737,7 +911,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 if (MTLogEnabled()) {
                     MTLog(@"[MTDatacenterAuthMessageService#%p couldn't set DH params]", self);
                 }
-                [self reset:mtProto];
+                [self fail:mtProto];
             }
         }
     }
@@ -781,7 +955,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 1]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                 }
                 else
                 {
@@ -789,10 +963,11 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     _currentStageMessageId = 0;
                     _currentStageMessageSeqNo = 0;
                     _currentStageTransactionId = nil;
+                    _failureCount = 0;
                     
                     id<MTDatacenterAuthMessageServiceDelegate> delegate = _delegate;
-                    if ([delegate respondsToSelector:@selector(authMessageServiceCompletedWithAuthKey:timestamp:)])
-                        [delegate authMessageServiceCompletedWithAuthKey:_authKey timestamp:message.messageId];
+                    if ([delegate respondsToSelector:@selector(authMessageServiceCompletedWithAuthKey:timestamp:serverSalt:)])
+                        [delegate authMessageServiceCompletedWithAuthKey:_authKey timestamp:message.messageId serverSalt:_serverSalt];
                 }
             }
             else if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseRetryMessage class]])
@@ -802,14 +977,14 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 2]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                 }
                 else
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p retry DH]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                 }
             }
             else if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseFailMessage class]])
@@ -819,14 +994,14 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 3]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                 }
                 else
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p server rejected DH params]", self);
                     }
-                    [self reset:mtProto];
+                    [self fail:mtProto];
                 }
             }
             else
@@ -834,7 +1009,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                 if (MTLogEnabled()) {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH params response]", self);
                 }
-                [self reset:mtProto];
+                [self fail:mtProto];
             }
         }
     }
@@ -842,7 +1017,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
 
 - (void)mtProto:(MTProto *)mtProto protocolErrorReceived:(int32_t)__unused errorCode
 {
-    [self reset:mtProto];
+    [self fail:mtProto];
 }
 
 - (void)mtProto:(MTProto *)mtProto transactionsMayHaveFailed:(NSArray *)transactionIds

@@ -174,7 +174,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             let mainController = context.sharedContext.makeStickerMediaPickerScreen(
                 context: context,
                 getSourceRect: { return .zero },
-                completion: { result, transitionView, transitionRect, transitionImage, fromCamera, completion, cancelled in
+                completion: { [weak self] result, transitionView, transitionRect, transitionImage, fromCamera, completion, cancelled in
                     let editorController = context.sharedContext.makeStickerEditorScreen(
                         context: context,
                         source: result,
@@ -1203,6 +1203,16 @@ public final class BusinessIntroSetupScreen: ViewControllerComponentContainer {
         self.dismiss()
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
+    }
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     }

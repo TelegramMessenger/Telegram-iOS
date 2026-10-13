@@ -20,6 +20,10 @@ import EmojiStatusComponent
 import VoiceChatActionButton
 
 final class VoiceChatParticipantItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     enum ParticipantText: Equatable {
         struct TextIcon: OptionSet {
             public var rawValue: Int32
@@ -87,10 +91,10 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.getUpdatingAvatar = getUpdatingAvatar
     }
         
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatParticipantItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
+            let (layout, apply) = node.asyncLayout()(self, params, neighbors.previous == nil || neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily == .voiceChatTilesGrid, neighbors.next == nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -103,7 +107,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? VoiceChatParticipantItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -114,7 +118,7 @@ final class VoiceChatParticipantItem: ListViewItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
+                    let (layout, apply) = makeLayout(self, params, neighbors.previous == nil || neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily == .voiceChatTilesGrid, neighbors.next == nil)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(false, animated)
@@ -160,7 +164,7 @@ class VoiceChatParticipantStatusNode: ASDisplayNode {
     func asyncLayout() -> (_ size: CGSize, _ text: VoiceChatParticipantItem.ParticipantText, _ expanded: Bool) -> (CGSize, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        return { size, text, expanded in
+        return { [weak self] size, text, expanded in
             let statusFont = Font.regular(14.0)
             
             var attributedString: NSAttributedString?
@@ -772,7 +776,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         let currentItem = self.layoutParams?.0
         let currentTitle = self.currentTitle
         
-        return { item, params, first, last in
+        return { [weak self] item, params, first, last in
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme

@@ -12,9 +12,9 @@ final class SpoilerTapRevealTests: XCTestCase {
         c.layoutIfNeeded()
         c.simulateParentLayout()
         let start = c.boxes[0].textStart
-        c.anchor = start + 5; c.head = start + 11
+        c.setSelectionForTesting(anchor: start + 5, head: start + 11)
         c.toggleSpoiler()
-        c.anchor = start; c.head = start
+        c.setSelectionForTesting(anchor: start, head: start)
         c.layoutIfNeeded()
         return c
     }
@@ -42,7 +42,7 @@ final class SpoilerTapRevealTests: XCTestCase {
     func test_tapOnRevealedSpoiler_isNotIntercepted() {
         let c = canvasWithSpoiler()
         let start = c.boxes[0].textStart
-        c.anchor = start + 7; c.head = start + 7      // reveal it first
+        c.setSelectionForTesting(anchor: start + 7, head: start + 7)   // reveal it first
         c.refreshSelectionUI()
         XCTAssertNil(c.hiddenSpoilerRun(at: c.spoilerRunsForTesting[0].canvasLineRects[0].center),
                      "a revealed spoiler is not a hidden hit-test target")

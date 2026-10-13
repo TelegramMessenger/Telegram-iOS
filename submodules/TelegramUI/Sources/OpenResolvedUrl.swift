@@ -22,6 +22,7 @@ import SettingsUI
 import UrlHandling
 import TelegramCallsUI
 import UndoUI
+import WalletContext
 import ImportStickerPackUI
 import PeerInfoUI
 import Markdown
@@ -44,6 +45,7 @@ import ProxyServerPreviewScreen
 import AuthConfirmationScreen
 import OpenInExternalAppUI
 import CreateBotScreen
+import WalletSendScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -341,14 +343,29 @@ func openResolvedUrlImpl(
         case let .channelMessage(peer, messageId, timecode):
             openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode, setupReply: false), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):
-            if let navigationController = navigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+            if replyThreadMessage.isMonoforumPost {
+                // A monoforum sublist is keyed by a packed `PeerId`, so it has no root message id: `effectiveMessageId`
+                // would clamp the thread id into `Int32` and `openMessageReplies` would then rediscover a thread from a
+                // message that does not exist. The resolver already produced the thread, so navigate with it directly.
+                if let navigationController = navigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always))
+                }
+            } else if let navigationController = navigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+                // A link tapped in a message carries its inline progress; the thread fetch then shimmers the link
+                // instead of covering the chat with a modal spinner.
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
                     present(c, a)
-                }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).startStandalone()
+                }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true, progress: progress).startStandalone()
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
+                let progressDisposable = progress.flatMap(startInlineLinkProgress)
+                let _ = (context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true)
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable?.dispose()
+                    }
+                }).startStandalone()
             }
         case let .stickerPack(name, _):
             dismissInput()
@@ -568,6 +585,13 @@ func openResolvedUrlImpl(
         
             let controller = ProxyServerPreviewScreen(context: context, server: server)
             navigationController?.pushViewController(controller)
+        case let .webProxy(host, path, secret):
+            let server = ProxyServerSettings(host: host, port: 443, connection: .web(secret: secret, path: path))
+
+            dismissInput()
+
+            let controller = ProxyServerPreviewScreen(context: context, server: server)
+            navigationController?.pushViewController(controller)
         case let .confirmationCode(code):
             if let topController = navigationController?.topViewController as? AuthorizationSequenceCodeEntryController {
                 topController.applyConfirmationCode(code)
@@ -606,7 +630,7 @@ func openResolvedUrlImpl(
             })
             dismissInput()
         case let .share(url, text, to):
-            let continueWithPeer: (PeerId, Int64?) -> Void = { peerId, threadId in
+            let continueWithPeer: (PeerId, Int64?) -> Void = { [navigationController] peerId, threadId in
                 let textInputState: ChatTextInputState?
                 if let text = text, !text.isEmpty {
                     if let url = url, !url.isEmpty {
@@ -1114,6 +1138,52 @@ func openResolvedUrlImpl(
                     navigationController.pushViewController(controller, animated: true)
                 }
             }
+        case let .sendGrams(transfer, tonConnectUrl):
+            guard WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable else {
+                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Wallet_Unavailable, timeout: nil, customUndoText: nil), action: { _ in return false }), nil)
+                return
+            }
+            if let tonConnectUrl {
+                dismissInput()
+                context.walletContext?.processTonConnectUrl(tonConnectUrl)
+                return
+            }
+            guard let walletContext = context.walletContext, let navigationController else {
+                return
+            }
+            dismissInput()
+            if let transfer {
+                let controller: WalletSendScreen
+                switch transfer.recipient {
+                case let .peer(peer, resolvedAddress):
+                    controller = WalletSendScreen(
+                        context: context,
+                        peer: peer,
+                        walletContext: walletContext,
+                        resolvedAddress: resolvedAddress,
+                        initialAmountNanograms: transfer.amountNanograms,
+                        completed: { [weak navigationController] in
+                            guard let navigationController else {
+                                return
+                            }
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .default, useExisting: true, completion: { chatController in
+                                chatController.scrollToEndOfHistory()
+                            }, forceOpenChat: true))
+                        }
+                    )
+                case let .address(address):
+                    controller = WalletSendScreen(
+                        context: context,
+                        walletContext: walletContext,
+                        address: address,
+                        initialAmountNanograms: transfer.amountNanograms
+                    )
+                }
+                controller.navigationPresentation = .modal
+                navigationController.pushViewController(controller, animated: true)
+            } else {
+                navigationController.pushViewController(context.sharedContext.makeWalletScreen(context: context), animated: true)
+            }
         case .ton:
             dismissInput()
             if let tonContext = context.tonContext {
@@ -1496,7 +1566,7 @@ func openResolvedUrlImpl(
                     return false
                 }
             }
-            |> deliverOnMainQueue).startStandalone(next: { exists in
+            |> deliverOnMainQueue).startStandalone(next: { [navigationController] exists in
                 if exists {
                     let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id), readGlobally: true)
                     let _ = (storyContent.state

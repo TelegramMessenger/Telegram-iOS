@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 load(
     "@build_bazel_rules_apple//apple:resources.bzl",
     "apple_resource_bundle",
@@ -54,6 +56,7 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
@@ -121,6 +124,7 @@ swift_library(
         "//third-party/td:TdBinding",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/LiquidGlassShapes",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",
         "//submodules/TelegramUI/Components/TextFieldComponent",
@@ -132,6 +136,39 @@ swift_library(
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertInputFieldComponent",
         "//submodules/TelegramUI/Components/GlassControls",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+swift_library(
+    name = "TelegramCallsUITestsLib",
+    testonly = True,
+    srcs = glob([
+        "Tests/**/*.swift",
+    ]),
+    deps = [
+        ":TelegramCallsUI",
+        "//submodules/TelegramAudio:TelegramAudio",
+        "//submodules/TelegramUI/Components/Calls/CallScreen",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+    ],
+)
+
+ios_test_runner(
+    name = "TelegramCallsUITestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "TelegramCallsUITests",
+    minimum_os_version = "15.0",
+    runner = ":TelegramCallsUITestRunner",
+    deps = [
+        ":TelegramCallsUITestsLib",
     ],
     visibility = [
         "//visibility:public",

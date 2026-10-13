@@ -142,14 +142,14 @@ final class DoubleReturnExitTests: XCTestCase {
 
     func test_backspace_RANGE_bodyStartIntoHeading_mergedTailRendersAtHeadingSize() {
         // iOS delivers Backspace at a paragraph's START as a RANGE [previous paragraph end, this start], NOT a
-        // collapsed caret — so it goes through applySelectionReplace, not the collapsed-caret merge branch.
+        // collapsed caret — so it goes through applySelectionReplaceOutcome, not the collapsed-caret merge branch.
         let c = makeCanvas([
             .paragraph(ParagraphBlock(id: BlockID("h"), style: .heading1, runs: [TextRun(text: "Head")])),
             .paragraph(ParagraphBlock(id: BlockID("b"), style: .body, runs: [TextRun(text: "small")])),
         ])
         let headEnd = c.boxes[0].leafRegions().first!.globalStart + 4     // end of "Head"
         let bodyStart = c.boxes[1].leafRegions().first!.globalStart        // start of "small"
-        c.anchor = headEnd; c.head = bodyStart                            // the object-replacement range
+        c.setSelectionForTesting(anchor: headEnd, head: bodyStart)   // the object-replacement range
         c.deleteBackward()
         XCTAssertEqual(c.boxes.count, 1)
         guard case .paragraph(let merged) = c.boxes[0].currentBlock() else { return XCTFail() }

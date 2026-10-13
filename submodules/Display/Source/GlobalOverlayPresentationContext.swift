@@ -126,7 +126,7 @@ final class GlobalOverlayPresentationContext {
             }
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
             
-            self.presentationDisposables.add(controllerReady.start(next: { [weak self] _ in
+            self.presentationDisposables.add(controllerReady.start(next: { [weak self, controller] _ in
                 if let strongSelf = self {
                     if strongSelf.controllers.contains(where: { $0 === controller }) {
                         return

@@ -231,6 +231,18 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     public let headerAccessoryItem: ListViewAccessoryItem?
     
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: (self as? ItemListRevealOptionsStatefulItem)?.hasActiveRevealOptions ?? false,
+            headerId: self.header?.id,
+            headerFamily: .contactList
+        ))
+    }
     
     public init(
         presentationData: ItemListPresentationData,
@@ -368,12 +380,12 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, neighbors: neighbors)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -388,13 +400,13 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactsPeerItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, neighbors: neighbors)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
                             apply().1(animation.isAnimated, false)
@@ -414,14 +426,14 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    static func mergeType(item: ContactsPeerItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ContactsPeerItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ListViewItemWithHeader {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self) {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -430,10 +442,10 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? ListViewItemWithHeader {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self) {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
@@ -707,12 +719,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         contextAction(self.containerNode, nil, point)
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let (item, _, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
-            self.layoutParams = (item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, neighbors: neighbors)
+            self.layoutParams = (item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
@@ -2185,4 +2197,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    /// Items whose section-letter header runs group together: `ContactsPeerItem` and
+    /// `ContactListActionItem`. Was encoded as a pair of concrete-type casts.
+    static let contactList = ListViewItemHeaderFamily("contactList")
 }

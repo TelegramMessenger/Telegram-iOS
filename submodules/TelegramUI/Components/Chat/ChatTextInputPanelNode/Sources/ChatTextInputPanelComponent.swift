@@ -581,6 +581,8 @@ public final class ChatTextInputPanelComponent: Component {
                     },
                     stopMediaRecording: {
                     },
+                    stopIncomingStreamingMessage: {
+                    },
                     lockMediaRecording: {
                     },
                     resumeMediaRecording: {

@@ -63,7 +63,7 @@ final class BlockQuoteTests: XCTestCase {
 
     func test_fragment_blockQuote_notInlineMergeable_plainText_regenId() {
         let bq = BlockQuote(id: BlockID("q"), children: [.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hi")]))], collapsed: false)
-        XCTAssertFalse(isInlineMergeable(.blockQuote(bq)))
+        XCTAssertFalse(isInlineMergeable(.blockQuote(bq), intoHostStyle: .body))
         XCTAssertEqual(blockPlainText(.blockQuote(bq)), "hi")
         let regen = Document(blocks: [.blockQuote(bq)]).regeneratingTopLevelIDs()
         guard case .blockQuote(let r) = regen.blocks[0] else { return XCTFail() }

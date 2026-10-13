@@ -283,7 +283,10 @@ public final class TextSelectionNode: ASDisplayNode {
     public var enableLookup: Bool = true
     public var enableQuote: Bool = false
     public var enableTranslate: Bool = true
+    public var enableSpeak: Bool = false
     public var enableShare: Bool = true
+    public var enableAutomaticScrolling: Bool = true
+    public var cancelSelectionOnOutsideTap: Bool = false
     
     public var menuSkipCoordnateConversion: Bool = false
     
@@ -363,7 +366,7 @@ public final class TextSelectionNode: ASDisplayNode {
                     strongSelf.updateSelection(range: updatedRange, animateIn: false)
                 }
                 
-                if let scrollView = findScrollView(view: strongSelf.view) {
+                if strongSelf.enableAutomaticScrolling, let scrollView = findScrollView(view: strongSelf.view) {
                     let scrollPoint = strongSelf.view.convert(point, to: scrollView)
                     scrollView.scrollRectToVisible(CGRect(origin: CGPoint(x: scrollPoint.x, y: scrollPoint.y - 50.0), size: CGSize(width: 1.0, height: 100.0)), animated: false)
                 }
@@ -794,6 +797,12 @@ public final class TextSelectionNode: ASDisplayNode {
                 }))
             }
         }
+        if self.enableSpeak {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
+                self?.performAction(string, .speak)
+                self?.cancelSelection()
+            }))
+        }
         
         let realFullRange = NSRange(location: 0, length: attributedString.length)
         if range != realFullRange {
@@ -818,9 +827,10 @@ public final class TextSelectionNode: ASDisplayNode {
             guard let self else {
                 return true
             }
-            if self.knobAtPoint(view.convert(point, to: self.view)) == nil {
-                //self.cancelSelection()
-                return true
+            if self.cancelSelectionOnOutsideTap, self.knobAtPoint(view.convert(point, to: self.view)) == nil {
+                // The menu dismisses itself after this callback.
+                self.contextMenu = nil
+                self.cancelSelection()
             }
             return true
         }

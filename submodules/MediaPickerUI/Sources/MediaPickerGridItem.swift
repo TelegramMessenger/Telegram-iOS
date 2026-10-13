@@ -554,7 +554,9 @@ final class MediaPickerGridItemNode: GridItemNode {
             
             var typeIcon: UIImage?
             var duration: String?
-            if asset.mediaType == .video {
+            if asset.value(forKey: "uniformTypeIdentifier") as? String == "com.compuserve.gif" {
+                duration = "GIF"
+            } else if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     typeIcon = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {

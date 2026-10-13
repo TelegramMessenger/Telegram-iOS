@@ -51,7 +51,7 @@ extension PeerInfoScreenNode {
             let canReorderEquals = lhs.2 == rhs.2
             return filterEquals && sortingEquals && canReorderEquals
         })
-        |> map { [weak pane, weak giftsContext] filter, sorting, canReorder -> ContextController.Items in
+        |> map { [weak pane, weak giftsContext, weak self] filter, sorting, canReorder -> ContextController.Items in
             var items: [ContextMenuItem] = []
                         
             if hasVisibility {

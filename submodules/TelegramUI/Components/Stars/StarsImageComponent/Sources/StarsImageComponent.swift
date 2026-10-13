@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -393,6 +394,10 @@ public final class StarsImageComponent: Component {
         private let amountView = ComponentView<Empty>()
         
         private var animationNode: AnimatedStickerNode?
+        private var currentAnimationSourceId: String?
+        private let animationFetchDisposable = MetaDisposable()
+        private let giftStickersDisposable = MetaDisposable()
+        private var giftStickersContextId: ObjectIdentifier?
         
         private var lockView: UIImageView?
         private let countView = ComponentView<Empty>()
@@ -411,6 +416,8 @@ public final class StarsImageComponent: Component {
         }
         deinit {
             self.fetchDisposable.dispose()
+            self.animationFetchDisposable.dispose()
+            self.giftStickersDisposable.dispose()
             self.hiddenMediaDisposable?.dispose()
         }
         
@@ -446,6 +453,29 @@ public final class StarsImageComponent: Component {
         func update(component: StarsImageComponent, state: EmptyComponentState, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
+
+            let isGift: Bool
+            if case .gift = component.subject {
+                isGift = true
+            } else {
+                isGift = false
+            }
+            if isGift {
+                let contextId = ObjectIdentifier(component.context)
+                if self.giftStickersContextId != contextId {
+                    self.giftStickersContextId = contextId
+                    self.giftStickersDisposable.set((combineLatest(
+                        component.context.premiumGiftStickers,
+                        component.context.tonGiftStickers
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        self?.state?.updated(transition: .immediate)
+                    }))
+                }
+            } else if self.giftStickersContextId != nil {
+                self.giftStickersContextId = nil
+                self.giftStickersDisposable.set(nil)
+            }
             
             let smallParticlesView: StarsParticlesView
             if let current = self.smallParticlesView {
@@ -857,31 +887,70 @@ public final class StarsImageComponent: Component {
                 if let current = self.animationNode {
                     animationNode = current
                 } else {
-                    let animationName: String
-                    switch count {
-                    case 1000:
-                        animationName = "GiftDiamond1"
-                    case 2000:
-                        animationName = "GiftDiamond2"
-                    case 3000:
-                        animationName = "GiftDiamond3"
-                    case 12:
-                        animationName = "Gift12"
-                    case 6:
-                        animationName = "Gift6"
-                    case 3:
-                        animationName = "Gift3"
-                    default:
-                        animationName = "Gift3"
-                    }
-                    animationNode = DefaultAnimatedStickerNodeImpl()
+                    animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: component.context.lottieRenderingSettings)
                     animationNode.autoplay = true
-                    animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
                     animationNode.visibility = true
                     containerNode.view.addSubview(animationNode.view)
                     self.animationNode = animationNode
-                    
-                    animationNode.playOnce()
+                }
+
+                let stickerPackAnimation: (reference: StickerPackReference, sourceId: String, file: TelegramMediaFile)?
+                switch count {
+                case 1000:
+                    if let file = component.context.tonGiftStickersValue[0]?.file._parse() {
+                        stickerPackAnimation = (.tonGifts, "ton", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                case 2000:
+                    if let file = component.context.tonGiftStickersValue[10]?.file._parse() {
+                        stickerPackAnimation = (.tonGifts, "ton", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                case 3000:
+                    if let file = component.context.tonGiftStickersValue[50]?.file._parse() {
+                        stickerPackAnimation = (.tonGifts, "ton", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                case 12:
+                    if let file = component.context.premiumGiftStickersValue[12]?.file._parse() {
+                        stickerPackAnimation = (.premiumGifts, "premium", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                case 6:
+                    if let file = component.context.premiumGiftStickersValue[6]?.file._parse() {
+                        stickerPackAnimation = (.premiumGifts, "premium", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                default:
+                    if let file = component.context.premiumGiftStickersValue[3]?.file._parse() {
+                        stickerPackAnimation = (.premiumGifts, "premium", file)
+                    } else {
+                        stickerPackAnimation = nil
+                    }
+                }
+
+                let animationSourceId: String?
+                if let stickerPackAnimation {
+                    animationSourceId = "\(stickerPackAnimation.sourceId):\(stickerPackAnimation.file.resource.id.stringRepresentation)"
+                } else {
+                    animationSourceId = nil
+                }
+                animationNode.isHidden = animationSourceId == nil
+
+                if self.currentAnimationSourceId != animationSourceId {
+                    self.currentAnimationSourceId = animationSourceId
+                    self.animationFetchDisposable.set(nil)
+
+                    if let stickerPackAnimation {
+                        animationNode.setup(source: AnimatedStickerResourceSource(account: component.context.account, resource: stickerPackAnimation.file.resource, isVideo: stickerPackAnimation.file.mimeType == "video/webm"), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                        self.animationFetchDisposable.set(freeMediaFileResourceInteractiveFetched(postbox: component.context.account.postbox, userLocation: .other, fileReference: .stickerPack(stickerPack: stickerPackAnimation.reference, media: stickerPackAnimation.file), resource: stickerPackAnimation.file.resource).start())
+                        animationNode.playOnce()
+                    }
                 }
                 let animationFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.19, dy: -imageFrame.height * 0.19).offsetBy(dx: 0.0, dy: -14.0)
                 animationNode.frame = animationFrame

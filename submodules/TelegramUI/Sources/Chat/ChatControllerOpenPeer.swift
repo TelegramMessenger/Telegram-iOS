@@ -122,8 +122,24 @@ import FaceScanScreen
 import ForumCreateTopicScreen
 
 extension ChatControllerImpl {
+    /// Puts `textInputState` into this controller's composer and brings the text keyboard up.
+    /// Used when a navigation that carries composer text resolves to the chat already on screen.
+    func fillComposer(with textInputState: ChatTextInputState) {
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+            return ($0.updatedInterfaceState {
+                return $0.withUpdatedComposeInputState(textInputState)
+            }).updatedInputMode({ _ in
+                return .text
+            })
+        })
+    }
+    
     func openPeer(peer: EnginePeer?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, fromReactionMessageId: EngineMessage.Id? = nil, expandAvatar: Bool = false, peerTypes: ReplyMarkupButtonAction.PeerTypes? = nil, skipAgeVerification: Bool = false) {
-        let _ = self.presentVoiceMessageDiscardAlert(action: {
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            guard let self else {
+                return
+            }
+
             if case let .peer(currentPeerId) = self.chatLocation, peer?.id == currentPeerId {
                 switch navigation {
                     case let .info(params):
@@ -142,13 +158,7 @@ extension ChatControllerImpl {
                         self.navigationButtonAction(.openChatInfo(expandAvatar: expandAvatar, section: section))
                     case let .chat(textInputState, _, _):
                         if let textInputState = textInputState {
-                            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                return ($0.updatedInterfaceState {
-                                    return $0.withUpdatedComposeInputState(textInputState)
-                                }).updatedInputMode({ _ in
-                                    return .text
-                                })
-                            })
+                            self.fillComposer(with: textInputState)
                         } else {
                             self.playShakeAnimation()
                         }
@@ -161,6 +171,12 @@ extension ChatControllerImpl {
                     default:
                         break
                 }
+            } else if case let .chat(textInputState?, _, _) = navigation, let peer, self.chatLocation.peerId == peer.id {
+                // Same chat, but this controller shows a thread of it (a forum topic or a comment
+                // thread). A `switch_inline_query_current_chat` button must fill THIS composer;
+                // navigating to `.peer(forum)` instead lands in the topic list and stores the draft
+                // at forum level, where only "View as Messages" shows it (bugs.telegram.org/c/23654).
+                self.fillComposer(with: textInputState)
             } else {
                 if let peer = peer {
                     do {
@@ -263,14 +279,12 @@ extension ChatControllerImpl {
                                     let peerId = peer.id
                                     
                                     if let strongSelf = self, let strongController = controller {
-                                        if case let .peer(currentPeerId) = strongSelf.chatLocation, peerId == currentPeerId {
-                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                return ($0.updatedInterfaceState {
-                                                    return $0.withUpdatedComposeInputState(textInputState)
-                                                }).updatedInputMode({ _ in
-                                                    return .text
-                                                })
-                                            })
+                                        // Fill this composer unless the picker named another chat or, when this
+                                        // controller shows a thread, another thread of it. A `.peer` controller
+                                        // (a plain chat, or a forum viewed as messages) keeps taking any pick of
+                                        // its own peer, as it always did.
+                                        if strongSelf.chatLocation.peerId == peerId, strongSelf.chatLocation.threadId == nil || threadId == nil || strongSelf.chatLocation.threadId == threadId {
+                                            strongSelf.fillComposer(with: textInputState)
                                             strongController.dismiss()
                                         } else {
                                             let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in

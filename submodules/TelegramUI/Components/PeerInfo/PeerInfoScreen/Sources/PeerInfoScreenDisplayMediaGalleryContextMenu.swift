@@ -9,8 +9,6 @@ import PeerInfoVisualMediaPaneNode
 
 extension PeerInfoScreenNode {
     func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
-        let peerId = self.peerId
-        
         var isBotPreviewOrStories = false
         if let currentPaneKey = self.paneContainerNode.currentPaneKey {
             if case .botPreview = currentPaneKey {
@@ -271,9 +269,12 @@ extension PeerInfoScreenNode {
                 controller.presentInGlobalOverlay(contextController)
             }
         } else {
+            // Count the chat the pane lists, which is not the profile's own chat when the profile
+            // was opened from a channel's direct messages.
+            let (listedPeerId, listedChatLocation, _) = self.sharedMediaChatLocation
             let _ = (self.context.engine.data.get(EngineDataMap([
-                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photo),
-                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .video)
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: listedPeerId, threadId: listedChatLocation.threadId, tag: .photo),
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: listedPeerId, threadId: listedChatLocation.threadId, tag: .video)
             ]))
             |> deliverOnMainQueue).startStandalone(next: { [weak self] messageCounts in
                 guard let strongSelf = self else {
@@ -325,7 +326,10 @@ extension PeerInfoScreenNode {
                 items.append(.action(generateAction(false)))
                 
                 var ignoreNextActions = false
-                if strongSelf.chatLocation.threadId == nil {
+                // The pane, not the screen, decides: a profile opened from a channel's direct
+                // messages is a plain peer location while its pane lists a thread, which has no
+                // calendar, so openMediaCalendar() would silently do nothing.
+                if pane.calendarSource != nil {
                     items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
                     }, action: { _, a in

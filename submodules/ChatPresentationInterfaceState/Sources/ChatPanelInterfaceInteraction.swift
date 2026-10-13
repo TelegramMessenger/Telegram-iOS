@@ -113,6 +113,7 @@ public final class ChatPanelInterfaceInteraction {
     public let beginMediaRecording: (Bool) -> Void
     public let finishMediaRecording: (ChatFinishMediaRecordingAction) -> Void
     public let stopMediaRecording: () -> Void
+    public let stopIncomingStreamingMessage: () -> Void
     public let lockMediaRecording: () -> Void
     public let resumeMediaRecording: () -> Void
     public let deleteRecordedMedia: () -> Void
@@ -246,6 +247,7 @@ public final class ChatPanelInterfaceInteraction {
         beginMediaRecording: @escaping (Bool) -> Void,
         finishMediaRecording: @escaping (ChatFinishMediaRecordingAction) -> Void,
         stopMediaRecording: @escaping () -> Void,
+        stopIncomingStreamingMessage: @escaping () -> Void,
         lockMediaRecording: @escaping () -> Void,
         resumeMediaRecording: @escaping () -> Void,
         deleteRecordedMedia: @escaping () -> Void,
@@ -378,6 +380,7 @@ public final class ChatPanelInterfaceInteraction {
         self.beginMediaRecording = beginMediaRecording
         self.finishMediaRecording = finishMediaRecording
         self.stopMediaRecording = stopMediaRecording
+        self.stopIncomingStreamingMessage = stopIncomingStreamingMessage
         self.lockMediaRecording = lockMediaRecording
         self.resumeMediaRecording = resumeMediaRecording
         self.deleteRecordedMedia = deleteRecordedMedia
@@ -517,6 +520,7 @@ public final class ChatPanelInterfaceInteraction {
         }, beginMediaRecording: { _ in
         }, finishMediaRecording: { _ in
         }, stopMediaRecording: {
+        }, stopIncomingStreamingMessage: {
         }, lockMediaRecording: {
         }, resumeMediaRecording: {
         }, deleteRecordedMedia: {

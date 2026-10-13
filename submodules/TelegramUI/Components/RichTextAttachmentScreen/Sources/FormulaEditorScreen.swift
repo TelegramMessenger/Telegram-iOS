@@ -145,6 +145,9 @@ private final class FormulaPreviewItemComponent: Component {
                 cachedMessageSyntaxHighlight: nil,
                 expandedDetails: [:],
                 fitToWidth: true
+                // Deliberately NOT scaled with Text Size: this theme is authored at a 22pt paragraph as a
+                // stylised preview, not a replica of the bubble's 17pt table, so the bubble's
+                // `baseDisplaySize / 17` would compound onto a base that is not 17 (33pt at the top step).
             )
             self.pageView.update(layout: layout, theme: pageTheme, animation: .None)
 

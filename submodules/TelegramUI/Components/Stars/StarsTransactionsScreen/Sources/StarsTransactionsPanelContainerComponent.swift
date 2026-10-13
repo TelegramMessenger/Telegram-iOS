@@ -4,6 +4,9 @@ import Display
 import ComponentFlow
 import ComponentDisplayAdapters
 import TelegramPresentationData
+import HorizontalTabsComponent
+import GlassBackgroundComponent
+import EdgeEffect
 
 final class StarsTransactionsPanelContainerEnvironment: Equatable {
     let isScrollable: Bool
@@ -81,290 +84,6 @@ final class StarsTransactionsPanelEnvironment: Equatable {
     }
 }
 
-private final class StarsTransactionsHeaderItemComponent: CombinedComponent {
-    let theme: PresentationTheme
-    let title: String
-    let activityFraction: CGFloat
-    
-    init(
-        theme: PresentationTheme,
-        title: String,
-        activityFraction: CGFloat
-    ) {
-        self.theme = theme
-        self.title = title
-        self.activityFraction = activityFraction
-    }
-    
-    static func ==(lhs: StarsTransactionsHeaderItemComponent, rhs: StarsTransactionsHeaderItemComponent) -> Bool {
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.title != rhs.title {
-            return false
-        }
-        if lhs.activityFraction != rhs.activityFraction {
-            return false
-        }
-        return true
-    }
-    
-    static var body: Body {
-        let activeText = Child(Text.self)
-        let inactiveText = Child(Text.self)
-        
-        return { context in
-            let activeText = activeText.update(
-                component: Text(text: context.component.title, font: Font.medium(14.0), color: context.component.theme.list.itemAccentColor),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
-            let inactiveText = inactiveText.update(
-                component: Text(text: context.component.title, font: Font.medium(14.0), color: context.component.theme.list.itemSecondaryTextColor),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
-            
-            context.add(activeText
-                .position(CGPoint(x: activeText.size.width * 0.5, y: activeText.size.height * 0.5))
-                .opacity(context.component.activityFraction)
-            )
-            context.add(inactiveText
-                .position(CGPoint(x: inactiveText.size.width * 0.5, y: inactiveText.size.height * 0.5))
-                .opacity(1.0 - context.component.activityFraction)
-            )
-            
-            return activeText.size
-        }
-    }
-}
-
-private extension CGFloat {
-    func interpolate(with other: CGFloat, fraction: CGFloat) -> CGFloat {
-        let invT = 1.0 - fraction
-        let result = other * fraction + self * invT
-        return result
-    }
-}
-
-private extension CGPoint {
-    func interpolate(with other: CGPoint, fraction: CGFloat) -> CGPoint {
-        return CGPoint(x: self.x.interpolate(with: other.x, fraction: fraction), y: self.y.interpolate(with: other.y, fraction: fraction))
-    }
-}
-
-private extension CGSize {
-    func interpolate(with other: CGSize, fraction: CGFloat) -> CGSize {
-        return CGSize(width: self.width.interpolate(with: other.width, fraction: fraction), height: self.height.interpolate(with: other.height, fraction: fraction))
-    }
-}
-
-private extension CGRect {
-    func interpolate(with other: CGRect, fraction: CGFloat) -> CGRect {
-        return CGRect(origin: self.origin.interpolate(with: other.origin, fraction: fraction), size: self.size.interpolate(with: other.size, fraction: fraction))
-    }
-}
-
-private final class StarsTransactionsHeaderComponent: Component {
-    struct Item: Equatable {
-        let id: AnyHashable
-        let title: String
-
-        init(
-            id: AnyHashable,
-            title: String
-        ) {
-            self.id = id
-            self.title = title
-        }
-    }
-
-    let theme: PresentationTheme
-    let items: [Item]
-    let activeIndex: Int
-    let transitionFraction: CGFloat
-    let switchToPanel: (AnyHashable) -> Void
-    
-    init(
-        theme: PresentationTheme,
-        items: [Item],
-        activeIndex: Int,
-        transitionFraction: CGFloat,
-        switchToPanel: @escaping (AnyHashable) -> Void
-    ) {
-        self.theme = theme
-        self.items = items
-        self.activeIndex = activeIndex
-        self.transitionFraction = transitionFraction
-        self.switchToPanel = switchToPanel
-    }
-    
-    static func ==(lhs: StarsTransactionsHeaderComponent, rhs: StarsTransactionsHeaderComponent) -> Bool {
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.items != rhs.items {
-            return false
-        }
-        if lhs.activeIndex != rhs.activeIndex {
-            return false
-        }
-        if lhs.transitionFraction != rhs.transitionFraction {
-            return false
-        }
-        return true
-    }
-    
-    class View: UIView {
-        private var component: StarsTransactionsHeaderComponent?
-        
-        private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
-        private let activeItemLayer: SimpleLayer
-        
-        override init(frame: CGRect) {
-            self.activeItemLayer = SimpleLayer()
-            self.activeItemLayer.cornerRadius = 2.0
-            self.activeItemLayer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-            
-            super.init(frame: frame)
-            
-            self.layer.addSublayer(self.activeItemLayer)
-            
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .ended = recognizer.state {
-                let point = recognizer.location(in: self)
-                var closestId: (CGFloat, AnyHashable)?
-                if self.bounds.contains(point) {
-                    for (id, item) in self.visibleItems {
-                        if let itemView = item.view {
-                            let distance: CGFloat = min(abs(point.x - itemView.frame.minX), abs(point.x - itemView.frame.maxX))
-                            if let closestIdValue = closestId {
-                                if distance < closestIdValue.0 {
-                                    closestId = (distance, id)
-                                }
-                            } else {
-                                closestId = (distance, id)
-                            }
-                        }
-                    }
-                }
-                if let closestId = closestId, let component = self.component {
-                    component.switchToPanel(closestId.1)
-                }
-            }
-        }
-        
-        func update(component: StarsTransactionsHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            let themeUpdated = self.component?.theme !== component.theme
-            
-            self.component = component
-            
-            var validIds = Set<AnyHashable>()
-            for i in 0 ..< component.items.count {
-                let item = component.items[i]
-                validIds.insert(item.id)
-                
-                let itemView: ComponentView<Empty>
-                var itemTransition = transition
-                if let current = self.visibleItems[item.id] {
-                    itemView = current
-                } else {
-                    itemTransition = .immediate
-                    itemView = ComponentView()
-                    self.visibleItems[item.id] = itemView
-                }
-                
-                let activeIndex: CGFloat = CGFloat(component.activeIndex) - component.transitionFraction
-                let activityDistance: CGFloat = abs(activeIndex - CGFloat(i))
-                
-                let activityFraction: CGFloat
-                if activityDistance < 1.0 {
-                    activityFraction = 1.0 - activityDistance
-                } else {
-                    activityFraction = 0.0
-                }
-                
-                let itemSize = itemView.update(
-                    transition: itemTransition,
-                    component: AnyComponent(StarsTransactionsHeaderItemComponent(
-                        theme: component.theme,
-                        title: item.title,
-                        activityFraction: activityFraction
-                    )),
-                    environment: {},
-                    containerSize: availableSize
-                )
-                
-                let itemHorizontalSpace = availableSize.width / CGFloat(component.items.count)
-                let itemX: CGFloat
-                if component.items.count == 1 {
-                    itemX = 37.0
-                } else {
-                    itemX = itemHorizontalSpace * CGFloat(i) + floor((itemHorizontalSpace - itemSize.width) / 2.0)
-                }
-                
-                let itemFrame = CGRect(origin: CGPoint(x: itemX, y: floor((availableSize.height - itemSize.height) / 2.0)), size: itemSize)
-                if let itemComponentView = itemView.view {
-                    if itemComponentView.superview == nil {
-                        self.addSubview(itemComponentView)
-                        itemComponentView.isUserInteractionEnabled = false
-                    }
-                    itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
-                }
-            }
-            
-            if component.activeIndex < component.items.count {
-                let activeView = self.visibleItems[component.items[component.activeIndex].id]?.view
-                let nextIndex: Int
-                if component.transitionFraction > 0.0 {
-                    nextIndex = max(0, component.activeIndex - 1)
-                } else {
-                    nextIndex = min(component.items.count - 1, component.activeIndex + 1)
-                }
-                let nextView = self.visibleItems[component.items[nextIndex].id]?.view
-                if let activeView = activeView, let nextView = nextView {
-                    let mergedFrame = activeView.frame.interpolate(with: nextView.frame, fraction: abs(component.transitionFraction))
-                    transition.setFrame(layer: self.activeItemLayer, frame: CGRect(origin: CGPoint(x: mergedFrame.minX, y: availableSize.height - 3.0), size: CGSize(width: mergedFrame.width, height: 3.0)))
-                }
-            }
-            
-            if themeUpdated {
-                self.activeItemLayer.backgroundColor = component.theme.list.itemAccentColor.cgColor
-            }
-            
-            var removeIds: [AnyHashable] = []
-            for (id, itemView) in self.visibleItems {
-                if !validIds.contains(id) {
-                    removeIds.append(id)
-                    if let itemComponentView = itemView.view {
-                        itemComponentView.removeFromSuperview()
-                    }
-                }
-            }
-            for id in removeIds {
-                self.visibleItems.removeValue(forKey: id)
-            }
-            
-            return availableSize
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
 final class StarsTransactionsPanelContainerComponent: Component {
     typealias EnvironmentType = StarsTransactionsPanelContainerEnvironment
     
@@ -427,49 +146,38 @@ final class StarsTransactionsPanelContainerComponent: Component {
     }
     
     class View: UIView, UIGestureRecognizerDelegate {
-        private let topPanelClippingView: UIView
-        private let topPanelBackgroundView: UIView
-        private let topPanelMergedBackgroundView: UIView
-        private let topPanelSeparatorLayer: SimpleLayer
-        private let header = ComponentView<Empty>()
+        private let edgeEffectView: EdgeEffectView
+        private let tabsBackgroundContainer: GlassBackgroundContainerView
+        private let tabsBackgroundView: GlassBackgroundView
+        private let tabsContainer = ComponentView<Empty>()
         
         private var component: StarsTransactionsPanelContainerComponent?
         private weak var state: EmptyComponentState?
         
-        private let panelsBackgroundLayer: SimpleLayer
         private let clippingView: UIView
         private var visiblePanels: [AnyHashable: ComponentView<StarsTransactionsPanelEnvironment>] = [:]
         private var actualVisibleIds = Set<AnyHashable>()
         private var currentId: AnyHashable?
         private var transitionFraction: CGFloat = 0.0
+        private var isDraggingTabs: Bool = false
         private var animatingTransition: Bool = false
         
         override init(frame: CGRect) {
-            self.topPanelClippingView = UIView()
-            self.topPanelClippingView.clipsToBounds = true
-            self.topPanelClippingView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-            
-            self.topPanelBackgroundView = UIView()
-            
-            self.topPanelMergedBackgroundView = UIView()
-            self.topPanelMergedBackgroundView.alpha = 0.0
-            
-            self.topPanelSeparatorLayer = SimpleLayer()
-            
-            self.panelsBackgroundLayer = SimpleLayer()
-            
+            self.edgeEffectView = EdgeEffectView()
+            self.edgeEffectView.isUserInteractionEnabled = false
+            self.tabsBackgroundContainer = GlassBackgroundContainerView()
+            self.tabsBackgroundView = GlassBackgroundView()
+
             self.clippingView = UIView()
             self.clippingView.clipsToBounds = true
-            
+
             super.init(frame: frame)
-            
-            self.layer.addSublayer(self.panelsBackgroundLayer)
+
             self.addSubview(self.clippingView)
-            self.addSubview(self.topPanelClippingView)
-            self.topPanelClippingView.addSubview(self.topPanelBackgroundView)
-            self.topPanelClippingView.addSubview(self.topPanelMergedBackgroundView)
-            self.layer.addSublayer(self.topPanelSeparatorLayer)
-            
+            self.addSubview(self.edgeEffectView)
+            self.tabsBackgroundContainer.contentView.addSubview(self.tabsBackgroundView)
+            self.addSubview(self.tabsBackgroundContainer)
+
             let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
                 guard let self, let component = self.component, let currentId = self.currentId else {
                     return []
@@ -477,10 +185,6 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 guard let index = component.items.firstIndex(where: { $0.id == currentId }) else {
                     return []
                 }
-                
-                /*if strongSelf.tabsContainerNode.bounds.contains(strongSelf.view.convert(point, to: strongSelf.tabsContainerNode.view)) {
-                    return []
-                }*/
                 
                 if index == 0 {
                     return .left
@@ -535,7 +239,8 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
                 
                 cancelContextGestures(view: self)
-                
+                self.isDraggingTabs = true
+
                 //self.animatingTransition = true
             case .changed:
                 guard let component = self.component, let currentId = self.currentId else {
@@ -556,6 +261,8 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 self.transitionFraction = transitionFraction
                 self.state?.updated(transition: .immediate)
             case .cancelled, .ended:
+                self.isDraggingTabs = false
+
                 guard let component = self.component, let currentId = self.currentId else {
                     return
                 }
@@ -600,8 +307,6 @@ final class StarsTransactionsPanelContainerComponent: Component {
         }
         
         func updateNavigationMergeFactor(value: CGFloat, transition: ComponentTransition) {
-            transition.setAlpha(view: self.topPanelMergedBackgroundView, alpha: value)
-            transition.setAlpha(view: self.topPanelBackgroundView, alpha: 1.0 - value)
         }
         
         func transferVelocity(_ velocity: CGFloat) {
@@ -620,32 +325,17 @@ final class StarsTransactionsPanelContainerComponent: Component {
         func update(component: StarsTransactionsPanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelContainerEnvironment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[StarsTransactionsPanelContainerEnvironment.self].value
             
-            let themeUpdated = self.component?.theme !== component.theme
-            
             self.component = component
             self.state = state
             
-            if themeUpdated {
-                self.panelsBackgroundLayer.backgroundColor = component.theme.list.itemBlocksBackgroundColor.cgColor
-                self.topPanelSeparatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
-                self.topPanelBackgroundView.backgroundColor = component.theme.list.itemBlocksBackgroundColor
-                self.topPanelMergedBackgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
-            }
-            
-            let topPanelCoverHeight: CGFloat = 10.0
-            
-            let containerWidth = availableSize.width - component.insets.left - component.insets.right
-            let topPanelFrame = CGRect(origin: CGPoint(x: component.insets.left, y: -topPanelCoverHeight), size: CGSize(width: containerWidth, height: 44.0))
-            transition.setFrame(view: self.topPanelClippingView, frame: topPanelFrame)
-            transition.setFrame(view: self.topPanelBackgroundView, frame: CGRect(origin: .zero, size: topPanelFrame.size))
-            transition.setFrame(view: self.topPanelMergedBackgroundView, frame: CGRect(origin: .zero, size: topPanelFrame.size))
+            let tabsHeight: CGFloat = 40.0
+            let tabsTopInset: CGFloat = component.insets.top + 10.0
+            let tabsBottomInset: CGFloat = 16.0
+            let tabsSideInset: CGFloat = 16.0 + component.insets.left
+            let tabsContainerSize = CGSize(width: availableSize.width - tabsSideInset * 2.0, height: tabsHeight)
 
-            transition.setCornerRadius(layer: self.topPanelClippingView.layer, cornerRadius: component.insets.left > 0.0 ? 26.0 : 0.0)
-            
-            transition.setFrame(layer: self.panelsBackgroundLayer, frame: CGRect(origin: CGPoint(x: component.insets.left, y: topPanelFrame.maxY), size: CGSize(width: containerWidth, height: availableSize.height - topPanelFrame.maxY)))
-            
-            transition.setFrame(layer: self.topPanelSeparatorLayer, frame: CGRect(origin: CGPoint(x: component.insets.left, y: topPanelFrame.maxY), size: CGSize(width: containerWidth, height: UIScreenPixel)))
-            
+            let panelsFrame = CGRect(origin: CGPoint(x: 0.0, y: component.insets.top), size: CGSize(width: availableSize.width, height: availableSize.height - component.insets.top))
+
             if let currentIdValue = self.currentId, !component.items.contains(where: { $0.id == currentIdValue }) {
                 self.currentId = nil
             }
@@ -669,44 +359,68 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
             }
             
-            let sideInset: CGFloat = 16.0 + component.insets.left
-            let condensedPanelWidth: CGFloat = availableSize.width - sideInset * 2.0
-            let headerSize = self.header.update(
+            let tabsContainerEffectiveSize = self.tabsContainer.update(
                 transition: transition,
-                component: AnyComponent(StarsTransactionsHeaderComponent(
+                component: AnyComponent(HorizontalTabsComponent(
+                    context: nil,
                     theme: component.theme,
-                    items: component.items.map { item -> StarsTransactionsHeaderComponent.Item in
-                        return StarsTransactionsHeaderComponent.Item(
+                    tabs: component.items.map { item -> HorizontalTabsComponent.Tab in
+                        return HorizontalTabsComponent.Tab(
                             id: item.id,
-                            title: item.title
+                            content: .title(HorizontalTabsComponent.Tab.Title(text: item.title, entities: [], enableAnimations: false)),
+                            badge: nil,
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                if component.items.contains(where: { $0.id == item.id }) {
+                                    self.currentId = item.id
+                                    let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
+                                    self.state?.updated(transition: transition)
+                                    component.currentPanelUpdated(item.id, transition)
+                                }
+                            }
                         )
                     },
-                    activeIndex: currentIndex ?? 0,
-                    transitionFraction: self.transitionFraction,
-                    switchToPanel: { [weak self] id in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        if component.items.contains(where: { $0.id == id }) {
-                            self.currentId = id
-                            let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
-                            self.state?.updated(transition: transition)
-                            component.currentPanelUpdated(id, transition)
-                        }
-                    }
+                    selectedTab: self.currentId,
+                    isEditing: false,
+                    layout: .fit,
+                    liftWhileSwitching: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: condensedPanelWidth, height: topPanelFrame.size.height)
+                containerSize: tabsContainerSize
             )
-            if let headerView = self.header.view {
-                if headerView.superview == nil {
-                    self.addSubview(headerView)
+
+            let tabContainerFrame = CGRect(
+                origin: CGPoint(
+                    x: floorToScreenPixels((availableSize.width - tabsContainerEffectiveSize.width) / 2.0),
+                    y: tabsTopInset
+                ),
+                size: tabsContainerEffectiveSize
+            )
+
+            transition.setFrame(view: self.tabsBackgroundContainer, frame: tabContainerFrame)
+            self.tabsBackgroundContainer.update(size: tabContainerFrame.size, isDark: component.theme.overallDarkAppearance, transition: transition)
+
+            transition.setFrame(view: self.tabsBackgroundView, frame: CGRect(origin: CGPoint(), size: tabContainerFrame.size))
+            self.tabsBackgroundView.update(size: tabContainerFrame.size, cornerRadius: tabContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: transition)
+
+            if let tabsContainerView = self.tabsContainer.view as? HorizontalTabsComponent.View {
+                if tabsContainerView.superview == nil {
+                    self.tabsBackgroundView.contentView.addSubview(tabsContainerView)
+                    tabsContainerView.setOverlayContainerView(overlayContainerView: self)
                 }
-                transition.setFrame(view: headerView, frame: CGRect(origin: topPanelFrame.origin.offsetBy(dx: 16.0, dy: 0.0), size: headerSize))
+                transition.setFrame(view: tabsContainerView, frame: CGRect(origin: CGPoint(), size: tabContainerFrame.size))
+                tabsContainerView.updateTabSwitchFraction(fraction: self.transitionFraction, isDragging: self.isDraggingTabs, transition: transition)
             }
-                        
-            let centralPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelFrame.maxY))
-            
+
+            let effectiveTabsHeight = tabsTopInset + tabContainerFrame.height + tabsBottomInset
+            let edgeEffectFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: effectiveTabsHeight))
+            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+            self.edgeEffectView.update(content: component.theme.list.blocksBackgroundColor, blur: false, alpha: 1.0, rect: edgeEffectFrame, edge: .top, edgeSize: min(64.0, effectiveTabsHeight), transition: transition)
+
+            let centralPanelFrame = CGRect(origin: CGPoint(), size: availableSize)
+
             if self.animatingTransition {
                 visibleIds = visibleIds.filter({ self.visiblePanels[$0] != nil })
             }
@@ -782,7 +496,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
                         theme: component.theme,
                         strings: component.strings,
                         dateTimeFormat: component.dateTimeFormat,
-                        containerInsets: UIEdgeInsets(top: 0.0, left: component.insets.left, bottom: component.insets.bottom, right: component.insets.right),
+                        containerInsets: UIEdgeInsets(top: effectiveTabsHeight, left: component.insets.left, bottom: component.insets.bottom, right: component.insets.right),
                         isScrollable: environment.isScrollable,
                         isCurrent: self.currentId == panelItem.id
                     )
@@ -818,10 +532,8 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
             }
             
-            let clippingFrame = CGRect(origin: CGPoint(x: component.insets.left, y: 0.0), size: CGSize(width: availableSize.width - component.insets.left - component.insets.right, height: availableSize.height))
-            
-            transition.setPosition(view: self.clippingView, position: clippingFrame.center)
-            transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: component.insets.left, y: 0.0), size: clippingFrame.size))
+            transition.setPosition(view: self.clippingView, position: panelsFrame.center)
+            transition.setBounds(view: self.clippingView, bounds: panelsFrame)
             
             var removeIds: [AnyHashable] = []
             for (id, panel) in self.visiblePanels {

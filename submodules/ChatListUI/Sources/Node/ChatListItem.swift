@@ -505,7 +505,15 @@ public class ChatListItem: ListViewItem {
     }
     
     let header: ListViewItemHeader?
-    
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ChatListItemNeighborDescriptor(
+            headerId: self.header?.id,
+            isPinned: self.isPinned,
+            hasActiveRevealControls: self.hasActiveRevealControls
+        ))
+    }
+
     public var isPinned: Bool {
         switch self.index {
         case let .chatList(index):
@@ -538,10 +546,10 @@ public class ChatListItem: ListViewItem {
         self.displayHiddenPeerIcon = displayHiddenPeerIcon
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListItemNode()
-            let mergeType = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let mergeType = ChatListItem.mergeType(item: self, neighbors: neighbors)
             let first = mergeType.first
             var last = mergeType.last
             let firstWithHeader = mergeType.firstWithHeader
@@ -569,14 +577,14 @@ public class ChatListItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ChatListItemNode)
             if let nodeValue = node() as? ChatListItemNode {
                 nodeValue.setupItem(item: self, synchronousLoads: false)
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let mergeType = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let mergeType = ChatListItem.mergeType(item: self, neighbors: neighbors)
                     let first = mergeType.first
                     var last = mergeType.last
                     let firstWithHeader = mergeType.firstWithHeader
@@ -637,14 +645,14 @@ public class ChatListItem: ListViewItem {
         }
     }
         
-    static func mergeType(item: ChatListItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, nextHasActiveRevealControls: Bool) {
+    static func mergeType(item: ChatListItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, nextHasActiveRevealControls: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ChatListItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .chatList {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -655,10 +663,8 @@ public class ChatListItem: ListViewItem {
         }
         var nextIsPinned = false
         var nextHasActiveRevealControls = false
-        if let nextItem = nextItem as? ChatListItem {
-            if case let .chatList(nextIndex) = nextItem.index, nextIndex.pinningIndex != nil {
-                nextIsPinned = true
-            }
+        if let nextItem = neighbors.next?.base(ChatListNeighborFacet.self) {
+            nextIsPinned = nextItem.isPinned
             nextHasActiveRevealControls = nextItem.hasActiveRevealControls
         } else {
             last = true
@@ -894,9 +900,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
                 if isPinned {
                     options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, iconColor: theme.list.itemDisclosureActions.constructive.foregroundColor, textColor: theme.chatList.dateTextColor))
                 } else {
-                    if filterData == nil || peer.id.namespace != Namespaces.Peer.SecretChat {
-                        options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, iconColor: theme.list.itemDisclosureActions.constructive.foregroundColor, textColor: theme.chatList.dateTextColor))
-                    }
+                    options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, iconColor: theme.list.itemDisclosureActions.constructive.foregroundColor, textColor: theme.chatList.dateTextColor))
                 }
             }
             return options
@@ -1549,11 +1553,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText, _, _, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText, _, _, _, richTextPreview) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
-                        result += "\n\(messageText)"
+                        result += "\n\(richTextPreview.map(instantPagePreviewPlainText) ?? messageText)"
                         return result
                     } else if !peers.isEmpty {
                         var result = ""
@@ -1870,9 +1874,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
                 peerLinkedCommunityId = peerData.peer.peer?.containerPeerId
             }
-            if peerData.peer.peerId.namespace == Namespaces.Peer.SecretChat {
-                enablePreview = false
-            }
         case let .groupReference(groupReferenceData):
             if let previousItem = previousItem, case let .groupReference(previousGroupReferenceData) = previousItem.content, groupReferenceData.hiddenByDefault != previousGroupReferenceData.hiddenByDefault {
                 UIView.transition(with: self.avatarNode.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
@@ -2138,9 +2139,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.contextContainer.isGestureEnabled = enablePreview && !item.editing
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         let layout = self.asyncLayout()
-        let (first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
+        let (first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls) = ChatListItem.mergeType(item: item as! ChatListItem, neighbors: neighbors)
         let (nodeLayout, apply) = layout(item as! ChatListItem, params, first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls)
         apply(false, false)
         self.contentSize = nodeLayout.contentSize
@@ -2290,7 +2291,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         let currentChatListQuoteSearchResult = self.cachedChatListQuoteSearchResult
         let currentCustomTextEntities = self.cachedCustomTextEntities
         
-        return { item, params, first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls in
+        return { [weak self] item, params, first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls in
             let titleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
             let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let italicTextFont = Font.italic(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
@@ -2787,7 +2788,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let messageText: String
                     let foldedRichTextPreview: NSAttributedString?
-                    if let currentChatListText = currentChatListText, currentChatListText.0 == text {
+                    if let richTextPreview {
+                        messageText = richTextPreview.string
+                        chatListText = nil
+                    } else if let currentChatListText = currentChatListText, currentChatListText.0 == text {
                         messageText = currentChatListText.1
                         chatListText = currentChatListText
                     } else {
@@ -2801,8 +2805,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         chatListText = (text, messageText)
                     }
                     if let richTextPreview {
-                        let foldedPreview = foldLineBreaks(richTextPreview)
-                        foldedRichTextPreview = foldedPreview.string == messageText ? foldedPreview : nil
+                        foldedRichTextPreview = richTextPreview
                     } else {
                         foldedRichTextPreview = nil
                     }
@@ -2876,7 +2879,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         let messageString: NSAttributedString
-                        if !messageText.isEmpty && entities.count > 0 {
+                        if let foldedRichTextPreview {
+                            let spoilerRanges = (customTextEntities?.textEntities ?? []).compactMap { entity -> NSRange? in
+                                guard case .Spoiler = entity.type else { return nil }
+                                return NSRange(location: entity.range.lowerBound, length: entity.range.count)
+                            }
+                            messageString = chatListRichTextPreview(foldedRichTextPreview, font: textFont, italicFont: italicTextFont, textColor: theme.messageTextColor, additionalSpoilers: spoilerRanges)
+                        } else if !messageText.isEmpty && entities.count > 0 {
                             let appliedString = stringWithAppliedEntities(messageText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
                             messageString = foldLineBreaks(appliedString)
                         } else if spoilers != nil || customEmojiRanges != nil {
@@ -2903,13 +2912,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     mutableString.addAttribute(ChatTextInputAttributes.customEmoji, value: attribute, range: range)
                                 }
                             }
-                            messageString = mutableString
-                        } else if let foldedRichTextPreview {
-                            let mutableString = NSMutableAttributedString(attributedString: foldedRichTextPreview)
-                            mutableString.addAttributes([
-                                .font: textFont,
-                                .foregroundColor: theme.messageTextColor
-                            ], range: NSRange(location: 0, length: mutableString.length))
                             messageString = mutableString
                         } else {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
@@ -3454,7 +3456,26 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
 
             if !isPeerGroup {
-                if hasUnseenMentions {
+                let hasUnreadIncomingGramTransfer = messages.last.map { message in
+                    guard let combinedReadState, combinedReadState.count > 0, !combinedReadState.isIncomingMessageIndexRead(message.index) else {
+                        return false
+                    }
+                    return message.effectivelyIncoming(account.peerId) && message.media.contains(where: { media in
+                        if let media = media as? TelegramMediaAction, case .gramTransfer = media.action {
+                            return true
+                        }
+                        return false
+                    })
+                } ?? false
+                if hasUnreadIncomingGramTransfer {
+                    currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundGram(item.presentationData.theme, diameter: badgeDiameter, inactive: isRemovedFromTotalUnreadCount)
+                    mentionBadgeContent = .mention
+                    if unreadCount.count == 1 {
+                        badgeContent = .none
+                        currentBadgeBackgroundImage = nil
+                        currentAvatarBadgeBackgroundImage = nil
+                    }
+                } else if hasUnseenMentions {
                     if case .chatList(.archive) = item.chatListLocation {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveMention(item.presentationData.theme, diameter: badgeDiameter)
                     } else {
@@ -5366,18 +5387,23 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let leftSeparatorInset: CGFloat
                     let rightSeparatorInset: CGFloat
                     let hideCommunitySeparator = item.useCommunityViewLayout && last
+                    // Separators stay out of the side safe areas. The content-aligned ones end 16pt
+                    // before the right inset; the full-width ones run to the edge unless there is a
+                    // right inset, in which case they end where the content-aligned ones do.
+                    let contentRightSeparatorInset: CGFloat = params.rightInset + 16.0
+                    let fullWidthRightSeparatorInset: CGFloat = params.rightInset.isZero ? 0.0 : contentRightSeparatorInset
                     if case let .groupReference(groupReferenceData) = item.content, groupReferenceData.hiddenByDefault {
-                        leftSeparatorInset = 0.0
-                        rightSeparatorInset = 0.0
+                        leftSeparatorInset = params.leftInset
+                        rightSeparatorInset = fullWidthRightSeparatorInset
                     } else if item.useCommunityViewLayout {
                         leftSeparatorInset = editingOffset + leftInset + rawContentRect.origin.x
-                        rightSeparatorInset = 16.0
+                        rightSeparatorInset = contentRightSeparatorInset
                     } else if (!nextIsPinned && isPinned) || last {
-                        leftSeparatorInset = 0.0
-                        rightSeparatorInset = 0.0
+                        leftSeparatorInset = params.leftInset
+                        rightSeparatorInset = fullWidthRightSeparatorInset
                     } else {
                         leftSeparatorInset = editingOffset + leftInset + rawContentRect.origin.x
-                        rightSeparatorInset = 16.0
+                        rightSeparatorInset = contentRightSeparatorInset
                     }
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftSeparatorInset, y: layoutOffset + itemHeight - separatorHeight), size: CGSize(width: params.width - leftSeparatorInset - rightSeparatorInset, height: separatorHeight)))
@@ -5432,7 +5458,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.highlightedBackgroundNode.backgroundColor = highlightedBackgroundColor
                     let topNegativeInset: CGFloat = 0.0
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: strongSelf.revealOffset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: params.leftInset + strongSelf.revealOffset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     transition.updateCornerRadius(node: strongSelf.highlightedBackgroundNode, cornerRadius: strongSelf.isRevealOptionsActive ? 26.0 : 0.0)
                     
                     if let peerPresence = peerPresence {
@@ -5581,7 +5607,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         transition.updateBounds(node: self.contextContainer, bounds: self.contextContainer.frame.offsetBy(dx: -offset, dy: 0.0))
 
         let highlightedBackgroundFrame = self.highlightedBackgroundNode.frame
-        transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: offset, y: highlightedBackgroundFrame.minY), size: highlightedBackgroundFrame.size))
+        let highlightedBackgroundLeftInset = self.layoutParams?.6.leftInset ?? 0.0
+        transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: highlightedBackgroundLeftInset + offset, y: highlightedBackgroundFrame.minY), size: highlightedBackgroundFrame.size))
     }
 
     override public func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {

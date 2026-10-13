@@ -2,13 +2,14 @@ build --action_env=ZERO_AR_DATE=1
 
 build --enable_platform_specific_config
 
+# Download dependencies directly if the remote downloader configured by --cacheHost fails.
+build --experimental_remote_downloader_local_fallback
+
+# Keeps $(TARGET_CPU) as "ios_sim_arm64" rather than "aarch64". Removing this does not
+# fail the build: the third-party genrules silently pick the wrong build directory.
+build --noincompatible_target_cpu_from_platform
+
 # macOS-specific settings (auto-applied on macOS via --enable_platform_specific_config)
-build:macos --apple_platform_type=ios
-build:macos --apple_crosstool_top=@local_config_apple_cc//:toolchain
-build:macos --crosstool_top=@local_config_apple_cc//:toolchain
-build:macos --host_crosstool_top=@local_config_apple_cc//:toolchain
-build:macos --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
-build:macos --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
 build:macos --features=debug_prefix_map_pwd_is_dot
 build:macos --features=swift.cacheable_swiftmodules
 build:macos --features=swift.debug_prefix_map
@@ -24,18 +25,5 @@ build --spawn_strategy=standalone
 
 build:macos --strategy=SwiftCompile=worker
 
-# SourceKit BSP: Swift indexing features (macOS only)
-common:macos --features=swift.index_while_building
-common:macos --features=swift.use_global_index_store
 common:macos --features=swift.use_global_module_cache
 common:macos --features=oso_prefix_is_pwd
-
-# SourceKit BSP: Index build config (used for background indexing)
-common:index_build --experimental_convenience_symlinks=ignore
-common:index_build --show_result=0
-common:index_build --noshow_loading_progress
-common:index_build --noshow_progress
-common:index_build --noannounce_rc
-common:index_build --noshow_timestamps
-common:index_build --curses=no
-common:index_build --color=no

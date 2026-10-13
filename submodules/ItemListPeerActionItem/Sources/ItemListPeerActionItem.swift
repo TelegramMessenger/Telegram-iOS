@@ -56,17 +56,17 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPeerActionItemNode()
-            var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
+            var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
             if self.alwaysPlain {
-                neighbors.top = .sameSection(alwaysPlain: false)
+                itemNeighbors.top = .sameSection(alwaysPlain: false)
             }
             if self.alwaysPlain {
-                neighbors.bottom = .sameSection(alwaysPlain: false)
+                itemNeighbors.bottom = .sameSection(alwaysPlain: false)
             }
-            let (layout, apply) = node.asyncLayout()(self, params, neighbors)
+            let (layout, apply) = node.asyncLayout()(self, params, itemNeighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -79,7 +79,7 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListPeerActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -90,14 +90,14 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
+                    var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
                     if self.alwaysPlain {
-                        neighbors.top = .sameSection(alwaysPlain: false)
+                        itemNeighbors.top = .sameSection(alwaysPlain: false)
                     }
                     if self.alwaysPlain {
-                        neighbors.bottom = .sameSection(alwaysPlain: false)
+                        itemNeighbors.bottom = .sameSection(alwaysPlain: false)
                     }
-                    let (layout, apply) = makeLayout(self, params, neighbors)
+                    let (layout, apply) = makeLayout(self, params, itemNeighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animated)
@@ -201,7 +201,7 @@ public final class ItemListPeerActionItemNode: ListViewItemNode, ItemListItemNod
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -206,7 +207,8 @@ private final class SheetContent: CombinedComponent {
             let icon = icon.update(
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: iconName),
-                    playOnce: state.playOnce
+                    playOnce: state.playOnce,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ),
                 availableSize: CGSize(width: 70, height: 70),
                 transition: .immediate
@@ -502,7 +504,8 @@ private final class SheetContainerComponent: CombinedComponent {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }

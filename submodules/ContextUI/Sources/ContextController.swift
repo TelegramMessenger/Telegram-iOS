@@ -307,13 +307,16 @@ public final class ContextControllerReferenceViewInfo {
         case bottom
         case top
     }
+    /// Optional visible shape in referenceView bounds coordinates.
+    public let sourcePath: UIBezierPath?
     public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
     public let actionsPosition: ActionsPosition
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom, sourcePath: UIBezierPath? = nil) {
+        self.sourcePath = sourcePath
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets

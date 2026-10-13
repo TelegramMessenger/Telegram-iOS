@@ -7,6 +7,7 @@ import TelegramCore
 import AccountContext
 import MediaEditor
 import DrawingUI
+import SwiftSignalKit
 
 extension MediaEditorScreenImpl {
     func isEligibleForDraft() -> Bool {
@@ -62,7 +63,7 @@ extension MediaEditorScreenImpl {
                     return false
                 }
             case .videoCollage:
-                return false
+                return self.collage != nil
             default:
                 break
             }
@@ -255,7 +256,7 @@ extension MediaEditorScreenImpl {
                     }
                 case .sticker:
                     break
-                case .multiple:
+                case .multiple, .collage:
                     break
                 }
                 
@@ -264,5 +265,103 @@ extension MediaEditorScreenImpl {
                 }
             })
         }
+    }
+}
+
+extension MediaEditorScreenImpl {
+    func removePublishedCollageDraft() {
+        if self.collage != nil, case let .draft(draft, id) = self.node.actualSubject, id == nil {
+            removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+        }
+    }
+
+    func saveCollageDraft(id: Int64?, completion: @escaping (Swift.Result<MediaEditorDraft, MediaEditorCollageDraftSaveError>) -> Void) {
+        guard !self.collageDraftPreparing, self.collageDraftSaveOperation == nil, let collage = self.collage, let mediaEditor = self.node.mediaEditor else {
+            completion(.failure(.storage))
+            return
+        }
+        self.updateMediaEditorEntities()
+        guard let image = mediaEditor.getResultCIImage() else {
+            completion(.failure(.mediaUnavailable))
+            return
+        }
+        self.collageDraftPreparing = true
+        let generation = UUID()
+        self.collageSaveGeneration = generation
+        let collageSnapshot = collage.snapshot(values: mediaEditor.values)
+        let values = mediaEditor.values
+        let privacy = self.state.privacy
+        let caption = self.node.getCaption()
+        let forwardInfo = self.forwardSource.flatMap { EngineStoryId(peerId: $0.0.id, id: $0.1.id) }
+        let duration = mediaEditor.duration
+        let engine = self.context.engine
+        let previousDraft: MediaEditorDraft?
+        let previousDraftIsSource: Bool
+        if case let .draft(draft, sourceId) = self.node.actualSubject {
+            previousDraft = draft
+            previousDraftIsSource = sourceId != nil
+        } else {
+            previousDraft = nil
+            previousDraftIsSource = false
+        }
+        var baseImagePath: String?
+        if !collageSnapshot.isVideo, let previousDraft, !previousDraft.isVideo, let manifest = previousDraft.collage, manifest.rows.map({ Int($0) }) == collageSnapshot.rows, manifest.items.count == collageSnapshot.items.count {
+            let directory = URL(fileURLWithPath: previousDraft.fullPath(engine: engine)).deletingLastPathComponent()
+            let sameComposition = zip(collageSnapshot.items, manifest.items).allSatisfy { item, saved in
+                guard case let .imageFile(path) = item.source else {
+                    return false
+                }
+                return item.id == saved.id && path == directory.appendingPathComponent(saved.resource).path && item.frame == saved.frame && item.contentScale == saved.contentScale && item.contentOffset == saved.contentOffset
+            }
+            if sameComposition {
+                // Adjustments and entities are stored separately; the unedited photo composition is unchanged.
+                baseImagePath = previousDraft.fullPath(engine: engine)
+            }
+        }
+        let now = Int32(Date().timeIntervalSince1970)
+        let expiresOn = id == nil ? now + 7 * 24 * 3600 : ((previousDraftIsSource ? previousDraft?.expiresOn : nil) ?? now + Int32(privacy.timeout))
+        let context = self.node.ciContext
+        let postbox = self.context.account.postbox
+        Queue.concurrentDefaultQueue().async { [weak self] in
+            makeEditorImageComposition(context: context, postbox: postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: CGSize(width: 270.0, height: 480.0), values: values, time: .zero, textScale: 2.0, completion: { [weak self] preview in
+                guard let self, self.collageSaveGeneration == generation, self.collageDraftPreparing else {
+                    return
+                }
+                guard let preview, let thumbnail = generateScaledImage(image: preview, size: preview.size.aspectFitted(CGSize(width: 128.0, height: 128.0))) else {
+                    self.collageDraftPreparing = false
+                    completion(.failure(.storage))
+                    return
+                }
+                self.collageDraftSaveOperation = MediaEditorCollageDraftSaveOperation(engine: engine, collage: collageSnapshot, preview: preview, baseImagePath: baseImagePath, additionalVideoPath: values.additionalVideoPath, audioPath: values.audioTrack?.path, makeDraft: { path, manifest, additionalVideoPath, audioPath in
+                    let values = collageSnapshot.valuesForStorage(values, additionalVideoPath: additionalVideoPath, audioPath: audioPath)
+                    return MediaEditorDraft(path: path, isVideo: collageSnapshot.isVideo, thumbnail: thumbnail, dimensions: PixelDimensions(storyDimensions), duration: duration, values: values, caption: caption, privacy: privacy, forwardInfo: forwardInfo, timestamp: previousDraft?.timestamp ?? now, location: previousDraft?.location, expiresOn: expiresOn, collage: manifest)
+                }, store: { draft in
+                    let store: Signal<Never, NoError>
+                    if let id {
+                        store = storeStorySource(engine: engine, item: draft, peerId: engine.account.peerId, id: id)
+                    } else {
+                        store = storeStoryDraft(engine: engine, item: draft, replacingPath: previousDraftIsSource ? nil : previousDraft?.path)
+                    }
+                    return store
+                }, completion: { [weak self] result in
+                    guard let self, self.collageSaveGeneration == generation else {
+                        return
+                    }
+                    self.collageDraftSaveOperation = nil
+                    self.collageDraftPreparing = false
+                    completion(result)
+                })
+            })
+        }
+    }
+
+    @discardableResult func cancelCollageDraftSave() -> Bool {
+        if let operation = self.collageDraftSaveOperation, !operation.cancel() {
+            return false
+        }
+        self.collageSaveGeneration = UUID()
+        self.collageDraftSaveOperation = nil
+        self.collageDraftPreparing = false
+        return true
     }
 }

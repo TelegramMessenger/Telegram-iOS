@@ -1,4 +1,6 @@
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 arm64_specific_sources = [
     "third_party/openh264/src/codec/encoder/core/arm64/intra_pred_aarch64_neon.S",
     "third_party/openh264/src/codec/encoder/core/arm64/intra_pred_sad_3_opt_aarch64_neon.S",
@@ -325,6 +327,8 @@ cc_library(
         "third_party/openh264/src/codec/decoder/core/inc/slice.h",
         "third_party/openh264/src/codec/decoder/core/inc/vlc_decoder.h",
         "third_party/openh264/src/codec/decoder/core/inc/wels_common_basis.h",
+        "third_party/openh264/src/codec/decoder/core/inc/wels_const.h",
+        "third_party/openh264/src/codec/decoder/core/inc/wels_decoder_thread.h",
         "third_party/openh264/src/codec/decoder/plus/inc/welsDecoderExt.h",
     ],
     includes = ["."],

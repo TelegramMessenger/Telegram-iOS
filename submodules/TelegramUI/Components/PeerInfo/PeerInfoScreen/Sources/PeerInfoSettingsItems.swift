@@ -12,12 +12,14 @@ import ItemListPeerItem
 import DeviceAccess
 import TelegramStringFormatting
 import PeerNameColorItem
+import WalletContext
 
 enum SettingsSection: Int, CaseIterable {
     case edit
     case phone
     case accounts
     case myProfile
+    case wallet
     case proxy
     case apps
     case shortcuts
@@ -151,12 +153,36 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.profile)
         }))
         
+        if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable {
+            let balanceText: NSAttributedString
+            if let balance = settings.walletBalance, balance > 10_000_000 {
+                var formattedLabel = formatTonAmountText(balance, dateTimeFormat: presentationData.dateTimeFormat)
+                if let decimalRange = formattedLabel.range(of: presentationData.dateTimeFormat.decimalSeparator) {
+                    let fractionalDigitsCount = formattedLabel[decimalRange.upperBound...].count
+                    formattedLabel += String(repeating: "0", count: max(0, 2 - fractionalDigitsCount))
+                } else {
+                    formattedLabel += presentationData.dateTimeFormat.decimalSeparator + "00"
+                }
+                let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                balanceText = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+            } else {
+                balanceText = NSAttributedString()
+            }
+            items[.wallet]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .attributedText(balanceText), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Money, icon: PresentationResourcesSettings.money, action: {
+                interaction.openSettings(.wallet)
+            }))
+        }
+        
         if !settings.proxySettings.servers.isEmpty {
             let proxyType: String
             if settings.proxySettings.enabled, let activeServer = settings.proxySettings.activeServer {
                 switch activeServer.connection {
                 case .mtp:
                     proxyType = presentationData.strings.SocksProxySetup_ProxyTelegram
+                case .web:
+                    proxyType = presentationData.strings.SocksProxySetup_ProxyWeb
                 case .socks5:
                     proxyType = presentationData.strings.SocksProxySetup_ProxySocks5
                 }
@@ -285,7 +311,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             } else {
                 balanceText = NSAttributedString()
             }
-            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .attributedText(balanceText), text: presentationData.strings.Settings_MyTon, icon: PresentationResourcesSettings.ton, action: {
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .attributedText(balanceText), text: presentationData.strings.Settings_MyTon, icon: PresentationResourcesSettings.gramEarnings, action: {
                 interaction.openSettings(.ton)
             }))
         }

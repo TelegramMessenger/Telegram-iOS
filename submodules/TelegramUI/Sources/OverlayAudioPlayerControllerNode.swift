@@ -17,6 +17,7 @@ import ChatHistoryEntry
 import MultilineTextComponent
 import GlassControls
 import PhotoResources
+import InstantPageUI
 
 final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestureRecognizerDelegate {
     let ready = Promise<Bool>()
@@ -106,7 +107,35 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.getParentController = getParentController
         
         if let playlistLocation = playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, canReorder, at, loadMore, _) = playlistLocation.effectiveLocation(context: context) {
-            self.source = .custom(messages: messages, messageId: at, quote: nil, isSavedMusic: true, canReorder: canReorder, loadMore: loadMore)
+            // Preserved as-is: every existing `.custom` location reaching here is saved music
+            // (`.savedMusic` is rewritten into `.custom` by effectiveLocation). The rich-message
+            // branch below passes false, because its rows are not saved music.
+            let isSavedMusic = true
+            self.source = .custom(messages: messages, messageId: at, quote: nil, isSavedMusic: isSavedMusic, canReorder: canReorder, richMessageId: nil, loadMore: loadMore)
+            self.isGlobalSearch = false
+        } else if let instantPageLocation = playlistLocation as? InstantPagePlaylistLocation, let richMessageId = instantPageLocation.messageId, !instantPageLocation.tracks.isEmpty {
+            // A rich message holds several audio files but is ONE message, so the default
+            // music-tagged history list renders it as a single row. Build the queue from the
+            // playing playlist's own tracks instead: one synthesized row per track, whose Local
+            // id IS the InstantPageMedia.index, so a row maps back to a playlist item exactly.
+            //
+            // These messages are DISPLAY-ONLY. Playback stays on InstantPageMediaPlaylist, which
+            // carries a real messageReference and so revalidates file references; a synthesized
+            // Local message could not.
+            var queueMessages: [EngineRawMessage] = []
+            for track in instantPageLocation.tracks {
+                let syntheticId = Int32(clamping: track.index)
+                queueMessages.append(EngineRawMessage(stableId: UInt32(clamping: track.index), stableVersion: 0, id: EngineMessage.Id(peerId: richMessageId.peerId, namespace: Namespaces.Message.Local, id: syntheticId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [.music], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [track.file], peers: EngineSimpleDictionary(), associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
+            }
+            // Pass document order as-is. ChatHistoryListNode's `.custom` handling reverses the
+            // array and the list then renders bottom-up, and the two together land on document
+            // order on screen — pre-reversing here displayed the tracks backwards.
+            //
+            // This only affects DISPLAY. Next/Previous are driven by InstantPageMediaPlaylist
+            // walking its own items, never by these rows, so the two cannot disagree.
+            // Note the inversion is deliberately applied here rather than in the shared `.custom`
+            // handling, which saved music also uses and which is correct for it today.
+            self.source = .custom(messages: .single((queueMessages, Int32(queueMessages.count), false)), messageId: initialMessageId, quote: nil, isSavedMusic: false, canReorder: false, richMessageId: richMessageId, loadMore: nil)
             self.isGlobalSearch = false
         } else {
             self.source = .default
@@ -226,7 +255,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
-        }, openWebView: { _, _, _, _ in
+        }, openWebView: { _, _, _, _, _ in
         }, activateAdAction: { _, _, _, _ in
         }, adContextAction: { _, _, _ in
         }, removeAd: { _ in
@@ -272,7 +301,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayAudioPlayerControlsNode(account: context.account, engine: context.engine, accountManager: context.sharedContext.accountManager, presentationData: self.presentationData, status: context.sharedContext.mediaManager.musicMediaPlayerState, chatLocation: self.chatLocation, source: self.source)
+        self.controlsNode = OverlayAudioPlayerControlsNode(account: context.account, engine: context.engine, accountManager: context.sharedContext.accountManager, presentationData: self.presentationData, status: context.sharedContext.mediaManager.musicMediaPlayerState, chatLocation: self.chatLocation, source: self.source, lottieSettings: context.lottieRenderingSettings)
         self.controlsNode.getParentController = getParentController
         
         self.historyBackgroundNode = ASDisplayNode()
@@ -470,6 +499,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }
         
         openMessageImpl = { [weak self] id in
+            if let strongSelf = self, let instantPageLocation = strongSelf.playlistLocation as? InstantPagePlaylistLocation, instantPageLocation.messageId != nil, id.namespace == Namespaces.Message.Local {
+                // Re-seed the SAME playlist at the tapped track. Letting openChatMessage build a
+                // PeerMessagesMediaPlaylist over these rows would be wrong twice: they are
+                // synthesized Local messages whose MessageReference cannot revalidate a stale file
+                // reference, and replacing the playlist would desync the bubble's own play/pause.
+                strongSelf.playInstantPageTrack(atMediaIndex: Int(id.id), location: instantPageLocation)
+                return false
+            }
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id)?._asMessage() {
                 var playlistLocation: PeerMessagesPlaylistLocation?
                 if let location = strongSelf.playlistLocation as? PeerMessagesPlaylistLocation {
@@ -598,6 +635,45 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.view.addGestureRecognizer(panRecognizer)
     }
     
+    /// Rebuilds the rich message's playlist re-anchored on `mediaIndex`, exactly as tapping the
+    /// track inside the bubble does. `InstantPageMedia`'s url/caption/credit are not read by
+    /// `InstantPageMediaPlaylistItem` — playbackData and displayData both derive entirely from the
+    /// file's own attributes — so reconstructing them as nil is lossless here.
+    private func playInstantPageTrack(atMediaIndex mediaIndex: Int, location: InstantPagePlaylistLocation) {
+        guard let webPage = location.webPage, let messageId = location.messageId else {
+            return
+        }
+        var items: [InstantPageMedia] = []
+        var initialItemIndex = 0
+        for track in location.tracks {
+            if track.index == mediaIndex {
+                initialItemIndex = items.count
+            }
+            items.append(InstantPageMedia(index: track.index, media: .file(track.file), url: nil, caption: nil, credit: nil))
+        }
+        guard !items.isEmpty else {
+            return
+        }
+        var isVoice = false
+        if case let .file(file) = items[initialItemIndex].media {
+            isVoice = file.isVoice
+        }
+        // The playlist id must stay `.richMessage(messageId:)`: the bubble's own play/pause and
+        // scrubber are bound to it via filteredPlaylistState(playlistId:itemId:).
+        let playlist = InstantPageMediaPlaylist(
+            playlistId: .richMessage(messageId: messageId),
+            webPage: webPage,
+            messageReference: location.messageReference,
+            items: items,
+            initialItemIndex: initialItemIndex
+        )
+        self.context.sharedContext.mediaManager.setPlaylist(
+            (self.context, playlist),
+            type: isVoice ? .voice : .music,
+            control: .playback(.play)
+        )
+    }
+
     private func setupReordering() {
         guard let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case let .savedMusic(savedMusicContext, _, canReorder) = playlistLocation, canReorder else {
             return

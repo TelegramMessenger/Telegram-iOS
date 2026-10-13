@@ -53,7 +53,7 @@ func _internal_requestTwoStepVerifiationSettings(network: Network, password: Str
             return .fail(.generic)
         }
         
-        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
             return .fail(.generic)
         }
         
@@ -143,7 +143,7 @@ func _internal_updateTwoStepVerificationPassword(network: Network, currentPasswo
     |> mapToSignal { authData, secureSecret -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> in
         let checkPassword: Api.InputCheckPasswordSRP
         if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-            if let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: currentPassword ?? "", derivation: currentPasswordDerivation, srpSessionData: srpSessionData) {
+            if let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: currentPassword ?? "", derivation: currentPasswordDerivation, srpSessionData: srpSessionData) {
                 checkPassword = .inputCheckPasswordSRP(.init(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1)))
             } else {
                 return .fail(.generic)
@@ -172,7 +172,7 @@ func _internal_updateTwoStepVerificationPassword(network: Network, currentPasswo
                     flags |= (1 << 1)
                 }
                 
-                guard let (updatedPasswordHash, updatedPasswordDerivation) = passwordUpdateKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: authData.nextPasswordDerivation) else {
+                guard let (updatedPasswordHash, updatedPasswordDerivation) = passwordUpdateKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: password, derivation: authData.nextPasswordDerivation) else {
                     return .fail(.generic)
                 }
                 
@@ -244,7 +244,7 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, s
             return .fail(.generic)
         }
         
-        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
             return .fail(.generic)
         }
         
@@ -273,7 +273,7 @@ func _internal_updateTwoStepVerificationEmail(network: Network, currentPassword:
     |> mapToSignal { authData -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> in
         let checkPassword: Api.InputCheckPasswordSRP
         if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-            guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: currentPassword, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+            guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: currentPassword, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
                 return .fail(.generic)
             }
             checkPassword = .inputCheckPasswordSRP(.init(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1)))
@@ -363,7 +363,7 @@ func _internal_requestTemporaryTwoStepPasswordToken(account: Account, password: 
         guard let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "NO_PASSWORD"))
         }
-        guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+        guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, keychain: account.network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "KDF_ERROR"))
         }
         

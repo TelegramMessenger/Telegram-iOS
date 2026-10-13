@@ -436,13 +436,16 @@ final class ChatListIndexTable: Table {
                 guard let peer = postbox.peerTable.get(peerId) else {
                     continue
                 }
-                let isContact = postbox.contactsTable.isContact(peerId: peerId)
                 let notificationPeerId: PeerId
                 if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                     notificationPeerId = associatedPeerId
                 } else {
                     notificationPeerId = peerId
                 }
+                // A peer whose identity is overridden by an associated one (a secret chat) has no
+                // contact status of its own; take the associated peer's, as the chat list filter
+                // predicate does. Identical to isContact(peerId) for every other peer.
+                let isContact = postbox.contactsTable.isContact(peerId: notificationPeerId)
                 
                 let initialReadState: CombinedPeerReadState?
                 if let updated = updatedIsThreadBasedUnreadCountCalculation[peerId] {
@@ -727,13 +730,16 @@ final class ChatListIndexTable: Table {
                 continue
             }
             
-            let isContact = postbox.contactsTable.isContact(peerId: peerId)
             let notificationPeerId: PeerId
             if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                 notificationPeerId = associatedPeerId
             } else {
                 notificationPeerId = peerId
             }
+            // A peer whose identity is overridden by an associated one (a secret chat) has no
+            // contact status of its own; take the associated peer's, as the chat list filter
+            // predicate does. Identical to isContact(peerId) for every other peer.
+            let isContact = postbox.contactsTable.isContact(peerId: notificationPeerId)
             let inclusion = self.get(peerId: peerId)
             if let (groupId, _) = inclusion.includedIndex(peerId: peerId) {
                 if totalStates[groupId] == nil {

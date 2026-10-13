@@ -106,7 +106,7 @@ public func presentedLegacyCamera(context: AccountContext, peer: EnginePeer?, ch
             if case .user = peer {
                 controller.hasTimer = hasSchedule
             }
-            controller.hasSilentPosting = true
+            controller.hasSilentPosting = !editingMedia
         }
     }
     controller.hasSchedule = hasSchedule

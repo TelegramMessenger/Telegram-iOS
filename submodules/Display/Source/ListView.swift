@@ -295,11 +295,24 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         }
     }
     public final var verticalScrollIndicatorFollowsOverscroll: Bool = false
+    /// Offsets the vertical scroll indicator from the side edge by the horizontal `scrollIndicatorInsets`
+    /// (which default to the list insets, so a list inset by the safe area keeps its indicator inside it).
+    public final var verticalScrollIndicatorRespectsSideInsets: Bool = false
     
     private var touchesPosition = CGPoint()
     public private(set) var isTracking = false
-    public private(set) var trackingOffset: CGFloat = 0.0
-    public private(set) var beganTrackingAtTopOrigin = false
+    // Per-gesture drag state. Private deliberately: the two halves mean nothing apart, and a consumer
+    // recombining them is a consumer that can get half of it wrong — read
+    // `didInteractivelyDragFromTopOrigin` instead. `trackingOffset` is reset on pan-begin (NOT on
+    // pan-end), so it stays readable by whatever layout pass follows the gesture.
+    private var trackingOffset: CGFloat = 0.0
+    private var beganTrackingAtTopOrigin = false
+    /// True when the current-or-most-recent touch sequence was a real interactive drag — the finger moved
+    /// the content — that began pinned to the content origin (within 10pt). In a rotated chat list that
+    /// origin is the newest-message edge.
+    public var didInteractivelyDragFromTopOrigin: Bool {
+        return !self.trackingOffset.isZero && self.beganTrackingAtTopOrigin
+    }
     public private(set) var isDragging = false
     public private(set) var isDeceleratingAfterTracking = false
     
@@ -1763,7 +1776,18 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         }
     }
     
-    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimationIsAnimated: Bool, updateAnimationIsCrossfade: Bool, customAnimationTransition: ControlledTransition?, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    /// The descriptors published by the items adjacent to `index`.
+    ///
+    /// Same index bases as the inline `index == 0 ? nil : self.items[index - 1]` expressions this
+    /// replaces, so the values are identical.
+    func neighbors(at index: Int) -> ListViewItemNeighbors {
+        return ListViewItemNeighbors(
+            previous: index == 0 ? nil : self.items[index - 1].neighborDescriptor,
+            next: index == self.items.count - 1 ? nil : self.items[index + 1].neighborDescriptor
+        )
+    }
+
+    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, neighbors: ListViewItemNeighbors, params: ListViewItemLayoutParams, updateAnimationIsAnimated: Bool, updateAnimationIsCrossfade: Bool, customAnimationTransition: ControlledTransition?, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         if let previousNode = previousNode {
             var controlledTransition: ControlledTransition?
             let updateAnimation: ListViewItemUpdateAnimation
@@ -1802,13 +1826,13 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
             }, node: {
                 assert(Queue.mainQueue().isCurrent())
                 return previousNode.syncWith({ $0 })
-            }, params: params, previousItem: previousItem, nextItem: nextItem, animation: updateAnimation, completion: { (layout, apply) in
+            }, params: params, neighbors: neighbors, animation: updateAnimation, completion: { (layout, apply) in
                 if Thread.isMainThread {
                     if synchronous {
                         completion(previousNode, layout, {
                             return (nil, { info in
                                 assert(Queue.mainQueue().isCurrent())
-                                previousNode.with({ $0.index = index })
+                                previousNode.with({ $0.index = index; $0.appliedNeighbors = neighbors })
                                 apply(info)
                             })
                         })
@@ -1817,7 +1841,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                             completion(previousNode, layout, {
                                 return (nil, { info in
                                     assert(Queue.mainQueue().isCurrent())
-                                    previousNode.with({ $0.index = index })
+                                    previousNode.with({ $0.index = index; $0.appliedNeighbors = neighbors })
                                     apply(info)
                                 })
                             })
@@ -1827,7 +1851,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                     completion(previousNode, layout, {
                         return (nil, { info in
                             assert(Queue.mainQueue().isCurrent())
-                            previousNode.with({ $0.index = index })
+                            previousNode.with({ $0.index = index; $0.appliedNeighbors = neighbors })
                             apply(info)
                         })
                     })
@@ -1840,8 +1864,9 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 } else {
                     self.async(f)
                 }
-            }, params: params, synchronousLoads: synchronousLoads, previousItem: previousItem, nextItem: nextItem, completion: { itemNode, apply in
+            }, params: params, synchronousLoads: synchronousLoads, neighbors: neighbors, completion: { itemNode, apply in
                 itemNode.index = index
+                itemNode.appliedNeighbors = neighbors
                 completion(QueueLocalObject(queue: Queue.mainQueue(), generate: { return itemNode }), ListViewItemNodeLayout(contentSize: itemNode.contentSize, insets: itemNode.insets), apply)
             })
         }
@@ -2012,7 +2037,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
             let animated = options.contains(.AnimateInsertion)
             
             var remapDeletion: [Int: Int] = [:]
-            var updateAdjacentItemsIndices = Set<Int>()
             
             var i = 0
             while i < state.nodes.count {
@@ -2038,10 +2062,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                             previousFrames.removeValue(forKey: index)
                             previousFrames[updatedIndex] = previousFrame
                         }
-                        if deleteIndexSet.contains(index - 1) || deleteIndexSet.contains(index + 1) {
-                            updateAdjacentItemsIndices.insert(updatedIndex)
-                        }
-                        
                         switch state.nodes[i] {
                         case let .Node(_, frame, referenceNode, newNode):
                             state.nodes[i] = .Node(index: updatedIndex, frame: frame, referenceNode: referenceNode, newNode: newNode)
@@ -2097,27 +2117,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 }
                 operations.append(.Remap(remapInsertion))
                 
-                var remappedUpdateAdjacentItemsIndices = Set<Int>()
-                for index in updateAdjacentItemsIndices {
-                    if let remappedIndex = remapInsertion[index] {
-                        remappedUpdateAdjacentItemsIndices.insert(remappedIndex)
-                    } else {
-                        remappedUpdateAdjacentItemsIndices.insert(index)
-                    }
-                }
-                updateAdjacentItemsIndices = remappedUpdateAdjacentItemsIndices
             }
             
             if self.debugInfo {
                 //print("state \(state.nodes.map({$0.index ?? -1}))")
-            }
-            
-            for node in state.nodes {
-                if let index = node.index {
-                    if insertedIndexSet.contains(index - 1) || insertedIndexSet.contains(index + 1) {
-                        updateAdjacentItemsIndices.insert(index)
-                    }
-                }
             }
             
             if let (index, boundary) = stationaryItemRange {
@@ -2138,7 +2141,23 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                     print("fillMissingNodes completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
                 }
                 
-                var updateIndices = updateAdjacentItemsIndices
+                // Relayout a node exactly when the descriptors published by its neighbors
+                // changed. This subsumes the former insert/delete adjacency sweep (an inserted or
+                // deleted item always changes its neighbors' pair, unless the replacement
+                // publishes an equal descriptor, in which case no relayout is needed) and
+                // additionally covers neighbors of *updated* items, which the old policy never
+                // relaid out.
+                //
+                // Runs after index remapping, against final indices, so there is nothing to remap.
+                var updateIndices = Set<Int>()
+                for case let .Node(index, _, referenceNode, _) in updatedState.nodes {
+                    guard let node = referenceNode?.syncWith({ $0 }) else {
+                        continue
+                    }
+                    if node.appliedNeighbors != self.neighbors(at: index) {
+                        updateIndices.insert(index)
+                    }
+                }
                 if widthUpdated {
                     for case let .Node(index, _, _, _) in updatedState.nodes {
                         updateIndices.insert(index)
@@ -2156,7 +2175,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 updateIndices.subtract(explicitelyUpdateIndices)
                 
                 self.updateNodes(synchronous: options.contains(.Synchronous), synchronousLoads: options.contains(.PreferSynchronousResourceLoading), crossfade: options.contains(.AnimateCrossfade), customAnimationTransition: customAnimationTransition, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, previousNodes: previousNodes, inputOperations: operations, completion: { updatedState, operations in
-                    self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, customAnimationTransition: customAnimationTransition, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
+                    self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, customAnimationTransition: customAnimationTransition, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { [self] state, operations in
                         var updatedState = state
                         var updatedOperations = operations
                         updatedState.removeInvisibleNodes(&updatedOperations)
@@ -2277,6 +2296,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                             referenceNode.syncWith({ $0 }).addPendingControlledTransition(transition: controlledTransition)
                         }
                         
+                        // Captured once: the completion runs asynchronously, by which time
+                        // self.items may differ from what this layout was computed against.
+                        let appliedNeighbors = self.neighbors(at: index)
+
                         self.items[index].updateNode(async: { f in
                             if synchronous {
                                 f()
@@ -2286,7 +2309,8 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         }, node: {
                             assert(Queue.mainQueue().isCurrent())
                             return referenceNode.syncWith({ $0 })
-                        }, params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], animation: updateAnimation, completion: { layout, apply in
+                        }, params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), neighbors: appliedNeighbors, animation: updateAnimation, completion: { layout, apply in
+                            referenceNode.with({ $0.appliedNeighbors = appliedNeighbors })
                             var updatedState = state
                             var updatedOperations = operations
                             
@@ -2360,7 +2384,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                     let index = insertionItemIndexAndDirection.0
                     let threadId = pthread_self()
                     var tailRecurse = false
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: false, customAnimationTransition: customAnimationTransition, completion: { (node, layout, apply) in
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, neighbors: self.neighbors(at: index), params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: false, customAnimationTransition: customAnimationTransition, completion: { (node, layout, apply) in
                         if pthread_equal(pthread_self(), threadId) != 0 && !tailRecurse {
                             tailRecurse = true
                             state.insertNode(index, node: node, layout: layout, apply: apply, offsetDirection: insertionItemIndexAndDirection.1, animated: animated && animatedInsertIndices.contains(index), operations: &operations, itemCount: self.items.count)
@@ -2397,7 +2421,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 if let previousNode = previousNodes[updateItem.index] {
                     let threadId = pthread_self()
                     var tailRecurse = false
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: crossfade, customAnimationTransition: customAnimationTransition, completion: { _, layout, apply in
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, neighbors: self.neighbors(at: updateItem.index), params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: crossfade, customAnimationTransition: customAnimationTransition, completion: { _, layout, apply in
                         state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, isAnimated: animated, apply: apply, operations: &operations)
                         
                         updateIndicesAndItems.remove(at: 0)
@@ -2433,7 +2457,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         }
     }
     
-    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, animateFullTransition: Bool, forceAnimateInsertion: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void), timestamp: Double, listInsets: UIEdgeInsets, visibleBounds: CGRect, forceInvertOffsetDirection: Bool) {
+    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, animateFullTransition: Bool, forceAnimateInsertion: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void), timestamp: Double, listInsets: UIEdgeInsets, forceInvertOffsetDirection: Bool) {
         let insertionOrigin = self.referencePointForInsertionAtIndex(nodeIndex)
         
         let nodeOrigin: CGPoint
@@ -2457,7 +2481,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
             node.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
         }
         
-        let applyContext = ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame), timestamp: timestamp)
+        let applyContext = ListViewItemApply(timestamp: timestamp)
         apply().1(applyContext)
         let invertOffsetDirection = forceInvertOffsetDirection
         
@@ -2831,7 +2855,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         var hadInserts = false
         var hadChangesToItemNodes = false
         
-        let visibleBounds = CGRect(origin: CGPoint(), size: self.visibleSize)
         
         for operation in operations {
             switch operation {
@@ -2853,7 +2876,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         updatedPreviousFrame = nil
                     }
                     
-                    self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, animateFullTransition: animateFullTransition, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds, forceInvertOffsetDirection: forceInvertOffsetDirection)
+                    self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, animateFullTransition: animateFullTransition, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets, forceInvertOffsetDirection: forceInvertOffsetDirection)
                     hadInserts = true
                     hadChangesToItemNodes = true
                     if let _ = updatedPreviousFrame {
@@ -2914,10 +2937,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                     if let height = height, let previousLayout = previousLayout {
                         if takenPreviousNodes.contains(referenceNode) {
                             let tempNode = ListViewTempItemNode(layerBacked: true)
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, animateFullTransition: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: tempNode, layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds, forceInvertOffsetDirection: forceInvertOffsetDirection)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, animateFullTransition: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: tempNode, layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, forceInvertOffsetDirection: forceInvertOffsetDirection)
                         } else {
                             referenceNode.index = nil
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, animateFullTransition: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds, forceInvertOffsetDirection: forceInvertOffsetDirection)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, animateFullTransition: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, forceInvertOffsetDirection: forceInvertOffsetDirection)
                             if let verticalScrollIndicator = self.verticalScrollIndicator {
                                 self.insertSubnode(referenceNode, belowSubnode: verticalScrollIndicator)
                             } else {
@@ -2991,10 +3014,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                     let updatedApparentHeight = node.bounds.size.height
                     let updatedInsets = node.insets
                     
-                    var apparentFrame = node.apparentFrame
-                    apparentFrame.size.height = updatedApparentHeight
-                    
-                    let applyContext = ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame), timestamp: timestamp)
+                    let applyContext = ListViewItemApply(timestamp: timestamp)
                     apply().1(applyContext)
                     let invertOffsetDirection = applyContext.invertOffsetDirection || forceInvertOffsetDirection
                     
@@ -3364,9 +3384,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         }
                         self.layer.add(animation, forKey: "animation-\(self.takeNextAnimationId())")
                         if !completeOffset.isZero {
-                            for itemNode in self.itemNodes {
-                                itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
-                            }
                             self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil, self.isTrackingOrDecelerating)
                         }
                     }
@@ -3411,9 +3428,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 self.layer.add(springAnimation, forKey: nil)
 
                 if !completeOffset.isZero {
-                    for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: .spring, duration: duration)
-                    }
                     self.didScrollWithOffset?(-completeOffset, .animated(duration: duration, curve: .spring), nil, self.isTrackingOrDecelerating)
                 }
             } else {
@@ -3793,12 +3807,6 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         self.layer.add(animation, forKey: "animation-\(self.takeNextAnimationId()))")
                     }
 
-                    for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
-                    }
-                    for itemNode in temporaryPreviousNodes {
-                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
-                    }
                     self.didScrollWithOffset?(-offset, .animated(duration: animationDuration, curve: animationCurve), nil, self.isTrackingOrDecelerating)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
@@ -4545,7 +4553,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                 
                 let approximateScrollingProgress = approximateOffset / (approximateContentHeight - approximateVisibleHeight)
                 
-                let indicatorSideInset: CGFloat = 3.0
+                var indicatorSideInset: CGFloat = 3.0
+                if self.verticalScrollIndicatorRespectsSideInsets {
+                    indicatorSideInset += self.rotated ? self.scrollIndicatorInsets.left : self.scrollIndicatorInsets.right
+                }
                 var indicatorTopInset: CGFloat = 3.0
                 if self.verticalScrollIndicatorFollowsOverscroll {
                     if scrollingIndicatorState.topItem.index == 0 {

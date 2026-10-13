@@ -61,7 +61,7 @@ public final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
             pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
             
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.pipelineState = pipelineState

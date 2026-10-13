@@ -7,7 +7,9 @@
 #import <MtProtoKit/MTProto.h>
 #import <MtProtoKit/MTRequestMessageService.h>
 #import <MtProtoKit/MTRequest.h>
+#import <MtProtoKit/MTRequestErrorContext.h>
 #import "MTBuffer.h"
+#import "MTInternalInterfaces.h"
 
 @interface MTDatacenterTransferAuthAction () <MTContextChangeListener>
 {
@@ -24,6 +26,16 @@
 @end
 
 @implementation MTDatacenterTransferAuthAction
+
++ (void)applyRetryPolicyToRequest:(MTRequest *)request {
+    // The policy TelegramCore gives every API request: MTRequestMessageService
+    // retries a 500 after a delay and waits out a FLOOD_WAIT. Without it the
+    // first 500 fails the transfer, and a brief inter-DC outage on the master
+    // datacenter (500 INTERDC_x_CALL_ERROR) is enough for that.
+    request.shouldContinueExecutionWithErrorContext = ^bool(__unused MTRequestErrorContext *errorContext) {
+        return true;
+    };
+}
 
 - (void)dealloc
 {
@@ -99,6 +111,7 @@
     MTExportAuthorizationResponseParser responseParser = [[context.serialization exportAuthorization:(int32_t)_destinationDatacenterId data:&exportAuthRequestData] copy];
     
     [request setPayload:exportAuthRequestData metadata:@"exportAuthorization" shortMetadata:@"exportAuthorization" responseParser:responseParser];
+    [MTDatacenterTransferAuthAction applyRetryPolicyToRequest:request];
     
     __weak MTDatacenterTransferAuthAction *weakSelf = self;
     [request setCompleted:^(MTExportedAuthorizationData *result, __unused MTRequestResponseInfo *info, id error)
@@ -142,6 +155,7 @@
     {
         return @true;
     }];
+    [MTDatacenterTransferAuthAction applyRetryPolicyToRequest:request];
     
     NSInteger destinationDatacenterId = _destinationDatacenterId;
     id authToken = _authToken;
@@ -183,7 +197,9 @@
 - (void)fail
 {
     id<MTDatacenterTransferAuthActionDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(datacenterTransferAuthActionCompleted:)])
+    if ([delegate respondsToSelector:@selector(datacenterTransferAuthActionFailed:)])
+        [delegate datacenterTransferAuthActionFailed:self];
+    else if ([delegate respondsToSelector:@selector(datacenterTransferAuthActionCompleted:)])
         [delegate datacenterTransferAuthActionCompleted:self];
 }
 

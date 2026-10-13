@@ -482,6 +482,12 @@ public class GlassBackgroundView: UIView {
     
     private var innerBackgroundView: UIView?
     
+    /// UIKit's liquid morph must target the effect view itself so the backdrop
+    /// participates in the shape transition along with its content.
+    public var transitionView: UIView {
+        return self.nativeView ?? self
+    }
+
     public var contentView: UIView {
         if let nativeView = self.nativeView {
             return nativeView.contentView
@@ -1555,6 +1561,11 @@ public final class GlassBackgroundComponent: Component {
 }
 
 public final class GlassContextExtractableContainer: UIView, ContextExtractableContainer {
+    /// Target the native effect itself so UIKit includes the source backdrop in a morph.
+    public var transitionView: UIView {
+        return self.glassView.transitionView
+    }
+
     private struct NormalParams {
         let size: CGSize
         let cornerRadius: CGFloat

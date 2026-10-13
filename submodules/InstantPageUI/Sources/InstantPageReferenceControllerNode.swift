@@ -8,6 +8,7 @@ import TelegramPresentationData
 import AccountContext
 import OpenInExternalAppUI
 import TelegramUIPreferences
+import UrlWhitelist
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
@@ -346,7 +347,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url.url) ?? url.url),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {

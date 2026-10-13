@@ -128,7 +128,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     let _ = updateChatListFiltersState(transaction: transaction, { state in
                         var state = state
                         if let index = state.filters.firstIndex(where: { $0.id == filterId }) {
-                            state.filters[index] = parsedFilter
+                            state.filters[index] = parsedFilter.withLocalOnlyPeers(from: state.filters[index])
                         } else {
                             state.filters.append(parsedFilter)
                         }

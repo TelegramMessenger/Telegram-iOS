@@ -1,3 +1,5 @@
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
 load("//build-system/bazel-utils:unique_directories.bzl", "unique_directories")
 
 private_headers = glob([

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1479,7 +1480,8 @@ private final class LimitSheetContent: CombinedComponent {
                         color: .white,
                         startingPosition: .begin,
                         size: CGSize(width: 30.0, height: 30.0),
-                        loop: true
+                        loop: true,
+                        lottieSettings: component.context.lottieRenderingSettings
                     ))))
                 }
                 let button = button.update(
@@ -1833,7 +1835,8 @@ private final class LimitSheetComponent: CombinedComponent {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }

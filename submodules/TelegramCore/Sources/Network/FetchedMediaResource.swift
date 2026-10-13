@@ -222,6 +222,18 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
         if let file = game.file, let result = findMediaResource(media: file, previousMedia: previousMedia, resource: resource) {
             return result
         }
+    } else if let poll = media as? TelegramMediaPoll {
+        if let attachedMedia = poll.attachedMedia, let result = findMediaResource(media: attachedMedia, previousMedia: previousMedia, resource: resource) {
+            return result
+        }
+        for option in poll.options {
+            if let optionMedia = option.media, let result = findMediaResource(media: optionMedia, previousMedia: previousMedia, resource: resource) {
+                return result
+            }
+        }
+        if let solutionMedia = poll.results.solution?.media, let result = findMediaResource(media: solutionMedia, previousMedia: previousMedia, resource: resource) {
+            return result
+        }
     } else if let action = media as? TelegramMediaAction {
         switch action.action {
             case let .photoUpdated(image):

@@ -41,7 +41,7 @@ final class AccountManagerAtomicState<Types: AccountManagerTypes>: Codable {
         if let accessChallengeData = try? container.decodeIfPresent(PostboxAccessChallengeData.self, forKey: .accessChallengeData) {
             self.accessChallengeData = accessChallengeData
         } else {
-            self.accessChallengeData = .none
+            self.accessChallengeData = container.contains(.accessChallengeData) ? .secured(id: "invalid", kind: .alphanumeric) : .none
         }
     }
     

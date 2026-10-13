@@ -111,6 +111,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                 hasTrending: false,
                 hasStickers: false,
                 hasGifs: false,
+                maskEdge: .clip,
                 sendGif: nil
             )
         )

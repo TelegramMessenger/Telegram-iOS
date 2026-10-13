@@ -12,7 +12,9 @@
 # OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-#load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 load(
     ":BUILD.generated.bzl",
     "crypto_headers",
@@ -180,6 +182,8 @@ cc_library(
 cc_library(
     name = "ssl",
     srcs = ssl_sources + ssl_internal_headers,
+    # hdrs, not srcs: //third-party/webrtc includes these too, and only hdrs propagate.
+    hdrs = ssl_headers,
     copts = boringssl_copts_cxx,
     visibility = ["//visibility:public"],
     deps = [

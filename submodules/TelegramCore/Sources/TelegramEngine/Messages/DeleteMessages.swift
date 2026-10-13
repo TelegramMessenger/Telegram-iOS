@@ -22,6 +22,23 @@ func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [Me
     }
 }
 
+func _internal_ephemeralReplacementMessageIds(transaction: Transaction, anchorIds: [MessageId]) -> [MessageId] {
+    var result = Set<MessageId>()
+    for anchorId in anchorIds {
+        if let message = transaction.getMessage(anchorId), let attribute = message.attributes.first(where: { $0 is EphemeralReplacementMessageAttribute }) as? EphemeralReplacementMessageAttribute {
+            result.insert(attribute.replacementMessageId)
+        }
+    }
+    return Array(result)
+}
+
+func _internal_deleteEphemeralReplacements(transaction: Transaction, anchorIds: [MessageId]) {
+    let replacementMessageIds = _internal_ephemeralReplacementMessageIds(transaction: transaction, anchorIds: anchorIds)
+    if !replacementMessageIds.isEmpty {
+        transaction.deleteMessages(replacementMessageIds, forEachMedia: nil)
+    }
+}
+
 public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageThreadKey, Int, Int) -> Void)? = nil) {
     var resourceIds: [MediaResourceId] = []
     if deleteMedia {
@@ -52,7 +69,8 @@ public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBo
             }
         }
     }
-    transaction.deleteMessages(ids, forEachMedia: { _ in
+    let replacementMessageIds = _internal_ephemeralReplacementMessageIds(transaction: transaction, anchorIds: ids)
+    transaction.deleteMessages(ids + replacementMessageIds, forEachMedia: { _ in
     })
 }
 

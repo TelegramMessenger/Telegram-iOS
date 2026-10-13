@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
@@ -44,6 +45,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/RadialStatusNode",
         "//submodules/Camera",
+        "//submodules/Camera/CameraLegacy",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
         "//submodules/ChatSendMessageActionUI",
         "//submodules/ComponentFlow",

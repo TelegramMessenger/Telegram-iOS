@@ -12,6 +12,7 @@
 #import <MtProtoKit/MTApiEnvironment.h>
 #import <MtProtoKit/MTLogging.h>
 #import <MtProtoKit/MTDatacenterAuthAction.h>
+#import "MTInternalInterfaces.h"
 
 #import <netinet/in.h>
 #import <arpa/inet.h>
@@ -148,20 +149,120 @@
     }] startOn:[MTTcpConnection tcpQueue]];
 }
 
-+ (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy
++ (NSArray<MTDatacenterAddress *> *)probeAddressesForAddressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy proxySettings:(MTSocksProxySettings *)proxySettings
 {
+    // `isProxy` keeps the existing preferForProxy filter contract and `proxySettings`
+    // decides the collapse below; every caller derives the former from the latter
+    // (`socksProxySettings != nil`), and they must agree.
     NSMutableArray *bestAddressList = [[NSMutableArray alloc] init];
-    
+
     for (MTDatacenterAddress *address in addressList)
     {
         if (media == address.preferForMedia && isProxy == address.preferForProxy) {
             [bestAddressList addObject:address];
         }
     }
-    
-    if (bestAddressList.count == 0 && media)
+
+    if (bestAddressList.count == 0) {
+        // Nothing matched both preferences. A datacenter whose config carries no `static`
+        // (proxy-preferred) address hits this with a proxy on, and the list used to stay
+        // empty: zero probes, so discovery ticked on its retry timer forever and never
+        // produced a scheme. MTProto still had schemes to dial (the transport uses every
+        // non-media address regardless of the proxy flag), so this was not the outage; the
+        // cost is that with an alive SOCKS proxy the datacenter never converged on a
+        // probed, known-good address, and the gain of probing here is that trade against
+        // one (MTProxy) or a few (SOCKS5) probe connections per backoff round through a
+        // proxy that may itself be down.
+        //
+        // Relax in two stages. First drop only the proxy preference and keep the media
+        // match: the scheme this produces keeps the probed address, and
+        // transportSchemesForDatacenterWithId discards a media-only address for a
+        // non-media connection (and MTTcpConnection derives the MTProxy datacenter tag
+        // from it), so a media address winning a non-media probe would be discovery
+        // succeeding with nothing usable.
+        for (MTDatacenterAddress *address in addressList) {
+            if (media == address.preferForMedia) {
+                [bestAddressList addObject:address];
+            }
+        }
+    }
+    if (bestAddressList.count == 0) {
+        // Second stage, the whole list. This is the fallback media discovery always had.
         [bestAddressList addObjectsFromArray:addressList];
-    
+    }
+
+    if (proxySettings != nil && (proxySettings.secret != nil || proxySettings.webProxy)) {
+        // An MTProxy chooses the datacenter from the obfuscated header and a WEB relay
+        // ignores the address it is handed, so every probe through either lands in the
+        // same place: N of them carry exactly the information of one, and each one is a
+        // connection opened through the proxy. When the proxy is unreachable that fan-out
+        // (addresses x ports, every round) was most of the retry storm the notification
+        // extension produced (bugs.telegram.org/c/64534). Probe a single address, IPv4
+        // first because IPv6 reachability is not otherwise known here.
+        MTDatacenterAddress *chosen = nil;
+        for (MTDatacenterAddress *address in bestAddressList) {
+            if (![self isIpv6:address.ip]) {
+                chosen = address;
+                break;
+            }
+        }
+        if (chosen == nil) {
+            chosen = bestAddressList.firstObject;
+        }
+        return chosen == nil ? @[] : @[chosen];
+    }
+
+    return bestAddressList;
+}
+
++ (NSArray<NSNumber *> *)alternatePortsForProxySettings:(MTSocksProxySettings *)proxySettings
+{
+    // Ports 80 and 5222 exist to get past local port filtering. A proxy already does that,
+    // and through one they only triple the connections each discovery round opens.
+    if (proxySettings != nil) {
+        return @[];
+    }
+    return @[@80, @5222];
+}
+
++ (void)_startBackoffRoundOf:(MTSignal *)signal delay:(NSTimeInterval)delay maxDelay:(NSTimeInterval)maxDelay queue:(MTQueue *)queue subscriber:(MTSubscriber *)subscriber currentDisposable:(MTMetaDisposable *)currentDisposable isDisposed:(MTAtomic *)isDisposed
+{
+    if ([[isDisposed value] boolValue]) {
+        return;
+    }
+    NSTimeInterval nextDelay = MIN(delay * 2.0, maxDelay);
+    MTSignal *round = [signal then:[[MTSignal complete] delay:delay onQueue:queue]];
+    // The recursion happens from the delay timer's completion, so it never grows the stack,
+    // and `currentDisposable` disposes immediately if the outer subscription went away in
+    // between (MTMetaDisposable keeps its disposed state).
+    [currentDisposable setDisposable:[round startWithNext:^(id next) {
+        [subscriber putNext:next];
+    } error:^(id error) {
+        [subscriber putError:error];
+    } completed:^{
+        [self _startBackoffRoundOf:signal delay:nextDelay maxDelay:maxDelay queue:queue subscriber:subscriber currentDisposable:currentDisposable isDisposed:isDisposed];
+    }]];
+}
+
++ (MTSignal *)repeatSignal:(MTSignal *)signal withBackoffFrom:(NSTimeInterval)initialDelay upTo:(NSTimeInterval)maxDelay onQueue:(MTQueue *)queue
+{
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        MTAtomic *isDisposed = [[MTAtomic alloc] initWithValue:@false];
+        MTMetaDisposable *currentDisposable = [[MTMetaDisposable alloc] init];
+        [self _startBackoffRoundOf:signal delay:initialDelay maxDelay:maxDelay queue:queue subscriber:subscriber currentDisposable:currentDisposable isDisposed:isDisposed];
+        return [[MTBlockDisposable alloc] initWithBlock:^{
+            [isDisposed swap:@true];
+            [currentDisposable dispose];
+        }];
+    }];
+}
+
++ (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy
+{
+    MTSocksProxySettings *proxySettings = context.apiEnvironment.socksProxySettings;
+    NSArray<MTDatacenterAddress *> *bestAddressList = [self probeAddressesForAddressList:addressList media:media isProxy:isProxy proxySettings:proxySettings];
+    NSArray<NSNumber *> *alternatePorts = [self alternatePortsForProxySettings:proxySettings];
+
     NSMutableArray *bestTcp4Signals = [[NSMutableArray alloc] init];
     NSMutableArray *bestTcp6Signals = [[NSMutableArray alloc] init];
     NSMutableArray *bestHttpSignals = [[NSMutableArray alloc] init];
@@ -196,8 +297,7 @@
                 return [MTSignal complete];
             }];
             [bestTcp4Signals addObject:signal];
-            
-            NSArray *alternatePorts = @[@80, @5222];
+
             for (NSNumber *nPort in alternatePorts) {
                 NSSet *ipsWithPort = tcpIpsByPort[nPort];
                 if (![ipsWithPort containsObject:address.ip]) {
@@ -216,12 +316,18 @@
         }
     }
     
-    MTSignal *repeatDelaySignal = [[MTSignal complete] delay:1.0 onQueue:[MTQueue concurrentDefaultQueue]];
+    // A round that finds nothing used to be retried after a fixed second, forever. While
+    // the network (or the proxy) is down that is a probe per address per ~6 s with no end,
+    // so the pause between rounds now doubles from 1 s up to 15 s. Each discovery is a
+    // fresh signal, so the backoff resets whenever discovery is restarted.
+    MTQueue *retryQueue = [MTQueue concurrentDefaultQueue];
+    NSTimeInterval const initialRetryDelay = 1.0;
+    NSTimeInterval const maxRetryDelay = 15.0;
     MTSignal *optimalDelaySignal = [[MTSignal complete] delay:30.0 onQueue:[MTQueue concurrentDefaultQueue]];
-    
-    MTSignal *firstTcp4Match = [[[[MTSignal mergeSignals:bestTcp4Signals] then:repeatDelaySignal] restart] take:1];
-    MTSignal *firstTcp6Match = [[[[MTSignal mergeSignals:bestTcp6Signals] then:repeatDelaySignal] restart] take:1];
-    MTSignal *firstHttpMatch = [[[[MTSignal mergeSignals:bestHttpSignals] then:repeatDelaySignal] restart] take:1];
+
+    MTSignal *firstTcp4Match = [[self repeatSignal:[MTSignal mergeSignals:bestTcp4Signals] withBackoffFrom:initialRetryDelay upTo:maxRetryDelay onQueue:retryQueue] take:1];
+    MTSignal *firstTcp6Match = [[self repeatSignal:[MTSignal mergeSignals:bestTcp6Signals] withBackoffFrom:initialRetryDelay upTo:maxRetryDelay onQueue:retryQueue] take:1];
+    MTSignal *firstHttpMatch = [[self repeatSignal:[MTSignal mergeSignals:bestHttpSignals] withBackoffFrom:initialRetryDelay upTo:maxRetryDelay onQueue:retryQueue] take:1];
     
     MTSignal *optimalTcp4Match = [[[[MTSignal mergeSignals:bestTcp4Signals] then:optimalDelaySignal] restart] take:1];
     MTSignal *optimalTcp6Match = [[[[MTSignal mergeSignals:bestTcp6Signals] then:optimalDelaySignal] restart] take:1];
@@ -249,8 +355,12 @@
         MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
         
         [[MTContext contextQueue] dispatchOnQueue:^{
-            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:MTDatacenterAuthInfoSelectorEphemeralMain isCdn:false skipBind:false completion:^(__unused MTDatacenterAuthAction *action, bool success) {
-                [subscriber putNext:@(!success)];
+            MTDatacenterAuthAction *action = [context makeAuthActionWithSelector:MTDatacenterAuthInfoSelectorEphemeralMain isCdn:false skipBind:false completion:^(MTDatacenterAuthAction *action, bool success) {
+                // Only ENCRYPTED_MESSAGE_INVALID means the server no longer knows
+                // the permanent key. Any other failed bind (a 500, a dropped
+                // connection) says nothing about it, and reporting it would log
+                // the user out.
+                [subscriber putNext:@(!success && [MTDatacenterAuthAction bindErrorMeansPermanentKeyIsUnknown:action.bindError])];
                 [subscriber putCompletion];
             }];
             [action execute:context datacenterId:datacenterId];

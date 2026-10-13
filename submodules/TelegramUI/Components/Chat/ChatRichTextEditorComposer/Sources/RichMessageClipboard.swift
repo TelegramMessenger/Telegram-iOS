@@ -15,13 +15,20 @@ import Pasteboard
 /// `registerEmoji`/`registerMedia` closures mint editor-side refs for a one-shot serialization (no live
 /// editor): the emoji's `altText` is filled by the bridge from the chat run's text, and media/tables
 /// degrade per the editor's current fragment scope (their bytes aren't carried on the pasteboard).
-public func richMessagePasteboardItem(fromInstantPage page: InstantPage) -> [String: Any] {
-    let content = chatInputContent(fromInstantPage: page)
-    let doc = document(
+/// Builds an editor `Document` fragment from a `ChatInputContent` using one-shot editor-side refs
+/// (the same `registerEmoji`/`registerMedia` scheme as the rich-message clipboard: emoji `altText` is
+/// filled by the bridge from the run's text; media/table refs are freshly minted). Shared by the
+/// markdown-on-paste hosts and by `richMessagePasteboardItem(fromInstantPage:)`.
+public func pasteFragmentDocument(fromChatInputContent content: ChatInputContent) -> Document {
+    return document(
         fromChatInputContent: content,
         registerEmoji: { fileId, _ in EmojiRef(id: String(fileId), instanceID: BlockID.generate().rawValue) },
         registerMedia: { _ in BlockID.generate().rawValue }
     )
+}
+
+public func richMessagePasteboardItem(fromInstantPage page: InstantPage) -> [String: Any] {
+    let doc = pasteFragmentDocument(fromChatInputContent: chatInputContent(fromInstantPage: page))
     return RichTextEditorClipboard.pasteboardItem(for: doc)
 }
 

@@ -36,17 +36,20 @@ private final class AvatarGalleryContextReferenceContentSource: ContextReference
     }
 }
 
+/// The server photo an entry drawn from the peer record (`TelegramUser.photo`) shows, when the record
+/// says which one it is.
+private func avatarGalleryEntryPeerPhotoId(_ entry: AvatarGalleryEntry) -> Int64? {
+    guard let entryRepresentation = largestImageRepresentation(entry.representations.map({ $0.representation })), let entryResource = entryRepresentation.resource as? CloudPeerPhotoSizeMediaResource else {
+        return nil
+    }
+    return entryResource.photoId
+}
+
 private func avatarGalleryEntryMatchesImage(_ entry: AvatarGalleryEntry, _ image: TelegramMediaImage) -> Bool {
-    guard
-        let entryRepresentation = largestImageRepresentation(entry.representations.map({ $0.representation })),
-        let imageRepresentation = largestImageRepresentation(image.representations)
-    else {
+    guard let photoId = avatarGalleryEntryPeerPhotoId(entry) else {
         return false
     }
-    guard let entryResource = entryRepresentation.resource as? CloudPeerPhotoSizeMediaResource, let imageResource = imageRepresentation.resource as? CloudPhotoSizeMediaResource else {
-        return false
-    }
-    return entryResource.photoId == imageResource.photoId
+    return image.imageId.namespace == Namespaces.Media.CloudImage && image.imageId.id == photoId
 }
 
 private func avatarGalleryEntryWithVideoRepresentations(_ entry: AvatarGalleryEntry, videoRepresentations: [VideoRepresentationWithReference], immediateThumbnailData: Data?) -> AvatarGalleryEntry {
@@ -286,6 +289,113 @@ public func initialAvatarGalleryEntries(account: Account, engine: TelegramEngine
     }
 }
 
+/// Builds a user's gallery from the user's photo list (`photos.getUserPhotos`).
+///
+/// The first slot is the peer record's current photo, `firstEntry`: it is the circle the gallery
+/// expands from, and it is labelled the main photo. The list keeps its order when an older photo is
+/// made the main one again (`photos.updateProfilePhoto` with an existing photo): the server replaces
+/// that photo in the list with a copy under a new id and makes the copy the current photo. So the
+/// current photo is looked up in the list and moved to the front rather than assumed to be first.
+/// Drawing it over whatever the list starts with showed it twice and hid that photo
+/// (bugs.telegram.org/c/15276). A current photo the list is known not to contain (the list stops at
+/// 100, or the record is stale) gets a slot of its own for the same reason.
+///
+/// A personal photo, one the viewer set for a contact, is never in the contact's list. It takes the
+/// place of the contact's current public photo, `secondEntry`, which is moved to the front and shown
+/// again right after it; when that photo is not known, the list's first photo stands in for it.
+/// `secondEntry` is only read for a personal photo. `lastEntry` is the fallback photo.
+public func avatarGalleryUserEntries(peer: EnginePeer, peerReference: PeerReference, photos: [TelegramPeerPhoto], firstEntry: AvatarGalleryEntry?, secondEntry: TelegramMediaImage?, lastEntry: TelegramMediaImage?) -> [AvatarGalleryEntry] {
+    let isPersonal = firstEntry?.representations.first?.representation.isPersonal == true
+
+    var photos = photos
+    var firstEntryHasOwnSlot = false
+    if isPersonal {
+        if let secondEntry {
+            if let index = photos.firstIndex(where: { $0.image.imageId == secondEntry.imageId }) {
+                photos.insert(photos.remove(at: index), at: 0)
+            } else {
+                photos.insert(TelegramPeerPhoto(image: secondEntry, reference: secondEntry.reference, date: photos.first?.date ?? 0, index: 0, totalCount: 0, messageId: nil), at: 0)
+            }
+        }
+        if let current = photos.first {
+            photos.insert(current, at: 1)
+        }
+    } else if let firstEntry, avatarGalleryEntryPeerPhotoId(firstEntry) != nil {
+        if let index = photos.firstIndex(where: { avatarGalleryEntryMatchesImage(firstEntry, $0.image) }) {
+            photos.insert(photos.remove(at: index), at: 0)
+        } else {
+            firstEntryHasOwnSlot = true
+        }
+    }
+    if let lastEntry {
+        photos.append(TelegramPeerPhoto(image: lastEntry, reference: lastEntry.reference, date: 0, index: photos.count, totalCount: 0, messageId: nil))
+    }
+
+    var result: [AvatarGalleryEntry] = []
+    if firstEntryHasOwnSlot, let firstEntry {
+        result.append(firstEntry)
+    }
+    for photo in photos {
+        if result.isEmpty, let first = firstEntry {
+            var videoRepresentations: [VideoRepresentationWithReference] = first.videoRepresentations
+            var emojiMarkup: TelegramMediaImage.EmojiMarkup? = first.emojiMarkup
+            if videoRepresentations.isEmpty, !isPersonal {
+                videoRepresentations = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
+            }
+            if emojiMarkup == nil, !isPersonal {
+                emojiMarkup = photo.image.emojiMarkup
+            }
+
+            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, isPersonal ? 0 : photo.date, nil, photo.messageId, first.immediateThumbnailData ?? photo.image.immediateThumbnailData, nil, false, emojiMarkup))
+        } else {
+            result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, nil, photo.messageId, photo.image.immediateThumbnailData, nil, photo.image.id == lastEntry?.id, photo.image.emojiMarkup))
+        }
+    }
+    if result.isEmpty, let firstEntry {
+        result.append(firstEntry)
+    }
+    return normalizeEntries(result)
+}
+
+/// `entries`, keeping for a photo that `shown` also contains the image it is shown with when that
+/// image is on disk and the rebuilt one is not (`isOnDisk` tells whether an entry's largest image
+/// is).
+///
+/// After a change of main photo the rebuilt list draws the previous main photo from its own sizes,
+/// which were never needed while the account record was drawing it and so were never downloaded;
+/// taking it as rebuilt reloaded a photo that is on screen and downloaded it again. The rebuilt image
+/// is preferred otherwise: it is the one the profile header shows (which matches entries by value to
+/// hide the one the gallery covers), and its reference stays valid, where the record's peer-photo
+/// location of a photo that is no longer the current one may not.
+///
+/// A photo listed twice in either list (a personal photo's slot carries the id of the public photo
+/// after it) is left as rebuilt, since there is no telling which image belongs to which slot.
+public func avatarGalleryEntries(_ entries: [AvatarGalleryEntry], keepingImagesOf shown: [AvatarGalleryEntry], isOnDisk: (AvatarGalleryEntry) -> Bool) -> [AvatarGalleryEntry] {
+    func imageId(_ entry: AvatarGalleryEntry) -> EngineMedia.Id? {
+        if case let .image(id, _, _, _, _, _, _, _, _, _, _, _) = entry {
+            return id
+        } else {
+            return nil
+        }
+    }
+    var occurrences: [EngineMedia.Id: Int] = [:]
+    for id in (entries + shown).compactMap(imageId) {
+        occurrences[id, default: 0] += 1
+    }
+    var shownImages: [EngineMedia.Id: AvatarGalleryEntry] = [:]
+    for entry in shown {
+        if let id = imageId(entry), occurrences[id] == 2 {
+            shownImages[id] = entry
+        }
+    }
+    return entries.map { entry in
+        guard case let .image(id, reference, _, _, peer, date, indexData, messageId, _, caption, isFallback, emojiMarkup) = entry, let shownEntry = shownImages[id], !isOnDisk(entry), isOnDisk(shownEntry) else {
+            return entry
+        }
+        return .image(id, reference, shownEntry.representations, shownEntry.videoRepresentations, peer, date, indexData, messageId, shownEntry.immediateThumbnailData, caption, isFallback, emojiMarkup)
+    }
+}
+
 public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: EnginePeer) -> Signal<[AvatarGalleryEntry], NoError> {
     return initialAvatarGalleryEntries(account: account, engine: engine, peer: peer)
     |> map { entries -> [AvatarGalleryEntry] in
@@ -328,15 +438,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                             index += 1
                         }
                     } else {
-                        for photo in photos {
-                            let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                            if result.isEmpty, let first = initialEntries.first {
-                                result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false, photo.image.emojiMarkup))
-                            } else {
-                                result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false, photo.image.emojiMarkup))
-                            }
-                            index += 1
-                        }
+                        result = avatarGalleryUserEntries(peer: peer, peerReference: peerReference, photos: photos, firstEntry: initialEntries.first, secondEntry: nil, lastEntry: nil)
                     }
                 }
                 return result
@@ -396,32 +498,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                         index += 1
                     }
                 } else {
-                    var photos = photos
-                    if let secondEntry {
-                        photos.insert(TelegramPeerPhoto(image: secondEntry, reference: secondEntry.reference, date: photos.first?.date ?? 0, index: 1, totalCount: 0, messageId: nil), at: 1)
-                    }
-                    if let lastEntry {
-                        photos.append(TelegramPeerPhoto(image: lastEntry, reference: lastEntry.reference, date: 0, index: photos.count, totalCount: 0, messageId: nil))
-                    }
-                    for photo in photos {
-                        let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                        if result.isEmpty, let first = initialEntries.first {
-                            var videoRepresentations: [VideoRepresentationWithReference] = first.videoRepresentations
-                            var emojiMarkup: TelegramMediaImage.EmojiMarkup? = first.emojiMarkup
-                            let isPersonal = first.representations.first?.representation.isPersonal == true
-                            if videoRepresentations.isEmpty, !isPersonal {
-                                videoRepresentations = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
-                            }
-                            if emojiMarkup == nil, !isPersonal {
-                                emojiMarkup = photo.image.emojiMarkup
-                            }
-                            
-                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, secondEntry != nil ? 0 : photo.date, indexData, photo.messageId, first.immediateThumbnailData ?? photo.image.immediateThumbnailData, nil, false, emojiMarkup))
-                        } else {
-                            result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, photo.image.id == lastEntry?.id, photo.image.emojiMarkup))
-                        }
-                        index += 1
-                    }
+                    result = avatarGalleryUserEntries(peer: peer, peerReference: peerReference, photos: photos, firstEntry: firstEntry, secondEntry: secondEntry, lastEntry: lastEntry)
                 }
             }
             return (true, result)
@@ -482,7 +559,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     
     private let editDisposable = MetaDisposable ()
-    
+    private let rebuiltEntriesDisposable = MetaDisposable()
+    private var localEntriesChangeCount = 0
+
     public init(context: AccountContext, peer: EnginePeer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, isSuggested: Bool = false, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
@@ -625,6 +704,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
         self.editDisposable.dispose()
+        self.rebuiltEntriesDisposable.dispose()
     }
     
     @objc func donePressed() {
@@ -812,7 +892,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
                 self.preferredContentSize = itemSize.aspectFitted(self.view.bounds.size)
-                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(),  statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(),  statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false), transition: .immediate)
                 centralItemNode.activateAsInitial()
             }
         }
@@ -837,7 +917,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         return canDelete
     }
     
-    private func replaceEntries(_ entries: [AvatarGalleryEntry]) {
+    private func replaceEntries(_ entries: [AvatarGalleryEntry], centralItemIndex: Int = 0) {
         self.galleryNode.currentThumbnailContainerNode?.updateSynchronously = true
         self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] sourceView in
             self?.presentDeleteEntryConfirmation(entry, sourceView: sourceView, gesture: nil)
@@ -845,17 +925,74 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.setMainEntry(entry)
         }, edit: { [weak self] sourceView, gesture in
             self?.editEntry(entry, sourceView: sourceView, gesture: gesture)
-        }) }), centralItemIndex: 0, synchronous: true)
+        }) }), centralItemIndex: centralItemIndex, synchronous: true)
         self.entries = entries
         self.galleryNode.currentThumbnailContainerNode?.updateSynchronously = false
     }
-    
+
+    /// Starts a local change of the entries (a new main photo, a removal), which supersedes any
+    /// earlier one still waiting for its result or its rebuilt list: applied late, those would undo it.
+    private func beginLocalEntriesChange() -> Int {
+        self.localEntriesChangeCount += 1
+        self.rebuiltEntriesDisposable.set(nil)
+        return self.localEntriesChangeCount
+    }
+
+    /// Takes the account's rebuilt photo list once it starts with the new main photo, so the gallery
+    /// shows the order the profile header and every later gallery will (`avatarGalleryUserEntries`).
+    /// The gallery's own entries cannot produce it: they are no longer in the server's order once a
+    /// photo has been moved to the front. The photo on screen stays on screen, and photos keep the
+    /// images they are shown with where the rebuilt ones are not on disk
+    /// (`avatarGalleryEntries(_:keepingImagesOf:isOnDisk:)`). A list that never starts with the new
+    /// photo is not waited for past a few seconds: taken later, it would replace the gallery at an
+    /// arbitrary moment.
+    private func adoptRebuiltEntries(mainPhotoId: EngineMedia.Id) {
+        self.rebuiltEntriesDisposable.set((peerInfoProfilePhotosWithCache(context: self.context, peerId: self.peer.id)
+        |> filter { complete, entries in
+            guard complete, let first = entries.first, case let .image(id, _, _, _, _, _, _, _, _, _, _, _) = first else {
+                return false
+            }
+            return id == mainPhotoId
+        }
+        |> take(1)
+        |> timeout(10.0, queue: Queue.mainQueue(), alternate: .complete())
+        |> deliverOnMainQueue).start(next: { [weak self] _, entries in
+            guard let self else {
+                return
+            }
+            let resources = self.context.engine.resources
+            let entries = normalizeEntries(avatarGalleryEntries(entries, keepingImagesOf: self.entries, isOnDisk: { entry in
+                guard let representation = largestImageRepresentation(entry.representations.map({ $0.representation })) else {
+                    return false
+                }
+                return resources.completedResourcePath(id: EngineMediaResource.Id(representation.resource.id)) != nil
+            }))
+
+            var centralItemIndex = 0
+            if let centralItemNode = self.galleryNode.pager.centralItemNode(), centralItemNode.index < self.entries.count, case let .image(centralId, _, _, _, _, _, _, _, _, _, _, _) = self.entries[centralItemNode.index] {
+                if let index = entries.firstIndex(where: { entry in
+                    if case let .image(id, _, _, _, _, _, _, _, _, _, _, _) = entry {
+                        return id == centralId
+                    } else {
+                        return false
+                    }
+                }) {
+                    centralItemIndex = index
+                }
+            }
+            self.replaceEntries(entries, centralItemIndex: centralItemIndex)
+            if let firstEntry = self.entries.first {
+                self._hiddenMedia.set(.single(firstEntry))
+            }
+        }))
+    }
+
     private func setMainEntry(_ rawEntry: AvatarGalleryEntry) {
         var entry = rawEntry
         if case .topImage = entry, !self.entries.isEmpty {
             entry = self.entries[0]
         }
-        
+
         switch entry {
             case .topImage:
                 if self.peer.id == self.context.account.peerId {
@@ -863,23 +1000,13 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 }
             case let .image(_, reference, _, _, _, _, _, _, _, _, _, _):
             if self.peer.id == self.context.account.peerId, let peerReference = PeerReference(self.peer) {
+                    let changeCount = self.beginLocalEntriesChange()
                     if let reference = reference {
-                        let _ = (self.context.engine.accountData.updatePeerPhotoExisting(reference: reference)
+                        let _ = (self.context.engine.accountData.updatePeerPhotoExisting(reference: reference, representations: entry.representations.map({ $0.representation }), videoRepresentations: entry.videoRepresentations.map({ $0.representation }))
                         |> deliverOnMainQueue).start(next: { [weak self] photo in
-                            if let strongSelf = self, let photo = photo, let firstEntry = strongSelf.entries.first, case let .image(_, _, _, _, _, index, indexData, messageId, _, caption, _, emojiMarkup) = firstEntry {
+                            if let strongSelf = self, strongSelf.localEntriesChangeCount == changeCount, let photo = photo, let firstEntry = strongSelf.entries.first, case let .image(_, _, _, _, _, index, indexData, messageId, _, caption, _, emojiMarkup) = firstEntry {
                                 let updatedEntry = AvatarGalleryEntry.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), strongSelf.peer, index, indexData, messageId, photo.immediateThumbnailData, caption, false, emojiMarkup)
-                                
-                                for (lhs, rhs) in zip(firstEntry.representations, updatedEntry.representations) {
-                                    if lhs.representation.dimensions == rhs.representation.dimensions {
-                                        strongSelf.context.engine.resources.copyResourceData(from: EngineMediaResource.Id(lhs.representation.resource.id), to: EngineMediaResource.Id(rhs.representation.resource.id), synchronous: true)
-                                    }
-                                }
-                                for (lhs, rhs) in zip(firstEntry.videoRepresentations, updatedEntry.videoRepresentations) {
-                                    if lhs.representation.dimensions == rhs.representation.dimensions {
-                                        strongSelf.context.engine.resources.copyResourceData(from: EngineMediaResource.Id(lhs.representation.resource.id), to: EngineMediaResource.Id(rhs.representation.resource.id), synchronous: true)
-                                    }
-                                }
-                                
+
                                 var entries = strongSelf.entries
                                 entries.remove(at: 0)
                                 entries.insert(updatedEntry, at: 0)
@@ -887,21 +1014,30 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                                 if let firstEntry = strongSelf.entries.first {
                                     strongSelf._hiddenMedia.set(.single(firstEntry))
                                 }
+                                strongSelf.adoptRebuiltEntries(mainPhotoId: photo.imageId)
                             }
                         })
                     }
 
                     if let index = self.entries.firstIndex(of: entry) {
+                        // Only a first guess at the new order: it is right while the gallery is in
+                        // the server's order, which an earlier change here may have undone. The
+                        // rebuilt list replaces it once the change is applied.
                         var entries = self.entries
-                        
-                        let previousFirstEntry = entries.first
                         entries.remove(at: index)
-                        entries.remove(at: 0)
+                        // A slot without a photo stands for a current photo the list does not
+                        // contain. Once another photo is the main one it stands for nothing this
+                        // gallery can act on (Remove on it resolves to the first entry, which would
+                        // now be the new main photo), and the rebuilt list does not have it either.
+                        entries.removeAll(where: { entry in
+                            if case .topImage = entry {
+                                return true
+                            } else {
+                                return false
+                            }
+                        })
                         entries.insert(entry, at: 0)
-                        if let previousFirstEntry = previousFirstEntry {
-                            entries.insert(previousFirstEntry, at: index)
-                        }
-                                              
+
                         self.replaceEntries(normalizeEntries(entries))
                         if let firstEntry = self.entries.first {
                             self._hiddenMedia.set(.single(firstEntry))
@@ -1012,6 +1148,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     }
 
     private func performDeleteEntry(_ rawEntry: AvatarGalleryEntry) {
+        let _ = self.beginLocalEntriesChange()
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         var entry = rawEntry
         if case .topImage = entry, !self.entries.isEmpty {
@@ -1028,6 +1165,12 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         switch entry {
             case .topImage:
                 if self.peer.id == self.context.account.peerId {
+                    // A top image carries no photo reference, so it can only be removed as "the
+                    // current profile photo". Without this, deleting is a silent no-op whenever
+                    // the photo list has not been fetched yet and the only entry is the one
+                    // derived from the peer record.
+                    let _ = self.context.engine.accountData.removeAccountPhoto(reference: nil).start()
+                    dismiss = true
                 } else {
                     if entry == self.entries.first {
                         let _ = self.context.engine.peers.updatePeerPhoto(peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()

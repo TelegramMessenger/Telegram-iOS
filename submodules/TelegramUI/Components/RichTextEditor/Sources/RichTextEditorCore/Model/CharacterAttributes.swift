@@ -20,6 +20,9 @@ public struct CharacterAttributes: Codable, Equatable {
     /// An inline math formula stored as its LaTeX source. The editor may render it as a one-character
     /// atom; raw LaTeX remains the visible fallback and chat/plain-text representation.
     public var formula: String?
+    /// An inline InstantPage button. When non-nil this run's text MUST be exactly one `U+FFFC` (the
+    /// pill occupies one UTF-16 position), matching `emoji` and `formula`. Has no Markdown form.
+    public var button: ButtonRef?
     /// Telegram-style spoiler: the run's text is hidden behind an animated "dust" overlay (UIKit) until
     /// revealed. Additive — suppresses no other attribute. No Markdown form yet (deferred to Phase 5c).
     public var spoiler: Bool
@@ -38,6 +41,7 @@ public struct CharacterAttributes: Codable, Equatable {
         baselineOffset: Double? = nil,
         emoji: EmojiRef? = nil,
         formula: String? = nil,
+        button: ButtonRef? = nil,
         spoiler: Bool = false
     ) {
         self.bold = bold
@@ -53,6 +57,7 @@ public struct CharacterAttributes: Codable, Equatable {
         self.baselineOffset = baselineOffset
         self.emoji = emoji
         self.formula = formula
+        self.button = button
         self.spoiler = spoiler
     }
 
@@ -60,7 +65,7 @@ public struct CharacterAttributes: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case bold, italic, underline, strikethrough, inlineCode
-        case fontFamily, fontSize, foreground, highlight, link, baselineOffset, emoji, formula, spoiler
+        case fontFamily, fontSize, foreground, highlight, link, baselineOffset, emoji, formula, button, spoiler
     }
 
     // Custom decode so documents written before a field existed still load (synthesized Codable
@@ -81,6 +86,7 @@ public struct CharacterAttributes: Codable, Equatable {
         baselineOffset = try c.decodeIfPresent(Double.self, forKey: .baselineOffset)
         emoji = try c.decodeIfPresent(EmojiRef.self, forKey: .emoji)
         formula = try c.decodeIfPresent(String.self, forKey: .formula)
+        button = try c.decodeIfPresent(ButtonRef.self, forKey: .button)
         spoiler = try c.decodeIfPresent(Bool.self, forKey: .spoiler) ?? false
     }
 }

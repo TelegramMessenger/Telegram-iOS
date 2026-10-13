@@ -1,4 +1,6 @@
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 ffmpeg_header_paths = [
     "libavutil/hwcontext.h",
     "libavutil/time.h",
@@ -96,7 +98,6 @@ ffmpeg_header_paths = [
     "libavcodec/codec_par.h",
     "libavcodec/codec_desc.h",
     "libavcodec/videotoolbox.h",
-    "libavcodec/avfft.h",
     "libavcodec/codec.h",
     "libavcodec/packet.h",
     "libavcodec/version_major.h",
@@ -264,7 +265,7 @@ genrule(
 
         VARIANT=release
 
-        FFMPEG_VERSION="7.1.1"
+        FFMPEG_VERSION="8.1.2"
 
         if [ "$(TARGET_CPU)" == "ios_arm64" ]; then
             BUILD_ARCH="arm64"

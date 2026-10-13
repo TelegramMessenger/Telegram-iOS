@@ -14,6 +14,7 @@ import MultilineTextComponent
 import PlainButtonComponent
 import ComponentDisplayAdapters
 import AccountContext
+import GlassBackgroundComponent
 
 private let labelFont = Font.regular(15.0)
 
@@ -58,7 +59,9 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
         }
     }
 
+    private let backgroundView: GlassBackgroundView
     private let button = ComponentView<Empty>()
+    private let tintContent = ComponentView<Empty>()
     
     private var params: Params?
     private var currentLayout: Layout?
@@ -69,7 +72,11 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
     }
     
     init(theme: PresentationTheme) {
+        self.backgroundView = GlassBackgroundView()
+        
         super.init()
+        
+        self.view.addSubview(self.backgroundView)
     }
     
     deinit {
@@ -106,8 +113,12 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
         let buttonSubtitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholderAction
         
         var buttonContents: [AnyComponentWithIdentity<Empty>] = []
+        var tintContents: [AnyComponentWithIdentity<Empty>] = []
         buttonContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
             text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.secondaryTextColor))
+        ))))
+        tintContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+            text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(13.0), textColor: .black))
         ))))
         if let context = self.context {
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
@@ -115,31 +126,69 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
                 buttonContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: buttonSubtitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor))
                 ))))
+                tintContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: buttonSubtitle, font: Font.regular(13.0), textColor: .black))
+                ))))
             }
         }
 
-        let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0 - 32.0, height: height)
+        let buttonHeight: CGFloat = 40.0
+        let horizontalContentInset: CGFloat = 12.0
+        let size = CGSize(width: max(1.0, params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0 - 32.0), height: buttonHeight)
         let buttonSize = self.button.update(
             transition: .immediate,
             component: AnyComponent(PlainButtonComponent(
                 content: AnyComponent(VStack(buttonContents, spacing: 1.0)),
                 effectAlignment: .center,
-                minSize: size,
+                minSize: CGSize(width: 1.0, height: buttonHeight),
+                contentInsets: UIEdgeInsets(top: 0.0, left: horizontalContentInset, bottom: 0.0, right: horizontalContentInset),
                 action: { [weak self] in
                     guard let self else {
                         return
                     }
                     self.interfaceInteraction?.openPremiumRequiredForMessaging()
-                }
+                },
+                animateAlpha: false,
+                animateScale: false
             )),
             environment: {},
             containerSize: size
         )
+        let backgroundFrame = CGRect(
+            origin: CGPoint(
+                x: floorToScreenPixels((params.width - buttonSize.width) / 2.0),
+                y: floorToScreenPixels((height - buttonHeight) / 2.0)
+            ),
+            size: buttonSize
+        )
+        transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+        self.backgroundView.update(size: backgroundFrame.size, cornerRadius: buttonHeight * 0.5, isDark: params.interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
+        
         if let buttonView = self.button.view {
             if buttonView.superview == nil {
-                self.view.addSubview(buttonView)
+                self.backgroundView.contentView.addSubview(buttonView)
             }
-            transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - buttonSize.width) / 2.0), y: 0.0), size: buttonSize))
+            transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(), size: buttonSize))
+        }
+        
+        let tintContentSize = self.tintContent.update(
+            transition: .immediate,
+            component: AnyComponent(VStack(tintContents, spacing: 1.0)),
+            environment: {},
+            containerSize: CGSize(width: max(1.0, buttonSize.width - horizontalContentInset * 2.0), height: buttonHeight)
+        )
+        if let tintContentView = self.tintContent.view {
+            if tintContentView.superview == nil {
+                tintContentView.isUserInteractionEnabled = false
+                self.backgroundView.maskContentView.addSubview(tintContentView)
+            }
+            transition.setFrame(view: tintContentView, frame: CGRect(
+                origin: CGPoint(
+                    x: floor((buttonSize.width - tintContentSize.width) * 0.5),
+                    y: floor((buttonSize.height - tintContentSize.height) * 0.5)
+                ),
+                size: tintContentSize
+            ))
         }
 
         return height

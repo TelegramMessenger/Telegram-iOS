@@ -136,7 +136,10 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         [self addSubview:_icon];
         
         _button = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44)];
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _button.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         _button.contentMode = UIViewContentModeCenter;
         _button.exclusiveTouch = true;
         _button.hitTestEdgeInsets = UIEdgeInsetsMake(0, -10, 0, -10);

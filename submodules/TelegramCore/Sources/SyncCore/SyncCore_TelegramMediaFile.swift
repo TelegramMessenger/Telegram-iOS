@@ -982,8 +982,15 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return nil
         }
     }
+
+    private var isSecretChatTgs: Bool {
+        return self.mimeType == "application/x-tgsticker" && self.fileId.namespace == Namespaces.Media.CloudSecretFile
+    }
     
     public var isSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         for attribute in self.attributes {
             if case .Sticker = attribute {
                 return true
@@ -993,6 +1000,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isStaticSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         for attribute in self.attributes {
             if case .Sticker = attribute {
                 if let s = self.size, s < 300 * 1024 {
@@ -1042,6 +1052,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isAnimated: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         for attribute in self.attributes {
             if case .Animated = attribute {
                 return true
@@ -1051,6 +1064,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isAnimatedSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         if let _ = self.fileName, self.mimeType == "application/x-tgsticker" {
             return true
         }
@@ -1336,6 +1352,13 @@ public extension TelegramMediaFile.Accessor {
     var id: MediaId {
         return self.fileId
     }
+
+    private var isSecretChatTgs: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.mimeType == "application/x-tgsticker" && _wrappedFile.fileId.namespace == Namespaces.Media.CloudSecretFile
+        }
+        return self._wrapped!.mimeType == "application/x-tgsticker" && self.fileId.namespace == Namespaces.Media.CloudSecretFile
+    }
     
     var fileName: String? {
         get {
@@ -1355,6 +1378,9 @@ public extension TelegramMediaFile.Accessor {
     }
     
     var isSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         if let _wrappedFile = self._wrappedFile {
             return _wrappedFile.isSticker
         }
@@ -1368,6 +1394,9 @@ public extension TelegramMediaFile.Accessor {
     }
     
     var isStaticSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         if let _wrappedFile = self._wrappedFile {
             return _wrappedFile.isStaticSticker
         }
@@ -1442,6 +1471,9 @@ public extension TelegramMediaFile.Accessor {
     }
     
     var isAnimated: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         if let _wrappedFile = self._wrappedFile {
             return _wrappedFile.isAnimated
         }
@@ -1455,6 +1487,9 @@ public extension TelegramMediaFile.Accessor {
     }
     
     var isAnimatedSticker: Bool {
+        if self.isSecretChatTgs {
+            return false
+        }
         if let _wrappedFile = self._wrappedFile {
             return _wrappedFile.isAnimatedSticker
         }

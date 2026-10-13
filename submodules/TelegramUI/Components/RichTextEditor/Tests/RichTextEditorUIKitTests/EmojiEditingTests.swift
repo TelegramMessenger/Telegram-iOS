@@ -63,7 +63,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_insertEmoji_insertsOneCharRun_caretAfter() {
         let c = makeCanvas(text: "ab")
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor   // between a and b
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)   // between a and b
         c.insertEmoji(id: "star", altText: ":star:")
         let run = firstEmojiRun(c)
         XCTAssertEqual(run?.text, "\u{FFFC}")
@@ -73,7 +73,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_insertEmoji_generatesUniqueInstanceIDs() {
         let c = makeCanvas(text: "")
-        c.anchor = c.boxes[0].textStart; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart)
         c.insertEmoji(id: "star", altText: nil)
         c.insertEmoji(id: "star", altText: nil)
         let ids = c.currentBlocks().compactMap { b -> [TextRun]? in
@@ -85,7 +85,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_insertEmoji_isOneUndoStep() {
         let c = makeCanvas(text: "ab")
         let um = UndoManager(); um.groupsByEvent = false; c.undoManagerOverride = um
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         um.beginUndoGrouping(); c.insertEmoji(id: "star", altText: nil); um.endUndoGrouping()
         XCTAssertNotNil(firstEmojiRun(c))
         um.undo()
@@ -94,7 +94,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_deleteBackward_removesEmoji() {
         let c = makeCanvas(text: "ab")
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: nil)   // caret now after emoji
         c.deleteBackward()
         XCTAssertNil(firstEmojiRun(c))
@@ -103,7 +103,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_insertFormula_insertsOneCharAtom_caretAfter() {
         let c = makeCanvas(text: "ab")
         installFormulaRenderer(c)
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertFormula(latex: "x^2")
         let run = firstFormulaRun(c)
         XCTAssertEqual(run?.text, "\u{FFFC}")
@@ -114,7 +114,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_textIn_substitutesFormulaLatex() {
         let c = makeCanvas(text: "ab")
         installFormulaRenderer(c)
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertFormula(latex: "x^2")
         let range = DocumentTextRange(DocumentTextPosition(0),
                                       DocumentTextPosition(c.documentSizeValue))
@@ -124,7 +124,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_deleteBackward_removesFormulaAtom() {
         let c = makeCanvas(text: "ab")
         installFormulaRenderer(c)
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertFormula(latex: "x^2")
         c.deleteBackward()
         XCTAssertNil(firstFormulaRun(c))
@@ -133,7 +133,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_typingAfterRenderedFormulaDoesNotInheritFormula() {
         let c = makeCanvas(text: "")
         installFormulaRenderer(c)
-        c.anchor = c.boxes[0].textStart; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart)
 
         c.insertFormula(latex: "x^2")
         c.insertText(" after")
@@ -146,7 +146,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_typingAfterRawLatexFormulaDoesNotInheritFormula() {
         let c = makeCanvas(text: "")   // no renderer: the formula is visible as raw LaTeX
-        c.anchor = c.boxes[0].textStart; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart)
 
         c.insertFormula(latex: "x^2")
         c.insertText(" after")
@@ -161,10 +161,10 @@ final class EmojiEditingTests: XCTestCase {
         let c = makeCanvas(text: "")
         installFormulaRenderer(c)
         let lineStart = c.boxes[0].textStart
-        c.anchor = lineStart; c.head = lineStart
+        c.setSelectionForTesting(anchor: lineStart, head: lineStart)
         c.insertFormula(latex: "x^2")
 
-        c.anchor = lineStart; c.head = lineStart
+        c.setSelectionForTesting(anchor: lineStart, head: lineStart)
         c.insertText("before ")
 
         let runs = firstParagraphRuns(c)
@@ -176,7 +176,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_tapFormula_requestsEditAndReplacesAtom() throws {
         let c = makeCanvas(text: "ab")
         installFormulaRenderer(c)
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertFormula(latex: "x^2")
         c.layoutIfNeeded()
 
@@ -206,7 +206,7 @@ final class EmojiEditingTests: XCTestCase {
 
     private func caretToEnd(_ c: DocumentCanvasView) {
         let end = c.boxes[0].textStart + c.boxes[0].textLength
-        c.anchor = end; c.head = end
+        c.setSelectionForTesting(anchor: end, head: end)
     }
 
     func test_deleteBackward_removesWholeSurrogatePairEmoji() {
@@ -242,7 +242,7 @@ final class EmojiEditingTests: XCTestCase {
         // (observed: selFrom/selTo split the emoji). Deleting it verbatim leaves a stray code unit.
         let c = makeCanvas(text: "a\u{1F600}")   // "a😀" — a(0..1), 😀(1..3)
         let base = c.boxes[0].textStart
-        c.anchor = base + 2; c.head = base + 3   // selection of ONLY the low surrogate half
+        c.setSelectionForTesting(anchor: base + 2, head: base + 3)   // selection of ONLY the low surrogate half
         c.deleteBackward()
         XCTAssertEqual(firstParagraphText(c), "a", "a partial-grapheme selection delete removes the whole emoji, not half")
     }
@@ -250,7 +250,7 @@ final class EmojiEditingTests: XCTestCase {
     func test_insertText_overPartialGraphemeSelection_replacesWholeEmoji() {
         let c = makeCanvas(text: "a\u{1F600}b")   // "a😀b"
         let base = c.boxes[0].textStart
-        c.anchor = base + 2; c.head = base + 3    // partial emoji
+        c.setSelectionForTesting(anchor: base + 2, head: base + 3)   // partial emoji
         c.insertText("X")
         XCTAssertEqual(firstParagraphText(c), "aXb", "typing over a partial-grapheme selection replaces the whole emoji")
     }
@@ -271,7 +271,7 @@ final class EmojiEditingTests: XCTestCase {
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400)
         c.layoutIfNeeded()
         guard let gap = c.boxes.first(where: { $0 is MediaBlockBox })?.nodeStart else { return XCTFail("no image") }
-        c.anchor = gap; c.head = gap   // the image gap (region-less but renderable)
+        c.setSelectionForTesting(anchor: gap, head: gap)   // the image gap (region-less but renderable)
         let before = c.currentBlocks().count
         c.insertEmoji(id: "star", altText: nil)
         XCTAssertNil(firstEmojiRun(c), "an emoji at an image gap is a no-op (no inline place to land)")
@@ -280,7 +280,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_insertEmoji_atDocumentStart_landsInFirstParagraph() {
         let c = makeCanvas(text: "ab")
-        c.anchor = 0; c.head = 0   // document-start structural slot (before the first paragraph's text)
+        c.setSelectionForTesting(anchor: 0, head: 0)   // document-start structural slot (before the first paragraph's text)
         c.insertEmoji(id: "star", altText: nil)
         XCTAssertEqual(firstEmojiRun(c)?.attributes.emoji?.id, "star")
         let para = c.currentBlocks().compactMap { b -> ParagraphBlock? in
@@ -291,7 +291,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_insertEmoji_replacesNonEmptySelection() {
         let c = makeCanvas(text: "ab")
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart + 2   // select "ab"
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart + 2)   // select "ab"
         c.insertEmoji(id: "star", altText: nil)
         let runs = c.currentBlocks().compactMap { b -> [TextRun]? in
             if case let .paragraph(p) = b { return p.runs }; return nil
@@ -303,7 +303,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_textIn_substitutesAltText() {
         let c = makeCanvas(text: "ab")
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: ":star:")
         let range = DocumentTextRange(DocumentTextPosition(0),
                                       DocumentTextPosition(c.documentSizeValue))
@@ -312,7 +312,7 @@ final class EmojiEditingTests: XCTestCase {
 
     func test_textIn_skipsEmojiWithNoAltText() {
         let c = makeCanvas(text: "ab")
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: nil)
         let range = DocumentTextRange(DocumentTextPosition(0),
                                       DocumentTextPosition(c.documentSizeValue))

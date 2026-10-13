@@ -505,6 +505,28 @@ func _internal_attachMenuBots(postbox: Postbox) -> Signal<[AttachMenuBot], NoErr
     }
 }
 
+func _internal_attachMenuBotsUpdates(postbox: Postbox) -> Signal<[AttachMenuBot], NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: 0)
+    let cacheKey: PostboxViewKey = .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.attachMenuBots, key: key))
+    return postbox.combinedView(keys: [cacheKey])
+    |> mapToSignal { _ -> Signal<[AttachMenuBot], NoError> in
+        return postbox.transaction { transaction -> [PeerId] in
+            return cachedAttachMenuBots(transaction: transaction)?.bots.map(\.peerId) ?? []
+        }
+        |> mapToSignal { peerIds -> Signal<[AttachMenuBot], NoError> in
+            if peerIds.isEmpty {
+                return _internal_attachMenuBots(postbox: postbox)
+            }
+            return postbox.combinedView(keys: peerIds.map { PostboxViewKey.basicPeer($0) })
+            |> mapToSignal { _ -> Signal<[AttachMenuBot], NoError> in
+                return _internal_attachMenuBots(postbox: postbox)
+            }
+        }
+    }
+    |> distinctUntilChanged
+}
+
 public enum GetAttachMenuBotError {
     case generic
 }

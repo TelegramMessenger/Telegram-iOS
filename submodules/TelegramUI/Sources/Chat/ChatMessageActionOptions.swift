@@ -891,7 +891,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceView: UIV
     
     let items = linkOptions
     |> deliverOnMainQueue
-    |> map { [weak selfController] linkOptions -> ContextController.Items in
+    |> map { [weak selfController, chatController] linkOptions -> ContextController.Items in
         guard let selfController else {
             return ContextController.Items(id: AnyHashable(linkOptions.url), content: .list([]))
         }

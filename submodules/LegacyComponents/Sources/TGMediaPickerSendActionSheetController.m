@@ -25,7 +25,10 @@
     self = [super init];
     if (self != nil) {
         _buttonView = [[TGModernButton alloc] init];
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _buttonView.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         
         __weak TGMediaPickerSendActionSheetItemView *weakSelf = self;
         _buttonView.highlitedChanged = ^(bool highlighted) {
@@ -208,8 +211,11 @@
     UIImage *doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
     
     _sendButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0, 0.0, 33.0, 33.0)];
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
     _sendButton.adjustsImageWhenDisabled = false;
     _sendButton.adjustsImageWhenHighlighted = false;
+    #pragma clang diagnostic pop
     [_sendButton setImage:doneImage forState:UIControlStateNormal];
     [_sendButton addTarget:self action:@selector(sendPressed) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_sendButton];

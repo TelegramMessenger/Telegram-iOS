@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -2081,7 +2082,8 @@ private final class StickerPackContainer: ASDisplayNode {
                         ),
                         color: self.presentationData.theme.chat.inputPanel.panelControlColor,
                         size: CGSize(width: 34.0, height: 34.0),
-                        playOnce: self.moreButtonPlayOnce
+                        playOnce: self.moreButtonPlayOnce,
+                        lottieSettings: self.context.lottieRenderingSettings
                     )
                 )),
                 action: { [weak self] view in
@@ -2117,7 +2119,7 @@ private final class StickerPackContainer: ASDisplayNode {
                             buttonTitle = self.presentationData.strings.Common_Done
                         } else {
                             buttonTitle = self.presentationData.strings.StickerPack_EditStickers
-                            buttonBackgroundColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.0)
+                            buttonBackgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
                             buttonForegroundColor = self.presentationData.theme.list.itemAccentColor
                         }
                     } else {

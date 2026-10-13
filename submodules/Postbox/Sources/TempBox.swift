@@ -50,6 +50,17 @@ public final class TempBoxDirectory {
     }
 }
 
+/// Makes an untrusted file name safe to place inside a temp-box directory: a leading
+/// `..` becomes `__` (keeping the rest of the name, so the extension survives) and path
+/// separators become `_`, so the name can never resolve to a parent directory.
+func sanitizedTempBoxFileName(_ fileName: String) -> String {
+    var cleanName = fileName
+    if cleanName.hasPrefix("..") {
+        cleanName = "__" + cleanName.dropFirst(2)
+    }
+    return cleanName.replacingOccurrences(of: "/", with: "_")
+}
+
 private final class TempBoxContexts {
     private var nextId: Int = 0
     private var contexts: [TempBoxKey: TempBoxFileContext] = [:]
@@ -64,12 +75,7 @@ private final class TempBoxContexts {
             self.nextId += 1
             let dirName = "\(id)"
             let dirPath = basePath + "/" + dirName
-            var cleanName = fileName
-            if cleanName.hasPrefix("..") {
-                cleanName = "__" + String(cleanName[cleanName.index(cleanName.startIndex, offsetBy: 2)])
-            }
-            cleanName = cleanName.replacingOccurrences(of: "/", with: "_")
-            context = TempBoxFileContext(directory: dirPath, fileName: cleanName)
+            context = TempBoxFileContext(directory: dirPath, fileName: sanitizedTempBoxFileName(fileName))
             self.contexts[key] = context
             let _ = try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
             let _ = try? FileManager.default.linkItem(atPath: path, toPath: context.path)
@@ -89,12 +95,7 @@ private final class TempBoxContexts {
         
         let dirName = "\(id)"
         let dirPath = basePath + "/" + dirName
-        var cleanName = fileName
-        if cleanName.hasPrefix("..") {
-            cleanName = "__" + String(cleanName[cleanName.index(cleanName.startIndex, offsetBy: 2)])
-        }
-        cleanName = cleanName.replacingOccurrences(of: "/", with: "_")
-        context = TempBoxFileContext(directory: dirPath, fileName: cleanName)
+        context = TempBoxFileContext(directory: dirPath, fileName: sanitizedTempBoxFileName(fileName))
         self.contexts[key] = context
         let _ = try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
     

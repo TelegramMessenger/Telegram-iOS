@@ -142,3 +142,35 @@ func _internal_loadedStickerPack(postbox: Postbox, network: Network, reference: 
         }
     }
 }
+
+/// Emits exactly once: the first `.result`, or nil. A pack its owner deleted loads as `.none`
+/// and an emoji can name no pack at all, so waiting for a `.result` alone never ends for them.
+func _internal_customEmojiPack(file: TelegramMediaFile, loadPack: (StickerPackReference) -> Signal<LoadedStickerPack, NoError>) -> Signal<LoadedStickerPack?, NoError> {
+    var packReference: StickerPackReference?
+    for attribute in file.attributes {
+        if case let .CustomEmoji(_, _, _, reference) = attribute {
+            packReference = reference
+            break
+        }
+    }
+    guard let packReference else {
+        return .single(nil)
+    }
+    return (loadPack(packReference)
+    |> filter { pack in
+        if case .fetching = pack {
+            return false
+        } else {
+            return true
+        }
+    }
+    |> map { pack -> LoadedStickerPack? in
+        if case .result = pack {
+            return pack
+        } else {
+            return nil
+        }
+    }
+    |> then(.single(nil)))
+    |> take(1)
+}

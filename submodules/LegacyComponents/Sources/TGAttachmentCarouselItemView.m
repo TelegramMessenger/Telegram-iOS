@@ -84,7 +84,6 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     TGMenuSheetButtonItemView *_sendFileItemView;
     
     TGMediaPickerModernGalleryMixin *_galleryMixin;
-    TGMediaPickerModernGalleryMixin *_previewGalleryMixin;
     TGMediaAsset *_hiddenItem;
     
     bool _zoomedIn;
@@ -1314,48 +1313,6 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     _sendMediaItemView.frame = CGRectMake(0, [self preferredHeightForWidth:self.frame.size.width screenHeight:self.screenHeight], self.frame.size.width, [_sendMediaItemView preferredHeightForWidth:self.frame.size.width screenHeight:self.screenHeight]);
     _sendFileItemView.frame = CGRectMake(0, CGRectGetMaxY(_sendMediaItemView.frame), self.frame.size.width, [_sendFileItemView preferredHeightForWidth:self.frame.size.width screenHeight:self.screenHeight]);
-}
-
-#pragma mark - 
-
-- (UIView *)previewSourceView
-{
-    return _collectionView;
-}
-
-- (UIViewController *)previewingContext:(id<UIViewControllerPreviewing>)previewingContext viewControllerForLocation:(CGPoint)location
-{
-    if (self.openEditor) {
-        return nil;
-    }
-    
-    NSIndexPath *indexPath = [_collectionView indexPathForItemAtPoint:location];
-    if (indexPath == nil)
-        return nil;
-    
-    CGRect cellFrame = [_collectionView.collectionViewLayout layoutAttributesForItemAtIndexPath:indexPath].frame;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    previewingContext.sourceRect = cellFrame;
-#pragma clang diagnostic pop
-    
-    TGMediaAsset *asset = nil;
-    _previewGalleryMixin = [self galleryMixinForIndexPath:indexPath previewMode:true outAsset:&asset];
-    UIViewController *controller = [_previewGalleryMixin galleryController];
-    
-    CGSize screenSize = TGScreenSize();
-    controller.preferredContentSize = TGFitSize(asset.dimensions, screenSize);
-    [_previewGalleryMixin setPreviewMode];
-    return controller;
-}
-
-- (void)previewingContext:(id<UIViewControllerPreviewing>)__unused previewingContext commitViewController:(UIViewController *)__unused viewControllerToCommit
-{
-    _galleryMixin = _previewGalleryMixin;
-    _previewGalleryMixin = nil;
-    
-    [self _setupGalleryMixin:_galleryMixin];
-    [_galleryMixin present];
 }
 
 @end

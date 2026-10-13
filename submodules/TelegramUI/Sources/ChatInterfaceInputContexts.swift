@@ -12,15 +12,9 @@ import ChatContextQuery
 import ChatTextInputPanelNode
 
 func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatPresentationInterfaceState: ChatPresentationInterfaceState, updateState: @escaping ((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void) -> [AnyHashable: () -> Disposable] {
-    var missingEmoji = Set<Int64>()
-    let inputText = chatPresentationInterfaceState.interfaceState.composeInputState.inputText
-    inputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: inputText.length), using: { value, _, _ in
-        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-            if value.file == nil {
-                missingEmoji.insert(value.fileId)
-            }
-        }
-    })
+    // Read the STRUCTURAL model, not the derived `inputText`: the flat projection drops whole blocks
+    // (table cells, collapsed quotes, media captions), so emoji living in them were never resolved.
+    let missingEmoji = chatPresentationInterfaceState.interfaceState.composeInputState.content.unresolvedCustomEmojiFileIds()
     
     var result: [AnyHashable: () -> Disposable] = [:]
     for id in missingEmoji {
@@ -31,20 +25,16 @@ func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatP
                     updateState({ state -> ChatPresentationInterfaceState in
                         return state.updatedInterfaceState { interfaceState -> ChatInterfaceState in
                             var inputState = interfaceState.composeInputState
-                            let text = NSMutableAttributedString(attributedString: inputState.inputText)
-                            
-                            inputState.inputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: inputText.length), using: { value, range, _ in
-                                if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                                    if value.fileId == id {
-                                        text.removeAttribute(ChatTextInputAttributes.customEmoji, range: range)
-                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file), range: range)
-                                    }
-                                }
-                            })
-                            
-                            // `inputText` is now a derived view (Piece 5), so rebuild the state from the new
-                            // text, preserving the selection (semantic "replace content, keep selection").
-                            inputState = ChatTextInputState(inputText: text, selectionRange: inputState.selectionRange)
+                            // Fill the file in ON THE MODEL. This used to rebuild the state from a mutated
+                            // `inputText` via `ChatTextInputState(inputText:selectionRange:)`, which re-derives
+                            // the content from a FLATTENED `NSAttributedString` — so every heading, list, quote,
+                            // table and media block in the composer was silently retyped as a body paragraph the
+                            // moment a sticker resolved. That is what made a pasted rich message show its
+                            // headings and then lose them a beat later.
+                            //
+                            // `resolvingCustomEmojiFiles` is attribute-only (no text, no structure change), so
+                            // the existing structural `selection` stays valid and is deliberately left untouched.
+                            inputState.content = inputState.content.resolvingCustomEmojiFiles([id: file])
 
                             return interfaceState.withUpdatedComposeInputState(inputState)
                         }
@@ -62,6 +52,8 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
         case .hashTagSearch:
             return []
         case .quickReplyMessageInput:
+            break
+        case .welcomeMessages:
             break
         case .businessLinkSetup:
             return []
@@ -249,6 +241,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     case .hashTagSearch:
                         break
                     case .quickReplyMessageInput:
+                        break
+                    case .welcomeMessages:
                         break
                     case .businessLinkSetup:
                         stickersEnabled = false

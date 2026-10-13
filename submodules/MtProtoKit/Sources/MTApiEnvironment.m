@@ -24,6 +24,7 @@ static NSData * _Nullable parseHexString(NSString * _Nonnull hex) {
         char *b2 = NULL;
         *bp++ = strtol(buf, &b2, 16);
         if (b2 != buf + 2) {
+            free(bytes);
             return nil;
         }
     }
@@ -290,6 +291,10 @@ static NSData *base64_decode(NSString *str) {
 @implementation MTSocksProxySettings
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret {
+    return [self initWithIp:ip port:port username:username password:password secret:secret webProxy:false];
+}
+
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret webProxy:(bool)webProxy {
     self = [super init];
     if (self != nil) {
         _ip = ip;
@@ -297,6 +302,7 @@ static NSData *base64_decode(NSString *str) {
         _username = username;
         _password = password;
         _secret = secret;
+        _webProxy = webProxy;
     }
     return self;
 }
@@ -321,10 +327,16 @@ static NSData *base64_decode(NSString *str) {
     if ((other->_secret != nil) != (_secret != nil) || (_secret != nil && ![_secret isEqual:other->_secret])) {
         return false;
     }
+    if (other->_webProxy != _webProxy) {
+        return false;
+    }
     return true;
 }
 
 - (NSString *)description {
+    if (_webProxy) {
+        return [NSString stringWithFormat:@"%@:%d+web", _ip, (int)_port];
+    }
     return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, [_secret description]];
 }
 
@@ -549,6 +561,12 @@ NSString *suffix = @"";
         return @"iPhone 17 Pro Max";
     if ([platform isEqualToString:@"iPhone18,4"])
         return @"iPhone Air";
+    if ([platform isEqualToString:@"iPhone19,4"])
+        return @"iPhone Duo";
+    if ([platform isEqualToString:@"iPhone19,2"])
+        return @"iPhone 18 Pro";
+    if ([platform isEqualToString:@"iPhone19,3"] || [platform isEqualToString:@"iPhone19,7"])
+        return @"iPhone 18 Pro Max";
         
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";
@@ -565,6 +583,9 @@ NSString *suffix = @"";
     if ([platform hasPrefix:@"iPod9"])
         return @"iPod touch 7G";
     
+    if ([platform isEqualToString:@"iPad1,1"])
+        return @"iPad";
+
     if ([platform isEqualToString:@"iPad2,5"] ||
         [platform isEqualToString:@"iPad2,6"] ||
         [platform isEqualToString:@"iPad2,7"])
@@ -584,7 +605,8 @@ NSString *suffix = @"";
         return @"iPad 3G";
     
     if ([platform isEqualToString:@"iPad4,1"] ||
-        [platform isEqualToString:@"iPad4,2"])
+        [platform isEqualToString:@"iPad4,2"] ||
+        [platform isEqualToString:@"iPad4,3"])
         return @"iPad Air";
         
     if ([platform isEqualToString:@"iPad4,4"] ||
@@ -744,6 +766,14 @@ NSString *suffix = @"";
     if ([platform isEqualToString:@"iPad16,10"] ||
         [platform isEqualToString:@"iPad16,11"])
         return @"iPad Air 13 inch (8th gen)";
+
+    if ([platform isEqualToString:@"iPad17,1"] ||
+        [platform isEqualToString:@"iPad17,2"])
+        return @"iPad Pro 11 inch (M5)";
+
+    if ([platform isEqualToString:@"iPad17,3"] ||
+        [platform isEqualToString:@"iPad17,4"])
+        return @"iPad Pro 13 inch (M5)";
         
     if ([platform hasPrefix:@"iPhone"])
         return @"Unknown iPhone";
@@ -915,4 +945,3 @@ NSString *suffix = @"";
 }
 
 @end
-

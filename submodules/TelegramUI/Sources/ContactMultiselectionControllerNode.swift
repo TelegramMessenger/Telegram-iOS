@@ -2,6 +2,7 @@ import Display
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import TelegramStringFormatting
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
@@ -218,22 +219,26 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             var selectedPeers: [EnginePeer.Id] = []
             if case let .premiumGifting(birthdays, selectToday, hasActions) = mode {
                 if let birthdays {
-                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                    let currentDate = Date()
+                    let currentTimeZone = TimeZone.current
                     var sections: [(String, [EnginePeer.Id], Bool)] = []
                     var todayPeers: [EnginePeer.Id] = []
                     var yesterdayPeers: [EnginePeer.Id] = []
                     var tomorrowPeers: [EnginePeer.Id] = []
                     
                     for (peerId, birthday) in birthdays {
-                        if birthday.day == today {
+                        switch relativeDateForBirthday(birthday, relativeTo: currentDate, timeZone: currentTimeZone) {
+                        case .today:
                             todayPeers.append(peerId)
                             if selectToday {
                                 selectedPeers.append(peerId)
                             }
-                        } else if birthday.day == today - 1 || birthday.day > today + 5 {
+                        case .yesterday:
                             yesterdayPeers.append(peerId)
-                        } else if birthday.day == today + 1 || birthday.day < today + 5 {
+                        case .tomorrow:
                             tomorrowPeers.append(peerId)
+                        case nil:
+                            break
                         }
                     }
                     
@@ -417,7 +422,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             var headerInsets = layout.insets(options: [.input])
                             headerInsets.top += actualNavigationBarHeight
                             headerInsets.top += strongSelf.tokenListNode.bounds.size.height
-                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: .immediate)
+                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), headerInsets: headerInsets, storiesInset: 0.0, transition: .immediate)
                             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                         }
                         
@@ -515,7 +520,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         switch self.contentNode {
         case let .contacts(contactsNode):
-            contactsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
+            contactsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
         case let .chats(chatsNode):
             var combinedInsets = insets
             combinedInsets.left += layout.safeInsets.left
@@ -527,7 +532,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.contentNode.node.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if let searchResultsNode = self.searchResultsNode {
-            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
+            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         }
 

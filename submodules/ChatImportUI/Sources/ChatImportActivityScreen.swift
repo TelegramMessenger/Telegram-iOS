@@ -1,3 +1,4 @@
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -357,8 +358,8 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
-            self.animationNode = DefaultAnimatedStickerNodeImpl()
-            self.doneAnimationNode = DefaultAnimatedStickerNodeImpl()
+            self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            self.doneAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             self.doneAnimationNode.isHidden = true
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)

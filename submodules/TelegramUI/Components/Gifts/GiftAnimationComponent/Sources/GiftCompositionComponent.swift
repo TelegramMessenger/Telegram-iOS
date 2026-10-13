@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import SwiftSignalKit
@@ -41,6 +42,7 @@ public final class GiftCompositionComponent: Component {
     let displayAnimationStars: Bool
     let animateScaleOnTransition: Bool
     let alwaysAnimateTransition: Bool
+    let topBackgroundExtension: CGFloat
     let revealedAttributes: Set<StarGift.UniqueGift.Attribute.AttributeType>
     let externalState: ExternalState?
     let requestUpdate: (ComponentTransition) -> Void
@@ -54,6 +56,7 @@ public final class GiftCompositionComponent: Component {
         displayAnimationStars: Bool = false,
         animateScaleOnTransition: Bool = true,
         alwaysAnimateTransition: Bool = false,
+        topBackgroundExtension: CGFloat = 0.0,
         revealedAttributes: Set<StarGift.UniqueGift.Attribute.AttributeType> = Set(),
         externalState: ExternalState? = nil,
         requestUpdate: @escaping (ComponentTransition) -> Void = { _ in }
@@ -66,6 +69,7 @@ public final class GiftCompositionComponent: Component {
         self.displayAnimationStars = displayAnimationStars
         self.animateScaleOnTransition = animateScaleOnTransition
         self.alwaysAnimateTransition = alwaysAnimateTransition
+        self.topBackgroundExtension = topBackgroundExtension
         self.revealedAttributes = revealedAttributes
         self.externalState = externalState
         self.requestUpdate = requestUpdate
@@ -91,6 +95,9 @@ public final class GiftCompositionComponent: Component {
             return false
         }
         if lhs.animateScaleOnTransition != rhs.animateScaleOnTransition {
+            return false
+        }
+        if lhs.topBackgroundExtension != rhs.topBackgroundExtension {
             return false
         }
         if lhs.revealedAttributes != rhs.revealedAttributes {
@@ -224,7 +231,7 @@ public final class GiftCompositionComponent: Component {
                 return
             }
 
-            let node = DefaultAnimatedStickerNodeImpl()
+            let node = DefaultAnimatedStickerNodeImpl(lottieSettings: self.component!.context.lottieRenderingSettings)
             node.isUserInteractionEnabled = false
             let pathPrefix = self.component!.context.engine.resources.shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id(file.resource.id))
             node.setup(
@@ -343,7 +350,7 @@ public final class GiftCompositionComponent: Component {
             for (i, attribute) in tail.reversed().enumerated() {
                 guard case let .model(_, file, _, _) = attribute else { continue }
 
-                let node = DefaultAnimatedStickerNodeImpl()
+                let node = DefaultAnimatedStickerNodeImpl(lottieSettings: self.component!.context.lottieRenderingSettings)
                 node.isUserInteractionEnabled = false
                 let pathPrefix = self.component!.context.engine.resources.shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id(file.resource.id))
                 node.setup(
@@ -809,10 +816,12 @@ public final class GiftCompositionComponent: Component {
                         backgroundView.animateSwipeTransition()
                     }
                 }
-                var avatarCenter = CGPoint(x: availableSize.width / 2.0, y: 104.0)
+                let topBackgroundExtension = max(0.0, component.topBackgroundExtension)
+                var avatarCenter = CGPoint(x: availableSize.width / 2.0, y: 104.0 + topBackgroundExtension)
                 if let _ = component.animationScale {
-                    avatarCenter = CGPoint(x: avatarCenter.x, y: 67.0)
+                    avatarCenter = CGPoint(x: avatarCenter.x, y: 67.0 + topBackgroundExtension)
                 }
+                let backgroundSize = CGSize(width: availableSize.width, height: availableSize.height + topBackgroundExtension)
                 let _ = self.background.update(
                     transition: backgroundTransition,
                     component: AnyComponent(PeerInfoCoverComponent(
@@ -823,12 +832,13 @@ public final class GiftCompositionComponent: Component {
                         avatarCenter: avatarCenter,
                         avatarScale: 1.0,
                         defaultHeight: 300.0,
+                        topBackgroundExtension: topBackgroundExtension,
                         gradientOnTop: true,
                         avatarTransitionFraction: 0.0,
                         patternTransitionFraction: 0.0
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: backgroundSize
                 )
                 if let backgroundView = self.background.view {
                     if backgroundView.superview == nil {
@@ -840,7 +850,7 @@ public final class GiftCompositionComponent: Component {
                             backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         }
                     }
-                    backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: .zero, size: availableSize))
+                    backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topBackgroundExtension), size: backgroundSize))
                 }
             } else if let backgroundView = self.background.view, backgroundView.superview != nil {
                 backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
@@ -953,7 +963,7 @@ public final class GiftCompositionComponent: Component {
             
             if let file = animationFile, self.animationNode == nil {
                 animationTransition = .immediate
-                let node = DefaultAnimatedStickerNodeImpl()
+                let node = DefaultAnimatedStickerNodeImpl(lottieSettings: component.context.lottieRenderingSettings)
                 node.isUserInteractionEnabled = false
                 self.animationNode = node
                 self.addSubview(node.view)

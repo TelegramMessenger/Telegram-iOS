@@ -36,17 +36,31 @@ extension ChatControllerImpl {
             }
         }
         
-        let continueNavigation: () -> Void = { [weak self] in
+        let continueNavigation: (EnginePeer?, EngineMessage?) -> Void = { [weak self] toPeer, toMessage in
             guard let self else {
                 return
             }
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId && !params.forceNew, forceNew: params.forceNew, progress: params.progress)
+            let forceInCurrentChat = fromId.peerId == id.peerId && !params.forceNew
+            // A same-peer target is normally searched for in the current history, but a reply header can
+            // point into a *different topic* of this forum (a "Reply in Another Chat" into a sibling topic).
+            // Searching the current topic for it cannot succeed — it reports "Message doesn't exist" — and
+            // the generic fallback would run that doomed search (possibly filling holes over the network)
+            // before resolving the topic. The topic is already known here, so go straight to it, the same
+            // way the fallback eventually does. Only when the target's topic is positively known to differ:
+            // an unknown message keeps today's behaviour instead of landing on the forum's topic list.
+            if forceInCurrentChat, case let .replyThread(currentThread) = self.chatLocation, currentThread.isForumPost, let toPeer, let toThreadId = toMessage?.threadId, toThreadId != currentThread.threadId, let navigationController = self.effectiveNavigationController {
+                let quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: forumAwareNavigateLocation(peer: toPeer, threadId: toThreadId), subject: .message(id: .id(id), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: params.setupReply), keepStack: .always))
+                return
+            }
+            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: forceInCurrentChat, forceNew: params.forceNew, progress: params.progress)
         }
         
         let _ = (self.context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: id.peerId)
+            TelegramEngine.EngineData.Item.Peer.Peer(id: id.peerId),
+            TelegramEngine.EngineData.Item.Messages.Message(id: id)
         )
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] toPeer in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] toPeer, toMessage in
             guard let self else {
                 return
             }
@@ -73,7 +87,7 @@ extension ChatControllerImpl {
                 }
             }
             
-            continueNavigation()
+            continueNavigation(toPeer, toMessage)
         })
     }
     

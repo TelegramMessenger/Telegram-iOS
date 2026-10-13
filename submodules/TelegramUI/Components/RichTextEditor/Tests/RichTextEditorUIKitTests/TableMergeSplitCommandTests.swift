@@ -43,7 +43,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_mergeSelectedCells_mergesRectAndConcatenatesContent() {
         let v = canvas(); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))   // A, B, C, D
         v.mergeSelectedCells()
         v.layoutIfNeeded()
@@ -69,7 +69,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
     func test_mergeSelectedCells_isUndoable_oneStep() {
         let v = canvas(); let t = table(v)
         let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
 
         um.beginUndoGrouping(); v.mergeSelectedCells(); um.endUndoGrouping()
@@ -90,7 +90,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
     func test_mergeSelectedCells_noopOnSingleCell() {
         let v = canvas(); let t = table(v)
         let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCell(row: 0, column: 0)   // a 1x1 rect
 
         v.mergeSelectedCells()
@@ -105,7 +105,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_splitSelectedCell_restoresGrid() {
         let v = canvas(); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         v.mergeSelectedCells()
         v.layoutIfNeeded()
@@ -113,7 +113,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
         // Focus the merged cell: caret in it, no `.cells` selection.
         v.clearTableSelection()
         let t2 = table(v)
-        v.anchor = t2.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t2.cellTextStart(row: 0, column: 0)!, head: t2.cellTextStart(row: 0, column: 0)!)
         XCTAssertNil(v.tableSelection)
 
         v.splitSelectedCell()
@@ -140,7 +140,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
     func test_splitSelectedCell_noopWhenNotMerged() {
         let v = canvas(); let t = table(v)
         let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.splitSelectedCell()
         XCTAssertFalse(um.canUndo, "a no-op split must not register an undo entry")
         XCTAssertEqual(TableMap(tableBlock(v)).anchors.count, 9)
@@ -150,7 +150,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_menu_cellsSelection_offersMergeWhenMultiCell() {
         let v = canvas(); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         let req = v.tableStructuralMenuRequest()
         let kinds = actionKinds(req)
@@ -162,7 +162,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_menu_singleMergedCell_offersSplit() {
         let v = canvas(); let t = table(v)
-        v.anchor = t.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         v.mergeSelectedCells()
         v.layoutIfNeeded()
@@ -170,7 +170,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
         // Re-select the merged origin as a 1x1 `.cells` rect — `selectTableCells` expands it to the
         // merged footprint, so the map resolves to exactly ONE (already-merged) anchor.
         let t2 = table(v)
-        v.anchor = t2.cellTextStart(row: 0, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t2.cellTextStart(row: 0, column: 0)!, head: t2.cellTextStart(row: 0, column: 0)!)
         v.selectTableCell(row: 0, column: 0)
 
         let kinds = actionKinds(v.tableStructuralMenuRequest())
@@ -182,7 +182,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_denseParity_columnMenuStillHasAddDeleteAlign_noMergeOrSplit() {
         let v = canvas(); let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         let kinds = actionKinds(v.tableStructuralMenuRequest())
         XCTAssertTrue(kinds.contains(.addColumnLeft))
@@ -194,7 +194,7 @@ final class TableMergeSplitCommandTests: XCTestCase {
 
     func test_denseParity_rowMenuStillHasAddDelete_noMergeOrSplit() {
         let v = canvas(); let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         let kinds = actionKinds(v.tableStructuralMenuRequest())
         XCTAssertTrue(kinds.contains(.addRowAbove))

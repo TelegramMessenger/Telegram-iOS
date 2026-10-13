@@ -51,7 +51,7 @@ public func presentTableStructuralMenu(
         )))
     }
     items.append(contentsOf: request.actions.map { action in
-        let (title, icon) = tableStructuralMenuTitleAndIcon(action.kind)
+        let (title, icon) = tableStructuralMenuTitleAndIcon(action.kind, strings: presentationData.strings)
         return .action(ContextMenuActionItem(
             text: title,
             textColor: tableStructuralMenuIsDestructive(action.kind) ? .destructive : .primary,
@@ -72,16 +72,16 @@ public func presentTableStructuralMenu(
     present(controller)
 }
 
-private func tableStructuralMenuTitleAndIcon(_ kind: TableStructuralMenuRequest.Kind) -> (title: String, icon: String) {
+private func tableStructuralMenuTitleAndIcon(_ kind: TableStructuralMenuRequest.Kind, strings: PresentationStrings) -> (title: String, icon: String) {
     switch kind {
-    case .addColumnLeft: return ("Add Column Left", "Chat/Context Menu/CellAddLeft")
-    case .addColumnRight: return ("Add Column Right", "Chat/Context Menu/CellAddRight")
-    case .deleteColumn: return ("Delete Column", "Chat/Context Menu/CellDelete")
-    case .addRowAbove: return ("Add Row Above", "Chat/Context Menu/CellAddTop")
-    case .addRowBelow: return ("Add Row Below", "Chat/Context Menu/CellAddBottom")
-    case .deleteRow: return ("Delete Row", "Chat/Context Menu/CellDelete")
-    case .mergeCells: return ("Merge Cells", "Chat/Context Menu/CellMergeH")
-    case .splitCell: return ("Split Cell", "Chat/Context Menu/CellSplitH")
+    case .addColumnLeft: return (strings.RichText_Menu_Table_AddColumnLeft, "Chat/Context Menu/CellAddLeft")
+    case .addColumnRight: return (strings.RichText_Menu_Table_AddColumnRight, "Chat/Context Menu/CellAddRight")
+    case .deleteColumn: return (strings.RichText_Menu_Table_DeleteColumn, "Chat/Context Menu/CellDelete")
+    case .addRowAbove: return (strings.RichText_Menu_Table_AddRowAbove, "Chat/Context Menu/CellAddTop")
+    case .addRowBelow: return (strings.RichText_Menu_Table_AddRowBelow, "Chat/Context Menu/CellAddBottom")
+    case .deleteRow: return (strings.RichText_Menu_Table_DeleteRow, "Chat/Context Menu/CellDelete")
+    case .mergeCells: return (strings.RichText_Menu_Table_MergeCells, "Chat/Context Menu/CellMergeH")
+    case .splitCell: return (strings.RichText_Menu_Table_SplitCell, "Chat/Context Menu/CellSplitH")
     }
 }
 

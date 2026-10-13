@@ -73,8 +73,12 @@ extension DocumentCanvasView {
                     if bq.collapsed { emitAtom(box) } else { walk(bq.children.boxes) }
                     continue
                 }
+                // The box's PRIMARY text region (the one starting at `textStart`), NOT `leafRegions().first`:
+                // a code box's first region is its LANGUAGE line, which is off the flat composer axis (the
+                // same rule that keeps a pull quote's author off it — `.first` there is the pull text).
+                // Taking `.first` blindly would flatten a code block to its language and drop the code.
                 guard (box is BlockBox || box is CodeBlockBox || box is PullQuoteBox),
-                      let region = box.leafRegions().first else { continue }
+                      let region = box.leafRegions().first(where: { $0.globalStart == box.textStart }) else { continue }
                 if !result.isEmpty { flat += 1 }   // "\n" joining this paragraph to the previous one
                 let atoms = composerInlineAtomOccurrences(in: region)
                 let flatLength = region.length + atoms.reduce(0) { $0 + ($1.flatLen - 1) }
@@ -188,10 +192,28 @@ extension DocumentCanvasView {
             // collapsed atom (non-renderable), causing the getter to fall through to end-of-document.
             // `snapToRenderable(_:forward:true)` is a no-op for already-renderable positions, so
             // existing round-trip tests are unaffected.
-            textInputDelegate?.selectionWillChange(self)
-            anchor = snapToRenderable(clampGlobal(a), forward: true)
-            head   = snapToRenderable(clampGlobal(h), forward: true)
-            textInputDelegate?.selectionDidChange(self)
+            // TASK 26: unsuppressed selection bracket (this site never consulted the coalescing flag).
+            // TASK 39: `applyCaretOutcome` (`+Editing.swift`) inside the UNCHANGED bracket, not
+            // `setSelection` — Task 37's population C, and here the doubling is visible on the very next
+            // line: `refreshSelectionUI(); onSelectionChange?()` deliver exactly the two host effects a
+            // `.selection` publish delivers.
+            // **`.range`, NOT `.caret` — this is the host's SELECTION setter and its whole job is to
+            // carry a two-endpoint range** (`NSRange(location:length:)` with a non-zero length). Axis 2
+            // of the plan's blind-axes block. Pinned — measured, not cited: `.caret(at: h')` here
+            // reddens exactly two tests, `ComposerSelectionMappingTests.test_set_selectionSpan` (which
+            // asserts `selFrom` and `selTo` separately) and
+            // `ComposerSelectionGeometryTests.test_boundingRect_withSelection_isFirstRect`.
+            // **What is NOT missing here, corrected in fix round 1:** this note used to say "no test
+            // distinguishes a REVERSED composer selection from its forward twin", and carried that
+            // toward the Phase-6 gate as an untested case. There is no such case. The setter's input is
+            // an `NSRange` — `location` plus a non-negative `length` — which **cannot express reversal
+            // at all**, so `a <= h` by construction and the claim is always forward. *An unrepresentable
+            // state recorded as an untested one is how a gate acquires an item nobody can ever close.*
+            // (`.range` is still required over `.caret`: the mutation above collapses the selection.)
+            inputBackend.notifyingSelectionChangeIgnoringCoalescing {
+                applyCaretOutcome(.range(snapToRenderable(clampGlobal(a), forward: true),
+                                         snapToRenderable(clampGlobal(h), forward: true)))
+            }
             setNeedsDisplay(); refreshSelectionUI(); onSelectionChange?()
         }
     }

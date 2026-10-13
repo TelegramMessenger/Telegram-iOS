@@ -7,7 +7,7 @@ import TextFormat
 import Markdown
 import AccountContext
 import TextNodeWithEntities
-import TextFormat
+import TelegramCore
 
 final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
     enum Icon {
@@ -21,14 +21,16 @@ final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
     let id: AnyHashable
     let icon: Icon?
     let text: String
+    let entities: [MessageTextEntity]?
     let attributedPrefix: NSAttributedString?
     let useAccentLinkColor: Bool
     let linkAction: ((LinkAction) -> Void)?
     
-    init(id: AnyHashable, icon: Icon? = nil, text: String, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
+    init(id: AnyHashable, icon: Icon? = nil, text: String, entities: [MessageTextEntity]? = nil, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
         self.id = id
         self.icon = icon
         self.text = text
+        self.entities = entities
         self.attributedPrefix = attributedPrefix
         self.useAccentLinkColor = useAccentLinkColor
         self.linkAction = linkAction
@@ -106,12 +108,49 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         var text = item.text
         text = text.replacingOccurrences(of: " >]", with: "\u{00A0}>]")
         
-        let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: item.useAccentLinkColor ? presentationData.theme.list.itemAccentColor : textColor, additionalAttributes: item.useAccentLinkColor ? [:] : [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber]), linkAttribute: { contents in
-            return (TelegramTextAttributes.URL, contents)
-        })).mutableCopy() as! NSMutableAttributedString
+        let attributedText: NSMutableAttributedString
+        var hasAppliedAttributedPrefix = false
+        if let entities = item.entities {
+            var entityText = text
+            var shiftedEntities = entities
+            if let attributedPrefix = item.attributedPrefix {
+                entityText = attributedPrefix.string + entityText
+                shiftedEntities = entities.map { entity in
+                    return MessageTextEntity(
+                        range: (entity.range.lowerBound + attributedPrefix.length) ..< (entity.range.upperBound + attributedPrefix.length),
+                        type: entity.type
+                    )
+                }
+                hasAppliedAttributedPrefix = true
+            }
+            attributedText = NSMutableAttributedString(attributedString: stringWithAppliedEntities(
+                entityText,
+                entities: shiftedEntities,
+                baseColor: textColor,
+                linkColor: item.useAccentLinkColor ? presentationData.theme.list.itemAccentColor : textColor,
+                baseFont: textFont,
+                linkFont: textFont,
+                boldFont: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                italicFont: Font.italic(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                boldItalicFont: Font.semiboldItalic(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                fixedFont: Font.monospace(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                blockQuoteFont: textFont,
+                message: nil
+            ))
+        } else {
+            attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: item.useAccentLinkColor ? presentationData.theme.list.itemAccentColor : textColor, additionalAttributes: item.useAccentLinkColor ? [:] : [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber]), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })).mutableCopy() as! NSMutableAttributedString
+        }
         
         if let attributedPrefix = item.attributedPrefix {
-            attributedText.insert(attributedPrefix, at: 0)
+            if hasAppliedAttributedPrefix {
+                attributedPrefix.enumerateAttributes(in: NSRange(location: 0, length: attributedPrefix.length), options: []) { attributes, range, _ in
+                    attributedText.addAttributes(attributes, range: range)
+                }
+            } else {
+                attributedText.insert(attributedPrefix, at: 0)
+            }
             attributedText.addAttribute(NSAttributedString.Key.font, value: textFont, range: NSRange(location: 0, length: attributedPrefix.length))
             attributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: NSRange(location: 0, length: attributedPrefix.length))
         }

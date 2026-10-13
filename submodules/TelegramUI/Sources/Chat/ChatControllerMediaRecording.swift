@@ -137,6 +137,7 @@ extension ChatControllerImpl {
                 self.context.sharedContext.mediaManager.audioRecorder(
                     resumeData: resumeData,
                     beginWithTone: beginWithTone,
+                    pauseMusicOnRecording: self.context.sharedContext.currentMediaInputSettings.with({ $0.pauseMusicOnRecording }),
                     applicationBindings: self.context.sharedContext.applicationBindings,
                     beganWithTone: { _ in
                     }
@@ -597,12 +598,8 @@ extension ChatControllerImpl {
         
         let insets = layout.insets(options: [.input])
         var screenWidth = layout.size.width
-        if layout.metrics.isTablet {
-            if layout.size.height == layout.deviceMetrics.screenSize.width {
-                screenWidth = layout.deviceMetrics.screenSize.height
-            } else {
-                screenWidth = layout.deviceMetrics.screenSize.width
-            }
+        if layout.metrics.isTablet, let windowSize = layout.metrics.windowSize {
+            screenWidth = windowSize.width
         }
         
         var sideOffset: CGFloat = 18.0

@@ -3585,6 +3585,8 @@ private func serializeGroupCallMessage(randomId: Int64, text: String, entities: 
                 entityDict["_"] = "messageEntityUnderline"
             case .BankCard:
                 entityDict["_"] = "messageEntityBankCard"
+            case .TonAddress:
+                entityDict["_"] = "messageEntityTonAddress"
             case .Spoiler:
                 entityDict["_"] = "messageEntitySpoiler"
             case let .CustomEmoji(_, fileId):
@@ -3715,6 +3717,8 @@ private func deserializeGroupCallMessage(data: Data) -> (randomId: Int64, text: 
                 messageEntityType = .Underline
             case "messageEntityBankCard":
                 messageEntityType = .BankCard
+            case "messageEntityTonAddress":
+                messageEntityType = .TonAddress
             case "messageEntitySpoiler":
                 messageEntityType = .Spoiler
             case "messageEntityCustomEmoji":

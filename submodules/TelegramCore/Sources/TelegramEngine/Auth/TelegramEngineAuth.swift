@@ -113,7 +113,7 @@ public extension TelegramEngine {
                 }
                 |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP?, DeleteAccountError> in
                     if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-                        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+                        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
                             return .fail(.generic)
                         }
                         return .single(.inputCheckPasswordSRP(.init(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))))

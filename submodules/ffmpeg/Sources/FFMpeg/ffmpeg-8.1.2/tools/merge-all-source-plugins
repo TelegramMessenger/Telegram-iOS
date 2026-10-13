@@ -1,0 +1,50 @@
+#!/bin/sh
+
+#If a version is set then we only try merging a source plugin with matching version as a generic one could change the ABI to master HEAD
+merge_internal(){ # $1=repository, $2=refspec
+    branch="sourceplugin-$2"
+    if [ -n "$version" ] ; then
+        branch="$branch-$version"
+    fi
+    git pull --no-rebase --log --stat --commit --no-edit "$1" "$branch"
+}
+
+unset succeeded failed version
+
+merge(){ # $1=repository, $2=refspec
+    merge_internal "$1" "$2" || {
+        git reset --hard
+        echo merge of $1 $2 failed, continuing with other plugins
+        failed="$failed $2"
+        return 0
+    }
+    succeeded="$succeeded $2"
+}
+
+error(){
+    echo $1
+    exit 1
+}
+
+git diff --exit-code >/dev/null ||\
+    error "Please commit local changes first"
+
+git diff --cached --exit-code >/dev/null ||\
+    error "Please commit local changes first"
+
+#version="12.34"
+
+[ $# -ne 1 ] &&\
+    error "Usage: $0 source-plugins.txt"
+
+while IFS=' ' read -r a b; do
+    case "$a" in
+        ''|'#'*) continue ;;
+    esac
+
+    merge "$a" "$b"
+done < "$1"
+
+[ -n "$version"  ] && echo version: $version
+[ -n "$succeeded" ] && echo Succeeded merging: $succeeded
+[ -n "$failed"   ] && echo Failed merging: $failed

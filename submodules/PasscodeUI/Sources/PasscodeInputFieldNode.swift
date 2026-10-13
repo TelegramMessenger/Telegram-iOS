@@ -136,7 +136,8 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var color: UIColor
     private var accentColor: UIColor
     private var fieldType: PasscodeEntryFieldType
-    private let useCustomNumpad: Bool
+    private var useCustomNumpad: Bool
+    private let fieldBackgroundColor: UIColor?
     
     private let textFieldNode: TextFieldNode
     private let borderNode: ASImageNode
@@ -145,6 +146,14 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var validLayout: (CGSize, CGFloat)?
     
     public var complete: ((String) -> Void)?
+    private var inputGeneration: Int = 0
+    var isInputEnabled = true {
+        didSet {
+            if self.isInputEnabled != oldValue {
+                self.cancelPendingCompletion()
+            }
+        }
+    }
     
     public var text: String {
         return self.textFieldNode.textField.text ?? ""
@@ -156,12 +165,13 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    public init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
+    public init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false, fieldBackgroundColor: UIColor? = nil) {
         self.color = color
         self.accentColor = accentColor
         self.fieldType = fieldType
         self.keyboardAppearance = keyboardAppearance
         self.useCustomNumpad = useCustomNumpad
+        self.fieldBackgroundColor = fieldBackgroundColor
         
         self.textFieldNode = TextFieldNode()
         self.borderNode = ASImageNode()
@@ -174,8 +184,8 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         for node in self.dotNodes {
             self.addSubnode(node)
         }
-        self.addSubnode(self.textFieldNode)
         self.addSubnode(self.borderNode)
+        self.addSubnode(self.textFieldNode)
     }
     
     override public func didLoad() {
@@ -190,20 +200,31 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
         self.textFieldNode.textField.tintColor = self.accentColor
         
-        if self.useCustomNumpad {
-            switch self.fieldType {
-                case .digits6, .digits4:
-                    self.textFieldNode.textField.inputView = PasscodeEntryInputView()
-                case .alphanumeric:
-                    break
+        self.updateKeyboard()
+    }
+
+    private func updateKeyboard() {
+        let textField = self.textFieldNode.textField
+        textField.keyboardType = self.fieldType.keyboardType
+        if self.useCustomNumpad && self.fieldType != .alphanumeric {
+            if textField.inputView == nil {
+                textField.inputView = PasscodeEntryInputView()
             }
+        } else {
+            textField.inputView = nil
+        }
+        if textField.isFirstResponder {
+            textField.reloadInputViews()
         }
     }
-    
-    func updateFieldType(_ fieldType: PasscodeEntryFieldType, animated: Bool) {
+
+    func updateFieldType(_ fieldType: PasscodeEntryFieldType, animated: Bool, useCustomNumpad: Bool? = nil) {
+        self.cancelPendingCompletion()
         self.fieldType = fieldType
-        
-        self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
+        if let useCustomNumpad {
+            self.useCustomNumpad = useCustomNumpad
+        }
+        self.updateKeyboard()
         
         if let (size, topOffset) = self.validLayout {
             let _ = self.updateLayout(size: size, topOffset: topOffset, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
@@ -249,6 +270,7 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func reset(animated: Bool = true) {
+        self.cancelPendingCompletion()
         var delay: Double = 0.0
         for node in self.dotNodes.reversed() {
             if node.alpha < 1.0 {
@@ -262,24 +284,27 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func append(_ string: String) {
-        var text = (self.textFieldNode.textField.text ?? "") + string
+        guard self.isInputEnabled, !string.isEmpty else { return }
+        let text = (self.textFieldNode.textField.text ?? "") + string
         let maxLength = self.fieldType.maxLength
         if let maxLength = maxLength, text.count > maxLength {
             return
         }
+        if let allowedCharacters = self.fieldType.allowedCharacters, text.rangeOfCharacter(from: allowedCharacters.inverted) != nil {
+            return
+        }
+        self.cancelPendingCompletion()
         self.textFieldNode.textField.text = text
-        
-        text = self.textFieldNode.textField.text ?? "" + string
         self.updateDots(count: text.count, animated: false)
         
         if let maxLength = maxLength, text.count == maxLength {
-            Queue.mainQueue().after(0.2) {
-                self.complete?(text)
-            }
+            self.scheduleCompletion(text)
         }
     }
     
     func delete() -> Bool {
+        guard self.isInputEnabled else { return false }
+        self.cancelPendingCompletion()
         var text = self.textFieldNode.textField.text ?? ""
         guard !text.isEmpty else {
             return false
@@ -302,10 +327,12 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func update(fieldType: PasscodeEntryFieldType) {
+        self.cancelPendingCompletion()
         if fieldType != self.fieldType {
             self.textFieldNode.textField.text = ""
         }
         self.fieldType = fieldType
+        self.updateKeyboard()
         if let (size, topOffset) = self.validLayout {
             let _ = self.updateLayout(size: size, topOffset: topOffset, transition: .immediate)
         }
@@ -344,19 +371,38 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         var inset: CGFloat = 50.0
-        if !self.useCustomNumpad {
+        if !self.useCustomNumpad || self.fieldBackgroundColor != nil {
             inset = 16.0
         }
-        let fieldFrame = CGRect(x: inset, y: origin.y, width: size.width - inset * 2.0, height: fieldHeight)
+        let height: CGFloat = self.fieldType == .alphanumeric && self.fieldBackgroundColor != nil ? 52.0 : fieldHeight
+        let fieldFrame = CGRect(x: inset, y: origin.y, width: size.width - inset * 2.0, height: height)
         transition.updateFrame(node: self.borderNode, frame: fieldFrame)
-        transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: 13.0, dy: 0.0))
+        transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: self.fieldBackgroundColor != nil ? 16.0 : 13.0, dy: 0.0))
         
-        self.borderNode.image = generateFieldBackgroundImage(backgroundImage: self.background?.foregroundImage, backgroundSize: self.background?.size, frame: fieldFrame)
+        if let fieldBackgroundColor = self.fieldBackgroundColor {
+            self.borderNode.image = generateStretchableFilledCircleImage(diameter: 52.0, color: fieldBackgroundColor)
+        } else {
+            self.borderNode.image = generateFieldBackgroundImage(backgroundImage: self.background?.foregroundImage, backgroundSize: self.background?.size, frame: fieldFrame)
+        }
         
         return fieldFrame
     }
     
+    func cancelPendingCompletion() {
+        self.inputGeneration += 1
+    }
+
+    private func scheduleCompletion(_ text: String) {
+        let generation = self.inputGeneration
+        Queue.mainQueue().after(0.2) { [weak self] in
+            guard let self, self.isInputEnabled, self.inputGeneration == generation, self.text == text else { return }
+            self.cancelPendingCompletion()
+            self.complete?(text)
+        }
+    }
+
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        guard self.isInputEnabled else { return false }
         let currentText = textField.text ?? ""
         let text = (currentText as NSString).replacingCharacters(in: range, with: string)
         if let maxLength = self.fieldType.maxLength, text.count > maxLength {
@@ -365,21 +411,17 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         if let allowedCharacters = self.fieldType.allowedCharacters, let _ = text.rangeOfCharacter(from: allowedCharacters.inverted) {
             return false
         }
+        self.cancelPendingCompletion()
         self.updateDots(count: text.count, animated: text.count < currentText.count)
         
         if string == "\n" {
-            Queue.mainQueue().after(0.2) {
-                self.complete?(currentText)
-            }
+            self.scheduleCompletion(currentText)
             return false
         }
         
         if let maxLength = self.fieldType.maxLength, text.count == maxLength {
-            Queue.mainQueue().after(0.2) {
-                self.complete?(text)
-            }
+            self.scheduleCompletion(text)
         }
         return true
     }
 }
-

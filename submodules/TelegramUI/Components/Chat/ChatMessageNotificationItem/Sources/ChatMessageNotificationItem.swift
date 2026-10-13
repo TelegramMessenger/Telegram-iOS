@@ -12,6 +12,7 @@ import LocalizedPeerData
 import StickerResources
 import PhotoResources
 import TelegramStringFormatting
+import PlatformRestrictionMatching
 import TextFormat
 import InvisibleInkDustNode
 import TextNodeWithEntities
@@ -113,6 +114,8 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     
     func setupItem(_ item: ChatMessageNotificationItem, compact: Bool) {
         self.item = item
+        self.titleIconNode.image = nil
+        self.titleIconNode.isHidden = true
         
         self.compact = compact
         if compact {
@@ -191,6 +194,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var isRound = false
         var messageText: String
         var messageEntities: [MessageTextEntity]?
+        var gramTransferAmountRanges: [NSRange]?
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
             messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").string
         } else if item.messages.count == 1 {
@@ -232,6 +236,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 }
             } else {
                 messageText = textString.string
+            }
+            if message.restrictionReason(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) == nil, let preview = incomingGramTransferPreview(message: EngineMessage(message), accountPeerId: item.context.account.peerId, strings: item.strings, dateTimeFormat: item.dateTimeFormat, includeDiamond: true) {
+                messageText = preview.text
+                messageEntities = nil
+                gramTransferAmountRanges = preview.amountRanges
+                if message.id.peerId.isTelegramNotifications {
+                    let iconSize: CGFloat = compact ? 14.0 : 16.0
+                    self.titleIconNode.image = generateScaledImage(image: PresentationResourcesChatList.verifiedIcon(presentationData.theme), size: CGSize(width: iconSize, height: iconSize), opaque: false)
+                    self.titleIconNode.isHidden = self.titleIconNode.image == nil
+                }
             }
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
@@ -345,7 +359,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var attributedMessageText: NSAttributedString
         
         var customEntities: [MessageTextEntity] = []
-        if item.messages[0].id.peerId.isTelegramNotifications || item.messages[0].id.peerId.isVerificationCodes {
+        if gramTransferAmountRanges == nil && (item.messages[0].id.peerId.isTelegramNotifications || item.messages[0].id.peerId.isVerificationCodes) {
             let regex: NSRegularExpression?
             if item.messages[0].id.peerId.isTelegramNotifications {
                 regex = telegramCodeRegex
@@ -368,7 +382,22 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         }
         
-        if let messageEntities = messageEntities {
+        if let amountRanges = gramTransferAmountRanges {
+            let text = NSMutableAttributedString(string: messageText, font: textFont, textColor: textColor)
+            let amountFont = Font.medium(textFont.pointSize)
+            let amountColor = UIColor(rgb: presentationData.theme.overallDarkAppearance ? 0x00b9ff : 0x007aff)
+            let diamondLength = ("💎" as NSString).length
+            let diamond = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .animation(name: "GramDiamond"))
+            for range in amountRanges {
+                // includeDiamond places the icon immediately before the localized amount.
+                let diamondRange = NSRange(location: range.location - diamondLength, length: diamondLength)
+                text.addAttribute(ChatTextInputAttributes.customEmoji, value: diamond, range: diamondRange)
+                text.addAttribute(.baselineOffset, value: 1.5, range: diamondRange)
+                text.addAttribute(.font, value: amountFont, range: range)
+                text.addAttribute(.foregroundColor, value: amountColor, range: range)
+            }
+            attributedMessageText = text
+        } else if let messageEntities = messageEntities {
             attributedMessageText = stringWithAppliedEntities(messageText, entities: messageEntities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: item.messages.first)
         } else {
             attributedMessageText = NSAttributedString(string: messageText.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: textColor)
@@ -434,13 +463,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 12.0, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
-        var titleInset: CGFloat = 0.0
+        var titleIconWidth: CGFloat = 0.0
         if let image = self.titleIconNode.image {
-            titleInset += image.size.width + 4.0
+            titleIconWidth = image.size.width + 4.0
         }
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - titleInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, width - leftInset - rightInset - titleIconWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
@@ -464,11 +493,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 
         let textSpacing: CGFloat = 1.0
         
-        let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if let image = self.titleIconNode.image {
-            transition.updateFrame(node: self.titleIconNode, frame: CGRect(origin: CGPoint(x: leftInset + 1.0, y: titleFrame.minY + 3.0), size: image.size))
+            transition.updateFrame(node: self.titleIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - image.size.height / 2.0)), size: image.size))
         }
         
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size)

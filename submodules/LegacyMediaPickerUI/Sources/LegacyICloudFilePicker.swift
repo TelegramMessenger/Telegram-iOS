@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import UniformTypeIdentifiers
 import Display
 import TelegramPresentationData
 import LegacyUI
@@ -54,14 +55,15 @@ public enum LegacyICloudFilePickerMode {
     case `import`
     case `export`
     
-    var documentPickerMode: UIDocumentPickerMode {
+    /// iOS 14 replaced `UIDocumentPickerMode` with an `asCopy` flag on the opening/exporting
+    /// initializers: the old `.open` is `asCopy: false`, while `.import` and `.exportToService`
+    /// are both `asCopy: true`.
+    var asCopy: Bool {
         switch self {
         case .default:
-            return .open
-        case .import:
-            return .import
-        case .export:
-            return .exportToService
+            return false
+        case .import, .export:
+            return true
         }
     }
 }
@@ -76,13 +78,14 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
     
     let controller: DocumentPickerViewController
     if case .export = mode, let url {
-        if #available(iOS 14.0, *) {
-            controller = DocumentPickerViewController(forExporting: [url], asCopy: true)
-        } else {
-            controller = DocumentPickerViewController(url: url, in: mode.documentPickerMode)
-        }
+        controller = DocumentPickerViewController(forExporting: [url], asCopy: true)
     } else {
-        controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+        // The old `documentTypes:` initializer took raw UTI strings, so identifiers the system does
+        // not know (e.g. "org.xiph.flac", which the app does not declare) must not be dropped --
+        // dropping them would silently make those files unselectable, and dropping all of them would
+        // silently widen the picker to every file.
+        let contentTypes = documentTypes.map { UTType($0) ?? UTType(importedAs: $0) }
+        controller = DocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: mode.asCopy)
     }
     controller.forceDarkTheme = forceDarkTheme || theme.overallDarkAppearance
     controller.didDisappear = {

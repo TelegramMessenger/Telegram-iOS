@@ -1,8 +1,9 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
-import RLottieBinding
+import LottieBinding
 import AppBundle
 import GZip
 import SwiftSignalKit
@@ -25,8 +26,8 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
     private var monkeyState: ManagedMonkeyAnimationState = .idle(.blink)
     private var timer: SwiftSignalKit.Timer?
     
-    init() {
-        super.init(size: CGSize(width: 136.0, height: 136.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 136.0, height: 136.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
     }
@@ -90,7 +91,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
             let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
             if let state = self.state, state.item.source == .local("TwoFactorSetupMonkeyTracking") {
                 let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: .range(startFrame: state.frameIndex ?? 0, endFrame: frameIndex), duration: 0.3)
-                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state, lottieSettings: self.lottieSettings)
                 self.didTryAdvancingState = false
                 self.updateAnimation()
             } else {
@@ -104,7 +105,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
         func enqueueClearTracking() {
             if let state = self.state, state.item.source == .local("TwoFactorSetupMonkeyTracking") {
                 let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: .range(startFrame: state.frameIndex ?? 0, endFrame: 0), duration: 0.3)
-                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state, lottieSettings: self.lottieSettings)
                 self.didTryAdvancingState = false
                 self.updateAnimation()
             }
@@ -130,7 +131,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
             case .eyesClosed:
                 break
             case .peeking:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: .range(startFrame: 0, endFrame: 14), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("IntroPassword"), frames: .range(startFrame: 0, endFrame: 14), duration: 0.3))
             case let .tracking(value):
                 self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 enqueueTracking(value)
@@ -141,7 +142,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
                 self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 self.enqueueIdle(idle)
             case .eyesClosed:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: .range(startFrame: 14, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("IntroPassword"), frames: .range(startFrame: 14, endFrame: 0), duration: 0.3))
             case .peeking:
                 break
             case let .tracking(value):

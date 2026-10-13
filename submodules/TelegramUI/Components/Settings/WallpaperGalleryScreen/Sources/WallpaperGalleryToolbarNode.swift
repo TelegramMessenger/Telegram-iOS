@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -81,7 +82,7 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
             self.doneButtonSolidTitleNode.displaysAsynchronously = false
             self.doneButtonSolidTitleNode.isUserInteractionEnabled = false
 
-            self.animationNode = SimpleAnimationNode(animationName: "premium_unlock", size: CGSize(width: 30.0, height: 30.0))
+            self.animationNode = SimpleAnimationNode(animationName: "premium_unlock", size: CGSize(width: 30.0, height: 30.0), lottieSettings: .noAccountFallback)
             self.animationNode.customColor = .white
             self.animationNode.isHidden = true
 

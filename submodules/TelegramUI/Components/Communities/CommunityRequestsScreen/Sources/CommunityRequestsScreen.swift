@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AccountContext
@@ -40,8 +41,11 @@ private final class CommunityRequestsEmptyPlaceholderView: UIView {
     private let title = ComponentView<Empty>()
     private let text = ComponentView<Empty>()
 
-    override init(frame: CGRect) {
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+    private let lottieSettings: LottieRenderingSettings
+
+    init(frame: CGRect, lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
         self.animationNode.setup(
             source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"),
             width: 192,
@@ -807,7 +811,7 @@ private final class CommunityRequestsScreenComponent: Component {
                     } else {
                         emptyPlaceholderTransition = .immediate
                         
-                        emptyPlaceholderView = CommunityRequestsEmptyPlaceholderView(frame: CGRect())
+                        emptyPlaceholderView = CommunityRequestsEmptyPlaceholderView(frame: CGRect(), lottieSettings: component.context.lottieRenderingSettings)
                         emptyPlaceholderView.alpha = 0.0
                         self.emptyPlaceholderView = emptyPlaceholderView
                         self.scrollView.addSubview(emptyPlaceholderView)

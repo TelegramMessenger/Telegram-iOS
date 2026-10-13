@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -436,7 +437,8 @@ public final class LocationMapHeaderNode: ASDisplayNode {
                             content: LottieComponent.ResourceContent(context: weatherContext, file: weatherEmojiFile, attemptSynchronously: false, providesPlaceholder: true),
                             placeholderColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor.withAlphaComponent(0.1),
                             renderingScale: 2.0,
-                            loop: true
+                            loop: true,
+                            lottieSettings: weatherContext.lottieRenderingSettings
                         )
                     ),
                     environment: {},

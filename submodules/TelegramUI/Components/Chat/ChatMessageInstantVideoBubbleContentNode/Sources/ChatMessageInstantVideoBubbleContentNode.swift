@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -79,11 +80,11 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
         return isVisible
     }
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.interactiveFileNode = ChatMessageInteractiveFileNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
                 
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.maskForeground.backgroundColor = UIColor.white.cgColor
         self.maskForeground.masksToBounds = true
@@ -183,7 +184,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
         let audioTranscriptionState = self.audioTranscriptionState
         let didSetupFileNode = self.item != nil
         
-        return { item, layoutConstants, preparePosition, selection, constrainedSize, avatarInset in
+        return { [weak self] item, layoutConstants, preparePosition, selection, constrainedSize, avatarInset in
             var selectedFile: TelegramMediaFile?
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {
@@ -280,7 +281,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
             
             let videoFrameWidth = videoFrame.width + 2.0
             
-            return (contentProperties, nil, initialWidth, { constrainedSize, position in
+            return (contentProperties, nil, initialWidth, { [weak self] constrainedSize, position in
                 var refinedWidth = videoFrameWidth
                 var finishLayout: ((CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void))?
                 
@@ -293,7 +294,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
                     refinedWidth = videoFrameWidth
                 }
                 
-                return (refinedWidth, { boundingWidth in
+                return (refinedWidth, { [weak self] boundingWidth in
                     var finalSize: CGSize
                     var finalFileSize: CGSize?
                     var finalFileApply: ((Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void)?

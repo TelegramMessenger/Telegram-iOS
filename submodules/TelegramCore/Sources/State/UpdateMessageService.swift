@@ -4,10 +4,9 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-class UpdateMessageService: NSObject, MTMessageService {
+class UpdateMessageService: NSObject, NetworkEngineUpdateSink {
     var peerId: PeerId!
     let pipe: ValuePipe<[UpdateGroup]> = ValuePipe()
-    var mtProto: MTProto?
     
     override init() {
         super.init()
@@ -18,15 +17,7 @@ class UpdateMessageService: NSObject, MTMessageService {
         self.peerId = peerId
     }
     
-    func mtProtoWillAdd(_ mtProto: MTProto!) {
-        self.mtProto = mtProto
-    }
-    
-    func mtProtoDidChangeSession(_ mtProto: MTProto!) {
-        self.pipe.putNext([.reset])
-    }
-    
-    func mtProtoServerDidChangeSession(_ mtProto: MTProto!, firstValidMessageId: Int64, otherValidMessageIds: [Any]!) {
+    func networkSessionDidReset() {
         self.pipe.putNext([.reset])
     }
     
@@ -34,8 +25,8 @@ class UpdateMessageService: NSObject, MTMessageService {
         self.pipe.putNext(groups)
     }
     
-    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector, networkType: Int32) {
-        if let updates = (message.body as? BoxedMessage)?.body as? Api.Updates {
+    func networkSessionDidReceive(message: Any) {
+        if let updates = (message as? BoxedMessage)?.body as? Api.Updates {
             self.addUpdates(updates)
         }
     }

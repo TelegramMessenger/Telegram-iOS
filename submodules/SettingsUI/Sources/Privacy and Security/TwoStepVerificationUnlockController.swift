@@ -478,7 +478,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                         text = presentationData.strings.Login_UnknownError
                 }
                 
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }))
         }
     }, openForgotPassword: {
@@ -532,7 +532,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                             state.checking = false
                                             return state
                                         }
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }))
                                 } else {
                                     if let pendingResetTimestamp = pendingResetTimestamp {
@@ -591,7 +591,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                                     presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                                 }
                                             })
-                                        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        })]), nil)
                                     }
                                 }
                             case .notSet:
@@ -724,7 +724,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                 dismissImpl?()
                             }))
                         }
-                    })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    })]), nil)
                 default:
                     break
             }

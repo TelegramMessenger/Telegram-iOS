@@ -357,6 +357,26 @@ final class MediaEditorRenderer {
         self.renderTarget?.redraw()
     }
     
+    func finalRenderedCIImage() -> CIImage? {
+        guard let texture = self.resultTexture, let device = self.effectiveDevice, let commandBuffer = self.commandQueue?.makeCommandBuffer() else {
+            return nil
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: texture.pixelFormat, width: texture.width, height: texture.height, mipmapped: false)
+        descriptor.usage = [.shaderRead]
+        guard let snapshot = device.makeTexture(descriptor: descriptor), let encoder = commandBuffer.makeBlitCommandEncoder() else {
+            return nil
+        }
+        // The live texture can be reused by the next frame while the draft preview is composed off the main thread.
+        encoder.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0), sourceSize: MTLSize(width: texture.width, height: texture.height, depth: 1), to: snapshot, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        encoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        guard commandBuffer.status == .completed else {
+            return nil
+        }
+        return getTextureCIImage(texture: snapshot)
+    }
+
     func finalRenderedImage(mirror: Bool = false) -> UIImage? {
         if let finalTexture = self.resultTexture, let device = self.effectiveDevice {
             return getTextureImage(device: device, texture: finalTexture, mirror: mirror)

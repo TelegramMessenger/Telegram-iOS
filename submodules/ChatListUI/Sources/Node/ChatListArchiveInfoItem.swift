@@ -8,6 +8,10 @@ import ListSectionHeaderNode
 import AppBundle
 
 class ChatListArchiveInfoItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -18,7 +22,7 @@ class ChatListArchiveInfoItem: ListViewItem {
         self.strings = strings
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListArchiveInfoItemNode()
             
@@ -37,14 +41,14 @@ class ChatListArchiveInfoItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ChatListArchiveInfoItemNode)
             if let nodeValue = node() as? ChatListArchiveInfoItemNode {
                 
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem == nil)
+                    let (nodeLayout, apply) = layout(self, params, neighbors.next == nil)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
                             apply()
@@ -192,9 +196,9 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, ASScrollViewDelegate {
         self.pageControlNode.setPage(0.0)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         let layout = self.asyncLayout()
-        let (_, apply) = layout(item as! ChatListArchiveInfoItem, params, nextItem == nil)
+        let (_, apply) = layout(item as! ChatListArchiveInfoItem, params, neighbors.next == nil)
         apply()
     }
     
@@ -203,7 +207,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, ASScrollViewDelegate {
         
         let makeInfoPageLayouts = self.infoPageNodes.map({ $0.asyncLayout() })
         
-        return { item, params, last in
+        return { [weak self] item, params, last in
             let baseWidth = params.width - params.leftInset - params.rightInset
             let bottomInset: CGFloat = 22.0 + 28.0
             

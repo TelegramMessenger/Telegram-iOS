@@ -69,8 +69,10 @@ public extension TelegramEngine {
             })
         }
 
-        public func updatePeerPhotoExisting(reference: TelegramMediaImageReference) -> Signal<TelegramMediaImage?, NoError> {
-            return _internal_updatePeerPhotoExisting(network: self.account.network, reference: reference)
+        /// `representations` and `videoRepresentations` are the photo's own sizes; the downloaded
+        /// ones are reused for the photo the server returns instead of being downloaded again.
+        public func updatePeerPhotoExisting(reference: TelegramMediaImageReference, representations: [TelegramMediaImageRepresentation] = [], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = []) -> Signal<TelegramMediaImage?, NoError> {
+            return _internal_updatePeerPhotoExisting(account: self.account, reference: reference, representations: representations, videoRepresentations: videoRepresentations)
         }
 
         public func removeAccountPhoto(reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {

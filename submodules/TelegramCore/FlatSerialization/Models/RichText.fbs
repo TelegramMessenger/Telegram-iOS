@@ -32,7 +32,9 @@ union RichText_Value {
     RichText_Mention,
     RichText_MentionName,
     RichText_Spoiler,
-    RichText_Date
+    RichText_Date,
+    RichText_TextButton,
+    RichText_TonAddress
 }
 
 table RichText {
@@ -132,6 +134,10 @@ table RichText_BankCard {
     text:RichText (id: 0, required);
 }
 
+table RichText_TonAddress {
+    text:RichText (id: 0, required);
+}
+
 table RichText_BotCommand {
     text:RichText (id: 0, required);
 }
@@ -161,4 +167,81 @@ table RichText_Date {
     text:RichText (id: 0, required);
     date:int (id: 1);
     format:int = -1 (id: 2);
+}
+
+table RichText_TextButton {
+    button:InstantPageButton (id: 0, required);
+}
+
+// InstantPageButton and its action union live HERE rather than in InstantPageBlock.fbs on
+// purpose: RichText_TextButton needs them, and InstantPageBlock.fbs already includes this file,
+// so defining them there would create an include cycle. They reference nothing outside this
+// file, so this placement is cycle-free.
+//
+// The union has exactly the 10 ReplyMarkupButtonAction cases reachable from Api.InlineButtonType.
+// text / requestPhone / requestMap / setupPoll / requestPeer come only from Api.ButtonType and
+// cannot occur on a page button.
+union InstantPageButtonAction_Value {
+    InstantPageButtonAction_Url,
+    InstantPageButtonAction_UrlAuth,
+    InstantPageButtonAction_OpenWebView,
+    InstantPageButtonAction_Callback,
+    InstantPageButtonAction_OpenWebApp,
+    InstantPageButtonAction_Payment,
+    InstantPageButtonAction_SwitchInline,
+    InstantPageButtonAction_OpenUserProfile,
+    InstantPageButtonAction_CopyText,
+    InstantPageButtonAction_Disabled
+}
+
+table InstantPageButtonAction {
+    value:InstantPageButtonAction_Value (id: 1, required);
+}
+
+table InstantPageButtonAction_Url {
+    url:string (id: 0, required);
+}
+
+table InstantPageButtonAction_UrlAuth {
+    url:string (id: 0, required);
+    buttonId:int (id: 1);
+}
+
+table InstantPageButtonAction_OpenWebView {
+    url:string (id: 0, required);
+    simple:bool (id: 1);
+}
+
+table InstantPageButtonAction_Callback {
+    data:[ubyte] (id: 0, required);
+    requiresPassword:bool (id: 1);
+}
+
+table InstantPageButtonAction_OpenWebApp {}
+
+table InstantPageButtonAction_Payment {}
+
+table InstantPageButtonAction_SwitchInline {
+    query:string (id: 0, required);
+    samePeer:bool (id: 1);
+    peerTypes:int (id: 2);
+}
+
+table InstantPageButtonAction_OpenUserProfile {
+    peerId:long (id: 0);
+}
+
+table InstantPageButtonAction_CopyText {
+    payload:string (id: 0, required);
+}
+
+table InstantPageButtonAction_Disabled {}
+
+table InstantPageButton {
+    text:RichText (id: 0, required);
+    action:InstantPageButtonAction (id: 1, required);
+    color:int = -1 (id: 2);
+    // `richButtonStyle` link:flags.3. A defaulted trailing scalar, so buffers written before it
+    // existed read `false`. Scalars cannot be `required` in flatc.
+    isLink:bool = false (id: 3);
 }

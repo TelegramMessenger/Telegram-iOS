@@ -65,10 +65,10 @@ final class StatsOverviewItem: ListViewItem, ItemListItem {
         self.style = style
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = StatsOverviewItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -81,13 +81,13 @@ final class StatsOverviewItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? StatsOverviewItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -212,12 +212,10 @@ private final class ValueItemNode: ASDisplayNode {
             
             var valueOffset: CGFloat = 0.0
             let iconName: String?
-            var iconTinted = false
             switch mode {
             case .ton:
-                iconName = "Ads/TonMedium"
-                iconTinted = true
-                valueOffset = 17.0
+                iconName = "Wallet/TopGram"
+                valueOffset = 24.0
             case .stars:
                 iconName = "Premium/Stars/StarMedium"
                 valueOffset = 21.0
@@ -259,11 +257,7 @@ private final class ValueItemNode: ASDisplayNode {
                     }
                     
                     if themeUpdated || iconNameUpdated {
-                        if iconTinted {
-                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: UIColor(rgb: 0x30A1F5))
-                        } else {
-                            iconNode.image = UIImage(bundleImageName: iconName)
-                        }
+                        iconNode.image = UIImage(bundleImageName: iconName)
                     }
                     
                     if let icon = iconNode.image {
@@ -355,7 +349,7 @@ class StatsOverviewItemNode: ListViewItemNode {
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor: UIColor

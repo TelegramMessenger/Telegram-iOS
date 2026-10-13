@@ -242,6 +242,11 @@ public final class MediaEditorComposer {
 public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inputImage: UIImage, dimensions: CGSize, outputDimensions: CGSize? = nil, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let inputImage = CIImage(image: inputImage, options: [.colorSpace: colorSpace])!
+    makeEditorImageComposition(context: context, postbox: postbox, inputImage: inputImage, dimensions: dimensions, outputDimensions: outputDimensions, values: values, time: time, textScale: textScale, completion: completion)
+}
+
+public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inputImage: CIImage, dimensions: CGSize, outputDimensions: CGSize? = nil, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
     var drawingImage: CIImage?
     
     var maskImage: CIImage?

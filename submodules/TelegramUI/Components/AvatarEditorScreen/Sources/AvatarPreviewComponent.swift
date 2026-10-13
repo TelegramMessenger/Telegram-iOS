@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -132,7 +133,7 @@ final class AvatarPreviewComponent: Component {
                 self.imageNode.isHidden = false
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                     if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl()
+                        let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: component.context.lottieRenderingSettings)
                         animationNode.autoplay = false
                         self.animationNode = animationNode
                         animationNode.started = { [weak self] in

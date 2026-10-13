@@ -23,6 +23,7 @@ import LocationUI
 import OpenInExternalAppUI
 import GalleryUI
 import TextFormat
+import UrlWhitelist
 
 final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let context: AccountContext
@@ -572,7 +573,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             return
         }
 
-        let specs = syntaxHighlightSpecs(for: instantPage.blocks)
+        let specs = instantPageSyntaxHighlightSpecs(for: instantPage.blocks)
         if let currentState = self.codeHighlightState, currentState.specs == specs {
             return
         }
@@ -605,54 +606,6 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         }))
     }
 
-    private func syntaxHighlightSpecs(for blocks: [InstantPageBlock]) -> [CachedMessageSyntaxHighlight.Spec] {
-        var specs: [CachedMessageSyntaxHighlight.Spec] = []
-        var seen = Set<CachedMessageSyntaxHighlight.Spec>()
-
-        func collect(blocks: [InstantPageBlock]) {
-            for block in blocks {
-                switch block {
-                case let .preformatted(text, language):
-                    guard let language = normalizedCodeBlockLanguage(language), !text.plainText.isEmpty else {
-                        continue
-                    }
-                    let spec = CachedMessageSyntaxHighlight.Spec(language: language, text: text.plainText)
-                    if seen.insert(spec).inserted {
-                        specs.append(spec)
-                    }
-                case let .cover(block):
-                    collect(blocks: [block])
-                case let .postEmbed(_, _, _, _, _, blocks, _):
-                    collect(blocks: blocks)
-                case let .collage(items, _):
-                    collect(blocks: items)
-                case let .slideshow(items, _):
-                    collect(blocks: items)
-                case let .details(_, blocks, _):
-                    collect(blocks: blocks)
-                case let .list(items, _):
-                    for item in items {
-                        if case let .blocks(blocks, _, _) = item {
-                            collect(blocks: blocks)
-                        }
-                    }
-                default:
-                    break
-                }
-            }
-        }
-
-        collect(blocks: blocks)
-        return specs
-    }
-
-    private func normalizedCodeBlockLanguage(_ language: String?) -> String? {
-        guard let language else {
-            return nil
-        }
-        let normalized = language.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return normalized.isEmpty ? nil : normalized
-    }
     
     func updateVisibleItems(visibleBounds: CGRect, animated: Bool = false) {
         var visibleTileIndices = Set<Int>()
@@ -1732,7 +1685,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: baseUrl),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(baseUrl) ?? baseUrl),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {

@@ -23,8 +23,8 @@ final class EditingInputDelegateBracketTests: XCTestCase {
 
     func test_insertEmoji_bracketsSelectionChange() {
         let c = makeCanvas()
-        let d = InputDelegateSpy(); c.textInputDelegate = d
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        let d = InputDelegateSpy(); c.inputDelegate = d
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: nil)
         XCTAssertGreaterThan(d.selectionDidChangeCount, 0, "a programmatic emoji insert must notify the input system the caret moved")
         XCTAssertGreaterThan(d.selectionWillChangeCount, 0)
@@ -32,8 +32,8 @@ final class EditingInputDelegateBracketTests: XCTestCase {
 
     func test_insertText_bracketsSelectionChange() {
         let c = makeCanvas()
-        let d = InputDelegateSpy(); c.textInputDelegate = d
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        let d = InputDelegateSpy(); c.inputDelegate = d
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertText("x")
         XCTAssertGreaterThan(d.selectionDidChangeCount, 0)
         XCTAssertGreaterThan(d.selectionWillChangeCount, 0)
@@ -41,8 +41,8 @@ final class EditingInputDelegateBracketTests: XCTestCase {
 
     func test_deleteBackward_bracketsSelectionChange() {
         let c = makeCanvas()
-        let d = InputDelegateSpy(); c.textInputDelegate = d
-        c.anchor = c.boxes[0].textStart + 2; c.head = c.anchor
+        let d = InputDelegateSpy(); c.inputDelegate = d
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 2, head: c.boxes[0].textStart + 2)
         c.deleteBackward()
         XCTAssertGreaterThan(d.selectionDidChangeCount, 0)
         XCTAssertGreaterThan(d.selectionWillChangeCount, 0)
@@ -53,7 +53,7 @@ final class EditingInputDelegateBracketTests: XCTestCase {
     /// leftover bare `U+FFFC`.
     func test_insertDeleteReinsert_leavesExactlyOneEmoji() {
         let c = makeCanvas(text: "")
-        c.anchor = c.boxes[0].textStart; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart)
         c.insertEmoji(id: "star", altText: nil)
         XCTAssertEqual(c.head, c.boxes[0].textStart + 1, "caret advances past the first emoji")
         c.deleteBackward()

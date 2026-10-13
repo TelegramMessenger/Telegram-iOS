@@ -30,9 +30,9 @@ final class BlockLayoutTK1EmojiTests: XCTestCase {
     }
 
     /// The hosted emoji box must sit on the SAME baseline TextKit 1 DRAWS the neighbouring text at — which is
-    /// the line-centered baseline (raw `location(forGlyphAt:)` − `centeringDelta`), since both engines now
-    /// center the `lineHeightMultiple` line (the text glyphs and the emoji shift up together). Reference =
-    /// `lineFragmentRect.minY + location(forGlyphAt: 0).y − centeringDelta` (glyph 0 = "A"). For a no-boost
+    /// the corrected baseline (raw `location(forGlyphAt:)` − `baselineDelta`), since both engines place the
+    /// first baseline at the font's ascender (the text glyphs and the emoji shift up together). Reference =
+    /// `lineFragmentRect.minY + location(forGlyphAt: 0).y − baselineDelta` (glyph 0 = "A"). For a no-boost
     /// style the box spans baseline−ascender … baseline−descender (a glyph cell).
     func test_tk1_emoji_sitsOnTextBaseline() {
         for style in [ParagraphStyleName.heading1, .caption, .heading2] {   // boost == 0 styles
@@ -45,8 +45,7 @@ final class BlockLayoutTK1EmojiTests: XCTestCase {
             guard let box = l.attachmentBox(at: 4) else { XCTFail("no box (\(style))"); continue }
             let lm = l.layoutManager
             let lineRect = lm.lineFragmentRect(forGlyphAt: 0, effectiveRange: nil)
-            let textBaseline = lineRect.minY + lm.location(forGlyphAt: 0).y
-                - l.centeringDelta(lineHeight: lineRect.height)
+            let textBaseline = lineRect.minY + lm.location(forGlyphAt: 0).y - l.baselineDelta
             XCTAssertEqual(box.minY, textBaseline - font.ascender, accuracy: 0.5, "box top = baseline−ascender (\(style))")
             XCTAssertEqual(box.maxY, textBaseline - font.descender, accuracy: 0.5, "box bottom = baseline−descender (\(style))")
         }

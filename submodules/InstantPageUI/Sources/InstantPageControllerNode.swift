@@ -18,6 +18,7 @@ import ContextUI
 import TranslateUI
 import Pasteboard
 import ChatRichTextEditorComposer
+import UrlWhitelist
 
 final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private weak var controller: InstantPageController?
@@ -1455,7 +1456,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url.url) ?? url.url),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
@@ -1924,7 +1925,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }, openInSafari: { [weak self] in
                 if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.context.sharedContext.applicationBindings.openUrl(content.url)
+                    strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: content.url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {})
                 }
             })
             self.addSubnode(settingsNode)

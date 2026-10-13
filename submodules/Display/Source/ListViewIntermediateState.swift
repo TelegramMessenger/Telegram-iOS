@@ -160,17 +160,33 @@ public struct ListViewUpdateSizeAndInsets {
 public struct ListViewItemRange: Equatable {
     public let firstIndex: Int
     public let lastIndex: Int
+
+    public init(firstIndex: Int, lastIndex: Int) {
+        self.firstIndex = firstIndex
+        self.lastIndex = lastIndex
+    }
 }
 
 public struct ListViewVisibleItemRange: Equatable {
     public let firstIndex: Int
     public let firstIndexFullyVisible: Bool
     public let lastIndex: Int
+
+    public init(firstIndex: Int, firstIndexFullyVisible: Bool, lastIndex: Int) {
+        self.firstIndex = firstIndex
+        self.firstIndexFullyVisible = firstIndexFullyVisible
+        self.lastIndex = lastIndex
+    }
 }
 
 public struct ListViewDisplayedItemRange: Equatable {
     public let loadedRange: ListViewItemRange?
     public let visibleRange: ListViewVisibleItemRange?
+
+    public init(loadedRange: ListViewItemRange?, visibleRange: ListViewVisibleItemRange?) {
+        self.loadedRange = loadedRange
+        self.visibleRange = visibleRange
+    }
 }
 
 struct IndexRange {

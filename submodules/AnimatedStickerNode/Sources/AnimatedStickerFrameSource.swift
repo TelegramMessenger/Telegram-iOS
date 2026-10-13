@@ -3,7 +3,8 @@ import Compression
 import Display
 import SwiftSignalKit
 import MediaResources
-import RLottieBinding
+import LottieBinding
+import LottieSettings
 import GZip
 import ManagedFile
 import AnimationCompression
@@ -578,7 +579,7 @@ public final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource 
         return self.currentFrame % self.frameCount
     }
     
-    public init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, useMetalCache: Bool = false, fitzModifier: EmojiFitzModifier?) {
+    public init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, useMetalCache: Bool = false, fitzModifier: EmojiFitzModifier?, lottieSettings: LottieRenderingSettings) {
         self.queue = queue
         self.data = data
         self.width = width
@@ -587,7 +588,7 @@ public final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource 
         self.currentFrame = 0
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         
-        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "") else {
+        guard let animation = makeLottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "", settings: lottieSettings) else {
             print("Could not load sticker data")
             return nil
         }

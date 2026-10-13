@@ -35,10 +35,17 @@ extension BotVerifierSettings {
         switch apiBotVerifierSettings {
         case let .botVerifierSettings(botVerifierSettingsData):
             let (flags, iconFileId, companyName, customDescription) = (botVerifierSettingsData.flags, botVerifierSettingsData.icon, botVerifierSettingsData.company, botVerifierSettingsData.customDescription)
+            var text: String?
+            var entities: [MessageTextEntity]?
+            if case let .textWithEntities(textWithEntitiesData) = customDescription {
+                text = textWithEntitiesData.text
+                entities = messageTextEntitiesFromApiEntities(textWithEntitiesData.entities)
+            }
             self.init(
                 iconFileId: iconFileId,
                 companyName: companyName,
-                customDescription: customDescription,
+                customDescription: text,
+                customDescriptionEntities: entities,
                 canModifyDescription: (flags & (1 << 1)) != 0
             )
         }

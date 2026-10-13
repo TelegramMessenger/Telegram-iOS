@@ -22,7 +22,7 @@ final class UndoCoalescingTests: XCTestCase {
         v.undoManagerOverride = um
         return v
     }
-    private func caretAtEnd(_ v: DocumentCanvasView) { let e = v.boxes[0].textStart + v.boxes[0].textLength; v.anchor = e; v.head = e }
+    private func caretAtEnd(_ v: DocumentCanvasView) { let e = v.boxes[0].textStart + v.boxes[0].textLength; v.setSelectionForTesting(anchor: e, head: e) }
     private func text(_ v: DocumentCanvasView) -> String { (v.boxes[0] as! BlockBox).currentParagraph().text }
 
     func test_contiguousTyping_registersOneUndoStep() {
@@ -37,15 +37,14 @@ final class UndoCoalescingTests: XCTestCase {
         let v = canvas("Hi")
         caretAtEnd(v)
         v.insertText("a")                        // step 1 (opens a run at the new caret)
-        v.head = v.boxes[0].textStart + 1        // move the caret away → breaks the run
-        v.anchor = v.head
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: v.boxes[0].textStart + 1)   // move the caret away → breaks the run
         v.insertText("z")                        // step 2 (non-contiguous)
         XCTAssertEqual(v.undoRegistrationCount, 2, "a caret move between typed chars starts a new step")
     }
 
     func test_typingOverSelection_isOwnStep_thenCoalesces() {
         let v = canvas("Hello")
-        v.anchor = v.boxes[0].textStart + 0; v.head = v.boxes[0].textStart + 5   // select "Hello"
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 0, head: v.boxes[0].textStart + 5)   // select "Hello"
         v.insertText("X")                        // replace-by-typing: step 1
         v.insertText("Y")                        // contiguous typing: coalesces
         XCTAssertEqual(text(v), "XY")
@@ -136,7 +135,7 @@ final class UndoCoalescingTests: XCTestCase {
     func test_undoOfSelectionDeletion_restoresCaretNotSelection() {
         let v = canvas("Hello")
         let start = v.boxes[0].textStart
-        v.anchor = start + 1; v.head = start + 4   // select "ell"
+        v.setSelectionForTesting(anchor: start + 1, head: start + 4)   // select "ell"
         v.deleteBackward()                          // -> "Ho"
         XCTAssertEqual(text(v), "Ho")
         v.effectiveUndoManager!.undo()
@@ -148,7 +147,7 @@ final class UndoCoalescingTests: XCTestCase {
     func test_undoOfFormatting_preservesSelection() {
         let v = canvas("Hello")
         let start = v.boxes[0].textStart
-        v.anchor = start + 0; v.head = start + 5   // select "Hello"
+        v.setSelectionForTesting(anchor: start + 0, head: start + 5)   // select "Hello"
         v.toggleBold()                              // attribute-only; selection stays a range
         v.effectiveUndoManager!.undo()              // un-bold
         XCTAssertEqual(text(v), "Hello", "un-bold must not alter the text")

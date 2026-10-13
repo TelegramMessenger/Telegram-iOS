@@ -329,22 +329,13 @@ class AccessibilityPreferencesContractTests(unittest.TestCase):
         for contract in (
             "baseFontSize: CGFloat",
             "item.presentationData.fontSize.baseDisplaySize",
-            "let fontScale = baseFontSize / 17.0",
-            "scaledFontSize(17.0)",
             "current.baseFontSize == baseFontSize",
+            "InstantPageTextCategories.chatMessage(",
+            "instantPageChatMessageContentScale(baseFontSize: baseFontSize)",
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, contents)
-        for fixed_size in (
-            "size: 19.0",
-            "size: 18.0",
-            "size: 17.0",
-            "size: 15.0",
-            "size: 14.0",
-            "size: 13.0",
-        ):
-            with self.subTest(fixed_size=fixed_size):
-                self.assertNotIn(fixed_size, contents)
+        self.assertNotIn("let fontScale = baseFontSize / 17.0", contents)
 
     def test_settings_rows_have_voice_control_names_and_stable_targets(self) -> None:
         owners = (

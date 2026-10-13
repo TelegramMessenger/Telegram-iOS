@@ -103,10 +103,10 @@ func instantPageBlocks(from content: ChatInputContent, collectingMediaInto media
             // Single item: byte-identical to the pre-container output.
             let item = m.items[0]
             switch item.kind {
-            case .image, .video, .audio:
+            case .image, .video, .audio, .document:
                 // Stash the Media in the page's `media` dict, keyed by its own MediaId; the block carries only the id.
-                // image/video/audio are always a concrete TelegramMediaImage/TelegramMediaFile with an id; a nil-id
-                // medium is dropped (it could not be resolved back from the dict anyway).
+                // image/video/audio/document are always a concrete TelegramMediaImage/TelegramMediaFile with an id;
+                // a nil-id medium is dropped (it could not be resolved back from the dict anyway).
                 guard let mediaId = item.media.id else {
                     break
                 }
@@ -118,6 +118,10 @@ func instantPageBlocks(from content: ChatInputContent, collectingMediaInto media
                     // music & voice both serialize as `.audio`; the file's `.Audio(isVoice:)` attribute (carried on
                     // the stored Media) drives the music-vs-voice render. No size/alignment is representable.
                     result.append(.audio(id: mediaId, caption: caption))
+                case .document:
+                    // A caption-less block, so `caption` is .empty for editor-authored content; the field is
+                    // carried anyway because the wire block has one.
+                    result.append(.document(id: mediaId, caption: caption))
                 default:
                     result.append(.video(id: mediaId, caption: caption, autoplay: false, loop: false, spoiler: item.isSpoiler))
                 }
@@ -167,7 +171,23 @@ func instantPageBlocks(from content: ChatInputContent, collectingMediaInto media
                 }
                 return InstantPageTableRow(cells: cells)
             }
-            result.append(.table(title: .empty, rows: rows, bordered: true, striped: false))
+            // TODO: `striped` (and `title`) are the last unmodelled `pageBlockTable` fields — a server
+            // table with `striped: true` keeps its borders through this round-trip but loses its stripes.
+            // Deliberate, not an oversight: modelling them needs an editor affordance too.
+            result.append(.table(title: .empty, rows: rows, bordered: t.bordered, striped: false, compact: t.compact))
+        case let .details(d):
+            // Recursive detail (folding) block → InstantPage `.details`. Forward the title as RichText and the
+            // inner content unchanged; `expanded` maps 1:1 (the inverse of a block-quote's `collapsed`).
+            result.append(.details(title: richText(from: d.title),
+                                   blocks: instantPageBlocks(from: d.content, collectingMediaInto: &media),
+                                   expanded: d.expanded))
+        case let .buttonRow(row):
+            result.append(.buttonRow(
+                alignment: row.alignment,
+                buttons: row.buttons.map {
+                    InstantPageButton(text: richText(from: $0.label), action: $0.action, color: $0.color, isLink: $0.isLink)
+                }
+            ))
         }
         i += 1
     }
@@ -193,6 +213,10 @@ func richText(from runs: [ChatInputRun]) -> RichText {
                 rt = .url(text: .plain(run.text), url: url, webpageId: nil)
             case let .date(date):
                 rt = .textDate(text: .plain(run.text), date: date, format: nil)
+            case let .button(button):
+                // The carrying run's text is a bare `U+FFFC` and is deliberately NOT emitted — a
+                // button's label lives inside the button. The reverse restores the `U+FFFC`.
+                rt = .textButton(InstantPageButton(text: richText(from: button.label), action: button.action, color: button.color, isLink: button.isLink))
             case nil:
                 rt = .plain(run.text)
             }
@@ -270,6 +294,40 @@ private func chatInputMediaItems(fromInnerBlocks innerBlocks: [InstantPageBlock]
     return items
 }
 
+/// Flattens InstantPage list items into `ChatInputContent` list paragraphs, recursing into `.blocks` items (a
+/// list item carrying continuation paragraphs and/or a nested sub-list) and preserving indent depth via the
+/// paragraph's `ChatInputListMembership.level`. Without the recursion a nested sub-list (carried as an item's
+/// `.blocks` payload — what the markdown parser emits) would be dropped entirely.
+private func appendChatInputListParagraphs(_ items: [InstantPageListItem], ordered: Bool, level: Int32, media: [MediaId: Media], into result: inout [ChatInputBlock]) {
+    func marker(_ checked: Bool?) -> ChatInputListMarker {
+        return checked != nil ? .checklist : (ordered ? .ordered : .bullet)
+    }
+    for item in items {
+        switch item {
+        case let .text(rt, _, checked):
+            result.append(.paragraph(ChatInputParagraph(style: .body, list: ChatInputListMembership(marker: marker(checked), level: level, checked: checked), runs: chatInputRuns(fromRichText: rt))))
+        case let .blocks(blocks, _, checked):
+            var isFirstParagraph = true
+            for inner in blocks {
+                switch inner {
+                case let .paragraph(rt):
+                    let paragraphChecked = isFirstParagraph ? checked : nil
+                    result.append(.paragraph(ChatInputParagraph(style: .body, list: ChatInputListMembership(marker: marker(paragraphChecked), level: level, checked: paragraphChecked), runs: chatInputRuns(fromRichText: rt))))
+                    isFirstParagraph = false
+                case let .list(subItems, subOrdered):
+                    appendChatInputListParagraphs(subItems, ordered: subOrdered, level: level + 1, media: media, into: &result)
+                default:
+                    // A non-paragraph, non-list block inside a list item (e.g. a nested quote/code — rare from
+                    // markdown). Flatten via the general mapper so its content is not lost.
+                    result.append(contentsOf: chatInputBlocks(fromInstantPageBlocks: [inner], media: media))
+                }
+            }
+        case .unknown:
+            break
+        }
+    }
+}
+
 func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [MediaId: Media] = [:]) -> [ChatInputBlock] {
     var result: [ChatInputBlock] = []
     for block in blocks {
@@ -287,17 +345,14 @@ func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [M
             }
             result.append(.paragraph(ChatInputParagraph(style: style, runs: chatInputRuns(fromRichText: rt))))
         case let .list(items, ordered):
-            // One body paragraph per `.text` item. If the item carries a non-nil `checked` value the marker is
-            // `.checklist` (the forward threads `checked` from `ChatInputListMembership`); otherwise use
-            // `.ordered` / `.bullet` per the `ordered` flag. Level 0 throughout (the forward canonicalizes
-            // any indent level to 0 — see the forward's level canonicalization note). A `.blocks`/`.unknown`
-            // item (never produced by the forward; only from cloud) is skipped defensively.
-            for item in items {
-                if case let .text(rt, _, checked) = item {
-                    let marker: ChatInputListMarker = checked != nil ? .checklist : (ordered ? .ordered : .bullet)
-                    result.append(.paragraph(ChatInputParagraph(style: .body, list: ChatInputListMembership(marker: marker, level: 0, checked: checked), runs: chatInputRuns(fromRichText: rt))))
-                }
-            }
+            // One body list paragraph per item. `.text` items are a single paragraph; a `.blocks` item — which
+            // the markdown parser produces for a list item that carries continuation paragraphs and/or a NESTED
+            // sub-list — is flattened recursively (its own paragraph(s) at this level, a nested `.list` one level
+            // deeper), preserving indent via `ChatInputListMembership.level`. A non-nil `checked` selects the
+            // `.checklist` marker (the forward threads `checked` from `ChatInputListMembership`); otherwise
+            // `.ordered` / `.bullet` per the `ordered` flag. (Skipping `.blocks` used to silently drop a whole
+            // nested sub-list on paste.)
+            appendChatInputListParagraphs(items, ordered: ordered, level: 0, media: media, into: &result)
         case let .preformatted(rt, language):
             result.append(.code(ChatInputCode(language: language, runs: chatInputRuns(fromRichText: rt))))
         case let .pullQuote(rt, caption):
@@ -312,6 +367,13 @@ func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [M
                 content: ChatInputContent(blocks: chatInputBlocks(fromInstantPageBlocks: innerBlocks, media: media)),
                 collapsed: collapsed == true,
                 author: authorRuns(fromCaption: caption))))
+        case let .details(title, innerBlocks, expanded):
+            // Recursive detail (folding) block → `ChatInputBlock.details`. Symmetric inverse of the forward
+            // `.details` arm; `expanded` maps 1:1 (the inverse of a block-quote's `collapsed`).
+            result.append(.details(ChatInputDetails(
+                content: ChatInputContent(blocks: chatInputBlocks(fromInstantPageBlocks: innerBlocks, media: media)),
+                title: chatInputRuns(fromRichText: title),
+                expanded: expanded)))
         case let .formula(latex):
             var attributes = ChatInputInlineAttributes()
             attributes.formula = latex
@@ -364,6 +426,14 @@ func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [M
             if let media = media[id] {
                 result.append(.media(ChatInputMedia(media: media, kind: .audio, naturalSize: ChatInputSize(width: 0.0, height: 0.0), displayWidth: nil, alignment: .center, caption: chatInputRuns(fromRichText: caption.text))))
             }
+        case let .document(id, caption):
+            // Mirror of `.audio`: resolve the concrete `TelegramMediaFile` from the page `media` dict (the
+            // forward always stores it). naturalSize/displayWidth/alignment restore the editor's media
+            // defaults; the caption rides the chat currency even though the editor renders none (a document
+            // is caption-less on screen — `MediaBlockBox` drops it at that boundary).
+            if let media = media[id] {
+                result.append(.media(ChatInputMedia(media: media, kind: .document, naturalSize: ChatInputSize(width: 0.0, height: 0.0), displayWidth: nil, alignment: .center, caption: chatInputRuns(fromRichText: caption.text))))
+            }
         case let .map(latitude, longitude, _, _, caption):
             // Reconstruct a `TelegramMediaMap` from the inline coordinates (no media-dict lookup — a `.map` block
             // stores none). zoom/dimensions are render-only and dropped; venue is not in the block (the caption
@@ -371,7 +441,7 @@ func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [M
             // matching the .image/.video canonicalization above.
             let map = TelegramMediaMap(latitude: latitude, longitude: longitude, heading: nil, accuracyRadius: nil, venue: nil)
             result.append(.media(ChatInputMedia(media: map, kind: .location, naturalSize: ChatInputSize(width: 0.0, height: 0.0), displayWidth: nil, alignment: .center, caption: chatInputRuns(fromRichText: caption.text))))
-        case let .table(_, rows, _, _):
+        case let .table(_, rows, bordered, _, compact):
             // Rebuild the `ChatInputTable`. Columns are inferred from the widest row's SPANNED cell count (each
             // cell occupies `max(1, colspan)` grid columns, so a colspanning first cell no longer under-counts
             // — a plain, no-span table still infers from the raw cell count, matching the prior behavior); column
@@ -403,7 +473,14 @@ func chatInputBlocks(fromInstantPageBlocks blocks: [InstantPageBlock], media: [M
                 }
                 return ChatInputTableRow(height: nil, cells: cells)
             }
-            result.append(.table(ChatInputTable(columns: columns, rows: outRows)))
+            result.append(.table(ChatInputTable(columns: columns, rows: outRows, compact: compact, bordered: bordered)))
+        case let .buttonRow(alignment, buttons):
+            result.append(.buttonRow(ChatInputButtonRow(
+                buttons: buttons.map {
+                    ChatInputButton(label: chatInputRuns(fromRichText: $0.text), action: $0.action, color: $0.color, isLink: $0.isLink)
+                },
+                alignment: alignment
+            )))
         default:
             break // Non-text InstantPage blocks have no ChatInputContent representation (drafts never carry them).
         }
@@ -469,6 +546,12 @@ func chatInputRun(fromSinglePart rt: RichText, attributes: ChatInputInlineAttrib
         return chatInputRun(fromSinglePart: inner, attributes: attributes)
     case .empty:
         return ChatInputRun(text: "", attributes: attributes)
+    case let .textButton(button):
+        // A button is an atom: its run text is a bare `U+FFFC`, mirroring the custom-emoji and formula
+        // invariants. The label lives INSIDE the button, not in the run — falling through to the
+        // `default:` below would flatten the pill to its label text and destroy the button.
+        attributes.entity = .button(ChatInputButton(label: chatInputRuns(fromRichText: button.text), action: button.action, color: button.color, isLink: button.isLink))
+        return ChatInputRun(text: "\u{FFFC}", attributes: attributes)
     default:
         // Defensive for wire-only RichText cases that the forward never produces.
         return ChatInputRun(text: rt.plainText, attributes: attributes)

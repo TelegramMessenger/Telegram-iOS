@@ -116,8 +116,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
     public let rightItem: AnyComponent<Empty>?
     public let hasTopEdgeEffect: Bool
     public let bottomItem: AnyComponent<Empty>?
+    public let bottomEdgeEffectExtension: CGFloat
     public let backgroundColor: BackgroundColor
+    public let clipsContent: Bool
     public let isFullscreen: Bool
+    public let allowsExpansion: Bool
+    public let centeredSize: CGSize?
     public let defaultHeight: CGFloat?
     public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
@@ -129,8 +133,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         rightItem: AnyComponent<Empty>? = nil,
         hasTopEdgeEffect: Bool = true,
         bottomItem: AnyComponent<Empty>? = nil,
+        bottomEdgeEffectExtension: CGFloat = 0.0,
         backgroundColor: BackgroundColor,
+        clipsContent: Bool = false,
         isFullscreen: Bool = false,
+        allowsExpansion: Bool = true,
+        centeredSize: CGSize? = nil,
         defaultHeight: CGFloat? = nil,
         externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>,
@@ -141,8 +149,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         self.rightItem = rightItem
         self.hasTopEdgeEffect = hasTopEdgeEffect
         self.bottomItem = bottomItem
+        self.bottomEdgeEffectExtension = bottomEdgeEffectExtension
         self.backgroundColor = backgroundColor
+        self.clipsContent = clipsContent
         self.isFullscreen = isFullscreen
+        self.allowsExpansion = allowsExpansion
+        self.centeredSize = centeredSize
         self.defaultHeight = defaultHeight
         self.externalState = externalState
         self.animateOut = animateOut
@@ -167,10 +179,19 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         if lhs.bottomItem != rhs.bottomItem {
             return false
         }
+        if lhs.bottomEdgeEffectExtension != rhs.bottomEdgeEffectExtension {
+            return false
+        }
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
+        if lhs.clipsContent != rhs.clipsContent {
+            return false
+        }
         if lhs.isFullscreen != rhs.isFullscreen {
+            return false
+        }
+        if lhs.allowsExpansion != rhs.allowsExpansion || lhs.centeredSize != rhs.centeredSize {
             return false
         }
         if lhs.defaultHeight != rhs.defaultHeight {
@@ -190,8 +211,9 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         var topInset: CGFloat
         var fillingSize: CGFloat
         let isTablet: Bool
+        let isCentered: Bool
 
-        init(containerSize: CGSize, containerInset: CGFloat, containerCornerRadius: CGFloat, bottomInset: CGFloat, topInset: CGFloat, fillingSize: CGFloat, isTablet: Bool) {
+        init(containerSize: CGSize, containerInset: CGFloat, containerCornerRadius: CGFloat, bottomInset: CGFloat, topInset: CGFloat, fillingSize: CGFloat, isTablet: Bool, isCentered: Bool) {
             self.containerSize = containerSize
             self.containerInset = containerInset
             self.containerCornerRadius = containerCornerRadius
@@ -199,6 +221,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             self.topInset = topInset
             self.fillingSize = fillingSize
             self.isTablet = isTablet
+            self.isCentered = isCentered
         }
     }
 
@@ -236,6 +259,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
 
         private let topEdgeEffectView: EdgeEffectView
         private let bottomEdgeEffectView: EdgeEffectView
+        private let bottomEdgeEffectFillView: UIView
         private let contentView: ComponentView<ChildEnvironmentType>
 
         private var titleItemView: ComponentView<Empty>?
@@ -295,6 +319,9 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             self.bottomEdgeEffectView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
             self.bottomEdgeEffectView.layer.cornerRadius = 40.0
             self.bottomEdgeEffectView.isUserInteractionEnabled = false
+
+            self.bottomEdgeEffectFillView = UIView()
+            self.bottomEdgeEffectFillView.isUserInteractionEnabled = false
             
             self.contentView = ComponentView()
 
@@ -349,11 +376,45 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             }
         }
 
+        public func scrollToBottom(transition: ComponentTransition) {
+            guard let component = self.component, !component.isFullscreen else {
+                return
+            }
+            let bottomOffset = max(
+                -self.scrollView.adjustedContentInset.top,
+                self.scrollView.contentSize.height + self.scrollView.adjustedContentInset.bottom - self.scrollView.bounds.height
+            )
+            guard self.scrollView.bounds.minY != bottomOffset else {
+                return
+            }
+            self.ignoreScrolling = true
+            transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint(x: self.scrollView.bounds.minX, y: bottomOffset))
+            self.ignoreScrolling = false
+            self.updateScrolling(transition: transition)
+        }
+
+        public var expansionFraction: CGFloat {
+            guard let itemLayout = self.itemLayout, itemLayout.topInset > 0.0 else {
+                return 0.0
+            }
+            return max(0.0, min(1.0, self.scrollView.bounds.minY / itemLayout.topInset))
+        }
+
+        public func setExpansionFraction(_ fraction: CGFloat, transition: ComponentTransition) {
+            guard let itemLayout = self.itemLayout, let component = self.component, !component.isFullscreen, !itemLayout.isCentered else {
+                return
+            }
+            self.ignoreScrolling = true
+            transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint(x: 0.0, y: itemLayout.topInset * max(0.0, min(1.0, fraction))))
+            self.ignoreScrolling = false
+            self.updateScrolling(transition: transition)
+        }
+
         public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if !self.bounds.contains(point) {
                 return nil
             }
-            if !self.backgroundLayer.frame.contains(point) {
+            if !self.backgroundLayer.frame.contains(self.convert(point, to: self.containerView)) {
                 return self.dimView
             }
 
@@ -369,6 +430,9 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
 
         override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer === self.dismissPanGesture {
+                if self.itemLayout?.isCentered == true {
+                    return false
+                }
                 let pan = gestureRecognizer as! UIPanGestureRecognizer
                 let velocity = pan.velocity(in: self)
                 if abs(velocity.y) <= abs(velocity.x) {
@@ -435,7 +499,8 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             case .began:
                 self.dismissStartTranslation = nil
             case .changed:
-                let shouldStartDismiss = self.scrollView.contentOffset.y <= 0.0 && translation.y > 0.0
+                let trackedScrollViewIsAtTop = self.trackedScrollView.map { $0.contentOffset.y <= self.trackedScrollViewTopOffset($0) + 0.5 } ?? true
+                let shouldStartDismiss = self.scrollView.contentOffset.y <= 0.0 && trackedScrollViewIsAtTop && translation.y > 0.0
                 if shouldStartDismiss {
                     if !self.isDismissingInteractively {
                         self.isDismissingInteractively = true
@@ -460,10 +525,10 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     let shouldDismiss = currentOffset > threshold || velocityY > 1000.0
 
                     self.isDismissingInteractively = false
-                    self.scrollView.isScrollEnabled = !component.isFullscreen
+                    self.scrollView.isScrollEnabled = !component.isFullscreen && component.allowsExpansion
 
                     if shouldDismiss {
-                        let animateOffset = self.bounds.height - self.backgroundLayer.frame.minY
+                        let animateOffset = self.bounds.height - self.containerView.convert(self.backgroundLayer.frame, to: self).minY
                         let initialVelocity = animateOffset > 0.0 ? max(0.0, velocityY) / animateOffset : 0.0
                         self.animateOut(initialVelocity: initialVelocity, completion: { [weak self] in
                             self?.environment?.dismiss(false)
@@ -497,7 +562,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 return
             }
             trackedScrollView.isScrollEnabled = true
-            if component.isFullscreen {
+            if component.isFullscreen || itemLayout.isCentered {
                 return
             }
             if !self.isSheetFullyExpanded(itemLayout: itemLayout) || self.isDismissingInteractively {
@@ -530,7 +595,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             guard let component = self.component, let itemLayout = self.itemLayout, let trackedScrollView = recognizer.view as? UIScrollView else {
                 return
             }
-            guard !component.isFullscreen, itemLayout.topInset > 0.5 else {
+            guard !component.isFullscreen, component.allowsExpansion, !itemLayout.isCentered, itemLayout.topInset > 0.5 else {
                 return
             }
 
@@ -577,6 +642,14 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             guard let itemLayout = self.itemLayout, let component = self.component, let environment = self.environment else {
                 return
             }
+            if component.isFullscreen || !component.allowsExpansion || itemLayout.isCentered {
+                self.ignoreScrolling = true
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: .zero, size: self.scrollView.bounds.size))
+                self.ignoreScrolling = false
+                self.scrollView.isScrollEnabled = false
+            } else {
+                self.scrollView.isScrollEnabled = !self.isDismissingInteractively
+            }
             var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
             topOffset = max(0.0, topOffset)
             transition.setTransform(layer: self.backgroundLayer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
@@ -586,15 +659,15 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             var topOffsetFraction = self.scrollView.bounds.minY / 100.0
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
 
-            if component.isFullscreen || environment.inputHeight > 0.0 {
+            if component.isFullscreen || itemLayout.isCentered || environment.inputHeight > 0.0 {
                 topOffsetFraction = 1.0
             }
             
-            #if DEBUG && true
-            if "".isEmpty {
-                topOffsetFraction = 1.0
-            }
-            #endif
+//            #if DEBUG && true
+//            if "".isEmpty {
+//                topOffsetFraction = 1.0
+//            }
+//            #endif
 
             let minScale: CGFloat = itemLayout.isTablet ? 1.0 : (itemLayout.containerSize.width - 6.0 * 2.0) / itemLayout.containerSize.width
             let minScaledTranslation: CGFloat = itemLayout.isTablet ? 0.0 : (itemLayout.containerSize.height - itemLayout.containerSize.height * minScale) * 0.5 - 6.0
@@ -611,13 +684,6 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             transition.setTransform(view: self.containerView, transform: containerTransform)
             transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
 
-            if component.isFullscreen {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: .zero, size: self.scrollView.bounds.size))
-                self.scrollView.isScrollEnabled = false
-            } else {
-                self.scrollView.isScrollEnabled = !self.isDismissingInteractively
-            }
-
             var bounds = self.scrollView.bounds
             bounds.size.width = itemLayout.fillingSize
             self.environment?.boundsUpdated.invoke(ResizableSheetComponentEnvironment.BoundsUpdate(bounds: bounds, isInteractive: self.scrollView.isTracking))
@@ -629,12 +695,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             self.didPlayAppearanceAnimation = true
 
             self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+            let animateOffset: CGFloat = self.bounds.height - self.containerView.convert(self.backgroundLayer.frame, to: self).minY
             self.containerView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
 
-        func animateOut(initialVelocity: CGFloat? = nil, completion: @escaping () -> Void) {
-            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+        public func animateOut(initialVelocity: CGFloat? = nil, completion: @escaping () -> Void) {
+            let animateOffset: CGFloat = self.bounds.height - self.containerView.convert(self.backgroundLayer.frame, to: self).minY
 
             self.dimView.layer.animateAlpha(from: self.dimView.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
             if let initialVelocity = initialVelocity {
@@ -668,15 +734,26 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
             }
 
-            let resetScrolling = self.scrollView.bounds.width != availableSize.width
+            let screenSize = availableSize
+            let isCentered = component.centeredSize != nil
+            let layoutSize: CGSize
+            if let centeredSize = component.centeredSize {
+                layoutSize = CGSize(width: min(screenSize.width, centeredSize.width), height: min(screenSize.height, centeredSize.height))
+            } else {
+                layoutSize = screenSize
+            }
+
+            let resetScrolling = self.scrollView.bounds.width != layoutSize.width
 
             let fillingSize: CGFloat
-            if case .regular = sheetEnvironment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - sheetEnvironment.safeInsets.left * 2.0
+            if isCentered {
+                fillingSize = layoutSize.width
+            } else if case .regular = sheetEnvironment.metrics.widthClass {
+                fillingSize = min(layoutSize.width, 414.0) - sheetEnvironment.safeInsets.left * 2.0
             } else {
-                fillingSize = min(availableSize.width, sheetEnvironment.deviceMetrics.screenSize.width) - sheetEnvironment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - sheetEnvironment.safeInsets.left * 2.0
             }
-            let rawSideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5)
+            let rawSideInset: CGFloat = floor((layoutSize.width - fillingSize) * 0.5)
 
             self.component = component
             self.state = state
@@ -703,23 +780,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 self.backgroundLayer.backgroundColor = backgroundColor.cgColor
             }
 
-            transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: screenSize))
 
-            var containerSize: CGSize
-            if !"".isEmpty, sheetEnvironment.isCentered {
-                let verticalInset: CGFloat = 44.0
-                let maxSide = max(availableSize.width, availableSize.height)
-                let minSide = min(availableSize.width, availableSize.height)
-                containerSize = CGSize(width: min(availableSize.width - 20.0, floor(maxSide / 2.0)), height: min(availableSize.height, minSide) - verticalInset * 2.0)
-                if let regularMetricsSize = sheetEnvironment.regularMetricsSize {
-                    containerSize = regularMetricsSize
-                }
-            } else {
-                containerSize = CGSize(width: fillingSize, height: .greatestFiniteMagnitude)
-            }
+            let containerSize = CGSize(width: fillingSize, height: isCentered ? layoutSize.height : .greatestFiniteMagnitude)
 
             var containerInset: CGFloat = sheetEnvironment.statusBarHeight + 10.0
-            if component.isFullscreen {
+            if component.isFullscreen || isCentered {
                 containerInset = 0.0
             }
             let clippingY: CGFloat
@@ -739,12 +805,15 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 if contentView.superview == nil {
                     self.scrollContentView.addSubview(contentView)
                 }
+                contentView.clipsToBounds = component.clipsContent
+                contentView.layer.cornerRadius = 40.0
+                
                 transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: rawSideInset, y: 0.0), size: contentViewSize))
             }
 
             let contentHeight = contentViewSize.height
             let initialContentHeight: CGFloat
-            if component.isFullscreen || sheetEnvironment.inputHeight > 0.0 {
+            if component.isFullscreen || isCentered || sheetEnvironment.inputHeight > 0.0 {
                 initialContentHeight = contentHeight
             } else if let defaultHeight = component.defaultHeight {
                 initialContentHeight = min(contentHeight, max(0.0, defaultHeight))
@@ -846,7 +915,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     environment: {},
                     containerSize: CGSize(width: 66.0, height: 66.0)
                 )
-                let rightItemFrame = CGRect(origin: CGPoint(x: availableSize.width - rawSideInset - 16.0 - rightItemSize.width, y: 16.0), size: rightItemSize)
+                let rightItemFrame = CGRect(origin: CGPoint(x: layoutSize.width - rawSideInset - 16.0 - rightItemSize.width, y: 16.0), size: rightItemSize)
                 if let view = rightItemView.view {
                     if view.superview == nil {
                         self.navigationBarContainer.addSubview(view)
@@ -870,7 +939,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
             }
 
-            var bottomInsets = ContainerViewLayout.concentricInsets(bottomInset: sheetEnvironment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            var bottomInsets = ContainerViewLayout.concentricInsets(bottomInset: isCentered ? 0.0 : sheetEnvironment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
             if sheetEnvironment.inputHeight > 0.0 {
                 bottomInsets.left = 16.0
                 bottomInsets.right = 16.0
@@ -895,7 +964,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     environment: {},
                     containerSize: CGSize(width: containerSize.width - bottomInsets.left - bottomInsets.right, height: 52.0)
                 )
-                let bottomItemFrame = CGRect(origin: CGPoint(x: rawSideInset + floorToScreenPixels((containerSize.width - bottomItemSize.width)) / 2.0, y: availableSize.height - bottomItemSize.height - bottomInsets.bottom), size: bottomItemSize)
+                let bottomItemFrame = CGRect(origin: CGPoint(x: rawSideInset + floorToScreenPixels((containerSize.width - bottomItemSize.width)) / 2.0, y: layoutSize.height - bottomItemSize.height - bottomInsets.bottom), size: bottomItemSize)
                 if let view = bottomItemView.view {
                     if view.superview == nil {
                         self.bottomContainer.addSubview(view)
@@ -920,58 +989,68 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
             }
 
-            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: availableSize.height - bottomInsets.bottom - bottomEdgeEffectHeight), size: CGSize(width: fillingSize, height: bottomEdgeEffectHeight + bottomInsets.bottom))
+            let bottomEdgeEffectExtension = max(0.0, component.bottomEdgeEffectExtension)
+            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: layoutSize.height - bottomInsets.bottom - bottomEdgeEffectHeight - bottomEdgeEffectExtension), size: CGSize(width: fillingSize, height: bottomEdgeEffectHeight + bottomInsets.bottom))
             transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
+            transition.setCornerRadius(layer: self.bottomEdgeEffectView.layer, cornerRadius: bottomEdgeEffectExtension > 0.0 ? 0.0 : 40.0)
             self.bottomEdgeEffectView.update(content: backgroundColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectHeight, transition: transition)
             if self.bottomEdgeEffectView.superview == nil {
                 self.bottomContainer.insertSubview(self.bottomEdgeEffectView, at: 0)
             }
+
+            let bottomEdgeEffectFillFrame = CGRect(origin: CGPoint(x: rawSideInset, y: bottomEdgeEffectFrame.maxY), size: CGSize(width: fillingSize, height: bottomEdgeEffectExtension))
+            transition.setFrame(view: self.bottomEdgeEffectFillView, frame: bottomEdgeEffectFillFrame)
+            transition.setBackgroundColor(view: self.bottomEdgeEffectFillView, color: backgroundColor)
+            if self.bottomEdgeEffectFillView.superview == nil {
+                self.bottomContainer.insertSubview(self.bottomEdgeEffectFillView, at: 0)
+            }
             transition.setAlpha(view: self.bottomContainer, alpha: component.bottomItem != nil ? 1.0 : 0.0)
 
 
-            clippingY = availableSize.height
+            clippingY = layoutSize.height
             
-            var topInset: CGFloat = max(0.0, availableSize.height - containerInset - initialContentHeight - sheetEnvironment.inputHeight)
-            if component.isFullscreen {
+            var topInset: CGFloat = max(0.0, layoutSize.height - containerInset - initialContentHeight - sheetEnvironment.inputHeight)
+            if component.isFullscreen || isCentered {
                 topInset = 0.0
             }
             
-            let scrollContentHeight = max(topInset + contentHeight + containerInset + sheetEnvironment.inputHeight, availableSize.height - containerInset)
+            let scrollContentHeight = max(topInset + contentHeight + containerInset + sheetEnvironment.inputHeight, layoutSize.height - containerInset)
 
             self.scrollContentClippingView.layer.cornerRadius = 40.0
 
-            let containerCornerRadius = max(22.0, sheetEnvironment.deviceMetrics.screenCornerRadius)
-            self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, containerCornerRadius: containerCornerRadius, bottomInset: sheetEnvironment.safeInsets.bottom, topInset: topInset, fillingSize: fillingSize, isTablet: sheetEnvironment.metrics.isTablet)
+            let containerCornerRadius: CGFloat = isCentered ? 40.0 : max(22.0, sheetEnvironment.deviceMetrics.screenCornerRadius)
+            self.containerView.layer.maskedCorners = isCentered ? [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner] : [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+            self.itemLayout = ItemLayout(containerSize: layoutSize, containerInset: containerInset, containerCornerRadius: containerCornerRadius, bottomInset: sheetEnvironment.safeInsets.bottom, topInset: topInset, fillingSize: fillingSize, isTablet: sheetEnvironment.metrics.isTablet, isCentered: isCentered)
 
-            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
+            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: layoutSize.width, height: contentHeight)))
 
-            transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
-            transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: CGSize(width: fillingSize, height: availableSize.height)))
+            transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: layoutSize.width / 2.0, y: layoutSize.height / 2.0))
+            transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: CGSize(width: fillingSize, height: layoutSize.height)))
 
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset), size: CGSize(width: availableSize.width, height: clippingY - containerInset))
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset), size: CGSize(width: layoutSize.width, height: clippingY - containerInset))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
 
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
-            let contentSize = CGSize(width: availableSize.width, height: scrollContentHeight)
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layoutSize.width, height: layoutSize.height)))
+            let contentSize = CGSize(width: layoutSize.width, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize)
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layoutSize)
             }
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
 
-            transition.setPosition(view: self.containerView, position: CGRect(origin: CGPoint(), size: availableSize).center)
-            transition.setBounds(view: self.containerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setPosition(view: self.containerView, position: CGRect(origin: CGPoint(), size: screenSize).center)
+            transition.setBounds(view: self.containerView, bounds: CGRect(origin: CGPoint(), size: layoutSize))
 
             if sheetEnvironment.isDisplaying && !self.didPlayAppearanceAnimation {
                 self.animateIn()
             }
 
-            return availableSize
+            return screenSize
         }
     }
 

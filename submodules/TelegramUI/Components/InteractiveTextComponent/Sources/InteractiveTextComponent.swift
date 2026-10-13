@@ -65,12 +65,14 @@ private final class InteractiveTextNodeStrikethrough {
     let frame: CGRect
     let color: UIColor?
     let style: Style
+    let isSpoiler: Bool
 
-    init(range: NSRange, frame: CGRect, color: UIColor? = nil, style: Style = .single) {
+    init(range: NSRange, frame: CGRect, color: UIColor? = nil, style: Style = .single, isSpoiler: Bool = false) {
         self.range = range
         self.frame = frame
         self.color = color
         self.style = style
+        self.isSpoiler = isSpoiler
     }
 }
 
@@ -1926,7 +1928,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 
                 if let range = line.range {
                     attributedString.enumerateAttributes(in: range, options: []) { attributes, range, _ in
-                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                        let isSpoiler = attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil
+                        if isSpoiler {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(line.line, &ascent, &descent, nil)
@@ -1955,16 +1958,18 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                             }
                             
                             addSpoiler(line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                        } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                        }
+
+                        if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            line.strikethroughs.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
+                            line.strikethroughs.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), isSpoiler: isSpoiler))
                         } else if let underlineStyle = attributes[NSAttributedString.Key.underlineStyle] as? Int {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single))
+                            line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single, isSpoiler: isSpoiler))
                         }
                         
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
@@ -2627,9 +2632,14 @@ final class TextContentItemLayer: SimpleLayer {
                     }
                     
                     if drawUnderlinesManually {
+                        let hasHiddenSpoilers = !params.item.displayContentsUnderSpoilers && !line.spoilers.isEmpty
+
                         if !line.strikethroughs.isEmpty {
                             for strikethrough in line.strikethroughs {
                                 guard let lineRange = line.range else {
+                                    continue
+                                }
+                                if hasHiddenSpoilers && strikethrough.isSpoiler {
                                     continue
                                 }
                                 var textColor: UIColor?
@@ -2649,6 +2659,9 @@ final class TextContentItemLayer: SimpleLayer {
                         if !line.underlines.isEmpty {
                             for strikethrough in line.underlines {
                                 guard let lineRange = line.range else {
+                                    continue
+                                }
+                                if hasHiddenSpoilers && strikethrough.isSpoiler {
                                     continue
                                 }
                                 var textColor: UIColor?

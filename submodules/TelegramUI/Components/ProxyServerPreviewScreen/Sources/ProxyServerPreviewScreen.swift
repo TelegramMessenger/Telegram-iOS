@@ -277,22 +277,32 @@ private final class ProxyServerPreviewSheetContent: CombinedComponent {
             let tableTextColor = theme.list.itemPrimaryTextColor
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
+
+            // A WEB relay is always HTTPS on 443 and is never pinged
+            // (ProxyServersStatuses skips it), so both the port row and the status
+            // row would state something the user cannot act on.
+            var isWebProxy = false
+            if case .web = component.server.connection {
+                isWebProxy = true
+            }
                         
             tableItems.append(.init(
                 id: "server",
                 title: strings.SocksProxySetup_Hostname,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: component.server.host, font: tableFont, textColor: tableTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: component.server.webProxyAddress ?? component.server.host, font: tableFont, textColor: tableTextColor)))
                 )
             ))
             
-            tableItems.append(.init(
-                id: "port",
-                title: strings.SocksProxySetup_Port,
-                component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: "\(component.server.port)", font: tableFont, textColor: tableTextColor)))
-                )
-            ))
+            if !isWebProxy {
+                tableItems.append(.init(
+                    id: "port",
+                    title: strings.SocksProxySetup_Port,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: "\(component.server.port)", font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
             
             switch component.server.connection {
             case let .socks5(username, password):
@@ -314,7 +324,8 @@ private final class ProxyServerPreviewSheetContent: CombinedComponent {
                         )
                     ))
                 }
-            case .mtp:
+            // A web proxy is secret-based like .mtp, so it previews the same masked secret row.
+            case .mtp, .web:
                 tableItems.append(.init(
                     id: "secret",
                     title: strings.SocksProxySetup_Secret,
@@ -324,40 +335,42 @@ private final class ProxyServerPreviewSheetContent: CombinedComponent {
                 ))
             }
             
-            var statusText = strings.SocksProxySetup_CheckStatus
-            var statusColor = tableLinkColor
-            var statusIsActive = true
-            if let status = state.status {
-                statusIsActive = false
-                switch status {
-                case let .available(rtt):
-                    let pingTime = Int(rtt * 1000.0)
-                    statusText = strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string
-                    statusColor = tableTextColor
-                case .checking:
-                    statusText = strings.SocksProxySetup_ProxyStatusChecking
-                    statusColor = tableTextColor
-                case .notAvailable:
-                    statusText = strings.SocksProxySetup_ProxyStatusUnavailable
-                    statusColor = environment.theme.list.itemDestructiveColor
+            if !isWebProxy {
+                var statusText = strings.SocksProxySetup_CheckStatus
+                var statusColor = tableLinkColor
+                var statusIsActive = true
+                if let status = state.status {
+                    statusIsActive = false
+                    switch status {
+                    case let .available(rtt):
+                        let pingTime = Int(rtt * 1000.0)
+                        statusText = strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string
+                        statusColor = tableTextColor
+                    case .checking:
+                        statusText = strings.SocksProxySetup_ProxyStatusChecking
+                        statusColor = tableTextColor
+                    case .notAvailable:
+                        statusText = strings.SocksProxySetup_ProxyStatusUnavailable
+                        statusColor = environment.theme.list.itemDestructiveColor
+                    }
                 }
-            }
-            
-            tableItems.append(.init(
-                id: "status",
-                title: strings.SocksProxySetup_Status,
-                component: AnyComponent(
-                    Button(
-                        content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: statusText, font: tableFont, textColor: statusColor)))),
-                        automaticHighlight: statusIsActive,
-                        action: {
-                            if statusIsActive {
-                                state.check()
+
+                tableItems.append(.init(
+                    id: "status",
+                    title: strings.SocksProxySetup_Status,
+                    component: AnyComponent(
+                        Button(
+                            content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: statusText, font: tableFont, textColor: statusColor)))),
+                            automaticHighlight: statusIsActive,
+                            action: {
+                                if statusIsActive {
+                                    state.check()
+                                }
                             }
-                        }
+                        )
                     )
-                )
-            ))
+                ))
+            }
             let table = table.update(
                 component: TableComponent(
                     theme: environment.theme,

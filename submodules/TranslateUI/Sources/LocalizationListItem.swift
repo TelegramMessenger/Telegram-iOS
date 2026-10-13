@@ -58,14 +58,14 @@ public class LocalizationListItem: ListViewItem, ItemListItem {
         self.removeItem = removeItem
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = LocalizationListItemNode()
-            var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-            if previousItem == nil && self.alwaysPlain {
-                neighbors.top = .sameSection(alwaysPlain: false)
+            var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+            if neighbors.previous == nil && self.alwaysPlain {
+                itemNeighbors.top = .sameSection(alwaysPlain: false)
             }
-            let (layout, apply) = node.asyncLayout()(self, params, neighbors)
+            let (layout, apply) = node.asyncLayout()(self, params, itemNeighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -78,17 +78,17 @@ public class LocalizationListItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? LocalizationListItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-                    if previousItem == nil && self.alwaysPlain {
-                        neighbors.top = .sameSection(alwaysPlain: false)
+                    var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+                    if neighbors.previous == nil && self.alwaysPlain {
+                        itemNeighbors.top = .sameSection(alwaysPlain: false)
                     }
-                    let (layout, apply) = makeLayout(self, params, neighbors)
+                    let (layout, apply) = makeLayout(self, params, itemNeighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animation.isAnimated)
@@ -212,7 +212,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var leftInset: CGFloat = params.leftInset
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)

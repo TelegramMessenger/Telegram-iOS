@@ -23,7 +23,7 @@ extension DocumentCanvasView {
             return
         }
         var present = Set<BlockID>()
-        for case let p as BlockBox in boxes {
+        for case let p as BlockBox in allBoxesRecursive() {   // top level AND nested in a details / quote body
             guard p.listMembership?.marker == .checklist, let rect = p.checklistMarkerCanvasRect() else { continue }
             present.insert(p.id)
             let checked = p.listMembership?.checked ?? false

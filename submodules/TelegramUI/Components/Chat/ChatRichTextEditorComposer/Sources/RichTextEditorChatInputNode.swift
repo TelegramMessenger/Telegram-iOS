@@ -4,10 +4,12 @@ import AsyncDisplayKit
 import Display
 import AppBundle
 import Postbox
+import SwiftSignalKit
 import TextFormat
 import TelegramCore
 import RichTextEditorCore
 import RichTextEditorUIKit
+import RichTextButtonIcons
 import ChatInputTextNode
 import CheckNode
 import TelegramPresentationData
@@ -56,7 +58,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// Factory the panel supplies (it owns `AccountContext`) to turn a `Media` + natural size into a hosted
     /// media view. The editor's media-view provider (registered in `didLoad`) resolves its opaque `mediaID` →
     /// `mediaByID` → this factory. Read lazily, so the panel may set it after `didLoad`. Mirrors `emojiViewProvider`.
-    public var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)?
+    public var mediaItemViewFactory: ((_ items: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)], _ existing: (UIView & RichTextMediaItemView)?) -> (UIView & RichTextMediaItemView)?)?
 
     public var formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)? {
         didSet {
@@ -119,21 +121,43 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// The compact-composer layout knobs that affect measured text height. Applied to the live editor in
     /// `didLoad` AND to the throwaway probe in `measuredTextFieldHeight`, so the probe's height matches the
     /// live field's. (Height-irrelevant knobs — placeholders, theme, quote style — are NOT included.)
+    /// The composer lays text out with V2's chat-message metrics, so what you type reads like the
+    /// message you are about to send. It uses `RichTextRenderMetrics.default` rather than
+    /// `InstantPageTheme.chatMessageRenderMetrics()` because this module cannot import `InstantPageUI` —
+    /// that edge is a cycle (`InstantPageUI` depends on this module). The two are pinned equal by
+    /// `RichTextV2MetricsParityTests.test_editorDefaultMetrics_equalTheAdaptedChatMessageTheme`.
+    ///
+    /// **`edgeSpacingReduction` trims the field's outer padding to nothing.** V2 gives a top-level
+    /// paragraph `blockVerticalPadding + 2` = 6pt at each SEQUENCE EDGE (not to be confused with the
+    /// inter-paragraph gap, which is 1pt), so an untrimmed one-line field measures 33pt against the
+    /// text's own 21pt. In a page that padding is the page's margin; in the composer the input panel
+    /// already owns the padding around the field, which is why the pre-parity config zeroed the block
+    /// inset for the same reason. Trimming here is V2's own mechanism for a host that insets the whole
+    /// page — the chat bubble passes 1.0 for it — and it affects ONLY the edges, so the interior rhythm
+    /// stays V2-exact (guarded by `BlockSpacingTests.test_edgeSpacingReduction_trimsEdgesOnlyAndClampsAtZero`).
+    /// Measured: 33pt → 21pt for one line; it clamps at 0, so 6 is "remove it entirely".
+    private static let composerEdgeSpacingReduction: CGFloat = 6.0
+
     private static func applyComposerLayoutMetrics(to editor: RichTextEditorView) {
         editor.contentPageMargin = 0.0
         editor.minimumContentHeight = 0.0
-        editor.blockVerticalInset = 0.0
-        editor.textLayoutMetrics = TextLayoutMetrics(
-            bodyLineHeightMultiple: 1.0,       // line spacing (1.0 = natural/tight; 1.10 = document)
-            bodyParagraphSpacingBefore: 0,     // gap above each paragraph
-            bodyParagraphSpacingAfter: 0       // inter-paragraph gap (Enter-separated lines)
-        )
+        var metrics = RichTextRenderMetrics.default
+        metrics.edgeSpacingReduction = composerEdgeSpacingReduction
+        editor.renderMetrics = metrics
     }
 
     private func updateFormulaRenderer() {
         self.editorView.registerFormulaRenderer { [weak self] context in
             return self?.formulaRenderer?(context)
         }
+    }
+
+    /// A button pill's type icon. Registered unconditionally rather than proxied through a host hook
+    /// like the formula renderer: the mapping is a pure function of the action, and it is GEOMETRY —
+    /// an inline pill grows by `inlineIconReserve` to hold its icon, so a composer that skipped it
+    /// would wrap a paragraph differently from the message it sends.
+    private func updateButtonIconProvider() {
+        self.editorView.registerButtonIconProvider(richTextEditorButtonIcon)
     }
 
     public override func didLoad() {
@@ -148,7 +172,16 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // Suppress the editor's built-in placeholders ("Type something…" / list hints): the chat input panel
         // draws its own placeholder ("Message", etc.), so the editor's would double up.
         
-        self.editorView.placeholders = RichTextEditorPlaceholders(body: "", listEnd: "", listOutdent: "", pullQuote: self.strings.RichText_PlaceholderQuote, blockQuote: self.strings.RichText_PlaceholderQuote, codeBlock: self.strings.RichText_PlaceholderCode)
+        self.editorView.placeholders = RichTextEditorPlaceholders(body: "", listEnd: "", listOutdent: "", pullQuote: self.strings.RichText_PlaceholderQuote, blockQuote: self.strings.RichText_PlaceholderQuote, codeBlock: self.strings.RichText_PlaceholderCode, codeLanguage: self.strings.RichText_PlaceholderCodeLanguage, detailsTitle: self.strings.RichText_PlaceholderDetailTitle, quoteAuthor: self.strings.RichText_PlaceholderQuoteAuthor, caption: self.strings.RichText_PlaceholderCaption)
+        self.editorView.editMenuStrings = RichTextEditorMenuStrings(
+            format: self.strings.TextFormat_Format,
+            bold: self.strings.TextFormat_Bold,
+            italic: self.strings.TextFormat_Italic,
+            underline: self.strings.TextFormat_Underline,
+            lookUp: self.strings.Conversation_ContextMenuLookUp,
+            translate: self.strings.Conversation_ContextMenuTranslate,
+            share: self.strings.Conversation_ContextMenuShare
+        )
         // The composer sits over the input panel's own background — clear the editor's document "page"
         // background (`.systemBackground`, opaque white in light mode) so the panel shows through. `nil`
         // (no background) rather than `.clear`: same transparency, but signals "unset" and avoids an
@@ -171,6 +204,17 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             topInset: 3.0,
             bottomInset: 3.0
         )
+        // Code-block geometry for the compact composer. The band does NOT bleed at all here: the
+        // editor sits inside the input field's rounded background (inset by the panel's
+        // `textInputViewInternalInsets`, 12 left / 11 right) and its right content margin also
+        // reserves room for the accessory + send buttons, so ANY outward bleed reads as spilling past
+        // what the field shows. The band therefore spans exactly the text column, and the code is
+        // indented within it instead — the inward counterpart of the renderer's outward bleed. A
+        // small radius keeps the band from fighting the field's own rounding.
+        //
+        // Deliberately NOT WYSIWYG against the sent bubble, which is full-bleed and square: a compact
+        // field is a different container shape from a message bubble.
+        self.editorView.codeStyle = CodeStyle(horizontalBleed: 0.0, horizontalInset: 8.0, cornerRadius: 4.0)
         // Media (image/video/location/audio) insets like the text paragraphs in the compact composer
         // (the document/article editor keeps the default edge-to-edge bleed).
         self.editorView.mediaBlockStyle = MediaBlockStyle(horizontalBleed: 0.0)
@@ -179,6 +223,8 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
            let expand = UIImage(bundleImageName: "Media Gallery/Fullscreen")?.precomposed().withRenderingMode(.alwaysTemplate) {
             self.editorView.quoteCollapseIcons = RichTextEditorQuoteCollapseIcons(collapse: collapse, expand: expand)
         }
+        // Detail-block fold chevron — the same vertical arrow the InstantPage V2 renderer uses.
+        self.editorView.detailsChevronImage = UIImage(bundleImageName: "Item List/ExpandingItemVerticalRegularArrow")?.withRenderingMode(.alwaysTemplate)
         // A selection-handle ("knob") drag must NOT be hijacked by the interactive keyboard-/modal-dismiss
         // gestures. Those Display flags can only be set host-side (the editor package can't import Display) and
         // are applied to the hit-testable handle views, so the effect is scoped to knob interaction — not the
@@ -256,6 +302,23 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // renderer fallback. The closure reads `self.emojiViewProvider` lazily, so the panel may set it after
         // this registration. `size` is ignored: the host renderer picks its own point size and the editor
         // frames the returned view to the glyph rect.
+        // The host owns "(language, text) -> colours": `asyncStanaloneSyntaxHighlight` runs libprisma off
+        // the main queue and returns the same cache model the message path stores, baking the LIGHT
+        // palette — so what the editor shows is what the sent message will show. The editor cannot do
+        // this itself; it cannot see TextFormat or libprisma.
+        self.editorView.registerSyntaxHighlighter { language, text, completion in
+            let spec = CachedMessageSyntaxHighlight.Spec(language: language, text: text)
+            let _ = (asyncStanaloneSyntaxHighlight(current: nil, specs: [spec])
+            |> deliverOnMainQueue).start(next: { result in
+                let entities = result.values[spec]?.entities ?? []
+                completion(entities.map { entity in
+                    RichTextSyntaxToken(
+                        range: NSRange(location: entity.range.lowerBound,
+                                       length: entity.range.upperBound - entity.range.lowerBound),
+                        color: UIColor(rgb: UInt32(bitPattern: entity.color)))
+                })
+            })
+        }
         self.editorView.registerEmojiViewProvider { [weak self] id, _ in
             guard let self, let fileId = Int64(id), let provider = self.emojiViewProvider else { return nil }
             let attribute = self.customEmojiAttributes[fileId]
@@ -272,6 +335,8 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // Reinstalling when the provider arrives after `didLoad` reloads already-present formula atoms.
         self.updateFormulaRenderer()
 
+        self.updateButtonIconProvider()
+
         // Media rendering. The editor hosts each `.media` block via this provider, asking by the opaque host
         // `mediaID` (the node's own key, recorded in `mediaByID` by `registerMediaValue`). Resolve it back to
         // the concrete `Media` and hand it + the natural size to the panel-supplied factory, which builds the
@@ -281,9 +346,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // to the provider's `RichTextMediaItemView?` return type.
         self.editorView.registerMediaViewProvider { [weak self] items, _, _, existing in
             guard let self, let factory = self.mediaItemViewFactory else { return nil }
-            let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool)] = items.compactMap { item in
+            let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)] = items.compactMap { item in
                 guard let media = self.mediaByID[item.mediaID] else { return nil }
-                return (EngineMedia(media), item.naturalSize, item.isSpoiler)
+                return (EngineMedia(media), item.naturalSize, item.isSpoiler, item.kind)
             }
             guard !resolved.isEmpty else { return nil }
             return factory(resolved, existing)
@@ -371,7 +436,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         case let .paragraph(p): return p.text.isEmpty
         case let .code(c): return c.text.isEmpty
         case let .pullQuote(pq): return pq.text.isEmpty
-        case .media, .table, .blockQuote: return false
+        case .media, .table, .blockQuote, .details, .buttonRow: return false
         }
     }
     public var inputContentIsEmptyWhitespaceTrimmed: Bool {
@@ -380,7 +445,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             case let .paragraph(p): return p.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             case let .code(c): return c.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             case let .pullQuote(pq): return pq.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            case .media, .table, .blockQuote: return false
+            case .media, .table, .blockQuote, .details, .buttonRow: return false
             }
         }
     }
@@ -538,7 +603,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             accent: colors.accent,
             tableBorder: colors.tableBorder,
             tableHeaderBackground: colors.tableHeaderBackground,
-            codeBackground: colors.tableHeaderBackground,  // v1: reuse the subtle panel fill; a dedicated code-bg seam color is a follow-up
+            codeBackground: colors.tableHeaderBackground,  // a code band reads as a highlighted table row — the same fill, deliberately
             containerPlaceholder: colors.placeholder.mixedWith(colors.accent, alpha: 0.15).withMultipliedBrightnessBy(colors.primaryText.brightness >= 0.4 ? 1.1 : 0.9).withMultipliedAlpha(0.8),
             shadowCursor: colors.shadowCursor,
             quoteAuthorText: colors.quoteAuthorText,
@@ -624,6 +689,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
 
     public var canPasteMedia: (() -> Bool)? { didSet { self.editorView.canPasteMedia = canPasteMedia } }
     public var onPasteMedia: (() -> Bool)? { didSet { self.editorView.onPasteMedia = onPasteMedia } }
+    public var pastedMarkdownFragmentParser: ((String) -> Document?)? { didSet { self.editorView.plainTextFragmentTransformer = self.pastedMarkdownFragmentParser } }
 
     public func performFormatAction(_ action: ChatRichTextFormatAction) {
         switch action {

@@ -161,6 +161,8 @@ extension PeerInputActivity {
             return nil
         case .inputSendMessageRichMessageDraftAction:
             return nil
+        case .sendMessageStopDraftAction:
+            return nil
         }
     }
 }

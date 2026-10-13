@@ -129,6 +129,8 @@ public final class MediaEditor {
                 case asset(PHAsset)
             }
             public let content: Content
+            public let id: Int64
+            public let isMain: Bool
             public let frame: CGRect
             public let contentScale: CGFloat
             public let contentOffset: CGPoint
@@ -152,9 +154,13 @@ public final class MediaEditor {
                 content: Content,
                 frame: CGRect,
                 contentScale: CGFloat,
-                contentOffset: CGPoint
+                contentOffset: CGPoint,
+                id: Int64 = Int64.random(in: .min ... .max),
+                isMain: Bool = false
             ) {
                 self.content = content
+                self.id = id
+                self.isMain = isMain
                 self.frame = frame
                 self.contentScale = contentScale
                 self.contentOffset = contentOffset
@@ -305,6 +311,10 @@ public final class MediaEditor {
     
     public func getResultImage(mirror: Bool) -> UIImage? {
         return self.renderer.finalRenderedImage(mirror: mirror)
+    }
+
+    public func getResultCIImage() -> CIImage? {
+        return self.renderer.finalRenderedCIImage()
     }
             
     private var wallpapersValue: ((day: UIImage, night: UIImage?))? {
@@ -905,6 +915,9 @@ public final class MediaEditor {
             
                 self.player = textureSourceResult.player
                 self.playerPromise.set(.single(self.player))
+                if !self.values.collage.isEmpty {
+                    self.setVideoVolume(self.values.videoVolume)
+                }
                             
                 if let image = textureSourceResult.image {
                     if self.values.nightTheme, let nightImage = textureSourceResult.nightImage {
@@ -1134,14 +1147,14 @@ public final class MediaEditor {
         case skipRendering
         case forceRendering
     }
-    private func updateValues(mode: UpdateMode = .generic, _ f: (MediaEditorValues) -> MediaEditorValues) {
+    private func updateValues(mode: UpdateMode = .generic, forceUpdate: Bool = false, _ f: (MediaEditorValues) -> MediaEditorValues) {
         if case .skipRendering = mode {
             self.skipRendering = true
         } else if case .forceRendering = mode {
             self.forceRendering = true
         }
         let updatedValues = f(self.values)
-        if self.values != updatedValues {
+        if forceUpdate || self.values != updatedValues {
             self.values = updatedValues
         }
         if case .skipRendering = mode {
@@ -1757,7 +1770,13 @@ public final class MediaEditor {
         }
     }
     
-    public func setupCollage(_ items: [MediaEditor.Subject.VideoCollageItem]) {
+    public func setupCollage(_ items: [MediaEditor.Subject.VideoCollageItem], restoredValues: [MediaEditorValues.VideoCollageItem]? = nil) {
+        if let restoredValues {
+            self.updateValues(mode: .skipRendering) { $0.withUpdatedCollage(restoredValues) }
+            self.setupAdditionalVideoPlayback()
+            self.updateAdditionalVideoPlaybackRange()
+            return
+        }
         let longestItem = longestCollageItem(items)
         var collage: [MediaEditorValues.VideoCollageItem] = []
         
@@ -1768,7 +1787,7 @@ public final class MediaEditor {
         for item in items {
             var content: MediaEditorValues.VideoCollageItem.Content
             var isVideo = false
-            if item.content == longestItem?.content {
+            if item.id == longestItem?.id {
                 content = .main
                 isVideo = true
             } else {
@@ -1819,6 +1838,11 @@ public final class MediaEditor {
                 
         self.setupAdditionalVideoPlayback()
         self.updateAdditionalVideoPlaybackRange()
+    }
+
+    public func updateCollageSources(_ collage: MediaEditorCollage, values: MediaEditorValues) {
+        // Keep playback on its current inputs while exports switch to the saved resources.
+        self.updateValues(mode: .skipRendering, forceUpdate: true) { _ in collage.valuesForEditor(values) }
     }
     
     public func setAdditionalVideo(_ path: String?, isDual: Bool = false, mirroringChanges: [VideoMirroringChange] = [], positionChanges: [VideoPositionChange]) {
@@ -1885,7 +1909,12 @@ public final class MediaEditor {
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
                     if fetchResult.count != 0 {
                         let asset = fetchResult.object(at: 0)
-                        signals.append(Signal { subscriber in
+                        signals.append(Signal { [weak self] subscriber in
+                            guard let self else {
+                                subscriber.putCompletion()
+                                return EmptyDisposable
+                            }
+
                             let options = PHVideoRequestOptions()
                             options.isNetworkAccessAllowed = true
                             options.deliveryMode = .highQualityFormat
@@ -1940,9 +1969,17 @@ public final class MediaEditor {
                 self.additionalPlayerAudioMixes = audioMixes
                 
                 (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInputs(additionalInputs)
-                
-                for player in additionalPlayers {
-                    player.play()
+
+                self.updateAdditionalVideoPlaybackRange()
+                if let player = self.player {
+                    let position = max(self.values.videoTrimRange?.lowerBound ?? 0.0, player.currentTime().seconds)
+                    if position.isFinite {
+                        self.seek(position, andPlay: player.rate > 0.0)
+                    }
+                } else {
+                    for player in additionalPlayers {
+                        player.play()
+                    }
                 }
                 
                 if let asset = self.player?.currentItem?.asset {
@@ -2099,7 +2136,8 @@ public final class MediaEditor {
     
     private func updateAdditionalVideoPlaybackRange() {
         if !self.values.collage.isEmpty {
-            var trackId: Int32 = 0
+            // Track zero belongs to the main player, which is not in additionalPlayers.
+            var trackId: Int32 = 1
             for player in self.additionalPlayers {
                 if let index = self.collageItemIndexForTrackId(trackId), let upperBound = self.values.collage[index].videoTrimRange?.upperBound {
                     let offset = max(0.0, self.values.collage[index].videoOffset ?? 0.0)
@@ -2109,6 +2147,7 @@ public final class MediaEditor {
                 }
                 trackId += 1
             }
+            return
         }
         if let upperBound = self.values.additionalVideoTrimRange?.upperBound {
             let offset = max(0.0, self.values.additionalVideoOffset ?? 0.0)
@@ -2227,7 +2266,7 @@ public final class MediaEditor {
     }
     
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
-        self.updateValues(mode: .skipRendering) { values in
+        self.updateValues(mode: .skipRendering, forceUpdate: true) { values in
             return values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
         }
     }
@@ -2561,6 +2600,9 @@ public func videoFrames(asset: AVAsset?, count: Int, initialPlaceholder: UIImage
 }
 
 private func longestCollageItem(_ items: [MediaEditor.Subject.VideoCollageItem]) -> MediaEditor.Subject.VideoCollageItem? {
+    if let mainItem = items.first(where: { $0.isMain && $0.isVideo }) {
+        return mainItem
+    }
     var longestItem: MediaEditor.Subject.VideoCollageItem?
     for item in items {
         guard item.isVideo else {

@@ -26,7 +26,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_insertText_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v) + 5; v.head = v.anchor
+        v.setSelectionForTesting(anchor: start(v) + 5, head: start(v) + 5)
         let before = v.dismissEditMenuCountForTesting
         v.insertText("X")
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "typing dismisses the menu")
@@ -34,7 +34,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_deleteBackward_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v) + 5; v.head = v.anchor
+        v.setSelectionForTesting(anchor: start(v) + 5, head: start(v) + 5)
         let before = v.dismissEditMenuCountForTesting
         v.deleteBackward()
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "deleting dismisses the menu")
@@ -42,7 +42,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_setCaret_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v); v.head = start(v)
+        v.setSelectionForTesting(anchor: start(v), head: start(v))
         let before = v.dismissEditMenuCountForTesting
         v.setCaret(global: start(v) + 3)
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "moving the caret dismisses the menu")
@@ -50,7 +50,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_setSelectionHead_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v); v.head = start(v) + 2
+        v.setSelectionForTesting(anchor: start(v), head: start(v) + 2)
         let before = v.dismissEditMenuCountForTesting
         v.setSelectionHead(global: start(v) + 5)
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "extending the selection dismisses the menu")
@@ -58,7 +58,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_setSelectionAnchor_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v) + 5; v.head = start(v) + 5
+        v.setSelectionForTesting(anchor: start(v) + 5, head: start(v) + 5)
         let before = v.dismissEditMenuCountForTesting
         v.setSelectionAnchor(global: start(v) + 1)
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "moving the anchor dismisses the menu")
@@ -68,7 +68,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
     /// writing the UITextInput `selectedTextRange` setter (NOT a gesture). It must dismiss too.
     func test_selectedTextRangeSetter_dismissesMenu() {
         let v = canvas()
-        v.anchor = start(v); v.head = start(v)
+        v.setSelectionForTesting(anchor: start(v), head: start(v))
         let before = v.dismissEditMenuCountForTesting
         v.selectedTextRange = DocumentTextRange(DocumentTextPosition(start(v) + 4), DocumentTextPosition(start(v) + 4))
         XCTAssertGreaterThan(v.dismissEditMenuCountForTesting, before, "a system-driven caret move dismisses the menu")
@@ -79,7 +79,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
     /// about to present is not dismissed out from under them.
     func test_selectAllThenPresent_doesNotSelfDismiss() {
         let v = canvas()
-        v.anchor = start(v) + 2; v.head = start(v) + 2
+        v.setSelectionForTesting(anchor: start(v) + 2, head: start(v) + 2)
         let before = v.dismissEditMenuCountForTesting
         v.selectAllText()          // the Select-All path: changes the selection, then the caller presents
         XCTAssertEqual(v.dismissEditMenuCountForTesting, before, "Select All must not dismiss the menu it is about to present")
@@ -87,7 +87,7 @@ final class EditMenuAutoDismissTests: XCTestCase {
 
     func test_selectWordThenPresent_doesNotSelfDismiss() {
         let v = canvas()
-        v.anchor = start(v) + 2; v.head = start(v) + 2
+        v.setSelectionForTesting(anchor: start(v) + 2, head: start(v) + 2)
         let before = v.dismissEditMenuCountForTesting
         v.selectWord(at: start(v) + 2)   // double-tap path: select then present
         XCTAssertEqual(v.dismissEditMenuCountForTesting, before, "Select word must not dismiss the menu it is about to present")

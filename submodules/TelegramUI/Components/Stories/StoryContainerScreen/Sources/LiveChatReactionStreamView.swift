@@ -287,7 +287,11 @@ final class LiveChatReactionStreamView: UIView {
             return
         }
         self.previousTimestamp = timestamp
-        Task {
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+
             await self.taskQueue.add(peer: peer, count: count, completion: { [weak self] image in
                 Task { @MainActor in
                     guard let self else {

@@ -27,30 +27,125 @@ false` → **off** even in debug, so the running app uses TK2 on iOS 16+; flip t
 system edit menu likewise falls back from `UIEditMenuInteraction` (iOS 16+) to **`UIMenuController`** (iOS
 13–15) — see `DocumentCanvasView+EditMenu` (shared responder actions; custom items become flat `UIMenuItem`s).
 
-**Line-height centering (2026-06-26).** The per-style render `lineHeightMultiple` (`StyleSheet.metrics`: body/
-caption/quote 1.10, headings 1.05) makes each line-fragment box — the box the selection wash + caret fill —
-taller than the glyphs, and **TextKit (both engines) dumps ALL that extra leading ABOVE the glyphs** (the
-baseline drops; measured ~2pt on top / 0 below for 17pt body), so the text reads as offset too low in its
-rect. Both engines now **center** the glyphs in the box while keeping the box's full (spacing-preserving)
-height: glyphs are raised by half the extra leading. BOTH engines apply the SAME `centeringDelta(lineHeight:)`
-= `lineHeight·(1−1/m)/2` (m = the paragraph `lineHeightMultiple`) at glyph-draw / `attachmentBox` /
-`firstLineBaselineFromTop` time, while caret/selection rects keep the full box. (The TextKit-1
-`NSLayoutManagerDelegate.shouldSetLineFragmentRect…baselineOffset` baseline hook — the "native" way to do this
-on TK1 — is **NOT invoked** under the TextKit-2-backed `NSLayoutManager` on modern iOS, verified at runtime, so
-`BlockLayoutTK1` does the manual draw/geometry shift too rather than relying on it.) **Why not `baselineOffset`**
-(the attribute): it's a real `CharacterAttributes` field (sub/superscript) and would round-trip into the
-model — centering must stay a render-only layout concern. Verified on both engines by `LineHeightCenteringTests`
-(glyph top-gap ≈ bottom-gap). **The empty-line fallbacks must mirror this too (2026-07-02):** an empty paragraph
-lays out no fragment, so `BlockBox.listMarkerBaselineFromTop` (the list marker) and `placeholderDraw` (the ghost
-hint) compute the baseline analytically — they must subtract the same `centeringDelta` (use HALF the extra leading,
-`(m−1)·lineHeight/2`, not the full leading), else an empty item's number / its placeholder sit ~1pt BELOW where the
-first typed glyph (positioned by the already-centered `firstLineBaselineFromTop`) will land. Guarded by
-`ListRenderingTests` (empty-vs-non-empty marker + marker-vs-placeholder) and `CanvasDecorationsTests`.
-The body/caption 1.10 multiple is now host-tunable via `TextLayoutMetrics`
-(see the compact-host knob list below): the chat composer sets it to **1.0** (natural line height — and the
-centering shift collapses to 0, since `centeringDelta` = `lineHeight·(1−1/1)/2` = 0) so multi-line composer
-text reads tight like the legacy input, while the document editor keeps 1.10. Headings (1.05) and quote (1.10)
-are not covered by this knob.
+**InstantPage V2 layout parity (2026-08-14).** The editor lays text out **pixel-identically to the
+InstantPage V2 renderer**, so what an author types reads like the message the recipient sees. This
+REPLACED the earlier `lineHeightMultiple` + glyph-centering model described here before; that model
+cannot express V2's geometry at all (see "Why not a multiple" below). Both editor hosts opt in.
+
+**The contract.** `RichTextRenderMetrics` (`Mapping/RichTextRenderMetrics.swift`) is a host-supplied
+value set — per-style `(family, size, weight, lineSpacingFactor)` plus the block-rhythm scalars and
+`edgeSpacingReduction` — and it **owns V2's line formulas as functions**:
+
+```
+L(F)      = floor(F.ascender + F.descender)     // V2's "fontLineHeight": a REDUCED box, not lineHeight
+S(F,f)    = floor(L · f)                        // V2's "fontLineSpacing"; f scales L, NOT the point size
+pitch     = L + S                               // baseline-to-baseline advance; always integral
+firstBaseline(F) = F.ascender
+textHeight(F,f,n) = ceil(A + |D|) + (n−1)·pitch
+```
+
+`StyleSheet` is a projection of it (`metrics`), so the heading ladder is V2's **22 / 20 / 18 / 17 / 16 /
+15 serif medium** (retuned 2026-08-17 from 24 / 22 / 20 / 19 / 18 / 17; see the note under
+`InstantPageTheme.headingTextAttributes` on why H1/H2 no longer borrow the `header` / `subheader`
+categories). `RichTextRenderMetrics.default` is the chat-message look; hosts set
+`RichTextEditorView.renderMetrics`. This retired `TextLayoutMetrics`/`textLayoutMetrics`,
+`blockVerticalInset`, and `StyleSheet.bodyBaseSize` (now `metrics.body.size`;
+`AttributedStringMapper.withBodyBaseSize` → `withBodyFontSize`).
+
+**The `ceil` is load-bearing.** `layoutTextItem` returns `ceil(height)` because callers stack blocks by
+adding sizes to a running origin, so one fractional box makes every later origin fractional. Omitting it
+left every editor block ~0.7pt short and the error accumulated down the document — caught by the parity
+test, not by inspection. The pitch is integral by construction, which is *why* the per-paragraph
+correction stays independent of the line count.
+
+**Why not a multiple.** `lineHeightMultiple` cannot express this: at the Instant Page reader's heading
+factor (0.685) V2 wants a pitch TIGHTER than the font's natural line height, and
+`NSParagraphStyle.lineSpacing` cannot go negative. So `StyleSheet.paragraphStyle` pins
+`minimumLineHeight == maximumLineHeight == pitch` — one mechanism for both directions. An explicit
+model-level `lineHeightMultiple` is user content and takes over instead; the two must never combine.
+
+**Baseline placement is MEASURED, not derived.** `BlockLayoutEngine.baselineDelta` (a shared extension,
+so the two engines cannot drift — each supplies only `rawFirstBaselineFromTop`) reads the baseline
+TextKit actually produced and corrects it to `F.ascender`, V2's position. TextKit's placement inside a
+pinned box is undocumented, so an analytic formula would silently drift across OS versions. Applied at
+glyph-draw / `attachmentBox` / `firstLineBaselineFromTop`; caret/selection rects keep the full box.
+**Not** the `baselineOffset` attribute — that is a real `CharacterAttributes` field (sub/superscript)
+and would round-trip into the model. (The TK1 `NSLayoutManagerDelegate.shouldSetLineFragmentRect…`
+baseline hook is **NOT invoked** under the TextKit-2-backed `NSLayoutManager` on modern iOS — verified
+at runtime — so TK1 shifts manually too.) **The empty-line fallbacks must mirror it:** an empty
+paragraph lays out no fragment, so `BlockBox.listMarkerBaselineFromTop` and `placeholderDraw` compute
+the baseline analytically, and under this model that is simply `firstBaselineFromTop` — no shift.
+Guarded by `LineHeightCenteringTests`, `ListRenderingTests`, `CanvasDecorationsTests`.
+
+**Every height consumer goes through `correctedBoundingHeight`, never `boundingHeight`.** It lives on
+the engine seam precisely so no call site can forget: the correction was first applied at one site
+(`BlockBox`) and **four** other height paths — the collapsed-quote preview, the pull quote, the media
+caption, code blocks — silently disagreed, which two existing height-parity tests caught.
+
+**Font families are load-bearing, not stylistic.** `FontResolver.font(spec:bold:italic:family:)` mirrors
+`InstantPageTextStyleStack`: **Georgia** for regular-weight serif, the **system serif design** (New York)
+for weighted serif — bold there is a WEIGHT, not a symbolic trait — **Menlo** for monospace, system sans
+otherwise. Every line formula is a function of `ascender`/`descender`, so resolving New York where the
+renderer resolves Georgia shifts every line while type-checking perfectly.
+
+**Block rhythm mirrors `spacingBetweenBlocks`.** `richTextSpacingBetweenBlocks`
+(`Canvas/BlockSpacing.swift`) is a transcription over `RichTextBlockSpacingKind`, the InstantPage cases
+the editor can produce; **rule ORDER is load-bearing** (several arms would otherwise both match). Two
+body paragraphs sit **1pt** apart, a heading takes both paddings, two bare images butt at 1pt.
+`CanvasBlock.spacingKind` has **no default implementation** on purpose — a conservative default would
+compile everywhere while silently giving a new block type the wrong rhythm. Adjacent list items collapse
+into the single virtual `.list` block the renderer sees, mirroring `buildListBlocks`; the shared
+`ParagraphBlock.standaloneFormulaLatex` predicate lives in Core so the classification cannot drift from
+what `InstantPageBuilder` emits.
+
+**GAP OWNERSHIP IS LOAD-BEARING.** V2's gap is ONE quantity between two blocks, not two facing insets,
+and it is carried by whichever neighbour can own it — preferring the lower, falling back to the
+paragraph above. A framed atom (table / code / quote / details) fills its own frame and has no external
+inset, so giving it the gap leaves **unowned dead space**; the arrow-key escape probe in `+Navigation`
+(`owner.frame.minY − step/2`) then lands in nothing and **the caret cannot leave a table**
+(`CanvasTableNavTests` caught exactly this). Only where no paragraph can own it — a non-`BlockBox` at a
+sequence edge, or two such neighbours — is the gap laid down as bare space. Side effect to know: a tap in
+a gap resolves to the block below.
+
+**A BARE GAP BELONGS TO NO BOX FRAME, so no height may be summed from box heights.** `BlockStack` owns the
+ownership rule in exactly one place — `bareGapAbove(_:_:)` / `bareTrailingGap(_:)` — read by BOTH `layout`
+and the live `currentHeight`, because the two silently disagreed: `DocumentCanvasView.intrinsicContentSize`
+(what `performLayout` feeds to `scrollView.contentSize`) summed box heights and so under-reported the
+laid-out extent by **4pt per bare gap, accumulating** (36pt for five non-paragraph blocks). The trailing
+blocks then sat outside the scrollable range — unreachable, overlapping the host's bottom inset band. A
+paragraphs-only document has no bare gaps, which is why it stayed hidden; the stateless
+`measuredHeight`/`measuredContentHeight` path was correct all along, so measure and commit disagreed.
+Guarded by the three `RichTextEditorViewTests.test_document*_scrollContentCoversEveryBlock` cases, which
+assert the scroll content EQUALS `root.contentHeight` + margins. Related: every height path calls
+`applyRootSpacingConfig()` rather than inheriting the last one's rhythm state — `intrinsicContentSize` is
+read BEFORE the layout pass, so it cannot assume `layoutContent` ran first.
+
+**Scope.** Only the document's TOP-LEVEL sequence is on V2's rhythm (`BlockStack.spacingModel ==
+.instantPageV2`). Stacks nested in a container — table cells, details, block-quote children — keep the
+pre-parity facing-inset model verbatim (`.containerInterior`), and author-line placement in both quote
+types deliberately measures the RAW line box. Those interiors have no V2 reference yet.
+
+**Deferred:** container interiors (block quote incl. V2's `quoteScale` 15/17 content scaling, pull
+quote, code-block insets), list marker geometry, table cell insets, media captions/credits, details
+chrome — and inline-attachment line inflation (V2 inflates `lineAscent` for formulas/buttons and adds
+`extraDescent` for tall inline images; a pinned `maximumLineHeight` clips that, so plain text and custom
+emoji are exact while those are not).
+
+**Verification.** `//submodules/InstantPageUI:InstantPageUITests` holds both parity layers:
+`RichTextV2MetricsParityTests` calls `layoutTextItem` and `spacingBetweenBlocks` directly and pins the
+formulas, the resolved font faces, and the **whole** pairwise gap table plus both edges (and pins
+`RichTextRenderMetrics.default` against the adapted theme — the composer depends on that default because
+it cannot import `InstantPageUI`, which would be a cycle); `RichTextV2FrameParityTests` pins the
+composition via the DEBUG-only `RichTextEditorView.layoutSnapshot()`. Line-break agreement between
+TextKit and `CTTypesetterSuggestLineBreak` was measured at **50/50** over a 10-string corpus × 5 widths
+(CJK, RTL, hyphens, trailing spaces, emoji), which is why the wrapped-text parity assertions are
+unconditional. **Runtime-checked in the chat composer**, which is what surfaced the outer-padding
+problem the `edgeSpacingReduction` trim above fixes — a reminder that measured parity against the
+renderer's functions does not by itself mean a host's field reads right. **Still unverified on screen:**
+the composer-vs-sent-bubble and article-editor-vs-sent-message side-by-side comparisons. If you have the
+`mcp__XcodeBuildMCP__*` tools, those are the two screenshots worth taking; a code block still will not
+match exactly (the editor draws `monospacedSystemFont` where the renderer uses Menlo, and nothing reads
+`metrics.codeBlock` yet) — though its GEOMETRY is now shared, via `metrics.code` (see below).
 
 So **the UIKit target is gated `@available(iOS 13.0, *)`** (`RichTextEditorCore` is pure-Foundation,
 always-available), with only genuine higher-OS APIs kept at their real floor: the TK2 `BlockLayout` type + the
@@ -112,9 +207,6 @@ behavior, so the attachment screen / Demo / SwiftPM tests are unchanged.** The c
   separately by the `mediaBlockStyle` knob). Composer → 0.
 - `minimumContentHeight` (default 44) — the floor `performLayout` applies to the returned content height.
   Composer → 0 (the height hugs the text; the host owns the min field height).
-- `blockVerticalInset` (default `BlockBox.defaultVerticalInset` = 8) — the root stack's base inter-block
-  vertical inset (`BlockStack.verticalInsetBase`; nested table-cell stacks keep the default). Composer → 0 so a
-  lone paragraph hugs its one-line height.
 - `placeholders` (`RichTextEditorPlaceholders`, default = "Type something…" + the two list hints) — the empty-
   paragraph placeholder strings, stamped onto top-level boxes in `stampListMarkers`; an empty string for a case
   draws nothing. Composer → all "".
@@ -126,25 +218,24 @@ behavior, so the attachment screen / Demo / SwiftPM tests are unchanged.** The c
   composer has no "empty area below the content" to grow into, so **Composer → `false`** (a tap there just places
   the caret in the trailing paragraph). Unlike the other knobs the composer sets this in `didLoad` purely for
   behavior — it doesn't affect layout, so its timing vs. the document seed is immaterial.
-- `textLayoutMetrics` (`TextLayoutMetrics`, default `.default` = the document look: body/caption 1.10 line-height
-  multiple + 8pt inter-paragraph gap) — a growable value set of render-only body/caption spacing knobs
-  (`bodyLineHeightMultiple`, `bodyParagraphSpacingBefore`, `bodyParagraphSpacingAfter`), mapped to flat
-  `StyleSheet` fields (parallel to the existing `quoteSpacing*` fields) and applied via `applyTextLayoutMetrics`
-  → mapper rebuild + reload (mirrors `quoteStyle`). Composer → `.compact` (natural 1.0 line height, 0 paragraph
-  spacing) so multi-line text reads tight like the legacy plain-text input. An explicit per-paragraph
-  `lineHeightMultiple` in the model still overrides. Runtime-verified 2026-06-29: body line pitch 22.33pt (1.10)
-  → 20.33pt (natural) in the composer; the quote block is correctly unaffected. (Headings + quote keep their
-  own metrics; quote spacing is `QuoteStyle`.)
-  **Gotcha — `lineHeightMultiple` is a per-line BOX-height scale, not a between-lines gap, so it also shifts a
-  lone/first line.** TextKit puts the multiple's extra leading entirely ABOVE the glyphs (see the line-height
-  centering note above), so a single line at 1.10 sits ~2pt low, which the render `centeringDelta` (`= L·(m−1)/2`)
-  half-corrects back up by ~1pt. So dropping a single line from 1.10 → 1.0 raises its baseline by ~1pt to the
-  font's TRUE natural position (the legacy plain-input baseline) — `20.3·(1.10−1)/2 ≈ 1pt`. That is correct, not
-  a regression: any host vertical padding that was eyeballed against the old 1.10-centered (1pt-low) baseline
-  should be re-tuned to natural metrics, NOT compensated by re-introducing the multiple. If a host ever wants
-  inter-line spacing that leaves the first line's baseline fixed, the right tool is `NSParagraphStyle.lineSpacing`
-  (additive below each fragment; a lone line is unaffected) — add it as a `TextLayoutMetrics` field rather than
-  abusing `lineHeightMultiple`.
+- `renderMetrics` (`RichTextRenderMetrics`, default `.default` = the chat-message look) — the whole
+  font + line-geometry + block-rhythm contract; see the V2 layout-parity note above. Applied via
+  `applyRenderMetrics` → mapper rebuild + reload (mirrors `quoteStyle`). **BOTH hosts pass V2 metrics**:
+  the composer assigns `RichTextRenderMetrics.default` (it cannot import `InstantPageUI` — that edge is a
+  cycle, and the default is pinned equal to the adapted theme by test), the article editor calls
+  `InstantPageTheme.chatMessageRenderMetrics()`. This replaced `textLayoutMetrics`, whose per-style
+  `lineHeightMultiple` + paragraph-spacing model is gone: V2 keeps ALL inter-block spacing in the rhythm
+  table and its strings carry none, so a residual per-style spacing would double-count every gap. It also
+  replaced `blockVerticalInset` — the rhythm is the contract's now, and a host that needs tighter outer
+  padding trims `edgeSpacingReduction` (V2's own parameter; the bubble passes 1.0) rather than
+  reintroducing a compact knob. **The composer does exactly that, trimming 6 (`composerEdgeSpacingReduction`).**
+  V2 gives a top-level paragraph `blockVerticalPadding + 2` = 6pt at each SEQUENCE EDGE — not to be
+  confused with the 1pt inter-paragraph gap — so an untrimmed one-line field measured 33pt against the
+  text's own 21pt, which read as too much padding in the input panel. In a page that padding IS the page
+  margin; in the composer the panel already owns the padding around the field, which is why the
+  pre-parity config zeroed the block inset for the same reason. The trim touches only the edges, so the
+  interior rhythm stays V2-exact. An explicit per-paragraph `lineHeightMultiple` in the model still
+  overrides the pinned box.
 - `mediaBlockStyle` (`MediaBlockStyle`, default `.default` = `horizontalBleed` 16 == `CanvasMetrics.pageMargin`,
   the document edge-to-edge look) — how far a top-level media block bleeds beyond the text content strip on each
   side; applied via `applyMediaBlockStyle` (pure geometry, no mapper rebuild) and read at `MediaBlockBox` creation
@@ -182,7 +273,9 @@ it via `ChatRichTextInputNode.applyRichTextTheme`, which `RichTextEditorChatInpu
   the table-control resize knobs, the selection-outline stroke, and the active-handle pill fill.
 - `tableBorder` (default the prior dynamic grid color) / `tableHeaderBackground` (default `white 0.5/0.1`) — the
   table grid stroke and header-row fill (the former `TableBlockBox.gridColor`/`headerRowBackground` statics).
-- `codeBackground` (default prior dynamic color) — code-block background fill.
+- `codeBackground` (default prior dynamic color) — the code band's plain fill, painted by `CodeBlockBox`
+  itself. Both hosts set it to the same value as `tableHeaderBackground`, so a code block reads as a
+  highlighted table row. (Declared but unread until 2026-08-18.)
 - `listMarker` (default `.label`) — list bullet/number marker color.
 - `inlineCodeBackground` (default `.systemGray5`) — inline-code run background pill.
 - `markedTextUnderline` (default `.label`) — IME marked-text (composing) underline.
@@ -241,6 +334,15 @@ The façade is now driven by its host rather than self-laying-out:
   set `scrollView.contentInsetAdjustmentBehavior = .never` and **removed all `UIResponder` keyboard
   observation**. A private `performLayout(size:)` sizes the scroll view/canvas; only `update` writes insets
   (so a system `layoutSubviews` pass can't clobber the parent inset). Caret-follow scrolling stays internal.
+  **A CHANGED TOP inset re-seats a scroll view that is resting at the top** (`contentOffset.y = −insets.top`,
+  applied after `performLayout` so the new content size is in place; gated on the top inset actually changing,
+  so a keyboard-driven bottom inset or a post-edit re-layout never moves a scroll the user owns). UIKit only
+  CLAMPS the offset on an inset change and `contentInsetAdjustmentBehavior` is `.never`, so nothing else does
+  it: a SHORT document is clamped into place for free (the visible-height floor makes `−top` its only valid
+  offset) but a document TALLER than the viewport leaves offset 0 in range — which is why the article editor
+  opened with its first screenful hidden under the navigation bar while the composer looked fine (its top inset
+  is 0). Guarded by `RichTextEditorViewTests.test_update_tallDocument_restsBelowTheTopInset` +
+  `…_doesNotResetAScrolledOffset`.
 - `height(forWidth:contentMargins:) -> CGFloat` — a side-effect-free content-height measure (the Phase-2
   follow-up to the composer's `textHeightForWidth`). Mirrors what `update(...)` returns at that width
   (same `minimumContentHeight` floor + `contentMargins`) but reflows NOTHING live: the per-block
@@ -346,11 +448,9 @@ timestamp-creation UI yet).
 **Composer code blocks — first-class `Block.code` (added 2026-06-19, `feature/richtext-code-block`).** A
 multi-line code block is now a first-class `Block.code(CodeBlock)` (`Core/Model/CodeBlock.swift`: `id` +
 `language: String?` + plain `runs` whose text may contain interior `"\n"`), rendered by a new
-`CodeBlockBox: CanvasBlock` (`Canvas/CodeBlockBox.swift`) — a monospace `BlockLayoutEngine` over the **same
-quote background**: the shared `BlockquoteUnderlay` (accent bar + accent-tinted fill + corner radius) via a
-`CodeBlockBox` case in `blockquoteDecorations()`, with quote-matched text insets (`quoteIndent` /
-`quoteTrailingInset` / `quoteTopInset` / `quoteBottomInset`) and an optional language label (2026-06-30). The
-box draws no fill itself; `RichTextEditorTheme.codeBackground` is retained but unused (a dormant seam). **It reuses the
+`CodeBlockBox: CanvasBlock` (`Canvas/CodeBlockBox.swift`) — a monospace `BlockLayoutEngine` inside a band the
+box paints ITSELF (see the edge-to-edge note below; it shared the quote's `BlockquoteUnderlay` until
+2026-08-18). **It reuses the
 existing position model unchanged:** `Block.code` maps to a `.paragraph` `DocNode` carrying a `TextNodeRef.code`
 leaf, sized `content + 2` exactly like a wrap-heavy paragraph — multi-line interior `"\n"`s need **no** new
 position/selection/tokenizer machinery (they're a linear UTF-16 range TextKit wraps). `currentBlock()` reads
@@ -363,7 +463,7 @@ start of content right after a leading blank — so **two newlines at the beginn
 a **wholly-empty** block → un-code (`uncodeEmptyCodeBlock`); a MIDDLE blank line just inserts another newline.
 **Backspace** in a fully-empty code block un-codes it to body;
 a **tap below** a trailing code block appends a body paragraph; **cross-block** edits treat a code endpoint
-like media (truncate-and-keep partial coverage, drop full coverage) in `applyReplace`. **Creation:**
+like media (truncate-and-keep partial coverage, drop full coverage) in `applyReplaceOutcome`. **Creation:**
 `makeCodeBlock()` (`+ParagraphFormat`, façade-forwarded) toggles the touched top-level paragraphs into one code
 block (joining BOTH paragraph and existing-code text, refusing a selection that spans a non-text block) and
 toggles back to body paragraphs split on `"\n"`; wired to the composer's Format▸Code via
@@ -374,6 +474,90 @@ flat-mapping counts a code block's interior. Full SwiftPM suite green (Core 102 
 `TextFormatTests` are green; **no logged-in-sim pass yet** (non-gating). The composer flat-coordinate mapping
 and the position axis were the load-bearing reuse points — code blocks added zero new invariants there. Spec/plan:
 `docs/superpowers/{specs/2026-06-19-richtext-code-block-design.md,plans/2026-06-19-richtext-code-block.md}`.
+
+**Code-block LANGUAGE field + syntax highlighting (added 2026-08-25).** A code block's language is
+**authored in an always-visible, editable line at the top of the band**, and code is syntax-highlighted in
+both editor hosts. `CodeBlock.language` and its whole serialization path already existed; this added the
+authoring UI and wired the highlighter.
+
+**The language line is a second LEAF REGION on `CodeBlockBox`** — its own `BlockLayoutEngine`
+(`languageLayout`), its own `TextNodeRef.codeLanguage`, and a `DocumentTree` shape change: `.code` maps to a
+CONTAINER of two paragraph children, `[language, code]`. It mirrors a pull quote's `[text, author]`, with
+the extra region LEADING and **never content-gated** (a quote author appears only once its quote has
+content; the language field is always visible, which is also what keeps the code text's offset stable).
+`nodeSize` is `len + langLen + 6`; the language text sits at `nodeStart + 1`, the code text at
+`nodeStart + langLen + 3`. The value is stored AS TYPED, trimmed, empty → nil; only the renderer lowercases.
+
+- **`textStart`/`textLength`/`textRef` still mean the CODE region, and `activeStack` resolves a box by that
+  PRIMARY region** (`leafRegions().first(where: { $0.globalStart == b.textStart })`, plus a fallback that
+  refuses a position inside one of the box's own non-primary regions). This is the load-bearing part: a
+  caret in the language line otherwise resolved to the code box with a LANGUAGE-relative offset, which
+  callers applied to the CODE layout — `insertCodeBlockNewline` spliced a newline into the code at the
+  wrong offset. It compiles and reads correctly at every call site. With the guard, every legacy
+  `box is CodeBlockBox` branch is inert in the language line **by construction** rather than by each site
+  remembering to ask which region it is in. NB the naive `pos >= textStart, pos <= textStart + textLength`
+  is NOT equivalent — containers report a degenerate `textStart == nodeStart`, so it would newly match them.
+- **`leafRegions()` is DOCUMENT order** (navigation indexes `allLeafRegions()` positionally), so a code
+  box's `.first` is now its LANGUAGE line. Every consumer that means "the box's primary text" must use
+  `textStart`. `+ComposerSelection`'s flat mapping did not, and flattened a code block to its language,
+  dropping the code from the composer axis entirely.
+- **A range edit inside the language line routes region-aware.** iOS delivers a backspace there as a RANGE,
+  which resolves to no `activeStack`, so the top-level engine returned `.unchanged` — the character was
+  selected and never deleted. `applySelectionReplaceOutcome` asks `regionIsOffTheTopLevelEngine(_:)`
+  (exhaustive over `TextNodeRef`, no `default`) and routes author AND language through
+  `applyLeafReplaceOutcome`.
+- **Editing semantics:** Return moves to the code start (a `.Pre` language has no second line — this is
+  where it diverges from the trailing author, which splits); Backspace at the start un-makes a wholly-empty
+  block or steps out without deleting; inline formats, emoji and links are inert; text services are off in
+  BOTH code regions (`caretIsInCodeRegion`), because iOS capitalizes `let` to `Let` and autocorrects
+  identifiers. That made `autocapitalizationType` the SEVENTH `UITextInputTraits` member the canvas
+  implements — the differential harness censuses that set, so adding one moves those tests. UIKit caches
+  traits, so `refreshSelectionUI` reloads them when the caret crosses into or out of a code block.
+- **`sameOwningStack` needed its own resolver.** It asked `activeStack` "which box + local" when it only
+  wanted "which stack", so once the guard above refused author/language positions, Select-All over a pull
+  quote (whose end endpoint lands on the empty author region) stopped toggling. `owningStack(at:)` answers
+  the narrower question. This is now the third narrow resolver in the `resolveBox` family the tech-debt
+  note above describes — the generalization it asks for is still owed.
+
+**Syntax highlighting is HOST-PROVIDED, because this package cannot see the highlighter.**
+`RichTextEditorUIKit` depends only on `RichTextEditorCore`, `AppBundle` and `MosaicLayout`, and must keep
+doing so to stay SwiftPM-testable and to keep the Demo app buildable — libprisma lives behind
+`TextFormat`/`TelegramCore`. So the editor owns detection, debounce, cache and apply, and the host answers
+`(language, text) -> [RichTextSyntaxToken]` through `registerSyntaxHighlighter(_:)`, the same seam pattern
+as `registerEmojiViewProvider` / `mapper.formulaRenderer`. Package tests inject a stub, so `swift test`
+never needs libprisma. Both hosts answer via `asyncStanaloneSyntaxHighlight`, baking the LIGHT palette —
+the palette decision lives host-side, so what the editor shows is what the sent message shows.
+
+- **Highlighting is inert until a language is typed** (an empty one is skipped), and an unknown language
+  yields an empty token list that is cached like any other answer, so it is attempted once per
+  (language, text) rather than every pass.
+- **The pass is debounced ~300ms** from `performEditing` and `setBlocks`, never from a selection change: the
+  caret moving through code changes no spec.
+- **`CodeBlockBox.applySyntaxHighlight` rebuilds the block's string with the colours baked in**, which is
+  lossless HERE ONLY because a code block's runs are plain by construction — no link, emoji, inline-code or
+  spoiler attribute lives inside one. It re-assigns `layout.attributedString` only when the result differs
+  (the idempotence rule), and drops a token set WHOLE when any range no longer fits the text. Colours never
+  reach `Document`: `currentCode()` reads the plain string back.
+- **Repaint the BLOCK VIEW, not the canvas.** A code block draws into a pooled `BlockBackingView`, so
+  `setNeedsDisplay()` on the canvas leaves its bitmap stale until some unrelated layout pass happens to run
+  `syncBlockViews()`. That is why highlighting first appeared only after the caret left the block. The pass
+  calls `blockViews[box.id]?.setNeedsDisplay()` and deliberately does NOT call `notifyContentSizeChanged()`
+  — colours never change metrics, and firing it would ask the host to re-lay-out on every arrival.
+- **A rebuild re-applies from cache SYNCHRONOUSLY.** A theme / quote-style change or an undo restore
+  reconstructs every box from the model, which carries no colours, so waiting for the debounced pass showed
+  a plain frame — the "text loses highlight when the device changes theme" report. `setBlocks` calls
+  `reapplyCachedSyntaxHighlights()` before the new boxes are first laid out.
+- **Painting rebuilds the block's text storage**, which would pull the rug from under an IME composition.
+  Safe today only because marked text is confined to top-level body paragraphs
+  (`isBodyParagraphPosition` requires `box is BlockBox`); if IME support ever reaches code blocks, that
+  needs a guard.
+
+Three defects OUTSIDE this package had to be fixed before any of it was visible, all pre-existing and all
+silent: `InstantPageBlock(apiBlock:)` hard-coded `language: nil` when decoding `pageBlockPreformatted`, so
+every page decoded from the API came back language-less; `generateMessageSyntaxHighlight` passed the raw
+language to libprisma, whose grammar lookup is an exact lowercase-keyed map, so `"Swift"` produced zero
+tokens; and V2's `layoutCodeBlock` never read the `cachedMessageSyntaxHighlight` its layout context has
+always carried. See `docs/instantpage-richtext.md`.
 
 **Floating cursor — hold-spacebar-to-move-cursor (added 2026-06-23, runtime-verified 2026-06-24, `feature/richtext-floating-cursor`, phase 1 of 2).**
 The iOS keyboard-as-trackpad gesture is implemented on the canvas (the bare sole `UITextInput`, which own-draws
@@ -491,7 +675,9 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
 `docs/superpowers/{specs,plans}/2026-06-16-richtext-parent-driven-layout*`.
 - **Type scale + `Title` removed.** `ParagraphStyleName` is now `heading1, heading2, heading3, body, caption,
   quote` (no `title`; no backwards-compat decode shim — a persisted `"title"` simply fails to decode). Sizes
-  (`StyleSheet`): H1 24 / H2 21 / H3 19 **serif**, Body 17 sans, Caption 15 sans, Quote 17 sans. **`caption`
+  (`StyleSheet`, as of 2026-06-13): H1 24 / H2 21 / H3 19 **serif**, Body 17 sans, Caption 15 sans, Quote 17
+  sans — **superseded 2026-08-14 by V2 parity, retuned 2026-08-17** (H1 22 / H2 20 / H3 18 / H4 17 / H5 16 /
+  H6 15 serif MEDIUM, from `RichTextRenderMetrics`; see the layout-parity note near the top). **`caption`
   is a render-only style** (media-block captions, 15pt) — never offered in the picker, never persists as a
   paragraph style (a caption serializes as the MediaBlock's runs); `MediaBlockBox` lays the caption out as
   `.caption`. Exhaustive `switch ParagraphStyleName` sites (StyleSheet ×2, conversion ×2) all carry `.caption`.
@@ -500,8 +686,8 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
   `AttributedStringMapper.tableCellVariant()` copies a mapper onto it preserving theme/emojiScale. Each
   `TableBlockBox` derives a cell mapper once and builds every cell box with it. To keep edits consistent, a
   box created as a split/merge replacement **inherits its source box's mapper** (`CanvasBlock` now exposes
-  `mapper { get }`; the three cell-capable creators — `applyReplace` merge, `insertParagraphBreak` split,
-  `mergeParagraphs` — pass `start.box.mapper`/`p.mapper`/`upper.mapper` instead of the canvas mapper), and the
+  `mapper { get }`; the three cell-capable creators — `applyReplaceOutcome` merge, `insertParagraphBreak` split,
+  `mergeParagraphsOutcome` — pass `start.box.mapper`/`p.mapper`/`upper.mapper` instead of the canvas mapper), and the
   empty-cell typing path (`typingAttributeDict`'s empty-storage branch) resolves the owning box via
   `activeStack` and uses **its** mapper — so an empty cell's first typed character is 15pt too. Headings keep
   their fixed sizes in cells. (An explicit run `fontSize` still wins; read-back pins the rendered 15pt.)
@@ -579,15 +765,17 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
   in `docs/instantpage-richtext.md` + `docs/richtext-composer.md` §4. Design/plan:
   `docs/superpowers/{specs,plans}/2026-07-08-richtext-media-spoiler*`.
 - **Backspace targeting a media block replaces it with an empty body paragraph IN PLACE** (2026-06-27, supersedes
-  the older per-case media-backspace rules). `replaceMediaWithEmptyParagraph(at:)` removes the media block and
+  the older per-case media-backspace rules). `replaceMediaWithEmptyParagraphOutcome(at:)` removes the media block and
   drops a fresh empty `.body` paragraph in its slot, caret there — NOT the old delete-and-merge-into-the-block-above
   (`deleteImageBox`) nor the old "act on the previous paragraph" gap behavior. It unifies every way a Backspace
-  "lands on" a media block, reached on FOUR paths in `deleteBackward` / `applySelectionReplace`:
-  - **collapsed caret at the media's leading gap** (`mediaBox(atGap: head)` branch);
+  "lands on" a media block, reached on FOUR paths in `deleteBackward` / `applySelectionReplaceOutcome`:
+  - **collapsed caret at the media's leading gap** (`mediaBox(atGap: head)` branch) — **NOTE: narrowed
+    2026-07-21** to the TAP-SELECTED case only (`imageSelection == img.id`); a plain non-selected gap caret now
+    acts on the PREVIOUS block instead (see the "Backspace at a media block's leading gap" note below);
   - **collapsed caret at the start of the caption** (`pos.box is MediaBlockBox, pos.local == 0`) — empty OR
     non-empty caption (the caption text is **discarded**);
   - **a selection whose bounds EXACTLY equal a media node's span** (`from == nodeStart && to == textStart +
-    textLength`) in `applySelectionReplace` (deliberate select-the-image-then-delete);
+    textLength`) in `applySelectionReplaceOutcome` (deliberate select-the-image-then-delete);
   - **the iOS object-replacement RANGE of a tap-selected media — the LOAD-BEARING, compiler-invisible case**
     (device-log-verified). Tapping a media runs `selectImage` (collapsed caret at the gap, `imageSelection` set),
     but the `selectedTextRange` setter clears `imageSelection` and, right before Backspace, **iOS OVERRIDES the
@@ -603,20 +791,40 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
     stream`), don't hypothesise twice.**
 
   A media delete never leaves a zero-block document (a lone-block replace yields the empty paragraph). The image
-  edit-menu **"Delete"** still fully REMOVES the block (`deleteImageBox`, merges up) — only Backspace was
-  respecified. (`deleteBlock(at:parkingCaretAtGapOf:)` was removed with its sole caller.)
+  edit-menu **"Delete"** still fully REMOVES the block — only Backspace was respecified. (`deleteBlock(at:parkingCaretAtGapOf:)`
+  was removed with its sole caller.) **Name corrected 2026-08-21 (Task 36c), behaviour VERIFIED not inherited:**
+  this said `deleteImageBox`, which no longer exists under that spelling and was not this path's callee anyway.
+  The menu's Delete closure is `+Media.swift`'s `MediaControlRequest.delete` → `deleteMediaBlock(id:)`
+  (whole block) or `deleteMediaItem(blockID:itemIndex:)` (one album cell). `deleteImageBoxOutcome`'s own doc
+  comment in `+Editing.swift` is where this whole class of mis-attribution is described — including why its
+  count is deliberately not written down anywhere. Do not restate it here.
+
+**Backspace at a media block's leading gap (2026-07-21).** A plain, NON-tap-selected caret at a media
+block's leading gap (`nodeStart`, the slot to the LEFT of the image) now acts on the PREVIOUS block
+rather than the media: it deletes the previous block's last grapheme (caret moves into that block), or,
+if the previous block is empty, deletes the empty block (caret stays at the image's shifted gap); a
+non-text previous atom (table / block quote whose boundary isn't renderable) is a safe no-op with the
+caret left at the gap; a LEADING image (no previous block) is a no-op. A TAP-SELECTED image (the tint;
+`imageSelection == img.id`, or the `imageObjectDeletePending` range path) still replaces the media with
+an empty paragraph on Backspace, as does Backspace at CAPTION start (offset 0). Both the collapsed-caret
+gap Backspace and the OS object-replacement RANGE `[prevEnd … gap]` (collapsed to a gap caret before the
+gap branch) route through the same logic. This keys on `mediaBox(atGap:)`, so it applies to EVERY
+`MediaBlockBox` including caption-less **audio** (`MediaKind.audio`) — consistent with images; audio stays
+deletable via tap-select + Backspace through the `imageSelection == img.id` branch. See `deleteBackward`
+(`DocumentCanvasView+UITextInput.swift`) and `CanvasImageEditTests` (`test_backspaceAtGap_*`).
+
 - **Backspace at the start of a paragraph AFTER a non-text block deletes the empty paragraph, never the block**
   (`deleteBackward`, the mirror of the leading-gap rule above). A collapsed caret at the start (`local == 0`) of
   a paragraph whose previous block is a non-text **atom** — an image (`MediaBlockBox`), a table (`TableBlockBox`),
   or a code block (`CodeBlockBox`), unified via `isNonParagraphAtom(_:)` — must NOT delete that block (you can't
-  merge text into it): an **empty** paragraph is removed (`removeBlock(at:parkingCaretAt:)`, so *"deleting the
+  merge text into it): an **empty** paragraph is removed (`removeBlockOutcome(at:parkingCaretAt:)`, so *"deleting the
   last paragraph" is always possible*), a **non-empty** one is kept; either way the caret steps back to the
   block's nearest text slot via `prevTextPosition` (an image's caption end, a table's last cell end, a code
   block's end) — never the block's degenerate node-start boundary. Previously the image branch called
   `deleteImageBox(at: pos.index - 1)` and silently destroyed the image; the table branch moved the caret but
   *kept* the empty paragraph (undeletable); the code branch left the empty paragraph in place. Text blocks
   (body/heading/quote/list paragraphs) still take the normal merge path below. (Select All + backspace still
-  removes a covered image — that goes through `applyReplace`, below.)
+  removes a covered image — that goes through `applyReplaceOutcome`, below.)
 - **An audio media block (`MediaKind.audio`) is a CAPTION-LESS atom** (2026-06-27) — unlike image/video/location it
   has **no caption** (not rendered, editable, or in the position model). `DocumentTree` emits `mediaBlock([mediaAtom])`
   (nodeSize 3, no caption paragraph), and `MediaBlockBox` is **dual-moded on `kind == .audio`** — `textLayout` →
@@ -631,6 +839,19 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
   `textStart + textLength` — because audio's `textStart + textLength` collapses to `nodeStart`. Backspace targeting
   audio still replaces it with an empty paragraph via the gap path (below); the caption-start branch never fires
   (no caption position exists).
+
+  **Generalised to documents (2026-07-31).** The predicate is now `MediaKind.isCaptionless` (`.audio ||
+  .document`), mirrored by `MediaBlock.isCaptionless` / `MediaBlockBox.isCaptionless`; every former `isAudio`
+  branch above — plus `DocumentTree` and the three `DocumentCanvasView+Editing` sites (`coverableContentEnd`,
+  the media-caption Enter guard, `insertMedia`'s caret landing) — keys on it. The ONE kind-specific value is
+  the row height: `audioRowHeight` 44 vs `documentRowHeight` **52**, selected by `MediaBlockBox.rowHeight`.
+  **Both must equal the matching V2 frame height in `InstantPageV2Layout`** (the box reserves the slot, the
+  renderer fills it), or the editor preview stops matching the sent bubble. The narrower `isAudio` accessor
+  survives on BOTH `MediaBlock` and `MediaBlockBox` for callers that mean audio *specifically* (several tests
+  assert audio identity — `isCaptionless` would silently also accept a document). Gap-caret Backspace,
+  tap-select delete, vertical nav and Select-All coverage needed no change at all: they key on
+  `mediaBox(atGap:)`, not the kind. Round-trip + recipient rendering: `docs/richtext-composer.md` §4 and
+  `docs/instantpage-richtext.md`.
 - **Inserting a table or image on an EMPTY paragraph replaces it; mid-paragraph it splits** (`insertTable`,
   `insertMedia`). Both share one branch order: an **empty** caret paragraph (`pos.box as? BlockBox` with
   `textLength == 0`) is **replaced** by the new block (`replaceSubrange(pos.index...pos.index)`) so no stray
@@ -642,7 +863,7 @@ sweep) extend this block below; the layout sweep also has a spec/plan pair in
   document's only block is fine — a lone `[table]`/`[image]` is a valid document (the caret lands in the first
   cell / caption; tap-below re-adds a paragraph). The empty-replace only targets `BlockBox` paragraphs, so it
   never replaces an image caption / code block the caret happens to sit in.
-- **Select All + backspace removes a covered image, even a leading/trailing one** (`applyReplace` cross-block).
+- **Select All + backspace removes a covered image, even a leading/trailing one** (`applyReplaceOutcome` cross-block).
   A media endpoint is now dropped when the selection covers its **whole node** (leading gap + entire caption:
   `lo <= box.nodeStart && hi >= box.textStart + box.textLength`), so the merge path's `replaceSubrange(start...
   end)` clears it like a covered MIDDLE image already was. A **partially**-covered media endpoint (selection
@@ -780,7 +1001,7 @@ RTL paragraphs (Arabic/Hebrew/…) lay out per-paragraph, **auto-detected by def
 - **LOAD-BEARING — font FAMILY is display-only and must NOT round-trip.** `NSTextStorage` font-fixing substitutes a
   script font into a run's `.font` **in storage** when the style font can't render the glyphs (Arabic/Hebrew/CJK).
   `characterAttributes(from:)` must therefore **not** capture `fontFamily` from the rendered font — it once did, so
-  the substituted family round-tripped and the font visibly changed on a backspace **merge** (`mergeParagraphs` →
+  the substituted family round-tripped and the font visibly changed on a backspace **merge** (`mergeParagraphsOutcome` →
   `currentParagraph()`). Font **size** IS still pinned on read-back (the 15pt table-cell round-trip needs it);
   bold/italic round-trip via font traits; forward `font(for:)` still honors an explicit import-set `fontFamily`.
 - **LOAD-BEARING — bold is a user-intent MARKER (`.rtBold`), not the rendered trait (2026-06-29).** The iOS
@@ -884,7 +1105,7 @@ yet — verify via an RTE-active composer (`forceNewTextInput` ON — Debug Sett
   a stray Backspace can't then delete table rows), sets `pendingSpellingMenu`, presents the menu. The iOS-16
   `menuFor` short-circuits to the guesses `UIMenu` when `pendingSpellingMenu != nil` (bypasses the host
   `contextMenuItemsProvider`); iOS 13–15 uses `UIMenuController` + fixed `spellGuess0…3` selectors. Replace =
-  `editing { applySelectionReplace(...) }` (one undo step) then re-check. Gated on `wasFirstResponder` (a focusing
+  `editing { applySelectionReplaceOutcome(...) }` (one undo step) then re-check. Gated on `wasFirstResponder` (a focusing
   tap only places the caret). `pendingSpellingMenu` cleared at the top of `dismissEditMenuForSelectionOrTextChange`.
 - **Display-only** — nothing spell-related enters `Document`; **no `RichTextEditorCore` change**.
 - **LOAD-BEARING (kept from the public feature):** `drawCellSpelling` mirrors `drawCellSelection`'s
@@ -966,10 +1187,10 @@ FAMILY does NOT have this problem (it's deliberately not round-tripped — see t
 **Where it bites (patched ~2026-07-05):**
 - **MERGE across styles is handled centrally in `ParagraphBlock.merging`** (Core): when the two paragraphs'
   styles differ, the appended (other) runs get their `fontSize` cleared so they inherit the surviving style's
-  size. This covers every merge path at once — `deleteBackward`'s top-level `applyReplace` merge (Backspace at
+  size. This covers every merge path at once — `deleteBackward`'s top-level `applyReplaceOutcome` merge (Backspace at
   a body paragraph's start into a preceding heading — reached as a RANGE `[prevEnd, thisStart]`, NOT a
-  collapsed caret, so it goes through `applySelectionReplace` → `applyReplace` → `merging`) and
-  `mergeParagraphs`. Same-style merges keep the pin (preserving the 15pt table-cell round-trip).
+  collapsed caret, so it goes through `applySelectionReplaceOutcome` → `applyReplaceOutcome` → `merging`) and
+  `mergeParagraphsOutcome`. Same-style merges keep the pin (preserving the 15pt table-cell round-trip).
 - **SPLIT (`insertParagraphBreak`) is still a separate patch**: Return in a heading makes the tail a body
   paragraph and clears the tail runs' `fontSize` (a split is not a `merging` call, so it needs its own sweep).
 
@@ -986,7 +1207,7 @@ a RANGE. Centralizing in `merging` + testing the range form fixed it.)
   invariant). Then a heading run reads back with `fontSize == nil` and inherits whatever paragraph style it
   lands in; the 15pt cell case is handled by resolving the size against the *cell's* style at pin time (pin
   only when 15 ≠ the destination style's default), or by carrying the cell size as context, not per-run.
-- Then delete the scattered `fontSize = nil` patches in `insertParagraphBreak` / `mergeParagraphs` — they
+- Then delete the scattered `fontSize = nil` patches in `insertParagraphBreak` / `mergeParagraphsOutcome` — they
   become unnecessary once size inherits the style by construction.
 - Guardrail until then: any new code path that moves runs into a different-styled paragraph must strip the
   runs' pinned `fontSize` (or it will render at the wrong size).
@@ -1049,7 +1270,7 @@ a RANGE. Centralizing in `merging` + testing the range form fixed it.)
   near an emoji places the caret mid-cluster, and the next insert/delete (incl. via the chat composer's
   `selectedRange`) splits the cluster → a stray code unit (the "service character"). Pairs with the
   grapheme-aware `deleteBackward` below — both keep the editor surrogate-safe.
-- **Range delete/replace expands to whole grapheme clusters.** `applySelectionReplace` (THE chokepoint for
+- **Range delete/replace expands to whole grapheme clusters.** `applySelectionReplaceOutcome` (THE chokepoint for
   every selection-replacing edit — delete, type-over, paste, `replace(_:withText:)`) runs
   `rangeExpandedToGraphemeBoundaries` first, so a range covering only PART of a composed sequence is widened
   to the whole cluster. This is load-bearing for the **chat composer**: the OS delivers backspace there as a
@@ -1154,7 +1375,7 @@ a RANGE. Centralizing in `merging` + testing the range form fixed it.)
   paste edit (the default `coalescing: .none`), and IME composition commit + resign-first-responder + `setBlocks`
   (which call `breakUndoCoalescing()`; `setBlocks` also covers the undo/redo restore). Only the 3 char-insert
   `insertText` sites pass `.typing` and the 3 plain-delete `deleteBackward` sites pass `.deleting`; every
-  structural delete (paragraph merge / `removeBlock` / media-replace / un-quote / un-code / cross-block merge)
+  structural delete (paragraph merge / `removeBlockOutcome` / media-replace / un-quote / un-code / cross-block merge)
   stays `.none`. Scope note: system replacements via `replace(_:withText:)` (autocorrect/dictation) stay
   `.none`, so a dictation utterance is its own undo step. `undoRegistrationCount` is a test seam counting new
   steps; `UndoCoalescingTests`.
@@ -1192,7 +1413,8 @@ link run's `foreground`/`underline` styling is render-only (suppressed on read-b
 Headings are **regular weight by default** (`StyleSheet.font` does not force bold for them — they read as
 larger serif); bold is a pure user-emphasis toggle that round-trips uniformly across every style. (This
 replaced the earlier behavior where headings baked bold into their font, which leaked `**bold**` into the
-model and left residual bold on a heading→body down-convert.) Type scale (2026-06-13): H1 24 / H2 21 / H3 19
+model and left residual bold on a heading→body down-convert.) Type scale (2026-06-13; sizes since superseded
+by V2 parity — see the layout-parity note): H1 24 / H2 21 / H3 19
 serif, Body 17 sans, Caption 15 sans, Quote 17 sans — see the 2026-06-13 session block above. **Inside table
 cells body/quote drop to a 15pt base (2026-06-26)** via a per-cell `StyleSheet.tableCells` mapper variant — see
 the type-scale bullet in that session block.
@@ -1348,11 +1570,51 @@ Three fixes to the selection-handle ("knob") drag, runtime-verified in the chat 
   is the window hit-test result, so the handle MUST stay hit-testable and its hit area MUST track the caret —
   verified on device (the hit test lands on `SelectionHandleView`).
 
+**Code blocks are edge-to-edge plain bands (2026-08-18, `feature/code-block-edge-to-edge`).** A code block
+stopped being a quote variant: no accent bar, no tint, no corner radius. Its band is a plain
+`RichTextEditorTheme.codeBackground` rectangle spanning its container's interior edge to edge, and its code
+text — plus a **bold, lowercased language line above it** — sits at exactly the x a paragraph occupies at
+that nesting level. So the band's interior side padding IS the paragraph inset; it is no longer a constant.
+
+- **`CodeBlockBox` paints its own fill** and left `blockquoteDecorations()`, which was deleted with its
+  struct (the code case was its only producer). That is also the FIX for a live bug: the quote underlay's
+  feed walks top-level boxes only, so a code block inside a quote or a table cell previously had **no fill
+  at all**.
+- **`blockViewFrame` outsets `frame` by `horizontalBleed`** — geometric sides (`minXSide` is the smaller-x
+  edge), mirroring the renderer's `InstantPageV2ChildBleed`. `BlockBackingView` clips to `blockViewFrame`, so
+  a bleed missing there renders as a band clipped back to the text column. It is assigned by
+  `BlockStack.layout(origin:width:codeBleed:)` at LAYOUT time, not at construction: it moves with the host's
+  content margins while the box does not. Root → the canvas edge by default, or `CodeStyle.horizontalBleed`
+  when a host sets one; block quote → just inside the accent bar, so the bar stays continuous; details /
+  table cells / list items → none, conservatively.
+- **A COMPACT host bleeds NOTHING and indents the text instead.** The composer's canvas sits INSIDE the
+  input field's rounded background (inset by the panel's `textInputViewInternalInsets`, 12 left / 11 right)
+  and its right `contentMargins` additionally reserves the accessory + send button strip — so any outward
+  bleed reads as spilling past what the field shows. The composer therefore sets
+  `CodeStyle(horizontalBleed: 0, horizontalInset: 8, cornerRadius: 4)`: the band spans exactly the text
+  column, and `horizontalInset` moves the code IN from its edges — the inward counterpart of the outward
+  bleed. **`horizontalBleed` and `horizontalInset` are alternatives**; a host sets one or the other, never
+  both to non-zero. The inset narrows the text MEASURE as well as its origin (`setWidth` /
+  `measuredHeight(forWidth:)` / the init layout all subtract it twice), or the code would wrap at the
+  band's full width and overrun its trailing edge. **Deliberately NOT WYSIWYG** against the sent bubble
+  (full-bleed, square) — a compact field is a different container shape from a message bubble, the same
+  reason the composer zeroes `mediaBlockStyle.horizontalBleed`.
+- **`CodeStyle` (host knob) + `StyleSheet.codeVerticalInset` / `codeLanguageSpacing`** replaced the borrowed
+  `quoteIndent` / `quoteTrailingInset` / `quoteTopInset` / `quoteBottomInset`. Both fields are optional and
+  resolve against `RichTextRenderMetrics.code` (`RichTextCodeMetrics`), so an unset host renders the
+  renderer's own numbers. `applyRenderMetrics` MUST re-resolve them — `metrics.code` is the fallback, so a
+  host setting `renderMetrics` after `codeStyle` would otherwise keep stale defaults.
+- This closed two real parity breaks: interior padding was 9/**22** here (it read `quoteTrailingInset`)
+  against the renderer's 9/9, and vertical padding a raw 3pt against its font-box-corrected 6pt.
+
+Renderer side + the design record: `docs/superpowers/specs/2026-08-18-code-block-edge-to-edge-design.md`.
+
+
 ## Status
 
 **Done** (model + editing + rendering all in place): the Core model, global position model, and JSON/`.rtdoc`
 serialization; continuous **cross-block and partial-cross-cell selection + editing** — the headline
-requirement, incl. editing across stacks via `applyReplace` / `applyMultiRegionClear`; structural editing
+requirement, incl. editing across stacks via `applyReplaceOutcome` / `applyMultiRegionClearOutcome`; structural editing
 (Enter splits / Backspace merges / cross-block delete) with snapshot undo; **lists** (rendering +
 `setList` / indent / outdent, incl. an **interactive checklist** — tappable `CheckNode` checkbox + message
 round-trip + emoji external share, see the note above), **images** (caption + gap cursor + selection highlight), **tables**
@@ -1379,9 +1641,25 @@ detect; `plainTextFragment` per-line detect). The in-app private fragment round-
 (`blockPlainText` / `text(in:)` stay marker-free). Accepted limitation: a paragraph the user literally typed
 starting with `✅ `/`⬜ ` is read as a checklist on external paste.
 
+**Inline-merging a pasted paragraph is DIRECTIONAL — it keeps the HOST's style, so it must not swallow a
+heading (`isInlineMergeable`, fixed 2026-08-17).** The predicate accepted every heading level, so a fragment
+whose first (or only) block was a heading folded into the split half of the host paragraph and came out
+retyped as the host's style. In the chat composer the host is always a body paragraph, so **pasting a copied
+rich message silently lost its headings** — the reported "headings are not pasted". The two directions are not
+symmetric and the predicate now takes the host style:
+- a plain **body** fragment paragraph carries no block structure, so folding it loses nothing → always folds.
+  This one MUST keep folding: pasting text into a heading has to stay in the heading.
+- a **heading** fragment paragraph loses its level when folded → folds only into a host of that same style
+  (`# X` pasted inside an H1 must not shatter it into three blocks). Anywhere else it stands as its own block,
+  and the split-and-assemble path below places it — including mid-paragraph, which now splits the host rather
+  than dissolving the heading into it.
+
+`Document.replacingRange` delegates its splice to `insertingFragment`, so the markdown-on-paste two-step path
+inherits the same rule. Guarded by `DocumentFragmentHeadingPasteTests` (Core).
+
 **Paste never leaves a spurious empty paragraph (load-bearing, `Document.insertingFragment`).** The multi-block
 splice assembles `[headBlock] + middle + [tailPara]`, where head/tail are the host paragraph split at the caret;
-it inline-merges a fragment block into a split half ONLY when that block is body/heading (`isInlineMergeable`).
+it inline-merges a fragment block into a split half only per the directional rule above (`isInlineMergeable`).
 Pasting a NON-inline-mergeable LAST block — a **list item (checklists), quote, or code block** — at a paragraph
 END (empty tail) would otherwise leave the empty host tail as a trailing empty paragraph (symmetric leading case at
 a paragraph start). It now drops an empty OUTERMOST split-half (`headBlock`/`tailPara` only — keyed on
@@ -1392,9 +1670,21 @@ case; the host-tail empty is the general one and lives here in Core, shared by b
 
 **Paste-media-to-send is host-delegated (2026-06-25).** The editor never embeds pasted media inline — images/GIF/video/stickers go to the chat *send* flow. Two façade hooks (`RichTextEditorView.canPasteMedia` / `onPasteMedia`, both `(() -> Bool)?`, forwarded to `DocumentCanvasView`): `paste(_:)` pastes a TEXT rep if one exists (fragment/RTF/plain — **text wins**), else calls `onPasteMedia?()`; `clipboardCanPerformAction(.paste)` also offers Paste when `canPasteMedia?()` is true (so the menu shows for an image-only clipboard). The editor stays Telegram-UTI-agnostic — the hooks are plain closures the host fills. The chat composer wires them (`ChatTextInputPanelNode.loadTextInputNode`) to a shared `handlePastedMedia(perform:)` (the gif/mp4/heics/png-sticker/jpeg detection extracted from the legacy `chatInputTextNodeShouldPaste`, so both the old and new composers route media identically), restoring the legacy paste-to-send the new composer had lost.
 
+**Host plain-text transform hook + two-step paste (2026-07-24, markdown-on-paste).** `RichTextEditorView.plainTextFragmentTransformer: ((String) -> Document?)?` (forwarded to `DocumentCanvasView`) lets a host convert pasted PLAIN text into a rich `Document` — the editor stays markdown-agnostic (the composer/article hosts inject a CommonMark parser; see `docs/richtext-composer.md` §7). `paste(_:)` consults it only when the pasteboard has **no** richer rep (fragment/RTF) and it returns a non-empty `Document`, then runs `pasteMarkdownTwoStep(plainText:rich:)`: step 1 splices the RAW text (`spliceFragmentInEditing`, one undo step), step 2 — **deferred to the next run-loop cycle** — `replaceRange`s it with `rich`. Two events are REQUIRED for two undo groups: the private `UndoManager` uses default `groupsByEvent`, so a synchronous step 2 would coalesce into one group (one undo would wipe the paste instead of reverting rich→plain). Step 1 sets **`suppressHostChangeNotification`** so `notifyContentSizeChanged()` (gated at its definition — `setBlocks` also calls it) and the `editing {}` trailing `refreshSelectionUI()`/`onSelectionChange()` no-op, keeping the intermediate raw-text state off-screen (no text flash, no caret jump — the caret moves once, in step 2). Undo therefore steps rich → plain → gone.
+
 **RTF export is hand-rolled and emits real tables (2026-06-25, `RTFConversion.swift`).** iOS has **no `NSTextTable` / `NSParagraphStyle.textBlocks`** (AppKit-only) — confirmed by spike — so `NSAttributedString` cannot represent or round-trip a real RTF table; a genuine table can only be produced by emitting the control words by hand. So `rtfData(from:)` now builds the **entire** RTF document by hand for ALL documents (one path; the old `NSAttributedString` export is gone) via one shared inline-run encoder (`inlineRTF`) + `escapeRTFText` (UTF-16 `\u<signed-16>?` escaping). Tables emit `\trowd`/`\trhdr`/`\cellx<cumulative-twips>`/`\intbl`/`\cell`/`\row` (`tableRTF`), so a Telegram table copied into Word/Pages/Notes becomes a **real table**. Parity kept on export (not added): no list markers, no foreground/theme colors, media-in-cell dropped, cell background colors dropped. Custom emoji ride the `tg://emoji?id=<id>&n=<seq>` hyperlink marker (the `&n=` per-export sequence stops adjacent identical emoji from coalescing). Spec/plan: `docs/superpowers/{specs/2026-06-25-richtext-rtf-tables-design.md,plans/2026-06-25-richtext-rtf-tables.md}`.
 
-**RTF import is a custom pure-Foundation parser in Core (2026-06-25, `RichTextEditorCore/Serialization/RTFTokenizer.swift` + `RTFImport.swift`).** Because iOS `NSAttributedString` flattens all block structure (no `NSTextTable`/`textLists`), a custom lexer (`RTFTokenizer`: groups, control words, `\'XX` cp1252, `\uN` signed-16 + surrogate + `\uc` skip, escapes) feeds a group-state document builder (`RTFDocumentParser`) that **reconstructs tables / headings / code / lists** + inline runs/links/emoji from third-party RTF (Word/Pages/web). `fragment(fromRTF:)` (UIKit) tries `RTFImport.document(fromRTF:)` **first** and falls back to the old `NSAttributedString` path only on hard failure (not-RTF / zero blocks) — so exotic RTF is never worse than the flatten, and the editor's own export→import now **round-trips structure losslessly** (the `RTFConversionTests` round-trip suite is the parse-compat gate; pure-Foundation parser is `swift test`-able on macOS via `RTFImportTests`/`RTFImportCorpusTests`). Heuristics (text always survives, only block style may differ): heading by font size (`\fsN/2` ≥23→H1/20–22→H2/18–19→H3), all-mono paragraph→code block, best-effort lists (`\ilvl`/`\listtext` marker→`.bullet`/`.ordered`+level). Non-goals: colors, nested tables, full Word list-table fidelity, images, codepage beyond cp1252. Graceful degradation: unknown control words → no-op; unknown/`{\*\…}` destinations consumed to their `}`; never crashes. **Paragraph breaks (load-bearing, fixed 2026-06-26 — the "pasting removes newlines" bug):** Cocoa/AppKit (TextEdit, Notes, Safari, Mail, Pages — i.e. *every* rich-app copy) serializes a paragraph break as a **backslash immediately followed by a literal CR/LF** (`a\⏎b`), which the RTF spec defines as equivalent to `\par` — NOT a literal `\par` (only the editor's own export and hand-written test RTF use literal `\par`, which is why this slipped the original suite). `RTFTokenizer` therefore maps `\`+CR/LF (CRLF collapsed to one) to a `\par` token; without it every cross-app paste glued all paragraphs into one. **Empty paragraphs survive:** an explicit `\par` is a paragraph *terminator*, so `flushParagraph(allowEmpty:)` emits an empty body paragraph for two consecutive `\par` (a blank line); the implicit end-of-document flush passes `allowEmpty:false`, so a doc with no trailing `\par` gains no spurious empty final paragraph. (Raw, un-backslashed CR/LF stays ignored per spec; `\line` is still a soft in-paragraph break.) Regression-guarded by `RTFImportTests.test_backslash*`/`test_*Par*` + `RTFImportCorpusTests.test_cocoaStyle_*`. Spec/plan: `docs/superpowers/{specs/2026-06-25-richtext-rtf-import-design.md,plans/2026-06-25-richtext-rtf-import.md}`.
+**RTF import is a custom pure-Foundation parser in Core (2026-06-25, `RichTextEditorCore/Serialization/RTFTokenizer.swift` + `RTFImport.swift`).** Because iOS `NSAttributedString` flattens all block structure (no `NSTextTable`/`textLists`), a custom lexer (`RTFTokenizer`: groups, control words, `\'XX` cp1252, `\uN` signed-16 + surrogate + `\uc` skip, escapes) feeds a group-state document builder (`RTFDocumentParser`) that **reconstructs tables / headings / code / lists** + inline runs/links/emoji from third-party RTF (Word/Pages/web). `fragment(fromRTF:)` (UIKit) tries `RTFImport.document(fromRTF:)` **first** and falls back to the old `NSAttributedString` path only on hard failure (not-RTF / zero blocks) — so exotic RTF is never worse than the flatten, and the editor's own export→import now **round-trips structure losslessly** (the `RTFConversionTests` round-trip suite is the parse-compat gate; pure-Foundation parser is `swift test`-able on macOS via `RTFImportTests`/`RTFImportCorpusTests`). Heuristics (text always survives, only block style may differ): heading by font size (`\fsN/2` ≥23→H1/20–22→H2/18–19→H3), all-mono paragraph→code block, best-effort lists (`\ilvl`/`\listtext` marker→`.bullet`/`.ordered`+level). **Imported links whose anchor text IS their own URL are stripped to plain text** — `fragment(fromRTF:)` runs
+`Document.strippingSelfReferentialLinks()` on BOTH the custom-parser and `NSAttributedString`-fallback results.
+A copied web link usually has the URL as its label; carrying it as a link run pins a destination the plain URL
+already gives, and the sent message would become a `textUrl` instead of a plain, auto-detected URL. A genuine
+text link (a label that differs from its target) is kept, as is anything pasted through the private fragment UTI
+(no importer involved). The predicate `linkIsSelfReferential(text:url:)` (Core) tolerates the normalizations a
+producer applies — an added `mailto:` / `http(s)://` scheme (the latter only when the text carries no scheme of
+its own), a percent-encoded path, a trailing `/` — and is a **deliberate duplicate** of `TextFormat`'s
+`chatInputLinkIsSelfReferential` (Core cannot import app modules; keep the two rules in step). The composer's
+markdown-on-paste path applies the same rule host-side — see `docs/richtext-composer.md` §7.
+Non-goals: colors, nested tables, full Word list-table fidelity, images, codepage beyond cp1252. Graceful degradation: unknown control words → no-op; unknown/`{\*\…}` destinations consumed to their `}`; never crashes. **Paragraph breaks (load-bearing, fixed 2026-06-26 — the "pasting removes newlines" bug):** Cocoa/AppKit (TextEdit, Notes, Safari, Mail, Pages — i.e. *every* rich-app copy) serializes a paragraph break as a **backslash immediately followed by a literal CR/LF** (`a\⏎b`), which the RTF spec defines as equivalent to `\par` — NOT a literal `\par` (only the editor's own export and hand-written test RTF use literal `\par`, which is why this slipped the original suite). `RTFTokenizer` therefore maps `\`+CR/LF (CRLF collapsed to one) to a `\par` token; without it every cross-app paste glued all paragraphs into one. **Empty paragraphs survive:** an explicit `\par` is a paragraph *terminator*, so `flushParagraph(allowEmpty:)` emits an empty body paragraph for two consecutive `\par` (a blank line); the implicit end-of-document flush passes `allowEmpty:false`, so a doc with no trailing `\par` gains no spurious empty final paragraph. (Raw, un-backslashed CR/LF stays ignored per spec; `\line` is still a soft in-paragraph break.) Regression-guarded by `RTFImportTests.test_backslash*`/`test_*Par*` + `RTFImportCorpusTests.test_cocoaStyle_*`. Spec/plan: `docs/superpowers/{specs/2026-06-25-richtext-rtf-import-design.md,plans/2026-06-25-richtext-rtf-import.md}`.
 
 **Other open work:** Phase 5e images toolbar (Photos/Files picker, alignment toggle, interactive drag-resize); Phase 6b new
 paragraph styles (Subtitle / Code) + a Dash list marker (Caption landed 2026-06-13 as a render-only style); Phase 6c floating pill keyboard toolbar
@@ -1415,3 +1705,42 @@ pre-move archive at `~/Documents/RichTextEditor/docs/superpowers/{specs,plans,sp
 foundational two: the main design spec (`2026-05-30-ios-rich-text-editor-design.md`) and the
 table-selection **spike findings** (`2026-05-30-table-selection-spike-findings.md` — the API learnings that
 drove the single-`UITextInput` architecture and its caveats).
+
+## Verification traps in this package (earned, 2026-08)
+
+Six measurement traps that cost real time during the input-backend seam work. Each is specific to this
+package or this repo, and each produced a **green result that meant nothing** until it was caught.
+
+- **`Scripts/iostest.sh` prints one `Executed …` summary PER TARGET, and the LAST is Core's.** Tailing the
+  log gives you the Core number (a few hundred) and reads as the whole suite (a few thousand). Always record
+  the decomposition: `N executed (UIKit X / S skipped + Core Y), exit 0`.
+- **`swift test --filter <Suite>` selects nothing here** and prints `Executed 0 tests, with 0 failures` — a
+  vacuous pass. Use `Scripts/iostest.sh <Target>/<Suite>` instead.
+- **`swift test` compiles NO canvas code.** All 67 `Canvas/*.swift` files are `#if canImport(UIKit)`-guarded
+  and the SwiftPM test build targets macOS, so a mutation planted in one of them proves nothing about
+  compilation. Build for the simulator when the claim is "this would/wouldn't compile".
+- **`sysctlbyname("kern.osversion")` in a simulator returns the HOST MAC's build** (e.g. `25G76`), not the
+  simulated iOS build. Use `ProcessInfo.operatingSystemVersionString`. This matters because two iOS 26.5
+  runtimes can be installed (`23F73` and a beta) sharing one identifier, and `device.plist` records only the
+  identifier.
+- **The `UITextInput` position axis is SPARSE**: a top-level paragraph boundary occupies TWO position slots
+  where the text projection emits one `"\n"`. Offsets are NOT character indices. `positionFromPosition:offset:`
+  does raw arithmetic then snaps, so aiming at a character index lands one character early past every
+  boundary. See `DocumentCanvasView+ComposerSelection.swift` for the existing global↔flat mapper.
+- **`BlockLayoutEngine.attributedString` returns the LIVE storage.** `let before = layout.attributedString`
+  and comparing it after a mutation compares the object with ITSELF, so the assertion passes no matter what
+  happened. A formatting lock-out test passed before its guard existed this way; only a control asserting
+  the same gesture DOES change an unguarded block caught it. Copy first
+  (`NSAttributedString(attributedString:)`), and commit the control alongside.
+- **A canvas nobody retains is deallocated before a debounced pass fires.** `_ = makeCanvas(...)` in a test
+  leaves the scheduled work item's `[weak self]` nil, so the pass never runs — and a test asserting
+  "nothing was requested" then passes against a dead canvas rather than against the rule. Hold the canvas,
+  and give any "nothing happens" test a positive control in the same document.
+- **`DispatchQueue.main.async { fulfill }` is not a way to wait for `asyncAfter`.** The timer-backed work
+  can land after the plain async block, so the wait returns before the pass has run. Spin the runloop
+  (`RunLoop.current.run(until:)`).
+- **Never `pgrep -f "<pattern>"` from a watcher whose own command line contains that pattern** — it matches
+  itself and the loop never exits. Wait on a PID or a sentinel file. (Cost 42 minutes once.)
+
+**And the general form of all six:** before recording an empty or zero result as evidence, prove the
+instrument can produce a non-empty one. A count from an unvalidated command is not a measurement.

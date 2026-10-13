@@ -165,16 +165,36 @@ enum PeerReadStateValidationError {
     case retry
 }
 
+/// Clears the peer's pending synchronization operation. Every path that decides there is
+/// nothing left to do must end here: the operation is persisted, and
+/// `SynchronizePeerReadStatesContextImpl` restarts whatever it still finds in the table.
+private func confirmSynchronized(postbox: Postbox, peerId: PeerId) -> Signal<Void, PeerReadStateValidationError> {
+    return postbox.transaction { transaction -> Void in
+        transaction.confirmSynchronizedIncomingReadState(peerId)
+    }
+    |> castError(PeerReadStateValidationError.self)
+}
+
 private func validatePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Never, PeerReadStateValidationError> {
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        // A secret chat has no Api.InputPeer, so there is no dialog to read an authoritative
+        // read state from: every step below fails at inputPeer and asks to retry, forever.
+        // Treat it like a peer the server reports no dialog for, which is already confirmed
+        // rather than retried. This does discard a validation that a detected inconsistency
+        // asked for - a hole among deleted unread messages, an undercount - without
+        // recounting, so a wrong unread badge survives until something else corrects it. A
+        // local recount is the honest answer, since for a secret chat the client is the
+        // authority; the loop this replaces recounted nothing either.
+        return confirmSynchronized(postbox: postbox, peerId: peerId)
+        |> ignoreValues
+    }
+
     let readStateWithInitialState = dialogReadState(network: network, postbox: postbox, peerId: peerId)
     
     let maybeAppliedReadState = readStateWithInitialState
     |> mapToSignal { data -> Signal<Never, PeerReadStateValidationError> in
         guard let (readState, _) = data else {
-            return postbox.transaction { transaction -> Void in
-                transaction.confirmSynchronizedIncomingReadState(peerId)
-            }
-            |> castError(PeerReadStateValidationError.self)
+            return confirmSynchronized(postbox: postbox, peerId: peerId)
             |> ignoreValues
         }
         return stateManager.addCustomOperation(postbox.transaction { transaction -> PeerReadStateValidationError? in
@@ -228,20 +248,34 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, PeerReadStateValidationError> {
     if peerId.namespace == Namespaces.Peer.SecretChat {
+        // Decide whether a request is needed before looking the peer up: inputSecretChat goes
+        // through loadedPeerWithId, which never emits when the peer row is missing and fails
+        // with .retry when it is not a TelegramSecretChat. Either would strand or respin an
+        // operation that has already been decided against.
+        guard case let .indexBased(maxIncomingReadIndex, _, _, _) = readState else {
+            return .single(readState)
+        }
+        // The marker is still at MessageIndex.lowerBound while nothing has been read, and
+        // several paths schedule a push without moving it - marking the chat unread, or a
+        // bare .Push that no read state change accompanied. Its zero date is not one the
+        // server accepts: it answers MAX_DATE_INVALID, and there is nothing to report.
+        if maxIncomingReadIndex.timestamp <= 0 {
+            return .single(readState)
+        }
         return inputSecretChat(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<PeerReadState, PeerReadStateValidationError> in
-            switch readState {
-            case .idBased:
-                return .single(readState)
-            case let .indexBased(maxIncomingReadIndex, _, _, _):
-                return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
-                    |> mapError { _ in
-                        return PeerReadStateValidationError.retry
-                    }
-                |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
-                    return .single(readState)
-                }
+            // A rejected push must not be retried: the operation is only cleared once it
+            // succeeds, so a permanent rejection would loop without end. The cloud branches
+            // below drop their errors the same way.
+            return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
             }
+            |> mapToSignal { _ -> Signal<PeerReadState, NoError> in
+                return .complete()
+            }
+            |> castError(PeerReadStateValidationError.self)
+            |> then(Signal<PeerReadState, PeerReadStateValidationError>.single(readState))
         }
     } else {
         return inputPeer(postbox: postbox, peerId: peerId)
@@ -323,7 +357,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     }
 }
 
-private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Never, PeerReadStateValidationError> {
+private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, willValidate: Bool) -> Signal<Never, PeerReadStateValidationError> {
     let currentReadState = postbox.transaction { transaction -> (MessageId.Namespace, PeerReadState)? in
         if let readStates = transaction.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {
@@ -342,8 +376,18 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
             |> map { updatedReadState -> (MessageId.Namespace, PeerReadState) in
                 return (namespace, updatedReadState)
             }
-        } else {
+        } else if willValidate {
+            // Validation runs next and owns the confirm; leave the operation in place so it
+            // survives a crash in between.
             return .complete()
+        } else {
+            // No read state to push, so the verification below never runs and would never
+            // confirm. Completing on its own leaves the persisted operation in place for the
+            // manager to pick straight back up - the same unbounded restart this guards.
+            return confirmSynchronized(postbox: postbox, peerId: peerId)
+            |> mapToSignal { _ -> Signal<(MessageId.Namespace, PeerReadState), PeerReadStateValidationError> in
+                return .complete()
+            }
         }
     }
     
@@ -379,7 +423,7 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
     var signal: Signal<Never, PeerReadStateValidationError> = .complete()
     if push {
         signal = signal
-        |> then(pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId))
+        |> then(pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, willValidate: validate))
     }
     if validate {
         signal = signal

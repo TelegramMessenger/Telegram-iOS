@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -330,7 +331,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.emptyResultsTextNode.alpha = 0.0
         self.emptyResultsTextNode.isUserInteractionEnabled = false
         
-        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         self.emptyResultsAnimationNode.alpha = 0.0
         self.emptyResultsAnimationNode.isUserInteractionEnabled = false
         

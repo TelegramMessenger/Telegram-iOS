@@ -330,9 +330,22 @@ static NSMutableArray<CALayerSpringParametersOverride *> *currentSpringParameter
 
 @end
 
-@protocol UIRemoteKeyboardWindowProtocol
+// The keyboard lives in a UIRemoteKeyboardWindow that belongs to an internal keyboard scene, so it is
+// absent from UIWindowScene.windows and from UIApplication.windows (both filter internal windows since
+// iOS 16). It is reached through the window scene's keyboard scene delegate.
+//
+// Do NOT go back to +[UIRemoteKeyboardWindow remoteKeyboardWindowForScreen:create:]: as of iOS 27 that
+// method traps (`brk #0`) when the calling binary is linked against the iOS 27 SDK or newer. The path
+// below has no such guard.
+@protocol UIKeyboardSceneDelegateProtocol
 
-+ (UIWindow * _Nullable)remoteKeyboardWindowForScreen:(UIScreen * _Nullable)screen create:(BOOL)create;
+- (UIWindow * _Nullable)keyboardWindow;
+
+@end
+
+@protocol UIWindowSceneKeyboardProtocol
+
+- (id _Nullable)keyboardSceneDelegate;
 
 @end
 
@@ -563,7 +576,6 @@ static NSMutableDictionary<NSString *, TrustedWebRecord *> *trustedWebRecords() 
         if (@available(iOS 26.0, *)) {
             registerEffectViewOverrides();
         }
-        
         /*#if DEBUG
         Class cls = NSClassFromString(@"WKBrowsingContextController");
         SEL sel = NSSelectorFromString(@"registerSchemeForCustomProtocol:");
@@ -729,16 +741,43 @@ static NSMutableDictionary<NSString *, TrustedWebRecord *> *trustedWebRecords() 
 }*/
 
 - (UIWindow * _Nullable)internalGetKeyboard {
-    Class windowClass = NSClassFromString(@"UIRemoteKeyboardWindow");
-    if (!windowClass) {
+    UIWindowScene *foundScene = nil;
+    for (UIScene *scene in self.connectedScenes) {
+        if (![scene isKindOfClass:[UIWindowScene class]]) {
+            continue;
+        }
+        if (scene.activationState == UISceneActivationStateForegroundActive) {
+            foundScene = (UIWindowScene *)scene;
+            break;
+        }
+        if (foundScene == nil) {
+            foundScene = (UIWindowScene *)scene;
+        }
+    }
+
+    return [self internalGetKeyboardForScene:foundScene];
+}
+
+- (UIWindow * _Nullable)internalGetKeyboardForScene:(UIWindowScene * _Nullable)scene {
+    if (scene == nil) {
         return nil;
     }
-    UIWindow *result = [(id<UIRemoteKeyboardWindowProtocol>)windowClass remoteKeyboardWindowForScreen:[UIScreen mainScreen] create:false];
-    
-    if (result) {
-        //dumpViews(result, @"");
+    if (![scene respondsToSelector:@selector(keyboardSceneDelegate)]) {
+        return nil;
     }
-    
+
+    id keyboardSceneDelegate = [(id<UIWindowSceneKeyboardProtocol>)scene keyboardSceneDelegate];
+    if (![keyboardSceneDelegate respondsToSelector:@selector(keyboardWindow)]) {
+        return nil;
+    }
+
+    // nil until the keyboard has been created for this scene, and also whenever the keyboard UI is
+    // hosted out of process — in that configuration there is no in-process keyboard window at all.
+    UIWindow *result = [(id<UIKeyboardSceneDelegateProtocol>)keyboardSceneDelegate keyboardWindow];
+    if (![result isKindOfClass:[UIWindow class]]) {
+        return nil;
+    }
+
     return result;
 }
 

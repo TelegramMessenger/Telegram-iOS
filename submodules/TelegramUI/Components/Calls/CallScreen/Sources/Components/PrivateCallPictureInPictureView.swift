@@ -159,22 +159,15 @@ final class PrivateCallPictureInPictureView: UIView {
             return
         }
         
-        var interfaceOrientation: UIInterfaceOrientation = .portrait
-        switch UIDevice.current.orientation {
-        case .portrait:
-            interfaceOrientation = .portrait
-        case .landscapeLeft:
-            interfaceOrientation = .landscapeLeft
-        case .landscapeRight:
-            interfaceOrientation = .landscapeRight
-        case .portraitUpsideDown:
-            interfaceOrientation = .portraitUpsideDown
-        default:
-            break
-        }
+        // The system picture-in-picture window turns with the device, so its surface orientation is
+        // the interface equivalent of the device orientation (landscapeLeft on one enum is
+        // landscapeRight on the other, per UIOrientation.h), and the body orientation handed to the
+        // resolver is that same position, so a remote frame is shown as sent.
+        let interfaceOrientation = interfaceOrientationMatching(UIDevice.current.orientation)
+        let deviceOrientation = deviceOrientationMatching(interfaceOrientation)
         
         if let videoMetrics = self.videoMetrics {
-            let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: interfaceOrientation)
+            let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: interfaceOrientation, deviceOrientation: deviceOrientation)
             
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false

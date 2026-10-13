@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -291,7 +292,7 @@ public final class VideoChatMicButtonComponent: Component {
         
         override init(frame: CGRect) {
             self.background = UIImageView()
-            self.icon = VoiceChatActionButtonIconNode(isColored: false)
+            self.icon = VoiceChatActionButtonIconNode(isColored: false, lottieSettings: .noAccountFallback)
             
             super.init(frame: frame)
         }

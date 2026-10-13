@@ -1956,7 +1956,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 if case let .animated(duration, _) = transition {
-                    inCallStatusBar.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: duration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)
+                    inCallStatusBar.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0 - forceInCallStatusBar.bottomOverhang), to: CGPoint(), duration: duration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)
                 }
             }
             if let layout = self.validLayout {
@@ -1968,7 +1968,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         } else if let inCallStatusBar = self.inCallStatusBar {
             self.inCallStatusBar = nil
-            transition.updatePosition(node: inCallStatusBar, position: CGPoint(x: inCallStatusBar.position.x, y: -64.0), completion: { [weak inCallStatusBar] _ in
+            transition.updatePosition(node: inCallStatusBar, position: CGPoint(x: inCallStatusBar.position.x, y: -64.0 - (inCallStatusBar.callStatusBarNode?.bottomOverhang ?? 0.0)), completion: { [weak inCallStatusBar] _ in
                 inCallStatusBar?.removeFromSupernode()
             })
             if let layout = self.validLayout {

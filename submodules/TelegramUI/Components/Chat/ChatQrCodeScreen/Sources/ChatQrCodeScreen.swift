@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import AVFoundation
 import UIKit
 import Display
@@ -121,6 +122,10 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
 
 
 private class ThemeSettingsThemeIconItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let context: AccountContext
     let emoticon: String?
     let emojiFile: TelegramMediaFile?
@@ -147,7 +152,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ThemeSettingsThemeItemIconNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
@@ -164,7 +169,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ThemeSettingsThemeItemIconNode)
             if let nodeValue = node() as? ThemeSettingsThemeItemIconNode {
@@ -385,7 +390,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         super.selected()
         
         if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {
+            Queue.mainQueue().after(0.1) { [animatedStickerNode, weak self] in
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
                     animatedStickerNode.play(firstFrame: false, fromIndex: nil)
@@ -505,7 +510,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -1197,7 +1202,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
             let themeCrossfadeDuration: Double = 0.3
             let themeCrossfadeDelay: Double = 0.25
             
-            Queue.mainQueue().after(themeCrossfadeDelay) {
+            Queue.mainQueue().after(themeCrossfadeDelay) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.switchThemeIconAnimator = DisplayLinkAnimator(duration: themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     self?.animationNode.setColors(colors: interpolateColors(from: previousIconColors, to: newIconColors, fraction: value))
                 }, completion: { [weak self] in
@@ -1710,7 +1719,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         self.codeMarkersNode = TransformImageNode()
         self.codeIconBackgroundNode = ASImageNode()
         
-        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl()
+        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         
         if isStatic {
             let codeStaticIconNode = ASImageNode()
@@ -1720,7 +1729,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = codeStaticIconNode
             self.codeAnimatedIconNode = nil
         } else {
-            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl()
+            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
             codeAnimatedIconNode.visibility = true
             self.codeAnimatedIconNode = codeAnimatedIconNode

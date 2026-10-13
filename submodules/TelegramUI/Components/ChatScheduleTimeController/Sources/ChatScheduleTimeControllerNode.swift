@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -594,7 +595,8 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
                         content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                         startingPosition: .begin,
                         size: CGSize(width: 32.0, height: 32.0),
-                        playOnce: playOnce
+                        playOnce: playOnce,
+                        lottieSettings: self.context.lottieRenderingSettings
                     )),
                     content: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(

@@ -521,7 +521,7 @@ extension ChatControllerImpl {
             case let .peer(peerView):
                 self.navigationActionDisposable.set((peerView.get()
                 |> take(1)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
+                |> deliverOnMainQueue).startStrict(next: { [weak self, controller] peerView in
                     guard let strongSelf = self, let peer = peerView.peers[peerView.peerId] else {
                         return
                     }

@@ -714,10 +714,10 @@ public final class PostboxEncoder {
             let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
             try! object.encode(to: innerEncoder)
 
+            // `makeData(addHeader: true)` already yields `[typeHash][length][payload]`, which is
+            // the per-element layout every `.ObjectArray` reader (and `positionOnKey`'s skip)
+            // expects. Do not prefix it with another length.
             let (data, _) = innerEncoder.makeData(addHeader: true, isDictionary: false)
-            
-            var length: Int32 = Int32(data.count)
-            self.buffer.write(&length, offset: 0, length: 4)
             self.buffer.write(data)
         }
     }
@@ -774,15 +774,23 @@ public final class PostboxDecoder {
             
             var valueLength: Int32 = 0
             memcpy(&valueLength, bytes + offset, 4)
+            if valueLength < 0 {
+                offset = 0
+                return false
+            }
             offset += 4 + Int(valueLength)
         case .Object:
-            if offset + 4 > length {
+            if offset + 8 > length {
                 offset = 0
                 return false
             }
             
             var valueLength: Int32 = 0
             memcpy(&valueLength, bytes + (offset + 4), 4)
+            if valueLength < 0 {
+                offset = 0
+                return false
+            }
             offset += 8 + Int(valueLength)
         case .Int32Array:
             if offset + 4 > length {
@@ -792,6 +800,10 @@ public final class PostboxDecoder {
             
             var valueLength: Int32 = 0
             memcpy(&valueLength, bytes + offset, 4)
+            if valueLength < 0 {
+                offset = 0
+                return false
+            }
             offset += 4 + Int(valueLength) * 4
         case .Int64Array:
             if offset + 4 > length {
@@ -801,6 +813,10 @@ public final class PostboxDecoder {
             
             var valueLength: Int32 = 0
             memcpy(&valueLength, bytes + offset, 4)
+            if valueLength < 0 {
+                offset = 0
+                return false
+            }
             offset += 4 + Int(valueLength) * 8
         case .ObjectArray:
             if offset + 4 > length {
@@ -820,8 +836,12 @@ public final class PostboxDecoder {
                 
                 var objectLength: Int32 = 0
                 memcpy(&objectLength, bytes + (offset + 4), 4)
+                if objectLength < 0 {
+                    offset = 0
+                    return false
+                }
                 offset += 8 + Int(objectLength)
-                if offset < 0 || offset > length {
+                if offset > length {
                     offset = 0
                     return false
                 }
@@ -846,6 +866,10 @@ public final class PostboxDecoder {
                 
                 var keyLength: Int32 = 0
                 memcpy(&keyLength, bytes + (offset + 4), 4)
+                if keyLength < 0 {
+                    offset = 0
+                    return false
+                }
                 offset += 8 + Int(keyLength)
                 
                 if offset + 4 + 4 > length {
@@ -855,6 +879,10 @@ public final class PostboxDecoder {
                 
                 var valueLength: Int32 = 0
                 memcpy(&valueLength, bytes + (offset + 4), 4)
+                if valueLength < 0 {
+                    offset = 0
+                    return false
+                }
                 offset += 8 + Int(valueLength)
                 i += 1
             }
@@ -866,6 +894,10 @@ public final class PostboxDecoder {
             
             var valueLength: Int32 = 0
             memcpy(&valueLength, bytes + offset, 4)
+            if valueLength < 0 {
+                offset = 0
+                return false
+            }
             offset += 4 + Int(valueLength)
         case .Nil:
             break
@@ -887,9 +919,20 @@ public final class PostboxDecoder {
                 
                 var stringLength: Int32 = 0
                 memcpy(&stringLength, bytes + offset, 4)
+                if stringLength < 0 {
+                    offset = 0
+                    return false
+                }
                 offset += 4 + Int(stringLength)
                 i += 1
             }
+        }
+        // A value whose declared size runs past the buffer is malformed. Every branch
+        // above has already rejected negative lengths (which could otherwise move the
+        // key scan backwards and loop it forever); this catches the forward overrun.
+        if offset > length {
+            offset = 0
+            return false
         }
         return true
     }
@@ -1290,51 +1333,87 @@ public final class PostboxDecoder {
         }
     }
     
+    // MARK: Bounds-checked primitives for the raw array readers
+    //
+    // Every array kind stores an element count and, for variable-size elements, a
+    // per-element length, all read straight from the file. These helpers are the one
+    // place those untrusted numbers are validated; a raw reader returns nil the moment
+    // one of them would take it past the buffer, and its callers treat that as
+    // malformed data rather than an empty or partial value.
+    
+    private func readInt32IfAvailable() -> Int32? {
+        if self.offset + 4 > self.buffer.length {
+            return nil
+        }
+        var value: Int32 = 0
+        memcpy(&value, self.buffer.memory + self.offset, 4)
+        self.offset += 4
+        return value
+    }
+    
+    /// A non-negative count or length, or nil when absent or negative.
+    private func readLengthIfValid() -> Int? {
+        guard let value = self.readInt32IfAvailable(), value >= 0 else {
+            return nil
+        }
+        return Int(value)
+    }
+    
+    private func hasBytes(_ count: Int) -> Bool {
+        return self.offset + count <= self.buffer.length
+    }
+    
+    /// True when `count` elements of at least `minimumElementSize` bytes each could
+    /// still fit in the remaining buffer; rejects absurd counts before any allocation.
+    private func canHold(count: Int, minimumElementSize: Int) -> Bool {
+        return count <= (self.buffer.length - self.offset) / minimumElementSize
+    }
+    
     public func decodeInt32ArrayForKey(_ key: String) -> [Int32] {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32Array) {
-            return decodeInt32ArrayRaw()
+            return decodeInt32ArrayRaw() ?? []
         } else {
             return []
         }
     }
 
-    func decodeInt32ArrayRaw() -> [Int32] {
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
-        var array: [Int32] = []
-        array.reserveCapacity(Int(length))
-        var i: Int32 = 0
-        while i < length {
-            var element: Int32 = 0
-            memcpy(&element, self.buffer.memory + (self.offset + 4 + 4 * Int(i)), 4)
-            array.append(element)
-            i += 1
+    /// Returns nil when the value is malformed (see the bounds-checked primitives).
+    func decodeInt32ArrayRaw() -> [Int32]? {
+        guard let count = self.readLengthIfValid(), self.hasBytes(count * 4) else {
+            return nil
         }
-        self.offset += 4 + Int(length) * 4
+        var array: [Int32] = []
+        array.reserveCapacity(count)
+        for i in 0 ..< count {
+            var element: Int32 = 0
+            memcpy(&element, self.buffer.memory + (self.offset + 4 * i), 4)
+            array.append(element)
+        }
+        self.offset += count * 4
         return array
     }
     
     public func decodeInt64ArrayForKey(_ key: String) -> [Int64] {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int64Array) {
-            return decodeInt64ArrayRaw()
+            return decodeInt64ArrayRaw() ?? []
         } else {
             return []
         }
     }
 
-    func decodeInt64ArrayRaw() -> [Int64] {
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
-        var array: [Int64] = []
-        array.reserveCapacity(Int(length))
-        var i: Int32 = 0
-        while i < length {
-            var element: Int64 = 0
-            memcpy(&element, self.buffer.memory + (self.offset + 4 + 8 * Int(i)), 8)
-            array.append(element)
-            i += 1
+    /// Returns nil when the value is malformed (see the bounds-checked primitives).
+    func decodeInt64ArrayRaw() -> [Int64]? {
+        guard let count = self.readLengthIfValid(), self.hasBytes(count * 8) else {
+            return nil
         }
-        self.offset += 4 + Int(length) * 8
+        var array: [Int64] = []
+        array.reserveCapacity(count)
+        for i in 0 ..< count {
+            var element: Int64 = 0
+            memcpy(&element, self.buffer.memory + (self.offset + 8 * i), 8)
+            array.append(element)
+        }
+        self.offset += count * 8
         return array
     }
     
@@ -1399,8 +1478,8 @@ public final class PostboxDecoder {
             return array
         } else {
             if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32Array) {
-                let array = decodeInt32ArrayRaw()
-                if array.isEmpty {
+                // An empty Codable array is stored as an empty Int32Array.
+                if let array = decodeInt32ArrayRaw(), array.isEmpty {
                     return []
                 } else {
                     return nil
@@ -1446,7 +1525,7 @@ public final class PostboxDecoder {
     
     public func decodeStringArrayForKey(_ key: String) -> [String] {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .StringArray) {
-            return decodeStringArrayRaw()
+            return decodeStringArrayRaw() ?? []
         } else {
             return []
         }
@@ -1460,28 +1539,27 @@ public final class PostboxDecoder {
         }
     }
 
-    public func decodeStringArrayRaw() -> [String] {
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
-        self.offset += 4
+    /// Returns nil when the value is malformed: a count or element length that runs
+    /// past the buffer, or an element that is not valid UTF-8 (the encoder always
+    /// writes valid UTF-8, lossily converted).
+    public func decodeStringArrayRaw() -> [String]? {
+        guard let count = self.readLengthIfValid(), self.canHold(count: count, minimumElementSize: 4) else {
+            return nil
+        }
 
         var array: [String] = []
-        array.reserveCapacity(Int(length))
+        array.reserveCapacity(count)
 
-        var i: Int32 = 0
-        while i < length {
-            var length: Int32 = 0
-            memcpy(&length, self.buffer.memory + self.offset, 4)
-            let data = Data(bytes: self.buffer.memory.assumingMemoryBound(to: UInt8.self).advanced(by: self.offset + 4), count: Int(length))
-            self.offset += 4 + Int(length)
-            if let string = String(data: data, encoding: .utf8) {
-                array.append(string)
-            } else {
-                assertionFailure()
-                array.append("")
+        for _ in 0 ..< count {
+            guard let length = self.readLengthIfValid(), self.hasBytes(length) else {
+                return nil
             }
-
-            i += 1
+            let data = Data(bytes: self.buffer.memory.assumingMemoryBound(to: UInt8.self).advanced(by: self.offset), count: length)
+            self.offset += length
+            guard let string = String(data: data, encoding: .utf8) else {
+                return nil
+            }
+            array.append(string)
         }
 
         return array
@@ -1489,55 +1567,67 @@ public final class PostboxDecoder {
     
     public func decodeBytesArrayForKey(_ key: String) -> [MemoryBuffer] {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .BytesArray) {
-            return decodeBytesArrayRaw()
+            return decodeBytesArrayRaw() ?? []
         } else {
             return []
         }
     }
 
-    func decodeBytesArrayRaw() -> [MemoryBuffer] {
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
-        self.offset += 4
+    /// Returns nil when the value is malformed (see the bounds-checked primitives).
+    func decodeBytesArrayRaw() -> [MemoryBuffer]? {
+        guard let count = self.readLengthIfValid(), self.canHold(count: count, minimumElementSize: 4) else {
+            return nil
+        }
 
         var array: [MemoryBuffer] = []
-        array.reserveCapacity(Int(length))
+        array.reserveCapacity(count)
 
-        var i: Int32 = 0
-        while i < length {
-            var length: Int32 = 0
-            memcpy(&length, self.buffer.memory + self.offset, 4)
-            let bytes = malloc(Int(length))!
-            memcpy(bytes, self.buffer.memory.advanced(by: self.offset + 4), Int(length))
-            array.append(MemoryBuffer(memory: bytes, capacity: Int(length), length: Int(length), freeWhenDone: true))
-            self.offset += 4 + Int(length)
-
-            i += 1
+        for _ in 0 ..< count {
+            guard let length = self.readLengthIfValid(), self.hasBytes(length) else {
+                return nil
+            }
+            let bytes = malloc(max(length, 1))!
+            memcpy(bytes, self.buffer.memory.advanced(by: self.offset), length)
+            array.append(MemoryBuffer(memory: bytes, capacity: length, length: length, freeWhenDone: true))
+            self.offset += length
         }
 
         return array
     }
 
-    func decodeObjectDataArrayRaw() -> [Data] {
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
+    /// Splits `.ObjectArray` bytes into their element payloads. Returns nil when the
+    /// data is malformed (an element header or body would extend past the buffer),
+    /// so the caller can fail the decode instead of handing back a partial array.
+    /// Element size is bounded only by the buffer: the encoder imposes no cap, so
+    /// neither may the decoder.
+    func decodeObjectDataArrayRaw() -> [Data]? {
+        if self.offset + 4 > self.buffer.length {
+            return nil
+        }
+        var count: Int32 = 0
+        memcpy(&count, self.buffer.memory + self.offset, 4)
         self.offset += 4
+        if count < 0 {
+            return nil
+        }
 
         var array: [Data] = []
-        array.reserveCapacity(Int(length))
+        array.reserveCapacity(Int(count))
 
         var i: Int32 = 0
-        while i < length {
+        while i < count {
+            if self.offset + 8 > self.buffer.length {
+                return nil
+            }
+
             var typeHash: Int32 = 0
             memcpy(&typeHash, self.buffer.memory + self.offset, 4)
             self.offset += 4
 
             var objectLength: Int32 = 0
             memcpy(&objectLength, self.buffer.memory + self.offset, 4)
-            if objectLength < 0 || objectLength > 2 * 1024 * 1024 {
-                assertionFailure()
-                self.offset = 0
-                break
+            if objectLength < 0 || self.offset + 4 + Int(objectLength) > self.buffer.length {
+                return nil
             }
 
             let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)
@@ -1831,38 +1921,32 @@ public final class PostboxDecoder {
         }
     }
 
-    public func decodeObjectDataDictRaw() -> [(Data, Data)] {
+    /// Returns nil when the value is malformed (see the bounds-checked primitives).
+    /// Each entry is `[keyHash][keyLength][key][valueHash][valueLength][value]`.
+    public func decodeObjectDataDictRaw() -> [(Data, Data)]? {
+        guard let count = self.readLengthIfValid(), self.canHold(count: count, minimumElementSize: 16) else {
+            return nil
+        }
+        
         var dict: [(Data, Data)] = []
+        dict.reserveCapacity(count)
 
-        var length: Int32 = 0
-        memcpy(&length, self.buffer.memory + self.offset, 4)
-        self.offset += 4
+        for _ in 0 ..< count {
+            // Key: the type hash is not needed to split the payload.
+            guard self.readInt32IfAvailable() != nil, let keyLength = self.readLengthIfValid(), self.hasBytes(keyLength) else {
+                return nil
+            }
+            let keyData = ReadBuffer(memory: self.buffer.memory + self.offset, length: keyLength, freeWhenDone: false).makeData()
+            self.offset += keyLength
 
-        var i: Int32 = 0
-        while i < length {
-            var keyHash: Int32 = 0
-            memcpy(&keyHash, self.buffer.memory + self.offset, 4)
-            self.offset += 4
-
-            var keyLength: Int32 = 0
-            memcpy(&keyLength, self.buffer.memory + self.offset, 4)
-
-            let keyData = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(keyLength), freeWhenDone: false).makeData()
-            self.offset += 4 + Int(keyLength)
-
-            var valueHash: Int32 = 0
-            memcpy(&valueHash, self.buffer.memory + self.offset, 4)
-            self.offset += 4
-
-            var valueLength: Int32 = 0
-            memcpy(&valueLength, self.buffer.memory + self.offset, 4)
-
-            let objectData = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(valueLength), freeWhenDone: false).makeData()
-            self.offset += 4 + Int(valueLength)
+            // Value.
+            guard self.readInt32IfAvailable() != nil, let valueLength = self.readLengthIfValid(), self.hasBytes(valueLength) else {
+                return nil
+            }
+            let objectData = ReadBuffer(memory: self.buffer.memory + self.offset, length: valueLength, freeWhenDone: false).makeData()
+            self.offset += valueLength
 
             dict.append((keyData, objectData))
-
-            i += 1
         }
 
         return dict
@@ -1959,25 +2043,38 @@ public final class PostboxDecoder {
     
     public func decodeArray<T: Decodable>(_ type: [T].Type, forKey key: String) -> [T]? {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
-            var length: Int32 = 0
-            memcpy(&length, self.buffer.memory + self.offset, 4)
+            if self.offset + 4 > self.buffer.length {
+                return nil
+            }
+            var count: Int32 = 0
+            memcpy(&count, self.buffer.memory + self.offset, 4)
             self.offset += 4
+            if count < 0 {
+                return nil
+            }
             
             var array: [T] = []
-            array.reserveCapacity(Int(length))
+            array.reserveCapacity(Int(count))
             
             var i: Int32 = 0
-            while i < length {
+            while i < count {
+                if self.offset + 8 > self.buffer.length {
+                    return nil
+                }
+                
                 var typeHash: Int32 = 0
                 memcpy(&typeHash, self.buffer.memory + self.offset, 4)
                 self.offset += 4
                 
                 var objectLength: Int32 = 0
                 memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                if objectLength < 0 || self.offset + 4 + Int(objectLength) > self.buffer.length {
+                    return nil
+                }
                 
                 let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)
                 let innerData = innerBuffer.makeData()
-                self.offset += 4 + Int(length)
+                self.offset += 4 + Int(objectLength)
 
                 do {
                     let result = try AdaptedPostboxDecoder().decode(T.self, from: innerData)

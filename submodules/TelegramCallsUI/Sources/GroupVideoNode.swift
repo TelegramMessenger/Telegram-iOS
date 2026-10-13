@@ -161,7 +161,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
             self.backgroundColor = nil
             self.hasScheduledUnblur = true
             if let snapshotView = snapshotView {
-                Queue.mainQueue().after(0.3) {
+                Queue.mainQueue().after(0.3) { [snapshotView] in
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     })

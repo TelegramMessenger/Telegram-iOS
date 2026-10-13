@@ -37,8 +37,26 @@ private let glassButtonSize = CGSize(width: 72.0, height: 62.0)
 private let smallGlassButtonSize = CGSize(width: 72.0, height: 62.0)
 private let smallButtonWidth: CGFloat = 69.0
 private let iconSize = CGSize(width: 30.0, height: 30.0)
-private let glassPanelSideInset: CGFloat = 20.0
+private let glassPanelInset: CGFloat = 22.0
+private let glassTextPanelInset: CGFloat = 28.0
 private let smallPanelWidth: CGFloat = 240.0
+// Two tabs (e.g. gallery + file while editing a message) keep the 3-tab spacing: 3 + 72 + 82 + 3.
+private let twoButtonPanelWidth: CGFloat = 160.0
+
+private func glassTabBarFrame(layout: ContainerViewLayout, buttonCount: Int) -> CGRect {
+    let availableWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right
+    let width: CGFloat
+    if buttonCount == 2 {
+        width = twoButtonPanelWidth
+    } else if buttonCount == 3 {
+        width = smallPanelWidth
+    } else if buttonCount == 4 {
+        width = 300.0
+    } else {
+        width = availableWidth - glassPanelInset * 2.0
+    }
+    return CGRect(x: layout.safeInsets.left + floorToScreenPixels((availableWidth - width) * 0.5), y: 0.0, width: width, height: glassButtonSize.height)
+}
 
 private final class IconComponent: Component {
     public let account: Account
@@ -144,6 +162,7 @@ private final class AttachButtonComponent: CombinedComponent {
     let type: AttachmentButtonType
     let isFirstOrLast: Bool
     let isSelected: Bool
+    let isAnimating: Bool
     let strings: PresentationStrings
     let theme: PresentationTheme
     let action: () -> Void
@@ -155,6 +174,7 @@ private final class AttachButtonComponent: CombinedComponent {
         type: AttachmentButtonType,
         isFirstOrLast: Bool,
         isSelected: Bool,
+        isAnimating: Bool,
         strings: PresentationStrings,
         theme: PresentationTheme,
         action: @escaping () -> Void,
@@ -165,6 +185,7 @@ private final class AttachButtonComponent: CombinedComponent {
         self.type = type
         self.isFirstOrLast = isFirstOrLast
         self.isSelected = isSelected
+        self.isAnimating = isAnimating
         self.strings = strings
         self.theme = theme
         self.action = action
@@ -187,6 +208,9 @@ private final class AttachButtonComponent: CombinedComponent {
         if lhs.isSelected != rhs.isSelected {
             return false
         }
+        if lhs.isAnimating != rhs.isAnimating {
+            return false
+        }
         if lhs.strings !== rhs.strings {
             return false
         }
@@ -206,6 +230,9 @@ private final class AttachButtonComponent: CombinedComponent {
             let name: String
             let imageName: String
             var imageFile: TelegramMediaFile?
+            var animationName: String?
+            var animationScale: CGFloat = 1.0
+            var animationOffset: CGFloat = 0.0
             var animationFile: TelegramMediaFile?
             var botPeer: EnginePeer?
 
@@ -215,34 +242,49 @@ private final class AttachButtonComponent: CombinedComponent {
             switch component.type {
             case .gallery:
                 name = strings.Attachment_Gallery
-                imageName = "Chat/Attach Menu/Gallery"
+                animationName = "TabPhoto"
+                imageName = ""
             case .file:
                 name = strings.Attachment_File
-                imageName = "Chat/Attach Menu/File"
+                animationName = "TabFile"
+                imageName = ""
+            case .money:
+                name = strings.Attachment_Money
+                animationName = "TabMoney"
+                imageName = ""
             case .location:
                 name = strings.Attachment_Location
-                imageName = "Chat/Attach Menu/Location"
+                animationName = "TabLocation"
+                imageName = ""
             case .todo:
                 name = strings.Attachment_Todo
-                imageName = "Chat/Attach Menu/Todo"
+                animationName = "TabTodo"
+                imageName = ""
             case .contact:
                 name = strings.Attachment_Contact
-                imageName = "Chat/Attach Menu/Contact"
+                animationName = "TabContacts"
+                animationScale = 1.78
+                animationOffset = UIScreenPixel
+                imageName = ""
             case .poll:
                 name = strings.Attachment_Poll
-                imageName = "Chat/Attach Menu/Poll"
+                animationName = "TabPoll"
+                imageName = ""
             case .gift:
                 name = strings.Attachment_Gift
-                imageName = "Chat/Attach Menu/Gift"
+                animationName = "TabGift"
+                imageName = ""
             case .sticker:
                 name = strings.Attachment_Sticker
-                imageName = "Chat/Attach Menu/Sticker"
+                animationName = "TabSticker"
+                imageName = ""
             case .emoji:
                 name = "Emoji"
                 imageName = "Chat/Attach Menu/Emoji"
             case .audio:
                 name = strings.Attachment_Audio
-                imageName = "Chat/Attach Menu/Audio"
+                animationName = "TabAudio"
+                imageName = ""
             case .link:
                 name = strings.Attachment_Link
                 imageName = "Chat/Attach Menu/Link"
@@ -263,10 +305,12 @@ private final class AttachButtonComponent: CombinedComponent {
                 imageFile = nil
             case .quickReply:
                 name = strings.Attachment_Reply
-                imageName = "Chat/Attach Menu/Reply"
+                animationName = "TabReply"
+                imageName = ""
             case .richText:
                 name = strings.Attachment_Article
-                imageName = "Chat/Attach Menu/Article"
+                animationName = "TabArticle"
+                imageName = ""
             }
 
             let tintColor: UIColor
@@ -285,8 +329,28 @@ private final class AttachButtonComponent: CombinedComponent {
                 spacing += UIScreenPixel
             }
 
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - iconSize.width) / 2.0), y: topInset), size: iconSize)
-            if let animationFile = animationFile {
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - iconSize.width) / 2.0), y: topInset + animationOffset), size: iconSize)
+            if let animationName {
+                let icon = animatedIcon.update(
+                    component: AnimatedStickerComponent(
+                        account: component.context.account,
+                        animation: AnimatedStickerComponent.Animation(
+                            source: .bundle(name: animationName),
+                            scale: UIScreenScale,
+                            loop: false
+                        ),
+                        tintColor: tintColor,
+                        isAnimating: component.isAnimating,
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
+                        lottieSettings: component.context.lottieRenderingSettings
+                    ),
+                    availableSize: iconSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+                )
+            } else if let animationFile = animationFile {
                 let icon = animatedIcon.update(
                     component: AnimatedStickerComponent(
                         account: component.context.account,
@@ -296,8 +360,9 @@ private final class AttachButtonComponent: CombinedComponent {
                             loop: false
                         ),
                         tintColor: tintColor,
-                        isAnimating: component.isSelected,
-                        size: CGSize(width: iconSize.width, height: iconSize.height)
+                        isAnimating: component.isAnimating,
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
+                        lottieSettings: component.context.lottieRenderingSettings
                     ),
                     availableSize: iconSize,
                     transition: context.transition
@@ -972,6 +1037,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     private weak var controller: AttachmentController?
     private let context: AccountContext
     private let isScheduledMessages: Bool
+    // While a message is being edited the result replaces that message's media, so the long-press
+    // send options (schedule, silent, effects) do not apply and the sheet is never offered.
+    private let isEditingMessage: Bool
     private var presentationData: PresentationData
     private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
@@ -1079,13 +1147,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     var onMainButtonPressed: () -> Void = { }
     var onSecondaryButtonPressed: () -> Void = { }
 
-    init(controller: AttachmentController, style: Style, context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, customEmojiAvailable: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?) {
+    init(controller: AttachmentController, style: Style, context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, isEditingMessage: Bool = false, customEmojiAvailable: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?) {
         self.controller = controller
         self.context = context
         self.panelStyle = style
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.isScheduledMessages = isScheduledMessages
+        self.isEditingMessage = isEditingMessage
         self.customEmojiAvailable = customEmojiAvailable
 
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, preferredGlassType: .default, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(.default), chatLocation: chatLocation ?? .peer(id: context.account.peerId), subject: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil).updatedCustomEmojiAvailable(customEmojiAvailable)
@@ -1192,6 +1261,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }, beginMediaRecording: { _ in
         }, finishMediaRecording: { _ in
         }, stopMediaRecording: {
+        }, stopIncomingStreamingMessage: {
         }, lockMediaRecording: {
         }, resumeMediaRecording: {
         }, deleteRecordedMedia: {
@@ -1281,6 +1351,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
                 return
             }
+            if strongSelf.isEditingMessage {
+                return
+            }
             textInputPanelNode.loadTextInputNodeIfNeeded()
             guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation?.peerId else {
                 return
@@ -1356,7 +1429,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     captionIsAboveMedia |> take(1),
                     ChatSendMessageContextScreen.initialData(context: strongSelf.context, currentMessageEffectId: nil)
                 )
-                |> deliverOnMainQueue).start(next: { [weak strongSelf] _, captionIsAboveMedia, initialData in
+                |> deliverOnMainQueue).start(next: { [weak strongSelf, textInputPanelNode] _, captionIsAboveMedia, initialData in
                     guard let strongSelf else {
                         return
                     }
@@ -2013,13 +2086,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         var panelSideInset: CGFloat
         switch self.panelStyle {
         case .glass:
-            panelSideInset = glassPanelSideInset + 3.0
+            width = glassTabBarFrame(layout: layout, buttonCount: buttons.count).width
+            panelSideInset = 3.0
         case .legacy:
             panelSideInset = 3.0
         }
 
         var distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - self.buttonSize.width) / CGFloat(max(1, buttons.count - 1)))
-        if buttons.count == 3 || buttons.count == 4 {
+        if self.panelStyle == .legacy && (buttons.count == 3 || buttons.count == 4) {
             distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - 32.0) / CGFloat(max(1, buttons.count - 1)))
         }
         let internalWidth = distanceBetweenNodes * CGFloat(max(0, buttons.count - 1))
@@ -2028,14 +2102,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         var maxButtonsToFit = 5
         switch self.panelStyle {
         case .glass:
-            leftNodeOriginX = layout.safeInsets.left + buttonWidth / 2.0
+            leftNodeOriginX = buttonWidth / 2.0
             if layout.size.width < 420.0 {
                 maxButtonsToFit = 5
             }
         case .legacy:
             leftNodeOriginX = (width - internalWidth) / 2.0
         }
-        if buttons.count == 3 || buttons.count == 4 {
+        if self.panelStyle == .legacy && (buttons.count == 3 || buttons.count == 4) {
             leftNodeOriginX = floor((layout.size.width - width) / 2.0) + 16.0
         }
 
@@ -2048,7 +2122,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 buttonWidth = smallButtonWidth
                 distanceBetweenNodes = 60.0
             }
-            leftNodeOriginX = layout.safeInsets.left + buttonWidth / 2.0
+            leftNodeOriginX = (self.panelStyle == .glass ? 0.0 : layout.safeInsets.left) + buttonWidth / 2.0
         }
 
         var validIds = Set<AnyHashable>()
@@ -2117,6 +2191,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     type: type,
                     isFirstOrLast: i == 0 || i == buttons.count - 1,
                     isSelected: false,
+                    isAnimating: i == self.selectedIndex,
                     strings: self.presentationData.strings,
                     theme: self.presentationData.theme,
                     action: { [weak self] in
@@ -2151,6 +2226,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     type: type,
                     isFirstOrLast: i == 0 || i == buttons.count - 1,
                     isSelected: true,
+                    isAnimating: i == self.selectedIndex,
                     strings: self.presentationData.strings,
                     theme: self.presentationData.theme,
                     action: {
@@ -2173,6 +2249,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 accessibilityTitle = self.presentationData.strings.Attachment_Gallery
             case .file:
                 accessibilityTitle = self.presentationData.strings.Attachment_File
+            case .money:
+                accessibilityTitle = self.presentationData.strings.Attachment_Money
             case .location:
                 accessibilityTitle = self.presentationData.strings.Attachment_Location
             case .todo:
@@ -2219,11 +2297,15 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         self.selectionNode.cornerRadius = selectionFrame.height * 0.5
         transition.setFrame(view: self.selectionNode.view, frame: selectionFrame)
 
-        mostRightX += layout.safeInsets.right + 3.0
+        if case .legacy = self.panelStyle {
+            mostRightX += layout.safeInsets.right + 3.0
+        }
 
         let contentSize = CGSize(width: mostRightX, height: self.buttonSize.height)
-        if contentSize != self.scrollNode.view.contentSize && self.scrollNode.view.bounds.width > 0.0 {
-            self.scrollNode.view.contentSize = contentSize
+        if self.scrollNode.view.bounds.width > 0.0 {
+            if contentSize != self.scrollNode.view.contentSize {
+                self.scrollNode.view.contentSize = contentSize
+            }
             self.scrollNode.view.isScrollEnabled = contentSize.width - self.scrollNode.view.bounds.width > 1.0
             self.liquidLensView?.clipsToBounds = self.scrollNode.view.isScrollEnabled
         }
@@ -2250,7 +2332,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 self?.presentInGlobalOverlay(c)
             }, getNavigationController: { [weak self] in
                 return self?.getNavigationController()
-            })
+            }, inputPanelBottomSpacing: self.panelStyle == .glass ? glassTextPanelInset : nil)
             if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
             } else if let peerId = self.presentationInterfaceState.chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat {
                 textInputPanelNode.isAIEnabled = true
@@ -2267,8 +2349,13 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 }
             }
             textInputPanelNode.focusUpdated = { [weak self] focus in
-                if let strongSelf = self, focus {
-                    strongSelf.beganTextEditing()
+                if let strongSelf = self {
+                    if focus {
+                        strongSelf.beganTextEditing()
+                    }
+                    if strongSelf.panelStyle == .glass && strongSelf.isSelecting {
+                        strongSelf.requestLayout()
+                    }
                 }
             }
             textInputPanelNode.updateHeight = { [weak self] _ in
@@ -2378,7 +2465,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         self.animatingTransition = true
         self.dismissed = dismissed
 
-        let action = {
+        let action = { [self, inputNodeSnapshotView] in
             guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: false), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
                 return
             }
@@ -2440,7 +2527,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
     }
 
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, hideButtons: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, hideButtons: Bool, transition: ContainedViewLayoutTransition) -> (height: CGFloat, bottomOffset: CGFloat) {
         self.validLayout = layout
         self.buttons = buttons
         self.elevateProgress = elevateProgress
@@ -2467,7 +2554,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
 
         self.scrollNode.isUserInteractionEnabled = !isSelecting
 
-        let isAnyButtonVisible = self.mainButtonState.isVisible || self.secondaryButtonState.isVisible
+        // A main button that keeps the tab row (AttachmentMainButtonState.keepsTabRow) is laid out above the
+        // tabs rather than replacing them, so for the rest of the layout it does not count as a visible button.
+        // Once the user selects something the tab row goes away anyway and the button follows the normal rules.
+        let inlineMainButton = self.mainButtonState.isVisible && self.mainButtonState.keepsTabRow && !isSelecting
+        let isAnyButtonVisible = (self.mainButtonState.isVisible && !inlineMainButton) || self.secondaryButtonState.isVisible
         let isNarrowButton = isAnyButtonVisible && self.mainButtonState.font == .regular
 
         let isTwoVerticalButtons = self.mainButtonState.isVisible && self.secondaryButtonState.isVisible && [.top, .bottom].contains(self.secondaryButtonState.position)
@@ -2480,12 +2571,29 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             insets.bottom = layout.intrinsicInsets.bottom
         }
 
-        let topAccessoryHeight: CGFloat
-        if self.hasMediaAccessoryPanel {
-            topAccessoryHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
+        let bottomOffset: CGFloat
+        if case .glass = self.panelStyle {
+            if isAnyButtonVisible {
+                bottomOffset = layout.metrics.isTablet ? 18.0 : 8.0
+            } else {
+                bottomOffset = 0.0
+                // The caption includes its own bottom spacing, including above the emoji keyboard.
+                insets.bottom = isSelecting ? max(0.0, layout.inputHeight ?? 0.0) : glassPanelInset
+            }
         } else {
-            topAccessoryHeight = 0.0
+            bottomOffset = 0.0
         }
+
+        let mediaAccessoryHeight: CGFloat
+        if self.hasMediaAccessoryPanel {
+            mediaAccessoryHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
+        } else {
+            mediaAccessoryHeight = 0.0
+        }
+        // The inline main button occupies the top of the panel; everything else (media accessory, tab pill,
+        // lens) is pushed down by its height, the same way the media accessory pushes the tab pill down.
+        let inlineButtonHeight: CGFloat = inlineMainButton ? (self.panelStyle == .glass ? 52.0 : 50.0) + 8.0 : 0.0
+        let topAccessoryHeight: CGFloat = inlineButtonHeight + mediaAccessoryHeight
 
         if isSelecting {
             self.loadTextNodeIfNeeded()
@@ -2493,20 +2601,26 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             self.textInputPanelNode?.ensureUnfocused()
         }
 
-        let textPanelSideInset: CGFloat = 16.0
-        let defaultPanelSideInset: CGFloat = glassPanelSideInset
+        let isTextInputFocused = isSelecting && self.textInputPanelNode?.isFocused == true
+        let textPanelSideInset: CGFloat = self.panelStyle == .glass && !isTextInputFocused ? glassTextPanelInset : 16.0
+        let textInputSideInset = textPanelSideInset - 16.0
+        let defaultPanelSideInset: CGFloat = self.panelStyle == .glass ? glassPanelInset : 20.0
         let panelSideInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + layout.safeInsets.left
+        let panelRightInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + layout.safeInsets.right
         var textPanelHeight: CGFloat = 0.0
         var visualTextPanelHeight: CGFloat = 0.0
         var textPanelWidth: CGFloat = 0.0
         if let textInputPanelNode = self.textInputPanelNode {
             textInputPanelNode.isUserInteractionEnabled = isSelecting
+            if self.panelStyle == .glass {
+                textInputPanelNode.inputPanelBottomSpacing = isTextInputFocused ? 8.0 : glassTextPanelInset
+            }
 
             var panelTransition = transition
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + layout.safeInsets.left, rightInset: insets.right + layout.safeInsets.right, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
+            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + layout.safeInsets.left + textInputSideInset, rightInset: insets.right + layout.safeInsets.right + textInputSideInset, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
             let panelFrame = CGRect(x: 0.0, y: topAccessoryHeight, width: layout.size.width, height: panelHeight)
             if textInputPanelNode.frame.width.isZero {
                 textInputPanelNode.frame = panelFrame
@@ -2516,12 +2630,18 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 textPanelHeight = panelFrame.height
                 visualTextPanelHeight = max(0.0, textPanelHeight - textInputPanelNode.additionalInputHeight)
             } else {
-                textPanelHeight = self.panelStyle == .glass ? 40.0 : 45.0
+                textPanelHeight = self.panelStyle == .glass ? 40.0 + textInputPanelNode.inputPanelBottomSpacing : 45.0
                 visualTextPanelHeight = textPanelHeight
             }
-            textPanelWidth = layout.size.width - panelSideInset * 2.0
+            textPanelWidth = layout.size.width - panelSideInset - panelRightInset
         }
 
+        let tabBarFrame = glassTabBarFrame(layout: layout, buttonCount: buttons.count)
+        if case .glass = self.panelStyle {
+            let scrollFrame = CGRect(origin: CGPoint(x: tabBarFrame.minX + 3.0, y: topAccessoryHeight + (isSelecting ? -11.0 : 0.0)), size: CGSize(width: tabBarFrame.width - 3.0 * 2.0, height: self.buttonSize.height))
+            transition.updatePosition(node: self.scrollNode, position: scrollFrame.center)
+            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: self.scrollNode.view.contentOffset.x, y: 0.0), size: scrollFrame.size))
+        }
         self.updateViews(transition: .immediate)
 
         let glassPanelHeight: CGFloat = 62.0
@@ -2567,21 +2687,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 self.scrollNode.view.addGestureRecognizer(tabSelectionRecognizer)
             }
 
-            let buttonsPanelWidth: CGFloat
-            if buttons.count == 3 {
-                buttonsPanelWidth = smallPanelWidth
-            } else if buttons.count == 4 {
-                buttonsPanelWidth = 300
-            } else {
-                buttonsPanelWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelSideInset * 2.0
-            }
-
-            let basePanelHeight = isSelecting ? max(0.0, visualTextPanelHeight - 11.0) : glassPanelHeight
-            var panelSize = CGSize(width: isSelecting ? textPanelWidth : buttonsPanelWidth, height: basePanelHeight + topAccessoryHeight)
+            let basePanelHeight = isSelecting ? max(0.0, visualTextPanelHeight - (self.textInputPanelNode?.inputPanelBottomSpacing ?? glassTextPanelInset)) : glassPanelHeight
+            var panelSize = CGSize(width: isSelecting ? textPanelWidth : tabBarFrame.width, height: basePanelHeight + mediaAccessoryHeight)
             if !isSelecting && shouldCollapseTabRow {
                 // Collapse the empty button row to the accessory height (zero when there's no accessory panel),
                 // so a single-tab picker doesn't render an empty glass bar.
-                panelSize.height = topAccessoryHeight
+                panelSize.height = mediaAccessoryHeight
             }
 
             let cornerRadius: CGFloat
@@ -2592,19 +2703,18 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             } else {
                 cornerRadius = glassPanelHeight * 0.5
             }
-            let backgroundOriginX: CGFloat = isSelecting ? panelSideInset : floorToScreenPixels((layout.size.width - panelSize.width) / 2.0)
+            let backgroundOriginX: CGFloat = isSelecting ? panelSideInset : tabBarFrame.minX
 
             backgroundView.update(size: panelSize, cornerRadius: cornerRadius, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: ComponentTransition(transition))
 
-            let lensSideInset: CGFloat = defaultPanelSideInset + layout.safeInsets.left
-            let lensPanelSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - lensSideInset * 2.0, height: glassPanelHeight)
+            let lensPanelSize = CGSize(width: tabBarFrame.width, height: glassPanelHeight)
             self.lensParams = (lensPanelSize, cornerRadius)
             self.updateLiquidLens(transition: ComponentTransition(transition))
 
             transition.updatePosition(layer: liquidLensView.layer, position: CGPoint(x: backgroundOriginX + panelSize.width * 0.5, y: topAccessoryHeight + lensPanelSize.height * 0.5))
             transition.updateBounds(layer: liquidLensView.layer, bounds: CGRect(origin: .zero, size: CGSize(width: lensPanelSize.width - 3.0 * 2.0, height: lensPanelSize.height - 3.0 * 2.0)))
 
-            transition.updatePosition(layer: backgroundView.layer, position: CGPoint(x: backgroundOriginX + panelSize.width * 0.5, y: panelSize.height * 0.5))
+            transition.updatePosition(layer: backgroundView.layer, position: CGPoint(x: backgroundOriginX + panelSize.width * 0.5, y: inlineButtonHeight + panelSize.height * 0.5))
             transition.updateBounds(layer: backgroundView.layer, bounds: CGRect(origin: .zero, size: panelSize))
 
             let itemsContainerFrame = CGRect(origin: .zero, size: CGSize(width: lensPanelSize.width - 3.0 * 2.0, height: lensPanelSize.height - 3.0 * 2.0))
@@ -2613,8 +2723,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             transition.updatePosition(layer: self.itemsContainer.layer, position: itemsContainerFrame.center)
             transition.updatePosition(layer: self.selectedItemsContainer.layer, position: itemsContainerFrame.center)
 
-            if topAccessoryHeight > 0.0 {
-                mediaAccessoryPanelFrame = CGRect(origin: CGPoint(x: backgroundOriginX, y: 0.0), size: CGSize(width: panelSize.width, height: topAccessoryHeight))
+            if mediaAccessoryHeight > 0.0 {
+                mediaAccessoryPanelFrame = CGRect(origin: CGPoint(x: backgroundOriginX, y: inlineButtonHeight), size: CGSize(width: panelSize.width, height: mediaAccessoryHeight))
             }
         }
         self.updateMediaAccessoryPanel(frame: mediaAccessoryPanelFrame, transition: transition)
@@ -2703,7 +2813,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     if case .glass = self.panelStyle {
                         var textInputPanelHeight = visualTextPanelHeight
                         if textInputPanelNode.frame.height < 1.0 {
-                            textInputPanelHeight = 51.0
+                            textInputPanelHeight = 40.0 + textInputPanelNode.inputPanelBottomSpacing
                         }
                         let heightDelta = glassPanelHeight - textInputPanelHeight
 
@@ -2741,7 +2851,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     if case .glass = self.panelStyle {
                         var textInputPanelHeight = visualTextPanelHeight
                         if textInputPanelNode.frame.height < 1.0 {
-                            textInputPanelHeight = 51.0
+                            textInputPanelHeight = 40.0 + textInputPanelNode.inputPanelBottomSpacing
                         }
                         let heightDelta = glassPanelHeight - textInputPanelHeight
 
@@ -2783,12 +2893,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         self.backgroundNode.update(size: containerBounds.size, transition: transition)
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
 
-        if case .glass = self.panelStyle {
-            let scrollFrame = CGRect(origin: CGPoint(x: self.isSelecting ? panelSideInset - defaultPanelSideInset : panelSideInset, y: topAccessoryHeight + (self.isSelecting ? -11.0 : 0.0)), size: CGSize(width: layout.size.width - panelSideInset * 2.0, height: self.buttonSize.height))
-            transition.updatePosition(node: self.scrollNode, position: scrollFrame.center)
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: self.scrollNode.view.contentOffset.x, y: 0.0), size: scrollFrame.size))
-        }
-
         if let progress = self.loadingProgress {
             let loadingProgressNode: LoadingProgressNode
             if let current = self.progressNode {
@@ -2824,7 +2928,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
 
         if !self.animatingTransition {
             let buttonOriginX = layout.safeInsets.left + buttonSideInset
-            let buttonOriginY = isAnyButtonVisible || self.fromMenu ? topAccessoryHeight + buttonTopInset : containerFrame.height
+            let buttonOriginY: CGFloat
+            if inlineMainButton {
+                buttonOriginY = 0.0
+            } else if isAnyButtonVisible || self.fromMenu {
+                buttonOriginY = topAccessoryHeight + buttonTopInset
+            } else {
+                buttonOriginY = containerFrame.height
+            }
             var mainButtonFrame: CGRect?
             var secondaryButtonFrame: CGRect?
             if self.secondaryButtonState.isVisible && self.mainButtonState.isVisible, let position = self.secondaryButtonState.position {
@@ -2880,7 +2991,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             }
         }
 
-        return containerFrame.height
+        return (containerFrame.height, bottomOffset)
     }
 
     func updateItemContainers(contentOffset: CGFloat, transition: ComponentTransition) {
@@ -2909,6 +3020,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             return
         }
 
+        let inset: CGFloat = 3.0
         var selectionFrame = CGRect()
         if self.selectedIndex >= 0 && self.selectedIndex < self.buttons.count, let itemView = self.itemViews[self.buttons[self.selectedIndex].key], let itemSize = self.itemSizes[self.buttons[self.selectedIndex].key] {
             let contentOffset = self.scrollNode.view.contentOffset.x
@@ -2923,7 +3035,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
 
         if !self.scrollNode.view.isScrollEnabled {
-            lensSelection.x = max(0.0, min(lensSelection.x, panelSize.width - lensSelection.width))
+            lensSelection.x = max(0.0, min(lensSelection.x, panelSize.width - inset * 2.0 - lensSelection.width))
         }
 
         var isLifted = self.selectionGestureState?.isLifted == true || self.lensIsLifted
@@ -2931,7 +3043,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             isLifted = false
         }
 
-        let inset: CGFloat = 3.0
         liquidLensView.update(size: CGSize(width: panelSize.width - inset * 2.0, height: panelSize.height - inset * 2.0), cornerRadius: 28.0, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: panelSize.height - inset * 2.0), inset: 0.0, isDark: self.presentationData.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: self.isSelecting || self.buttons.count < 2 || self.hideButtons, transition: transition)
     }
 

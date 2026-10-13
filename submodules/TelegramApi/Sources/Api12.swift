@@ -1,4 +1,402 @@
 public extension Api {
+    enum InputMessage: TypeConstructorDescription {
+        public class Cons_inputMessageCallbackQuery: TypeConstructorDescription {
+            public var id: Int32
+            public var queryId: Int64
+            public init(id: Int32, queryId: Int64) {
+                self.id = id
+                self.queryId = queryId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputMessageCallbackQuery", [("id", ConstructorParameterDescription(self.id)), ("queryId", ConstructorParameterDescription(self.queryId))])
+            }
+        }
+        public class Cons_inputMessageID: TypeConstructorDescription {
+            public var id: Int32
+            public init(id: Int32) {
+                self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputMessageID", [("id", ConstructorParameterDescription(self.id))])
+            }
+        }
+        public class Cons_inputMessageReplyTo: TypeConstructorDescription {
+            public var id: Int32
+            public init(id: Int32) {
+                self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputMessageReplyTo", [("id", ConstructorParameterDescription(self.id))])
+            }
+        }
+        case inputMessageCallbackQuery(Cons_inputMessageCallbackQuery)
+        case inputMessageID(Cons_inputMessageID)
+        case inputMessagePinned
+        case inputMessageReplyTo(Cons_inputMessageReplyTo)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputMessageCallbackQuery(let _data):
+                if boxed {
+                    buffer.appendInt32(-1392895362)
+                }
+                serializeInt32(_data.id, buffer: buffer, boxed: false)
+                serializeInt64(_data.queryId, buffer: buffer, boxed: false)
+                break
+            case .inputMessageID(let _data):
+                if boxed {
+                    buffer.appendInt32(-1502174430)
+                }
+                serializeInt32(_data.id, buffer: buffer, boxed: false)
+                break
+            case .inputMessagePinned:
+                if boxed {
+                    buffer.appendInt32(-2037963464)
+                }
+                break
+            case .inputMessageReplyTo(let _data):
+                if boxed {
+                    buffer.appendInt32(-1160215659)
+                }
+                serializeInt32(_data.id, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputMessageCallbackQuery(let _data):
+                return ("inputMessageCallbackQuery", [("id", ConstructorParameterDescription(_data.id)), ("queryId", ConstructorParameterDescription(_data.queryId))])
+            case .inputMessageID(let _data):
+                return ("inputMessageID", [("id", ConstructorParameterDescription(_data.id))])
+            case .inputMessagePinned:
+                return ("inputMessagePinned", [])
+            case .inputMessageReplyTo(let _data):
+                return ("inputMessageReplyTo", [("id", ConstructorParameterDescription(_data.id))])
+            }
+        }
+
+        public static func parse_inputMessageCallbackQuery(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputMessage.inputMessageCallbackQuery(Cons_inputMessageCallbackQuery(id: _1!, queryId: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMessageID(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMessage.inputMessageID(Cons_inputMessageID(id: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMessagePinned(_ reader: BufferReader) -> InputMessage? {
+            return Api.InputMessage.inputMessagePinned
+        }
+        public static func parse_inputMessageReplyTo(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMessage.inputMessageReplyTo(Cons_inputMessageReplyTo(id: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum InputMessageReadMetric: TypeConstructorDescription {
+        public class Cons_inputMessageReadMetric: TypeConstructorDescription {
+            public var msgId: Int32
+            public var viewId: Int64
+            public var timeInViewMs: Int32
+            public var activeTimeInViewMs: Int32
+            public var heightToViewportRatioPermille: Int32
+            public var seenRangeRatioPermille: Int32
+            public init(msgId: Int32, viewId: Int64, timeInViewMs: Int32, activeTimeInViewMs: Int32, heightToViewportRatioPermille: Int32, seenRangeRatioPermille: Int32) {
+                self.msgId = msgId
+                self.viewId = viewId
+                self.timeInViewMs = timeInViewMs
+                self.activeTimeInViewMs = activeTimeInViewMs
+                self.heightToViewportRatioPermille = heightToViewportRatioPermille
+                self.seenRangeRatioPermille = seenRangeRatioPermille
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputMessageReadMetric", [("msgId", ConstructorParameterDescription(self.msgId)), ("viewId", ConstructorParameterDescription(self.viewId)), ("timeInViewMs", ConstructorParameterDescription(self.timeInViewMs)), ("activeTimeInViewMs", ConstructorParameterDescription(self.activeTimeInViewMs)), ("heightToViewportRatioPermille", ConstructorParameterDescription(self.heightToViewportRatioPermille)), ("seenRangeRatioPermille", ConstructorParameterDescription(self.seenRangeRatioPermille))])
+            }
+        }
+        case inputMessageReadMetric(Cons_inputMessageReadMetric)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputMessageReadMetric(let _data):
+                if boxed {
+                    buffer.appendInt32(1076577429)
+                }
+                serializeInt32(_data.msgId, buffer: buffer, boxed: false)
+                serializeInt64(_data.viewId, buffer: buffer, boxed: false)
+                serializeInt32(_data.timeInViewMs, buffer: buffer, boxed: false)
+                serializeInt32(_data.activeTimeInViewMs, buffer: buffer, boxed: false)
+                serializeInt32(_data.heightToViewportRatioPermille, buffer: buffer, boxed: false)
+                serializeInt32(_data.seenRangeRatioPermille, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputMessageReadMetric(let _data):
+                return ("inputMessageReadMetric", [("msgId", ConstructorParameterDescription(_data.msgId)), ("viewId", ConstructorParameterDescription(_data.viewId)), ("timeInViewMs", ConstructorParameterDescription(_data.timeInViewMs)), ("activeTimeInViewMs", ConstructorParameterDescription(_data.activeTimeInViewMs)), ("heightToViewportRatioPermille", ConstructorParameterDescription(_data.heightToViewportRatioPermille)), ("seenRangeRatioPermille", ConstructorParameterDescription(_data.seenRangeRatioPermille))])
+            }
+        }
+
+        public static func parse_inputMessageReadMetric(_ reader: BufferReader) -> InputMessageReadMetric? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputMessageReadMetric.inputMessageReadMetric(Cons_inputMessageReadMetric(msgId: _1!, viewId: _2!, timeInViewMs: _3!, activeTimeInViewMs: _4!, heightToViewportRatioPermille: _5!, seenRangeRatioPermille: _6!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    indirect enum InputNotifyPeer: TypeConstructorDescription {
+        public class Cons_inputNotifyCommunity: TypeConstructorDescription {
+            public var community: Api.InputChannel
+            public init(community: Api.InputChannel) {
+                self.community = community
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputNotifyCommunity", [("community", ConstructorParameterDescription(self.community))])
+            }
+        }
+        public class Cons_inputNotifyForumTopic: TypeConstructorDescription {
+            public var peer: Api.InputPeer
+            public var topMsgId: Int32
+            public init(peer: Api.InputPeer, topMsgId: Int32) {
+                self.peer = peer
+                self.topMsgId = topMsgId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputNotifyForumTopic", [("peer", ConstructorParameterDescription(self.peer)), ("topMsgId", ConstructorParameterDescription(self.topMsgId))])
+            }
+        }
+        public class Cons_inputNotifyPeer: TypeConstructorDescription {
+            public var peer: Api.InputPeer
+            public init(peer: Api.InputPeer) {
+                self.peer = peer
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputNotifyPeer", [("peer", ConstructorParameterDescription(self.peer))])
+            }
+        }
+        case inputNotifyBroadcasts
+        case inputNotifyChats
+        case inputNotifyCommunity(Cons_inputNotifyCommunity)
+        case inputNotifyForumTopic(Cons_inputNotifyForumTopic)
+        case inputNotifyPeer(Cons_inputNotifyPeer)
+        case inputNotifyUsers
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputNotifyBroadcasts:
+                if boxed {
+                    buffer.appendInt32(-1311015810)
+                }
+                break
+            case .inputNotifyChats:
+                if boxed {
+                    buffer.appendInt32(1251338318)
+                }
+                break
+            case .inputNotifyCommunity(let _data):
+                if boxed {
+                    buffer.appendInt32(666573532)
+                }
+                _data.community.serialize(buffer, true)
+                break
+            case .inputNotifyForumTopic(let _data):
+                if boxed {
+                    buffer.appendInt32(1548122514)
+                }
+                _data.peer.serialize(buffer, true)
+                serializeInt32(_data.topMsgId, buffer: buffer, boxed: false)
+                break
+            case .inputNotifyPeer(let _data):
+                if boxed {
+                    buffer.appendInt32(-1195615476)
+                }
+                _data.peer.serialize(buffer, true)
+                break
+            case .inputNotifyUsers:
+                if boxed {
+                    buffer.appendInt32(423314455)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputNotifyBroadcasts:
+                return ("inputNotifyBroadcasts", [])
+            case .inputNotifyChats:
+                return ("inputNotifyChats", [])
+            case .inputNotifyCommunity(let _data):
+                return ("inputNotifyCommunity", [("community", ConstructorParameterDescription(_data.community))])
+            case .inputNotifyForumTopic(let _data):
+                return ("inputNotifyForumTopic", [("peer", ConstructorParameterDescription(_data.peer)), ("topMsgId", ConstructorParameterDescription(_data.topMsgId))])
+            case .inputNotifyPeer(let _data):
+                return ("inputNotifyPeer", [("peer", ConstructorParameterDescription(_data.peer))])
+            case .inputNotifyUsers:
+                return ("inputNotifyUsers", [])
+            }
+        }
+
+        public static func parse_inputNotifyBroadcasts(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyBroadcasts
+        }
+        public static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyChats
+        }
+        public static func parse_inputNotifyCommunity(_ reader: BufferReader) -> InputNotifyPeer? {
+            var _1: Api.InputChannel?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputChannel
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputNotifyPeer.inputNotifyCommunity(Cons_inputNotifyCommunity(community: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputNotifyForumTopic(_ reader: BufferReader) -> InputNotifyPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputNotifyPeer.inputNotifyForumTopic(Cons_inputNotifyForumTopic(peer: _1!, topMsgId: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputNotifyPeer.inputNotifyPeer(Cons_inputNotifyPeer(peer: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyUsers
+        }
+    }
+}
+public extension Api {
+    enum InputPasskeyCredential: TypeConstructorDescription {
+        public class Cons_inputPasskeyCredentialPublicKey: TypeConstructorDescription {
+            public var id: String
+            public var rawId: String
+            public var response: Api.InputPasskeyResponse
+            public init(id: String, rawId: String, response: Api.InputPasskeyResponse) {
+                self.id = id
+                self.rawId = rawId
+                self.response = response
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputPasskeyCredentialPublicKey", [("id", ConstructorParameterDescription(self.id)), ("rawId", ConstructorParameterDescription(self.rawId)), ("response", ConstructorParameterDescription(self.response))])
+            }
+        }
+        case inputPasskeyCredentialPublicKey(Cons_inputPasskeyCredentialPublicKey)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputPasskeyCredentialPublicKey(let _data):
+                if boxed {
+                    buffer.appendInt32(1009235855)
+                }
+                serializeString(_data.id, buffer: buffer, boxed: false)
+                serializeString(_data.rawId, buffer: buffer, boxed: false)
+                _data.response.serialize(buffer, true)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputPasskeyCredentialPublicKey(let _data):
+                return ("inputPasskeyCredentialPublicKey", [("id", ConstructorParameterDescription(_data.id)), ("rawId", ConstructorParameterDescription(_data.rawId)), ("response", ConstructorParameterDescription(_data.response))])
+            }
+        }
+
+        public static func parse_inputPasskeyCredentialPublicKey(_ reader: BufferReader) -> InputPasskeyCredential? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.InputPasskeyResponse?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InputPasskeyResponse
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputPasskeyCredential.inputPasskeyCredentialPublicKey(Cons_inputPasskeyCredentialPublicKey(id: _1!, rawId: _2!, response: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum InputPasskeyResponse: TypeConstructorDescription {
         public class Cons_inputPasskeyResponseLogin: TypeConstructorDescription {
             public var clientData: Api.DataJSON
@@ -879,249 +1277,6 @@ public extension Api {
         }
         public static func parse_inputPrivacyKeyVoiceMessages(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyVoiceMessages
-        }
-    }
-}
-public extension Api {
-    enum InputPrivacyRule: TypeConstructorDescription {
-        public class Cons_inputPrivacyValueAllowChatParticipants: TypeConstructorDescription {
-            public var chats: [Int64]
-            public init(chats: [Int64]) {
-                self.chats = chats
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputPrivacyValueAllowChatParticipants", [("chats", ConstructorParameterDescription(self.chats))])
-            }
-        }
-        public class Cons_inputPrivacyValueAllowUsers: TypeConstructorDescription {
-            public var users: [Api.InputUser]
-            public init(users: [Api.InputUser]) {
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputPrivacyValueAllowUsers", [("users", ConstructorParameterDescription(self.users))])
-            }
-        }
-        public class Cons_inputPrivacyValueDisallowChatParticipants: TypeConstructorDescription {
-            public var chats: [Int64]
-            public init(chats: [Int64]) {
-                self.chats = chats
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputPrivacyValueDisallowChatParticipants", [("chats", ConstructorParameterDescription(self.chats))])
-            }
-        }
-        public class Cons_inputPrivacyValueDisallowUsers: TypeConstructorDescription {
-            public var users: [Api.InputUser]
-            public init(users: [Api.InputUser]) {
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputPrivacyValueDisallowUsers", [("users", ConstructorParameterDescription(self.users))])
-            }
-        }
-        case inputPrivacyValueAllowAll
-        case inputPrivacyValueAllowBots
-        case inputPrivacyValueAllowChatParticipants(Cons_inputPrivacyValueAllowChatParticipants)
-        case inputPrivacyValueAllowCloseFriends
-        case inputPrivacyValueAllowContacts
-        case inputPrivacyValueAllowPremium
-        case inputPrivacyValueAllowUsers(Cons_inputPrivacyValueAllowUsers)
-        case inputPrivacyValueDisallowAll
-        case inputPrivacyValueDisallowBots
-        case inputPrivacyValueDisallowChatParticipants(Cons_inputPrivacyValueDisallowChatParticipants)
-        case inputPrivacyValueDisallowContacts
-        case inputPrivacyValueDisallowUsers(Cons_inputPrivacyValueDisallowUsers)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputPrivacyValueAllowAll:
-                if boxed {
-                    buffer.appendInt32(407582158)
-                }
-                break
-            case .inputPrivacyValueAllowBots:
-                if boxed {
-                    buffer.appendInt32(1515179237)
-                }
-                break
-            case .inputPrivacyValueAllowChatParticipants(let _data):
-                if boxed {
-                    buffer.appendInt32(-2079962673)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    serializeInt64(item, buffer: buffer, boxed: false)
-                }
-                break
-            case .inputPrivacyValueAllowCloseFriends:
-                if boxed {
-                    buffer.appendInt32(793067081)
-                }
-                break
-            case .inputPrivacyValueAllowContacts:
-                if boxed {
-                    buffer.appendInt32(218751099)
-                }
-                break
-            case .inputPrivacyValueAllowPremium:
-                if boxed {
-                    buffer.appendInt32(2009975281)
-                }
-                break
-            case .inputPrivacyValueAllowUsers(let _data):
-                if boxed {
-                    buffer.appendInt32(320652927)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .inputPrivacyValueDisallowAll:
-                if boxed {
-                    buffer.appendInt32(-697604407)
-                }
-                break
-            case .inputPrivacyValueDisallowBots:
-                if boxed {
-                    buffer.appendInt32(-991594219)
-                }
-                break
-            case .inputPrivacyValueDisallowChatParticipants(let _data):
-                if boxed {
-                    buffer.appendInt32(-380694650)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    serializeInt64(item, buffer: buffer, boxed: false)
-                }
-                break
-            case .inputPrivacyValueDisallowContacts:
-                if boxed {
-                    buffer.appendInt32(195371015)
-                }
-                break
-            case .inputPrivacyValueDisallowUsers(let _data):
-                if boxed {
-                    buffer.appendInt32(-1877932953)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .inputPrivacyValueAllowAll:
-                return ("inputPrivacyValueAllowAll", [])
-            case .inputPrivacyValueAllowBots:
-                return ("inputPrivacyValueAllowBots", [])
-            case .inputPrivacyValueAllowChatParticipants(let _data):
-                return ("inputPrivacyValueAllowChatParticipants", [("chats", ConstructorParameterDescription(_data.chats))])
-            case .inputPrivacyValueAllowCloseFriends:
-                return ("inputPrivacyValueAllowCloseFriends", [])
-            case .inputPrivacyValueAllowContacts:
-                return ("inputPrivacyValueAllowContacts", [])
-            case .inputPrivacyValueAllowPremium:
-                return ("inputPrivacyValueAllowPremium", [])
-            case .inputPrivacyValueAllowUsers(let _data):
-                return ("inputPrivacyValueAllowUsers", [("users", ConstructorParameterDescription(_data.users))])
-            case .inputPrivacyValueDisallowAll:
-                return ("inputPrivacyValueDisallowAll", [])
-            case .inputPrivacyValueDisallowBots:
-                return ("inputPrivacyValueDisallowBots", [])
-            case .inputPrivacyValueDisallowChatParticipants(let _data):
-                return ("inputPrivacyValueDisallowChatParticipants", [("chats", ConstructorParameterDescription(_data.chats))])
-            case .inputPrivacyValueDisallowContacts:
-                return ("inputPrivacyValueDisallowContacts", [])
-            case .inputPrivacyValueDisallowUsers(let _data):
-                return ("inputPrivacyValueDisallowUsers", [("users", ConstructorParameterDescription(_data.users))])
-            }
-        }
-
-        public static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowAll
-        }
-        public static func parse_inputPrivacyValueAllowBots(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowBots
-        }
-        public static func parse_inputPrivacyValueAllowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Int64]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(Cons_inputPrivacyValueAllowChatParticipants(chats: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueAllowCloseFriends(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowCloseFriends
-        }
-        public static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowContacts
-        }
-        public static func parse_inputPrivacyValueAllowPremium(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowPremium
-        }
-        public static func parse_inputPrivacyValueAllowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Api.InputUser]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueAllowUsers(Cons_inputPrivacyValueAllowUsers(users: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueDisallowAll
-        }
-        public static func parse_inputPrivacyValueDisallowBots(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueDisallowBots
-        }
-        public static func parse_inputPrivacyValueDisallowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Int64]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(Cons_inputPrivacyValueDisallowChatParticipants(chats: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueDisallowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueDisallowContacts
-        }
-        public static func parse_inputPrivacyValueDisallowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Api.InputUser]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(Cons_inputPrivacyValueDisallowUsers(users: _1!))
-            }
-            else {
-                return nil
-            }
         }
     }
 }

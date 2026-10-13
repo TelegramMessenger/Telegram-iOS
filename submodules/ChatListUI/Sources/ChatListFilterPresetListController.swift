@@ -623,7 +623,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         }
         let rightNavigationButton: ItemListNavigationButton?
         if state.isEditing {
-            rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: { [updatedFilterOrder] in
                 let _ = (updatedFilterOrder.get()
                 |> take(1)
                 |> deliverOnMainQueue).startStandalone(next: { [weak updatedFilterOrder] updatedFilterOrderValue in

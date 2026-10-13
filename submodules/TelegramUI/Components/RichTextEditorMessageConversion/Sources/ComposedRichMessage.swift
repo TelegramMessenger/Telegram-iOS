@@ -30,7 +30,7 @@ func normalizedBlocks(_ blocks: [Block], media: [String: Media]) -> [Block] {
     var out: [Block] = []
     for block in blocks {
         switch block {
-        case .paragraph, .table, .code, .pullQuote:
+        case .paragraph, .table, .code, .pullQuote, .buttonRow:
             out.append(block)
         case let .media(mediaBlock):
             if media[mediaBlock.mediaID] != nil {
@@ -40,6 +40,9 @@ func normalizedBlocks(_ blocks: [Block], media: [String: Media]) -> [Block] {
             }
         case .blockQuote:
             // Pass through; children are resolved in downstream builders.
+            out.append(block)
+        case .details:
+            // Pass through; children are resolved in downstream builders (buildInstantPage recurses).
             out.append(block)
         }
     }
@@ -67,7 +70,7 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case .table:
             return true
         case let .paragraph(paragraph):
-            if runsContainFormula(paragraph.runs) {
+            if runsContainFormula(paragraph.runs) || runsContainButton(paragraph.runs) {
                 return true
             }
             if paragraph.list != nil {
@@ -89,7 +92,7 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case let .code(code):
             // A code block is entity-expressible (.Pre) and does NOT force the rich path — it round-trips
             // through the normal text+entities builder (buildEntityMessage).
-            if runsContainFormula(code.runs) {
+            if runsContainFormula(code.runs) || runsContainButton(code.runs) {
                 return true
             }
             break
@@ -99,6 +102,12 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case .blockQuote:
             // A block quote has no entity form → always forces the rich path.
             return true
+        case .details:
+            // A detail (folding) block has no entity form → always forces the rich path.
+            return true
+        case .buttonRow:
+            // A button has no entity form at all → always forces the rich path.
+            return true
         }
     }
     return false
@@ -107,6 +116,17 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
 private func runsContainFormula(_ runs: [TextRun]) -> Bool {
     for run in runs {
         if run.attributes.formula != nil {
+            return true
+        }
+    }
+    return false
+}
+
+/// True when any run carries an inline button. A button has no message-entity form, so its presence
+/// forces the rich (InstantPage) path exactly as a formula does.
+private func runsContainButton(_ runs: [TextRun]) -> Bool {
+    for run in runs {
+        if run.attributes.button != nil {
             return true
         }
     }

@@ -14,6 +14,8 @@ import AnimationCache
 import MultiAnimationRenderer
 import Photos
 import TextFormat
+import WalletContext
+import LottieSettings
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -317,6 +319,21 @@ public enum ResolvedBotStartPeerType {
     case channel
 }
 
+public struct WalletSendRequest {
+    public enum Recipient {
+        case peer(EnginePeer, resolvedAddress: WalletUserAddress? = nil)
+        case address(String)
+    }
+
+    public let recipient: Recipient
+    public let amountNanograms: Int64?
+
+    public init(recipient: Recipient, amountNanograms: Int64?) {
+        self.recipient = recipient
+        self.amountNanograms = amountNanograms
+    }
+}
+
 public enum ResolvedUrl {
     case externalUrl(String)
     case urlAuth(String)
@@ -331,6 +348,7 @@ public enum ResolvedUrl {
     case stickerPack(name: String, type: StickerPackUrlType)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
+    case webProxy(host: String, path: String, secret: Data)
     case join(String)
     case joinCall(String)
     case localization(String)
@@ -358,6 +376,7 @@ public enum ResolvedUrl {
     case storyFolder(peerId: EnginePeer.Id, id: Int64)
     case giftCollection(peerId: EnginePeer.Id, id: Int64)
     case sendGift(peerId: EnginePeer.Id?)
+    case sendGrams(transfer: WalletSendRequest?, tonConnectUrl: String? = nil)
     case unknownDeepLink(path: String)
     case oauth(url: String)
     case createBot(parentBot: EnginePeer.Id, username: String?, title: String?)
@@ -905,12 +924,16 @@ public enum CreateGroupMode {
 }
 
 public protocol AppLockContext: AnyObject {
+    var isPasscodeLocked: Signal<Bool, NoError> { get }
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     
     func lock()
     func unlock()
+    
+    func beginBiometricAuthentication() -> Disposable
     func failedUnlockAttempt()
+    func _internalCrashForPasscodeMigrationTest(isLocked: Bool) throws -> Never
 }
 
 public protocol RecentSessionsController: AnyObject {
@@ -1073,7 +1096,6 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getSettingsController() -> ViewController?
     
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
-    func getTwoStepAuthData() -> Promise<TwoStepAuthData?>?
     func getNotificationExceptions() -> Promise<NotificationExceptionsList?>?
         
     func openContacts()
@@ -1361,6 +1383,27 @@ public enum EmojiStatusSelectionControllerMode {
     case quickReactionSelection(completion: () -> Void)
 }
 
+public enum WalletInfoScreenMode: Equatable, CaseIterable {
+    case wallet
+    case gram
+    case firstGrams
+    case recovery
+}
+
+public enum WalletImportScreenMode: Equatable {
+    case importWallet
+    case enterRecoveryPhrase
+    case enableBackup(expectedAddress: String)
+    case verify(words: [String], keyRotation: Bool = false, allowsRepeatedCompletion: Bool = false)
+}
+
+public enum WalletWordsScreenMode: Equatable {
+    case view
+    case verify
+    case replacement
+    case backupDisable(updateSecretPhrase: Bool)
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1430,7 +1473,7 @@ public protocol SharedAccountContext: AnyObject {
         mode: ChatHistoryListMode
     ) -> ChatHistoryListNode
     func subscribeChatListData(context: AccountContext, location: ChatListControllerLocation) -> Signal<EngineChatList, NoError>
-    func makeChatMessagePreviewItem(context: AccountContext, messages: [EngineRawMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineRawMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EngineRawPeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?) -> ListViewItem
+    func makeChatMessagePreviewItem(context: AccountContext, messages: [EngineRawMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineRawMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EngineRawPeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool) -> ListViewItem
     func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: EngineRawPeer, message: EngineRawMessage, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makePeerSharedMediaController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController?
@@ -1555,6 +1598,27 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
+    func makeWalletScreen(context: AccountContext) -> ViewController
+    func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController
+    func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController
+    func makeWalletImportScreen(context: AccountContext, mode: WalletImportScreenMode, completion: (() -> Void)?) -> ViewController
+    func makeWalletSettingsScreen(context: AccountContext) -> ViewController
+    func makeWalletAppsScreen(context: AccountContext) -> ViewController
+    func makeWalletWordsScreen(context: AccountContext, words: [String], verify: Bool, dismissOnBackgroundOrLock: Bool, completion: (() -> Void)?) -> ViewController
+    func makeWalletWordsScreen(context: AccountContext, words: [String], mode: WalletWordsScreenMode, completion: (() -> Void)?) -> ViewController
+    func makeWalletInfoScreen(context: AccountContext, mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
+    func makeWalletInfoScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
+    func makeWalletConnectScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectRequest, cancelled: @escaping () -> Void, connect: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
+    func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
+    func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
+    func makeWalletTransactionScreen(context: AccountContext, walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
+    func makeWalletTransactionScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
+    func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, preparedTransfer: WalletContext.PreparedTransfer, dismissSendScreen: @escaping () -> Void) -> ViewController
+    func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController
+    func makeWalletTransactionPreviewScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController
+    func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, recipientPeer: EnginePeer?, collectible: WalletContext.Collectible, comment: String?, dismissSendScreen: @escaping () -> Void) -> ViewController
+    func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, collectibleSent: @escaping (String) -> Void) -> ViewController
+    func authorizeWalletAccess(context: AccountContext, completion: @escaping (Bool) -> Void)
     func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: ((StarGift.UniqueGift) -> Void)?) -> ViewController
     func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: ((StarGift.UniqueGift) -> Void)?, openChatTheme: (() -> Void)?, dismissed: (() -> Void)?) -> ViewController
     func makeGiftWearPreviewScreen(context: AccountContext, gift: StarGift, attributes: [StarGift.UniqueGift.Attribute]?) -> ViewController
@@ -1574,6 +1638,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController
+    func openBotApp(context: AccountContext, parentController: ViewController, botApp: BotApp?, botPeer: EnginePeer, payload: String?, mode: ResolvedStartAppMode, isOnramp: Bool, willOpen: @escaping () -> Void, completion: @escaping () -> Void)
     func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?, verifyAgeCompletion: ((Int) -> Void)?)
     func openJoinChatWebView(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, webView: JoinChatWebView, chatTitle: String)
     func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
@@ -1722,6 +1787,7 @@ public protocol AccountContext: AnyObject {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
     var engine: TelegramEngine { get }
+    var twoStepAuthData: Promise<TwoStepAuthData?> { get }
     
     var liveLocationManager: LiveLocationManager? { get }
     var fetchManager: FetchManager { get }
@@ -1732,12 +1798,18 @@ public protocol AccountContext: AnyObject {
     var inAppPurchaseManager: InAppPurchaseManager? { get }
     var starsContext: StarsContext? { get }
     var tonContext: StarsContext? { get }
+    var walletContext: WalletContext? { get }
     var giftAuctionsManager: GiftAuctionsManager? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
+
+    /// Which Lottie rasterizer this account's renders should use. Resolved from
+    /// app configuration and the debug switch; see the implementation for the
+    /// precedence rule.
+    var lottieRenderingSettings: LottieRenderingSettings { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     
@@ -1747,6 +1819,10 @@ public protocol AccountContext: AnyObject {
     var animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> { get }
     var animatedEmojiStickersValue: [String: [StickerPackItem]] { get }
     var additionalAnimatedEmojiStickers: Signal<[String: [Int: StickerPackItem]], NoError> { get }
+    var premiumGiftStickers: Signal<[Int32: StickerPackItem], NoError> { get }
+    var premiumGiftStickersValue: [Int32: StickerPackItem] { get }
+    var tonGiftStickers: Signal<[Int32: StickerPackItem], NoError> { get }
+    var tonGiftStickersValue: [Int32: StickerPackItem] { get }
     var availableReactions: Signal<AvailableReactions?, NoError> { get }
     var availableMessageEffects: Signal<AvailableMessageEffects?, NoError> { get }
     
@@ -2069,6 +2145,36 @@ public struct TranslationConfiguration {
                 autoValue = "disabled"
             }
             return TranslationConfiguration(manual: TranslationAvailability(string: manualValue), auto: TranslationAvailability(string: autoValue))
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
+public struct GiftConfiguration {
+    static var defaultValue: GiftConfiguration {
+        return GiftConfiguration(maxCaptionLength: 255, convertToStarsPeriod: 90 * 86400)
+    }
+    
+    public let maxCaptionLength: Int32
+    public let convertToStarsPeriod: Int32
+    
+    fileprivate init(maxCaptionLength: Int32, convertToStarsPeriod: Int32) {
+        self.maxCaptionLength = maxCaptionLength
+        self.convertToStarsPeriod = convertToStarsPeriod
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> GiftConfiguration {
+        if let data = appConfiguration.data {
+            var maxCaptionLength: Int32?
+            if let value = data["stargifts_message_length_max"] as? Double {
+                maxCaptionLength = Int32(value)
+            }
+            var convertToStarsPeriod: Int32?
+            if let value = data["stargifts_convert_period_max"] as? Double {
+                convertToStarsPeriod = Int32(value)
+            }
+            return GiftConfiguration(maxCaptionLength: maxCaptionLength ?? GiftConfiguration.defaultValue.maxCaptionLength, convertToStarsPeriod: convertToStarsPeriod ?? GiftConfiguration.defaultValue.convertToStarsPeriod)
         } else {
             return .defaultValue
         }

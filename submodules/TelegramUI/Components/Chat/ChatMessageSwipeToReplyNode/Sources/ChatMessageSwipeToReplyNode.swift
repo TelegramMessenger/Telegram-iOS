@@ -127,12 +127,6 @@ public final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         if let backgroundContent = self.backgroundContent {
             self.backgroundNode.isHidden = true
             backgroundContent.frame = backgroundFrame
-            if let (rect, containerSize) = self.absolutePosition {
-                var backgroundFrame = backgroundContent.frame
-                backgroundFrame.origin.x += rect.minX
-                backgroundFrame.origin.y += containerSize.height - rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-            }
         } else {
             self.backgroundNode.isHidden = false
         }
@@ -216,12 +210,6 @@ public final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += containerSize.height - rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
 }
 

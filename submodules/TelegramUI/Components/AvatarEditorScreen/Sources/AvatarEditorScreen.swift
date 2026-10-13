@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1353,7 +1354,8 @@ final class AvatarEditorScreenComponent: Component {
                     color: theme.list.itemCheckColors.foregroundColor,
                     startingPosition: .begin,
                     size: CGSize(width: 30.0, height: 30.0),
-                    loop: true
+                    loop: true,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ))))
             }
             
@@ -1399,7 +1401,8 @@ final class AvatarEditorScreenComponent: Component {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }
@@ -1481,7 +1484,7 @@ final class AvatarEditorScreenComponent: Component {
                     }
                 }
                 
-                Queue.mainQueue().async {
+                Queue.mainQueue().async { [controller] in
                     guard let image else {
                         return
                     }

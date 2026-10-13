@@ -190,7 +190,7 @@ public func webpagePreviewWithProgress(account: Account, urls: [String], webpage
                                             account.stateManager.updatedWebpage(media.webpageId)
                                             |> take(1)
                                             |> map { next -> WebpagePreviewWithProgressResult in
-                                                if let url = next.content.url {
+                                                if let next, let url = next.content.url {
                                                     return .result(WebpagePreviewResult.Result(webpage: next, sourceUrl: url))
                                                 } else {
                                                     return .result(nil)

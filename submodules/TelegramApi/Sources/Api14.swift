@@ -1,4 +1,261 @@
 public extension Api {
+    enum InputStarsTransaction: TypeConstructorDescription {
+        public class Cons_inputStarsTransaction: TypeConstructorDescription {
+            public var flags: Int32
+            public var id: String
+            public init(flags: Int32, id: String) {
+                self.flags = flags
+                self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputStarsTransaction", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id))])
+            }
+        }
+        case inputStarsTransaction(Cons_inputStarsTransaction)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputStarsTransaction(let _data):
+                if boxed {
+                    buffer.appendInt32(543876817)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.id, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputStarsTransaction(let _data):
+                return ("inputStarsTransaction", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id))])
+            }
+        }
+
+        public static func parse_inputStarsTransaction(_ reader: BufferReader) -> InputStarsTransaction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputStarsTransaction.inputStarsTransaction(Cons_inputStarsTransaction(flags: _1!, id: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum InputStickerSet: TypeConstructorDescription {
+        public class Cons_inputStickerSetDice: TypeConstructorDescription {
+            public var emoticon: String
+            public init(emoticon: String) {
+                self.emoticon = emoticon
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputStickerSetDice", [("emoticon", ConstructorParameterDescription(self.emoticon))])
+            }
+        }
+        public class Cons_inputStickerSetID: TypeConstructorDescription {
+            public var id: Int64
+            public var accessHash: Int64
+            public init(id: Int64, accessHash: Int64) {
+                self.id = id
+                self.accessHash = accessHash
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputStickerSetID", [("id", ConstructorParameterDescription(self.id)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
+            }
+        }
+        public class Cons_inputStickerSetShortName: TypeConstructorDescription {
+            public var shortName: String
+            public init(shortName: String) {
+                self.shortName = shortName
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputStickerSetShortName", [("shortName", ConstructorParameterDescription(self.shortName))])
+            }
+        }
+        case inputStickerSetAnimatedEmoji
+        case inputStickerSetAnimatedEmojiAnimations
+        case inputStickerSetDice(Cons_inputStickerSetDice)
+        case inputStickerSetEmojiChannelDefaultStatuses
+        case inputStickerSetEmojiDefaultStatuses
+        case inputStickerSetEmojiDefaultTopicIcons
+        case inputStickerSetEmojiGenericAnimations
+        case inputStickerSetEmpty
+        case inputStickerSetID(Cons_inputStickerSetID)
+        case inputStickerSetPremiumGifts
+        case inputStickerSetShortName(Cons_inputStickerSetShortName)
+        case inputStickerSetTonGifts
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputStickerSetAnimatedEmoji:
+                if boxed {
+                    buffer.appendInt32(42402760)
+                }
+                break
+            case .inputStickerSetAnimatedEmojiAnimations:
+                if boxed {
+                    buffer.appendInt32(215889721)
+                }
+                break
+            case .inputStickerSetDice(let _data):
+                if boxed {
+                    buffer.appendInt32(-427863538)
+                }
+                serializeString(_data.emoticon, buffer: buffer, boxed: false)
+                break
+            case .inputStickerSetEmojiChannelDefaultStatuses:
+                if boxed {
+                    buffer.appendInt32(1232373075)
+                }
+                break
+            case .inputStickerSetEmojiDefaultStatuses:
+                if boxed {
+                    buffer.appendInt32(701560302)
+                }
+                break
+            case .inputStickerSetEmojiDefaultTopicIcons:
+                if boxed {
+                    buffer.appendInt32(1153562857)
+                }
+                break
+            case .inputStickerSetEmojiGenericAnimations:
+                if boxed {
+                    buffer.appendInt32(80008398)
+                }
+                break
+            case .inputStickerSetEmpty:
+                if boxed {
+                    buffer.appendInt32(-4838507)
+                }
+                break
+            case .inputStickerSetID(let _data):
+                if boxed {
+                    buffer.appendInt32(-1645763991)
+                }
+                serializeInt64(_data.id, buffer: buffer, boxed: false)
+                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
+                break
+            case .inputStickerSetPremiumGifts:
+                if boxed {
+                    buffer.appendInt32(-930399486)
+                }
+                break
+            case .inputStickerSetShortName(let _data):
+                if boxed {
+                    buffer.appendInt32(-2044933984)
+                }
+                serializeString(_data.shortName, buffer: buffer, boxed: false)
+                break
+            case .inputStickerSetTonGifts:
+                if boxed {
+                    buffer.appendInt32(485912992)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputStickerSetAnimatedEmoji:
+                return ("inputStickerSetAnimatedEmoji", [])
+            case .inputStickerSetAnimatedEmojiAnimations:
+                return ("inputStickerSetAnimatedEmojiAnimations", [])
+            case .inputStickerSetDice(let _data):
+                return ("inputStickerSetDice", [("emoticon", ConstructorParameterDescription(_data.emoticon))])
+            case .inputStickerSetEmojiChannelDefaultStatuses:
+                return ("inputStickerSetEmojiChannelDefaultStatuses", [])
+            case .inputStickerSetEmojiDefaultStatuses:
+                return ("inputStickerSetEmojiDefaultStatuses", [])
+            case .inputStickerSetEmojiDefaultTopicIcons:
+                return ("inputStickerSetEmojiDefaultTopicIcons", [])
+            case .inputStickerSetEmojiGenericAnimations:
+                return ("inputStickerSetEmojiGenericAnimations", [])
+            case .inputStickerSetEmpty:
+                return ("inputStickerSetEmpty", [])
+            case .inputStickerSetID(let _data):
+                return ("inputStickerSetID", [("id", ConstructorParameterDescription(_data.id)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
+            case .inputStickerSetPremiumGifts:
+                return ("inputStickerSetPremiumGifts", [])
+            case .inputStickerSetShortName(let _data):
+                return ("inputStickerSetShortName", [("shortName", ConstructorParameterDescription(_data.shortName))])
+            case .inputStickerSetTonGifts:
+                return ("inputStickerSetTonGifts", [])
+            }
+        }
+
+        public static func parse_inputStickerSetAnimatedEmoji(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetAnimatedEmoji
+        }
+        public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
+        }
+        public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStickerSet.inputStickerSetDice(Cons_inputStickerSetDice(emoticon: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputStickerSetEmojiChannelDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiChannelDefaultStatuses
+        }
+        public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
+        }
+        public static func parse_inputStickerSetEmojiDefaultTopicIcons(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiDefaultTopicIcons
+        }
+        public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations
+        }
+        public static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmpty
+        }
+        public static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputStickerSet.inputStickerSetID(Cons_inputStickerSetID(id: _1!, accessHash: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputStickerSetPremiumGifts(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetPremiumGifts
+        }
+        public static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStickerSet.inputStickerSetShortName(Cons_inputStickerSetShortName(shortName: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputStickerSetTonGifts(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetTonGifts
+        }
+    }
+}
+public extension Api {
     enum InputStickerSetItem: TypeConstructorDescription {
         public class Cons_inputStickerSetItem: TypeConstructorDescription {
             public var flags: Int32
@@ -1107,591 +1364,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputWallPaper.inputWallPaperSlug(Cons_inputWallPaperSlug(slug: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum InputWebDocument: TypeConstructorDescription {
-        public class Cons_inputWebDocument: TypeConstructorDescription {
-            public var url: String
-            public var size: Int32
-            public var mimeType: String
-            public var attributes: [Api.DocumentAttribute]
-            public init(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute]) {
-                self.url = url
-                self.size = size
-                self.mimeType = mimeType
-                self.attributes = attributes
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputWebDocument", [("url", ConstructorParameterDescription(self.url)), ("size", ConstructorParameterDescription(self.size)), ("mimeType", ConstructorParameterDescription(self.mimeType)), ("attributes", ConstructorParameterDescription(self.attributes))])
-            }
-        }
-        case inputWebDocument(Cons_inputWebDocument)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputWebDocument(let _data):
-                if boxed {
-                    buffer.appendInt32(-1678949555)
-                }
-                serializeString(_data.url, buffer: buffer, boxed: false)
-                serializeInt32(_data.size, buffer: buffer, boxed: false)
-                serializeString(_data.mimeType, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.attributes.count))
-                for item in _data.attributes {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .inputWebDocument(let _data):
-                return ("inputWebDocument", [("url", ConstructorParameterDescription(_data.url)), ("size", ConstructorParameterDescription(_data.size)), ("mimeType", ConstructorParameterDescription(_data.mimeType)), ("attributes", ConstructorParameterDescription(_data.attributes))])
-            }
-        }
-
-        public static func parse_inputWebDocument(_ reader: BufferReader) -> InputWebDocument? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.DocumentAttribute]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputWebDocument.inputWebDocument(Cons_inputWebDocument(url: _1!, size: _2!, mimeType: _3!, attributes: _4!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum InputWebFileLocation: TypeConstructorDescription {
-        public class Cons_inputWebFileAudioAlbumThumbLocation: TypeConstructorDescription {
-            public var flags: Int32
-            public var document: Api.InputDocument?
-            public var title: String?
-            public var performer: String?
-            public init(flags: Int32, document: Api.InputDocument?, title: String?, performer: String?) {
-                self.flags = flags
-                self.document = document
-                self.title = title
-                self.performer = performer
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputWebFileAudioAlbumThumbLocation", [("flags", ConstructorParameterDescription(self.flags)), ("document", ConstructorParameterDescription(self.document)), ("title", ConstructorParameterDescription(self.title)), ("performer", ConstructorParameterDescription(self.performer))])
-            }
-        }
-        public class Cons_inputWebFileGeoPointLocation: TypeConstructorDescription {
-            public var geoPoint: Api.InputGeoPoint
-            public var accessHash: Int64
-            public var w: Int32
-            public var h: Int32
-            public var zoom: Int32
-            public var scale: Int32
-            public init(geoPoint: Api.InputGeoPoint, accessHash: Int64, w: Int32, h: Int32, zoom: Int32, scale: Int32) {
-                self.geoPoint = geoPoint
-                self.accessHash = accessHash
-                self.w = w
-                self.h = h
-                self.zoom = zoom
-                self.scale = scale
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputWebFileGeoPointLocation", [("geoPoint", ConstructorParameterDescription(self.geoPoint)), ("accessHash", ConstructorParameterDescription(self.accessHash)), ("w", ConstructorParameterDescription(self.w)), ("h", ConstructorParameterDescription(self.h)), ("zoom", ConstructorParameterDescription(self.zoom)), ("scale", ConstructorParameterDescription(self.scale))])
-            }
-        }
-        public class Cons_inputWebFileLocation: TypeConstructorDescription {
-            public var url: String
-            public var accessHash: Int64
-            public init(url: String, accessHash: Int64) {
-                self.url = url
-                self.accessHash = accessHash
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputWebFileLocation", [("url", ConstructorParameterDescription(self.url)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
-            }
-        }
-        case inputWebFileAudioAlbumThumbLocation(Cons_inputWebFileAudioAlbumThumbLocation)
-        case inputWebFileGeoPointLocation(Cons_inputWebFileGeoPointLocation)
-        case inputWebFileLocation(Cons_inputWebFileLocation)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputWebFileAudioAlbumThumbLocation(let _data):
-                if boxed {
-                    buffer.appendInt32(-193992412)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    _data.document!.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 1) != 0 {
-                    serializeString(_data.title!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 1) != 0 {
-                    serializeString(_data.performer!, buffer: buffer, boxed: false)
-                }
-                break
-            case .inputWebFileGeoPointLocation(let _data):
-                if boxed {
-                    buffer.appendInt32(-1625153079)
-                }
-                _data.geoPoint.serialize(buffer, true)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                serializeInt32(_data.w, buffer: buffer, boxed: false)
-                serializeInt32(_data.h, buffer: buffer, boxed: false)
-                serializeInt32(_data.zoom, buffer: buffer, boxed: false)
-                serializeInt32(_data.scale, buffer: buffer, boxed: false)
-                break
-            case .inputWebFileLocation(let _data):
-                if boxed {
-                    buffer.appendInt32(-1036396922)
-                }
-                serializeString(_data.url, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .inputWebFileAudioAlbumThumbLocation(let _data):
-                return ("inputWebFileAudioAlbumThumbLocation", [("flags", ConstructorParameterDescription(_data.flags)), ("document", ConstructorParameterDescription(_data.document)), ("title", ConstructorParameterDescription(_data.title)), ("performer", ConstructorParameterDescription(_data.performer))])
-            case .inputWebFileGeoPointLocation(let _data):
-                return ("inputWebFileGeoPointLocation", [("geoPoint", ConstructorParameterDescription(_data.geoPoint)), ("accessHash", ConstructorParameterDescription(_data.accessHash)), ("w", ConstructorParameterDescription(_data.w)), ("h", ConstructorParameterDescription(_data.h)), ("zoom", ConstructorParameterDescription(_data.zoom)), ("scale", ConstructorParameterDescription(_data.scale))])
-            case .inputWebFileLocation(let _data):
-                return ("inputWebFileLocation", [("url", ConstructorParameterDescription(_data.url)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
-            }
-        }
-
-        public static func parse_inputWebFileAudioAlbumThumbLocation(_ reader: BufferReader) -> InputWebFileLocation? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputDocument?
-            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
-                if let signature = reader.readInt32() {
-                    _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
-                }
-            }
-            var _3: String?
-            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
-                _3 = parseString(reader)
-            }
-            var _4: String?
-            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
-                _4 = parseString(reader)
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputWebFileLocation.inputWebFileAudioAlbumThumbLocation(Cons_inputWebFileAudioAlbumThumbLocation(flags: _1!, document: _2, title: _3, performer: _4))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputWebFileGeoPointLocation(_ reader: BufferReader) -> InputWebFileLocation? {
-            var _1: Api.InputGeoPoint?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
-            }
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Int32?
-            _6 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputWebFileLocation.inputWebFileGeoPointLocation(Cons_inputWebFileGeoPointLocation(geoPoint: _1!, accessHash: _2!, w: _3!, h: _4!, zoom: _5!, scale: _6!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputWebFileLocation(_ reader: BufferReader) -> InputWebFileLocation? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputWebFileLocation.inputWebFileLocation(Cons_inputWebFileLocation(url: _1!, accessHash: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum Invoice: TypeConstructorDescription {
-        public class Cons_invoice: TypeConstructorDescription {
-            public var flags: Int32
-            public var currency: String
-            public var prices: [Api.LabeledPrice]
-            public var maxTipAmount: Int64?
-            public var suggestedTipAmounts: [Int64]?
-            public var termsUrl: String?
-            public var subscriptionPeriod: Int32?
-            public init(flags: Int32, currency: String, prices: [Api.LabeledPrice], maxTipAmount: Int64?, suggestedTipAmounts: [Int64]?, termsUrl: String?, subscriptionPeriod: Int32?) {
-                self.flags = flags
-                self.currency = currency
-                self.prices = prices
-                self.maxTipAmount = maxTipAmount
-                self.suggestedTipAmounts = suggestedTipAmounts
-                self.termsUrl = termsUrl
-                self.subscriptionPeriod = subscriptionPeriod
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("invoice", [("flags", ConstructorParameterDescription(self.flags)), ("currency", ConstructorParameterDescription(self.currency)), ("prices", ConstructorParameterDescription(self.prices)), ("maxTipAmount", ConstructorParameterDescription(self.maxTipAmount)), ("suggestedTipAmounts", ConstructorParameterDescription(self.suggestedTipAmounts)), ("termsUrl", ConstructorParameterDescription(self.termsUrl)), ("subscriptionPeriod", ConstructorParameterDescription(self.subscriptionPeriod))])
-            }
-        }
-        case invoice(Cons_invoice)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .invoice(let _data):
-                if boxed {
-                    buffer.appendInt32(77522308)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeString(_data.currency, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.prices.count))
-                for item in _data.prices {
-                    item.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 8) != 0 {
-                    serializeInt64(_data.maxTipAmount!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 8) != 0 {
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(_data.suggestedTipAmounts!.count))
-                    for item in _data.suggestedTipAmounts! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                }
-                if Int(_data.flags) & Int(1 << 10) != 0 {
-                    serializeString(_data.termsUrl!, buffer: buffer, boxed: false)
-                }
-                if Int(_data.flags) & Int(1 << 11) != 0 {
-                    serializeInt32(_data.subscriptionPeriod!, buffer: buffer, boxed: false)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .invoice(let _data):
-                return ("invoice", [("flags", ConstructorParameterDescription(_data.flags)), ("currency", ConstructorParameterDescription(_data.currency)), ("prices", ConstructorParameterDescription(_data.prices)), ("maxTipAmount", ConstructorParameterDescription(_data.maxTipAmount)), ("suggestedTipAmounts", ConstructorParameterDescription(_data.suggestedTipAmounts)), ("termsUrl", ConstructorParameterDescription(_data.termsUrl)), ("subscriptionPeriod", ConstructorParameterDescription(_data.subscriptionPeriod))])
-            }
-        }
-
-        public static func parse_invoice(_ reader: BufferReader) -> Invoice? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: [Api.LabeledPrice]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LabeledPrice.self)
-            }
-            var _4: Int64?
-            if Int(_1 ?? 0) & Int(1 << 8) != 0 {
-                _4 = reader.readInt64()
-            }
-            var _5: [Int64]?
-            if Int(_1 ?? 0) & Int(1 << 8) != 0 {
-                if let _ = reader.readInt32() {
-                    _5 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-                }
-            }
-            var _6: String?
-            if Int(_1 ?? 0) & Int(1 << 10) != 0 {
-                _6 = parseString(reader)
-            }
-            var _7: Int32?
-            if Int(_1 ?? 0) & Int(1 << 11) != 0 {
-                _7 = reader.readInt32()
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1 ?? 0) & Int(1 << 8) == 0) || _4 != nil
-            let _c5 = (Int(_1 ?? 0) & Int(1 << 8) == 0) || _5 != nil
-            let _c6 = (Int(_1 ?? 0) & Int(1 << 10) == 0) || _6 != nil
-            let _c7 = (Int(_1 ?? 0) & Int(1 << 11) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.Invoice.invoice(Cons_invoice(flags: _1!, currency: _2!, prices: _3!, maxTipAmount: _4, suggestedTipAmounts: _5, termsUrl: _6, subscriptionPeriod: _7))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum JSONObjectValue: TypeConstructorDescription {
-        public class Cons_jsonObjectValue: TypeConstructorDescription {
-            public var key: String
-            public var value: Api.JSONValue
-            public init(key: String, value: Api.JSONValue) {
-                self.key = key
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonObjectValue", [("key", ConstructorParameterDescription(self.key)), ("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        case jsonObjectValue(Cons_jsonObjectValue)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .jsonObjectValue(let _data):
-                if boxed {
-                    buffer.appendInt32(-1059185703)
-                }
-                serializeString(_data.key, buffer: buffer, boxed: false)
-                _data.value.serialize(buffer, true)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .jsonObjectValue(let _data):
-                return ("jsonObjectValue", [("key", ConstructorParameterDescription(_data.key)), ("value", ConstructorParameterDescription(_data.value))])
-            }
-        }
-
-        public static func parse_jsonObjectValue(_ reader: BufferReader) -> JSONObjectValue? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Api.JSONValue?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.JSONValue
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.JSONObjectValue.jsonObjectValue(Cons_jsonObjectValue(key: _1!, value: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum JSONValue: TypeConstructorDescription {
-        public class Cons_jsonArray: TypeConstructorDescription {
-            public var value: [Api.JSONValue]
-            public init(value: [Api.JSONValue]) {
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonArray", [("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        public class Cons_jsonBool: TypeConstructorDescription {
-            public var value: Api.Bool
-            public init(value: Api.Bool) {
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonBool", [("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        public class Cons_jsonNumber: TypeConstructorDescription {
-            public var value: Double
-            public init(value: Double) {
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonNumber", [("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        public class Cons_jsonObject: TypeConstructorDescription {
-            public var value: [Api.JSONObjectValue]
-            public init(value: [Api.JSONObjectValue]) {
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonObject", [("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        public class Cons_jsonString: TypeConstructorDescription {
-            public var value: String
-            public init(value: String) {
-                self.value = value
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("jsonString", [("value", ConstructorParameterDescription(self.value))])
-            }
-        }
-        case jsonArray(Cons_jsonArray)
-        case jsonBool(Cons_jsonBool)
-        case jsonNull
-        case jsonNumber(Cons_jsonNumber)
-        case jsonObject(Cons_jsonObject)
-        case jsonString(Cons_jsonString)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .jsonArray(let _data):
-                if boxed {
-                    buffer.appendInt32(-146520221)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.value.count))
-                for item in _data.value {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .jsonBool(let _data):
-                if boxed {
-                    buffer.appendInt32(-952869270)
-                }
-                _data.value.serialize(buffer, true)
-                break
-            case .jsonNull:
-                if boxed {
-                    buffer.appendInt32(1064139624)
-                }
-                break
-            case .jsonNumber(let _data):
-                if boxed {
-                    buffer.appendInt32(736157604)
-                }
-                serializeDouble(_data.value, buffer: buffer, boxed: false)
-                break
-            case .jsonObject(let _data):
-                if boxed {
-                    buffer.appendInt32(-1715350371)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.value.count))
-                for item in _data.value {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .jsonString(let _data):
-                if boxed {
-                    buffer.appendInt32(-1222740358)
-                }
-                serializeString(_data.value, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .jsonArray(let _data):
-                return ("jsonArray", [("value", ConstructorParameterDescription(_data.value))])
-            case .jsonBool(let _data):
-                return ("jsonBool", [("value", ConstructorParameterDescription(_data.value))])
-            case .jsonNull:
-                return ("jsonNull", [])
-            case .jsonNumber(let _data):
-                return ("jsonNumber", [("value", ConstructorParameterDescription(_data.value))])
-            case .jsonObject(let _data):
-                return ("jsonObject", [("value", ConstructorParameterDescription(_data.value))])
-            case .jsonString(let _data):
-                return ("jsonString", [("value", ConstructorParameterDescription(_data.value))])
-            }
-        }
-
-        public static func parse_jsonArray(_ reader: BufferReader) -> JSONValue? {
-            var _1: [Api.JSONValue]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.JSONValue.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.JSONValue.jsonArray(Cons_jsonArray(value: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_jsonBool(_ reader: BufferReader) -> JSONValue? {
-            var _1: Api.Bool?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.JSONValue.jsonBool(Cons_jsonBool(value: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_jsonNull(_ reader: BufferReader) -> JSONValue? {
-            return Api.JSONValue.jsonNull
-        }
-        public static func parse_jsonNumber(_ reader: BufferReader) -> JSONValue? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.JSONValue.jsonNumber(Cons_jsonNumber(value: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_jsonObject(_ reader: BufferReader) -> JSONValue? {
-            var _1: [Api.JSONObjectValue]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.JSONObjectValue.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.JSONValue.jsonObject(Cons_jsonObject(value: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_jsonString(_ reader: BufferReader) -> JSONValue? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.JSONValue.jsonString(Cons_jsonString(value: _1!))
             }
             else {
                 return nil

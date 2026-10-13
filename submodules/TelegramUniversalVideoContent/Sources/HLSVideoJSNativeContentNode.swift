@@ -945,14 +945,21 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         var current: Int
         var preferred: UniversalVideoContentVideoQuality
         var available: [Int]
-        
+
         init(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int]) {
             self.current = current
             self.preferred = preferred
             self.available = available
         }
     }
-    
+
+    private struct BridgeStatus: Equatable {
+        var isPlaying: Bool
+        var isWaiting: Bool
+        var seekId: Int
+        var currentTime: Double
+    }
+
     fileprivate static var sharedBandwidthEstimate: Double?
     
     private let postbox: Postbox
@@ -1015,9 +1022,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private let dimensionsPromise = ValuePromise<CGSize>(CGSize())
     
     private var validLayout: (size: CGSize, actualSize: CGSize)?
-    
-    private var statusTimer: Foundation.Timer?
-    
+
     private var preferredVideoQuality: UniversalVideoContentVideoQuality = .auto
     
     fileprivate var playerIsReady: Bool = false
@@ -1037,9 +1042,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private var requestedBaseRate: Double = 1.0
     private var requestedLevelIndex: Int?
     
-    private var didBecomeActiveObserver: NSObjectProtocol?
-    private var willResignActiveObserver: NSObjectProtocol?
-    
+    private var lastBridgeStatus: BridgeStatus?
+
     private let chunkPlayerPartsState = Promise<ChunkMediaPlayerPartsState>(ChunkMediaPlayerPartsState(duration: nil, content: .parts([])))
     private var sourceBufferStateDisposable: Disposable?
     
@@ -1147,13 +1151,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         self._bufferingStatus.set(.single(nil))
         
-        self.didBecomeActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
-            let _ = self
-        })
-        self.willResignActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil, using: { [weak self] _ in
-            let _ = self
-        })
-        
         self.playerStatusDisposable = (self.player.status
         |> deliverOnMainQueue).startStrict(next: { [weak self] status in
             guard let self else {
@@ -1161,14 +1158,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             self.updatePlayerStatus(status: status)
         })
-        
-        self.statusTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 25.0, repeats: true, block: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.updateStatus()
-        })
-        
+
         onSeeked = { [weak self] in
             Queue.mainQueue().async {
                 guard let self else {
@@ -1184,18 +1174,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
     
     deinit {
-        if let didBecomeActiveObserver = self.didBecomeActiveObserver {
-            NotificationCenter.default.removeObserver(didBecomeActiveObserver)
-        }
-        if let willResignActiveObserver = self.willResignActiveObserver {
-            NotificationCenter.default.removeObserver(willResignActiveObserver)
-        }
-        
         self.serverDisposable?.dispose()
         self.audioSessionDisposable.dispose()
-        
-        self.statusTimer?.invalidate()
-        
+
         self.sourceBufferStateDisposable?.dispose()
         self.playerStatusDisposable?.dispose()
         
@@ -1315,14 +1296,10 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             
             SharedHLSVideoJSContext.shared.jsContext?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));")
         }
-        
-        self.updateStatus()
     }
-    
+
     fileprivate func onPlayerUpdatedCurrentTime(currentTime: Double) {
         self.playerTime = currentTime
-        
-        self.updateStatus()
     }
     
     fileprivate func onSetCurrentTime(timestamp: Double) {
@@ -1399,14 +1376,24 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 isBuffering = true
             }
             
+            let currentTime = status.timestamp.isFinite ? status.timestamp : 0.0
+            let bridgeStatus = BridgeStatus(isPlaying: isPlaying, isWaiting: isBuffering, seekId: status.seekId, currentTime: currentTime)
+            if let lastBridgeStatus = self.lastBridgeStatus {
+                if lastBridgeStatus.isPlaying == bridgeStatus.isPlaying, lastBridgeStatus.isWaiting == bridgeStatus.isWaiting, lastBridgeStatus.seekId == bridgeStatus.seekId, abs(bridgeStatus.currentTime - lastBridgeStatus.currentTime) < 0.2 {
+                    return
+                }
+            }
+            self.lastBridgeStatus = bridgeStatus
+
             let result: [String: Any] = [
                 "isPlaying": isPlaying,
                 "isWaiting": isBuffering,
-                "currentTime": status.timestamp
+                "currentTime": currentTime
             ]
-            
-            let jsonResult = try! JSONSerialization.data(withJSONObject: result)
-            let jsonResultString = String(data: jsonResult, encoding: .utf8)!
+
+            guard let jsonResult = try? JSONSerialization.data(withJSONObject: result), let jsonResultString = String(data: jsonResult, encoding: .utf8) else {
+                return
+            }
             SharedHLSVideoJSContext.shared.jsContext?.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateStatus(\(jsonResultString));")
         }
     }
@@ -1437,9 +1424,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 }
             }
         }
-    }
-    
-    private func updateStatus() {
     }
     
     private func performActionAtEnd() {
@@ -1581,7 +1565,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         if self.playerIsReady {
             SharedHLSVideoJSContext.shared.jsContext?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));")
         }
-        self.updateStatus()
     }
     
     private func resolveCurrentLevelIndex() -> Int? {
@@ -1851,7 +1834,7 @@ private final class SourceBuffer {
                         let item = ChunkMediaPlayerPart(
                             startTime: fragmentInfo.startTime.seconds,
                             endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
-                            content: ChunkMediaPlayerPart.TempFile(file: tempFile),
+                            content: ChunkMediaPlayerPart.TempFile(file: tempFile, ignoreAudioEditList: true),
                             codecName: videoCodecName,
                             offsetTime: 0.0
                         )

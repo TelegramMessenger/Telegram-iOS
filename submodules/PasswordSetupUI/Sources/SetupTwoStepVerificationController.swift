@@ -39,7 +39,9 @@ public class SetupTwoStepVerificationController: ViewController {
         
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(overallDarkAppearance: self.presentationData.theme.overallDarkAppearance, buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear, accentButtonColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentDisabledButtonColor: self.presentationData.theme.chat.inputPanel.panelControlDisabledColor, accentForegroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        let navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, enableBackgroundBlur: false, hideBackground: true, edgeEffectColor: .clear, style: .glass)
+        
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         

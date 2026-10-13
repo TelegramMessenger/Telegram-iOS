@@ -56,10 +56,26 @@ protocol CanvasBlock: AnyObject {
     func leafRegions() -> [LeafTextRegion]
     /// Draws this block (decoration/grid + text) in canvas coordinates.
     func draw(in ctx: CGContext, imageProvider: (String) -> UIImage?)
+
+    /// What this block becomes when the document is rendered as an InstantPage — the classification
+    /// the vertical-rhythm rules are written in. **Deliberately has no default implementation:** a
+    /// conservative default would compile everywhere while silently giving a new block type the wrong
+    /// rhythm, which no diff review catches. It must agree with what `InstantPageBuilder` emits for the
+    /// same block; `//submodules/InstantPageUI:InstantPageUITests` is that check.
+    var spacingKind: RichTextBlockSpacingKind { get }
+
+    /// The block's height at `width` EXCLUDING any inter-block gap the enclosing `BlockStack` owns.
+    /// For a `BlockBox` this is its text height without `topInset`/`bottomInset`; for every other block
+    /// the insets are internal padding, so this is just `measuredHeight(forWidth:)`.
+    func measuredContentHeight(forWidth width: CGFloat) -> CGFloat
 }
 
 @available(iOS 13.0, *)
 extension CanvasBlock {
+    func measuredContentHeight(forWidth width: CGFloat) -> CGFloat {
+        return measuredHeight(forWidth: width)
+    }
+
     var rendersAsBlockView: Bool { false }
     var blockViewFrame: CGRect { frame }
 }

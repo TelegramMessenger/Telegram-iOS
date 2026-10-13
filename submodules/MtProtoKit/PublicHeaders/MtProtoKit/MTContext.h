@@ -41,6 +41,15 @@
 - (void)disconnect;
 - (void)resetDelegate;
 
+@optional
+
+/// True only for the WEB proxy carrier, which multiplexes the connection over a hidden
+/// WebView instead of opening a socket, and therefore IGNORES the host and port it is
+/// handed. `MTTcpConnection` uses that to pair the interface with
+/// `MTSocksProxySettings.webProxy`: a connection that has a real address to reach must
+/// never be given the carrier, and a WEB proxy connection must never fall back to a socket.
+- (bool)isWebProxyCarrier;
+
 @end
 
 
@@ -51,6 +60,13 @@
 - (void)contextDatacenterAddressSetUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet * _Nonnull)addressSet;
 - (void)contextDatacenterAuthInfoUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo * _Nonnull)authInfo selector:(MTDatacenterAuthInfoSelector)selector;
 - (void)contextDatacenterAuthTokenUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authToken:(id _Nullable)authToken;
+// Creating the datacenter's auth key for this selector ended without a key
+// (or was abandoned). A listener still waiting for that key asks for it again;
+// the context starts nothing on its own.
+- (void)contextDatacenterAuthInfoRequestFailed:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId selector:(MTDatacenterAuthInfoSelector)selector;
+// Transferring the datacenter's auth token ended without a token (or was
+// cancelled). A listener still waiting for the token asks for it again.
+- (void)contextDatacenterAuthTokenTransferFailed:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId;
 - (void)contextDatacenterTransportSchemesUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset;
 - (void)contextIsPasswordRequiredUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId;
 - (void)contextDatacenterPublicKeysUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> * _Nonnull)publicKeys;
@@ -79,6 +95,8 @@
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 @property (nonatomic) int32_t tempKeyExpiration;
+// Replaces bound temporary keys this process uses before they expire. Off by default; app extensions keep it off.
+@property (nonatomic) bool refreshesTemporaryKeys;
 
 @property (nonatomic, copy) id<MTTcpConnectionInterface> _Nonnull (^ _Nullable makeTcpConnectionInterface)(id<MTTcpConnectionInterfaceDelegate> _Nonnull delegate, dispatch_queue_t _Nonnull delegateQueue);
 

@@ -12,14 +12,28 @@ extension DocumentCanvasView {
     /// inline place to put the emoji). Wrapped in `editing { }` (one undo step).
     func insertEmoji(id: String, altText: String?) {
         guard !boxes.isEmpty else { return }
+        // A code block's language is a plain string on the wire; a custom-emoji U+FFFC there would survive
+        // into the model as part of the language name.
+        if selectionIsEntirelyInCodeLanguageRegion() { return }
         let ref = EmojiRef(id: id, instanceID: BlockID.generate().rawValue, altText: altText)
         editing {
-            if selFrom != selTo { applySelectionReplace(globalFrom: selFrom, globalTo: selTo, text: "") }
+            // THE CLAIM IS APPLIED HERE, ON THE NEXT INSTRUCTION — never batched to the end of this
+            // transaction's own `return`: the container-snap and `leafRegion(containingGlobal: head)` below read the caret back. A deferred claim re-resolves at the
+            // pre-delete caret and silently produces a DIFFERENT document. Why, and the full list of
+            // fourteen such sites: `applyReplaceOutcome`'s doc in `+Editing.swift`. Pinned by
+            // `CaretLandingCharacterizationTests.test_insertEmojiOverAMidParagraphSelectionLandsBetweenTheHalves`.
+            if selFrom != selTo {
+                applyCaretOutcome(applySelectionReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: ""))
+            }
             // A collapsed caret resolving to a table or block-quote box is a structural boundary —
             // snap into the nearest in-container text start (mirrors insertText).
             if !isInsideTable(head) && !isInsideBlockQuote(head),
                let r = resolveBox(at: head), r.box is TableBlockBox || r.box is BlockQuoteBox {
-                let snapped = caretSnappedIntoContainer(head); anchor = snapped; head = snapped
+                // Applied HERE, not returned as this body's claim, for the reason the block above
+                // states: the `leafRegion(containingGlobal: head)` test below and its `guard` read
+                // this caret back, so a deferred claim would resolve the insert at the PRE-snap caret.
+                let snapped = caretSnappedIntoContainer(head)
+                applyCaretOutcome(.caret(at: snapped))
             }
             // A caret on a structural slot with no owning leaf region (e.g. document start = position 0,
             // which sits before the first block's textStart) snaps forward to the nearest renderable slot
@@ -27,9 +41,9 @@ extension DocumentCanvasView {
             // resolveBox. An image gap stays un-snappable (still renderable but region-less) → a no-op.
             if leafRegion(containingGlobal: head) == nil {
                 let snapped = snapToRenderable(head, forward: true)
-                anchor = snapped; head = snapped
+                applyCaretOutcome(.caret(at: snapped))   // read back by the `guard` below
             }
-            guard let (region, local) = leafRegion(containingGlobal: head) else { return }
+            guard let (region, local) = leafRegion(containingGlobal: head) else { return .unchanged }
             // Start from the caret's typing attributes (correct font + paragraph style for the context,
             // incl. empty captions/cells), then stamp our attachment over them. Any inherited attachment
             // from a neighbouring emoji is replaced; read-back is emoji-only regardless, so nothing leaks.
@@ -44,7 +58,7 @@ extension DocumentCanvasView {
             region.layout.replace(start: local, end: local, with: frag)
             recomputeSpans()
             let caret = region.globalStart + local + 1
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
     }
 }

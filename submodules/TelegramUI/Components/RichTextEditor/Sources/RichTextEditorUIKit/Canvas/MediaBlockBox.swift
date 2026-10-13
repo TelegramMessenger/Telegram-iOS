@@ -43,20 +43,29 @@ final class MediaBlockBox: CanvasBlock {
     /// caption runs, so alignment never enters the model (and markdown carries none).
     private static let captionParagraph = ParagraphAttributes(alignment: .center)
 
-    /// The placeholder text shown while the caption is empty.
-    private static let captionPlaceholderText = "Add caption"
+    /// Host placeholder strings, stamped by the canvas during layout.
+    var placeholders: RichTextEditorPlaceholders = .default
 
-    /// Audio renders as a fixed-height row (matches the V2 renderer's `audioFrame` height in
-    /// `InstantPageV2Layout.swift`, so the editor preview equals the sent bubble) — NOT aspect-scaled.
+    /// A caption-less block renders as a fixed-height row (NOT aspect-scaled). Both heights match the V2
+    /// renderer's frame height in `InstantPageV2Layout.swift` (`audioFrame` / `documentFrame`), so the
+    /// editor preview equals the sent bubble.
     static let audioRowHeight: CGFloat = 44.0
+    static let documentRowHeight: CGFloat = 52.0
 
     /// The full canvas width this image bleeds across: its content-strip frame width plus both page
     /// margins (the inverse of the inset top-level frame). The image draws edge-to-edge over this by
     /// default; a host can inset media via `horizontalBleed` (0 = flush with text, e.g. composer or table cell).
     private var canvasWidth: CGFloat { layoutWidth + horizontalBleed * 2 }
 
-    /// The box is an audio block iff its single item is audio (audio is always single).
+    /// The box is an audio block iff its single item is audio (audio is always single). Narrower than
+    /// `isCaptionless` — kept for callers that mean audio SPECIFICALLY, mirroring `MediaBlock.isAudio`.
     var isAudio: Bool { items.first?.kind == .audio }
+    /// The box is a caption-less row (audio or document) iff its single item is one — both are always single.
+    var isCaptionless: Bool { items.first?.kind.isCaptionless ?? false }
+    /// The fixed row height for a caption-less block. Meaningless for captioned media.
+    var rowHeight: CGFloat {
+        items.first?.kind == .document ? MediaBlockBox.documentRowHeight : MediaBlockBox.audioRowHeight
+    }
     /// The primary medium's opaque key (single-media paths / control routing default).
     var mediaID: String { items.first?.mediaID ?? "" }
     /// First item's natural size (single-media layout path).
@@ -86,10 +95,30 @@ final class MediaBlockBox: CanvasBlock {
     // The medium is now an overlay view (not drawn into the backing store), so the backing view only needs
     // to cover the caption (its own inset frame). The full-bleed medium is hosted in the canvas mediaOverlay.
     var blockViewFrame: CGRect { frame }
-    var textLayout: BlockLayoutEngine { isAudio ? emptyLayout : caption }
-    var textLength: Int { isAudio ? 0 : caption.length }
-    var nodeSize: Int { isAudio ? 3 : caption.length + 5 }
-    var textStart: Int { isAudio ? nodeStart : nodeStart + 2 }
+    var textLayout: BlockLayoutEngine { isCaptionless ? emptyLayout : caption }
+    var textLength: Int { isCaptionless ? 0 : caption.length }
+    /// `hasCredit` is ALWAYS false: `InstantPageBuilder` maps the editor's single caption to
+    /// `InstantPageCaption.text` and always passes `credit: .empty`. The editor has no credit field — do
+    /// NOT wire the caption here, or every captioned image loses its flush-below gap.
+    /// Raw media is V2's image/video/slideshow/collage/map set; audio and document are not.
+    var spacingKind: RichTextBlockSpacingKind {
+        // A multi-item box (mosaic/slideshow) maps to `.collage`/`.slideshow`, both of which are in V2's
+        // raw-media set, so it is raw regardless of the primary item's kind.
+        let raw: Bool
+        if items.count > 1 {
+            raw = true
+        } else {
+            switch items.first?.kind {
+            case .image, .video, .location: raw = true
+            case .audio, .document:         raw = false
+            case nil:                       raw = true
+            }
+        }
+        return .media(hasCredit: false, isRawMedia: raw)
+    }
+
+    var nodeSize: Int { isCaptionless ? 3 : caption.length + 5 }
+    var textStart: Int { isCaptionless ? nodeStart : nodeStart + 2 }
     var textRef: TextNodeRef { .caption(id) } // unchanged; unused for audio (leafRegions is empty)
 
     func setWidth(_ width: CGFloat) {
@@ -143,7 +172,7 @@ final class MediaBlockBox: CanvasBlock {
     }
 
     var imageAreaHeight: CGFloat {
-        if isAudio { return MediaBlockBox.audioRowHeight }
+        if isCaptionless { return rowHeight }
         if items.count >= 2 { return containerSize(maxWidth: max(canvasWidth, 1)).height }
         return imageDisplaySize(maxWidth: max(canvasWidth, 1)).height
     }
@@ -164,17 +193,17 @@ final class MediaBlockBox: CanvasBlock {
     /// caret to the START (left edge) of the centered placeholder rather than the line's center.
     private var captionPlaceholderTextWidth: CGFloat {
         let font = mapper.styleSheet.font(for: .caption, attributes: .plain)
-        return (MediaBlockBox.captionPlaceholderText as NSString).size(withAttributes: [.font: font]).width
+        return (placeholders.caption as NSString).size(withAttributes: [.font: font]).width
     }
 
     var height: CGFloat {
-        if isAudio { return verticalInset + MediaBlockBox.audioRowHeight + verticalInset }
+        if isCaptionless { return verticalInset + rowHeight + verticalInset }
         return verticalInset + imageAreaHeight + captionGap
-            + max(caption.boundingHeight, captionEmptyLineHeight) + verticalInset
+            + max(caption.correctedBoundingHeight, captionEmptyLineHeight) + verticalInset
     }
 
     func measuredHeight(forWidth width: CGFloat) -> CGFloat {
-        if isAudio { return verticalInset + MediaBlockBox.audioRowHeight + verticalInset }
+        if isCaptionless { return verticalInset + rowHeight + verticalInset }
         let imageArea: CGFloat
         if items.count >= 2 {
             imageArea = containerSize(maxWidth: max(width + horizontalBleed * 2, 1)).height
@@ -182,7 +211,7 @@ final class MediaBlockBox: CanvasBlock {
             imageArea = imageDisplaySize(maxWidth: max(width + horizontalBleed * 2, 1)).height
         }
         return verticalInset + imageArea + captionGap
-            + max(caption.boundingHeight(forWidth: max(width, 1)), captionEmptyLineHeight) + verticalInset
+            + max(caption.correctedBoundingHeight(forWidth: max(width, 1)), captionEmptyLineHeight) + verticalInset
     }
 
     var textOrigin: CGPoint {
@@ -195,11 +224,11 @@ final class MediaBlockBox: CanvasBlock {
     // to skip the bleed.
     func mediaRect() -> CGRect {
         let avail = max(canvasWidth, 1)
-        if isAudio {
+        if isCaptionless {
             // Audio is a fixed-height full-width row (see imageAreaHeight); NOT aspect-scaled. The hosted
             // audio view lays out its content within this width. `bleedX` matches the image full-bleed origin.
             let bleedX = frame.minX - horizontalBleed
-            return CGRect(x: bleedX, y: frame.minY + verticalInset, width: avail, height: MediaBlockBox.audioRowHeight)
+            return CGRect(x: bleedX, y: frame.minY + verticalInset, width: avail, height: rowHeight)
         }
         if items.count >= 2 {
             // Full-bleed mosaic container rect; per-cell frames are the host view's concern.
@@ -218,7 +247,7 @@ final class MediaBlockBox: CanvasBlock {
     }
 
     func closestPosition(toCanvasPoint point: CGPoint) -> Int {
-        if isAudio { return nodeStart }
+        if isCaptionless { return nodeStart }
         if point.y < textOrigin.y { return nodeStart }   // image area → gap before the atom
         let local = CGPoint(x: point.x - textOrigin.x, y: point.y - textOrigin.y)
         return textStart + caption.closestOffset(toPoint: local)
@@ -227,11 +256,11 @@ final class MediaBlockBox: CanvasBlock {
     func currentBlock() -> Block {
         .media(MediaBlock(id: id, items: items, displayWidth: displayWidth, alignment: alignment,
                           displayMode: displayMode,
-                          caption: isAudio ? [] : mapper.runs(from: caption.attributedString, style: .caption)))
+                          caption: isCaptionless ? [] : mapper.runs(from: caption.attributedString, style: .caption)))
     }
 
     func leafRegions() -> [LeafTextRegion] {
-        if isAudio { return [] }
+        if isCaptionless { return [] }
         // When the caption is empty, place its caret at the START (left edge) of the centered "Add caption"
         // placeholder — not the line center — so the caret sits just before the placeholder text rather than
         // bisecting it. The placeholder is centered in a layoutWidth-wide rect, so its left edge is
@@ -261,14 +290,14 @@ final class MediaBlockBox: CanvasBlock {
     /// because an image is view-backed (`rendersAsBlockView`) — its caption and placeholder must share
     /// the same render layer. Mirrors the paragraph placeholder's color/font.
     func captionPlaceholder() -> CaptionPlaceholder? {
-        guard !isAudio, caption.length == 0 else { return nil }
+        guard !isCaptionless, caption.length == 0, !placeholders.caption.isEmpty else { return nil }
         let font = mapper.styleSheet.font(for: .caption, attributes: .plain)
         let rect = CGRect(x: textOrigin.x, y: textOrigin.y, width: layoutWidth, height: captionEmptyLineHeight)
-        return CaptionPlaceholder(text: MediaBlockBox.captionPlaceholderText, rect: rect, font: font)
+        return CaptionPlaceholder(text: placeholders.caption, rect: rect, font: font)
     }
 
     func draw(in ctx: CGContext, imageProvider: (String) -> UIImage?) {
-        guard !isAudio else { return } // caption-less: the media is a host overlay; nothing to draw here
+        guard !isCaptionless else { return } // caption-less: the media is a host overlay; nothing to draw here
         // The medium itself is now a host-supplied overlay view (positioned at `mediaRect()` by the canvas
         // media reconciler), so the backing store draws only the caption (+ its placeholder). `imageProvider`
         // is retained as the shared `CanvasBlock.draw` parameter but is unused here.

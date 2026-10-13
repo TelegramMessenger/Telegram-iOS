@@ -835,7 +835,6 @@ final class MutableMessageHistoryView: MutablePostboxView {
         }
         
         var updatedCachedPeerDataMessages = false
-        var updatedCachedPeerDataPeers = false
         var currentCachedPeerData: CachedPeerData?
         
         let additionalDatas = self.additionalDatas
@@ -849,17 +848,17 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     if currentData?.messageIds != updatedData.messageIds {
                         updatedCachedPeerDataMessages = true
                     }
-                    if currentData?.peerIds != updatedData.peerIds {
-                        updatedCachedPeerDataPeers = true
-                    }
                     currentCachedPeerData = updatedData
                     updated[i] = .cachedPeerData(peerId, updatedData)
                     hasChanges = true
                 }
             case .cachedPeerDataMessages:
                 break
-            case .cachedPeerDataPeers:
-                break
+            case let .cachedPeerDataPeers(peerId, _):
+                if let updatedData = transaction.currentUpdatedCachedPeerData[peerId]?.updated {
+                    updated[i] = .cachedPeerDataPeers(peerId, postbox.cachedPeerDataPeers(peerId: peerId, cachedData: updatedData))
+                    hasChanges = true
+                }
             case let .message(id, currentMessages):
                 let currentGroupingKey = currentMessages.first?.groupingKey
                 var currentIds = [id]
@@ -938,7 +937,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     }
                     
                     if value != updatedValue {
-                        updated[i] = .peerIsContact(peerId, value)
+                        updated[i] = .peerIsContact(peerId, updatedValue)
                         hasChanges = true
                     }
                 }
@@ -993,25 +992,6 @@ final class MutableMessageHistoryView: MutablePostboxView {
                         }
                     }
                     updated[i] = .cachedPeerDataMessages(peerId, messages)
-                default:
-                    break
-                }
-            }
-        }
-        if updatedCachedPeerDataPeers {
-            hasChanges = true
-            for i in 0 ..< additionalDatas.count {
-                switch additionalDatas[i] {
-                case let .cachedPeerDataPeers(peerId, _):
-                    var peers: [PeerId: Peer] = [:]
-                    if let cachedData = currentCachedPeerData {
-                        for id in cachedData.peerIds {
-                            if let peer = postbox.peerTable.get(id) {
-                                peers[id] = peer
-                            }
-                        }
-                    }
-                    updated[i] = .cachedPeerDataPeers(peerId, peers)
                 default:
                     break
                 }
@@ -1123,10 +1103,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
         return Message(
             stableId: typingDraft.stableId,
             stableVersion: typingDraft.stableVersion,
-            id: MessageId(
-                peerId: peerId,
-                namespace: 1,
-                id: Int32.max - 50000),
+            id: typingDraftMessageId(peerId: peerId, randomId: typingDraft.id),
             globallyUniqueId: nil,
             groupingKey: nil,
             groupInfo: nil,

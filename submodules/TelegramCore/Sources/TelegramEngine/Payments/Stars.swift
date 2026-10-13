@@ -1658,7 +1658,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                         case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer, .premiumGift, .starGiftResale, .starGiftPrepaidUpgrade, .starGiftDropOriginalDetails, .starGiftAuctionBid:
                                             receiptMessageId = nil
                                         }
-                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, isRefunded, _, peerId, _, savedId, _, canTransferDate, canResaleDate, dropOriginalDetailsStars, _, _, canCraftAt, _) = action.action, case let .Id(messageId) = message.id {
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, isRefunded, _, peerId, _, savedId, _, canTransferDate, canResaleDate, dropOriginalDetailsStars, _, _, canCraftAt, _, text, entities, nameHidden) = action.action, case let .Id(messageId) = message.id {
                                         let reference: StarGiftReference
                                         if let peerId, let savedId {
                                             reference = .peer(peerId: peerId, id: savedId)
@@ -1670,9 +1670,9 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                             reference: reference,
                                             fromPeer: nil,
                                             date: message.timestamp,
-                                            text: nil,
-                                            entities: nil,
-                                            nameHidden: false,
+                                            text: text,
+                                            entities: entities,
+                                            nameHidden: nameHidden,
                                             savedToProfile: savedToProfile,
                                             pinnedToTop: false,
                                             convertStars: nil,
@@ -1702,7 +1702,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
             }
         }
         |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
-            if error.errorCode == 406 {
+            if error.errorCode == 406 || error.errorDescription == "STARGIFT_ALREADY_UPGRADED" {
                 return .fail(.serverProvided(error.errorDescription))
             } else if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
                 return .fail(.precheckoutFailed)

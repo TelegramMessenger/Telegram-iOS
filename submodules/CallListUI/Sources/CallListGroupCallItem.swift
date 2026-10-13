@@ -13,17 +13,20 @@ import AccountContext
 import ChatListSearchItemHeader
 import PeerOnlineMarkerNode
 
-private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, bottomItem: ListViewItem?) -> ItemListNeighbors {
+private func callListNeighbors(item: ListViewItem, neighbors: ListViewItemNeighbors) -> ItemListNeighbors {
+    // A private duplicate of the same-named helper in CallListCallItem.swift, differing only in
+    // the item type it groups. As there, the `item as? ItemListItem` branch is unreachable today
+    // and preserved rather than pruned.
     let topNeighbor: ItemListNeighbor
-    if let topItem = topItem {
-        if let item = item as? ItemListItem, let topItem = topItem as? ItemListItem {
+    if let topDescriptor = neighbors.previous {
+        if let item = item as? ItemListItem, let topItem = topDescriptor.base(ItemListNeighborFacet.self) {
             if topItem.sectionId != item.sectionId {
                 topNeighbor = .otherSection(topItem.requestsNoInset ? .none : .full)
             } else {
                 topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
             }
         } else {
-            if item is CallListGroupCallItem && topItem is CallListGroupCallItem {
+            if item is CallListGroupCallItem && topDescriptor.base(HeaderNeighborFacet.self)?.headerFamily == .callListGroupCall {
                 topNeighbor = .sameSection(alwaysPlain: false)
             } else {
                 topNeighbor = .otherSection(.full)
@@ -34,15 +37,15 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
     }
     
     let bottomNeighbor: ItemListNeighbor
-    if let bottomItem = bottomItem {
-        if let item = item as? ItemListItem, let bottomItem = bottomItem as? ItemListItem {
+    if let bottomDescriptor = neighbors.next {
+        if let item = item as? ItemListItem, let bottomItem = bottomDescriptor.base(ItemListNeighborFacet.self) {
             if bottomItem.sectionId != item.sectionId {
                 bottomNeighbor = .otherSection(bottomItem.requestsNoInset ? .none : .full)
             } else {
                 bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
             }
         } else {
-            if item is CallListGroupCallItem && bottomItem is CallListGroupCallItem {
+            if item is CallListGroupCallItem && bottomDescriptor.base(HeaderNeighborFacet.self)?.headerFamily == .callListGroupCall {
                 bottomNeighbor = .sameSection(alwaysPlain: false)
             } else {
                 bottomNeighbor = .otherSection(.full)
@@ -68,6 +71,10 @@ class CallListGroupCallItem: ListViewItem {
     let selectable: Bool = true
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .callListGroupCall))
+    }
     
     init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, context: AccountContext, style: ItemListStyle, peer: EnginePeer, isActive: Bool, editing: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
@@ -83,12 +90,12 @@ class CallListGroupCallItem: ListViewItem {
         self.header = ChatListSearchItemHeader(type: .activeVoiceChats, theme: presentationData.theme, strings: presentationData.strings)
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = CallListGroupCallItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
+            let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: self, neighbors: neighbors)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, neighbors: neighbors))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -102,13 +109,13 @@ class CallListGroupCallItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? CallListGroupCallItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
+                    let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: self, neighbors: neighbors)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, neighbors: neighbors))
                     var animated = true
                     if case .None = animation {
                         animated = false
@@ -128,14 +135,14 @@ class CallListGroupCallItem: ListViewItem {
         self.interaction.openGroupCall(self.peer.id)
     }
     
-    static func mergeType(item: CallListGroupCallItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: CallListGroupCallItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? CallListGroupCallItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .callListGroupCall {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -144,10 +151,10 @@ class CallListGroupCallItem: ListViewItem {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? CallListGroupCallItem {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .callListGroupCall {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
@@ -228,12 +235,12 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let (item, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = CallListGroupCallItem.mergeType(item: item, neighbors: neighbors)
             self.layoutParams = (item, params, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, topItem: previousItem, bottomItem: nextItem))
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, neighbors: neighbors))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply(false)
@@ -483,3 +490,6 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
     }
 }
 
+public extension ListViewItemHeaderFamily {
+    static let callListGroupCall = ListViewItemHeaderFamily("callListGroupCall")
+}

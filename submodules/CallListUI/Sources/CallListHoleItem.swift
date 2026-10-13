@@ -8,6 +8,10 @@ import TelegramPresentationData
 private let titleFont = Font.regular(17.0)
 
 class CallListHoleItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let theme: PresentationTheme
     
     let selectable: Bool = false
@@ -16,12 +20,12 @@ class CallListHoleItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = CallListHoleItemNode()
-            node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
+            node.relativePosition = (first: neighbors.previous == nil, last: neighbors.next == nil)
             node.insets = UIEdgeInsets()
-            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
+            node.layoutForParams(params, item: self, neighbors: neighbors)
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in })
@@ -30,15 +34,15 @@ class CallListHoleItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is CallListHoleItemNode)
             if let nodeValue = node() as? CallListHoleItemNode {
                 
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let first = previousItem == nil
-                    let last = nextItem == nil
+                    let first = neighbors.previous == nil
+                    let last = neighbors.next == nil
                     
                     let (nodeLayout, apply) = layout(self, params, first, last)
                     Queue.mainQueue().async {
@@ -76,7 +80,7 @@ class CallListHoleItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         let layout = self.asyncLayout()
         let (_, apply) = layout(item as! CallListHoleItem, params, self.relativePosition.first, self.relativePosition.last)
         apply()
@@ -85,7 +89,7 @@ class CallListHoleItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: CallListHoleItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelNodeLayout = TextNode.asyncLayout(self.labelNode)
         
-        return { item, params, first, last in
+        return { [weak self] item, params, first, last in
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let (labelLayout, labelApply) = labelNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "", font: titleFont, textColor: item.theme.chatList.messageTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

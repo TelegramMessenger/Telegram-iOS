@@ -28,8 +28,10 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/SheetComponent",
+        "//submodules/Components/ResizableSheetComponent",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorUIKit",
+        "//submodules/TelegramUI/Components/RichTextButtonIcons",
         "//submodules/TelegramUI/Components/RichTextEditorMediaView",
         "//submodules/Components/ViewControllerComponent",
         "//submodules/TelegramUI/Components/EntityKeyboard",
@@ -45,6 +47,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatRichTextEditorComposer",
         "//submodules/ChatTextLinkEditUI",
         "//submodules/UndoUI",
+        "//submodules/ChatSendMessageActionUI",
     ],
     visibility = [
         "//visibility:public",

@@ -283,6 +283,7 @@ private class ReplyThreadHistoryContextImpl {
     deinit {
         self.initialStateDisposable?.dispose()
         self.holesDisposable?.dispose()
+        self.readStateDisposable?.dispose()
         self.readDisposable.dispose()
         self.updateInitialStateDisposable?.dispose()
     }

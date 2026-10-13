@@ -36,23 +36,23 @@ final class ComposerSelectionMappingTests: XCTestCase {
     func test_get_singleParagraph_collapsedCaret() {
         let c = makeCanvas([para("abc")])
         let base = c.boxes[0].textStart
-        c.anchor = base + 2; c.head = base + 2
+        c.setSelectionForTesting(anchor: base + 2, head: base + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 2, length: 0))
     }
 
     func test_get_multiParagraph_secondParagraphOffsetsAcrossNewline() {
         let c = makeCanvas([para("ab"), para("cd")])   // flat "ab\ncd"
         let p2 = c.boxes[1].textStart
-        c.anchor = p2; c.head = p2
+        c.setSelectionForTesting(anchor: p2, head: p2)
         XCTAssertEqual(c.composerSelectedRange.location, 3, "start of paragraph 2 is flat offset 3 (after the \\n)")
-        c.anchor = p2 + 2; c.head = p2 + 2
+        c.setSelectionForTesting(anchor: p2 + 2, head: p2 + 2)
         XCTAssertEqual(c.composerSelectedRange.location, 5, "end of paragraph 2 is flat offset 5")
     }
 
     func test_get_surrogatePairEmoji_offsetCountsUTF16Units() {
         let c = makeCanvas([para("a\u{1F600}")])   // "a😀" — emoji is 2 UTF-16 units, flat length 3
         let base = c.boxes[0].textStart
-        c.anchor = base + 3; c.head = base + 3
+        c.setSelectionForTesting(anchor: base + 3, head: base + 3)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 3, length: 0), "caret after the emoji is flat offset 3")
     }
 
@@ -108,11 +108,11 @@ final class ComposerSelectionMappingTests: XCTestCase {
     func test_get_customEmoji_countsAltStringLength() {
         let c = makeCanvas([emojiPara("a", "\u{1F600}", "b")])   // "a" + emoji(alt "😀", 2 UTF-16) + "b"
         let base = c.boxes[0].textStart
-        c.anchor = base + 1; c.head = base + 1
+        c.setSelectionForTesting(anchor: base + 1, head: base + 1)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 1, length: 0), "before emoji = flat 1")
-        c.anchor = base + 2; c.head = base + 2
+        c.setSelectionForTesting(anchor: base + 2, head: base + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 3, length: 0), "after emoji = flat 3, not 2")
-        c.anchor = base + 3; c.head = base + 3
+        c.setSelectionForTesting(anchor: base + 3, head: base + 3)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 4, length: 0), "end = flat 4")
     }
 
@@ -131,7 +131,7 @@ final class ComposerSelectionMappingTests: XCTestCase {
         let c = makeCanvas([.paragraph(ParagraphBlock(id: BlockID.generate(),
             runs: [emojiRun("\u{1F600}"), TextRun(text: "x"), emojiRun("\u{1F601}")]))])   // 😀 x 😁
         let base = c.boxes[0].textStart
-        c.anchor = base + 3; c.head = base + 3
+        c.setSelectionForTesting(anchor: base + 3, head: base + 3)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 5, length: 0))
         c.composerSelectedRange = NSRange(location: 5, length: 0)
         XCTAssertEqual(c.head, base + 3)
@@ -143,7 +143,7 @@ final class ComposerSelectionMappingTests: XCTestCase {
         let c = makeCanvas([.paragraph(ParagraphBlock(id: BlockID.generate(),
             runs: [TextRun(text: "a"), TextRun(text: "\u{FFFC}", attributes: a), TextRun(text: "b")]))])
         let base = c.boxes[0].textStart
-        c.anchor = base + 2; c.head = base + 2   // after the emoji
+        c.setSelectionForTesting(anchor: base + 2, head: base + 2)   // after the emoji
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 2, length: 0), "no altText -> emoji counts as 1")
     }
 
@@ -153,9 +153,9 @@ final class ComposerSelectionMappingTests: XCTestCase {
         let base = c.boxes[0].textStart
         // global: emoji1(base+0) emoji2(base+1); between = base+1, after both = base+2
         // flat: emoji1(2) emoji2(2); between = 2, after both = 4
-        c.anchor = base + 1; c.head = base + 1
+        c.setSelectionForTesting(anchor: base + 1, head: base + 1)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 2, length: 0))
-        c.anchor = base + 2; c.head = base + 2
+        c.setSelectionForTesting(anchor: base + 2, head: base + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 4, length: 0))
         c.composerSelectedRange = NSRange(location: 2, length: 0)
         XCTAssertEqual(c.head, base + 1)
@@ -167,10 +167,10 @@ final class ComposerSelectionMappingTests: XCTestCase {
         let c = makeCanvas([emojiPara("a", "\u{1F600}", "b")])   // "a😀b"
         let base = c.boxes[0].textStart
         // whole "a😀b": global base+0..base+3 -> flat 0..4 -> length 4
-        c.anchor = base + 0; c.head = base + 3
+        c.setSelectionForTesting(anchor: base + 0, head: base + 3)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 0, length: 4))
         // just the emoji: global base+1..base+2 -> flat 1..3 -> length 2
-        c.anchor = base + 1; c.head = base + 2
+        c.setSelectionForTesting(anchor: base + 1, head: base + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 1, length: 2))
     }
 
@@ -178,7 +178,7 @@ final class ComposerSelectionMappingTests: XCTestCase {
         let c = makeCanvas([para("ab"), emojiPara("c", "\u{1F600}", "d")])   // "ab\n" + "c😀d"
         let p2 = c.boxes[1].textStart
         // p2 flat start = 3 (a,b,\n). caret after the emoji in p2: global p2+2 (c + U+FFFC), flat = 3 + 1(c) + 2(emoji) = 6
-        c.anchor = p2 + 2; c.head = p2 + 2
+        c.setSelectionForTesting(anchor: p2 + 2, head: p2 + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 6, length: 0))
         c.composerSelectedRange = NSRange(location: 6, length: 0)
         XCTAssertEqual(c.head, p2 + 2)
@@ -197,11 +197,11 @@ final class ComposerSelectionMappingTests: XCTestCase {
     func test_get_formula_countsLatexLength() {
         let c = makeFormulaCanvas([formulaPara("a", "x^2", "b")])
         let base = c.boxes[0].textStart
-        c.anchor = base + 1; c.head = base + 1
+        c.setSelectionForTesting(anchor: base + 1, head: base + 1)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 1, length: 0), "before formula = flat 1")
-        c.anchor = base + 2; c.head = base + 2
+        c.setSelectionForTesting(anchor: base + 2, head: base + 2)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 4, length: 0), "after formula = flat 4")
-        c.anchor = base + 3; c.head = base + 3
+        c.setSelectionForTesting(anchor: base + 3, head: base + 3)
         XCTAssertEqual(c.composerSelectedRange, NSRange(location: 5, length: 0), "end = flat 5")
     }
 

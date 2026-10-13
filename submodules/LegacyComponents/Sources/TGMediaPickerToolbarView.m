@@ -40,7 +40,10 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         [_leftButton setTitle:TGLocalized(@"Common.Cancel") forState:UIControlStateNormal];
         [_leftButton setTitleColor:TGAccentColor()];
         _leftButton.titleLabel.font = TGSystemFontOfSize(17);
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _leftButton.contentEdgeInsets = UIEdgeInsetsMake(0, 10, 0, 0);
+        #pragma clang diagnostic pop
         [_leftButton sizeToFit];
         _leftButton.frame = CGRectMake(0, 0, MAX(60, _leftButton.frame.size.width), 44);
         _leftButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
@@ -52,7 +55,10 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         [_rightButton setTitle:TGLocalized(@"MediaPicker.Send") forState:UIControlStateNormal];
         [_rightButton setTitleColor:TGAccentColor()];
         _rightButton.titleLabel.font = TGMediumSystemFontOfSize(17);
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _rightButton.contentEdgeInsets = UIEdgeInsetsMake(0, 27, 0, 10);
+        #pragma clang diagnostic pop
         [_rightButton sizeToFit];
         
         CGFloat doneButtonWidth = MAX(40, _rightButton.frame.size.width);
@@ -273,7 +279,10 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
     {
         _centerButton = [[TGModernButton alloc] initWithFrame:CGRectMake(round((self.frame.size.width - 60.0f) / 2.0f), 0, 60, 44)];
         _centerButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _centerButton.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         _centerButton.exclusiveTouch = true;
         [_centerButton addTarget:self action:@selector(centerButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_centerButton];

@@ -57,7 +57,10 @@ public class EdgeEffectView: UIView {
         }
         
         if blur {
-            let blurHeight: CGFloat = max(edgeSize, bounds.height - 14.0)
+            // Clamp to the effect's own bounds: the `max(edgeSize, ...)` floor below would
+            // otherwise let the blur spill past `rect` whenever the caller asks for a gradient
+            // longer than the region it is painting into, blurring unrelated content underneath.
+            let blurHeight: CGFloat = min(bounds.height, max(edgeSize, bounds.height - 14.0))
             let blurFrame = CGRect(origin: CGPoint(x: 0.0, y: edge == .bottom ? (bounds.height - blurHeight) : 0.0), size: CGSize(width: bounds.width, height: blurHeight))
             
             let blurView: VariableBlurView

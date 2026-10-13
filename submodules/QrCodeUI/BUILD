@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramCore:TelegramCore",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -27,6 +28,7 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/UndoUI:UndoUI",
         "//submodules/Camera:Camera",
+        "//submodules/Camera/CameraLegacy",
         "//submodules/LegacyUI:LegacyUI",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",

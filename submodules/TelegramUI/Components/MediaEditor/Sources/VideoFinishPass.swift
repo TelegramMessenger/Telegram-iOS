@@ -136,8 +136,8 @@ private func verticesData(
     }
     
     let adjustedOffset = simd_float2(
-        offset.x / texCoordScale.x,
-        offset.y / texCoordScale.y
+        offset.x * texCoordScale.x,
+        offset.y * texCoordScale.y
     )
     
     texCoordScale *= 1.0 / scale

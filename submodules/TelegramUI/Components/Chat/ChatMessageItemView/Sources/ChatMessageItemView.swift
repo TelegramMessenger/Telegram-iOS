@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -16,7 +17,6 @@ import ChatMessageItem
 import ChatMessageTransitionNode
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
-import LottieMetal
 
 public func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams, presentationData: ChatPresentationData) -> ChatMessageItemLayoutConstants {
     var result: ChatMessageItemLayoutConstants
@@ -699,6 +699,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open var accessibilityData: ChatMessageAccessibilityData?
     private weak var messageAccessibilityNode: AccessibilityAreaNode?
     open var safeInsets = UIEdgeInsets()
+    open var scrollTiltProvider: ((CFTimeInterval) -> Float)?
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
@@ -726,6 +727,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         super.reuse()
         
         self.item = nil
+        self.scrollTiltProvider = nil
         self.frame = CGRect()
     }
     
@@ -796,14 +798,14 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         return true
     }
     
-    override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? ChatMessageItem {
             let doLayout = self.asyncLayout()
-            let merged = item.mergedWithItems(top: previousItem, bottom: nextItem, isRotated: item.controllerInteraction.chatIsRotated)
+            let merged = item.merged(with: ChatHistoryItemNeighbors(neighbors), isRotated: item.controllerInteraction.chatIsRotated)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
-            apply(.None, ListViewItemApply(isOnScreen: false), false)
+            apply(.None, ListViewItemApply(), false)
         }
     }
     
@@ -953,7 +955,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id, nil)
                 case let .urlAuth(url, buttonId):
-                    item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.id, buttonId: buttonId))
+                    item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.callbackTargetMessageId, buttonId: buttonId))
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
@@ -964,11 +966,15 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                         }
                     })
                 case let .openWebView(url, simple):
-                    item.controllerInteraction.openWebView(button.title, url, simple, .generic)
+                    item.controllerInteraction.openWebView(button.title, url, simple, .generic, progress)
                 case .requestPeer:
                     break
                 case let .copyText(payload):
                     item.controllerInteraction.copyText(payload)
+                case .disabled:
+                    // A forward stripped this button's behaviour; it renders dimmed and does
+                    // nothing. The tap is also blocked upstream in ChatMessageActionButtonsNode.
+                    break
             }
         }
     }
@@ -1130,17 +1136,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             let additionalAnimationNode: AnimatedStickerNode
             var effectiveScale: CGFloat = 1.0
             #if targetEnvironment(simulator)
-            additionalAnimationNode = DirectAnimatedStickerNode()
+            additionalAnimationNode = DirectAnimatedStickerNode(lottieSettings: item.context.lottieRenderingSettings)
             effectiveScale = 1.4
             #else
-            additionalAnimationNode = DirectAnimatedStickerNode()
+            additionalAnimationNode = DirectAnimatedStickerNode(lottieSettings: item.context.lottieRenderingSettings)
             effectiveScale = 1.4
-            /*if "".isEmpty {
-                additionalAnimationNode = DirectAnimatedStickerNode()
-                effectiveScale = 1.4
-            } else {
-                additionalAnimationNode = LottieMetalAnimatedStickerNode()
-            }*/
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))

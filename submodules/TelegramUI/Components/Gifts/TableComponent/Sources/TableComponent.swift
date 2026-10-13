@@ -61,11 +61,18 @@ public final class TableComponent: CombinedComponent {
     private let theme: PresentationTheme
     private let items: [Item]
     private let semiTransparent: Bool
+    private let rightColumnBackgroundColor: UIColor?
     
-    public init(theme: PresentationTheme, items: [Item], semiTransparent: Bool = false) {
+    public init(
+        theme: PresentationTheme,
+        items: [Item],
+        semiTransparent: Bool = false,
+        rightColumnBackgroundColor: UIColor? = nil
+    ) {
         self.theme = theme
         self.items = items
         self.semiTransparent = semiTransparent
+        self.rightColumnBackgroundColor = rightColumnBackgroundColor
     }
 
     public static func ==(lhs: TableComponent, rhs: TableComponent) -> Bool {
@@ -78,12 +85,16 @@ public final class TableComponent: CombinedComponent {
         if lhs.semiTransparent != rhs.semiTransparent {
             return false
         }
+        if lhs.rightColumnBackgroundColor != rhs.rightColumnBackgroundColor {
+            return false
+        }
         return true
     }
     
     public final class State: ComponentState {
         var cachedLastBackgroundImage: (UIImage, PresentationTheme)?
         var cachedLeftColumnImage: (UIImage, PresentationTheme)?
+        var cachedRightColumnImage: (UIImage, PresentationTheme, UIColor)?
         var cachedBorderImage: (UIImage, PresentationTheme)?
     }
     
@@ -93,6 +104,7 @@ public final class TableComponent: CombinedComponent {
 
     public static var body: Body {
         let leftColumnBackground = Child(Image.self)
+        let rightColumnBackground = Child(Image.self)
         let lastBackground = Child(Image.self)
         let verticalBorder = Child(Rectangle.self)
         let titleChildren = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
@@ -217,6 +229,41 @@ public final class TableComponent: CombinedComponent {
             }
             
             let borderRadius: CGFloat = 14.0
+
+            if let rightColumnBackgroundColor = context.component.rightColumnBackgroundColor {
+                let rightColumnImage: UIImage
+                if let (currentImage, theme, color) = context.state.cachedRightColumnImage,
+                   theme === context.component.theme,
+                   color == rightColumnBackgroundColor {
+                    rightColumnImage = currentImage
+                } else {
+                    rightColumnImage = generateImage(CGSize(width: borderRadius * 2.0 + 4.0, height: borderRadius * 2.0 + 4.0), rotatedContext: { size, context in
+                        var bounds = CGRect(origin: CGPoint(x: -borderRadius, y: 0.0), size: CGSize(width: size.width + borderRadius, height: size.height))
+                        context.clear(CGRect(origin: .zero, size: size))
+
+                        if hasStraightSide {
+                            let offset = rowBackgroundIsLast ? 0.0 : -borderRadius
+                            bounds.origin.y += offset
+                            bounds.size.height += borderRadius
+                        }
+
+                        let path = CGPath(roundedRect: bounds.insetBy(dx: borderWidth / 2.0, dy: borderWidth / 2.0), cornerWidth: borderRadius, cornerHeight: borderRadius, transform: nil)
+                        context.setFillColor(rightColumnBackgroundColor.cgColor)
+                        context.addPath(path)
+                        context.fillPath()
+                    })!.stretchableImage(withLeftCapWidth: Int(borderRadius), topCapHeight: Int(borderRadius))
+                    context.state.cachedRightColumnImage = (rightColumnImage, context.component.theme, rightColumnBackgroundColor)
+                }
+
+                let rightColumnBackground = rightColumnBackground.update(
+                    component: Image(image: rightColumnImage),
+                    availableSize: CGSize(width: rightColumnWidth, height: innerTotalHeight),
+                    transition: context.transition
+                )
+                context.add(rightColumnBackground
+                    .position(CGPoint(x: leftColumnWidth + rightColumnWidth / 2.0, y: innerTotalOffset + innerTotalHeight / 2.0))
+                )
+            }
             
             if hasRowBackground {
                 let lastBackgroundImage: UIImage

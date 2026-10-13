@@ -584,6 +584,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 if (chatFullFlags & 1 << 7) != 0 {
                                     flags.insert(.canChangeUsername)
                                 }
+                                if (chatFullFlags & 1 << 21) != 0 {
+                                    flags.insert(.hasWelcomeMessages)
+                                }
                                 
                                 var hasScheduledMessages = false
                                 if (chatFullFlags & 1 << 8) != 0 {
@@ -740,6 +743,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             if (flags2 & Int32(1 << 20)) != 0 {
                                                 channelFlags.insert(.paidMessagesAvailable)
+                                            }
+                                            if (flags2 & Int32(1 << 24)) != 0 {
+                                                channelFlags.insert(.hasWelcomeMessages)
                                             }
                                         
                                             let sendAsPeerId = defaultSendAs?.peerId

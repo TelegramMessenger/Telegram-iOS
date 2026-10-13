@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -270,7 +271,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let items: Signal<[ContextMenuItem], NoError> = activeAccountsAndPeers(context: self.context, includePrimary: true)
             |> take(1)
-            |> map { primary, other -> [ContextMenuItem] in
+            |> map { [weak self] primary, other -> [ContextMenuItem] in
                 var items: [ContextMenuItem] = []
                 var existingIds = Set<EnginePeer.Id>()
                 if let (_, peer) = primary {
@@ -494,7 +495,8 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     if let file {
                         items.append(
                             AnyComponentWithIdentity(id: "animatedIcon", component: AnyComponent(
-                                LottieComponent(content: LottieComponent.ResourceContent(context: component.context, file: file, attemptSynchronously: true, providesPlaceholder: true), placeholderColor: theme.list.mediaPlaceholderColor, startingPosition: .begin, size: CGSize(width: 32.0, height: 32.0), loop: true, playOnce: nil)
+                                LottieComponent(content: LottieComponent.ResourceContent(context: component.context, file: file, attemptSynchronously: true, providesPlaceholder: true), placeholderColor: theme.list.mediaPlaceholderColor, startingPosition: .begin, size: CGSize(width: 32.0, height: 32.0), loop: true, playOnce: nil,
+                    lottieSettings: component.context.lottieRenderingSettings)
                             ))
                         )
                     } else {

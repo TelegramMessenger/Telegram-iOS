@@ -21,7 +21,7 @@ final class SpoilerToggleTests: XCTestCase {
     }
     func selectParagraph(_ v: DocumentCanvasView, _ id: String, _ lo: Int, _ hi: Int) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart + lo; v.head = r.globalStart + hi
+        v.setSelectionForTesting(anchor: r.globalStart + lo, head: r.globalStart + hi)
     }
 
     func test_toggleSpoiler_setsMarkerOnSelection() {
@@ -43,7 +43,7 @@ final class SpoilerToggleTests: XCTestCase {
     func test_toggleSpoiler_collapsedCaretIsNoOp() {
         let v = canvas()
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("h")) }!
-        v.anchor = r.globalStart + 2; v.head = r.globalStart + 2
+        v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)
         v.toggleSpoiler()
         XCTAssertEqual(text(v, "h") { $0.spoiler }, "", "a collapsed caret toggles nothing")
     }

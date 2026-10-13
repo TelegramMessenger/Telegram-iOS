@@ -38,7 +38,7 @@ final class SelectionDragCoalescingTests: XCTestCase {
     func test_handleDrag_coalescesInputDelegateNotificationsToGestureEnd() {
         let v = canvas(); _ = v.becomeFirstResponder()
         let spy = InputDelegateSpy(); v.inputDelegate = spy
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         v.beginCoalescedSelectionDrag()
         let baseWill = spy.selectionWillChangeCount, baseDid = spy.selectionDidChangeCount
         for i in 1...6 { v.setSelectionHead(global: v.boxes[0].textStart + i) }
@@ -55,7 +55,7 @@ final class SelectionDragCoalescingTests: XCTestCase {
         // the input delegate per call — the load-bearing invariant for programmatic / arrow-key moves.
         let v = canvas(); _ = v.becomeFirstResponder()
         let spy = InputDelegateSpy(); v.inputDelegate = spy
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         let baseDid = spy.selectionDidChangeCount
         for i in 1...3 { v.setSelectionHead(global: v.boxes[0].textStart + i) }
         XCTAssertEqual(spy.selectionDidChangeCount, baseDid + 3, "each non-drag selection move brackets the input delegate")

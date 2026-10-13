@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -306,7 +307,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 self.backgroundClipNode.layer.cornerCurve = .continuous
             }
             fontSize = 14.0
-        } else if case let .gradient(leftColor, rightColor) = style {
+        } else if case let .gradient(leftColor, rightColor, _) = style {
             self.gradientNode = ASDisplayNode()
             self.gradientNode?.setLayerBlock({
                 let layer = CAGradientLayer()
@@ -402,7 +403,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.balancedTextLayout = balancedTextLayout
         self.constrainWidth = constrainWidth
         
-        self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
+        self.animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback)
         switch icon {
         case .none:
             break
@@ -656,7 +657,16 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 environment: {},
                 containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
             )
-            if case let .customBlur(_, inset) = self.tooltipStyle, inset < 0.0 {
+            let inset: CGFloat?
+            switch self.tooltipStyle {
+            case let .customBlur(_, value):
+                inset = value
+            case let .gradient(_, _, value):
+                inset = value
+            default:
+                inset = nil
+            }
+            if let inset, inset < 0.0 {
                 textSize.height -= 3.0
             }
         } else {
@@ -711,11 +721,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         var backgroundHeight: CGFloat
         switch self.tooltipStyle {
-        case .default, .gradient:
+        case .default:
             backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0
         case .wide:
             backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0 + 4.0
-        case let .customBlur(_, inset):
+        case let .customBlur(_, inset), let .gradient(_, _, inset):
             backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0 + inset * 2.0
         case .light:
             backgroundHeight = max(28.0, max(animationSize.height, textContentSize.height) + 4.0 * 2.0)
@@ -1224,7 +1234,7 @@ public final class TooltipScreen: ViewController {
         case `default`
         case light
         case customBlur(UIColor, CGFloat)
-        case gradient(UIColor, UIColor)
+        case gradient(UIColor, UIColor, CGFloat)
         case wide
     }
     

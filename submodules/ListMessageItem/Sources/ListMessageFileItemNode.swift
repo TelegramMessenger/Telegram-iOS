@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -569,10 +570,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? ListMessageItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: false, bottom: false, dateAtBottom: item.getDateAtBottom(top: previousItem, bottom: nextItem))
+            let merged = (top: false, bottom: false, dateAtBottom: item.getDateAtBottom(top: neighbors.previous))
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
@@ -945,7 +946,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated && item.displayFileInfo {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: item.isSavedMusic, isAttachMusic: item.isAttachMusic || item.isStoryMusic)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: item.isSavedMusic, isAttachMusic: item.isAttachMusic || item.isStoryMusic, richMessageQueueId: item.richMessageQueueId)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -972,7 +973,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }
                         if isVoice {
-                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: false)
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: false, richMessageQueueId: item.richMessageQueueId)
                         }
                     } else if let image = selectedMedia as? TelegramMediaImage {
                         updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
@@ -1885,7 +1886,7 @@ private enum DownloadIconNodeState: Equatable {
 }
 
 private func generateDownloadIcon(color: UIColor) -> UIImage? {
-    let animation = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0))
+    let animation = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0), lottieSettings: .noAccountFallback)
     animation.customColor = color
     animation.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
     return animation.image
@@ -1924,7 +1925,7 @@ private final class DownloadIconNode: ASImageNode {
         }
 
         if self.animationNode == nil {
-            let animationNode = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0))
+            let animationNode = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0), lottieSettings: .noAccountFallback)
             self.animationNode = animationNode
             animationNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 18.0, height: 18.0))
             animationNode.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))

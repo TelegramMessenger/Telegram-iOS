@@ -128,7 +128,9 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             })
         case let .peer(_, participant, editing, label, enabled, isChannel, isContact):
             let status: ContactsPeerItemStatus
-            if let label = label {
+            if let username = participant.peer.addressName, !username.isEmpty {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: false, icon: nil)
+            } else if let label = label {
                 status = .custom(string: NSAttributedString(string: label), multiline: false, isActive: false, icon: nil)
             } else if participant.peer.id != context.account.peerId {
                 let presence = participant.presences[participant.peer.id] ?? TelegramUserPresence(status: .none, lastActivity: 0)
@@ -149,7 +151,9 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             })
         case let .contact(_, peer, presence):
             let status: ContactsPeerItemStatus
-            if peer.id != context.account.peerId, let presence = presence {
+            if let username = peer.addressName, !username.isEmpty {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: false, icon: nil)
+            } else if peer.id != context.account.peerId, let presence = presence {
                 status = .presence(EnginePeer.Presence(presence), presentationData.dateTimeFormat)
             } else {
                 status = .none
@@ -682,7 +686,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: self.forceTheme, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: self.forceTheme, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, displayUsername: true, prioritizeExactUsernameMatches: true, openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             

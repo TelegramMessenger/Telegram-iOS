@@ -26,6 +26,11 @@ public class StatusBarSurface {
 }
 
 open class CallStatusBarNode: ASDisplayNode {
+    /// How far the node draws below its bounds. The bar slides this much further out when it is shown or hidden.
+    open var bottomOverhang: CGFloat {
+        return 0.0
+    }
+    
     open func update(size: CGSize) {
         
     }

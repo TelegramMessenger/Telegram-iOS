@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -275,8 +276,9 @@ private final class ShareContentInfoView: UIView {
         let iconSize = self.icon.update(
             transition: .immediate,
             component: AnyComponent(LottieComponent(
-                content: LottieComponent.AppBundleContent(name: "ToastCollectibleUsernameEmoji"),
-                loop: false
+                content: LottieComponent.AppBundleContent(name: "anim_collectible_username"),
+                loop: false,
+                lottieSettings: .noAccountFallback
             )),
             environment: {},
             containerSize: CGSize(width: 30.0, height: 30.0)
@@ -1261,6 +1263,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
                 inVoiceOver: layout.inVoiceOver
+                presentedInFormSheet: false
             )
             controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition)
         }

@@ -101,6 +101,7 @@ public final class PrivacyIntroController: ViewController {
     private let mode: PrivacyIntroControllerMode
     private let arguments: PrivacyIntroControllerPresentationArguments
     private let proceedAction: () -> Void
+    private let preferredModalWidth: CGFloat?
     
     private var controllerNode: PrivacyIntroControllerNode {
         return self.displayNode as! PrivacyIntroControllerNode
@@ -111,11 +112,12 @@ public final class PrivacyIntroController: ViewController {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
+    public init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), preferredModalWidth: CGFloat? = nil, proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.arguments = arguments
         self.proceedAction = proceedAction
+        self.preferredModalWidth = preferredModalWidth
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -165,6 +167,16 @@ public final class PrivacyIntroController: ViewController {
         self.controllerNode.updatePresentationData(self.presentationData)
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular, let preferredModalWidth = self.preferredModalWidth else {
+            return nil
+        }
+        return CGSize(
+            width: min(preferredModalWidth, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
+    }
+
     override public func loadDisplayNode() {
         self.displayNode = PrivacyIntroControllerNode(context: self.context, mode: self.mode, proceedAction: self.proceedAction)
         self.displayNodeDidLoad()

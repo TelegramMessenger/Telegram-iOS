@@ -167,7 +167,7 @@ public enum UpdateCustomVerificationError {
 }
 
 public enum UpdateCustomVerificationValue {
-    case enabled(description: String?)
+    case enabled(description: String?, descriptionEntities: [MessageTextEntity]?)
     case disabled
 }
 
@@ -175,13 +175,25 @@ func _internal_updateCustomVerification(account: Account, botId: PeerId, peerId:
     return account.postbox.transaction { transaction -> Signal<Api.Bool, UpdateCustomVerificationError> in
         if let bot = transaction.getPeer(botId), let inputBot = apiInputUser(bot), let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = (1 << 0)
-            var customDescription: String?
+            var customDescription: Api.TextWithEntities?
             switch value {
-            case let .enabled(description):
+            case let .enabled(description, descriptionEntities):
                 flags |= (1 << 1)
                 if let description, !description.isEmpty {
                     flags |= (1 << 2)
-                    customDescription = description
+                    let descriptionEntities = descriptionEntities ?? []
+                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                    for entity in descriptionEntities {
+                        for associatedPeerId in entity.associatedPeerIds {
+                            if associatedPeers[associatedPeerId] == nil, let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                associatedPeers[associatedPeerId] = associatedPeer
+                            }
+                        }
+                    }
+                    customDescription = .textWithEntities(.init(
+                        text: description,
+                        entities: apiEntitiesFromMessageTextEntities(descriptionEntities, associatedPeers: associatedPeers)
+                    ))
                 }
             case .disabled:
                 break

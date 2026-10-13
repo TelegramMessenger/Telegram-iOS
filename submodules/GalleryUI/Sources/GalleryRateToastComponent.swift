@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -177,7 +178,8 @@ final class GalleryRateToastComponent: Component {
                         content: LottieComponent.AppBundleContent(name: "video_toast_speedup"),
                         color: .white,
                         startingPosition: .begin,
-                        loop: false
+                        loop: false,
+                        lottieSettings: .noAccountFallback
                     )),
                     environment: {},
                     containerSize: CGSize(width: 60.0, height: 60.0)

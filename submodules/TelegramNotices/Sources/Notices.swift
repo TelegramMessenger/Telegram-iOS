@@ -209,6 +209,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case aiTextProcessingStyleSelectionTips = 87
     case savedMessagesChatListView = 88
     case guestChatMessageTooltip = 89
+    case walletGramTooltip = 90
     
     var key: EngineDataBuffer {
         let v = EngineDataBuffer(length: 4)
@@ -597,6 +598,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func savedMessagesChatListView() -> EngineNoticeEntryKey {
         return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.savedMessagesChatListView.key)
+    }
+    
+    static func walletGramTooltip() -> EngineNoticeEntryKey {
+        return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.walletGramTooltip.key)
     }
 }
 
@@ -2671,6 +2676,39 @@ public struct ApplicationSpecificNotice {
             }
             
             return Int(previousValue)
+        }
+    }
+    
+    public static func getWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.walletGramTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.walletGramTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            if let entry = EngineCodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.walletGramTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func resetWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.walletGramTooltip(), nil)
         }
     }
 }

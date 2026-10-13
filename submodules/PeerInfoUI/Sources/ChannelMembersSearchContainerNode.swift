@@ -128,13 +128,15 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     let section: ChannelMembersSearchSection
     let dateTimeFormat: PresentationDateTimeFormat
     let addIcon: Bool
+    let matchingUsername: String?
     
-    init(index: Int, content: ChannelMembersSearchContent, section: ChannelMembersSearchSection, dateTimeFormat: PresentationDateTimeFormat, addIcon: Bool = false) {
+    init(index: Int, content: ChannelMembersSearchContent, section: ChannelMembersSearchSection, dateTimeFormat: PresentationDateTimeFormat, addIcon: Bool = false, matchingUsername: String? = nil) {
         self.index = index
         self.content = content
         self.section = section
         self.dateTimeFormat = dateTimeFormat
         self.addIcon = addIcon
+        self.matchingUsername = matchingUsername
     }
     
     var stableId: ChannelMembersSearchEntryId {
@@ -142,22 +144,34 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     }
     
     static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.content == rhs.content && lhs.section == rhs.section && lhs.addIcon == rhs.addIcon
+        return lhs.index == rhs.index && lhs.content == rhs.content && lhs.section == rhs.section && lhs.addIcon == rhs.addIcon && lhs.matchingUsername == rhs.matchingUsername
     }
     
     static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, displayUsername: Bool, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
         switch self.content {
         case let .peer(peer):
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
+            let status: ContactsPeerItemStatus
+            if displayUsername, let username = self.matchingUsername {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: true, icon: nil)
+            } else if displayUsername, let username = peer.addressName, !username.isEmpty {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: false, icon: nil)
+            } else {
+                status = .none
+            }
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                 interaction.peerSelected(peer, nil)
             })
         case let .participant(participant, _, revealActions, revealed, enabled):
             let status: ContactsPeerItemStatus
-            if let presence = participant.presences[participant.peer.id] {
+            if displayUsername, let username = self.matchingUsername {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: true, icon: nil)
+            } else if displayUsername, let username = participant.peer.addressName, !username.isEmpty {
+                status = .custom(string: NSAttributedString(string: "@\(username)"), multiline: false, isActive: false, icon: nil)
+            } else if let presence = participant.presences[participant.peer.id] {
                 status = .presence(EnginePeer.Presence(presence), dateTimeFormat)
             } else {
                 status = .none
@@ -226,6 +240,58 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                     interaction.setPeerIdWithRevealedOptions(RevealedPeerId(peerId: participant.peer.id, section: self.section), fromPeerId.flatMap({ RevealedPeerId(peerId: $0, section: self.section) }))
                 })
         }
+    }
+}
+
+private func channelMembersSearchEntriesWithMatchingUsernames(_ entries: [ChannelMembersSearchEntry], query: String, prioritizeExactMatches: Bool) -> [ChannelMembersSearchEntry] {
+    var normalizedQuery = query.lowercased()
+    if normalizedQuery.hasPrefix("@") {
+        normalizedQuery.removeFirst()
+    }
+    guard !normalizedQuery.isEmpty else {
+        return entries
+    }
+
+    var sectionIndices: [ChannelMembersSearchSection: Int] = [:]
+    var rankedEntries = entries.map { entry -> (entry: ChannelMembersSearchEntry, sectionIndex: Int, matchingUsername: String?) in
+        let sectionIndex = sectionIndices[entry.section] ?? sectionIndices.count
+        sectionIndices[entry.section] = sectionIndex
+
+        let peer: EnginePeer
+        switch entry.content {
+        case let .peer(value):
+            peer = value
+        case let .participant(participant, _, _, _, _):
+            peer = participant.peer
+        }
+
+        let matchingUsername: String?
+        if case let .user(user) = peer {
+            if let username = user.username, username.lowercased() == normalizedQuery {
+                matchingUsername = username
+            } else {
+                matchingUsername = user.usernames.first(where: { $0.username.lowercased() == normalizedQuery })?.username
+            }
+        } else {
+            matchingUsername = nil
+        }
+        return (entry, sectionIndex, matchingUsername)
+    }
+
+    if prioritizeExactMatches {
+        rankedEntries.sort { lhs, rhs in
+            if lhs.sectionIndex != rhs.sectionIndex {
+                return lhs.sectionIndex < rhs.sectionIndex
+            }
+            if (lhs.matchingUsername != nil) != (rhs.matchingUsername != nil) {
+                return lhs.matchingUsername != nil
+            }
+            return lhs.entry.index < rhs.entry.index
+        }
+    }
+    return rankedEntries.enumerated().map { index, rankedEntry in
+        let entry = rankedEntry.entry
+        return ChannelMembersSearchEntry(index: index, content: entry.content, section: entry.section, dateTimeFormat: entry.dateTimeFormat, addIcon: entry.addIcon, matchingUsername: rankedEntry.matchingUsername)
     }
 }
 
@@ -306,12 +372,12 @@ public final class GroupMembersSearchContext {
     }
 }
 
-private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, isEmpty: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ChannelMembersSearchContainerTransition {
+private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, isEmpty: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, displayUsername: Bool, interaction: ChannelMembersSearchContainerInteraction) -> ChannelMembersSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, displayUsername: displayUsername, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, displayUsername: displayUsername, interaction: interaction), directionHint: nil) }
     
     return ChannelMembersSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query)
 }
@@ -353,7 +419,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         return _hasDim
     }
     
-    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, displayUsername: Bool = false, prioritizeExactUsernameMatches: Bool = false, openPeer: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
@@ -957,6 +1023,9 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         }
                     }
                     
+                    if displayUsername || prioritizeExactUsernameMatches {
+                        return channelMembersSearchEntriesWithMatchingUsernames(entries, query: query, prioritizeExactMatches: prioritizeExactUsernameMatches)
+                    }
                     return entries
                 }
             } else if let group = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
@@ -1200,6 +1269,9 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         }
                     }
                     
+                    if displayUsername || prioritizeExactUsernameMatches {
+                        return channelMembersSearchEntriesWithMatchingUsernames(entries, query: query, prioritizeExactMatches: prioritizeExactUsernameMatches)
+                    }
                     return entries
                 }
             } else {
@@ -1215,7 +1287,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
             if let strongSelf = self {
                 let previousEntries = previousEmptyQueryItems.swap(entries)
                 let firstTime = previousEntries == nil
-                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: "",  context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction)
+                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: "",  context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, displayUsername: displayUsername, interaction: interaction)
                 strongSelf.enqueueEmptyQueryTransition(transition, firstTime: firstTime)
                 
                 if entries == nil {
@@ -1232,7 +1304,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 let previousEntries = previousSearchItems.swap(entries)
                 updateActivity(false)
                 let firstTime = previousEntries == nil
-                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction)
+                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, displayUsername: displayUsername, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))

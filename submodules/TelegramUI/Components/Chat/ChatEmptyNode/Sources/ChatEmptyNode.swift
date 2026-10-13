@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -601,7 +602,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             maxWidth = min(240.0, maxWidth)
             
             switch customChatContents.kind {
-            case .quickReplyMessageInput:
+            case .quickReplyMessageInput, .welcomeMessages:
                 insets.top = 10.0
                 imageSpacing = 5.0
                 titleSpacing = 5.0
@@ -673,6 +674,13 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 case .hashTagSearch:
                     titleString = ""
                     strings = []
+                case .welcomeMessages:
+                    iconName = "Chat/Empty Chat/GreetingShortcut"
+                    centerText = true
+                    titleString = interfaceState.strings.WelcomeMessages_EmptyTitle
+                    strings = [
+                        interfaceState.strings.WelcomeMessages_EmptyText
+                    ]
                 }
             } else {
                 titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
@@ -1043,8 +1051,10 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     private var currentStrings: PresentationStrings?
     
     private let stars: Int64?
+    private let lottieSettings: LottieRenderingSettings
     
     public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?, stars: Int64?) {
+        self.lottieSettings = context.lottieRenderingSettings
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         self.isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         self.stars = stars
@@ -1228,7 +1238,8 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
                         content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
                         color: serviceColor.primaryText,
                         size: CGSize(width: 120.0, height: 120.0),
-                        loop: true
+                        loop: true,
+                        lottieSettings: self.lottieSettings
                     )
                 )
             }
@@ -1546,15 +1557,6 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         return size
     }
     
-    func updateAbsolutePosition(rect: CGRect, containerSize: CGSize, transition: ContainedViewLayoutTransition) {
-        guard let backgroundContent = self.backgroundContent else {
-            return
-        }
-        var backgroundFrame = backgroundContent.frame
-        backgroundFrame.origin.x += rect.minX
-        backgroundFrame.origin.y += rect.minY
-        backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
-    }
 }
 
 public final class ChatEmptyNode: ASDisplayNode {
@@ -1843,12 +1845,6 @@ public final class ChatEmptyNode: ASDisplayNode {
             let attachedDescriptionFrame = CGRect(origin: CGPoint(x: leftInset + floor((size.width - leftInset - rightInset - attachedDescriptionSize.width) * 0.5), y: contentFrame.maxY + 4.0), size: attachedDescriptionSize)
             transition.updateFrame(node: attachedDescriptionNode, frame: attachedDescriptionFrame)
             
-            if let (rect, containerSize) = self.absolutePosition {
-                var backgroundFrame = attachedDescriptionNode.frame
-                backgroundFrame.origin.x += rect.minX
-                backgroundFrame.origin.y += rect.minY
-                attachedDescriptionNode.updateAbsolutePosition(rect: backgroundFrame, containerSize: containerSize, transition: .immediate)
-            }
         } else if let attachedDescriptionNode = self.attachedDescriptionNode {
             self.attachedDescriptionNode = nil
             attachedDescriptionNode.removeFromSupernode()
@@ -1871,12 +1867,6 @@ public final class ChatEmptyNode: ASDisplayNode {
             backgroundContent.cornerRadius = min(20.0, self.backgroundNode.bounds.height / 2.0)            
             transition.updateFrame(node: backgroundContent, frame: contentFrame)
 
-            if let (rect, containerSize) = self.absolutePosition {
-                var backgroundFrame = backgroundContent.frame
-                backgroundFrame.origin.x += rect.minX
-                backgroundFrame.origin.y += rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-            }
         } else {
             self.backgroundNode.isHidden = false
         }
@@ -1889,18 +1879,6 @@ public final class ChatEmptyNode: ASDisplayNode {
     
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
-        }
         
-        if let attachedDescriptionNode = self.attachedDescriptionNode {
-            var backgroundFrame = attachedDescriptionNode.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            attachedDescriptionNode.updateAbsolutePosition(rect: backgroundFrame, containerSize: containerSize, transition: transition)
-        }
     }
 }

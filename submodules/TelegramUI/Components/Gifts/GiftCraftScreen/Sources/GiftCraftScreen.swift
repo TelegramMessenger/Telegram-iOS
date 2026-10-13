@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -641,7 +642,8 @@ private final class CraftGiftPageContent: Component {
                                     providesPlaceholder: true
                                 ),
                                 color: .white,
-                                size: CGSize(width: 32.0, height: 32.0)
+                                size: CGSize(width: 32.0, height: 32.0),
+                                lottieSettings: component.context.lottieRenderingSettings
                             )
                         )
                     )
@@ -1658,7 +1660,8 @@ private final class SheetContainerComponent: CombinedComponent {
                     color: environment.theme.list.itemCheckColors.foregroundColor,
                     startingPosition: .begin,
                     size: CGSize(width: 28.0, height: 28.0),
-                    playOnce: playButtonAnimation
+                    playOnce: playButtonAnimation,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ))))
                 buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                     text: strings.Gift_Craft_Info_Understood,

@@ -15,6 +15,8 @@ import TelegramPresentationData
 import PresentationDataUtils
 import PasswordSetupUI
 import InstantPageCache
+import WalletContext
+import UndoUI
 
 extension PeerInfoScreenNode {
     func openSettings(section: PeerInfoSettingsSection) {
@@ -38,7 +40,12 @@ extension PeerInfoScreenNode {
                 
                 var animated = true
                 if let validLayout = strongSelf.validLayout?.0, case .regular = validLayout.metrics.widthClass {
-                    animated = false
+                    switch c.navigationPresentation {
+                    case .default, .master:
+                        animated = false
+                    case .modal, .flatModal, .standaloneModal, .standaloneFlatModal, .modalInLargeLayout, .modalInCompactLayout:
+                        break
+                    }
                 }
                 navigationController.setViewControllers(updatedControllers, animated: animated)
             }
@@ -294,6 +301,12 @@ extension PeerInfoScreenNode {
             if let tonContext = self.controller?.tonContext {
                 push(self.context.sharedContext.makeStarsTransactionsScreen(context: self.context, starsContext: tonContext))
             }
+        case .wallet:
+            guard WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable else {
+                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Wallet_Unavailable, timeout: nil, customUndoText: nil), action: { _ in return false }), in: .window(.root))
+                return
+            }
+            push(self.context.sharedContext.makeWalletScreen(context: self.context))
         }
     }
 

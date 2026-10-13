@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import AVFoundation
 import UIKit
 import AsyncDisplayKit
@@ -1473,6 +1474,7 @@ final class VideoChatScreenComponent: Component {
         
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
+            let lottieSettings = component.initialCall.accountContext.lottieRenderingSettings
             defer {
                 self.isUpdating = false
             }
@@ -2295,7 +2297,8 @@ final class VideoChatScreenComponent: Component {
                             name: "anim_profilemore"
                         ),
                         color: .white,
-                        size: CGSize(width: 34.0, height: 34.0)
+                        size: CGSize(width: 34.0, height: 34.0),
+                        lottieSettings: lottieSettings
                     )),
                     background: AnyComponent(
                         GlassBackgroundComponent(size: CGSize(width: navigationButtonDiameter, height: navigationButtonDiameter), cornerRadius: navigationButtonDiameter * 0.5, isDark: true, tintColor: .init(kind: .custom(style: .default, color: panelColor)))
@@ -3506,7 +3509,7 @@ final class VideoChatScreenComponent: Component {
                     }
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.2) {
+                            Queue.mainQueue().after(0.2) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -3697,7 +3700,7 @@ final class VideoChatScreenComponent: Component {
                     }
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.2) {
+                            Queue.mainQueue().after(0.2) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })

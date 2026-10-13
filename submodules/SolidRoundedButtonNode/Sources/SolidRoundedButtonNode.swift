@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -262,7 +263,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     self.animationNode?.removeFromSupernode()
                     self.animationNode = nil
                     
-                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
+                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0), lottieSettings: .noAccountFallback)
                     animationNode.customColor = self.theme.foregroundColor
                     animationNode.isUserInteractionEnabled = false
                     self.addSubnode(animationNode)
@@ -275,7 +276,11 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     if self.isShimmering {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(1.25) {
+                        Queue.mainQueue().after(1.25) { [weak self] in
+                            guard let self else {
+                                return
+                            }
+
                             self.animationNode?.play()
                             
                             let timer = SwiftSignalKit.Timer(timeout: self.animationLoopTime, repeat: true, completion: { [weak self] in
@@ -1031,7 +1036,7 @@ public final class SolidRoundedButtonView: UIView {
                     self.animationNode?.view.removeFromSuperview()
                     self.animationNode = nil
                     
-                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
+                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0), lottieSettings: .noAccountFallback)
                     animationNode.customColor = self.theme.foregroundColor
                     animationNode.isUserInteractionEnabled = false
                     self.addSubview(animationNode.view)
@@ -1044,7 +1049,11 @@ public final class SolidRoundedButtonView: UIView {
                     if self.gloss {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(1.25) {
+                        Queue.mainQueue().after(1.25) { [weak self] in
+                            guard let self else {
+                                return
+                            }
+
                             self.animationNode?.play()
                             
                             let timer = SwiftSignalKit.Timer(timeout: self.animationLoopTime, repeat: true, completion: { [weak self] in

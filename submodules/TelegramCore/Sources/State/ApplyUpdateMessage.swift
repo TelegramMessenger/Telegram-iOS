@@ -63,7 +63,8 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
 
 func applyMediaResourceChanges(from: InstantPageBlock, fromMedia: [MediaId: Media], to: InstantPageBlock, toMedia: [MediaId: Media], postbox: Postbox, force: Bool, skipPreviews: Bool) {
     switch from {
-    case .unsupported, .title, .subtitle, .authorDate, .header, .subheader, .heading, .formula, .paragraph, .preformatted, .footer, .divider, .anchor, .pullQuote, .webEmbed, .channelBanner, .kicker, .thinking, .table, .relatedArticles, .map:
+    case .unsupported, .title, .subtitle, .authorDate, .header, .subheader, .heading, .formula, .paragraph, .preformatted, .footer, .divider, .anchor, .pullQuote, .webEmbed, .channelBanner, .kicker, .thinking, .table, .relatedArticles, .map, .buttonRow:
+        // .buttonRow carries no media, so it joins the no-op group.
         break
     case let .list(lhsItems, _):
         guard case let .list(rhsItems, _) = to else {
@@ -105,6 +106,16 @@ func applyMediaResourceChanges(from: InstantPageBlock, fromMedia: [MediaId: Medi
         }
     case let .audio(lhsId, _):
         guard case let .audio(rhsId, _) = to else {
+            return
+        }
+        if let lhsMedia = fromMedia[lhsId], let rhsMedia = toMedia[rhsId] {
+            applyMediaResourceChanges(from: lhsMedia, to: rhsMedia, postbox: postbox, force: force, skipPreviews: skipPreviews)
+        }
+    case let .document(lhsId, _):
+        // Mirrors .audio: on send confirmation this hands the locally-uploaded file's resource data
+        // to the cloud resource. Without it, a document in a just-sent rich message would be
+        // re-downloaded instead of reusing what is already on disk.
+        guard case let .document(rhsId, _) = to else {
             return
         }
         if let lhsMedia = fromMedia[lhsId], let rhsMedia = toMedia[rhsId] {

@@ -47,6 +47,9 @@ func _internal_getPreparedInlineMessage(account: Account, botId: EnginePeer.Id, 
 }
 
 func _internal_checkBotDownload(account: Account, botId: EnginePeer.Id, fileName: String, url: String) -> Signal<Bool, NoError> {
+    guard !fileName.contains("/"), fileName.lengthOfBytes(using: .utf8) <= 255, url.lengthOfBytes(using: .utf8) <= 32768 else {
+        return .single(false)
+    }
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(botId).flatMap(apiInputUser)
     }
@@ -68,4 +71,3 @@ func _internal_checkBotDownload(account: Account, botId: EnginePeer.Id, fileName
         }
     }
 }
-

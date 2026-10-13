@@ -26,7 +26,8 @@
 
 #import <MtProtoKit/MTLogging.h>
 
-#import <zlib.h>
+#import <MtProtoKit/MTGzip.h>
+#import <MtProtoKit/MTTransport.h>
 
 @implementation MTInternalMessageParser
 
@@ -595,17 +596,18 @@
                         return nil;
                     }
                     
-                    if (length < 0 || length > 16 * 1024 * 1024)
+                    if (length < 0 || (NSUInteger)length > MTMaxTransportPayloadLength)
                     {
                         if (MTLogEnabled()) {
                             MTLog(@"[MTInternalMessageParser: msg_container invalid length %d]", length);
                         }
                         return nil;
                     }
-                    
-                    NSMutableData *messageData = [[NSMutableData alloc] init];
-                    [messageData setLength:(NSUInteger)length];
-                    if (![reader readBytes:messageData.mutableBytes length:(NSUInteger)length])
+
+                    // readData: checks the remaining bytes before allocating, so a
+                    // frame that declares a 16 MiB child it does not carry costs nothing.
+                    NSData *messageData = [reader readData:(NSUInteger)length];
+                    if (messageData == nil)
                     {
                         if (MTLogEnabled()) {
                             MTLog(@"[MTInternalMessageParser: msg_container can't read bytes]");
@@ -661,98 +663,26 @@
     return nil;
 }
 
-+ (NSData *)readBytes:(NSData *)data skippingLength:(NSUInteger)skipLength
-{
-    NSUInteger offset = skipLength;
-    
-    uint8_t tmp = 0;
-    [data getBytes:&tmp range:NSMakeRange(offset, 1)];
-    offset += 1;
-    
-    int32_t length = tmp;
-    if (length == 254)
-    {
-        length = 0;
-        [data getBytes:((uint8_t *)&length) + 1 range:NSMakeRange(offset, 3)];
-        offset += 3;
-        length >>= 8;
-    }
-    
-    return [data subdataWithRange:NSMakeRange(offset, length)];
-}
-
-+ (NSData *)decompressGZip:(NSData *)data
-{
-    const int kMemoryChunkSize = 1024;
-    
-    NSUInteger length = [data length];
-    int windowBits = 15 + 32; //Default + gzip header instead of zlib header
-    int retCode;
-#pragma clang diagnostic push
-#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180500
-#pragma clang diagnostic ignored "-Wvla-cxx-extension"
-#endif
-#pragma clang diagnostic ignored "-Wgnu-folding-constant"
-    unsigned char output[kMemoryChunkSize];
-#pragma clang diagnostic pop
-    uInt gotBack;
-    NSMutableData *result;
-    z_stream stream;
-    
-    if ((length == 0) || (length > UINT_MAX)) //FIXME: Support 64 bit inputs
-        return nil;
-    
-    bzero(&stream, sizeof(z_stream));
-    stream.avail_in = (uInt)length;
-    stream.next_in = (unsigned char*)[data bytes];
-    
-    retCode = inflateInit2(&stream, windowBits);
-    if(retCode != Z_OK)
-    {
-        NSLog(@"%s: inflateInit2() failed with error %i", __PRETTY_FUNCTION__, retCode);
-        return nil;
-    }
-    
-    result = [NSMutableData dataWithCapacity:(length * 4)];
-    do
-    {
-        stream.avail_out = kMemoryChunkSize;
-        stream.next_out = output;
-        retCode = inflate(&stream, Z_NO_FLUSH);
-        if ((retCode != Z_OK) && (retCode != Z_STREAM_END))
-        {
-            NSLog(@"%s: inflate() failed with error %i", __PRETTY_FUNCTION__, retCode);
-            inflateEnd(&stream);
-            return nil;
-        }
-        gotBack = kMemoryChunkSize - stream.avail_out;
-        if (gotBack > 0)
-            [result appendBytes:output length:gotBack];
-    } while( retCode == Z_OK);
-    inflateEnd(&stream);
-    
-    return (retCode == Z_STREAM_END ? result : nil);
-}
-
-+ (NSData *)unwrapMessage:(NSData *)data
+// gzip_packed#3072cfa1 packed_data:bytes. This runs on the unauthenticated
+// handshake path as well as on verified frames, so it goes through the
+// bounds-checked reader: a short or lying length prefix returns nil, never raises.
++ (NSData * _Nullable)unwrapMessage:(NSData *)data
 {
     if (data.length < 4)
         return data;
-    
+
+    MTBufferReader *reader = [[MTBufferReader alloc] initWithData:data];
+
     int32_t signature = 0;
-    [data getBytes:&signature length:4];
-    
-    if (signature == (int32_t)0x3072cfa1)
-    {
-        NSData *packedData = [self readBytes:data skippingLength:4];
-        if (packedData != nil)
-        {
-            NSData *unpackedData = [self decompressGZip:packedData];
-            return unpackedData;
-        }
-    }
-    
-    return data;
+    [reader readInt32:&signature];
+    if (signature != (int32_t)0x3072cfa1)
+        return data;
+
+    NSData *packedData = nil;
+    if (![reader readTLBytes:&packedData])
+        return nil;
+
+    return [MTGzip decompress:packedData maxOutputLength:MTMaxUnpackedMessageLength];
 }
 
 @end

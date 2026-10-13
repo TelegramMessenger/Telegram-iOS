@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import TelegramCore
@@ -26,10 +27,12 @@ final class StickerPackPreviewGridItem: GridItem {
     let interaction: StickerPackPreviewInteraction
     let theme: PresentationTheme
     let isVerified: Bool
+    let lottieSettings: LottieRenderingSettings
     
     let section: GridSection? = nil
     
-    init(account: Account, stickerItem: ImportStickerPack.Sticker, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool) {
+    init(account: Account, stickerItem: ImportStickerPack.Sticker, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool, lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
         self.account = account
         self.stickerItem = stickerItem
         self.interaction = interaction
@@ -39,7 +42,7 @@ final class StickerPackPreviewGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified, lottieSettings: self.lottieSettings)
         return node
     }
     
@@ -48,7 +51,7 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified, lottieSettings: self.lottieSettings)
     }
 }
 
@@ -99,7 +102,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: ImportStickerPack.Sticker?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool) {
+    func setup(account: Account, stickerItem: ImportStickerPack.Sticker?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool, lottieSettings: LottieRenderingSettings) {
         self.interaction = interaction
         self.theme = theme
         
@@ -122,7 +125,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         self.imageNode.isHidden = true
                         
                         if isVerified {
-                            let animationNode = DefaultAnimatedStickerNodeImpl()
+                            let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
                             self.animationNode = animationNode
                             
                             if let placeholderNode = self.placeholderNode {

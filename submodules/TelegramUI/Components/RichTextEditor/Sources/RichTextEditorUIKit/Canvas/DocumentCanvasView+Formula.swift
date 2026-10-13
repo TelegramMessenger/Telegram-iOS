@@ -27,22 +27,30 @@ extension DocumentCanvasView {
         }
 
         editing {
+            // THE CLAIM IS APPLIED HERE, ON THE NEXT INSTRUCTION — never batched to the end of this
+            // transaction's own `return`: the container-snap and `leafRegion(containingGlobal: head)`
+            // below read the caret back. A deferred claim re-resolves at the pre-delete caret and produces a
+            // DIFFERENT document. Why, and the full list of fourteen such sites: `applyReplaceOutcome`'s
+            // doc in `+Editing.swift`. Pinned by `CaretLandingCharacterizationTests
+            // .test_insertFormulaOverAMidParagraphSelectionLandsBetweenTheHalves`.
             if selFrom != selTo {
-                applySelectionReplace(globalFrom: selFrom, globalTo: selTo, text: "")
+                applyCaretOutcome(applySelectionReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: ""))
             }
             if !isInsideTable(head) && !isInsideBlockQuote(head),
                let r = resolveBox(at: head), r.box is TableBlockBox || r.box is BlockQuoteBox {
+                // Applied HERE for the same reason the block above gives, and it is the reason the
+                // comment says "the container-snap ... read the caret back": the next `if`'s
+                // `leafRegion(containingGlobal: head)` and the `guard` below consult this caret, so
+                // returning it as this body's claim would resolve the insert at the PRE-snap caret.
                 let snapped = caretSnappedIntoContainer(head)
-                anchor = snapped
-                head = snapped
+                applyCaretOutcome(.caret(at: snapped))
             }
             if leafRegion(containingGlobal: head) == nil {
                 let snapped = snapToRenderable(head, forward: true)
-                anchor = snapped
-                head = snapped
+                applyCaretOutcome(.caret(at: snapped))   // read back by the `guard` below
             }
             guard let (region, local) = leafRegion(containingGlobal: head) else {
-                return
+                return .unchanged
             }
 
             let attrs = typingAttributeDict(region: region, atLocal: local)
@@ -51,8 +59,7 @@ extension DocumentCanvasView {
             recomputeSpans()
 
             let caret = region.globalStart + local + fragment.length
-            anchor = caret
-            head = caret
+            return .caret(at: caret)
         }
     }
 
@@ -112,7 +119,7 @@ extension DocumentCanvasView {
                   let current = region.layout.attributedString.attribute(.attachment, at: occurrence.localOffset, effectiveRange: nil) as? FormulaTextAttachment,
                   current.latex == occurrence.latex
             else {
-                return
+                return .unchanged
             }
             var attrs = region.layout.attributedString.attributes(at: occurrence.localOffset, effectiveRange: nil)
             attrs.removeValue(forKey: .attachment)
@@ -120,8 +127,7 @@ extension DocumentCanvasView {
             region.layout.replace(start: occurrence.localOffset, end: occurrence.localOffset + 1, with: fragment)
             recomputeSpans()
             let caret = region.globalStart + occurrence.localOffset + fragment.length
-            anchor = caret
-            head = caret
+            return .caret(at: caret)
         }
     }
 }

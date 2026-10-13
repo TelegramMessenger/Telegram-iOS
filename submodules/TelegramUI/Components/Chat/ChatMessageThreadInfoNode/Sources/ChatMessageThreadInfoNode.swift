@@ -304,12 +304,6 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
     
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     public class func asyncLayout(_ maybeNode: ChatMessageThreadInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode) {
@@ -431,12 +425,6 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                                     (backgroundContent.view.mask as? UIImageView)?.image = image
                                     
                                     backgroundContent.frame = backgroundFrame
-                                    if let (rect, containerSize) = node.absolutePosition {
-                                        var backgroundFrame = backgroundContent.frame
-                                        backgroundFrame.origin.x += rect.minX
-                                        backgroundFrame.origin.y += rect.minY
-                                        backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                                    }
                                 }
                             } else {
                                 node.backgroundContent?.removeFromSupernode()

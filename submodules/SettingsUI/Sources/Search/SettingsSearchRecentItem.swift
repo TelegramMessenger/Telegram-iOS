@@ -23,6 +23,10 @@ class SettingsSearchRecentItem: ListViewItem {
     let deleted: () -> Void
     
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .settingsSearchRecent))
+    }
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, title: String, breadcrumbs: [String], isFaq: Bool, action: @escaping () -> Void, deleted: @escaping () -> Void, header: ListViewItemHeader) {
         self.theme = theme
@@ -36,21 +40,21 @@ class SettingsSearchRecentItem: ListViewItem {
         self.header = header
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = SettingsSearchRecentItemNode()
             let makeLayout = node.asyncLayout()
             
-            var previousHeader: ListViewItemHeader?
-            if let previousItem = previousItem as? SettingsSearchRecentItem {
-                previousHeader = previousItem.header
+            var previousHeader: ListViewItemNode.HeaderId?
+            if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .settingsSearchRecent {
+                previousHeader = previousItem.headerId
             }
-            var nextHeader: ListViewItemHeader?
-            if let nextItem = nextItem as? SettingsSearchRecentItem {
-                nextHeader = nextItem.header
+            var nextHeader: ListViewItemNode.HeaderId?
+            if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .settingsSearchRecent {
+                nextHeader = nextItem.headerId
             }
             
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem == nil || nextHeader?.id != self.header?.id, !(previousItem is SettingsSearchRecentItem) || previousHeader?.id != self.header?.id)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, neighbors.next == nil || nextHeader != self.header?.id, neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily != .settingsSearchRecent || previousHeader != self.header?.id)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -58,21 +62,21 @@ class SettingsSearchRecentItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? SettingsSearchRecentItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    var previousHeader: ListViewItemHeader?
-                    if let previousItem = previousItem as? SettingsSearchRecentItem {
-                        previousHeader = previousItem.header
+                    var previousHeader: ListViewItemNode.HeaderId?
+                    if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .settingsSearchRecent {
+                        previousHeader = previousItem.headerId
                     }
-                    var nextHeader: ListViewItemHeader?
-                    if let nextItem = nextItem as? SettingsSearchRecentItem {
-                        nextHeader = nextItem.header
+                    var nextHeader: ListViewItemNode.HeaderId?
+                    if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .settingsSearchRecent {
+                        nextHeader = nextItem.headerId
                     }
                     
-                    let (nodeLayout, apply) = layout(self, params, nextItem == nil || nextHeader?.id != self.header?.id, !(previousItem is SettingsSearchRecentItem) || previousHeader?.id != self.header?.id)
+                    let (nodeLayout, apply) = layout(self, params, neighbors.next == nil || nextHeader != self.header?.id, neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily != .settingsSearchRecent || previousHeader != self.header?.id)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)
@@ -134,10 +138,10 @@ class SettingsSearchRecentItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.subtitleNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem == nil, previousItem == nil)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, neighbors.next == nil, neighbors.previous == nil)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
@@ -284,4 +288,8 @@ class SettingsSearchRecentItemNode: ItemListRevealOptionsItemNode {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let settingsSearchRecent = ListViewItemHeaderFamily("settingsSearchRecent")
 }

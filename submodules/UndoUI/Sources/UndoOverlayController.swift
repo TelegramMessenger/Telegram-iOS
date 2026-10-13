@@ -14,7 +14,7 @@ public enum UndoOverlayContent {
     case revealedArchive(title: String, text: String, undo: Bool)
     case succeed(text: String, timeout: Double?, customUndoText: String?)
     case info(title: String?, text: String, timeout: Double?, customUndoText: String?)
-    case emoji(name: String, text: String)
+    case emoji(name: String, text: String, interactive: Bool = false)
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String?, text: String, cancel: String?, destructive: Bool)
     case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: StickerPackItem?, context: AccountContext)

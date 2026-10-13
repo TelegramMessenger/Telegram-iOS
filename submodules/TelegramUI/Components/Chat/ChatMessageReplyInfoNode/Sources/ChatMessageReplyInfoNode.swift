@@ -514,11 +514,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     messageText = NSAttributedString(string: quote.text, font: textFont, textColor: textColor)
                 }
             } else {
-                let mutableTextString = NSMutableAttributedString(attributedString: foldLineBreaks(textString))
-                mutableTextString.addAttributes([
-                    .font: textFont,
-                    .foregroundColor: textColor
-                ], range: NSRange(location: 0, length: mutableTextString.length))
+                let mutableTextString = styleInstantPagePreview(foldLineBreaks(textString), font: textFont, italicFont: Font.italic(textFont.pointSize), textColor: textColor)
                 messageText = renderInstantPagePreviewIcons(mutableTextString, font: textFont, textColor: textColor)
                 
                 if let _ = arguments.message?.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {

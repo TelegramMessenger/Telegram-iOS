@@ -1,0 +1,3706 @@
+{
+  "family": "ime",
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "scenarios": [
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-interior-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "かな",
+          "range": {
+            "location": 6,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-interior-cancel",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 6,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-interior-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-before-boundary-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "かな",
+          "range": {
+            "location": 18,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-before-boundary-cancel",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 18,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-before-boundary-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-before-boundary-return-commit-then-undo",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-before-boundary-responder-loss",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "resign-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-after-boundary-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "かな",
+          "range": {
+            "location": 19,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-after-boundary-cancel",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 19,
+            "length": 1
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-after-boundary-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "japanese-romaji-after-boundary-return-commit-then-undo",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-japanese-romaji-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "k",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "か",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "かな",
+          "range": null,
+          "selectedRange": {
+            "location": 2,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-interior-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "你好",
+          "range": {
+            "location": 6,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-interior-cancel",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 6,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-interior-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 6,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 6,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-before-boundary-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "你好",
+          "range": {
+            "location": 18,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-before-boundary-cancel",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 18,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-before-boundary-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-before-boundary-return-commit-then-undo",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-before-boundary-responder-loss",
+      "initial": {
+        "selection": {
+          "location": 18,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 18,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "resign-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-after-boundary-candidate-commit",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "你好",
+          "range": {
+            "location": 19,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-after-boundary-cancel",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 19,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-after-boundary-ordinary-commit",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "simplified-chinese-pinyin-after-boundary-return-commit-then-undo",
+      "initial": {
+        "selection": {
+          "location": 19,
+          "length": 0
+        },
+        "text": "Alpha middle omega\nSecond block remains unchanged.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 1,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/ime-simplified-chinese-pinyin-stock-contract-v1.json",
+        "stockEvidence": ".ime-task9-complete-matrix-attempt5",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 19,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "begin-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "n",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 1
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "firstComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "ni",
+          "range": null,
+          "selectedRange": {
+            "length": 0,
+            "location": 2
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "updatedComposition"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "nihao",
+          "range": null,
+          "selectedRange": {
+            "location": 5,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "end-undo-group",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "committed"
+        },
+        {
+          "kind": "undo",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    }
+  ],
+  "schema": 1
+}

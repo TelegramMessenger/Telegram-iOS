@@ -6,6 +6,7 @@
 #import <MtProtoKit/MTDatacenterAddressSet.h>
 #import <MtProtoKit/MTRequestMessageService.h>
 #import <MtProtoKit/MTRequest.h>
+#import <MtProtoKit/MTQueue.h>
 
 @interface MTDiscoverDatacenterAddressAction () <MTContextChangeListener>
 {
@@ -120,7 +121,9 @@
             [_requestService addRequest:request];
         }
         else {
-            
+            // Continued from contextDatacenterAuthInfoUpdated once the key exists.
+            _awaitingAddresSetUpdate = true;
+            [context addChangeListener:self];
             [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent allowUnboundEphemeralKeys:false];
         }
     }
@@ -130,7 +133,7 @@
 {
     if (_context != context || !_awaitingAddresSetUpdate)
         return;
-    if (authInfo == nil) {
+    if (authInfo == nil || selector != MTDatacenterAuthInfoSelectorPersistent) {
         return;
     }
     
@@ -142,6 +145,15 @@
     }
 }
 
+- (void)contextDatacenterAuthInfoRequestFailed:(MTContext *)context datacenterId:(NSInteger)datacenterId selector:(MTDatacenterAuthInfoSelector)selector
+{
+    if (_context != context || !_awaitingAddresSetUpdate || selector != MTDatacenterAuthInfoSelectorPersistent)
+        return;
+    
+    if (_targetDatacenterId != 0 && _targetDatacenterId == datacenterId)
+        [context authInfoForDatacenterWithIdRequired:datacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent allowUnboundEphemeralKeys:false];
+}
+
 - (void)getConfigSuccess:(NSArray *)addressList
 {
     if (addressList.count != 0)
@@ -151,18 +163,44 @@
         [self complete];
     }
     else
-        [self fail];
+    {
+        [self cleanup];
+        [self askNextDatacenter];
+    }
 }
 
 - (void)getConfigFailed
 {
     [self cleanup];
     
-    [self fail];
+    [self askNextDatacenter];
+}
+
+// execute skips the datacenters already asked, and fails once none is left.
+// getConfig completes on the request service's queue; the action otherwise
+// runs on the context queue, where MTContext starts, notifies and cancels it.
+- (void)askNextDatacenter
+{
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTContext *context = _context;
+        if (context == nil)
+            [self fail];
+        else
+            [self execute:context datacenterId:_datacenterId];
+    }];
+}
+
+- (void)stopListening
+{
+    _awaitingAddresSetUpdate = false;
+    [_context removeChangeListener:self];
 }
 
 - (void)cleanup
 {
+    [self stopListening];
+    
     [_mtProto stop];
     _mtProto = nil;
 }
@@ -175,6 +213,8 @@
 
 - (void)complete
 {
+    [self stopListening];
+    
     id<MTDiscoverDatacenterAddressActionDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(discoverDatacenterAddressActionCompleted:)])
         [delegate discoverDatacenterAddressActionCompleted:self];
@@ -182,6 +222,8 @@
 
 - (void)fail
 {
+    [self stopListening];
+    
     id<MTDiscoverDatacenterAddressActionDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(discoverDatacenterAddressActionCompleted:)])
         [delegate discoverDatacenterAddressActionCompleted:self];

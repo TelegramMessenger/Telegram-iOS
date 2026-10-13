@@ -117,10 +117,9 @@ func pixelBufferToMTLTexture(pixelBuffer: CVPixelBuffer, textureCache: CVMetalTe
     return nil
 }
 
-func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = false) -> UIImage? {
+func getTextureCIImage(texture: MTLTexture, mirror: Bool = false) -> CIImage? {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let context = CIContext(mtlDevice: device, options: [:])
-    guard var ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: colorSpace]) else {
+    guard let ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: colorSpace]) else {
         return nil
     }
     let transform: CGAffineTransform
@@ -129,8 +128,12 @@ func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = fals
     } else {
         transform = CGAffineTransform(1.0, 0.0, 0.0, -1.0, 0.0, ciImage.extent.height)
     }
-    ciImage = ciImage.transformed(by: transform)
-    guard let cgImage = context.createCGImage(ciImage, from: CGRect(origin: .zero, size: CGSize(width: ciImage.extent.width, height: ciImage.extent.height))) else {
+    return ciImage.transformed(by: transform)
+}
+
+func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = false) -> UIImage? {
+    let context = CIContext(mtlDevice: device, options: [:])
+    guard let ciImage = getTextureCIImage(texture: texture, mirror: mirror), let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
         return nil
     }
     return UIImage(cgImage: cgImage)

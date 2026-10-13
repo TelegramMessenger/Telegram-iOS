@@ -561,6 +561,13 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
             if !self.currentItemNode.isNavigationInAFinalState {
                 return []
             }
+            if self.currentItemNode.isDragging || self.currentItemNode.isDeceleratingAfterTracking {
+                if self.availableFilters.count <= 1 {
+                    return []
+                } else if self.availableFilters.first?.id == self.selectedId {
+                    return [.leftCenter]
+                }
+            }
             if self.availableFilters.count > 1 {
                 return [.leftCenter, .rightCenter]
             } else {
@@ -594,9 +601,16 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         return false
     }
     
-    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+    @objc private func panGesture(_ recognizer: InteractiveTransitionGestureRecognizer) {
         let filtersLimit = self.filtersLimit.flatMap({ $0 + 1 }) ?? Int32(self.availableFilters.count)
         let maxFilterIndex = min(Int(filtersLimit), self.availableFilters.count) - 1
+
+        let canOpenStoryCamera = self.validLayout?.0.metrics.widthClass == .compact
+            && self.availableFilters.first?.id == self.selectedId
+            && !recognizer.currentAllowedDirections.intersection(.right).isEmpty
+            && self.controller?.isStoryPostingAvailable == true
+            && !(self.context.sharedContext.callManager?.hasActiveCall ?? false)
+        let hasLiveStream = canOpenStoryCamera && self.controller?.chatListHeaderView()?.storyPeerListView()?.isLiveStreaming == true
         
         switch recognizer.state {
         case .began:
@@ -604,6 +618,16 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
             
             self.transitionFractionOffset = 0.0
             if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
+                if canOpenStoryCamera, !hasLiveStream, self.transitionFraction.isZero,
+                    (itemNode.layer.presentation()?.frame.minX ?? itemNode.frame.minX).isZero {
+                    let translation = recognizer.translation(in: self.view)
+                    if translation.x > 0.0 || (translation.x.isZero && recognizer.velocity(in: self.view).x > 0.0) {
+                        self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
+                        if self.controller?.hasStoryCameraTransition == true {
+                            return
+                        }
+                    }
+                }
                 for (id, itemNode) in self.itemNodes {
                     if id != selectedId {
                         itemNode.emptyNode?.restartAnimation()
@@ -644,12 +668,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
                 
-                var hasLiveStream = false
-                if let componentView = self.controller?.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView(), storyPeerListView.isLiveStreaming {
-                    hasLiveStream = true
-                }
-                     
-                if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false) {
+                if canOpenStoryCamera {
                     if hasLiveStream {
                         if translation.x >= 30.0 {
                             self.panRecognizer?.cancel()
@@ -662,12 +681,13 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                     if selectedIndex <= 0 && translation.x > 0.0 {
                         transitionFraction = 0.0
+                        self.transitionFractionOffset = 0.0
                         self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
                     } else if translation.x <= 0.0 && cameraIsAlreadyOpened {
                         self.controller?.storyCameraPanGestureChanged(transitionFraction: 0.0)
                     }
                     
-                    if cameraIsAlreadyOpened {
+                    if cameraIsAlreadyOpened || (self.controller?.hasStoryCameraTransition == true && self.transitionFraction.isZero && self.transitionFractionOffset.isZero && !self.isSwitchingCurrentItemFilterByDragging) {
                         transitionFraction = 0.0
                         return
                     }
@@ -733,7 +753,19 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                 
                 let hasStoryCameraTransition = self.controller?.hasStoryCameraTransition ?? false
                 if hasStoryCameraTransition {
-                    self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
+                    if !self.transitionFraction.isZero || !self.transitionFractionOffset.isZero {
+                        self.transitionFraction = 0.0
+                        self.transitionFractionOffset = 0.0
+                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
+                    }
+                    let cancelled = recognizer.state == .cancelled
+                    self.controller?.storyCameraPanGestureEnded(transitionFraction: cancelled ? 0.0 : translation.x / layout.size.width, velocity: cancelled ? 0.0 : velocity.x)
+                    if self.isSwitchingCurrentItemFilterByDragging {
+                        self.isSwitchingCurrentItemFilterByDragging = false
+                        self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, false)
+                        self.pinnedHeaderDisplayFractionUpdated?(.immediate)
+                    }
+                    return
                 }
                 var applyNodeAsCurrent: ChatListFilterTabEntryId?
                 
@@ -1533,8 +1565,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     return nil
                 }
 
+                // The folder tabs describe the main list: a forum open inline has no folder of its own.
                 let selectedTab: HorizontalTabsComponent.Tab.Id
-                switch self.effectiveContainerNode.currentItemFilter {
+                switch self.mainContainerNode.currentItemFilter {
                 case .all:
                     selectedTab = AnyHashable(Int32.min)
                 case let .filter(id):
@@ -1675,7 +1708,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
-                sideInset: layout.safeInsets.left,
+                leftInset: layout.safeInsets.left,
+                rightInset: layout.safeInsets.right,
                 search: ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: headerContent?.primaryContent,
@@ -2113,7 +2147,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self.mainContainerNode.accessibilityElementsHidden = false
             self.inlineStackContainerNode?.accessibilityElementsHidden = false
             
-            return { [weak self, weak placeholderNode] in
+            return { [weak self, weak placeholderNode, searchDisplayController] in
                 guard let self, let (layout, _, _, cleanNavigationBarHeight, _) = self.containerLayout else {
                     return
                 }

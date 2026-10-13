@@ -1,4 +1,247 @@
 public extension Api {
+    enum InputPrivacyRule: TypeConstructorDescription {
+        public class Cons_inputPrivacyValueAllowChatParticipants: TypeConstructorDescription {
+            public var chats: [Int64]
+            public init(chats: [Int64]) {
+                self.chats = chats
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputPrivacyValueAllowChatParticipants", [("chats", ConstructorParameterDescription(self.chats))])
+            }
+        }
+        public class Cons_inputPrivacyValueAllowUsers: TypeConstructorDescription {
+            public var users: [Api.InputUser]
+            public init(users: [Api.InputUser]) {
+                self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputPrivacyValueAllowUsers", [("users", ConstructorParameterDescription(self.users))])
+            }
+        }
+        public class Cons_inputPrivacyValueDisallowChatParticipants: TypeConstructorDescription {
+            public var chats: [Int64]
+            public init(chats: [Int64]) {
+                self.chats = chats
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputPrivacyValueDisallowChatParticipants", [("chats", ConstructorParameterDescription(self.chats))])
+            }
+        }
+        public class Cons_inputPrivacyValueDisallowUsers: TypeConstructorDescription {
+            public var users: [Api.InputUser]
+            public init(users: [Api.InputUser]) {
+                self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputPrivacyValueDisallowUsers", [("users", ConstructorParameterDescription(self.users))])
+            }
+        }
+        case inputPrivacyValueAllowAll
+        case inputPrivacyValueAllowBots
+        case inputPrivacyValueAllowChatParticipants(Cons_inputPrivacyValueAllowChatParticipants)
+        case inputPrivacyValueAllowCloseFriends
+        case inputPrivacyValueAllowContacts
+        case inputPrivacyValueAllowPremium
+        case inputPrivacyValueAllowUsers(Cons_inputPrivacyValueAllowUsers)
+        case inputPrivacyValueDisallowAll
+        case inputPrivacyValueDisallowBots
+        case inputPrivacyValueDisallowChatParticipants(Cons_inputPrivacyValueDisallowChatParticipants)
+        case inputPrivacyValueDisallowContacts
+        case inputPrivacyValueDisallowUsers(Cons_inputPrivacyValueDisallowUsers)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputPrivacyValueAllowAll:
+                if boxed {
+                    buffer.appendInt32(407582158)
+                }
+                break
+            case .inputPrivacyValueAllowBots:
+                if boxed {
+                    buffer.appendInt32(1515179237)
+                }
+                break
+            case .inputPrivacyValueAllowChatParticipants(let _data):
+                if boxed {
+                    buffer.appendInt32(-2079962673)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.chats.count))
+                for item in _data.chats {
+                    serializeInt64(item, buffer: buffer, boxed: false)
+                }
+                break
+            case .inputPrivacyValueAllowCloseFriends:
+                if boxed {
+                    buffer.appendInt32(793067081)
+                }
+                break
+            case .inputPrivacyValueAllowContacts:
+                if boxed {
+                    buffer.appendInt32(218751099)
+                }
+                break
+            case .inputPrivacyValueAllowPremium:
+                if boxed {
+                    buffer.appendInt32(2009975281)
+                }
+                break
+            case .inputPrivacyValueAllowUsers(let _data):
+                if boxed {
+                    buffer.appendInt32(320652927)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .inputPrivacyValueDisallowAll:
+                if boxed {
+                    buffer.appendInt32(-697604407)
+                }
+                break
+            case .inputPrivacyValueDisallowBots:
+                if boxed {
+                    buffer.appendInt32(-991594219)
+                }
+                break
+            case .inputPrivacyValueDisallowChatParticipants(let _data):
+                if boxed {
+                    buffer.appendInt32(-380694650)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.chats.count))
+                for item in _data.chats {
+                    serializeInt64(item, buffer: buffer, boxed: false)
+                }
+                break
+            case .inputPrivacyValueDisallowContacts:
+                if boxed {
+                    buffer.appendInt32(195371015)
+                }
+                break
+            case .inputPrivacyValueDisallowUsers(let _data):
+                if boxed {
+                    buffer.appendInt32(-1877932953)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .inputPrivacyValueAllowAll:
+                return ("inputPrivacyValueAllowAll", [])
+            case .inputPrivacyValueAllowBots:
+                return ("inputPrivacyValueAllowBots", [])
+            case .inputPrivacyValueAllowChatParticipants(let _data):
+                return ("inputPrivacyValueAllowChatParticipants", [("chats", ConstructorParameterDescription(_data.chats))])
+            case .inputPrivacyValueAllowCloseFriends:
+                return ("inputPrivacyValueAllowCloseFriends", [])
+            case .inputPrivacyValueAllowContacts:
+                return ("inputPrivacyValueAllowContacts", [])
+            case .inputPrivacyValueAllowPremium:
+                return ("inputPrivacyValueAllowPremium", [])
+            case .inputPrivacyValueAllowUsers(let _data):
+                return ("inputPrivacyValueAllowUsers", [("users", ConstructorParameterDescription(_data.users))])
+            case .inputPrivacyValueDisallowAll:
+                return ("inputPrivacyValueDisallowAll", [])
+            case .inputPrivacyValueDisallowBots:
+                return ("inputPrivacyValueDisallowBots", [])
+            case .inputPrivacyValueDisallowChatParticipants(let _data):
+                return ("inputPrivacyValueDisallowChatParticipants", [("chats", ConstructorParameterDescription(_data.chats))])
+            case .inputPrivacyValueDisallowContacts:
+                return ("inputPrivacyValueDisallowContacts", [])
+            case .inputPrivacyValueDisallowUsers(let _data):
+                return ("inputPrivacyValueDisallowUsers", [("users", ConstructorParameterDescription(_data.users))])
+            }
+        }
+
+        public static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowAll
+        }
+        public static func parse_inputPrivacyValueAllowBots(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowBots
+        }
+        public static func parse_inputPrivacyValueAllowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
+            var _1: [Int64]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(Cons_inputPrivacyValueAllowChatParticipants(chats: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPrivacyValueAllowCloseFriends(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowCloseFriends
+        }
+        public static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowContacts
+        }
+        public static func parse_inputPrivacyValueAllowPremium(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowPremium
+        }
+        public static func parse_inputPrivacyValueAllowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
+            var _1: [Api.InputUser]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPrivacyRule.inputPrivacyValueAllowUsers(Cons_inputPrivacyValueAllowUsers(users: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueDisallowAll
+        }
+        public static func parse_inputPrivacyValueDisallowBots(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueDisallowBots
+        }
+        public static func parse_inputPrivacyValueDisallowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
+            var _1: [Int64]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(Cons_inputPrivacyValueDisallowChatParticipants(chats: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPrivacyValueDisallowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueDisallowContacts
+        }
+        public static func parse_inputPrivacyValueDisallowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
+            var _1: [Api.InputUser]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(Cons_inputPrivacyValueDisallowUsers(users: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum InputQuickReplyShortcut: TypeConstructorDescription {
         public class Cons_inputQuickReplyShortcut: TypeConstructorDescription {
             public var shortcut: String
@@ -1110,263 +1353,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    }
-}
-public extension Api {
-    enum InputStarsTransaction: TypeConstructorDescription {
-        public class Cons_inputStarsTransaction: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: String
-            public init(flags: Int32, id: String) {
-                self.flags = flags
-                self.id = id
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputStarsTransaction", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id))])
-            }
-        }
-        case inputStarsTransaction(Cons_inputStarsTransaction)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputStarsTransaction(let _data):
-                if boxed {
-                    buffer.appendInt32(543876817)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeString(_data.id, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .inputStarsTransaction(let _data):
-                return ("inputStarsTransaction", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id))])
-            }
-        }
-
-        public static func parse_inputStarsTransaction(_ reader: BufferReader) -> InputStarsTransaction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStarsTransaction.inputStarsTransaction(Cons_inputStarsTransaction(flags: _1!, id: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum InputStickerSet: TypeConstructorDescription {
-        public class Cons_inputStickerSetDice: TypeConstructorDescription {
-            public var emoticon: String
-            public init(emoticon: String) {
-                self.emoticon = emoticon
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputStickerSetDice", [("emoticon", ConstructorParameterDescription(self.emoticon))])
-            }
-        }
-        public class Cons_inputStickerSetID: TypeConstructorDescription {
-            public var id: Int64
-            public var accessHash: Int64
-            public init(id: Int64, accessHash: Int64) {
-                self.id = id
-                self.accessHash = accessHash
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputStickerSetID", [("id", ConstructorParameterDescription(self.id)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
-            }
-        }
-        public class Cons_inputStickerSetShortName: TypeConstructorDescription {
-            public var shortName: String
-            public init(shortName: String) {
-                self.shortName = shortName
-            }
-            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("inputStickerSetShortName", [("shortName", ConstructorParameterDescription(self.shortName))])
-            }
-        }
-        case inputStickerSetAnimatedEmoji
-        case inputStickerSetAnimatedEmojiAnimations
-        case inputStickerSetDice(Cons_inputStickerSetDice)
-        case inputStickerSetEmojiChannelDefaultStatuses
-        case inputStickerSetEmojiDefaultStatuses
-        case inputStickerSetEmojiDefaultTopicIcons
-        case inputStickerSetEmojiGenericAnimations
-        case inputStickerSetEmpty
-        case inputStickerSetID(Cons_inputStickerSetID)
-        case inputStickerSetPremiumGifts
-        case inputStickerSetShortName(Cons_inputStickerSetShortName)
-        case inputStickerSetTonGifts
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputStickerSetAnimatedEmoji:
-                if boxed {
-                    buffer.appendInt32(42402760)
-                }
-                break
-            case .inputStickerSetAnimatedEmojiAnimations:
-                if boxed {
-                    buffer.appendInt32(215889721)
-                }
-                break
-            case .inputStickerSetDice(let _data):
-                if boxed {
-                    buffer.appendInt32(-427863538)
-                }
-                serializeString(_data.emoticon, buffer: buffer, boxed: false)
-                break
-            case .inputStickerSetEmojiChannelDefaultStatuses:
-                if boxed {
-                    buffer.appendInt32(1232373075)
-                }
-                break
-            case .inputStickerSetEmojiDefaultStatuses:
-                if boxed {
-                    buffer.appendInt32(701560302)
-                }
-                break
-            case .inputStickerSetEmojiDefaultTopicIcons:
-                if boxed {
-                    buffer.appendInt32(1153562857)
-                }
-                break
-            case .inputStickerSetEmojiGenericAnimations:
-                if boxed {
-                    buffer.appendInt32(80008398)
-                }
-                break
-            case .inputStickerSetEmpty:
-                if boxed {
-                    buffer.appendInt32(-4838507)
-                }
-                break
-            case .inputStickerSetID(let _data):
-                if boxed {
-                    buffer.appendInt32(-1645763991)
-                }
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                break
-            case .inputStickerSetPremiumGifts:
-                if boxed {
-                    buffer.appendInt32(-930399486)
-                }
-                break
-            case .inputStickerSetShortName(let _data):
-                if boxed {
-                    buffer.appendInt32(-2044933984)
-                }
-                serializeString(_data.shortName, buffer: buffer, boxed: false)
-                break
-            case .inputStickerSetTonGifts:
-                if boxed {
-                    buffer.appendInt32(485912992)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-            switch self {
-            case .inputStickerSetAnimatedEmoji:
-                return ("inputStickerSetAnimatedEmoji", [])
-            case .inputStickerSetAnimatedEmojiAnimations:
-                return ("inputStickerSetAnimatedEmojiAnimations", [])
-            case .inputStickerSetDice(let _data):
-                return ("inputStickerSetDice", [("emoticon", ConstructorParameterDescription(_data.emoticon))])
-            case .inputStickerSetEmojiChannelDefaultStatuses:
-                return ("inputStickerSetEmojiChannelDefaultStatuses", [])
-            case .inputStickerSetEmojiDefaultStatuses:
-                return ("inputStickerSetEmojiDefaultStatuses", [])
-            case .inputStickerSetEmojiDefaultTopicIcons:
-                return ("inputStickerSetEmojiDefaultTopicIcons", [])
-            case .inputStickerSetEmojiGenericAnimations:
-                return ("inputStickerSetEmojiGenericAnimations", [])
-            case .inputStickerSetEmpty:
-                return ("inputStickerSetEmpty", [])
-            case .inputStickerSetID(let _data):
-                return ("inputStickerSetID", [("id", ConstructorParameterDescription(_data.id)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
-            case .inputStickerSetPremiumGifts:
-                return ("inputStickerSetPremiumGifts", [])
-            case .inputStickerSetShortName(let _data):
-                return ("inputStickerSetShortName", [("shortName", ConstructorParameterDescription(_data.shortName))])
-            case .inputStickerSetTonGifts:
-                return ("inputStickerSetTonGifts", [])
-            }
-        }
-
-        public static func parse_inputStickerSetAnimatedEmoji(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmoji
-        }
-        public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
-        }
-        public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetDice(Cons_inputStickerSetDice(emoticon: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetEmojiChannelDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiChannelDefaultStatuses
-        }
-        public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
-        }
-        public static func parse_inputStickerSetEmojiDefaultTopicIcons(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiDefaultTopicIcons
-        }
-        public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations
-        }
-        public static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmpty
-        }
-        public static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStickerSet.inputStickerSetID(Cons_inputStickerSetID(id: _1!, accessHash: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetPremiumGifts(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetPremiumGifts
-        }
-        public static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetShortName(Cons_inputStickerSetShortName(shortName: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetTonGifts(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetTonGifts
         }
     }
 }

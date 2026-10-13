@@ -118,7 +118,7 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                 return .single(.invalid)
             }
         case .bot:
-            return account.network.request(Api.functions.bots.checkUsername(username: name))
+            return account.network.request(Api.functions.bots.checkUsername(flags: 0, username: name))
             |> map { result -> AddressNameAvailability in
                 switch result {
                     case .boolTrue:

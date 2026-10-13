@@ -282,15 +282,14 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     
     @objc private func clearPressed() {
         self.currentPresetSearchTerm = nil
-        self.updateQuery(nil)
         self.textField?.text = ""
         
         self.clearIconView.isHidden = true
         self.clearIconTintView.isHidden = true
         self.clearIconButton.isHidden = true
         
-        /*self.tintTextView.view?.isHidden = false
-        self.textView.view?.isHidden = false*/
+        self.update(transition: .immediate)
+        self.updateQuery(nil)
     }
     
     var isActive: Bool {
@@ -471,6 +470,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let _ = self.statusIcon.update(
             transition: transition,
             component: AnyComponent(EmojiSearchStatusComponent(
+                context: context,
                 theme: theme,
                 forceNeedsVibrancy: forceNeedsVibrancy,
                 strings: strings,

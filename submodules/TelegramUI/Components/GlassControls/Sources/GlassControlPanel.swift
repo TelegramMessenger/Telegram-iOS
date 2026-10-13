@@ -10,11 +10,15 @@ public final class GlassControlPanelComponent: Component {
         public let items: [GlassControlGroupComponent.Item]
         public let background: GlassControlGroupComponent.Background
         public let keepWide: Bool
+        public let minWidth: CGFloat?
+        public let textHorizontalInset: CGFloat
 
-        public init(items: [GlassControlGroupComponent.Item], background: GlassControlGroupComponent.Background, keepWide: Bool = false) {
+        public init(items: [GlassControlGroupComponent.Item], background: GlassControlGroupComponent.Background, keepWide: Bool = false, minWidth: CGFloat? = nil, textHorizontalInset: CGFloat = 10.0) {
             self.items = items
             self.background = background
             self.keepWide = keepWide
+            self.minWidth = minWidth
+            self.textHorizontalInset = textHorizontalInset
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -25,6 +29,12 @@ public final class GlassControlPanelComponent: Component {
                 return false
             }
             if lhs.keepWide != rhs.keepWide {
+                return false
+            }
+            if lhs.minWidth != rhs.minWidth {
+                return false
+            }
+            if lhs.textHorizontalInset != rhs.textHorizontalInset {
                 return false
             }
             return true
@@ -158,7 +168,8 @@ public final class GlassControlPanelComponent: Component {
                         preferClearGlass: component.preferClearGlass,
                         background: leftItem.background,
                         items: leftItem.items,
-                        minWidth: availableSize.height
+                        minWidth: leftItem.minWidth ?? availableSize.height,
+                        textHorizontalInset: leftItem.textHorizontalInset
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
@@ -208,7 +219,8 @@ public final class GlassControlPanelComponent: Component {
                         preferClearGlass: component.preferClearGlass,
                         background: rightItem.background,
                         items: rightItem.items,
-                        minWidth: availableSize.height
+                        minWidth: rightItem.minWidth ?? availableSize.height,
+                        textHorizontalInset: rightItem.textHorizontalInset
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
@@ -275,7 +287,8 @@ public final class GlassControlPanelComponent: Component {
                         preferClearGlass: component.preferClearGlass,
                         background: centralItem.background,
                         items: centralItem.items,
-                        minWidth: centralItem.keepWide ? 165.0 : availableSize.height
+                        minWidth: centralItem.minWidth ?? (centralItem.keepWide ? 165.0 : availableSize.height),
+                        textHorizontalInset: centralItem.textHorizontalInset
                     )),
                     environment: {},
                     containerSize: maxCentralItemSize

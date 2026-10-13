@@ -35,20 +35,20 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             var firstWithHeader = false
             var last = false
             if self.style == .plain {
-                if previousItem == nil {
+                if neighbors.previous == nil {
                     firstWithHeader = true
                 }
-                if nextItem == nil {
+                if neighbors.next == nil {
                     last = true
                 }
             }
             let node = AdditionalLinkItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -61,7 +61,7 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? AdditionalLinkItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -70,15 +70,15 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
                     var firstWithHeader = false
                     var last = false
                     if self.style == .plain {
-                        if previousItem == nil {
+                        if neighbors.previous == nil {
                             firstWithHeader = true
                         }
-                        if nextItem == nil {
+                        if neighbors.next == nil {
                             last = true
                         }
                     }
                     
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -194,7 +194,7 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
         
         let currentItem = self.layoutParams?.0
                 
-        return { item, params, neighbors, firstWithHeader, last in
+        return { [weak self] item, params, neighbors, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             var updatedIsActive = false
         

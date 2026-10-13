@@ -593,7 +593,8 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
                 type: AnimationCacheAnimationType(file: patternFile),
                 keyframeOnly: false,
-                customColor: .white
+                customColor: .white,
+                lottieSettings: pattern.context.lottieRenderingSettings
             ),
             completion: { [weak self] _, _ in
                 guard let self else {

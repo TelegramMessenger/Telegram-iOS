@@ -260,6 +260,17 @@ public extension Api {
                 return ("messageEntityTextUrl", [("offset", ConstructorParameterDescription(self.offset)), ("length", ConstructorParameterDescription(self.length)), ("url", ConstructorParameterDescription(self.url))])
             }
         }
+        public class Cons_messageEntityTonAddress: TypeConstructorDescription {
+            public var offset: Int32
+            public var length: Int32
+            public init(offset: Int32, length: Int32) {
+                self.offset = offset
+                self.length = length
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("messageEntityTonAddress", [("offset", ConstructorParameterDescription(self.offset)), ("length", ConstructorParameterDescription(self.length))])
+            }
+        }
         public class Cons_messageEntityUnderline: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
@@ -315,6 +326,7 @@ public extension Api {
         case messageEntitySpoiler(Cons_messageEntitySpoiler)
         case messageEntityStrike(Cons_messageEntityStrike)
         case messageEntityTextUrl(Cons_messageEntityTextUrl)
+        case messageEntityTonAddress(Cons_messageEntityTonAddress)
         case messageEntityUnderline(Cons_messageEntityUnderline)
         case messageEntityUnknown(Cons_messageEntityUnknown)
         case messageEntityUrl(Cons_messageEntityUrl)
@@ -484,6 +496,13 @@ public extension Api {
                 serializeInt32(_data.length, buffer: buffer, boxed: false)
                 serializeString(_data.url, buffer: buffer, boxed: false)
                 break
+            case .messageEntityTonAddress(let _data):
+                if boxed {
+                    buffer.appendInt32(-39075891)
+                }
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                serializeInt32(_data.length, buffer: buffer, boxed: false)
+                break
             case .messageEntityUnderline(let _data):
                 if boxed {
                     buffer.appendInt32(-1672577397)
@@ -554,6 +573,8 @@ public extension Api {
                 return ("messageEntityStrike", [("offset", ConstructorParameterDescription(_data.offset)), ("length", ConstructorParameterDescription(_data.length))])
             case .messageEntityTextUrl(let _data):
                 return ("messageEntityTextUrl", [("offset", ConstructorParameterDescription(_data.offset)), ("length", ConstructorParameterDescription(_data.length)), ("url", ConstructorParameterDescription(_data.url))])
+            case .messageEntityTonAddress(let _data):
+                return ("messageEntityTonAddress", [("offset", ConstructorParameterDescription(_data.offset)), ("length", ConstructorParameterDescription(_data.length))])
             case .messageEntityUnderline(let _data):
                 return ("messageEntityUnderline", [("offset", ConstructorParameterDescription(_data.offset)), ("length", ConstructorParameterDescription(_data.length))])
             case .messageEntityUnknown(let _data):
@@ -895,6 +916,20 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageEntity.messageEntityTextUrl(Cons_messageEntityTextUrl(offset: _1!, length: _2!, url: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityTonAddress(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityTonAddress(Cons_messageEntityTonAddress(offset: _1!, length: _2!))
             }
             else {
                 return nil

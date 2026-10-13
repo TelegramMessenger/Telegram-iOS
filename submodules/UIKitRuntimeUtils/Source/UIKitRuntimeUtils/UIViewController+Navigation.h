@@ -24,6 +24,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 - (void)internalSetStatusBarStyle:(UIStatusBarStyle)style animated:(BOOL)animated;
 - (void)internalSetStatusBarHidden:(BOOL)hidden animation:(UIStatusBarAnimation)animation;
 - (UIWindow * _Nullable)internalGetKeyboard;
+- (UIWindow * _Nullable)internalGetKeyboardForScene:(UIWindowScene * _Nullable)scene;
 
 @end
 

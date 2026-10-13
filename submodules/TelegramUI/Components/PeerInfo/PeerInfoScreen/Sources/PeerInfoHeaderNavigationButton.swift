@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import ContextUI
@@ -17,8 +18,8 @@ private final class MoreIconNode: ManagedAnimationNode {
     private let duration: Double = 0.21
     private var iconState: MoreIconNodeState = .more
     
-    init() {
-        super.init(size: CGSize(width: 30.0, height: 30.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 30.0, height: 30.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
     }
@@ -119,7 +120,7 @@ private final class MoreIconNode: ManagedAnimationNode {
     }
 }
 
-final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
+final class PeerInfoHeaderNavigationButton: HighlightTrackingButtonNode {
     let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
     private let textNode: ImmediateTextNode
@@ -292,7 +293,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 if let current = self.animationNode {
                     animationNode = current
                 } else {
-                    animationNode = MoreIconNode()
+                    animationNode = MoreIconNode(lottieSettings: .noAccountFallback)
                     self.animationNode = animationNode
                     self.contextSourceNode.addSubnode(animationNode)
                     animationNode.imageNode.layer.layerTintColor = self.contentsColor.cgColor

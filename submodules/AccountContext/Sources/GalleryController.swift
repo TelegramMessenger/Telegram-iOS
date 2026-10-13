@@ -10,6 +10,11 @@ public enum GalleryMediaSubject: Hashable {
     case pollOption(Data)
     case pollSolution
     case instantPageMedia(EngineMedia.Id)
+    /// A specific medium inside a rich message's `RichTextMessageAttribute` InstantPage. Rich media lives
+    /// in the attribute, not `message.media`, so `effectiveMedia` can hold several and the default
+    /// first-match resolution would open the wrong one. Distinct from `instantPageMedia`, whose only
+    /// consumer sits inside `GalleryData`'s `TelegramMediaWebpage` (link-preview) branch.
+    case richTextMedia(EngineMedia.Id)
 }
 
 public enum GalleryControllerItemSource {

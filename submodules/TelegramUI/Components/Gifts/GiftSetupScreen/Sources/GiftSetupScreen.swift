@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramNotices
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -408,22 +409,30 @@ private final class GiftSetupScreenComponent: Component {
                                 return
                             }
                             
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                    chatController.hintPlayNextOutgoingGift()
-                                    foundController = true
-                                    break
+                            let navigateToChat = {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                        chatController.hintPlayNextOutgoingGift()
+                                        foundController = true
+                                        break
+                                    }
                                 }
+                                if !foundController {
+                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    chatController.hintPlayNextOutgoingGift()
+                                    controllers.append(chatController)
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
                             }
-                            if !foundController {
-                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                chatController.hintPlayNextOutgoingGift()
-                                controllers.append(chatController)
+                            if component.peerId.namespace == Namespaces.Peer.CloudUser {
+                                let _ = (ApplicationSpecificNotice.incrementDismissedBirthdayPremiumGiftTip(accountManager: component.context.sharedContext.accountManager, peerId: component.peerId, timestamp: Int32(Date().timeIntervalSince1970))
+                                |> deliverOnMainQueue).startStandalone(completed: navigateToChat)
+                            } else {
+                                navigateToChat()
                             }
-                            navigationController.setViewControllers(controllers, animated: true)
                         }
                     }, error: { [weak self] error in
                         guard let self, let controller = self.environment?.controller() else {
@@ -546,6 +555,20 @@ private final class GiftSetupScreenComponent: Component {
                     guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
                         return
                     }
+                    
+                    let complete: () -> Void = {
+                        if let completion {
+                            completion()
+                            
+                            if let controller = self.environment?.controller() {
+                                controller.dismiss()
+                            }
+                        }
+                        
+                        Queue.mainQueue().after(2.5) {
+                            starsContext.load(force: true)
+                        }
+                    }
 
                     if peerId.namespace == Namespaces.Peer.CloudChannel, case let .starGift(starGift, _) = component.subject {
                         var controllers = navigationController.viewControllers
@@ -569,62 +592,59 @@ private final class GiftSetupScreenComponent: Component {
                         
                         navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
                     } else if peerId.namespace == Namespaces.Peer.CloudUser {
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                        var foundController = false
-                        for controller in controllers.reversed() {
-                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                chatController.hintPlayNextOutgoingGift()
-                                foundController = true
-                                break
-                            }
-                        }
-                        if !foundController {
-                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                            chatController.hintPlayNextOutgoingGift()
-                            controllers.append(chatController)
-                        }
-                        navigationController.setViewControllers(controllers, animated: true)
-                        
-                        if case let .starGift(starGift, _) = component.subject, let perUserLimit = starGift.perUserLimit {
-                            Queue.mainQueue().after(0.5) {
-                                let remains = max(0, perUserLimit.remains - 1)
-                                let text: String
-                                if remains == 0 {
-                                    text = presentationData.strings.Gift_Send_Limited_Success_Text_None
-                                } else {
-                                    text = presentationData.strings.Gift_Send_Limited_Success_Text(remains)
+                        let navigateToChat = {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
                                 }
-                                let tooltipController = UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .sticker(
-                                        context: context,
-                                        file: starGift.file,
-                                        loop: true,
-                                        title: presentationData.strings.Gift_Send_Limited_Success_Title,
-                                        text: text,
-                                        undoText: nil,
-                                        customAction: nil
-                                    ),
-                                    position: .top,
-                                    action: { _ in return true }
-                                )
-                                (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
                             }
+                            if !foundController {
+                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                chatController.hintPlayNextOutgoingGift()
+                                controllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                            
+                            if case let .starGift(starGift, _) = component.subject, let perUserLimit = starGift.perUserLimit {
+                                Queue.mainQueue().after(0.5) {
+                                    let remains = max(0, perUserLimit.remains - 1)
+                                    let text: String
+                                    if remains == 0 {
+                                        text = presentationData.strings.Gift_Send_Limited_Success_Text_None
+                                    } else {
+                                        text = presentationData.strings.Gift_Send_Limited_Success_Text(remains)
+                                    }
+                                    let tooltipController = UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .sticker(
+                                            context: context,
+                                            file: starGift.file,
+                                            loop: true,
+                                            title: presentationData.strings.Gift_Send_Limited_Success_Title,
+                                            text: text,
+                                            undoText: nil,
+                                            customAction: nil
+                                        ),
+                                        position: .top,
+                                        action: { _ in return true }
+                                    )
+                                    (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
+                                }
+                            }
+                            
+                            complete()
                         }
+                        let _ = (ApplicationSpecificNotice.incrementDismissedBirthdayPremiumGiftTip(accountManager: component.context.sharedContext.accountManager, peerId: component.peerId, timestamp: Int32(Date().timeIntervalSince1970))
+                        |> deliverOnMainQueue).startStandalone(completed: navigateToChat)
+                        return
                     }
                     
-                    if let completion {
-                        completion()
-                        
-                        if let controller = self.environment?.controller() {
-                            controller.dismiss()
-                        }
-                    }
-                    
-                    Queue.mainQueue().after(2.5) {
-                        starsContext.load(force: true)
-                    }
+                    complete()
                 }, error: { [weak self] error in
                     guard let self, let controller = self.environment?.controller() else {
                         return
@@ -667,7 +687,7 @@ private final class GiftSetupScreenComponent: Component {
                 let _ = (self.optionsPromise.get()
                 |> filter { $0 != nil }
                 |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self, starsContext] options in
                     guard let self, let component = self.component, let controller = self.environment?.controller() else {
                         return
                     }
@@ -815,7 +835,7 @@ private final class GiftSetupScreenComponent: Component {
                     targetFrame.origin.y = availableSize.height
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.3) {
+                            Queue.mainQueue().after(0.3) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -895,7 +915,7 @@ private final class GiftSetupScreenComponent: Component {
             if case .regular = environment.metrics.widthClass {
                 fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
             } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - environment.safeInsets.left * 2.0
             }
             let rawSideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5)
             let sideInset: CGFloat = rawSideInset + 24.0
@@ -983,6 +1003,7 @@ private final class GiftSetupScreenComponent: Component {
                         hasStickers: false,
                         hasGifs: false,
                         hideBackground: true,
+                        maskEdge: .clip,
                         forceHasPremium: true,
                         sendGif: nil
                     )
@@ -2077,7 +2098,8 @@ private final class GiftSetupScreenComponent: Component {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }
@@ -2166,30 +2188,6 @@ public class GiftSetupScreen: ViewControllerComponentContainer, GiftSetupScreenP
             } else {
                 self.dismiss(animated: false)
             }
-        }
-    }
-}
-
-private struct GiftConfiguration {
-    static var defaultValue: GiftConfiguration {
-        return GiftConfiguration(maxCaptionLength: 255)
-    }
-    
-    let maxCaptionLength: Int32
-    
-    fileprivate init(maxCaptionLength: Int32) {
-        self.maxCaptionLength = maxCaptionLength
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> GiftConfiguration {
-        if let data = appConfiguration.data {
-            var maxCaptionLength: Int32?
-            if let value = data["stargifts_message_length_max"] as? Double {
-                maxCaptionLength = Int32(value)
-            }
-            return GiftConfiguration(maxCaptionLength: maxCaptionLength ?? GiftConfiguration.defaultValue.maxCaptionLength)
-        } else {
-            return .defaultValue
         }
     }
 }

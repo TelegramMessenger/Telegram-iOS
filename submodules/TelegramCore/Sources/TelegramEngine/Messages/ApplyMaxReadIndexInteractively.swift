@@ -9,7 +9,37 @@ func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: Ac
         _internal_applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
     }
 }
-    
+
+/// Applies a read from a caller that has only a message id and no `MessageIndex` - a
+/// notification action or a Siri intent.
+///
+/// Never applies to a secret chat. Reading there is destructive and irreversible: it
+/// starts every message's autoremove countdown (below) and tells the other party the
+/// messages were seen, for messages the user has not actually opened. These callers act on
+/// an id the user never looked at - a notification they replied to, a Siri phrase - so the
+/// chat is left unread until it is opened, which is recoverable. That is also what these
+/// callers already did in effect: they passed `MessageIndex(id:, timestamp: 0)`, whose zero
+/// date matched no message, so a secret chat was never actually read. All that changes is
+/// that the invented index no longer becomes the chat's read marker, from where it was
+/// pushed as `messages.readEncryptedHistory(max_date: 0)` and rejected.
+///
+/// For every other peer the read state is id-based: it reads up to `messageId.id` and the
+/// index's timestamp is unused, so the id alone is enough. Resolve the stored message's
+/// real index anyway when there is one, since it is the honest value.
+///
+/// Reports whether a read was applied, so a caller that has to answer the user - a Siri
+/// intent - can say it did nothing rather than claim success.
+func _internal_applyMaxReadMessageIdInteractively(postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Bool, NoError> {
+    return postbox.transaction { transaction -> Bool in
+        guard messageId.peerId.namespace != Namespaces.Peer.SecretChat else {
+            return false
+        }
+        let index = transaction.getMessage(messageId)?.index ?? MessageIndex(id: messageId, timestamp: 0)
+        _internal_applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
+        return true
+    }
+}
+
 func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex) {
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     

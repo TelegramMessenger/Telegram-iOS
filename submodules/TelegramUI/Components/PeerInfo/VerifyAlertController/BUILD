@@ -18,6 +18,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ComponentFlow",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/Components/BalancedTextComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/TelegramUI/Components/TextFieldComponent",

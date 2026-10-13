@@ -25,6 +25,11 @@ swift_library(
         "//third-party/ZipArchive:ZipArchive",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/TelegramVoip",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
+        "//submodules/WalletContext",
+        "//submodules/CpuProfiler:CpuProfiler",
     ],
     visibility = [
         "//visibility:public",

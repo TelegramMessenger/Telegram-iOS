@@ -107,7 +107,10 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
         if self.pinnedPeers.contains(peerId) {
             return false
         }
-        if self.peers.contains(peerId) {
+        if self.peers.contains(peerId) || isLocalOnlyChatListFilterPeer(peerId) {
+            // A local-only peer is deliberately not added to `peers`: it is already in the folder
+            // implicitly, the server can never be told about it, and making it an explicit member
+            // would both surface it in the folder editor and consume a chats-per-folder slot.
             self.pinnedPeers.insert(peerId, at: 0)
             return true
         } else {
@@ -150,7 +153,9 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
     
     public mutating func setPeers(_ peers: [PeerId]) {
         self.peers = peers
-        self.pinnedPeers = self.pinnedPeers.filter { peers.contains($0) }
+        // Local-only peers are pinned without being members, and the chat pickers that produce
+        // `peers` cannot represent them, so they must survive a membership edit.
+        self.pinnedPeers = self.pinnedPeers.filter { peers.contains($0) || isLocalOnlyChatListFilterPeer($0) }
     }
 }
 
@@ -158,6 +163,50 @@ extension ChatListFilterIncludePeers {
     init(rawPeers: [PeerId], rawPinnedPeers: [PeerId]) {
         self.peers = rawPinnedPeers + rawPeers.filter { !rawPinnedPeers.contains($0) }
         self.pinnedPeers = rawPinnedPeers
+    }
+}
+
+// Secret chats have no Api.InputPeer representation, so apiInputPeer(_:) drops them from every
+// filter we upload and the server can never send one back. A secret chat that a filter references
+// locally (currently only by being pinned inside the folder) therefore has to be re-grafted onto
+// every server-sourced copy of that filter, or it is silently lost the next time the folder syncs.
+// This mirrors what synchronizePinnedChats does for the root chat list's pinned order.
+func isLocalOnlyChatListFilterPeer(_ peerId: PeerId) -> Bool {
+    return peerId.namespace == Namespaces.Peer.SecretChat
+}
+
+private func mergingLocalOnlyPeerIds(remote: [PeerId], local: [PeerId]) -> [PeerId] {
+    let localOnly = local.enumerated().filter { isLocalOnlyChatListFilterPeer($0.element) }
+    if localOnly.isEmpty {
+        return remote.filter { !isLocalOnlyChatListFilterPeer($0) }
+    }
+    var result = remote.filter { !isLocalOnlyChatListFilterPeer($0) }
+    for (index, peerId) in localOnly {
+        result.insert(peerId, at: min(index, result.count))
+    }
+    return result
+}
+
+extension ChatListFilter {
+    /// Returns `self` (a filter as the server knows it) with the local-only peers of `localFilter`
+    /// restored at their previous positions. Returns `self` unchanged when there are none.
+    func withLocalOnlyPeers(from localFilter: ChatListFilter?) -> ChatListFilter {
+        guard case let .filter(id, title, emoticon, data) = self else {
+            return self
+        }
+        guard let localFilter, case let .filter(_, _, _, localData) = localFilter else {
+            return self
+        }
+        var updatedData = data
+        updatedData.includePeers = ChatListFilterIncludePeers(
+            peers: mergingLocalOnlyPeerIds(remote: data.includePeers.peers, local: localData.includePeers.peers),
+            pinnedPeers: mergingLocalOnlyPeerIds(remote: data.includePeers.pinnedPeers, local: localData.includePeers.pinnedPeers)
+        )
+        updatedData.excludePeers = mergingLocalOnlyPeerIds(remote: data.excludePeers, local: localData.excludePeers)
+        if updatedData == data {
+            return self
+        }
+        return .filter(id: id, title: title, emoticon: emoticon, data: updatedData)
     }
 }
 
@@ -1550,7 +1599,10 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
                 return postbox.transaction { transaction -> Void in
                     let _ = updateChatListFiltersState(transaction: transaction, { state in
                         var state = state
-                        state.filters = remoteFilters
+                        let currentFilters = state.filters
+                        state.filters = remoteFilters.map { remoteFilter in
+                            return remoteFilter.withLocalOnlyPeers(from: currentFilters.first(where: { $0.id == remoteFilter.id }))
+                        }
                         state.remoteFilters = state.filters
                         state.displayTags = remoteTagsEnabled
                         state.remoteDisplayTags = state.displayTags
@@ -1575,7 +1627,7 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
             for id in remotelyAddedFilters {
                 if let filter = remoteFilters.first(where: { $0.id == id }) {
                     if let index = mergedFilters.firstIndex(where: { $0.id == id }) {
-                        mergedFilters[index] = filter
+                        mergedFilters[index] = filter.withLocalOnlyPeers(from: mergedFilters[index])
                     } else {
                         mergedFilters.append(filter)
                     }
@@ -1602,7 +1654,7 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
             for filter in mergedFilters {
                 let updated: Bool
                 if let index = remoteFilters.firstIndex(where: { $0.id == filter.id }) {
-                    updated = remoteFilters[index] != filter
+                    updated = remoteFilters[index].withLocalOnlyPeers(from: filter) != filter
                 } else {
                     updated = true
                 }

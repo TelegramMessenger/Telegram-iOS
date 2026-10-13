@@ -273,28 +273,9 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
         }
     }
     if let entities = entities?.entities {
-        let updatedString = NSMutableAttributedString(attributedString: attributedText)
-        
-        for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
-            guard case let .CustomEmoji(_, fileId) = entity.type else {
-                continue
-            }
-            
-            let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-            if range.upperBound >= updatedString.length {
-                continue
-            }
-            
-            let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
-            var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
-            
-            let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
-            updatedString.replaceCharacters(in: range, with: insertString)
-        }
-        attributedText = updatedString
+        attributedText = stringWithAppliedCustomEmojiEntities(attributedText, entities: entities, message: message._asMessage())
     }
-    
+
     return attributedText
 }
 
@@ -314,7 +295,7 @@ public func messageContentKind(contentSettings: ContentSettings, message: Engine
     }
     for attribute in message.attributes {
         if let attribute = attribute as? RichTextMessageAttribute {
-            return .text(attribute.instantPage.previewAttributedText(strings: strings))
+            return .text(attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia))
         }
     }
     return .text(messageTextWithAttributes(message: message))
@@ -507,6 +488,12 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
 
 public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (NSAttributedString, Bool, Bool) {
     let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
+    if message.richText != nil {
+        let result = stringForMediaKind(contentKind, strings: strings)
+        if contentKind.key != .text || result.0.length != 0 {
+            return (result.0, result.1, false)
+        }
+    }
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo, .poll].contains(contentKind.key) {
         return (foldLineBreaks(messageTextWithAttributes(message: message)), false, true)
     }

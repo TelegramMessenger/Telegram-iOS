@@ -1,7 +1,7 @@
 {
-    "app": "12.9.2",
-    "xcode": "26.2",
+    "app": "13.0",
+    "xcode": "26.6",
     "deploy_xcode": "26.2",
-    "bazel": "8.4.2:45e9388abf21d1107e146ea366ad080eb93cb6a5f3a4a3b048f78de0bc3faffa",
+    "bazel": "9.2.0:dd466352a3e4d3581b8898740ee1ff208866ccbe25f8d367c5dcb950219587e6",
     "macos": "26"
 }

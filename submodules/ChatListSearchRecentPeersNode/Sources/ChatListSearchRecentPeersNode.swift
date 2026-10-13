@@ -207,7 +207,9 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         theme: PresentationTheme,
         mode: HorizontalPeerItemMode,
         strings: PresentationStrings,
-        peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false)
+        peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false,
+        peerFilter: ((EnginePeer) -> Bool)? = nil,
+        displayUnreadBadges: Bool = true)
     {
         self.theme = theme
         self.strings = strings
@@ -247,7 +249,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             case let .peers(peers):
                 return combineLatest(queue: .mainQueue(),
                     peers.filter {
-                        !$0.isDeleted
+                        !$0.isDeleted && (peerFilter?(EnginePeer($0)) ?? true)
                     }.map {
                         stateManager.postbox.peerView(id: $0.id)
                     }
@@ -310,7 +312,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             if let strongSelf = self {
                 var entries: [ChatListSearchRecentPeersEntry] = []
                 for peer in peers.0 {
-                    entries.append(ChatListSearchRecentPeersEntry(index: entries.count, peer: peer, presence: peers.2[peer.id], unreadBadge: peers.1[peer.id], theme: themeAndStrings.0, strings: themeAndStrings.1, itemCustomWidth: itemCustomWidth))
+                    entries.append(ChatListSearchRecentPeersEntry(index: entries.count, peer: peer, presence: peers.2[peer.id], unreadBadge: displayUnreadBadges ? peers.1[peer.id] : nil, theme: themeAndStrings.0, strings: themeAndStrings.1, itemCustomWidth: itemCustomWidth))
                 }
                 
                 let animated = !firstTime.swap(false)

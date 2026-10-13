@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1888,7 +1889,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsTextNode.lineSpacing = 0.2
         self.emptyResultsTextNode.isHidden = true
 
-        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         self.emptyResultsAnimationNode.isHidden = true
 
         if key == .channels || key == .apps {
@@ -1911,7 +1912,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             self.emptyRecentTextNode = emptyRecentTextNode
 
-            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl()
+            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             emptyRecentAnimationNode.isHidden = true
             self.emptyRecentAnimationNode = emptyRecentAnimationNode
 
@@ -3668,6 +3669,16 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let sourceNode = sourceNode as? ChatListItemNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
+        }, openCommunity: { [weak self] communityId in
+            guard let self, let navigationController = self.navigationController else {
+                return
+            }
+            let controller = self.context.sharedContext.makeCommunityViewScreen(
+                context: self.context,
+                communityId: communityId,
+                mode: .sheet
+            )
+            navigationController.pushViewController(controller)
         }, openStarsTopup: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
@@ -6179,9 +6190,9 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
 
             var itemNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
-                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: (i == items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: (i == items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNodes.append(node)
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
             }
 

@@ -62,7 +62,7 @@ final class TableCellAlignmentTests: XCTestCase {
                    Row(id: BlockID("r1"), cells: [cell("c","C"), cell("d","D")])]))], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 400); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)
         v.setSelectionVerticalAlignment(.bottom)
         v.setSelectionHorizontalAlignment(.right)

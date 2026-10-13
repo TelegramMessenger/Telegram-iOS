@@ -194,7 +194,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         self.view.endEditing(true)
         
-        self.context.joinGroupCall(peerId: peerId, invite: invite, requestJoinAsPeerId: { completion in
+        self.context.joinGroupCall(peerId: peerId, invite: invite, requestJoinAsPeerId: { [weak self] completion in
             let currentAccountPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
             |> mapToSignal { peer -> Signal<EnginePeer, NoError> in
                 if let peer {

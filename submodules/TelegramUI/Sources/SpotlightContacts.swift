@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramCore
 import Display
 import CoreSpotlight
-import MobileCoreServices
+import UniformTypeIdentifiers
 
 private let roundCorners = { () -> UIImage in
     let diameter: CGFloat = 60.0
@@ -149,7 +149,7 @@ private final class SpotlightIndexStorage {
                 
                 let itemDataPath = path + "/data.json"
                 
-                let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
+                let attributeSet = CSSearchableItemAttributeSet(itemContentType: UTType.text.identifier)
                 attributeSet.version = "\(UInt64.random(in: 0 ..< UInt64.max))"
                 if !item.firstName.isEmpty && !item.lastName.isEmpty {
                     attributeSet.title = "\(item.firstName) \(item.lastName)"

@@ -68,7 +68,11 @@ func secretChatAdvanceRekeySessionIfNeeded(encryptionProvider: EncryptionProvide
                             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                         }
                         
-                        assert(remoteKeyFingerprint == keyFingerprint)
+                        if remoteKeyFingerprint != keyFingerprint {
+                            Logger.shared.log("SecretChat", "peerId \(peerId) rekey session \(rekeySession.id) key fingerprint mismatch, aborting session")
+                            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsAbortSession(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), rekeySessionId: rekeySession.id), mutable: true, delivered: false))
+                            return state.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceState.withUpdatedRekeyState(nil)))
+                        }
                         
                         transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SecretChatOutgoingOperation(contents: .pfsCommitKey(layer: sequenceState.layerNegotiationState.activeLayer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), rekeySessionId: rekeySession.id, keyFingerprint: keyFingerprint), mutable: true, delivered: false))
                         

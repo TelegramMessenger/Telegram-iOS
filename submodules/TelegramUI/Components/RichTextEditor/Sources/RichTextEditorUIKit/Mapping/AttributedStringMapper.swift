@@ -1,5 +1,6 @@
 #if canImport(UIKit)
 import UIKit
+import CoreText
 import RichTextEditorCore
 
 @available(iOS 13.0, *)
@@ -39,16 +40,27 @@ public struct AttributedStringMapper {
     /// Host-provided formula renderer. `nil` (or returning nil for invalid LaTeX) makes formula runs
     /// display as raw LaTeX while preserving semantic metadata.
     public var formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)?
+    /// Host-provided button type icon, already tinted to the colour it is handed. A nil RETURN means
+    /// this action has no icon, and the pill then reserves no width for one either — one question with
+    /// one answer, so what is drawn and what was measured cannot disagree. (An icon that exists but
+    /// whose image could not be loaded is a non-nil `RichTextButtonIcon` with a nil `image`; see there.)
+    ///
+    /// It has to come from the host: the icon depends on the button's ACTION, and the editor's
+    /// Telegram-free model carries every action it cannot name as an opaque `.unsupported` blob. Only
+    /// the host can decode that back into the action the renderer will resolve an icon from.
+    public var buttonIconProvider: ((ButtonAction) -> RichTextButtonIcon?)?
 
     public init(styleSheet: StyleSheet = .default, emojiScale: CGFloat = 1.0,
                 theme: RichTextEditorTheme = .default,
                 baseWritingDirection: NSWritingDirection = .natural,
-                formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)? = nil) {
+                formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)? = nil,
+                buttonIconProvider: ((ButtonAction) -> RichTextButtonIcon?)? = nil) {
         self.styleSheet = styleSheet
         self.emojiScale = emojiScale
         self.theme = theme
         self.baseWritingDirection = baseWritingDirection
         self.formulaRenderer = formulaRenderer
+        self.buttonIconProvider = buttonIconProvider
     }
 
     /// A copy of this mapper that renders table-cell content (a smaller body/quote base size, see
@@ -57,17 +69,19 @@ public struct AttributedStringMapper {
     /// via their source box's `mapper`).
     public func tableCellVariant() -> AttributedStringMapper {
         AttributedStringMapper(styleSheet: .tableCells, emojiScale: emojiScale, theme: theme,
-                               baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer)
+                               baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer,
+                               buttonIconProvider: buttonIconProvider)
     }
 
-    /// A copy that renders body/pull-quote content at `size` base points, PRESERVING this mapper's
+    /// A copy that renders body/pull-quote content at `size` points, PRESERVING this mapper's
     /// stylesheet customizations (quote insets, spacing, metrics), emoji scale, theme, and writing direction.
     /// (Unlike `tableCellVariant()`, which swaps in the fixed `.tableCells` stylesheet.)
-    public func withBodyBaseSize(_ size: CGFloat) -> AttributedStringMapper {
+    public func withBodyFontSize(_ size: CGFloat) -> AttributedStringMapper {
         var s = styleSheet
-        s.bodyBaseSize = size
+        s.metrics.body.size = size
         return AttributedStringMapper(styleSheet: s, emojiScale: emojiScale, theme: theme,
-                                      baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer)
+                                      baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer,
+                                      buttonIconProvider: buttonIconProvider)
     }
 
     /// Points to enlarge a rendered inline emoji beyond its glyph box, per paragraph style (decoupled from
@@ -93,6 +107,101 @@ public struct AttributedStringMapper {
         return FormulaTextAttachment(latex: latex, renderResult: result)
     }
 
+    /// The ONE construction path for both inline and block-row pills — they must agree on whether `size`
+    /// includes the padding, because the label centring reads exactly `size.width - 2 * horizontalPadding`.
+    /// Two independent constructions drifted apart once already in the renderer.
+    /// `horizontalPadding` overrides the padding this pill kind would otherwise take. Passed by the row
+    /// packer's tight-fallback measurement (`richTextMeasureRowButton`); every other caller leaves it nil.
+    func buttonAttachment(button: ButtonRef, isBlockPill: Bool, maxWidth: CGFloat?,
+                          horizontalPadding: CGFloat? = nil) -> ButtonTextAttachment {
+        let metrics = styleSheet.metrics.button
+        // A link-styled ROW pill draws no background, so it takes no inner padding either — its label
+        // sits flush and reads as a link. Mirrors `instantPageBlockButtonPadding(for:)` in the renderer.
+        let hPad: CGFloat
+        if let horizontalPadding {
+            hPad = horizontalPadding
+        } else if isBlockPill {
+            hPad = button.isLink ? 0.0 : metrics.blockHorizontalPadding
+        } else {
+            hPad = metrics.inlineHorizontalPadding
+        }
+        let vPad = metrics.verticalPadding
+        let fontSize = isBlockPill ? metrics.blockFontSize : metrics.inlineFontSize
+
+        // A button label carries its OWN typography rather than inheriting the paragraph's: semibold, at a
+        // fixed size that does not scale with any host font-size setting (the renderer does the same).
+        let label = NSMutableAttributedString()
+        for run in button.label {
+            var attrs = attributes(for: run.attributes, style: .body)
+            // Strip only a NESTED BUTTON attachment (not representable inside a label). An EMOJI
+            // attachment must survive: it reserves the emoji's advance in the measured label, and
+            // `ButtonPillView.syncEmoji` locates it to host a live view over the pill.
+            if attrs[.attachment] is ButtonTextAttachment {
+                attrs.removeValue(forKey: .attachment)
+            }
+            attrs[.paragraphStyle] = nil
+            label.append(NSAttributedString(string: run.text, attributes: attrs))
+        }
+        if label.length > 0 {
+            label.addAttribute(.font, value: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                               range: NSRange(location: 0, length: label.length))
+        }
+        let colors = theme.resolvedButtonColors(color: button.color, isDisabled: button.action == .disabled,
+                                                isLink: isBlockPill && button.isLink)
+        // Resolved BEFORE measuring, because whether there is an icon is also whether there is width to
+        // reserve for one. One question, one answer — a separate "does it have an icon" predicate could
+        // disagree with what is actually drawn.
+        let icon = buttonIconProvider?(button.action)
+        // Only an INLINE pill pays width for its icon; a block pill's badge overlays its fill and the
+        // row packer keeps the label clear of it with `blockIconReserve` instead.
+        let iconReserve: CGFloat = (icon != nil && !isBlockPill) ? styleSheet.metrics.button.inlineIconReserve : 0.0
+
+        var effective: NSAttributedString = label
+        var truncated = false
+        if let maxWidth {
+            (effective, truncated) = truncatedButtonLabel(label, availableWidth: max(0.0, maxWidth - hPad * 2.0 - iconReserve))
+        }
+
+        var ascent: CGFloat = 0.0
+        var descent: CGFloat = 0.0
+        var inkWidth: CGFloat = 0.0
+        if effective.length > 0 {
+            let line = CTLineCreateWithAttributedString(effective)
+            inkWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, nil))
+        } else {
+            // An empty label still needs a real box, or the pill collapses and cannot be tapped.
+            let font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+            ascent = font.ascender
+            descent = -font.descender
+        }
+        return ButtonTextAttachment(
+            button: button,
+            labelString: effective,
+            size: CGSize(width: inkWidth + hPad * 2.0 + iconReserve, height: ascent + descent + vPad * 2.0),
+            ascent: ascent + vPad,
+            descent: descent + vPad,
+            horizontalPadding: hPad,
+            isTruncated: truncated,
+            colors: colors,
+            icon: icon,
+            iconReserve: iconReserve,
+            isBlockPill: isBlockPill
+        )
+    }
+
+    /// Whether a button carries a type icon — the RESERVE question, asked without rasterising.
+    ///
+    /// Falls back to `richTextButtonHasBadge` when no host provider is registered. That coarse rule is
+    /// what the row packer used before there was a provider, so an unconfigured editor (a preview, a
+    /// test) keeps the geometry it had rather than silently re-flowing its rows; a configured one gets
+    /// the renderer's exact answer, including for the actions the editor's own model cannot name.
+    func buttonHasIcon(_ action: ButtonAction) -> Bool {
+        if let buttonIconProvider {
+            return buttonIconProvider(action) != nil
+        }
+        return richTextButtonHasBadge(action)
+    }
+
     func attributedFormulaString(latex: String, attributes baseAttributes: [NSAttributedString.Key: Any]) -> NSAttributedString {
         var attrs = baseAttributes
         attrs[.rtFormula] = latex
@@ -112,6 +221,12 @@ public struct AttributedStringMapper {
             return [.font: styleSheet.font(for: style, attributes: ca),
                     .attachment: EmojiTextAttachment(ref: emoji, scale: emojiScale,
                                                      renderBoost: emojiRenderBoost(for: style))]
+        }
+        if let button = ca.button {
+            // A button run is purely the inline atom, like an emoji: no other character attribute applies
+            // (they would be ignored on read-back anyway, and a pill draws its own label typography).
+            return [.font: styleSheet.font(for: style, attributes: ca),
+                    .attachment: buttonAttachment(button: button, isBlockPill: false, maxWidth: nil)]
         }
         var dict: [NSAttributedString.Key: Any] = [:]
         dict[.font] = styleSheet.font(for: style, attributes: ca)
@@ -172,6 +287,10 @@ public struct AttributedStringMapper {
         var ca = CharacterAttributes()
         if let att = dict[.attachment] as? FormulaTextAttachment {
             ca.formula = att.latex
+            return ca
+        }
+        if let att = dict[.attachment] as? ButtonTextAttachment {
+            ca.button = att.button   // button-only; the render-time label/colour never enter the model
             return ca
         }
         if let att = dict[.attachment] as? EmojiTextAttachment {
@@ -259,4 +378,36 @@ public struct AttributedStringMapper {
         return runs
     }
 }
+
+/// Tail-ellipsis truncation on CLUSTER boundaries, with the ellipsis inheriting the label's own
+/// attributes. A pill wider than its line cannot be re-broken by the line-breaker (that recovery path
+/// requires the line to hold more than the pill), so the label must shrink instead of overflowing.
+///
+/// `truncated` is reported rather than inferred from the returned string: a one-character label
+/// replaced by a bare ellipsis keeps the same length, so a length comparison would miss exactly the
+/// case that is cut hardest.
+@available(iOS 13.0, *)
+private func truncatedButtonLabel(_ labelString: NSAttributedString, availableWidth: CGFloat) -> (label: NSAttributedString, truncated: Bool) {
+    guard labelString.length > 0 else {
+        return (labelString, false)
+    }
+    let fullWidth = CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(labelString), nil, nil, nil))
+    guard fullWidth > availableWidth else {
+        return (labelString, false)
+    }
+    let tailAttributes = labelString.attributes(at: labelString.length - 1, effectiveRange: nil)
+    let ellipsis = NSAttributedString(string: "\u{2026}", attributes: tailAttributes)
+    let ellipsisWidth = CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(ellipsis), nil, nil, nil))
+    let widthForText = availableWidth - ellipsisWidth
+    guard widthForText > 0.0 else {
+        return (ellipsis, true)
+    }
+    let typesetter = CTTypesetterCreateWithAttributedString(labelString)
+    let fittingCount = CTTypesetterSuggestClusterBreak(typesetter, 0, Double(widthForText))
+    let result = NSMutableAttributedString(attributedString: labelString.attributedSubstring(
+        from: NSRange(location: 0, length: min(fittingCount, labelString.length))))
+    result.append(ellipsis)
+    return (result, true)
+}
+
 #endif

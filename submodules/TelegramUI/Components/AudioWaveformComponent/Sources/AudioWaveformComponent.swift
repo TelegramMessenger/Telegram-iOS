@@ -346,7 +346,11 @@ public final class AudioWaveformComponent: Component {
                 self.revealProgress = 0.0
                 self.setNeedsDisplay()
                 
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.08, execute: {
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.08, execute: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+
                     self.animator = DisplayLinkAnimator(duration: 0.8, from: 0.0, to: 1.0, update: { [weak self] progress in
                         guard let strongSelf = self else {
                             return

@@ -23,6 +23,7 @@ import TextFormat
 public enum AttachmentButtonType: Equatable {
     case gallery
     case file
+    case money
     case location
     case todo
     case quickReply
@@ -43,6 +44,8 @@ public enum AttachmentButtonType: Equatable {
             return "gallery"
         case .file:
             return "file"
+        case .money:
+            return "money"
         case .location:
             return "location"
         case .todo:
@@ -82,6 +85,12 @@ public enum AttachmentButtonType: Equatable {
             }
         case .file:
             if case .file = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .money:
+            if case .money = rhs {
                 return true
             } else {
                 return false
@@ -177,8 +186,10 @@ public protocol AttachmentContainable: ViewController, MinimizableController {
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
+    var allowsCollapsing: Bool { get }
     var isPanGestureEnabled: (() -> Bool)? { get }
     var isInnerPanGestureEnabled: (() -> Bool)? { get }
+    var ignoresInputHeightInRegularLayout: Bool { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? { get }
 
@@ -238,12 +249,20 @@ public extension AttachmentContainable {
         return nil
     }
 
+    var allowsCollapsing: Bool {
+        return true
+    }
+
     var isPanGestureEnabled: (() -> Bool)? {
         return nil
     }
 
     var isInnerPanGestureEnabled: (() -> Bool)? {
         return nil
+    }
+
+    var ignoresInputHeightInRegularLayout: Bool {
+        return false
     }
 
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? {
@@ -426,11 +445,13 @@ public class AttachmentController: ViewController, MinimizableController {
     private let style: Style
     private let chatLocation: ChatLocation?
     private let isScheduledMessages: Bool
+    private let isEditingMessage: Bool
     private var buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private var hasTextInput: Bool
     private let isFullSize: Bool
+    private let roundsTopCornersInRegularLayout: Bool
     private let customEmojiAvailable: Bool
     public var animateAppearance: Bool = false
 
@@ -596,7 +617,7 @@ public class AttachmentController: ViewController, MinimizableController {
             self.wrapperNode = ASDisplayNode()
             self.wrapperNode.clipsToBounds = true
 
-            self.container = AttachmentContainer(presentationData: self.presentationData, isFullSize: controller.isFullSize, glass: controller._hasGlassStyle, hasPill: controller.style == .glass)
+            self.container = AttachmentContainer(presentationData: self.presentationData, isFullSize: controller.isFullSize, glass: controller._hasGlassStyle, hasPill: controller.style == .glass, roundsTopCornersInRegularLayout: controller.roundsTopCornersInRegularLayout)
             self.container.canHaveKeyboardFocus = true
 
             let panelStyle: AttachmentPanel.Style
@@ -607,7 +628,7 @@ public class AttachmentController: ViewController, MinimizableController {
                 panelStyle = .legacy
             }
 
-            self.panel = AttachmentPanel(controller: controller, style: panelStyle, context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, customEmojiAvailable: controller.customEmojiAvailable, updatedPresentationData: controller.updatedPresentationData)
+            self.panel = AttachmentPanel(controller: controller, style: panelStyle, context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, isEditingMessage: controller.isEditingMessage, customEmojiAvailable: controller.customEmojiAvailable, updatedPresentationData: controller.updatedPresentationData)
             self.panel.fromMenu = controller.fromMenu
             self.panel.isStandalone = controller.isStandalone
 
@@ -1122,24 +1143,51 @@ public class AttachmentController: ViewController, MinimizableController {
         }
 
         private var isAnimating = false
+        private var pendingRegularLayoutAnimateIn = false
+
+        override func didEnterHierarchy() {
+            super.didEnterHierarchy()
+
+            if self.pendingRegularLayoutAnimateIn {
+                self.pendingRegularLayoutAnimateIn = false
+                if !self.isDismissing {
+                    self.animateIn()
+                }
+            }
+        }
+
         func animateIn() {
             guard let layout = self.validLayout, let controller = self.controller else {
+                return
+            }
+
+            if layout.metrics.widthClass == .regular, controller.animateAppearance, controller.roundsTopCornersInRegularLayout, !self.isInHierarchy {
+                self.pendingRegularLayoutAnimateIn = true
                 return
             }
 
             self.isAnimating = true
             if case .regular = layout.metrics.widthClass {
                 if controller.animateAppearance {
-                    let targetPosition = self.position
-                    let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
-
-                    self.position = startPosition
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
-                    transition.animateView(allowUserInteraction: true, {
-                        self.position = targetPosition
-                    }, completion: {  _ in
-                        self.isAnimating = false
-                    })
+                    if controller.roundsTopCornersInRegularLayout {
+                        // Navigation owns the root node's frame. Animate the panel layers
+                        // additively so subsequent layout updates preserve the entrance.
+                        transition.animatePositionAdditive(node: self.wrapperNode, offset: layout.size.height, completion: { [weak self] _ in
+                            self?.isAnimating = false
+                        })
+                        transition.animatePositionAdditive(node: self.shadowNode, offset: layout.size.height, completion: { _ in })
+                    } else {
+                        let targetPosition = self.position
+                        let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
+
+                        self.position = startPosition
+                        transition.animateView(allowUserInteraction: true, {
+                            self.position = targetPosition
+                        }, completion: { _ in
+                            self.isAnimating = false
+                        })
+                    }
                 } else {
                     self.isAnimating = false
                 }
@@ -1377,6 +1425,11 @@ public class AttachmentController: ViewController, MinimizableController {
                 return
             }
 
+            var layout = layout
+            if layout.metrics.widthClass == .regular, self.currentControllers.last?.ignoresInputHeightInRegularLayout == true {
+                layout = layout.withUpdatedInputHeight(nil)
+            }
+
             transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 2.0)))
 
             let fromMenu = controller.fromMenu
@@ -1393,7 +1446,7 @@ public class AttachmentController: ViewController, MinimizableController {
                     let inputHeight = layout.inputHeight ?? 0.0
                     let availableHeight = layout.size.height - inputHeight
 
-                    let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
+                    let size = CGSize(width: 390.0, height: min(670.0, availableHeight))
 
                     let insets = layout.insets(options: [.input])
                     let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
@@ -1467,17 +1520,8 @@ public class AttachmentController: ViewController, MinimizableController {
                 hasPanel = false
             }
 
-            var panelOffset: CGFloat = 0.0
-            if case .glass = controller.style {
-                if layout.metrics.isTablet {
-                    panelOffset = 18.0
-                } else {
-                    panelOffset = 8.0
-                }
-            }
-
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, selectionCount: self.selectionCount, elevateProgress: !hasPanel && !hasButton, hideButtons: !self.isPanelVisible && self.panel.hasMediaAccessoryPanel, transition: transition)
+            let (panelHeight, panelOffset) = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, selectionCount: self.selectionCount, elevateProgress: !hasPanel && !hasButton, hideButtons: !self.isPanelVisible && self.panel.hasMediaAccessoryPanel, transition: transition)
 
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight + panelOffset
@@ -1557,11 +1601,15 @@ public class AttachmentController: ViewController, MinimizableController {
         style: Style = .legacy,
         chatLocation: ChatLocation?,
         isScheduledMessages: Bool = false,
+        /// The result replaces the media of a message being edited rather than sending a new message, so
+        /// send options (schedule, silent, effects) are never offered.
+        isEditingMessage: Bool = false,
         buttons: [AttachmentButtonType],
         initialButton: AttachmentButtonType = .gallery,
         fromMenu: Bool = false,
         hasTextInput: Bool = true,
         isFullSize: Bool = false,
+        roundsTopCornersInRegularLayout: Bool = false,
         makeEntityInputView: @escaping () -> UIView? = { return nil },
         customEmojiAvailable: Bool = true)
     {
@@ -1570,11 +1618,13 @@ public class AttachmentController: ViewController, MinimizableController {
         self.style = style
         self.chatLocation = chatLocation
         self.isScheduledMessages = isScheduledMessages
+        self.isEditingMessage = isEditingMessage
         self.buttons = buttons
         self.initialButton = initialButton
         self.fromMenu = fromMenu
         self.hasTextInput = hasTextInput
         self.isFullSize = isFullSize
+        self.roundsTopCornersInRegularLayout = roundsTopCornersInRegularLayout
         self.customEmojiAvailable = customEmojiAvailable
 
         super.init(navigationBarPresentationData: nil)

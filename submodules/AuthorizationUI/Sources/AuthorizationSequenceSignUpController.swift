@@ -53,7 +53,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         self.presentationData = presentationData
         self.back = back
         
-        self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
+        self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme, encircled: false, navigation: true)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))

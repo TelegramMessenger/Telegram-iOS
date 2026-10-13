@@ -569,17 +569,17 @@ private final class ItemView: UIView, SparseItemGridView {
         let messageItemNode: ListViewItemNode
         if let current = self.messageItemNode {
             messageItemNode = current
-            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), neighbors: .none, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 current.contentSize = layout.contentSize
                 current.insets = layout.insets
 
-                apply(ListViewItemApply(isOnScreen: true))
+                apply(ListViewItemApply())
             })
         } else {
             var itemNode: ListViewItemNode?
-            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                 itemNode = node
-                apply().1(ListViewItemApply(isOnScreen: true))
+                apply().1(ListViewItemApply())
             })
             messageItemNode = itemNode!
             self.messageItemNode = messageItemNode
@@ -601,11 +601,11 @@ private final class ItemView: UIView, SparseItemGridView {
 
     func update(size: CGSize, insets: UIEdgeInsets) {
         if let messageItem = self.messageItem, let messageItemNode = self.messageItemNode {
-            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), neighbors: .none, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 messageItemNode.contentSize = layout.contentSize
                 messageItemNode.insets = layout.insets
 
-                apply(ListViewItemApply(isOnScreen: true))
+                apply(ListViewItemApply())
             })
             
             messageItemNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -769,9 +769,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
             )
 
             var itemNode: ListViewItemNode?
-            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: 400.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: 400.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                 itemNode = node
-                apply().1(ListViewItemApply(isOnScreen: true))
+                apply().1(ListViewItemApply())
             })
 
             guard let fileItemNode = itemNode as? ListMessageFileItemNode else {
@@ -1394,6 +1394,11 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         var processedOnBeginFastScrolling = false
         self.itemGridBinding.onBeginFastScrollingImpl = { [weak self] in
             guard let strongSelf = self else {
+                return
+            }
+            // The tooltip points to the calendar, which a pane without one (a thread) does not
+            // offer; showing it anyway would also spend the one-time notice.
+            if strongSelf.calendarSource == nil {
                 return
             }
             if processedOnBeginFastScrolling {
@@ -2370,9 +2375,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 )
 
                 var itemNode: ListViewItemNode?
-                messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
 
                 if let itemNode = itemNode {

@@ -111,6 +111,14 @@ extension DocumentCanvasView {
         return forward ? (atOrAfter ?? atOrBefore ?? p) : (atOrBefore ?? atOrAfter ?? p)
     }
 
+    /// D24 legacy hook (Task 24, Family 1) for `LegacyRichTextInputBackend`'s `beginningOfDocument`/
+    /// `endOfDocument`/`position(from:offset:)` bodies: a `legacy`-prefixed forward to
+    /// `snapToRenderable(_:forward:)` above, unchanged, so the backend may reach it through the D24
+    /// escape hatch (which is permitted to invoke only `legacy…`-prefixed hooks).
+    func legacySnapToRenderable(_ pos: Int, forward: Bool) -> Int {
+        snapToRenderable(pos, forward: forward)
+    }
+
     /// The first caret position in the block immediately AFTER `table` (where Tab exits the table to),
     /// or nil when the table is the document's last block. A paragraph → its text start; an image → the
     /// gap before it (the GapCursor); a following table → its first cell.
@@ -202,7 +210,7 @@ extension DocumentCanvasView {
                     let nr = regions[j]
                     let lineH = max(nr.layout.caretRect(atOffset: 0).height, 16)
                     let probeY = down ? nr.canvasOrigin.y + lineH / 2
-                                      : nr.canvasOrigin.y + max(nr.layout.boundingHeight, lineH) - lineH / 2
+                                      : nr.canvasOrigin.y + max(nr.layout.correctedBoundingHeight, lineH) - lineH / 2
                     let stepped = closestGlobalPosition(to: CGPoint(x: caret.midX - off, y: probeY))
                     if stepped != pos { return stepped }
                 }
@@ -217,9 +225,21 @@ extension DocumentCanvasView {
         return snapped
     }
 
+    // TASK 24 (Family 1): one-line router. The full stepping algorithm — grapheme-aware horizontal
+    // steps, geometric vertical steps, the captionless-atom-gap step-through (via `nextTextPosition`/
+    // `prevTextPosition`/`verticalPosition` above), and the defense-in-depth renderable snap on a
+    // vertical move — is UNCHANGED, moved verbatim to `legacyPositionOffset(from:in:offset:)` just
+    // below. This is the OS-facing vertical-nav witness: hardware arrows are driven by the OS through
+    // this method + the `selectedTextRange` setter, not `keyCommands`.
     func position(from position: UITextPosition, in direction: UITextLayoutDirection, offset: Int) -> UITextPosition? {
-        guard let p = position as? DocumentTextPosition else { return nil }
-        var pos = p.offset
+        inputBackend.position(from: position, in: direction, offset: offset)
+    }
+
+    /// D24 legacy hook for `position(from:in:offset:)` above — the verbatim former body, with the
+    /// `UITextPosition`/`LegacyTextPosition` identity cast now done by the backend caller (Task 44
+    /// still owns moving that identity itself; this hook works in plain `Int` global offsets only).
+    func legacyPositionOffset(from pos: Int, in direction: UITextLayoutDirection, offset: Int) -> Int {
+        var pos = pos
         switch direction {
         case .right: for _ in 0..<offset { pos = nextTextPosition(after: pos) }
         case .left:  for _ in 0..<offset { pos = prevTextPosition(before: pos) }
@@ -232,7 +252,7 @@ extension DocumentCanvasView {
         // future vertical result drifting onto a structural slot. Horizontal moves keep their exact existing
         // behaviour (e.g. Left from a leading image's gap intentionally returns doc start = a non-renderable 0).
         if direction == .up || direction == .down { pos = snapToRenderable(pos, forward: direction == .down) }
-        return DocumentTextPosition(pos)
+        return pos
     }
 
     /// Tab/Shift-Tab: move the caret to the next/previous cell. Tab in the last cell exits to the start

@@ -23,6 +23,15 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
     public let selectable: Bool = true
     
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ChatListAdditionalCategoryNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            headerId: self.header?.id
+        ))
+    }
     
     public init(
         presentationData: ItemListPresentationData,
@@ -56,12 +65,12 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         }
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListAdditionalCategoryItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: self, neighbors: neighbors)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -76,13 +85,13 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatListAdditionalCategoryItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: self, neighbors: neighbors)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
                             apply().1(animation.isAnimated, false)
@@ -100,14 +109,14 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         self.action()
     }
     
-    static func mergeType(item: ChatListAdditionalCategoryItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ChatListAdditionalCategoryItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ListViewItemWithHeader {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self) {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -116,16 +125,16 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? ListViewItemWithHeader {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self) {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
-            } else if let _ = nextItem as? ChatListAdditionalCategoryItem {
+            } else if neighbors.next?.base(ChatListAdditionalCategoryNeighborFacet.self) != nil {
             } else {
-                if let nextItem = nextItem as? ListViewItemWithHeader, nextItem.header != nil {
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerId != nil {
                     last = true
                 }
             }
@@ -181,11 +190,11 @@ public class ChatListAdditionalCategoryItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
-            let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = ChatListAdditionalCategoryItem.mergeType(item: item, neighbors: neighbors)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()

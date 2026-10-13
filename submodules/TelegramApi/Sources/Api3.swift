@@ -567,6 +567,222 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ButtonType: TypeConstructorDescription {
+        public class Cons_buttonTypeRequestPeer: TypeConstructorDescription {
+            public var flags: Int32
+            public var buttonId: Int32
+            public var peerType: Api.RequestPeerType
+            public var maxQuantity: Int32
+            public init(flags: Int32, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32) {
+                self.flags = flags
+                self.buttonId = buttonId
+                self.peerType = peerType
+                self.maxQuantity = maxQuantity
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("buttonTypeRequestPeer", [("flags", ConstructorParameterDescription(self.flags)), ("buttonId", ConstructorParameterDescription(self.buttonId)), ("peerType", ConstructorParameterDescription(self.peerType)), ("maxQuantity", ConstructorParameterDescription(self.maxQuantity))])
+            }
+        }
+        public class Cons_buttonTypeRequestPoll: TypeConstructorDescription {
+            public var flags: Int32
+            public var quiz: Api.Bool?
+            public init(flags: Int32, quiz: Api.Bool?) {
+                self.flags = flags
+                self.quiz = quiz
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("buttonTypeRequestPoll", [("flags", ConstructorParameterDescription(self.flags)), ("quiz", ConstructorParameterDescription(self.quiz))])
+            }
+        }
+        public class Cons_buttonTypeSimpleWebView: TypeConstructorDescription {
+            public var url: String
+            public init(url: String) {
+                self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("buttonTypeSimpleWebView", [("url", ConstructorParameterDescription(self.url))])
+            }
+        }
+        public class Cons_inputButtonTypeRequestPeer: TypeConstructorDescription {
+            public var flags: Int32
+            public var buttonId: Int32
+            public var peerType: Api.RequestPeerType
+            public var maxQuantity: Int32
+            public init(flags: Int32, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32) {
+                self.flags = flags
+                self.buttonId = buttonId
+                self.peerType = peerType
+                self.maxQuantity = maxQuantity
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputButtonTypeRequestPeer", [("flags", ConstructorParameterDescription(self.flags)), ("buttonId", ConstructorParameterDescription(self.buttonId)), ("peerType", ConstructorParameterDescription(self.peerType)), ("maxQuantity", ConstructorParameterDescription(self.maxQuantity))])
+            }
+        }
+        case buttonTypeDefault
+        case buttonTypeRequestGeoLocation
+        case buttonTypeRequestPeer(Cons_buttonTypeRequestPeer)
+        case buttonTypeRequestPhone
+        case buttonTypeRequestPoll(Cons_buttonTypeRequestPoll)
+        case buttonTypeSimpleWebView(Cons_buttonTypeSimpleWebView)
+        case inputButtonTypeRequestPeer(Cons_inputButtonTypeRequestPeer)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .buttonTypeDefault:
+                if boxed {
+                    buffer.appendInt32(-908226327)
+                }
+                break
+            case .buttonTypeRequestGeoLocation:
+                if boxed {
+                    buffer.appendInt32(-1678843584)
+                }
+                break
+            case .buttonTypeRequestPeer(let _data):
+                if boxed {
+                    buffer.appendInt32(1331208759)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.buttonId, buffer: buffer, boxed: false)
+                _data.peerType.serialize(buffer, true)
+                serializeInt32(_data.maxQuantity, buffer: buffer, boxed: false)
+                break
+            case .buttonTypeRequestPhone:
+                if boxed {
+                    buffer.appendInt32(-549636359)
+                }
+                break
+            case .buttonTypeRequestPoll(let _data):
+                if boxed {
+                    buffer.appendInt32(-1429209212)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.quiz!.serialize(buffer, true)
+                }
+                break
+            case .buttonTypeSimpleWebView(let _data):
+                if boxed {
+                    buffer.appendInt32(-1072014982)
+                }
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                break
+            case .inputButtonTypeRequestPeer(let _data):
+                if boxed {
+                    buffer.appendInt32(1071802622)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.buttonId, buffer: buffer, boxed: false)
+                _data.peerType.serialize(buffer, true)
+                serializeInt32(_data.maxQuantity, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .buttonTypeDefault:
+                return ("buttonTypeDefault", [])
+            case .buttonTypeRequestGeoLocation:
+                return ("buttonTypeRequestGeoLocation", [])
+            case .buttonTypeRequestPeer(let _data):
+                return ("buttonTypeRequestPeer", [("flags", ConstructorParameterDescription(_data.flags)), ("buttonId", ConstructorParameterDescription(_data.buttonId)), ("peerType", ConstructorParameterDescription(_data.peerType)), ("maxQuantity", ConstructorParameterDescription(_data.maxQuantity))])
+            case .buttonTypeRequestPhone:
+                return ("buttonTypeRequestPhone", [])
+            case .buttonTypeRequestPoll(let _data):
+                return ("buttonTypeRequestPoll", [("flags", ConstructorParameterDescription(_data.flags)), ("quiz", ConstructorParameterDescription(_data.quiz))])
+            case .buttonTypeSimpleWebView(let _data):
+                return ("buttonTypeSimpleWebView", [("url", ConstructorParameterDescription(_data.url))])
+            case .inputButtonTypeRequestPeer(let _data):
+                return ("inputButtonTypeRequestPeer", [("flags", ConstructorParameterDescription(_data.flags)), ("buttonId", ConstructorParameterDescription(_data.buttonId)), ("peerType", ConstructorParameterDescription(_data.peerType)), ("maxQuantity", ConstructorParameterDescription(_data.maxQuantity))])
+            }
+        }
+
+        public static func parse_buttonTypeDefault(_ reader: BufferReader) -> ButtonType? {
+            return Api.ButtonType.buttonTypeDefault
+        }
+        public static func parse_buttonTypeRequestGeoLocation(_ reader: BufferReader) -> ButtonType? {
+            return Api.ButtonType.buttonTypeRequestGeoLocation
+        }
+        public static func parse_buttonTypeRequestPeer(_ reader: BufferReader) -> ButtonType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.RequestPeerType?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.RequestPeerType
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ButtonType.buttonTypeRequestPeer(Cons_buttonTypeRequestPeer(flags: _1!, buttonId: _2!, peerType: _3!, maxQuantity: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_buttonTypeRequestPhone(_ reader: BufferReader) -> ButtonType? {
+            return Api.ButtonType.buttonTypeRequestPhone
+        }
+        public static func parse_buttonTypeRequestPoll(_ reader: BufferReader) -> ButtonType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _2 = Api.parse(reader, signature: signature) as? Api.Bool
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.ButtonType.buttonTypeRequestPoll(Cons_buttonTypeRequestPoll(flags: _1!, quiz: _2))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_buttonTypeSimpleWebView(_ reader: BufferReader) -> ButtonType? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ButtonType.buttonTypeSimpleWebView(Cons_buttonTypeSimpleWebView(url: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputButtonTypeRequestPeer(_ reader: BufferReader) -> ButtonType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.RequestPeerType?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.RequestPeerType
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ButtonType.inputButtonTypeRequestPeer(Cons_inputButtonTypeRequestPeer(flags: _1!, buttonId: _2!, peerType: _3!, maxQuantity: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum CdnConfig: TypeConstructorDescription {
         public class Cons_cdnConfig: TypeConstructorDescription {
             public var publicKeys: [Api.CdnPublicKey]

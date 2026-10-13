@@ -786,12 +786,14 @@ public extension Api {
 public extension Api {
     enum ReplyMarkup: TypeConstructorDescription {
         public class Cons_replyInlineMarkup: TypeConstructorDescription {
-            public var rows: [Api.KeyboardButtonRow]
-            public init(rows: [Api.KeyboardButtonRow]) {
+            public var flags: Int32
+            public var rows: [Api.KeyboardInlineButtonRow]
+            public init(flags: Int32, rows: [Api.KeyboardInlineButtonRow]) {
+                self.flags = flags
                 self.rows = rows
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("replyInlineMarkup", [("rows", ConstructorParameterDescription(self.rows))])
+                return ("replyInlineMarkup", [("flags", ConstructorParameterDescription(self.flags)), ("rows", ConstructorParameterDescription(self.rows))])
             }
         }
         public class Cons_replyKeyboardForceReply: TypeConstructorDescription {
@@ -836,8 +838,9 @@ public extension Api {
             switch self {
             case .replyInlineMarkup(let _data):
                 if boxed {
-                    buffer.appendInt32(1218642516)
+                    buffer.appendInt32(-1297000592)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 buffer.appendInt32(481674261)
                 buffer.appendInt32(Int32(_data.rows.count))
                 for item in _data.rows {
@@ -879,7 +882,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .replyInlineMarkup(let _data):
-                return ("replyInlineMarkup", [("rows", ConstructorParameterDescription(_data.rows))])
+                return ("replyInlineMarkup", [("flags", ConstructorParameterDescription(_data.flags)), ("rows", ConstructorParameterDescription(_data.rows))])
             case .replyKeyboardForceReply(let _data):
                 return ("replyKeyboardForceReply", [("flags", ConstructorParameterDescription(_data.flags)), ("placeholder", ConstructorParameterDescription(_data.placeholder))])
             case .replyKeyboardHide(let _data):
@@ -890,13 +893,16 @@ public extension Api {
         }
 
         public static func parse_replyInlineMarkup(_ reader: BufferReader) -> ReplyMarkup? {
-            var _1: [Api.KeyboardButtonRow]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.KeyboardInlineButtonRow]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButtonRow.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardInlineButtonRow.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ReplyMarkup.replyInlineMarkup(Cons_replyInlineMarkup(rows: _1!))
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ReplyMarkup.replyInlineMarkup(Cons_replyInlineMarkup(flags: _1!, rows: _2!))
             }
             else {
                 return nil

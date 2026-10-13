@@ -10,6 +10,10 @@ import ContextUI
 import AccountContext
 
 class ChatListRecentPeersListItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let theme: PresentationTheme
     let strings: PresentationStrings
     let context: AccountContext
@@ -29,11 +33,11 @@ class ChatListRecentPeersListItem: ListViewItem {
         self.header = nil
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListRecentPeersListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem != nil)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, neighbors.next != nil)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -43,12 +47,12 @@ class ChatListRecentPeersListItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatListRecentPeersListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem != nil)
+                    let (nodeLayout, apply) = layout(self, params, neighbors.next != nil)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
                             apply(false)
@@ -85,10 +89,10 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         self.addSubnode(self.separatorNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem == nil)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, neighbors.next == nil)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply(false)

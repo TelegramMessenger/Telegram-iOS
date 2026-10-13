@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -35,7 +36,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let addButtonNode: ChatMessageAttachedContentButtonNode
     private let messageButtonNode: ChatMessageAttachedContentButtonNode
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
@@ -43,7 +44,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.addButtonNode = ChatMessageAttachedContentButtonNode()
         self.messageButtonNode = ChatMessageAttachedContentButtonNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -97,7 +98,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         let previousContact = self.contact
         let previousContactInfo = self.contactInfo
         
-        return { item, layoutConstants, _, _, constrainedSize, _ in
+        return { [weak self] item, layoutConstants, _, _, constrainedSize, _ in
             var selectedContact: TelegramMediaContact?
             for media in item.message.media {
                 if let media = media as? TelegramMediaContact {
@@ -225,7 +226,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let avatarSize = CGSize(width: 40.0, height: 40.0)
                 
                 let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0
@@ -358,7 +359,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
-                return (contentWidth, { boundingWidth in
+                return (contentWidth, { [weak self] boundingWidth in
                     let baseAvatarFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutConstants.text.bubbleInsets.top), size: avatarSize)
                     
                     let lineWidth: CGFloat = 3.0

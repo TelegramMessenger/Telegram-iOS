@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -230,7 +231,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, maxHeight: CGFloat, savedMusic: Bool?)?
     
-    init(account: Account, engine: TelegramEngine, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>, chatLocation: ChatLocation, source: ChatHistoryListSource) {
+    init(account: Account, engine: TelegramEngine, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>, chatLocation: ChatLocation, source: ChatHistoryListSource, lottieSettings: LottieRenderingSettings) {
         self.accountManager = accountManager
         self.account = account
         self.engine = engine
@@ -295,7 +296,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.playPauseButton = IconButtonNode()
         self.playPauseButton.displaysAsynchronously = false
         
-        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode = PlayPauseIconNode(lottieSettings: lottieSettings)
         
         self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
         self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: presentationData.theme.list.itemPrimaryTextColor)
@@ -1237,8 +1238,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    init() {
-        super.init(size: CGSize(width: 76.0, height: 76.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 76.0, height: 76.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

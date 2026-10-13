@@ -23,10 +23,10 @@ import AppBundle
 import ComponentFlow
 import AlertComponent
 
-func textStringForForwardedMessage(_ message: EngineRawMessage, strings: PresentationStrings) -> (text: NSAttributedString, entities: [MessageTextEntity], isMedia: Bool) {
+func textStringForForwardedMessage(_ message: EngineRawMessage, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> (text: NSAttributedString, entities: [MessageTextEntity], isMedia: Bool) {
     for attribute in message.attributes {
         if let attribute = attribute as? RichTextMessageAttribute {
-            return (attribute.instantPage.previewAttributedText(strings: strings), [], false)
+            return (attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia), [], false)
         }
     }
     for media in message.media {
@@ -321,17 +321,17 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
             }
         }
         
+        var richAccessibilityText: String?
         if self.messages.count == 1 {
             title = self.strings.Conversation_ForwardOptions_ForwardTitleSingle
-            let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings)
+            let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings, dateTimeFormat: interfaceState.dateTimeFormat)
+            if messages[0].attributes.contains(where: { $0 is RichTextMessageAttribute }) {
+                richAccessibilityText = "\(authors): \(instantPagePreviewPlainText(string))"
+            }
             
             text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
             
-            let additionalText = NSMutableAttributedString(attributedString: string)
-            additionalText.addAttributes([
-                .font: Font.regular(15.0),
-                .foregroundColor: self.theme.chat.inputPanel.secondaryTextColor
-            ], range: NSRange(location: 0, length: additionalText.length))
+            let additionalText = NSMutableAttributedString(attributedString: styleInstantPagePreview(string, font: Font.regular(15.0), italicFont: Font.italic(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
             for entity in entities {
                 switch entity.type {
                 case let .CustomEmoji(_, fileId):
@@ -344,17 +344,18 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 }
             }
             
-            text.append(additionalText)
+            text.append(renderInstantPagePreviewIcons(additionalText, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
         } else {
             title = self.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
             text = NSMutableAttributedString(attributedString: NSAttributedString(string: self.strings.Conversation_ForwardFrom(authors).string, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
         }
         
         if interfaceState.interfaceState.forwardOptionsState?.hideNames == true {
+            richAccessibilityText = nil
             text = NSMutableAttributedString(attributedString: NSAttributedString(string: self.strings.Conversation_ForwardOptions_SenderNamesRemoved, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
         }
 
-        let accessibilityText = text.string
+        let accessibilityText = richAccessibilityText ?? text.string
         text = NSMutableAttributedString(attributedString: renderInstantPagePreviewIcons(text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)

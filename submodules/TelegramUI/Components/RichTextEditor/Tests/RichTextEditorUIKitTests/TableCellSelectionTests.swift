@@ -42,7 +42,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_selectTableCells_selectedCellCoords_dedupesAndCoversRect() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
 
         let coords = v.selectedCellCoords(in: t)
@@ -56,7 +56,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_selectTableCells_expandsToWholeMergedCell() {
         let v = canvas(mergedTopLeftColspan2())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         // Bisects the colspan-2 merged cell at (0,0)-(0,1): requesting only (0,0) must expand to include (0,1).
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 0, right: 0))
 
@@ -75,7 +75,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_structuralCellRect_and_rangesNilForCells() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
 
         XCTAssertEqual(v.structuralCellRect(), TableRect(top: 0, left: 0, bottom: 1, right: 1))
@@ -88,7 +88,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_tableStructuralSelectionRegions_cells() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
 
         let regions = v.tableStructuralSelectionRegions()
@@ -108,7 +108,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_clearTableSelection_clearsCells() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCells(TableRect(top: 0, left: 0, bottom: 1, right: 1))
         XCTAssertNotNil(v.tableSelection)
         v.clearTableSelection()
@@ -120,14 +120,14 @@ final class TableCellSelectionTests: XCTestCase {
     func test_denseParity_rowsAndColumnsSelectionUnchanged() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         XCTAssertEqual(v.tableSelection?.kind, .rows(1...1))
         XCTAssertEqual(v.head, t.cellTextStart(row: 1, column: 0))
         let rowCoords = v.selectedCellCoords(in: t)
         XCTAssertEqual(rowCoords.count, 3)
 
-        v.head = t.cellTextStart(row: 0, column: 2)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 2)!, head: t.cellTextStart(row: 0, column: 2)!)
         v.selectTableColumn(2)
         XCTAssertEqual(v.tableSelection?.kind, .columns(2...2))
         XCTAssertEqual(v.head, t.cellTextStart(row: 0, column: 2))
@@ -140,7 +140,7 @@ final class TableCellSelectionTests: XCTestCase {
     func test_selectTableCell_singleCellConvenience() {
         let v = canvas(dense3x3())
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableCell(row: 1, column: 1)
         XCTAssertEqual(v.tableSelection?.kind, .cells(TableRect(top: 1, left: 1, bottom: 1, right: 1)))
         XCTAssertEqual(v.head, t.cellTextStart(row: 1, column: 1))

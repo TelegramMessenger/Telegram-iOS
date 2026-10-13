@@ -27,7 +27,7 @@ extension DocumentCanvasView {
         let tok = tokenizer as? DocumentTokenizer
         func wordNS(_ pos: Int) -> NSRange? {
             guard let r = tok?.wordRange(at: pos) else { return nil }
-            return NSRange(location: r.from.offset, length: r.to.offset - r.from.offset)
+            return NSRange(location: r.from, length: r.to - r.from)
         }
         let left = wordNS(fromCaret), entered = wordNS(toCaret)
         if let l = left, l == entered { return (nil, nil) }   // caret stayed within one word
@@ -41,7 +41,10 @@ extension DocumentCanvasView {
     /// selection-handle drag) to mirror the suppressed `inputDelegate` selection bracket; `endCoalescedSelectionDrag`
     /// runs it once at the final caret. A range selection is not a typing boundary — record the head and skip.
     func nativeCheckOnSelectionChange() {
-        guard isSpellCheckingEnabled, let checker = nativeChecker, !coalescingSelectionNotifications else { return }
+        // TASK 43: reads the backend's D33 flag directly — `coalescingSelectionNotifications` was the
+        // canvas forwarder onto exactly this, and is deleted.
+        guard isSpellCheckingEnabled, let checker = nativeChecker,
+              !inputBackend.suppressesSelectionNotifications else { return }
         let now = head
         defer { lastCheckedCaret = now }
         // An active `.correction` (autocorrect underline) clears once the caret moves to a DIFFERENT region than
@@ -85,22 +88,25 @@ extension DocumentCanvasView {
     // MARK: client annotation surface (messaged by the controller via the ObjC runtime)
     /// Build a `UITextRange` from a RAW global position range (the axis `spellResults` uses). The driver
     /// calls this instead of `positionFromPosition:offset:`, which is relative to `beginningOfDocument` (itself
-    /// at global 1 on this 1-based axis) and would double-count the offset. `DocumentTextPosition` wraps a
-    /// global offset directly, so this is exact.
+    /// at global 1 on this 1-based axis) and would double-count the offset. The backend's identity
+    /// position wraps a global offset directly, so this is exact.
+    ///
+    /// TASK 44: was `DocumentTextRange(DocumentTextPosition(loc), DocumentTextPosition(loc + length))`
+    /// inline. Same object, minted on the backend side; this file no longer names the type.
     @objc(nativeTextRangeForGlobalLocation:length:)
     func nativeTextRange(forGlobalLocation loc: Int, length: Int) -> UITextRange? {
-        DocumentTextRange(DocumentTextPosition(loc), DocumentTextPosition(loc + length))
+        LegacyTextIdentity.range(fromGlobal: loc, toGlobal: loc + length)
     }
 
     @objc(annotatedSubstringForRange:)
     func annotatedSubstring(for range: UITextRange) -> NSAttributedString? {
-        guard let r = range as? DocumentTextRange else { return nil }
-        return NSAttributedString(string: text(in: r) ?? "")
+        guard LegacyTextIdentity.globalRange(of: range) != nil else { return nil }
+        return NSAttributedString(string: text(in: range) ?? "")
     }
     @objc(replaceRange:withAnnotatedString:relativeReplacementRange:)
     func nativeReplace(_ range: UITextRange, withAnnotatedString s: NSAttributedString, relativeReplacementRange rr: NSRange) {
-        guard let r = range as? DocumentTextRange else { return }
-        let base = min(r.from.offset, r.to.offset)
+        guard let r = LegacyTextIdentity.globalRange(of: range) else { return }
+        let base = min(r.from, r.to)
         s.enumerateAttributes(in: NSRange(location: 0, length: s.length)) { attrs, sub, _ in
             guard !attrs.isEmpty else { return }
             let global = NSRange(location: base + sub.location, length: sub.length)
@@ -115,8 +121,8 @@ extension DocumentCanvasView {
     }
     @objc(removeAnnotation:forRange:)
     func nativeRemoveAnnotation(_ annotation: Any, forRange range: UITextRange) {
-        guard let r = range as? DocumentTextRange else { return }
-        let global = NSRange(location: min(r.from.offset, r.to.offset), length: abs(r.to.offset - r.from.offset))
+        guard let r = LegacyTextIdentity.globalRange(of: range) else { return }
+        let global = NSRange(location: min(r.from, r.to), length: abs(r.to - r.from))
         // Scoped to the in-flight check's style when this fires synchronously from `driveNativeCheck` (the
         // common case — see that method's doc); otherwise style-agnostic (e.g. a controller-driven removal
         // outside our own check calls, if any).

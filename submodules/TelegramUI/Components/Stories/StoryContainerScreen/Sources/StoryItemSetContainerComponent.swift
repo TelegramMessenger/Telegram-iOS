@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -4061,7 +4062,8 @@ public final class StoryItemSetContainerComponent: Component {
                             ),
                             color: .white,
                             startingPosition: .end,
-                            size: CGSize(width: 30.0, height: 30.0)
+                            size: CGSize(width: 30.0, height: 30.0),
+                            lottieSettings: component.context.lottieRenderingSettings
                         )),
                         effectAlignment: .center,
                         minSize: CGSize(width: 33.0, height: 64.0),
@@ -4119,7 +4121,8 @@ public final class StoryItemSetContainerComponent: Component {
                         ),
                         color: .white,
                         startingPosition: .end,
-                        size: CGSize(width: 30.0, height: 30.0)
+                        size: CGSize(width: 30.0, height: 30.0),
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: 33.0, height: 64.0),
@@ -4630,7 +4633,7 @@ public final class StoryItemSetContainerComponent: Component {
                             case .lookup:
                                 self.sendMessageContext.performLookupTextAction(view: self, text: text.string)
                             case .speak:
-                                if let speechHolder = speakText(context: component.context, text: text.string) {
+                                if let speechHolder = speakText(text: text.string) {
                                     speechHolder.completion = { [weak self, weak speechHolder] in
                                         guard let self else {
                                             return

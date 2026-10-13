@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
@@ -128,7 +129,8 @@ public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessage
                 isPreview: true,
                 isStandalone: true,
                 rank: nil,
-                rankRole: nil
+                rankRole: nil,
+                isGiftMessageComposerPreview: false
             )
             items.append(item)
         }
@@ -139,7 +141,7 @@ public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessage
                 let itemNode = messageNodes[i]
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: CGPoint(x: itemNode.frame.minX, y: itemNode.frame.minY), size: CGSize(width: containerSize.width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
@@ -147,16 +149,16 @@ public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessage
                     itemNode.frame = nodeFrame
                     itemNode.isUserInteractionEnabled = false
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
             }
         } else {
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
@@ -283,7 +285,8 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
             isPreview: true,
             isStandalone: true,
             rank: nil,
-            rankRole: nil
+            rankRole: nil,
+            isGiftMessageComposerPreview: false
         )
         let items = [item]
         
@@ -293,7 +296,7 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
                 let itemNode = messageNodes[i]
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None, completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: containerSize.width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
@@ -301,16 +304,16 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
                     itemNode.frame = nodeFrame
                     itemNode.isUserInteractionEnabled = false
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
             }
         } else {
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
@@ -482,7 +485,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
-        }, openWebView: { _, _, _, _ in
+        }, openWebView: { _, _, _, _, _ in
         }, activateAdAction: { _, _, _, _ in
         }, adContextAction: { _, _, _ in
         }, removeAd: { _ in
@@ -570,7 +573,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
             if let current = self.messageNodes[items[0].message.id] {
                 messageNode = current
             } else {
-                messageNode = ChatMessageMediaBubbleContentNode()
+                messageNode = ChatMessageMediaBubbleContentNode(lottieSettings: self.context.lottieRenderingSettings)
                 self.messageNodes[items[0].message.id] = messageNode
                 self.messagesContainer.addSubview(messageNode.view)
             }
@@ -640,7 +643,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
                 if let current = self.messageNodes[items[i].message.id] {
                     messageNode = current
                 } else {
-                    messageNode = ChatMessageMediaBubbleContentNode()
+                    messageNode = ChatMessageMediaBubbleContentNode(lottieSettings: self.context.lottieRenderingSettings)
                     self.messageNodes[items[i].message.id] = messageNode
                     self.messagesContainer.addSubview(messageNode.view)
                 }

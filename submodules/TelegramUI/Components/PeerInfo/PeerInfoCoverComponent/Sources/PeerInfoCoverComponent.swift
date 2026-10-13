@@ -131,6 +131,7 @@ public final class PeerInfoCoverComponent: Component {
     public let avatarSize: CGSize
     public let avatarScale: CGFloat
     public let defaultHeight: CGFloat
+    public let topBackgroundExtension: CGFloat
     public let gradientOnTop: Bool
     public let gradientCenter: CGPoint
     public let avatarTransitionFraction: CGFloat
@@ -146,6 +147,7 @@ public final class PeerInfoCoverComponent: Component {
         avatarSize: CGSize = CGSize(width: 100.0, height: 100.0),
         avatarScale: CGFloat,
         defaultHeight: CGFloat,
+        topBackgroundExtension: CGFloat = 0.0,
         gradientOnTop: Bool = false,
         gradientCenter: CGPoint = CGPoint(x: 0.5, y: 0.5),
         avatarTransitionFraction: CGFloat,
@@ -160,6 +162,7 @@ public final class PeerInfoCoverComponent: Component {
         self.avatarSize = avatarSize
         self.avatarScale = avatarScale
         self.defaultHeight = defaultHeight
+        self.topBackgroundExtension = topBackgroundExtension
         self.gradientOnTop = gradientOnTop
         self.gradientCenter = gradientCenter
         self.avatarTransitionFraction = avatarTransitionFraction
@@ -190,6 +193,9 @@ public final class PeerInfoCoverComponent: Component {
             return false
         }
         if lhs.defaultHeight != rhs.defaultHeight {
+            return false
+        }
+        if lhs.topBackgroundExtension != rhs.topBackgroundExtension {
             return false
         }
         if lhs.gradientOnTop != rhs.gradientOnTop {
@@ -392,7 +398,8 @@ public final class PeerInfoCoverComponent: Component {
                             resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
                             type: AnimationCacheAnimationType(file: patternFile),
                             keyframeOnly: false,
-                            customColor: .white
+                            customColor: .white,
+                            lottieSettings: component.context.lottieRenderingSettings
                         ),
                         completion: { [weak self] _, _ in
                             guard let self else {
@@ -487,9 +494,9 @@ public final class PeerInfoCoverComponent: Component {
             }
             
             let gradientWidth: CGFloat
-            let gradientHeight: CGFloat = component.defaultHeight
+            let gradientHeight: CGFloat = component.defaultHeight + component.topBackgroundExtension
             if case .custom = component.subject {
-                gradientWidth = gradientHeight
+                gradientWidth = component.defaultHeight
                 self.backgroundView.backgroundColor = backgroundColor
                 self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: component.avatarCenter.y / gradientHeight)
                 self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)

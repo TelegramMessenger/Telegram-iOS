@@ -125,7 +125,7 @@ final class SpoilerDustView: UIView {
 
         // Build the inverse radial mask off the main thread (matches Telegram), then install + animate it.
         let maskSize = emitterContainer.frame.size
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [weak self] in
             let image = Self.emitterMaskImage(size: maskSize, position: location)
             DispatchQueue.main.async { [weak self] in self?.emitterSpot.image = image }
         }

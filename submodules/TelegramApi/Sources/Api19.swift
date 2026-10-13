@@ -301,6 +301,436 @@ public extension Api {
     }
 }
 public extension Api {
+    enum OnrampAvailability: TypeConstructorDescription {
+        public class Cons_onrampAvailability: TypeConstructorDescription {
+            public var flags: Int32
+            public var countryCode: String
+            public var state: String?
+            public var methods: [Api.OnrampMethodAvailability]
+            public init(flags: Int32, countryCode: String, state: String?, methods: [Api.OnrampMethodAvailability]) {
+                self.flags = flags
+                self.countryCode = countryCode
+                self.state = state
+                self.methods = methods
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampAvailability", [("flags", ConstructorParameterDescription(self.flags)), ("countryCode", ConstructorParameterDescription(self.countryCode)), ("state", ConstructorParameterDescription(self.state)), ("methods", ConstructorParameterDescription(self.methods))])
+            }
+        }
+        case onrampAvailability(Cons_onrampAvailability)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampAvailability(let _data):
+                if boxed {
+                    buffer.appendInt32(-104314509)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.countryCode, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.state!, buffer: buffer, boxed: false)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.methods.count))
+                for item in _data.methods {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampAvailability(let _data):
+                return ("onrampAvailability", [("flags", ConstructorParameterDescription(_data.flags)), ("countryCode", ConstructorParameterDescription(_data.countryCode)), ("state", ConstructorParameterDescription(_data.state)), ("methods", ConstructorParameterDescription(_data.methods))])
+            }
+        }
+
+        public static func parse_onrampAvailability(_ reader: BufferReader) -> OnrampAvailability? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1 ?? 0) & Int(1 << 2) != 0 {
+                _3 = parseString(reader)
+            }
+            var _4: [Api.OnrampMethodAvailability]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.OnrampMethodAvailability.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1 ?? 0) & Int(1 << 2) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.OnrampAvailability.onrampAvailability(Cons_onrampAvailability(flags: _1!, countryCode: _2!, state: _3, methods: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum OnrampLimits: TypeConstructorDescription {
+        public class Cons_onrampLimits: TypeConstructorDescription {
+            public var baseCurrency: String
+            public var baseMinAmount: String
+            public var baseMaxAmount: String
+            public var cryptoMinAmount: String
+            public var cryptoMaxAmount: String
+            public var paymentMethod: String
+            public init(baseCurrency: String, baseMinAmount: String, baseMaxAmount: String, cryptoMinAmount: String, cryptoMaxAmount: String, paymentMethod: String) {
+                self.baseCurrency = baseCurrency
+                self.baseMinAmount = baseMinAmount
+                self.baseMaxAmount = baseMaxAmount
+                self.cryptoMinAmount = cryptoMinAmount
+                self.cryptoMaxAmount = cryptoMaxAmount
+                self.paymentMethod = paymentMethod
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampLimits", [("baseCurrency", ConstructorParameterDescription(self.baseCurrency)), ("baseMinAmount", ConstructorParameterDescription(self.baseMinAmount)), ("baseMaxAmount", ConstructorParameterDescription(self.baseMaxAmount)), ("cryptoMinAmount", ConstructorParameterDescription(self.cryptoMinAmount)), ("cryptoMaxAmount", ConstructorParameterDescription(self.cryptoMaxAmount)), ("paymentMethod", ConstructorParameterDescription(self.paymentMethod))])
+            }
+        }
+        case onrampLimits(Cons_onrampLimits)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampLimits(let _data):
+                if boxed {
+                    buffer.appendInt32(2078435198)
+                }
+                serializeString(_data.baseCurrency, buffer: buffer, boxed: false)
+                serializeString(_data.baseMinAmount, buffer: buffer, boxed: false)
+                serializeString(_data.baseMaxAmount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoMinAmount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoMaxAmount, buffer: buffer, boxed: false)
+                serializeString(_data.paymentMethod, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampLimits(let _data):
+                return ("onrampLimits", [("baseCurrency", ConstructorParameterDescription(_data.baseCurrency)), ("baseMinAmount", ConstructorParameterDescription(_data.baseMinAmount)), ("baseMaxAmount", ConstructorParameterDescription(_data.baseMaxAmount)), ("cryptoMinAmount", ConstructorParameterDescription(_data.cryptoMinAmount)), ("cryptoMaxAmount", ConstructorParameterDescription(_data.cryptoMaxAmount)), ("paymentMethod", ConstructorParameterDescription(_data.paymentMethod))])
+            }
+        }
+
+        public static func parse_onrampLimits(_ reader: BufferReader) -> OnrampLimits? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.OnrampLimits.onrampLimits(Cons_onrampLimits(baseCurrency: _1!, baseMinAmount: _2!, baseMaxAmount: _3!, cryptoMinAmount: _4!, cryptoMaxAmount: _5!, paymentMethod: _6!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum OnrampMethodAvailability: TypeConstructorDescription {
+        public class Cons_onrampMethodAvailability: TypeConstructorDescription {
+            public var flags: Int32
+            public var paymentMethod: String
+            public init(flags: Int32, paymentMethod: String) {
+                self.flags = flags
+                self.paymentMethod = paymentMethod
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampMethodAvailability", [("flags", ConstructorParameterDescription(self.flags)), ("paymentMethod", ConstructorParameterDescription(self.paymentMethod))])
+            }
+        }
+        case onrampMethodAvailability(Cons_onrampMethodAvailability)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampMethodAvailability(let _data):
+                if boxed {
+                    buffer.appendInt32(-1631009112)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.paymentMethod, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampMethodAvailability(let _data):
+                return ("onrampMethodAvailability", [("flags", ConstructorParameterDescription(_data.flags)), ("paymentMethod", ConstructorParameterDescription(_data.paymentMethod))])
+            }
+        }
+
+        public static func parse_onrampMethodAvailability(_ reader: BufferReader) -> OnrampMethodAvailability? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.OnrampMethodAvailability.onrampMethodAvailability(Cons_onrampMethodAvailability(flags: _1!, paymentMethod: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum OnrampProviderInfo: TypeConstructorDescription {
+        public class Cons_onrampProviderInfo: TypeConstructorDescription {
+            public var flags: Int32
+            public var id: String
+            public var name: String
+            public var cryptoCurrencies: [String]
+            public init(flags: Int32, id: String, name: String, cryptoCurrencies: [String]) {
+                self.flags = flags
+                self.id = id
+                self.name = name
+                self.cryptoCurrencies = cryptoCurrencies
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampProviderInfo", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id)), ("name", ConstructorParameterDescription(self.name)), ("cryptoCurrencies", ConstructorParameterDescription(self.cryptoCurrencies))])
+            }
+        }
+        case onrampProviderInfo(Cons_onrampProviderInfo)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampProviderInfo(let _data):
+                if boxed {
+                    buffer.appendInt32(230847874)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.id, buffer: buffer, boxed: false)
+                serializeString(_data.name, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.cryptoCurrencies.count))
+                for item in _data.cryptoCurrencies {
+                    serializeString(item, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampProviderInfo(let _data):
+                return ("onrampProviderInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id)), ("name", ConstructorParameterDescription(_data.name)), ("cryptoCurrencies", ConstructorParameterDescription(_data.cryptoCurrencies))])
+            }
+        }
+
+        public static func parse_onrampProviderInfo(_ reader: BufferReader) -> OnrampProviderInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [String]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.OnrampProviderInfo.onrampProviderInfo(Cons_onrampProviderInfo(flags: _1!, id: _2!, name: _3!, cryptoCurrencies: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum OnrampQuote: TypeConstructorDescription {
+        public class Cons_onrampQuote: TypeConstructorDescription {
+            public var baseCurrency: String
+            public var baseAmount: String
+            public var cryptoCurrency: String
+            public var cryptoAmount: String
+            public var cryptoPrice: String
+            public var feeAmount: String
+            public var extraFeeAmount: String
+            public var networkFeeAmount: String
+            public var totalAmount: String
+            public var paymentMethod: String
+            public var expiresDate: Int32
+            public init(baseCurrency: String, baseAmount: String, cryptoCurrency: String, cryptoAmount: String, cryptoPrice: String, feeAmount: String, extraFeeAmount: String, networkFeeAmount: String, totalAmount: String, paymentMethod: String, expiresDate: Int32) {
+                self.baseCurrency = baseCurrency
+                self.baseAmount = baseAmount
+                self.cryptoCurrency = cryptoCurrency
+                self.cryptoAmount = cryptoAmount
+                self.cryptoPrice = cryptoPrice
+                self.feeAmount = feeAmount
+                self.extraFeeAmount = extraFeeAmount
+                self.networkFeeAmount = networkFeeAmount
+                self.totalAmount = totalAmount
+                self.paymentMethod = paymentMethod
+                self.expiresDate = expiresDate
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampQuote", [("baseCurrency", ConstructorParameterDescription(self.baseCurrency)), ("baseAmount", ConstructorParameterDescription(self.baseAmount)), ("cryptoCurrency", ConstructorParameterDescription(self.cryptoCurrency)), ("cryptoAmount", ConstructorParameterDescription(self.cryptoAmount)), ("cryptoPrice", ConstructorParameterDescription(self.cryptoPrice)), ("feeAmount", ConstructorParameterDescription(self.feeAmount)), ("extraFeeAmount", ConstructorParameterDescription(self.extraFeeAmount)), ("networkFeeAmount", ConstructorParameterDescription(self.networkFeeAmount)), ("totalAmount", ConstructorParameterDescription(self.totalAmount)), ("paymentMethod", ConstructorParameterDescription(self.paymentMethod)), ("expiresDate", ConstructorParameterDescription(self.expiresDate))])
+            }
+        }
+        case onrampQuote(Cons_onrampQuote)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampQuote(let _data):
+                if boxed {
+                    buffer.appendInt32(2055213545)
+                }
+                serializeString(_data.baseCurrency, buffer: buffer, boxed: false)
+                serializeString(_data.baseAmount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoCurrency, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoAmount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoPrice, buffer: buffer, boxed: false)
+                serializeString(_data.feeAmount, buffer: buffer, boxed: false)
+                serializeString(_data.extraFeeAmount, buffer: buffer, boxed: false)
+                serializeString(_data.networkFeeAmount, buffer: buffer, boxed: false)
+                serializeString(_data.totalAmount, buffer: buffer, boxed: false)
+                serializeString(_data.paymentMethod, buffer: buffer, boxed: false)
+                serializeInt32(_data.expiresDate, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampQuote(let _data):
+                return ("onrampQuote", [("baseCurrency", ConstructorParameterDescription(_data.baseCurrency)), ("baseAmount", ConstructorParameterDescription(_data.baseAmount)), ("cryptoCurrency", ConstructorParameterDescription(_data.cryptoCurrency)), ("cryptoAmount", ConstructorParameterDescription(_data.cryptoAmount)), ("cryptoPrice", ConstructorParameterDescription(_data.cryptoPrice)), ("feeAmount", ConstructorParameterDescription(_data.feeAmount)), ("extraFeeAmount", ConstructorParameterDescription(_data.extraFeeAmount)), ("networkFeeAmount", ConstructorParameterDescription(_data.networkFeeAmount)), ("totalAmount", ConstructorParameterDescription(_data.totalAmount)), ("paymentMethod", ConstructorParameterDescription(_data.paymentMethod)), ("expiresDate", ConstructorParameterDescription(_data.expiresDate))])
+            }
+        }
+
+        public static func parse_onrampQuote(_ reader: BufferReader) -> OnrampQuote? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: String?
+            _9 = parseString(reader)
+            var _10: String?
+            _10 = parseString(reader)
+            var _11: Int32?
+            _11 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.OnrampQuote.onrampQuote(Cons_onrampQuote(baseCurrency: _1!, baseAmount: _2!, cryptoCurrency: _3!, cryptoAmount: _4!, cryptoPrice: _5!, feeAmount: _6!, extraFeeAmount: _7!, networkFeeAmount: _8!, totalAmount: _9!, paymentMethod: _10!, expiresDate: _11!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum OnrampSession: TypeConstructorDescription {
+        public class Cons_onrampSession: TypeConstructorDescription {
+            public var provider: String
+            public var sessionId: String
+            public var url: String
+            public var expiresDate: Int32
+            public init(provider: String, sessionId: String, url: String, expiresDate: Int32) {
+                self.provider = provider
+                self.sessionId = sessionId
+                self.url = url
+                self.expiresDate = expiresDate
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("onrampSession", [("provider", ConstructorParameterDescription(self.provider)), ("sessionId", ConstructorParameterDescription(self.sessionId)), ("url", ConstructorParameterDescription(self.url)), ("expiresDate", ConstructorParameterDescription(self.expiresDate))])
+            }
+        }
+        case onrampSession(Cons_onrampSession)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .onrampSession(let _data):
+                if boxed {
+                    buffer.appendInt32(-773575132)
+                }
+                serializeString(_data.provider, buffer: buffer, boxed: false)
+                serializeString(_data.sessionId, buffer: buffer, boxed: false)
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeInt32(_data.expiresDate, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .onrampSession(let _data):
+                return ("onrampSession", [("provider", ConstructorParameterDescription(_data.provider)), ("sessionId", ConstructorParameterDescription(_data.sessionId)), ("url", ConstructorParameterDescription(_data.url)), ("expiresDate", ConstructorParameterDescription(_data.expiresDate))])
+            }
+        }
+
+        public static func parse_onrampSession(_ reader: BufferReader) -> OnrampSession? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.OnrampSession.onrampSession(Cons_onrampSession(provider: _1!, sessionId: _2!, url: _3!, expiresDate: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum OutboxReadDate: TypeConstructorDescription {
         public class Cons_outboxReadDate: TypeConstructorDescription {
             public var date: Int32
@@ -491,14 +921,16 @@ public extension Api {
             }
         }
         public class Cons_pageBlockBlockquote: TypeConstructorDescription {
+            public var flags: Int32
             public var text: Api.RichText
             public var caption: Api.RichText
-            public init(text: Api.RichText, caption: Api.RichText) {
+            public init(flags: Int32, text: Api.RichText, caption: Api.RichText) {
+                self.flags = flags
                 self.text = text
                 self.caption = caption
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("pageBlockBlockquote", [("text", ConstructorParameterDescription(self.text)), ("caption", ConstructorParameterDescription(self.caption))])
+                return ("pageBlockBlockquote", [("flags", ConstructorParameterDescription(self.flags)), ("text", ConstructorParameterDescription(self.text)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockBlockquoteBlocks: TypeConstructorDescription {
@@ -510,6 +942,17 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("pageBlockBlockquoteBlocks", [("blocks", ConstructorParameterDescription(self.blocks)), ("caption", ConstructorParameterDescription(self.caption))])
+            }
+        }
+        public class Cons_pageBlockButtonRow: TypeConstructorDescription {
+            public var flags: Int32
+            public var buttons: [Api.PageButton]
+            public init(flags: Int32, buttons: [Api.PageButton]) {
+                self.flags = flags
+                self.buttons = buttons
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockButtonRow", [("flags", ConstructorParameterDescription(self.flags)), ("buttons", ConstructorParameterDescription(self.buttons))])
             }
         }
         public class Cons_pageBlockChannel: TypeConstructorDescription {
@@ -552,6 +995,17 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("pageBlockDetails", [("flags", ConstructorParameterDescription(self.flags)), ("blocks", ConstructorParameterDescription(self.blocks)), ("title", ConstructorParameterDescription(self.title))])
+            }
+        }
+        public class Cons_pageBlockDocument: TypeConstructorDescription {
+            public var documentId: Int64
+            public var caption: Api.PageCaption
+            public init(documentId: Int64, caption: Api.PageCaption) {
+                self.documentId = documentId
+                self.caption = caption
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockDocument", [("documentId", ConstructorParameterDescription(self.documentId)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockEmbed: TypeConstructorDescription {
@@ -865,11 +1319,13 @@ public extension Api {
         case pageBlockAuthorDate(Cons_pageBlockAuthorDate)
         case pageBlockBlockquote(Cons_pageBlockBlockquote)
         case pageBlockBlockquoteBlocks(Cons_pageBlockBlockquoteBlocks)
+        case pageBlockButtonRow(Cons_pageBlockButtonRow)
         case pageBlockChannel(Cons_pageBlockChannel)
         case pageBlockCollage(Cons_pageBlockCollage)
         case pageBlockCover(Cons_pageBlockCover)
         case pageBlockDetails(Cons_pageBlockDetails)
         case pageBlockDivider
+        case pageBlockDocument(Cons_pageBlockDocument)
         case pageBlockEmbed(Cons_pageBlockEmbed)
         case pageBlockEmbedPost(Cons_pageBlockEmbedPost)
         case pageBlockFooter(Cons_pageBlockFooter)
@@ -933,8 +1389,9 @@ public extension Api {
                 break
             case .pageBlockBlockquote(let _data):
                 if boxed {
-                    buffer.appendInt32(641563686)
+                    buffer.appendInt32(1724999435)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.text.serialize(buffer, true)
                 _data.caption.serialize(buffer, true)
                 break
@@ -948,6 +1405,17 @@ public extension Api {
                     item.serialize(buffer, true)
                 }
                 _data.caption.serialize(buffer, true)
+                break
+            case .pageBlockButtonRow(let _data):
+                if boxed {
+                    buffer.appendInt32(1835270936)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.buttons.count))
+                for item in _data.buttons {
+                    item.serialize(buffer, true)
+                }
                 break
             case .pageBlockChannel(let _data):
                 if boxed {
@@ -988,6 +1456,13 @@ public extension Api {
                 if boxed {
                     buffer.appendInt32(-618614392)
                 }
+                break
+            case .pageBlockDocument(let _data):
+                if boxed {
+                    buffer.appendInt32(955923363)
+                }
+                serializeInt64(_data.documentId, buffer: buffer, boxed: false)
+                _data.caption.serialize(buffer, true)
                 break
             case .pageBlockEmbed(let _data):
                 if boxed {
@@ -1243,9 +1718,11 @@ public extension Api {
             case .pageBlockAuthorDate(let _data):
                 return ("pageBlockAuthorDate", [("author", ConstructorParameterDescription(_data.author)), ("publishedDate", ConstructorParameterDescription(_data.publishedDate))])
             case .pageBlockBlockquote(let _data):
-                return ("pageBlockBlockquote", [("text", ConstructorParameterDescription(_data.text)), ("caption", ConstructorParameterDescription(_data.caption))])
+                return ("pageBlockBlockquote", [("flags", ConstructorParameterDescription(_data.flags)), ("text", ConstructorParameterDescription(_data.text)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockBlockquoteBlocks(let _data):
                 return ("pageBlockBlockquoteBlocks", [("blocks", ConstructorParameterDescription(_data.blocks)), ("caption", ConstructorParameterDescription(_data.caption))])
+            case .pageBlockButtonRow(let _data):
+                return ("pageBlockButtonRow", [("flags", ConstructorParameterDescription(_data.flags)), ("buttons", ConstructorParameterDescription(_data.buttons))])
             case .pageBlockChannel(let _data):
                 return ("pageBlockChannel", [("channel", ConstructorParameterDescription(_data.channel))])
             case .pageBlockCollage(let _data):
@@ -1256,6 +1733,8 @@ public extension Api {
                 return ("pageBlockDetails", [("flags", ConstructorParameterDescription(_data.flags)), ("blocks", ConstructorParameterDescription(_data.blocks)), ("title", ConstructorParameterDescription(_data.title))])
             case .pageBlockDivider:
                 return ("pageBlockDivider", [])
+            case .pageBlockDocument(let _data):
+                return ("pageBlockDocument", [("documentId", ConstructorParameterDescription(_data.documentId)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockEmbed(let _data):
                 return ("pageBlockEmbed", [("flags", ConstructorParameterDescription(_data.flags)), ("url", ConstructorParameterDescription(_data.url)), ("html", ConstructorParameterDescription(_data.html)), ("posterPhotoId", ConstructorParameterDescription(_data.posterPhotoId)), ("w", ConstructorParameterDescription(_data.w)), ("h", ConstructorParameterDescription(_data.h)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockEmbedPost(let _data):
@@ -1386,18 +1865,21 @@ public extension Api {
             }
         }
         public static func parse_pageBlockBlockquote(_ reader: BufferReader) -> PageBlock? {
-            var _1: Api.RichText?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.RichText
-            }
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Api.RichText?
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.RichText
             }
+            var _3: Api.RichText?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PageBlock.pageBlockBlockquote(Cons_pageBlockBlockquote(text: _1!, caption: _2!))
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.PageBlock.pageBlockBlockquote(Cons_pageBlockBlockquote(flags: _1!, text: _2!, caption: _3!))
             }
             else {
                 return nil
@@ -1416,6 +1898,22 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.PageBlock.pageBlockBlockquoteBlocks(Cons_pageBlockBlockquoteBlocks(blocks: _1!, caption: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_pageBlockButtonRow(_ reader: BufferReader) -> PageBlock? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.PageButton]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageButton.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PageBlock.pageBlockButtonRow(Cons_pageBlockButtonRow(flags: _1!, buttons: _2!))
             }
             else {
                 return nil
@@ -1488,6 +1986,22 @@ public extension Api {
         }
         public static func parse_pageBlockDivider(_ reader: BufferReader) -> PageBlock? {
             return Api.PageBlock.pageBlockDivider
+        }
+        public static func parse_pageBlockDocument(_ reader: BufferReader) -> PageBlock? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.PageCaption?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PageCaption
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PageBlock.pageBlockDocument(Cons_pageBlockDocument(documentId: _1!, caption: _2!))
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_pageBlockEmbed(_ reader: BufferReader) -> PageBlock? {
             var _1: Int32?

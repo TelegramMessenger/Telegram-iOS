@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -17,6 +18,8 @@ import GlassBarButtonComponent
 private final class StoryStealthModeSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
+    
     let mode: StoryStealthModeSheetScreen.Mode
     let backwardDuration: Int32
     let forwardDuration: Int32
@@ -24,12 +27,16 @@ private final class StoryStealthModeSheetContentComponent: Component {
     let dismiss: () -> Void
     
     init(
+    
+        context: AccountContext,
         mode: StoryStealthModeSheetScreen.Mode,
         backwardDuration: Int32,
         forwardDuration: Int32,
         action: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
+    
+        self.context = context
         self.mode = mode
         self.backwardDuration = backwardDuration
         self.forwardDuration = forwardDuration
@@ -147,7 +154,8 @@ private final class StoryStealthModeSheetContentComponent: Component {
                         icon: AnyComponent(LottieComponent(
                             content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                             startingPosition: .begin,
-                            size: CGSize(width: 32.0, height: 32.0)
+                            size: CGSize(width: 32.0, height: 32.0),
+                            lottieSettings: component.context.lottieRenderingSettings
                         )),
                         content: AnyComponent(MultilineTextComponent(
                             text: .markdown(text: environment.strings.Story_StealthMode_ToastCooldownText, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
@@ -268,7 +276,8 @@ private final class StoryStealthModeSheetContentComponent: Component {
                             color: environment.theme.list.itemCheckColors.foregroundColor,
                             startingPosition: .begin,
                             size: CGSize(width: 30.0, height: 30.0),
-                            loop: true
+                            loop: true,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )))
                     ], spacing: 4.0)
                 ))
@@ -424,6 +433,7 @@ private final class StoryStealthModeSheetScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(StoryStealthModeSheetContentComponent(
+                        context: component.context,
                         mode: component.mode,
                         backwardDuration: component.backwardDuration,
                         forwardDuration: component.forwardDuration,
@@ -451,7 +461,7 @@ private final class StoryStealthModeSheetScreenComponent: Component {
                         }
                     )),
                     style: .glass,
-                    backgroundColor: .color(environment.theme.overallDarkAppearance ? environment.theme.list.itemBlocksBackgroundColor : environment.theme.list.blocksBackgroundColor),
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: self.sheetAnimateOut
                 )),
                 environment: {

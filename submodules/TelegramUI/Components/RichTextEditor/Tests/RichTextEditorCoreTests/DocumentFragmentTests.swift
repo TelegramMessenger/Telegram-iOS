@@ -8,6 +8,21 @@ final class DocumentFragmentTests: XCTestCase {
     }
     func doc(_ blocks: Block...) -> Document { Document(blocks: blocks) }
 
+    func test_nearestTopLevelTextPosition_clampsOutOfRangeCaret_nilInsideRange() {
+        // "ab" paragraph: text occupies globals 1...3 (textStart 1, len 2).
+        let d = doc(para("p", "ab"))
+        XCTAssertEqual(d.nearestTopLevelTextPosition(to: 0), 1, "caret 0 (below first text start) → 1")
+        XCTAssertNil(d.nearestTopLevelTextPosition(to: 1), "caret already at a text locus → nil (no clamp)")
+        XCTAssertNil(d.nearestTopLevelTextPosition(to: 2), "interior caret → nil")
+        XCTAssertEqual(d.nearestTopLevelTextPosition(to: 99), 3, "caret past the last text end → clamps to it")
+
+        // A lone table has no top-level text block: every caret → nil (caller flattens).
+        let tableDoc = doc(.table(TableBlock(id: .generate(), columns: [ColumnSpec(width: 90)],
+            rows: [Row(id: .generate(), cells: [Cell(id: .generate(),
+                blocks: [.paragraph(ParagraphBlock(id: .generate(), runs: [TextRun(text: "x")]))])])])))
+        XCTAssertNil(tableDoc.nearestTopLevelTextPosition(to: 0))
+    }
+
     // Pasting a copied table must NOT reuse the source table's BlockIDs — block views are keyed by BlockID,
     // so a duplicate-ID paste steals the original's view and the original table disappears. `regeneratingIDs`
     // (used by every paste via `insertingFragment`) must therefore recurse into tables: table + rows + cells +
@@ -304,18 +319,20 @@ final class DocumentFragmentTests: XCTestCase {
     }
 
     func test_insert_intoCodeBlock_flattensFragmentToText() {
-        // A code block "let x" — text axis: open@0, text@1..6, close@6. Caret after "let " (global 5).
+        // A code block is a container of [languagePara, codePara], so its code text starts past the whole
+        // language child — derived here rather than hard-coded, since that offset moves with the language.
         let host = Document(blocks: [code("c", "let x")])
+        let codeStart = host.globalTextStart(ofBlockAt: 0)
         let frag = doc(para("p", "AA"), para("q", "BB"))   // two paragraphs
-        let r = host.insertingFragment(frag, atGlobal: 5)!
+        let r = host.insertingFragment(frag, atGlobal: codeStart + 4)!   // caret after "let "
         guard case .code(let c) = r.document.blocks[0] else { return XCTFail() }
         XCTAssertEqual(c.text, "let AA\nBBx")   // paragraphs joined by "\n", inserted inline
-        XCTAssertEqual(r.caret, 5 + ("AA\nBB" as NSString).length)
+        XCTAssertEqual(r.caret, codeStart + 4 + ("AA\nBB" as NSString).length)
     }
 
     func test_insert_intoCodeBlock_keepsCodeBlockIdentity() {
         let host = Document(blocks: [code("c", "ab")])
-        let r = host.insertingFragment(doc(para("p", "X")), atGlobal: 2)!
+        let r = host.insertingFragment(doc(para("p", "X")), atGlobal: host.globalTextStart(ofBlockAt: 0) + 2)!
         XCTAssertEqual(r.document.blocks.count, 1)
         XCTAssertEqual(r.document.blocks[0].id, BlockID("c"))
     }

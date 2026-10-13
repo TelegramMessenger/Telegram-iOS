@@ -1,5 +1,10 @@
 #import <BuildConfig/BuildConfig.h>
 
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+
 static NSString *telegramApplicationSecretKey = @"telegramApplicationSecretKey_v3";
 API_AVAILABLE(ios(10))
 @interface LocalPrivateKey : NSObject {
@@ -220,6 +225,14 @@ API_AVAILABLE(ios(10))
     return bundleSeedID;
 }
 
++ (NSString * _Nullable)keychainAccessGroupForBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId.length == 0 || baseAppBundleId.length == 0) {
+        return nil;
+    }
+    return [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+}
+
 + (NSData * _Nullable)applicationSecretTag:(bool)isCheckKey {
     if (isCheckKey) {
         return [[telegramApplicationSecretKey stringByAppendingString:@"_check"] dataUsingEncoding:NSUTF8StringEncoding];
@@ -364,6 +377,33 @@ API_AVAILABLE(ios(10))
     NSString *filePath = [rootPath stringByAppendingPathComponent:@".tempkey"];
     //NSString *encryptedPath = [rootPath stringByAppendingPathComponent:@".tempkeyEncrypted"];
     
+    // The app and its extensions (notification service, widget, intents) derive the key
+    // independently. Two processes that both find no key (or both find a 32-byte key that
+    // still needs a salt) would each generate different random material and the last
+    // writer would win, leaving the other's freshly keyed database unreadable. Serialize
+    // the read-generate-write sequence with an advisory lock held across the whole step.
+    NSString *lockPath = [rootPath stringByAppendingPathComponent:@".tempkey.lock"];
+    // Bounded: the holder may be suspended by iOS between taking and releasing the lock,
+    // and a blocked waiter would stall the app's launch or burn an extension's budget. After
+    // ~2 s proceed unlocked, which is what this code always did before the lock existed.
+    int lockFd = open([lockPath fileSystemRepresentation], O_CREAT | O_RDWR | O_CLOEXEC, S_IRUSR | S_IWUSR);
+    BOOL locked = NO;
+    if (lockFd >= 0) {
+        for (int attempt = 0; attempt < 100; attempt++) {
+            if (flock(lockFd, LOCK_EX | LOCK_NB) == 0) {
+                locked = YES;
+                break;
+            }
+            if (errno != EWOULDBLOCK) {
+                break;
+            }
+            usleep(20 * 1000);
+        }
+        if (!locked) {
+            NSLog(@"deviceSpecificEncryptionParameters: proceeding without the key lock");
+        }
+    }
+    
     NSData *currentData = [NSData dataWithContentsOfFile:filePath];
     NSData *resultData = nil;
     if (currentData != nil && currentData.length == 32 + 16) {
@@ -371,13 +411,26 @@ API_AVAILABLE(ios(10))
     }
     if (resultData == nil) {
         NSMutableData *randomData = [[NSMutableData alloc] initWithLength:32 + 16];
-        int result = SecRandomCopyBytes(kSecRandomDefault, randomData.length, [randomData mutableBytes]);
+        if (SecRandomCopyBytes(kSecRandomDefault, randomData.length, randomData.mutableBytes) != errSecSuccess) {
+            // This buffer becomes the database key and is persisted; it must never
+            // be left at the all-zero contents initWithLength: gave it. arc4random_buf
+            // cannot fail.
+            arc4random_buf(randomData.mutableBytes, randomData.length);
+        }
         if (currentData != nil && currentData.length == 32) { // upgrade key with salt
             [currentData getBytes:randomData.mutableBytes length:32];
         }
-        assert(result == 0);
         resultData = randomData;
-        [resultData writeToFile:filePath atomically:false];
+        // Atomic: a reader that does not take the lock (older builds) must never see a
+        // torn write, which is indistinguishable from "no key yet".
+        [resultData writeToFile:filePath atomically:true];
+    }
+    
+    if (lockFd >= 0) {
+        if (locked) {
+            flock(lockFd, LOCK_UN);
+        }
+        close(lockFd);
     }
     
     /*if (@available(iOS 11, *)) {

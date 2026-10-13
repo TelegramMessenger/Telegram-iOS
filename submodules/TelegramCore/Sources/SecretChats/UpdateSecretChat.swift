@@ -18,7 +18,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
     assert((currentPeer == nil) == (currentState == nil))
     switch chat {
         case let .encryptedChat(encryptedChatData):
-            let (adminId, gAOrB) = (encryptedChatData.adminId, encryptedChatData.gAOrB)
+            let (adminId, gAOrB, remoteKeyFingerprint) = (encryptedChatData.adminId, encryptedChatData.gAOrB, encryptedChatData.keyFingerprint)
             if let currentPeer = currentPeer, let currentState = currentState, adminId == accountPeerId.id._internalGetInt64Value() {
                 if case let .handshake(handshakeState) = currentState.embeddedState, case let .requested(_, p, a) = handshakeState {
                     let pData = p.makeData()
@@ -48,6 +48,12 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                         let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
+                    }
+                    
+                    if keyFingerprint != remoteKeyFingerprint {
+                        Logger.shared.log("SecretChat", "peerId \(currentPeer.id) key fingerprint mismatch on handshake completion, terminating")
+                        _internal_terminateSecretChat(transaction: transaction, peerId: currentPeer.id, requestRemoteHistoryRemoval: false)
+                        return
                     }
                     
                     var updatedState = currentState

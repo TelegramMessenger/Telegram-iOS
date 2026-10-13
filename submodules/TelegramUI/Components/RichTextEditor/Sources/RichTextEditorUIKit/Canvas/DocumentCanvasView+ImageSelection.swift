@@ -39,9 +39,15 @@ extension DocumentCanvasView {
         // Bracket the caret move with the input-delegate notification (like `setCaret`) so the OS re-reads
         // `selectedTextRange` = the gap. Without it the OS keeps the STALE prior caret, and a hardware Arrow
         // key runs `position(from:in:)` from the previous position instead of the image (the reported bug).
-        textInputDelegate?.selectionWillChange(self)
-        anchor = img.nodeStart; head = img.nodeStart
-        textInputDelegate?.selectionDidChange(self)
+        // TASK 26: unsuppressed selection bracket (this site never consulted the coalescing flag).
+        // TASK 39: `applyCaretOutcome` (`+Editing.swift`) inside the UNCHANGED bracket, not
+        // `setSelection` — see `applySelection` in `+SelectionActions.swift` for the shared reasoning
+        // (population C: this bracket neither opens a transaction nor suppresses, so a publish takes
+        // the full path). Here it would be worse than a doubling: `selectImage` reports NOTHING to the
+        // host today — there is no `onSelectionChange?()` below — so a publish would INVENT one.
+        inputBackend.notifyingSelectionChangeIgnoringCoalescing {
+            applyCaretOutcome(.caret(at: img.nodeStart))
+        }
         imageSelection = img.id
         refreshSelectionUI(); setNeedsDisplay()
     }

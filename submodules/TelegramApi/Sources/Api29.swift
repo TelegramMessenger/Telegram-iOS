@@ -441,6 +441,306 @@ public extension Api {
     }
 }
 public extension Api {
+    enum TonConnectManifest: TypeConstructorDescription {
+        public class Cons_tonConnectManifest: TypeConstructorDescription {
+            public var flags: Int32
+            public var url: String
+            public var name: String
+            public var icon: Api.WebDocument?
+            public init(flags: Int32, url: String, name: String, icon: Api.WebDocument?) {
+                self.flags = flags
+                self.url = url
+                self.name = name
+                self.icon = icon
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("tonConnectManifest", [("flags", ConstructorParameterDescription(self.flags)), ("url", ConstructorParameterDescription(self.url)), ("name", ConstructorParameterDescription(self.name)), ("icon", ConstructorParameterDescription(self.icon))])
+            }
+        }
+        case tonConnectManifest(Cons_tonConnectManifest)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .tonConnectManifest(let _data):
+                if boxed {
+                    buffer.appendInt32(304255588)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeString(_data.name, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.icon!.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .tonConnectManifest(let _data):
+                return ("tonConnectManifest", [("flags", ConstructorParameterDescription(_data.flags)), ("url", ConstructorParameterDescription(_data.url)), ("name", ConstructorParameterDescription(_data.name)), ("icon", ConstructorParameterDescription(_data.icon))])
+            }
+        }
+
+        public static func parse_tonConnectManifest(_ reader: BufferReader) -> TonConnectManifest? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.WebDocument?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.WebDocument
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.TonConnectManifest.tonConnectManifest(Cons_tonConnectManifest(flags: _1!, url: _2!, name: _3!, icon: _4))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum TonConnectNextEventId: TypeConstructorDescription {
+        public class Cons_tonConnectNextEventId: TypeConstructorDescription {
+            public var eventId: Int64
+            public init(eventId: Int64) {
+                self.eventId = eventId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("tonConnectNextEventId", [("eventId", ConstructorParameterDescription(self.eventId))])
+            }
+        }
+        case tonConnectNextEventId(Cons_tonConnectNextEventId)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .tonConnectNextEventId(let _data):
+                if boxed {
+                    buffer.appendInt32(1478780131)
+                }
+                serializeInt64(_data.eventId, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .tonConnectNextEventId(let _data):
+                return ("tonConnectNextEventId", [("eventId", ConstructorParameterDescription(_data.eventId))])
+            }
+        }
+
+        public static func parse_tonConnectNextEventId(_ reader: BufferReader) -> TonConnectNextEventId? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.TonConnectNextEventId.tonConnectNextEventId(Cons_tonConnectNextEventId(eventId: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum TonConnectRequest: TypeConstructorDescription {
+        public class Cons_tonConnectRequest: TypeConstructorDescription {
+            public var flags: Int32
+            public var sessionId: Int64
+            public var msgId: Int32
+            public var body: Buffer
+            public var expires: Int32
+            public var topic: String?
+            public var traceId: String?
+            public init(flags: Int32, sessionId: Int64, msgId: Int32, body: Buffer, expires: Int32, topic: String?, traceId: String?) {
+                self.flags = flags
+                self.sessionId = sessionId
+                self.msgId = msgId
+                self.body = body
+                self.expires = expires
+                self.topic = topic
+                self.traceId = traceId
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("tonConnectRequest", [("flags", ConstructorParameterDescription(self.flags)), ("sessionId", ConstructorParameterDescription(self.sessionId)), ("msgId", ConstructorParameterDescription(self.msgId)), ("body", ConstructorParameterDescription(self.body)), ("expires", ConstructorParameterDescription(self.expires)), ("topic", ConstructorParameterDescription(self.topic)), ("traceId", ConstructorParameterDescription(self.traceId))])
+            }
+        }
+        case tonConnectRequest(Cons_tonConnectRequest)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .tonConnectRequest(let _data):
+                if boxed {
+                    buffer.appendInt32(-1587575533)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.sessionId, buffer: buffer, boxed: false)
+                serializeInt32(_data.msgId, buffer: buffer, boxed: false)
+                serializeBytes(_data.body, buffer: buffer, boxed: false)
+                serializeInt32(_data.expires, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.topic!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeString(_data.traceId!, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .tonConnectRequest(let _data):
+                return ("tonConnectRequest", [("flags", ConstructorParameterDescription(_data.flags)), ("sessionId", ConstructorParameterDescription(_data.sessionId)), ("msgId", ConstructorParameterDescription(_data.msgId)), ("body", ConstructorParameterDescription(_data.body)), ("expires", ConstructorParameterDescription(_data.expires)), ("topic", ConstructorParameterDescription(_data.topic)), ("traceId", ConstructorParameterDescription(_data.traceId))])
+            }
+        }
+
+        public static func parse_tonConnectRequest(_ reader: BufferReader) -> TonConnectRequest? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: String?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                _6 = parseString(reader)
+            }
+            var _7: String?
+            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
+                _7 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.TonConnectRequest.tonConnectRequest(Cons_tonConnectRequest(flags: _1!, sessionId: _2!, msgId: _3!, body: _4!, expires: _5!, topic: _6, traceId: _7))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum TonConnectSession: TypeConstructorDescription {
+        public class Cons_tonConnectSession: TypeConstructorDescription {
+            public var flags: Int32
+            public var id: Int64
+            public var dappClientId: String
+            public var clientId: String?
+            public var nonce: Buffer
+            public var manifest: Api.TonConnectManifest?
+            public var manifestError: Int32?
+            public var date: Int32
+            public init(flags: Int32, id: Int64, dappClientId: String, clientId: String?, nonce: Buffer, manifest: Api.TonConnectManifest?, manifestError: Int32?, date: Int32) {
+                self.flags = flags
+                self.id = id
+                self.dappClientId = dappClientId
+                self.clientId = clientId
+                self.nonce = nonce
+                self.manifest = manifest
+                self.manifestError = manifestError
+                self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("tonConnectSession", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id)), ("dappClientId", ConstructorParameterDescription(self.dappClientId)), ("clientId", ConstructorParameterDescription(self.clientId)), ("nonce", ConstructorParameterDescription(self.nonce)), ("manifest", ConstructorParameterDescription(self.manifest)), ("manifestError", ConstructorParameterDescription(self.manifestError)), ("date", ConstructorParameterDescription(self.date))])
+            }
+        }
+        case tonConnectSession(Cons_tonConnectSession)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .tonConnectSession(let _data):
+                if boxed {
+                    buffer.appendInt32(308631238)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.id, buffer: buffer, boxed: false)
+                serializeString(_data.dappClientId, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 3) != 0 {
+                    serializeString(_data.clientId!, buffer: buffer, boxed: false)
+                }
+                serializeBytes(_data.nonce, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 4) != 0 {
+                    _data.manifest!.serialize(buffer, true)
+                }
+                if Int(_data.flags) & Int(1 << 5) != 0 {
+                    serializeInt32(_data.manifestError!, buffer: buffer, boxed: false)
+                }
+                serializeInt32(_data.date, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .tonConnectSession(let _data):
+                return ("tonConnectSession", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id)), ("dappClientId", ConstructorParameterDescription(_data.dappClientId)), ("clientId", ConstructorParameterDescription(_data.clientId)), ("nonce", ConstructorParameterDescription(_data.nonce)), ("manifest", ConstructorParameterDescription(_data.manifest)), ("manifestError", ConstructorParameterDescription(_data.manifestError)), ("date", ConstructorParameterDescription(_data.date))])
+            }
+        }
+
+        public static func parse_tonConnectSession(_ reader: BufferReader) -> TonConnectSession? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            if Int(_1 ?? 0) & Int(1 << 3) != 0 {
+                _4 = parseString(reader)
+            }
+            var _5: Buffer?
+            _5 = parseBytes(reader)
+            var _6: Api.TonConnectManifest?
+            if Int(_1 ?? 0) & Int(1 << 4) != 0 {
+                if let signature = reader.readInt32() {
+                    _6 = Api.parse(reader, signature: signature) as? Api.TonConnectManifest
+                }
+            }
+            var _7: Int32?
+            if Int(_1 ?? 0) & Int(1 << 5) != 0 {
+                _7 = reader.readInt32()
+            }
+            var _8: Int32?
+            _8 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1 ?? 0) & Int(1 << 4) == 0) || _6 != nil
+            let _c7 = (Int(_1 ?? 0) & Int(1 << 5) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.TonConnectSession.tonConnectSession(Cons_tonConnectSession(flags: _1!, id: _2!, dappClientId: _3!, clientId: _4, nonce: _5!, manifest: _6, manifestError: _7, date: _8!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum TopPeer: TypeConstructorDescription {
         public class Cons_topPeer: TypeConstructorDescription {
             public var peer: Api.Peer
@@ -970,6 +1270,21 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("updateBotShippingQuery", [("queryId", ConstructorParameterDescription(self.queryId)), ("userId", ConstructorParameterDescription(self.userId)), ("payload", ConstructorParameterDescription(self.payload)), ("shippingAddress", ConstructorParameterDescription(self.shippingAddress))])
+            }
+        }
+        public class Cons_updateBotStarsSubscription: TypeConstructorDescription {
+            public var flags: Int32
+            public var userId: Int64
+            public var payload: Buffer
+            public var qts: Int32
+            public init(flags: Int32, userId: Int64, payload: Buffer, qts: Int32) {
+                self.flags = flags
+                self.userId = userId
+                self.payload = payload
+                self.qts = qts
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateBotStarsSubscription", [("flags", ConstructorParameterDescription(self.flags)), ("userId", ConstructorParameterDescription(self.userId)), ("payload", ConstructorParameterDescription(self.payload)), ("qts", ConstructorParameterDescription(self.qts))])
             }
         }
         public class Cons_updateBotStopped: TypeConstructorDescription {
@@ -1539,6 +1854,29 @@ public extension Api {
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
                 return ("updateEncryption", [("chat", ConstructorParameterDescription(self.chat)), ("date", ConstructorParameterDescription(self.date))])
+            }
+        }
+        public class Cons_updateEphemeralBotCallbackQuery: TypeConstructorDescription {
+            public var flags: Int32
+            public var queryId: Int64
+            public var userId: Int64
+            public var peer: Api.Peer?
+            public var msgId: Int32
+            public var data: Buffer
+            public var chatInstance: Int64?
+            public var message: Api.EphemeralMessage
+            public init(flags: Int32, queryId: Int64, userId: Int64, peer: Api.Peer?, msgId: Int32, data: Buffer, chatInstance: Int64?, message: Api.EphemeralMessage) {
+                self.flags = flags
+                self.queryId = queryId
+                self.userId = userId
+                self.peer = peer
+                self.msgId = msgId
+                self.data = data
+                self.chatInstance = chatInstance
+                self.message = message
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateEphemeralBotCallbackQuery", [("flags", ConstructorParameterDescription(self.flags)), ("queryId", ConstructorParameterDescription(self.queryId)), ("userId", ConstructorParameterDescription(self.userId)), ("peer", ConstructorParameterDescription(self.peer)), ("msgId", ConstructorParameterDescription(self.msgId)), ("data", ConstructorParameterDescription(self.data)), ("chatInstance", ConstructorParameterDescription(self.chatInstance)), ("message", ConstructorParameterDescription(self.message))])
             }
         }
         public class Cons_updateFolderPeers: TypeConstructorDescription {
@@ -2341,6 +2679,19 @@ public extension Api {
                 return ("updateSentStoryReaction", [("peer", ConstructorParameterDescription(self.peer)), ("storyId", ConstructorParameterDescription(self.storyId)), ("reaction", ConstructorParameterDescription(self.reaction))])
             }
         }
+        public class Cons_updateSentWalletTransaction: TypeConstructorDescription {
+            public var flags: Int32
+            public var msgHash: String
+            public var transaction: Api.WalletTransaction?
+            public init(flags: Int32, msgHash: String, transaction: Api.WalletTransaction?) {
+                self.flags = flags
+                self.msgHash = msgHash
+                self.transaction = transaction
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateSentWalletTransaction", [("flags", ConstructorParameterDescription(self.flags)), ("msgHash", ConstructorParameterDescription(self.msgHash)), ("transaction", ConstructorParameterDescription(self.transaction))])
+            }
+        }
         public class Cons_updateServiceNotification: TypeConstructorDescription {
             public var flags: Int32
             public var inboxDate: Int32?
@@ -2560,6 +2911,50 @@ public extension Api {
                 return ("updateUserTyping", [("flags", ConstructorParameterDescription(self.flags)), ("userId", ConstructorParameterDescription(self.userId)), ("topMsgId", ConstructorParameterDescription(self.topMsgId)), ("action", ConstructorParameterDescription(self.action))])
             }
         }
+        public class Cons_updateWalletGaslessInfo: TypeConstructorDescription {
+            public var flags: Int32
+            public var left: Int32
+            public var resetAt: Int32
+            public var minAmount: Int64
+            public var relayerAddress: String
+            public init(flags: Int32, left: Int32, resetAt: Int32, minAmount: Int64, relayerAddress: String) {
+                self.flags = flags
+                self.left = left
+                self.resetAt = resetAt
+                self.minAmount = minAmount
+                self.relayerAddress = relayerAddress
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateWalletGaslessInfo", [("flags", ConstructorParameterDescription(self.flags)), ("left", ConstructorParameterDescription(self.left)), ("resetAt", ConstructorParameterDescription(self.resetAt)), ("minAmount", ConstructorParameterDescription(self.minAmount)), ("relayerAddress", ConstructorParameterDescription(self.relayerAddress))])
+            }
+        }
+        public class Cons_updateWalletState: TypeConstructorDescription {
+            public var state: Api.WalletState
+            public init(state: Api.WalletState) {
+                self.state = state
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateWalletState", [("state", ConstructorParameterDescription(self.state))])
+            }
+        }
+        public class Cons_updateWalletTonConnectPendingDisconnect: TypeConstructorDescription {
+            public var sessionIds: [Int64]
+            public init(sessionIds: [Int64]) {
+                self.sessionIds = sessionIds
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateWalletTonConnectPendingDisconnect", [("sessionIds", ConstructorParameterDescription(self.sessionIds))])
+            }
+        }
+        public class Cons_updateWalletTonConnectSession: TypeConstructorDescription {
+            public var session: Api.TonConnectSession
+            public init(session: Api.TonConnectSession) {
+                self.session = session
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("updateWalletTonConnectSession", [("session", ConstructorParameterDescription(self.session))])
+            }
+        }
         public class Cons_updateWebBrowserException: TypeConstructorDescription {
             public var flags: Int32
             public var openExternalBrowser: Api.Bool?
@@ -2624,6 +3019,7 @@ public extension Api {
         case updateBotPrecheckoutQuery(Cons_updateBotPrecheckoutQuery)
         case updateBotPurchasedPaidMedia(Cons_updateBotPurchasedPaidMedia)
         case updateBotShippingQuery(Cons_updateBotShippingQuery)
+        case updateBotStarsSubscription(Cons_updateBotStarsSubscription)
         case updateBotStopped(Cons_updateBotStopped)
         case updateBotWebhookJSON(Cons_updateBotWebhookJSON)
         case updateBotWebhookJSONQuery(Cons_updateBotWebhookJSONQuery)
@@ -2670,6 +3066,7 @@ public extension Api {
         case updateEncryptedChatTyping(Cons_updateEncryptedChatTyping)
         case updateEncryptedMessagesRead(Cons_updateEncryptedMessagesRead)
         case updateEncryption(Cons_updateEncryption)
+        case updateEphemeralBotCallbackQuery(Cons_updateEphemeralBotCallbackQuery)
         case updateFavedStickers
         case updateFolderPeers(Cons_updateFolderPeers)
         case updateGeoLiveViewed(Cons_updateGeoLiveViewed)
@@ -2743,6 +3140,7 @@ public extension Api {
         case updateSavedRingtones
         case updateSentPhoneCode(Cons_updateSentPhoneCode)
         case updateSentStoryReaction(Cons_updateSentStoryReaction)
+        case updateSentWalletTransaction(Cons_updateSentWalletTransaction)
         case updateServiceNotification(Cons_updateServiceNotification)
         case updateSmsJob(Cons_updateSmsJob)
         case updateStarGiftAuctionState(Cons_updateStarGiftAuctionState)
@@ -2763,6 +3161,10 @@ public extension Api {
         case updateUserPhone(Cons_updateUserPhone)
         case updateUserStatus(Cons_updateUserStatus)
         case updateUserTyping(Cons_updateUserTyping)
+        case updateWalletGaslessInfo(Cons_updateWalletGaslessInfo)
+        case updateWalletState(Cons_updateWalletState)
+        case updateWalletTonConnectPendingDisconnect(Cons_updateWalletTonConnectPendingDisconnect)
+        case updateWalletTonConnectSession(Cons_updateWalletTonConnectSession)
         case updateWebBrowserException(Cons_updateWebBrowserException)
         case updateWebBrowserSettings(Cons_updateWebBrowserSettings)
         case updateWebPage(Cons_updateWebPage)
@@ -3002,6 +3404,15 @@ public extension Api {
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
                 serializeBytes(_data.payload, buffer: buffer, boxed: false)
                 _data.shippingAddress.serialize(buffer, true)
+                break
+            case .updateBotStarsSubscription(let _data):
+                if boxed {
+                    buffer.appendInt32(1812827683)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeBytes(_data.payload, buffer: buffer, boxed: false)
+                serializeInt32(_data.qts, buffer: buffer, boxed: false)
                 break
             case .updateBotStopped(let _data):
                 if boxed {
@@ -3442,6 +3853,23 @@ public extension Api {
                 }
                 _data.chat.serialize(buffer, true)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
+                break
+            case .updateEphemeralBotCallbackQuery(let _data):
+                if boxed {
+                    buffer.appendInt32(2081454550)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt64(_data.queryId, buffer: buffer, boxed: false)
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.peer!.serialize(buffer, true)
+                }
+                serializeInt32(_data.msgId, buffer: buffer, boxed: false)
+                serializeBytes(_data.data, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeInt64(_data.chatInstance!, buffer: buffer, boxed: false)
+                }
+                _data.message.serialize(buffer, true)
                 break
             case .updateFavedStickers:
                 if boxed {
@@ -4109,6 +4537,16 @@ public extension Api {
                 serializeInt32(_data.storyId, buffer: buffer, boxed: false)
                 _data.reaction.serialize(buffer, true)
                 break
+            case .updateSentWalletTransaction(let _data):
+                if boxed {
+                    buffer.appendInt32(-1320989366)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeString(_data.msgHash, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    _data.transaction!.serialize(buffer, true)
+                }
+                break
             case .updateServiceNotification(let _data):
                 if boxed {
                     buffer.appendInt32(-337352679)
@@ -4268,6 +4706,38 @@ public extension Api {
                 }
                 _data.action.serialize(buffer, true)
                 break
+            case .updateWalletGaslessInfo(let _data):
+                if boxed {
+                    buffer.appendInt32(-1464984404)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.left, buffer: buffer, boxed: false)
+                serializeInt32(_data.resetAt, buffer: buffer, boxed: false)
+                serializeInt64(_data.minAmount, buffer: buffer, boxed: false)
+                serializeString(_data.relayerAddress, buffer: buffer, boxed: false)
+                break
+            case .updateWalletState(let _data):
+                if boxed {
+                    buffer.appendInt32(1791226538)
+                }
+                _data.state.serialize(buffer, true)
+                break
+            case .updateWalletTonConnectPendingDisconnect(let _data):
+                if boxed {
+                    buffer.appendInt32(-772898407)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.sessionIds.count))
+                for item in _data.sessionIds {
+                    serializeInt64(item, buffer: buffer, boxed: false)
+                }
+                break
+            case .updateWalletTonConnectSession(let _data):
+                if boxed {
+                    buffer.appendInt32(1352896014)
+                }
+                _data.session.serialize(buffer, true)
+                break
             case .updateWebBrowserException(let _data):
                 if boxed {
                     buffer.appendInt32(335872721)
@@ -4343,6 +4813,8 @@ public extension Api {
                 return ("updateBotPurchasedPaidMedia", [("userId", ConstructorParameterDescription(_data.userId)), ("payload", ConstructorParameterDescription(_data.payload)), ("qts", ConstructorParameterDescription(_data.qts))])
             case .updateBotShippingQuery(let _data):
                 return ("updateBotShippingQuery", [("queryId", ConstructorParameterDescription(_data.queryId)), ("userId", ConstructorParameterDescription(_data.userId)), ("payload", ConstructorParameterDescription(_data.payload)), ("shippingAddress", ConstructorParameterDescription(_data.shippingAddress))])
+            case .updateBotStarsSubscription(let _data):
+                return ("updateBotStarsSubscription", [("flags", ConstructorParameterDescription(_data.flags)), ("userId", ConstructorParameterDescription(_data.userId)), ("payload", ConstructorParameterDescription(_data.payload)), ("qts", ConstructorParameterDescription(_data.qts))])
             case .updateBotStopped(let _data):
                 return ("updateBotStopped", [("userId", ConstructorParameterDescription(_data.userId)), ("date", ConstructorParameterDescription(_data.date)), ("stopped", ConstructorParameterDescription(_data.stopped)), ("qts", ConstructorParameterDescription(_data.qts))])
             case .updateBotWebhookJSON(let _data):
@@ -4435,6 +4907,8 @@ public extension Api {
                 return ("updateEncryptedMessagesRead", [("chatId", ConstructorParameterDescription(_data.chatId)), ("maxDate", ConstructorParameterDescription(_data.maxDate)), ("date", ConstructorParameterDescription(_data.date))])
             case .updateEncryption(let _data):
                 return ("updateEncryption", [("chat", ConstructorParameterDescription(_data.chat)), ("date", ConstructorParameterDescription(_data.date))])
+            case .updateEphemeralBotCallbackQuery(let _data):
+                return ("updateEphemeralBotCallbackQuery", [("flags", ConstructorParameterDescription(_data.flags)), ("queryId", ConstructorParameterDescription(_data.queryId)), ("userId", ConstructorParameterDescription(_data.userId)), ("peer", ConstructorParameterDescription(_data.peer)), ("msgId", ConstructorParameterDescription(_data.msgId)), ("data", ConstructorParameterDescription(_data.data)), ("chatInstance", ConstructorParameterDescription(_data.chatInstance)), ("message", ConstructorParameterDescription(_data.message))])
             case .updateFavedStickers:
                 return ("updateFavedStickers", [])
             case .updateFolderPeers(let _data):
@@ -4581,6 +5055,8 @@ public extension Api {
                 return ("updateSentPhoneCode", [("sentCode", ConstructorParameterDescription(_data.sentCode))])
             case .updateSentStoryReaction(let _data):
                 return ("updateSentStoryReaction", [("peer", ConstructorParameterDescription(_data.peer)), ("storyId", ConstructorParameterDescription(_data.storyId)), ("reaction", ConstructorParameterDescription(_data.reaction))])
+            case .updateSentWalletTransaction(let _data):
+                return ("updateSentWalletTransaction", [("flags", ConstructorParameterDescription(_data.flags)), ("msgHash", ConstructorParameterDescription(_data.msgHash)), ("transaction", ConstructorParameterDescription(_data.transaction))])
             case .updateServiceNotification(let _data):
                 return ("updateServiceNotification", [("flags", ConstructorParameterDescription(_data.flags)), ("inboxDate", ConstructorParameterDescription(_data.inboxDate)), ("type", ConstructorParameterDescription(_data.type)), ("message", ConstructorParameterDescription(_data.message)), ("media", ConstructorParameterDescription(_data.media)), ("entities", ConstructorParameterDescription(_data.entities))])
             case .updateSmsJob(let _data):
@@ -4621,6 +5097,14 @@ public extension Api {
                 return ("updateUserStatus", [("userId", ConstructorParameterDescription(_data.userId)), ("status", ConstructorParameterDescription(_data.status))])
             case .updateUserTyping(let _data):
                 return ("updateUserTyping", [("flags", ConstructorParameterDescription(_data.flags)), ("userId", ConstructorParameterDescription(_data.userId)), ("topMsgId", ConstructorParameterDescription(_data.topMsgId)), ("action", ConstructorParameterDescription(_data.action))])
+            case .updateWalletGaslessInfo(let _data):
+                return ("updateWalletGaslessInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("left", ConstructorParameterDescription(_data.left)), ("resetAt", ConstructorParameterDescription(_data.resetAt)), ("minAmount", ConstructorParameterDescription(_data.minAmount)), ("relayerAddress", ConstructorParameterDescription(_data.relayerAddress))])
+            case .updateWalletState(let _data):
+                return ("updateWalletState", [("state", ConstructorParameterDescription(_data.state))])
+            case .updateWalletTonConnectPendingDisconnect(let _data):
+                return ("updateWalletTonConnectPendingDisconnect", [("sessionIds", ConstructorParameterDescription(_data.sessionIds))])
+            case .updateWalletTonConnectSession(let _data):
+                return ("updateWalletTonConnectSession", [("session", ConstructorParameterDescription(_data.session))])
             case .updateWebBrowserException(let _data):
                 return ("updateWebBrowserException", [("flags", ConstructorParameterDescription(_data.flags)), ("openExternalBrowser", ConstructorParameterDescription(_data.openExternalBrowser)), ("exception", ConstructorParameterDescription(_data.exception))])
             case .updateWebBrowserSettings(let _data):
@@ -5109,6 +5593,26 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateBotShippingQuery(Cons_updateBotShippingQuery(queryId: _1!, userId: _2!, payload: _3!, shippingAddress: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotStarsSubscription(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateBotStarsSubscription(Cons_updateBotStarsSubscription(flags: _1!, userId: _2!, payload: _3!, qts: _4!))
             }
             else {
                 return nil
@@ -5994,6 +6498,46 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateEncryption(Cons_updateEncryption(chat: _1!, date: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateEphemeralBotCallbackQuery(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Api.Peer?
+            if Int(_1 ?? 0) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.Peer
+                }
+            }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Buffer?
+            _6 = parseBytes(reader)
+            var _7: Int64?
+            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
+                _7 = reader.readInt64()
+            }
+            var _8: Api.EphemeralMessage?
+            if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.EphemeralMessage
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1 ?? 0) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Update.updateEphemeralBotCallbackQuery(Cons_updateEphemeralBotCallbackQuery(flags: _1!, queryId: _2!, userId: _3!, peer: _4, msgId: _5!, data: _6!, chatInstance: _7, message: _8!))
             }
             else {
                 return nil
@@ -7277,6 +7821,27 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateSentWalletTransaction(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.WalletTransaction?
+            if Int(_1 ?? 0) & Int(1 << 1) != 0 {
+                if let signature = reader.readInt32() {
+                    _3 = Api.parse(reader, signature: signature) as? Api.WalletTransaction
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1 ?? 0) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateSentWalletTransaction(Cons_updateSentWalletTransaction(flags: _1!, msgHash: _2!, transaction: _3))
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -7594,6 +8159,68 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserTyping(Cons_updateUserTyping(flags: _1!, userId: _2!, topMsgId: _3, action: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateWalletGaslessInfo(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: String?
+            _5 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateWalletGaslessInfo(Cons_updateWalletGaslessInfo(flags: _1!, left: _2!, resetAt: _3!, minAmount: _4!, relayerAddress: _5!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateWalletState(_ reader: BufferReader) -> Update? {
+            var _1: Api.WalletState?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WalletState
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateWalletState(Cons_updateWalletState(state: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateWalletTonConnectPendingDisconnect(_ reader: BufferReader) -> Update? {
+            var _1: [Int64]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateWalletTonConnectPendingDisconnect(Cons_updateWalletTonConnectPendingDisconnect(sessionIds: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateWalletTonConnectSession(_ reader: BufferReader) -> Update? {
+            var _1: Api.TonConnectSession?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.TonConnectSession
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateWalletTonConnectSession(Cons_updateWalletTonConnectSession(session: _1!))
             }
             else {
                 return nil

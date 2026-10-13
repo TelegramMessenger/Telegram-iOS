@@ -38,6 +38,10 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let accessible: Bool
     let action: () -> Void
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .contactList))
+    }
     
     public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, systemStyle: ItemListSystemStyle = .legacy, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, actionStyle: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.presentationData = presentationData
@@ -55,10 +59,10 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
-            let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, neighbors: neighbors)
             let (layout, apply) = node.asyncLayout()(self, params, firstWithHeader, last)
             
             node.contentSize = layout.contentSize
@@ -72,13 +76,13 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactListActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, neighbors: neighbors)
                     let (layout, apply) = makeLayout(self, params, firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
@@ -99,16 +103,14 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    static func mergeType(item: ContactListActionItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ContactListActionItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ContactsPeerItem {
-                    firstWithHeader = header.id != previousItem.header?.id
-                } else if let previousItem = previousItem as? ContactListActionItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .contactList {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -117,11 +119,9 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
-            if let nextItem = nextItem as? ContactsPeerItem {
-                last = item.header?.id != nextItem.header?.id
-            } else if let nextItem = nextItem as? ContactListActionItem {
-                last = item.header?.id != nextItem.header?.id
+        if neighbors.next != nil {
+            if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .contactList {
+                last = item.header?.id != nextItem.headerId
             } else {
                 last = true
             }
@@ -199,7 +199,7 @@ class ContactListActionItemNode: ListViewItemNode {
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let currentItem = self.item
         
-        return { item, params, firstWithHeader, last in
+        return { [weak self] item, params, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {

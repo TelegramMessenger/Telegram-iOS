@@ -16,6 +16,8 @@ import AnimationCache
 import MultiAnimationRenderer
 import InvisibleInkDustNode
 import ShimmeringMask
+import WallpaperBackgroundNode
+import UnsupportedContentPill
 
 // MARK: - Stable item identity (for view reuse on re-layouts)
 
@@ -36,7 +38,7 @@ public enum InstantPageV2StableItemId: Hashable {
 }
 
 public enum InstantPageV2ItemKind: Hashable {
-    case text, codeBlock, divider, listMarker, blockQuoteBar, shape, imageOrnament, mediaPlaceholder, table, anchor, formula, slideshow, quoteFrame
+    case text, codeBlock, divider, listMarker, blockQuoteBar, shape, imageOrnament, mediaPlaceholder, table, anchor, formula, slideshow, quoteFrame, inlineButton, buttonRow, unsupportedContent
 }
 
 // MARK: - Render context
@@ -53,8 +55,8 @@ public final class InstantPageV2RenderContext {
     public let context: AccountContext
     public private(set) var webpage: TelegramMediaWebpage
     public let sourceLocation: InstantPageSourceLocation
-    public let imageReference: (TelegramMediaImage) -> ImageMediaReference
-    public let fileReference: (TelegramMediaFile) -> FileMediaReference
+    public private(set) var imageReference: (TelegramMediaImage) -> ImageMediaReference
+    public private(set) var fileReference: (TelegramMediaFile) -> FileMediaReference
     public let present: (ViewController, Any?) -> Void
     public let push: (ViewController) -> Void
     public let openUrl: (InstantPageUrlItem) -> Void
@@ -63,7 +65,7 @@ public final class InstantPageV2RenderContext {
     /// key audio playback per message (`.richMessage(message.id)`) AND to fetch audio files via a
     /// message reference (so a stale file reference can revalidate); `nil` in the send preview,
     /// which falls back to the webpage-keyed playlist id + webpage file reference.
-    public let message: MessageReference?
+    public private(set) var message: MessageReference?
     /// Per-media auto-download decision for a photo, computed by the host (chat bubble) from the
     /// message's download settings. Default `{ _ in false }` — V1/web-IV and the send preview keep
     /// their existing behavior (the node's own global-settings gate). See the video/autodownload spec.
@@ -73,6 +75,24 @@ public final class InstantPageV2RenderContext {
     /// Whether a video file should auto-play inline (energy-usage autoplay setting AND already
     /// downloaded), computed by the host. Default `{ _ in false }` — no inline autoplay.
     public let shouldAutoplayVideo: (TelegramMediaFile) -> Bool
+    /// The host's chat wallpaper, when it has one. The unsupported-content pill asks it for a
+    /// `.free` bubble background so the wallpaper shows through the card.
+    ///
+    /// A closure rather than a stored reference: a message-scoped context must not retain the
+    /// chat's background node, and the host may swap its node without rebuilding the context.
+    /// Bubble backgrounds here are portal views that mirror their source, so nothing else — no
+    /// absolute rect, no scroll offset — has to be threaded through.
+    public let wallpaperBackgroundNode: () -> WallpaperBackgroundNode?
+    /// Whether the media on this page must be excluded from screenshots and screen recordings
+    /// (`setLayerDisableScreenshots`), and denied the gallery's share/save affordances. Set by the
+    /// chat bubble from the message's copy-protection state; `false` for V1 Instant View, web IV
+    /// and the send preview, which have no protected content.
+    ///
+    /// Mutable because copy protection is a *peer* setting that can be toggled while a message is
+    /// on screen: that changes neither the webpage nor the page layout, so the V2View — and with it
+    /// this context — is not rebuilt. The host refreshes the flag before each `update(layout:…)`
+    /// and every media view re-reads it from the context in its own `update(…)`.
+    public private(set) var captureProtected: Bool
 
     public init(
         context: AccountContext,
@@ -87,6 +107,8 @@ public final class InstantPageV2RenderContext {
         shouldAutoDownloadImage: @escaping (TelegramMediaImage) -> Bool = { _ in false },
         shouldAutoDownloadFile: @escaping (TelegramMediaFile) -> Bool = { _ in false },
         shouldAutoplayVideo: @escaping (TelegramMediaFile) -> Bool = { _ in false },
+        wallpaperBackgroundNode: @escaping () -> WallpaperBackgroundNode? = { nil },
+        captureProtected: Bool = false,
         message: MessageReference?
     ) {
         self.context = context
@@ -102,15 +124,41 @@ public final class InstantPageV2RenderContext {
         self.shouldAutoDownloadImage = shouldAutoDownloadImage
         self.shouldAutoDownloadFile = shouldAutoDownloadFile
         self.shouldAutoplayVideo = shouldAutoplayVideo
+        self.wallpaperBackgroundNode = wallpaperBackgroundNode
+        self.captureProtected = captureProtected
     }
 
-    /// Update the content-bearing fields for a later chunk of the SAME message. Enables the
-    /// streaming bubble to reuse one V2View across `stableVersion` bumps instead of rebuilding.
-    /// Only `webpage` changes across chunks; the `imageReference`/`fileReference` closures keep
-    /// their construction-time `MessageReference` snapshot, which is acceptable because the message
-    /// id is stable across chunks (media resolves by id) and streamed AI content carries no media.
+    /// Refresh the copy-protection state. See `captureProtected`; the host calls this before each
+    /// `InstantPageV2View.update(layout:theme:animation:)` so reused media views pick the new value
+    /// up in their own `update(…)`.
+    public func updateCaptureProtected(_ captureProtected: Bool) {
+        self.captureProtected = captureProtected
+    }
+
+    /// Update the content-bearing webpage for a later chunk of the SAME message with the SAME
+    /// server id (streamed AI `stableVersion` bumps). The `imageReference`/`fileReference`/`message`
+    /// snapshot is intentionally NOT refreshed here: the message id is stable across chunks (media
+    /// resolves by id) and streamed AI content carries no media. For the Local→Cloud send transition
+    /// (same stableId, NEW id, real media) use `updateContent(webpage:message:imageReference:fileReference:)`.
     public func updateContent(webpage: TelegramMediaWebpage) {
         self.webpage = webpage
+    }
+
+    /// Refresh content AND the message-scoped references when the SAME logical message (same
+    /// `stableId`) transitions to a new server id (Local→Cloud on send). Already-built media item
+    /// VIEWS keep their construction-time (local) reference — their bytes are already local
+    /// (`ApplyUpdateMessage` moved them), so the poster does not reload — but LIVE reads (inline
+    /// video content-id/fetch, audio playlist key/fetch, gallery) now use the Cloud reference.
+    public func updateContent(
+        webpage: TelegramMediaWebpage,
+        message: MessageReference?,
+        imageReference: @escaping (TelegramMediaImage) -> ImageMediaReference,
+        fileReference: @escaping (TelegramMediaFile) -> FileMediaReference
+    ) {
+        self.webpage = webpage
+        self.message = message
+        self.imageReference = imageReference
+        self.fileReference = fileReference
     }
 }
 
@@ -139,7 +187,11 @@ private final class InstantPageInlineImageData {
 
 private final class InstantPageEmojiLayerData {
     let itemLayer: InlineStickerItemLayer
-    weak var textView: InstantPageV2TextView?
+    /// The view whose coordinate space `itemLayer.frame` is in — an `InstantPageV2TextView` for an
+    /// emoji in body text, or an `InstantPageV2ButtonPillView` for one in a button label. Only a
+    /// text host has a progressive-reveal cursor; a pill already pops in atomically with its
+    /// paragraph, so a pill-hosted emoji is revealed from the start.
+    weak var hostView: UIView?
     var charIndexInItem: Int = 0
     var revealed: Bool = false
 
@@ -160,8 +212,24 @@ public final class InstantPageV2View: UIView {
     /// structural path (see InstantPage.togglingCheckbox); `newValue` is the toggled state.
     public var checkboxTapped: ((_ path: [Int], _ newValue: Bool) -> Void)?
 
+    /// Fired when an InstantPage button is tapped — an inline `RichText.textButton` or a member of a
+    /// `pageBlockButtonRow`. The consumer maps it onto the message-button dispatch, and reports the
+    /// action's progress back through the promise so the tapped pill can shimmer while it is in
+    /// flight. Leaving the promise unfulfilled is fine — the pill simply never shimmers.
+    public var buttonTapped: ((InstantPageButton, Promise<Bool>) -> Void)?
+    /// Fires when a `.document` row whose file is already downloaded is tapped.
+    public var documentTapped: ((TelegramMediaFile) -> Void)?
+    /// Fired when the Update button on an unsupported-content pill is tapped. Hosts inside a chat
+    /// route this to the App Store page; hosts that leave it nil still render the button (the tap
+    /// is inert) so the pill's width does not change between preview and sent message.
+    public var unsupportedActionTapped: (() -> Void)?
+
     var itemViews: [InstantPageItemView] = []
     private var itemViewStableIds: [InstantPageV2StableItemId] = []
+    /// Whether any item view currently carries a collapsed-quote fade. Lets the fade pass return
+    /// immediately on the overwhelmingly common page that has neither a collapsible quote nor a
+    /// leftover mask to clean up.
+    private var hasQuoteFadeMasks = false
 
     public let renderContext: InstantPageV2RenderContext?
 
@@ -240,6 +308,20 @@ public final class InstantPageV2View: UIView {
         theme: InstantPageTheme,
         animation: ListViewItemUpdateAnimation
     ) {
+        // Where each collapsible quote sat BEFORE this update, keyed by its structural path. A quote
+        // being collapsed has no fade mask yet, so a mask created now would otherwise appear already
+        // closed; this is the geometry it animates out of. Read before `self.currentLayout` is
+        // replaced at the end of this method.
+        var previousQuoteFrames: [[Int]: CGRect] = [:]
+        for item in self.currentLayout?.items ?? [] {
+            if case let .quoteFrame(quote) = item, quote.collapseState != .notCollapsible {
+                previousQuoteFrames[quote.path] = quote.frame
+            }
+        }
+        // Likewise for the views the mask hangs off: by the time the fade pass runs, every frame has
+        // already been set to its target.
+        var previousViewFrames: [ObjectIdentifier: CGRect] = [:]
+
         // Build map of existing views by stable id.
         var oldViewsById: [InstantPageV2StableItemId: InstantPageItemView] = [:]
         for (oldIndex, oldId) in self.itemViewStableIds.enumerated() {
@@ -249,6 +331,11 @@ public final class InstantPageV2View: UIView {
         var newItemViews: [InstantPageItemView] = []
         var newStableIds: [InstantPageV2StableItemId] = []
         var reusedIds: Set<InstantPageV2StableItemId> = []
+        // Kept alongside `newItemViews` rather than re-derived by index from `layout.items`: an item
+        // whose view cannot be built (`makeItemView` returning nil) is skipped here but still present
+        // there, so the two lists are NOT index-aligned. The collapsed-quote fade pass needs each
+        // view's item.
+        var newItems: [InstantPageV2LaidOutItem] = []
 
         // Two independent position counters so thinking-block churn never renumbers content
         // blocks' stable ids (requirement: adding/removing a thinking block must not affect other
@@ -268,6 +355,7 @@ public final class InstantPageV2View: UIView {
 
             if let existing = oldViewsById[id], let reusedView = self.reuse(existingView: existing, for: item, theme: theme, animation: animation) {
                 let newFrame = InstantPageV2View.actualFrame(forItem: item)   // parent positions child
+                previousViewFrames[ObjectIdentifier(reusedView)] = reusedView.frame
                 if animation.isAnimated && reusedView.frame != newFrame {
                     // A collapsing details view keeps its body alive; remove it once this
                     // frame-shrink (the clip that hides it) finishes — see finalizePendingCollapse().
@@ -281,12 +369,14 @@ public final class InstantPageV2View: UIView {
                 }
                 newItemViews.append(reusedView)
                 newStableIds.append(id)
+                newItems.append(item)
                 reusedIds.insert(id)
                 // Already in subviews from the previous update; just keep it.
             } else {
                 guard let newView = self.makeItemView(for: item, theme: theme) else { continue }
                 newItemViews.append(newView)
                 newStableIds.append(id)
+                newItems.append(item)
                 self.addSubview(newView)
                 self.propagateRegistryHost(to: newView)
             }
@@ -307,6 +397,7 @@ public final class InstantPageV2View: UIView {
         self.itemViewStableIds = newStableIds
         self.currentLayout = layout
         self.currentTheme = theme
+        self.applyCollapsedQuoteFades(views: newItemViews, items: newItems, previousQuoteFrames: previousQuoteFrames, previousViewFrames: previousViewFrames, animation: animation)
         self.updateInlineImages()
         self.updateInlineEmoji()
         let enableSpoilerAnimations = self.renderContext.map { $0.context.sharedContext.energyUsageSettings.fullTranslucency } ?? true
@@ -321,6 +412,123 @@ public final class InstantPageV2View: UIView {
         // Force the current reveal state (true OR false) onto every text view every layout, so a
         // positionally-reused text view cannot retain a stale reveal flag from prior content.
         self.setDisplayContentsUnderSpoilers(self.displayContentsUnderSpoilers, atLocation: nil, animated: false)
+    }
+
+    /// Hangs the collapsed-quote fade off the content views that reach a collapsed quote's bottom
+    /// edge, and dissolves it again when that quote expands.
+    ///
+    /// A POST-PASS over positioned views rather than a flag on the items, because **a quote's content
+    /// is not grouped**: `layoutBlockQuote` emits the frame and its children as flat siblings into the
+    /// page's item list, so the only thing tying a text view to the quote it sits in is geometry.
+    /// (Details bodies and table cells do nest their own `InstantPageV2View`, and masking the
+    /// container masks the whole subtree, so nesting needs no special case.)
+    private func applyCollapsedQuoteFades(views: [InstantPageItemView], items: [InstantPageV2LaidOutItem], previousQuoteFrames: [[Int]: CGRect], previousViewFrames: [ObjectIdentifier: CGRect], animation: ListViewItemUpdateAnimation) {
+        var quotes: [(frame: CGRect, isCollapsed: Bool, mirrored: Bool, path: [Int])] = []
+        for item in items {
+            guard case let .quoteFrame(quote) = item, quote.collapseState != .notCollapsible else {
+                continue
+            }
+            quotes.append((quote.frame, quote.collapseState == .collapsed, quote.barOnTrailing, quote.path))
+        }
+        // The overwhelmingly common page has neither a collapsible quote nor a leftover fade.
+        if quotes.isEmpty && !self.hasQuoteFadeMasks {
+            return
+        }
+
+        var anyMaskRemains = false
+        for (view, item) in zip(views, items) {
+            var ownQuoteFrame: CGRect?
+            if case let .quoteFrame(quote) = item {
+                ownQuoteFrame = quote.frame
+            }
+            // Innermost wins: a nested collapsed quote fades its own content, not its parent's edge.
+            var host: (frame: CGRect, isCollapsed: Bool, mirrored: Bool, path: [Int])?
+            for quote in quotes {
+                // A quote never fades its own background or its own chevron.
+                if let ownQuoteFrame, ownQuoteFrame == quote.frame {
+                    continue
+                }
+                guard quote.frame.insetBy(dx: -0.5, dy: -0.5).contains(view.itemFrame) else {
+                    continue
+                }
+                if let current = host, current.frame.height <= quote.frame.height {
+                    continue
+                }
+                host = quote
+            }
+
+            let existingMask = view.layer.mask as? InstantPageV2QuoteFadeMaskLayer
+            guard let host else {
+                if let existingMask, self.dissolveQuoteFade(existingMask, on: view, animation: animation) {
+                    anyMaskRemains = true
+                }
+                continue
+            }
+
+            // The fade is anchored to the QUOTE's rect, expressed in this view's coordinate space —
+            // so a view sitting well above the quote's bottom gets an all-opaque mask and is
+            // untouched, exactly as it should be.
+            let viewFrame = view.frame
+            let localQuoteFrame = host.frame.offsetBy(dx: -viewFrame.minX, dy: -viewFrame.minY)
+            let reachesFade = viewFrame.maxY > host.frame.maxY - instantPageV2QuoteFadeTileSize.height
+
+            if host.isCollapsed && reachesFade {
+                if let existingMask {
+                    existingMask.invalidatePendingDissolve()
+                    animation.animator.updateFrame(layer: existingMask, frame: localQuoteFrame, completion: nil)
+                    animation.animator.updateBackgroundColor(layer: existingMask, color: .clear, completion: nil)
+                } else {
+                    let mask = InstantPageV2QuoteFadeMaskLayer()
+                    // RTL: the carve-out is anchored to the tile's trailing side, so mirror it to
+                    // follow the chevron across to the leading side.
+                    if host.mirrored {
+                        mask.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                    }
+                    // A mask born already closed IS the snap: the overflow lines it exists to sweep
+                    // away would be gone on the first frame. Start it at the quote's pre-toggle rect,
+                    // in the pre-toggle coordinate space of the very view it is masking, and let it
+                    // close alongside everything else.
+                    if animation.isAnimated,
+                       let previousQuote = previousQuoteFrames[host.path],
+                       let previousViewFrame = previousViewFrames[ObjectIdentifier(view)] {
+                        mask.frame = previousQuote.offsetBy(dx: -previousViewFrame.minX, dy: -previousViewFrame.minY)
+                        view.layer.mask = mask
+                        animation.animator.updateFrame(layer: mask, frame: localQuoteFrame, completion: nil)
+                    } else {
+                        mask.frame = localQuoteFrame
+                        view.layer.mask = mask
+                    }
+                }
+                anyMaskRemains = true
+            } else if let existingMask {
+                // Keep the mask tracking the quote as it grows — a stale rect would clip the newly
+                // revealed lines for the length of the expand animation — while its carve-out fills
+                // back in.
+                animation.animator.updateFrame(layer: existingMask, frame: localQuoteFrame, completion: nil)
+                if self.dissolveQuoteFade(existingMask, on: view, animation: animation) {
+                    anyMaskRemains = true
+                }
+            }
+        }
+        self.hasQuoteFadeMasks = anyMaskRemains
+    }
+
+    /// Fills a fade's carve-out back in and drops the mask. Returns whether the mask is still
+    /// attached on return (it is, for the length of an animated dissolve).
+    private func dissolveQuoteFade(_ mask: InstantPageV2QuoteFadeMaskLayer, on view: UIView, animation: ListViewItemUpdateAnimation) -> Bool {
+        guard animation.isAnimated else {
+            view.layer.mask = nil
+            return false
+        }
+        let token = mask.beginDissolve()
+        // An opaque background fills the carve-out in — see `InstantPageV2QuoteFadeMaskLayer`.
+        animation.animator.updateBackgroundColor(layer: mask, color: .white, completion: { [weak view, weak mask] _ in
+            guard let view, let mask, view.layer.mask === mask, mask.isDissolveCurrent(token) else {
+                return
+            }
+            view.layer.mask = nil
+        })
+        return true
     }
 
     func updateInlineEmoji() {
@@ -399,8 +607,71 @@ public final class InstantPageV2View: UIView {
 
                     data.itemLayer.dynamicColor = textColor
                     data.itemLayer.frame = itemFrame
-                    data.textView = textView
+                    data.hostView = textView
                     data.charIndexInItem = emojiItem.range.location
+                }
+            }
+        }
+
+        // Second walk: custom emoji inside button pills. Registered here rather than owned by the
+        // pill so they inherit the same reveal, looping and visibility gates as body-text emoji
+        // instead of needing a parallel implementation of all three.
+        for view in self.itemViews {
+            // `pillSize` comes from the ITEM, never from the pill's live bounds: a freshly created
+            // InstantPageV2InlineButtonView assigns its pill's frame in `layoutSubviews`, which has
+            // not run yet at this point.
+            var pills: [(pill: InstantPageV2ButtonPillView, size: CGSize)] = []
+            if let buttonView = view as? InstantPageV2InlineButtonView {
+                pills.append((buttonView.pillView, buttonView.item.frame.size))
+            } else if let rowView = view as? InstantPageV2ButtonRowView {
+                for (index, pill) in rowView.pillViews.enumerated() where index < rowView.item.buttons.count {
+                    pills.append((pill, rowView.item.buttons[index].frame.size))
+                }
+            } else {
+                continue
+            }
+
+            for entry in pills {
+                let pill = entry.pill
+                let textColor = pill.resolvedLabelColor
+                for placement in instantPageButtonEmojiPlacements(attachment: pill.attachment, pillSize: entry.size) {
+                    let index = nextIndexById[placement.emoji.fileId] ?? 0
+                    nextIndexById[placement.emoji.fileId] = index + 1
+                    let id = InlineStickerItemLayer.Key(id: placement.emoji.fileId, index: index)
+                    validIds.append(id)
+
+                    let data: InstantPageEmojiLayerData
+                    if let existing = self.inlineStickerItemLayers[id] {
+                        data = existing
+                        if data.itemLayer.superlayer !== pill.emojiContainerView.layer {
+                            pill.emojiContainerView.layer.addSublayer(data.itemLayer)
+                        }
+                    } else {
+                        let pointSize = floor(placement.frame.width * 1.3)
+                        let layer = InlineStickerItemLayer(
+                            context: context,
+                            userLocation: .other,
+                            attemptSynchronousLoad: false,
+                            emoji: placement.emoji,
+                            file: placement.emoji.file,
+                            cache: cache,
+                            renderer: renderer,
+                            placeholderColor: UIColor(white: 0.5, alpha: 0.3),
+                            pointSize: CGSize(width: pointSize, height: pointSize),
+                            dynamicColor: textColor
+                        )
+                        layer.opacity = 0.0
+                        data = InstantPageEmojiLayerData(itemLayer: layer)
+                        self.inlineStickerItemLayers[id] = data
+                        pill.emojiContainerView.layer.addSublayer(layer)
+                    }
+
+                    data.itemLayer.dynamicColor = textColor
+                    data.itemLayer.frame = placement.frame
+                    data.hostView = pill
+                    // No reveal cursor on a pill host, so `charIndexInItem` is unused; the layer is
+                    // taken to full opacity by `updateEmojiReveal` at the end of this method.
+                    data.charIndexInItem = 0
                 }
             }
         }
@@ -472,7 +743,8 @@ public final class InstantPageV2View: UIView {
                             frame: itemFrame,
                             context: context,
                             userLocation: .other,
-                            theme: theme
+                            theme: theme,
+                            captureProtected: renderContext.captureProtected
                         )
                         // Image starts hidden; updateImageReveal pops it in when the streaming
                         // cursor crosses its char-index. For non-streaming pages (no
@@ -485,6 +757,7 @@ public final class InstantPageV2View: UIView {
                     }
 
                     data.view.frame = itemFrame
+                    data.view.captureProtected = renderContext.captureProtected
                     data.textView = textView
                     data.charIndexInItem = imageItem.range.location
                 }
@@ -506,7 +779,7 @@ public final class InstantPageV2View: UIView {
     func updateEmojiReveal(animated: Bool) {
         for (_, data) in self.inlineStickerItemLayers {
             let revealed: Bool
-            if let textView = data.textView, let count = textView.currentRevealCharacterCount {
+            if let textView = data.hostView as? InstantPageV2TextView, let count = textView.currentRevealCharacterCount {
                 revealed = data.charIndexInItem < count
             } else {
                 revealed = true
@@ -577,8 +850,8 @@ public final class InstantPageV2View: UIView {
     func updateEmojiVisibility() {
         for (_, data) in self.inlineStickerItemLayers {
             let onScreen: Bool
-            if let visibilityRect = self.visibilityRect, let textView = data.textView {
-                let rectInSelf = textView.convert(data.itemLayer.frame, to: self)
+            if let visibilityRect = self.visibilityRect, let hostView = data.hostView {
+                let rectInSelf = hostView.convert(data.itemLayer.frame, to: self)
                 onScreen = rectInSelf.intersects(visibilityRect)
             } else {
                 // No visibility rect == not tracked / off-screen → don't animate. The root view's
@@ -659,7 +932,7 @@ public final class InstantPageV2View: UIView {
         switch item {
         case let .text(text):
             guard let v = existingView as? InstantPageV2TextView else { return nil }
-            v.update(item: text, theme: theme)
+            v.update(item: text, theme: theme, animation: animation)
             return v
         case let .codeBlock(block):
             guard let v = existingView as? InstantPageV2CodeBlockView else { return nil }
@@ -679,7 +952,7 @@ public final class InstantPageV2View: UIView {
             return v
         case let .quoteFrame(frame):
             guard let v = existingView as? InstantPageV2QuoteFrameView else { return nil }
-            v.update(item: frame, theme: theme)
+            v.update(item: frame, theme: theme, animation: animation)
             return v
         case let .shape(shape):
             guard let v = existingView as? InstantPageV2ShapeView else { return nil }
@@ -709,6 +982,22 @@ public final class InstantPageV2View: UIView {
             guard let v = existingView as? InstantPageV2FormulaView else { return nil }
             v.update(item: formula, theme: theme)
             return v
+        case let .inlineButton(button):
+            guard let v = existingView as? InstantPageV2InlineButtonView else { return nil }
+            v.update(item: button, theme: theme)
+            // Re-wire on reuse: the closure captures self, and a reused view may have been created
+            // against a previous InstantPageV2View.
+            v.onButtonTapped = { [weak self] button, progress in
+                self?.buttonTapped?(button, progress)
+            }
+            return v
+        case let .buttonRow(row):
+            guard let v = existingView as? InstantPageV2ButtonRowView else { return nil }
+            v.update(item: row, theme: theme)
+            v.onButtonTapped = { [weak self] button, progress in
+                self?.buttonTapped?(button, progress)
+            }
+            return v
         case let .mediaImage(media):
             guard let v = existingView as? InstantPageV2MediaImageView, let rc = self.renderContext else { return nil }
             v.update(item: media, theme: theme, renderContext: rc)
@@ -729,6 +1018,14 @@ public final class InstantPageV2View: UIView {
             guard let v = existingView as? InstantPageV2MediaAudioView, let rc = self.renderContext else { return nil }
             v.update(item: media, theme: theme, renderContext: rc)
             return v
+        case let .document(document):
+            guard let v = existingView as? InstantPageV2DocumentView, let rc = self.renderContext else { return nil }
+            // Re-wire: a recycled view may belong to a previous InstantPageV2View (see onDocumentTapped).
+            v.onDocumentTapped = { [weak self] file in
+                self?.documentTapped?(file)
+            }
+            v.update(item: document, theme: theme, renderContext: rc)
+            return v
         case let .thinking(thinking):
             guard let v = existingView as? InstantPageV2ThinkingView else { return nil }
             v.update(item: thinking, theme: theme)
@@ -736,6 +1033,15 @@ public final class InstantPageV2View: UIView {
         case let .slideshow(slideshow):
             guard let v = existingView as? InstantPageV2SlideshowView, let rc = self.renderContext else { return nil }
             v.update(item: slideshow, theme: theme, renderContext: rc)
+            return v
+        case let .unsupportedContent(unsupported):
+            guard let v = existingView as? InstantPageV2UnsupportedView else { return nil }
+            v.update(item: unsupported, theme: theme, renderContext: self.renderContext)
+            // Re-wire on reuse: the closure captures self, and a reused view may have been created
+            // against a previous InstantPageV2View.
+            v.onActionTapped = { [weak self] in
+                self?.unsupportedActionTapped?()
+            }
             return v
         }
     }
@@ -747,6 +1053,7 @@ public final class InstantPageV2View: UIView {
         case let .mediaMap(m):         return .media(m.media.index)
         case let .mediaCoverImage(m):  return .media(m.media.index)
         case let .mediaAudio(m):       return .media(m.media.index)
+        case let .document(d):         return .media(d.media.index)
         case let .details(d):          return .details(d.index)
         case .text:                    return .positional(.text, position)
         case .codeBlock:               return .positional(.codeBlock, position)
@@ -760,8 +1067,11 @@ public final class InstantPageV2View: UIView {
         case .table:                   return .positional(.table, position)
         case .anchor:                  return .positional(.anchor, position)
         case .formula:                 return .positional(.formula, position)
+        case .inlineButton:            return .positional(.inlineButton, position)
+        case .buttonRow:               return .positional(.buttonRow, position)
         case .thinking:                return .thinking(position)
         case .slideshow:               return .positional(.slideshow, position)
+        case .unsupportedContent:      return .positional(.unsupportedContent, position)
         }
     }
 
@@ -865,8 +1175,36 @@ public final class InstantPageV2View: UIView {
             } else {
                 return InstantPageV2MediaPlaceholderView(item: InstantPageV2MediaPlaceholderItem(frame: media.frame, kind: .audio, cornerRadius: 0.0), theme: theme)
             }
+        case let .document(document):
+            if let renderContext = self.renderContext {
+                let view = InstantPageV2DocumentView(item: document, renderContext: renderContext, theme: theme)
+                view.onDocumentTapped = { [weak self] file in
+                    self?.documentTapped?(file)
+                }
+                return view
+            } else {
+                return InstantPageV2MediaPlaceholderView(item: InstantPageV2MediaPlaceholderItem(frame: document.frame, kind: .audio, cornerRadius: 0.0), theme: theme)
+            }
         case let .formula(formula):
             return InstantPageV2FormulaView(item: formula, theme: theme)
+        case let .inlineButton(button):
+            let view = InstantPageV2InlineButtonView(item: button, theme: theme)
+            view.onButtonTapped = { [weak self] button, progress in
+                self?.buttonTapped?(button, progress)
+            }
+            return view
+        case let .buttonRow(row):
+            let view = InstantPageV2ButtonRowView(item: row, theme: theme)
+            view.onButtonTapped = { [weak self] button, progress in
+                self?.buttonTapped?(button, progress)
+            }
+            return view
+        case let .unsupportedContent(unsupported):
+            let view = InstantPageV2UnsupportedView(item: unsupported, theme: theme, renderContext: self.renderContext)
+            view.onActionTapped = { [weak self] in
+                self?.unsupportedActionTapped?()
+            }
+            return view
         case let .thinking(thinking):
             return InstantPageV2ThinkingView(item: thinking, theme: theme)
         case let .slideshow(slideshow):
@@ -981,6 +1319,10 @@ final class InstantPageV2TextView: UIView, InstantPageItemView {
         }
     }
 
+    /// Which line last carried the collapsed-quote "…", so `update` can tell the toggle apart from
+    /// every other reason it runs. `nil` = none.
+    private var appliedTruncationTokenLine: Int?
+
     // Reveal mask state — populated in Task 5.
     private var maxCharacterDrawCount: Int?
     private var previousMaxCharacterDrawCount: Int = 0
@@ -1014,18 +1356,47 @@ final class InstantPageV2TextView: UIView, InstantPageItemView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func update(item: InstantPageV2TextItem, theme: InstantPageTheme) {
+    func update(item: InstantPageV2TextItem, theme: InstantPageTheme, animation: ListViewItemUpdateAnimation = .None) {
         let _ = theme
         self.item = item
         // Lay every container out from the item's own (clipping-inset-expanded) frame rather than
         // self.bounds, so the single path is correct regardless of when the parent assigns our
         // frame — and so a reused text view that changed size (e.g. AI streaming) re-frames its
         // renderContainer/renderView too, which the old update path skipped.
-        let containerBounds = CGRect(origin: .zero, size: item.frame.insetBy(dx: -v2TextViewClippingInset, dy: -v2TextViewClippingInset).size)
+        // Height includes `overflowHeight`, which the layout deliberately did not reserve: a collapsed
+        // quote keeps the lines past its preview drawn so its animated fade can sweep them away. They
+        // spill past this view's own bounds on purpose — nothing here clips — and the quote's mask is
+        // what hides them. See `InstantPageV2TextItem.overflowHeight`.
+        let containerBounds = CGRect(
+            origin: .zero,
+            size: CGSize(
+                width: item.frame.width + v2TextViewClippingInset * 2.0,
+                height: item.frame.height + item.overflowHeight + v2TextViewClippingInset * 2.0))
+        let boxIsUnchanged = self.renderView.frame == containerBounds
+        let truncationTokenLine = item.textItem.lines.firstIndex(where: { $0.additionalTrailingLine != nil })
+        let tokenChanged = truncationTokenLine != self.appliedTruncationTokenLine
+        self.appliedTruncationTokenLine = truncationTokenLine
+
         self.renderContainer.frame = containerBounds
         self.renderView.frame = containerBounds
         self.renderView.item = item
-        self.renderView.setNeedsDisplay()
+        // Toggling a collapsed quote changes exactly ONE thing in what this view draws: the "…" on
+        // the last visible line. Every other line, and every line position, is identical in both
+        // states because the cut lines stay drawn as overflow — so the token would otherwise blink
+        // in and out while the geometry around it animated. Crossfade the backing store instead,
+        // the way the reference does for its spoiler reveal: keep the bitmap that is already there,
+        // force the redraw, then dissolve between the two and let CA discard the old one.
+        //
+        // Requires the box to be the same size, which is the honest precondition for a contents
+        // crossfade — a resized layer would squash the old bitmap into the new bounds. That also
+        // keeps this off the AI-streaming path, which grows the box and has its own reveal.
+        if animation.isAnimated, tokenChanged, boxIsUnchanged, let previousContents = self.renderView.layer.contents {
+            self.renderView.setNeedsDisplay()
+            self.renderView.layer.displayIfNeeded()
+            animation.transition.animateContents(layer: self.renderView.layer, from: previousContents)
+        } else {
+            self.renderView.setNeedsDisplay()
+        }
         self.imageContainerView.frame = containerBounds
         self.emojiContainerView.frame = containerBounds
         self.spoilerContainerView.frame = containerBounds
@@ -1493,6 +1864,13 @@ private final class TextRenderView: UIView {
                 }
             }
 
+            // The collapsed-quote "…", drawn after the line's own glyphs on the same baseline. Its
+            // width is deliberately outside `lineFrame`, exactly as in `InteractiveTextComponent`.
+            if let additionalTrailingLine = line.additionalTrailingLine {
+                context.textPosition = CGPoint(x: lineOrigin.x + lineFrame.size.width, y: lineOrigin.y + lineFrame.size.height)
+                CTLineDraw(additionalTrailingLine, context)
+            }
+
             if textItem.opaqueBackground {
                 context.setBlendMode(.copy)
             }
@@ -1687,12 +2065,16 @@ final class InstantPageV2ListMarkerView: UIView, InstantPageItemView {
             )
             dot.cornerRadius = radius
             self.layer.addSublayer(dot)
-        case let .number(text):
+        case let .number(string, alignment):
+            // The string carries the font and colour it was MEASURED with during layout; do not
+            // rebuild them here. This used to set `systemFont(ofSize: 17.0)` and `item.color`
+            // explicitly, which silently disagreed with the theme's paragraph font whenever that
+            // was not system 17 — and since the marker column's width comes from the measured
+            // string, the drawn digits then no longer filled the box that was supposed to align them.
             let label = UILabel()
-            label.text = text
-            label.textColor = item.color
-            label.font = UIFont.systemFont(ofSize: 17.0)
-            label.textAlignment = .right
+            label.attributedText = string
+            // The frame is the WHOLE marker column, so this alignment is what lines the dots up.
+            label.textAlignment = alignment
             label.frame = CGRect(origin: .zero, size: item.frame.size)
             self.addSubview(label)
         case let .checklist(checked, colors):
@@ -1740,31 +2122,105 @@ final class InstantPageV2BlockQuoteBarView: UIView, InstantPageItemView {
 
 // MARK: - Quote frame view (accent bar + accent-tinted rounded fill, for block quotes & code)
 
+/// The expand chevron a collapsible quote carries, in the SAME asset the chat's own collapsible
+/// blockquote uses (`InteractiveTextComponent`'s `expandArrowIcon`) — so the two surfaces cannot
+/// drift into two different arrows. Baked white once and recoloured per quote through
+/// `layerTintColor`, which multiplies the contents rather than re-rendering the image per theme.
+private let instantPageV2QuoteExpandArrowIcon: UIImage? = {
+    return generateTintedImage(image: UIImage(bundleImageName: "Item List/ExpandingItemVerticalRegularArrow"), color: .white)
+}()
+
 final class InstantPageV2QuoteFrameView: UIView, InstantPageItemView {
     private(set) var item: InstantPageV2QuoteFrameItem
     var itemFrame: CGRect { return self.item.frame }
     private let imageView: UIImageView
+    private var chevronLayer: SimpleLayer?
+    /// The fill's parameters as last rendered. `instantPageV2QuoteFillImage` is a full CoreGraphics
+    /// render, and `update` runs on every layout of every quote in the chat list, so it is only
+    /// re-rendered when one of its four inputs actually moves — never for a size change, which the
+    /// resizable image handles by stretching.
+    private var appliedFill: (accent: UIColor, barWidth: CGFloat, cornerRadius: CGFloat, fillAlpha: CGFloat)?
+
+    // Expanded == the collapsed arrow turned over. Held as a constant so the two update paths cannot
+    // disagree about which way "up" is.
+    private static let expandedChevronTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
 
     init(item: InstantPageV2QuoteFrameItem, theme: InstantPageTheme) {
         self.item = item
         self.imageView = UIImageView()
         super.init(frame: item.frame)
+        // Stays false even for a collapsible quote: the tap is resolved by the host's
+        // `tapActionAtPoint`, AFTER its URL and entity hits, so a link inside the visible lines still
+        // wins. An interactive view here would take the touch first and break that.
         self.isUserInteractionEnabled = false
         self.addSubview(self.imageView)
-        self.update(item: item, theme: theme)
+        self.update(item: item, theme: theme, animation: .None)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func update(item: InstantPageV2QuoteFrameItem, theme: InstantPageTheme) {
+    func update(item: InstantPageV2QuoteFrameItem, theme: InstantPageTheme, animation: ListViewItemUpdateAnimation) {
         let _ = theme
         self.item = item
-        self.imageView.image = instantPageV2QuoteFillImage(accent: item.accentColor, barWidth: item.barWidth, cornerRadius: item.cornerRadius, fillAlpha: item.fillAlpha)
-        self.imageView.frame = CGRect(origin: .zero, size: item.frame.size)
+        let fill = (accent: item.accentColor, barWidth: item.barWidth, cornerRadius: item.cornerRadius, fillAlpha: item.fillAlpha)
+        if self.appliedFill == nil || self.appliedFill! != fill {
+            self.appliedFill = fill
+            self.imageView.image = instantPageV2QuoteFillImage(accent: fill.accent, barWidth: fill.barWidth, cornerRadius: fill.cornerRadius, fillAlpha: fill.fillAlpha)
+        }
         // RTL: mirror horizontally so the leading bar sits on the trailing (right) edge; the fill is
         // otherwise symmetric, so the mirror only moves the bar + swaps which corners the arc rounds.
         self.imageView.transform = item.barOnTrailing ? CGAffineTransform(scaleX: -1.0, y: 1.0) : .identity
+        // Animated, because the CALLER animates our own frame: a collapsing quote's frame shrinks
+        // over the transition, and assigning the fill's frame directly would snap the chrome to the
+        // new size on the first frame while everything around it slid. Position + bounds rather than
+        // frame, since the RTL mirror puts a transform on this layer. The fill is a resizable image,
+        // so the stretch follows the bounds animation for free.
+        let fillFrame = CGRect(origin: .zero, size: item.frame.size)
+        animation.animator.updatePosition(layer: self.imageView.layer, position: fillFrame.center, completion: nil)
+        animation.animator.updateBounds(layer: self.imageView.layer, bounds: CGRect(origin: .zero, size: fillFrame.size), completion: nil)
+
+        switch item.collapseState {
+        case .notCollapsible:
+            if let chevronLayer = self.chevronLayer {
+                self.chevronLayer = nil
+                chevronLayer.removeFromSuperlayer()
+            }
+        case .collapsed, .expanded:
+            guard let icon = instantPageV2QuoteExpandArrowIcon else {
+                return
+            }
+            var isNew = false
+            let chevronLayer: SimpleLayer
+            if let current = self.chevronLayer {
+                chevronLayer = current
+            } else {
+                isNew = true
+                chevronLayer = SimpleLayer()
+                chevronLayer.contents = icon.cgImage
+                chevronLayer.contentsScale = icon.scale
+                self.chevronLayer = chevronLayer
+                self.layer.addSublayer(chevronLayer)
+            }
+            chevronLayer.layerTintColor = item.accentColor.cgColor
+
+            // Same offsets as the reference: 6pt in from the trailing edge, 3pt up from the bottom.
+            // Under RTL the bar takes the trailing edge, so the chevron moves to the leading side.
+            let x = item.barOnTrailing ? 6.0 : item.frame.width - 6.0 - icon.size.width
+            let chevronFrame = CGRect(origin: CGPoint(x: x, y: item.frame.height - 3.0 - icon.size.height), size: icon.size)
+            let transform = item.collapseState == .expanded ? InstantPageV2QuoteFrameView.expandedChevronTransform : CATransform3DIdentity
+            // Position + bounds, never `frame`: the layer carries a rotation, and `frame` is derived
+            // from the transformed bounds, so writing it would fight the rotation on every update.
+            if isNew {
+                chevronLayer.bounds = CGRect(origin: .zero, size: chevronFrame.size)
+                chevronLayer.position = chevronFrame.center
+                chevronLayer.transform = transform
+            } else {
+                animation.animator.updatePosition(layer: chevronLayer, position: chevronFrame.center, completion: nil)
+                animation.animator.updateBounds(layer: chevronLayer, bounds: CGRect(origin: .zero, size: chevronFrame.size), completion: nil)
+                animation.animator.updateTransform(layer: chevronLayer, transform: transform, completion: nil)
+            }
+        }
     }
 }
 
@@ -1870,7 +2326,6 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
 
     let titleTextView: InstantPageV2TextView
     private let chevronView: UIImageView
-    private let separator: UIView
     var bodyView: InstantPageV2View?
     private let titleHitView: UIView
 
@@ -1905,9 +2360,6 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
         // Decorative: let taps fall through to titleHitView (which carries the toggle gesture).
         self.chevronView.isUserInteractionEnabled = false
 
-        self.separator = UIView()
-        self.separator.isUserInteractionEnabled = false
-
         self.titleHitView = UIView()
         self.titleHitView.backgroundColor = .clear
 
@@ -1917,7 +2369,6 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
 
         self.addSubview(self.titleTextView)
         self.addSubview(self.chevronView)
-        self.addSubview(self.separator)
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.titleTapped))
         self.insertSubview(self.titleHitView, at: 0)
@@ -1944,12 +2395,12 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
         )
         self.titleTextView.update(item: titleV2Item, theme: theme)
 
-        self.chevronView.tintColor = theme.secondaryControlColor
+        self.chevronView.tintColor = theme.textCategories.paragraph.color
         let chevronSize = CGSize(width: 18.0, height: 18.0)
         self.chevronView.bounds = CGRect(origin: .zero, size: chevronSize)
         self.chevronView.center = CGPoint(
             x: item.rtl ? (item.frame.width - item.sideInset - chevronSize.width / 2.0) : (item.sideInset + chevronSize.width / 2.0),
-            y: item.titleFrame.midY + 1.0
+            y: item.titleFrame.midY
         )
 
         self.titleHitView.frame = item.titleFrame
@@ -1958,7 +2409,6 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
         // view's own frame height (clipsToBounds = true), not by the body itself — see
         // InstantPageV2View.update. The body's internal layout is forwarded `animation` so a
         // *nested* details block inside the body can also animate its own toggle.
-        let blockHeight: CGFloat
         if item.isExpanded {
             if let innerLayout = item.innerLayout {
                 let body: InstantPageV2View
@@ -1984,9 +2434,6 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
                     origin: CGPoint(x: 0.0, y: item.titleFrame.maxY),
                     size: innerLayout.contentSize
                 )
-                blockHeight = body.frame.maxY
-            } else {
-                blockHeight = item.titleFrame.maxY
             }
         } else {
             if let existingBody = self.bodyView {
@@ -2000,16 +2447,7 @@ final class InstantPageV2DetailsView: UIView, InstantPageItemView {
                     self.bodyView = nil
                 }
             }
-            blockHeight = item.titleFrame.maxY
         }
-        
-        self.separator.backgroundColor = item.separatorColor
-        animation.animator.updateFrame(layer: self.separator.layer, frame: CGRect(
-            x: 8.0,
-            y: blockHeight - UIScreenPixel,
-            width: item.frame.width - 8.0 * 2.0,
-            height: UIScreenPixel
-        ), completion: nil)
 
         // Chevron rotation. The body teardown on collapse is NOT tied to this completion — see
         // finalizePendingCollapse(), which the parent calls from the frame-shrink (clip) animation.
@@ -2036,16 +2474,13 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
     private(set) var item: InstantPageV2CodeBlockItem
     var itemFrame: CGRect { return self.item.frame }
 
-    private let backgroundImageView: UIImageView
-    private let languageLabel: UILabel
+    private var languageView: InstantPageV2TextView?
     let textView: InstantPageV2TextView
 
     init(item: InstantPageV2CodeBlockItem, theme: InstantPageTheme) {
         self.item = item
-        self.backgroundImageView = UIImageView()
-        self.languageLabel = UILabel()
 
-        // item.textItem.frame is already in code-block content-area coords (x=leadingInset, y=verticalInset).
+        // item.textItem.frame is already in block-local coordinates.
         let innerV2TextItem = InstantPageV2TextItem(
             frame: item.textItem.frame,
             textItem: item.textItem
@@ -2053,9 +2488,6 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
         self.textView = InstantPageV2TextView(item: innerV2TextItem, theme: theme)
 
         super.init(frame: item.frame)
-        self.backgroundColor = .clear
-        self.addSubview(self.backgroundImageView)
-        self.addSubview(self.languageLabel)
         self.addSubview(self.textView)
         self.update(item: item, theme: theme)
     }
@@ -2066,22 +2498,25 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
     func update(item: InstantPageV2CodeBlockItem, theme: InstantPageTheme) {
         self.item = item
 
-        self.backgroundImageView.image = instantPageV2QuoteFillImage(accent: item.accentColor, barWidth: item.barWidth, cornerRadius: item.cornerRadius, fillAlpha: item.fillAlpha)
-        self.backgroundImageView.frame = CGRect(origin: .zero, size: item.frame.size)
-        self.backgroundImageView.transform = item.barOnTrailing ? CGAffineTransform(scaleX: -1.0, y: 1.0) : .identity
+        // A plain band. No fill image, no bar, no corner radius: a code block reads as a highlighted
+        // table row. Corners at a bubble edge are clipped by the rounded container the page sits in,
+        // exactly as they are for full-width media.
+        self.backgroundColor = item.backgroundColor
 
-        if let language = item.language, !language.isEmpty {
-            self.languageLabel.isHidden = false
-            self.languageLabel.attributedText = NSAttributedString(string: language, attributes: [
-                .font: UIFont(name: "Menlo", size: 11.0) ?? Font.regular(11.0),
-                .foregroundColor: item.languageLabelColor
-            ])
-            self.languageLabel.sizeToFit()
-            let labelWidth = self.languageLabel.bounds.width
-            let labelHeight = self.languageLabel.bounds.height
-            self.languageLabel.frame = CGRect(x: item.frame.width - 8.0 - labelWidth, y: 2.0, width: labelWidth, height: labelHeight)
-        } else {
-            self.languageLabel.isHidden = true
+        if let languageItem = item.languageItem {
+            let inner = InstantPageV2TextItem(frame: languageItem.frame, textItem: languageItem)
+            if let existing = self.languageView {
+                existing.update(item: inner, theme: theme)
+                existing.frame = self.textViewFrame(for: languageItem)
+            } else {
+                let view = InstantPageV2TextView(item: inner, theme: theme)
+                view.frame = self.textViewFrame(for: languageItem)
+                self.addSubview(view)
+                self.languageView = view
+            }
+        } else if let existing = self.languageView {
+            existing.removeFromSuperview()
+            self.languageView = nil
         }
 
         let innerV2TextItem = InstantPageV2TextItem(
@@ -2089,6 +2524,15 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
             textItem: item.textItem
         )
         self.textView.update(item: innerV2TextItem, theme: theme)
+        self.textView.frame = self.textViewFrame(for: item.textItem)
+    }
+
+    /// `InstantPageV2TextView` sizes itself from its item's frame ONLY in `init` (and lays its inner
+    /// containers out from the item on every update) — so the PARENT owns its frame across updates.
+    /// This block's two children can both move when a language line appears or disappears, so both
+    /// are re-framed here rather than relying on their construction-time size.
+    private func textViewFrame(for textItem: InstantPageTextItem) -> CGRect {
+        return textItem.frame.insetBy(dx: -v2TextViewClippingInset, dy: -v2TextViewClippingInset)
     }
 }
 
@@ -2204,7 +2648,6 @@ final class InstantPageV2TableView: UIView, InstantPageItemView {
         self.scrollView.alwaysBounceHorizontal = false
         self.scrollView.alwaysBounceVertical = false
         self.scrollView.showsVerticalScrollIndicator = false
-        self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         self.addSubview(self.scrollView)
         self.scrollView.addSubview(self.contentView)
 
@@ -2249,6 +2692,7 @@ final class InstantPageV2TableView: UIView, InstantPageItemView {
 
         self.scrollView.frame = CGRect(origin: .zero, size: item.frame.size)
         self.scrollView.contentSize = CGSize(width: item.contentSize.width + item.contentInset * 2.0, height: item.contentSize.height)
+        self.scrollView.disablesInteractiveTransitionGestureRecognizer = self.scrollView.contentSize.width > item.frame.width
         self.scrollView.showsHorizontalScrollIndicator = item.contentSize.width + item.contentInset * 2.0 > item.frame.width
         self.contentView.frame = CGRect(x: item.contentInset, y: 0.0, width: item.contentSize.width, height: item.contentSize.height)
 
@@ -2326,6 +2770,47 @@ public extension InstantPageV2View {
     func textItemAt(point: CGPoint) -> (item: InstantPageTextItem, parentOffset: CGPoint)? {
         guard let layout = self.currentLayout else { return nil }
         return findTextItem(in: layout, point: point, accumulatedOffset: .zero)
+    }
+
+    /// The structural path of the collapsible quote containing `point`, or nil. The host resolves the
+    /// expand tap through this AFTER its URL / entity hits, so a link inside a collapsed quote's
+    /// visible lines still opens rather than toggling.
+    ///
+    /// Innermost wins: a collapsible quote nested inside another is matched before its parent (a longer
+    /// path is deeper), so its own chevron toggles the quote it belongs to.
+    ///
+    /// Top-level items only, matching where `layoutBlockQuote` puts a quote's frame item. A quote
+    /// nested inside a details body or a table cell lives in that container's own sub-layout and is
+    /// not reachable here — those containers are not collapsible-quote hosts today.
+    func collapsibleQuoteAt(point: CGPoint) -> [Int]? {
+        guard let layout = self.currentLayout else { return nil }
+        var best: InstantPageV2QuoteFrameItem?
+        for item in layout.items {
+            guard case let .quoteFrame(frameItem) = item, frameItem.collapseState != .notCollapsible else {
+                continue
+            }
+            guard frameItem.frame.contains(point) else {
+                continue
+            }
+            if let current = best, current.path.count >= frameItem.path.count {
+                continue
+            }
+            best = frameItem
+        }
+        return best?.path
+    }
+
+    /// The frame (this view's coords) of the unsupported pill's Update button containing `point`,
+    /// or nil.
+    ///
+    /// A host whose surface arbitrates its own touches must consult this BEFORE claiming a tap: the
+    /// pill's button is a real `UIButton`, and a surrounding tap recognizer that claims the touch
+    /// cancels the button's tracking, so `touchUpInside` never fires. In a chat bubble that is
+    /// `tapActionAtPoint` returning `.ignore` for this rect (see
+    /// `ChatMessageRichDataBubbleContentNode`).
+    func unsupportedActionFrame(at point: CGPoint) -> CGRect? {
+        guard let layout = self.currentLayout else { return nil }
+        return InstantPageUI.unsupportedActionFrame(in: layout, containing: point)
     }
 
     func urlItemAt(point: CGPoint) -> (urlItem: InstantPageUrlItem, item: InstantPageTextItem,

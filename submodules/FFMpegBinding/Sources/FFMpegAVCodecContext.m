@@ -70,6 +70,10 @@ static enum AVPixelFormat getPreferredPixelFormat(__unused AVCodecContext *ctx, 
     _impl->get_format = getPreferredPixelFormat;
 }
 
+- (void)setSkipLoopFilterToAll {
+    _impl->skip_loop_filter = AVDISCARD_ALL;
+}
+
 - (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame {
     int status = avcodec_receive_frame(_impl, (AVFrame *)[frame impl]);
     if (status == 0) {

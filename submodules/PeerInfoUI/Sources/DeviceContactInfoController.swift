@@ -1512,7 +1512,7 @@ public func pushContactContextOptionsController(context: AccountContext, context
     )
     items.append(.separator)
     items.append(
-        .action(ContextMenuActionItem(text: presentationData.strings.Chat_Context_Phone_CreateNewContact, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+        .action(ContextMenuActionItem(text: presentationData.strings.Chat_Context_Phone_CreateNewContact, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { [parentController] _, f in
             f(.default)
             
             context.sharedContext.openAddContact(

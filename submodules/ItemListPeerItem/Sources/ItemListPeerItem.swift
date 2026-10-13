@@ -462,6 +462,18 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
     let style: ItemListStyle
     public let tag: ItemListItemTag?
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: self.hasActiveRevealOptions,
+            headerId: self.header?.id,
+            headerFamily: .itemListPeer
+        ))
+    }
     let shimmering: ItemListPeerItemShimmering?
     let displayDecorations: Bool
     let displayBackground: Bool
@@ -649,10 +661,10 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         self.openStories = openStories
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPeerItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), self.getHeaderAtTop(top: neighbors.previous))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -665,10 +677,10 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         }
     }
     
-    private func getHeaderAtTop(top: ListViewItem?, bottom: ListViewItem?) -> Bool {
+    private func getHeaderAtTop(top: AnyEquatable?) -> Bool {
         var headerAtTop = false
-        if let top = top as? ItemListPeerItem, top.header != nil {
-            if top.header?.id != self.header?.id {
+        if let top = top?.base(HeaderNeighborFacet.self), top.headerFamily == .itemListPeer, top.headerId != nil {
+            if top.headerId != self.header?.id {
                 headerAtTop = true
             }
         } else if self.header != nil {
@@ -678,7 +690,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         return headerAtTop
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListPeerItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -689,7 +701,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), self.getHeaderAtTop(top: neighbors.previous))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(false, animated)
@@ -915,7 +927,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         let currentHasBadge = self.labelBadgeNode.image != nil
         
-        return { item, params, neighbors, headerAtTop in
+        return { [weak self] item, params, neighbors, headerAtTop in
             var updateArrowImage: UIImage?
             
             let statusFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
@@ -2278,4 +2290,8 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
             }
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let itemListPeer = ListViewItemHeaderFamily("itemListPeer")
 }

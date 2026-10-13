@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -12,15 +13,21 @@ import LottieComponent
 private final class ArchiveInfoSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
+    
     let settings: GlobalPrivacySettings
     let openSettings: () -> Void
     let dismiss: () -> Void
     
     init(
+    
+        context: AccountContext,
         settings: GlobalPrivacySettings,
         openSettings: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
+    
+        self.context = context
         self.settings = settings
         self.openSettings = openSettings
         self.dismiss = dismiss
@@ -98,7 +105,8 @@ private final class ArchiveInfoSheetContentComponent: Component {
                 color: environment.theme.list.itemCheckColors.foregroundColor,
                 startingPosition: .begin,
                 size: CGSize(width: 28.0, height: 28.0),
-                playOnce: playButtonAnimation
+                playOnce: playButtonAnimation,
+                lottieSettings: component.context.lottieRenderingSettings
             ))))
             buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                 text: environment.strings.ArchiveInfo_CloseAction,
@@ -236,6 +244,7 @@ private final class ArchiveInfoScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(ArchiveInfoSheetContentComponent(
+                        context: component.context,
                         settings: component.settings,
                         openSettings: { [weak self] in
                             guard let self, let component = self.component, let controller = self.environment?.controller() else {

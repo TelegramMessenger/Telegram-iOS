@@ -10,6 +10,7 @@ import AccountContext
 import MetalEngine
 import TelegramPresentationData
 import Photos
+import MediaEditor
 
 final class CameraCollage {
     final class CaptureResult {
@@ -21,6 +22,7 @@ final class CameraCollage {
         }
         
         private var internalContent: Content
+        private(set) var originalImageAssetIdentifier: String?
         private var disposable: Disposable?
         
         init(result: Signal<CameraScreenImpl.Result, NoError>, snapshotView: UIView?, contentUpdated: @escaping () -> Void) {
@@ -34,6 +36,7 @@ final class CameraCollage {
                 case .pendingImage:
                     contentUpdated()
                 case let .image(image):
+                    self.originalImageAssetIdentifier = image.originalAssetIdentifier
                     self.internalContent = .image(image.image)
                     contentUpdated()
                 case let .video(video):
@@ -331,91 +334,49 @@ final class CameraCollage {
             return .complete()
         }
         
-        var hasVideo = false
         let state = self._state
-        
-outer:  for row in state.rows {
-            for item in row.items {
-                if case .video = item.content {
-                    hasVideo = true
-                    break outer
-                }
-            }
-        }
-        
         let size = CGSize(width: 1080.0, height: 1920.0)
-        let rowHeight: CGFloat = ceil(size.height / CGFloat(state.rows.count))
-        
-        if hasVideo {
-            var items: [CameraScreenImpl.Result.VideoCollage.Item] = []
-            var itemFrame: CGRect = .zero
-            for row in state.rows {
-                let columnWidth: CGFloat = floor(size.width / CGFloat(row.items.count))
-                itemFrame = CGRect(origin: itemFrame.origin, size: CGSize(width: columnWidth, height: rowHeight))
-                for item in row.items {
-                    let scale = itemViews[item.uniqueId]?.contentScale ?? 1.0
-                    let offset = itemViews[item.uniqueId]?.contentOffset ?? .zero
-                    
-                    let content: CameraScreenImpl.Result.VideoCollage.Item.Content
-                    switch item.content {
-                    case let .image(image):
-                        content = .image(image)
-                    case let .video(_, _, duration, source):
-                        switch source {
-                        case let .file(path):
-                            content = .video(path, duration)
-                        case let .asset(asset):
-                            content = .asset(asset)
-                        }
-                    default:
-                        fatalError()
+        let rowHeight = size.height / CGFloat(state.rows.count)
+        var items: [MediaEditorCollage.Item] = []
+        for (rowIndex, row) in state.rows.enumerated() {
+            let columnWidth = size.width / CGFloat(row.items.count)
+            for (columnIndex, item) in row.items.enumerated() {
+                let source: MediaEditorCollage.Source
+                let dimensions: CGSize
+                let duration: Double
+                switch item.content {
+                case let .image(image):
+                    source = .image(image, assetIdentifier: self.getItem(id: item.uniqueId)?.originalImageAssetIdentifier)
+                    dimensions = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                    duration = 0.0
+                case let .video(asset, _, itemDuration, videoSource):
+                    switch videoSource {
+                    case let .file(path):
+                        source = .videoFile(path)
+                    case let .asset(asset):
+                        source = .videoAsset(asset)
                     }
-                    items.append(CameraScreenImpl.Result.VideoCollage.Item(
-                        content: content,
-                        frame: itemFrame,
-                        contentScale: scale,
-                        contentOffset: offset
-                    ))
-                    itemFrame.origin.x += columnWidth
-                }
-                itemFrame.origin.x = 0.0
-                itemFrame.origin.y += rowHeight
-            }
-            return .single(.videoCollage(CameraScreenImpl.Result.VideoCollage(items: items)))
-        } else {
-            let image = generateImage(size, contextGenerator: { size, context in
-                var itemFrame: CGRect = .zero
-                for row in state.rows {
-                    let columnWidth: CGFloat = ceil(size.width / CGFloat(row.items.count))
-                    itemFrame = CGRect(origin: itemFrame.origin, size: CGSize(width: columnWidth, height: rowHeight))
-                    for item in row.items {
-                        let scale = itemViews[item.uniqueId]?.contentScale ?? 1.0
-                        let offset = itemViews[item.uniqueId]?.contentOffset ?? .zero
-                        
-                        let mappedItemFrame = CGRect(origin: CGPoint(x: itemFrame.minX, y: size.height - itemFrame.origin.y - rowHeight), size: CGSize(width: columnWidth, height: rowHeight))
-                        if case let .image(image) = item.content {
-                            context.clip(to: mappedItemFrame)
-                            let drawingSize = image.size.aspectFilled(mappedItemFrame.size)
-                            let center = mappedItemFrame.center.offsetBy(dx: offset.x * mappedItemFrame.width, dy: offset.y * mappedItemFrame.height)
-                            
-                            let imageFrame = CGSize(width: drawingSize.width * scale, height: drawingSize.height * scale).centered(around: center)
-                            if let cgImage = image.cgImage {
-                                context.draw(cgImage, in: imageFrame, byTiling: false)
-                            }
-                            context.resetClip()
-                        }
-                        itemFrame.origin.x += columnWidth
+                    if let track = asset.tracks(withMediaType: .video).first {
+                        dimensions = CGRect(origin: .zero, size: track.naturalSize).applying(track.preferredTransform).size
+                    } else {
+                        dimensions = size
                     }
-                    itemFrame.origin.x = 0.0
-                    itemFrame.origin.y += rowHeight
+                    duration = itemDuration > 0.0 ? itemDuration : asset.duration.seconds
+                default:
+                    return .complete()
                 }
-            }, opaque: true, scale: 1.0)
-            if let image {
-                return .single(.image(CameraScreenImpl.Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
-            } else {
-                return .single(.pendingImage)
+                items.append(MediaEditorCollage.Item(
+                    id: item.uniqueId,
+                    source: source,
+                    dimensions: dimensions,
+                    duration: duration,
+                    frame: CGRect(x: CGFloat(columnIndex) * columnWidth, y: CGFloat(rowIndex) * rowHeight, width: columnWidth, height: rowHeight),
+                    contentScale: itemViews[item.uniqueId]?.contentScale ?? 1.0,
+                    contentOffset: itemViews[item.uniqueId]?.contentOffset ?? .zero
+                ))
             }
         }
+        return .single(.collage(MediaEditorCollage(rows: state.rows.map { $0.items.count }, items: items)))
     }
 }
 
@@ -440,12 +401,110 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         }
     }
     
+    private final class ItemClippingView: UIView {
+        private let maskLayer: SimpleLayer?
+        private let cornerLayers: [(container: SimpleLayer, content: SimpleLayer)]
+        private var validSize: CGSize?
+        private var cornerRadii: CornerRadii?
+
+        override init(frame: CGRect) {
+            if CALayer.cornerRadiiSupported {
+                self.maskLayer = nil
+                self.cornerLayers = []
+            } else {
+                let maskLayer = SimpleLayer()
+                self.maskLayer = maskLayer
+                let corners: [CACornerMask] = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                self.cornerLayers = corners.map { corner in
+                    let container = SimpleLayer()
+                    container.masksToBounds = true
+                    let content = SimpleLayer()
+                    content.backgroundColor = UIColor.white.cgColor
+                    content.masksToBounds = true
+                    content.maskedCorners = corner
+                    if #available(iOS 13.0, *) {
+                        content.cornerCurve = .continuous
+                    }
+                    container.addSublayer(content)
+                    maskLayer.addSublayer(container)
+                    return (container, content)
+                }
+            }
+
+            super.init(frame: frame)
+
+            if #available(iOS 13.0, *) {
+                self.layer.cornerCurve = .continuous
+            }
+            self.setClippingEnabled(true)
+        }
+
+        required init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func setClippingEnabled(_ enabled: Bool) {
+            self.clipsToBounds = enabled
+            self.layer.mask = enabled ? self.maskLayer : nil
+        }
+
+        func update(size: CGSize, cornerRadii: CornerRadii, transition: ComponentTransition) {
+            let previousSize = self.validSize
+            let radiiUpdated = self.cornerRadii != cornerRadii
+            let cornerTransition: ComponentTransition = self.cornerRadii == nil ? .immediate : transition
+            self.validSize = size
+            self.cornerRadii = cornerRadii
+
+            // Position-only layout updates must not cancel an in-flight corner animation.
+            if CALayer.cornerRadiiSupported {
+                if radiiUpdated {
+                    cornerTransition.setCornerRadii(layer: self.layer, cornerRadii: cornerRadii)
+                }
+            } else if let maskLayer = self.maskLayer {
+                if previousSize != size {
+                    let layoutTransition: ComponentTransition = previousSize == nil ? .immediate : transition
+                    layoutTransition.setFrame(layer: maskLayer, frame: CGRect(origin: .zero, size: size))
+                    let split = CGPoint(x: floorToScreenPixels(size.width / 2.0), y: floorToScreenPixels(size.height / 2.0))
+                    for (index, layers) in self.cornerLayers.enumerated() {
+                        let isLeft = index % 2 == 0
+                        let isTop = index < 2
+                        let origin = CGPoint(x: isLeft ? 0.0 : split.x, y: isTop ? 0.0 : split.y)
+                        let quadrantSize = CGSize(width: isLeft ? split.x : size.width - split.x, height: isTop ? split.y : size.height - split.y)
+                        layoutTransition.setFrame(layer: layers.container, frame: CGRect(origin: origin, size: quadrantSize))
+                        // Each quadrant reveals one corner of a full-size rounded layer.
+                        layoutTransition.setFrame(layer: layers.content, frame: CGRect(origin: CGPoint(x: -origin.x, y: -origin.y), size: size))
+                    }
+                }
+                if radiiUpdated {
+                    let radii = [cornerRadii.topLeft, cornerRadii.topRight, cornerRadii.bottomLeft, cornerRadii.bottomRight]
+                    for (layers, radius) in zip(self.cornerLayers, radii) {
+                        if cornerTransition.animation.isImmediate {
+                            layers.content.removeAnimation(forKey: "cornerRadius")
+                        }
+                        cornerTransition.setCornerRadius(layer: layers.content, cornerRadius: radius)
+                    }
+                }
+            }
+        }
+    }
+
     final class ItemView: ContextControllerSourceView, UIScrollViewDelegate {
         private let extractedContainerView = ContextExtractedContentContainingView()
+        private let itemClippingView = ItemClippingView(frame: .zero)
+        private var gridCornerRadii = CornerRadii(uniform: 0.0)
+        private var isReordering = false
+        private var isExtractedToContextPreview = false
         
         private let scrollView = UIScrollView()
         private let clippingView = UIView()
         private let contentView = UIView()
+        private var isUpdatingContentLayout = false
+
+        private struct CropState {
+            let zoomScale: CGFloat
+            let normalizedCenter: CGPoint
+        }
+
         private var snapshotView: UIView?
         private var cameraContainerView: UIView?
         private var imageView: UIImageView?
@@ -504,7 +563,8 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.decelerationRate = .fast
-            //self.scrollView.panGestureRecognizer.minimumNumberOfTouches = 2
+            self.scrollView.minimumZoomScale = 1.0
+            self.scrollView.maximumZoomScale = 3.5
             
             self.clippingView.clipsToBounds = true
             self.clippingView.isUserInteractionEnabled = false
@@ -516,8 +576,9 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             
             self.clipsToBounds = true
             self.extractedContainerView.contentView.clipsToBounds = true
-            self.extractedContainerView.contentView.addSubview(self.scrollView)
-            self.extractedContainerView.contentView.addSubview(self.clippingView)
+            self.extractedContainerView.contentView.addSubview(self.itemClippingView)
+            self.itemClippingView.addSubview(self.scrollView)
+            self.itemClippingView.addSubview(self.clippingView)
             
             self.scrollView.addSubview(self.contentView)
             
@@ -525,18 +586,11 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 guard let self else {
                     return
                 }
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                if value {
-                    self.clippingView.layer.cornerRadius = 12.0
-                    self.scrollView.layer.cornerRadius = 12.0
-                    transition.updateSublayerTransformScale(layer: self.extractedContainerView.contentView.layer, scale: CGPoint(x: 0.9, y: 0.9))
-                } else {
-                    self.clippingView.layer.cornerRadius = 0.0
-                    self.clippingView.layer.animate(from: NSNumber(value: Float(12.0)), to: NSNumber(value: Float(0.0)), keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
-                    self.scrollView.layer.cornerRadius = 0.0
-                    self.scrollView.layer.animate(from: NSNumber(value: Float(12.0)), to: NSNumber(value: Float(0.0)), keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
-                    transition.updateSublayerTransformScale(layer: self.extractedContainerView.contentView.layer, scale: CGPoint(x: 1.0, y: 1.0))
-                }
+                self.isExtractedToContextPreview = value
+                let transition = ComponentTransition.easeInOut(duration: 0.2)
+                self.updateCornerRadii(transition: transition)
+                let scale: CGFloat = value ? 0.9 : 1.0
+                transition.setSublayerTransform(view: self.extractedContainerView.contentView, transform: CATransform3DMakeScale(scale, scale, 1.0))
             }
             
             self.activated = { [weak self] gesture, _ in
@@ -568,18 +622,23 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         }
         
         var getPreviewLayer: () -> PreviewLayer? = { return nil }
+
+        private func updateCornerRadii(transition: ComponentTransition) {
+            let cornerRadii = self.isReordering || self.isExtractedToContextPreview ? CornerRadii(uniform: 24.0) : self.gridCornerRadii
+            self.itemClippingView.update(size: self.itemClippingView.bounds.size, cornerRadii: cornerRadii, transition: transition)
+        }
         
         private var item: CameraCollage.State.Item?
-        func update(item: CameraCollage.State.Item, size: CGSize, cameraContainerView: UIView?, transition: ComponentTransition) {
+        func update(item: CameraCollage.State.Item, size: CGSize, gridCornerRadii: CornerRadii, isReordering: Bool, cameraContainerView: UIView?, transition: ComponentTransition) {
+            let sizeUpdated = self.scrollView.bounds.size != size
+            let previousCropState = sizeUpdated ? self.currentCropState() : nil
             self.item = item
+            self.gridCornerRadii = gridCornerRadii
+            self.isReordering = isReordering
             
             let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
             
             let bounds = CGRect(origin: .zero, size: size)
-            var sizeUpdated = false
-            if self.scrollView.frame.size.width > 0.0 && self.scrollView.frame.size != size {
-                sizeUpdated = true
-            }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: size))
             
             switch item.content {
@@ -722,12 +781,10 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 }
                                 
                 var added = false
-                var imageTransition = transition
                 var imageView: UIImageView
                 if let current = self.imageView {
                     imageView = current
                 } else {
-                    imageTransition = .immediate
                     imageView = UIImageView()
                     imageView.contentMode = .scaleAspectFill
                     self.imageView = imageView
@@ -737,12 +794,10 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 imageView.image = image
                 
                 let dimensions = image.size.aspectFilled(size)
-                imageTransition.setFrame(view: imageView, frame: CGRect(origin: .zero, size: dimensions))
-                
                 if added || sizeUpdated {
-                    self.contentView.bounds = CGRect(origin: .zero, size: dimensions)
-                    self.scrollView.contentSize = dimensions
-                    self.scrollView.resetZooming()
+                    self.updateContentLayout(dimensions: dimensions, cropState: added ? nil : previousCropState)
+                } else {
+                    transition.setFrame(view: imageView, frame: CGRect(origin: .zero, size: dimensions))
                 }
             case let .video(asset, _, _, _):
                 if let cameraContainerView = self.cameraContainerView {
@@ -768,9 +823,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 }
                 
                 var added = false
-                var imageTransition = transition
                 if self.videoLayer == nil {
-                    imageTransition = .immediate
                     let playerItem = AVPlayerItem(asset: asset)
                     let player = AVPlayer(playerItem: playerItem)
                     player.isMuted = true
@@ -803,24 +856,20 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 }
                 
                 let dimensions = (asset.videoDimensions ?? CGSize(width: 1.0, height: 1.0)).aspectFilled(size)
-                if let videoLayer = self.videoLayer {
-                    imageTransition.setFrame(layer: videoLayer, frame: CGRect(origin: .zero, size: dimensions))
-                }
-                
                 if added || sizeUpdated {
-                    self.contentView.bounds = CGRect(origin: .zero, size: dimensions)
-                    self.scrollView.contentSize = dimensions
-                    self.scrollView.resetZooming()
+                    self.updateContentLayout(dimensions: dimensions, cropState: added ? nil : previousCropState)
+                } else if let videoLayer = self.videoLayer {
+                    transition.setFrame(layer: videoLayer, frame: CGRect(origin: .zero, size: dimensions))
                 }
             }
             
-            self.adjustPreviewZoom(updating: true)
-            
             transition.setFrame(view: self.extractedContainerView, frame: bounds)
             transition.setFrame(view: self.extractedContainerView.contentView, frame: bounds)
+            transition.setFrame(view: self.itemClippingView, frame: bounds)
             transition.setBounds(view: self.clippingView, bounds: bounds)
             transition.setPosition(view: self.clippingView, position: bounds.center)
             self.extractedContainerView.contentRect = bounds
+            self.updateCornerRadii(transition: transition)
         }
         
         func animateIn(from size: CGSize, transition: ComponentTransition) {
@@ -829,12 +878,14 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             }
             
             self.extractedContainerView.contentView.clipsToBounds = false
+            self.itemClippingView.setClippingEnabled(false)
             self.clippingView.clipsToBounds = false
             
             let scale = self.bounds.width / originalCameraFrame.width
             transition.animateScale(view: cameraContainerView, from: 1.0, to: scale)
             transition.animatePosition(view: cameraContainerView, from: originalCameraFrame.center, to: cameraContainerView.center, completion: { _ in
                 self.extractedContainerView.contentView.clipsToBounds = true
+                self.itemClippingView.setClippingEnabled(true)
                 self.clippingView.clipsToBounds = true
             })
         }
@@ -845,6 +896,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             }
             
             self.extractedContainerView.contentView.clipsToBounds = false
+            self.itemClippingView.setClippingEnabled(false)
             self.clippingView.clipsToBounds = false
             
             let scale = max(self.frame.width / originalCameraFrame.width, self.frame.height / originalCameraFrame.height)
@@ -852,23 +904,67 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             transition.animateScale(view: cameraContainerView, from: scale, to: 1.0)
             transition.setPosition(view: cameraContainerView, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0), completion: { _ in
                 self.extractedContainerView.contentView.clipsToBounds = true
+                self.itemClippingView.setClippingEnabled(true)
                 self.clippingView.clipsToBounds = true
                 completion()
             })
         }
         
-        private func adjustPreviewZoom(updating: Bool = false) {
-            let minScale: CGFloat = 1.0
-            let maxScale: CGFloat = 3.5
-            
-            if self.scrollView.minimumZoomScale != minScale {
-                self.scrollView.minimumZoomScale = minScale
+        private func currentCropState() -> CropState? {
+            let contentBounds = self.contentView.bounds
+            let scrollBounds = self.scrollView.bounds
+            guard self.isReady, contentBounds.width > 0.0, contentBounds.height > 0.0, scrollBounds.width > 0.0, scrollBounds.height > 0.0 else {
+                return nil
             }
-            if self.scrollView.maximumZoomScale != maxScale {
-                self.scrollView.maximumZoomScale = maxScale
+
+            let center = self.contentView.convert(scrollBounds.center, from: self.scrollView)
+            return CropState(
+                zoomScale: self.scrollView.zoomScale,
+                normalizedCenter: CGPoint(
+                    x: (center.x - contentBounds.minX) / contentBounds.width,
+                    y: (center.y - contentBounds.minY) / contentBounds.height
+                )
+            )
+        }
+
+        private func updateContentLayout(dimensions: CGSize, cropState: CropState?) {
+            let viewportSize = self.scrollView.bounds.size
+            guard dimensions.width > 0.0, dimensions.height > 0.0, viewportSize.width > 0.0, viewportSize.height > 0.0 else {
+                return
             }
-            
-            let boundsSize = self.scrollView.frame.size
+
+            self.isUpdatingContentLayout = true
+            defer {
+                self.isUpdatingContentLayout = false
+            }
+
+            UIView.performWithoutAnimation {
+                self.scrollView.setZoomScale(1.0, animated: false)
+                self.contentView.frame = CGRect(origin: .zero, size: dimensions)
+                if let imageView = self.imageView {
+                    ComponentTransition.immediate.setFrame(view: imageView, frame: CGRect(origin: .zero, size: dimensions))
+                }
+                if let videoLayer = self.videoLayer {
+                    ComponentTransition.immediate.setFrame(layer: videoLayer, frame: CGRect(origin: .zero, size: dimensions))
+                }
+                self.scrollView.contentSize = dimensions
+
+                let zoomScale = min(self.scrollView.maximumZoomScale, max(self.scrollView.minimumZoomScale, cropState?.zoomScale ?? 1.0))
+                self.scrollView.setZoomScale(zoomScale, animated: false)
+                let contentSize = CGSize(width: dimensions.width * zoomScale, height: dimensions.height * zoomScale)
+                self.scrollView.contentSize = contentSize
+                self.adjustPreviewZoom()
+
+                let normalizedCenter = cropState?.normalizedCenter ?? CGPoint(x: 0.5, y: 0.5)
+                self.scrollView.contentOffset = CGPoint(
+                    x: min(max(0.0, contentSize.width - viewportSize.width), max(0.0, normalizedCenter.x * contentSize.width - viewportSize.width / 2.0)),
+                    y: min(max(0.0, contentSize.height - viewportSize.height), max(0.0, normalizedCenter.y * contentSize.height - viewportSize.height / 2.0))
+                )
+            }
+        }
+
+        private func adjustPreviewZoom() {
+            let boundsSize = self.scrollView.bounds.size
             var contentFrame = self.contentView.frame
             if boundsSize.width > contentFrame.size.width {
                 contentFrame.origin.x = (boundsSize.width - contentFrame.size.width) / 2.0
@@ -885,10 +981,16 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         }
         
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            guard !self.isUpdatingContentLayout else {
+                return
+            }
             self.adjustPreviewZoom()
         }
         
         func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+            guard !self.isUpdatingContentLayout else {
+                return
+            }
             self.adjustPreviewZoom()
             
             if scrollView.zoomScale < 1.0 {
@@ -903,6 +1005,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
     
     private let context: AccountContext
     private let collage: CameraCollage
+    private let cornerRadius: CGFloat
     private weak var cameraContainerView: UIView?
     
     private var cameraVideoSource: CameraVideoSource?
@@ -933,9 +1036,10 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         return self.collage.result(itemViews: self.itemViews)
     }
     
-    init(context: AccountContext, collage: CameraCollage, cameraVideoSource: CameraVideoSource, cameraContainerView: UIView?) {
+    init(context: AccountContext, collage: CameraCollage, cornerRadius: CGFloat, cameraVideoSource: CameraVideoSource, cameraContainerView: UIView?) {
         self.context = context
         self.collage = collage
+        self.cornerRadius = cornerRadius
         self.cameraVideoSource = cameraVideoSource
         self.cameraContainerView = cameraContainerView
         
@@ -1172,6 +1276,14 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             completion()
             return
         }
+        if transition.animation.isImmediate {
+            if let cameraContainerView = self.cameraContainerView {
+                cameraContainerView.transform = .identity
+                cameraContainerView.frame = CGRect(origin: .zero, size: size)
+            }
+            completion()
+            return
+        }
         guard let (_, cameraItemView) = self.itemViews.first(where: { $0.value.isCamera }) else {
             if let cameraContainerView = self.cameraContainerView {
                 cameraContainerView.transform = CGAffineTransform.identity
@@ -1251,24 +1363,29 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         var previousItemFrame: CGRect?
         
         var itemFrame: CGRect = .zero
-        for row in state.rows {
+        for (rowIndex, row) in state.rows.enumerated() {
             let columnWidth: CGFloat = floor(size.width / CGFloat(row.items.count))
             itemFrame = CGRect(origin: itemFrame.origin, size: CGSize(width: columnWidth, height: rowHeight))
                         
-            for item in row.items {
+            for (columnIndex, item) in row.items.enumerated() {
                 let id = item.uniqueId
                 validIds.insert(id)
+
+                let gridCornerRadii = CornerRadii(
+                    topLeft: rowIndex == 0 && columnIndex == 0 ? self.cornerRadius : 0.0,
+                    topRight: rowIndex == 0 && columnIndex == row.items.count - 1 ? self.cornerRadius : 0.0,
+                    bottomLeft: rowIndex == state.rows.count - 1 && columnIndex == 0 ? self.cornerRadius : 0.0,
+                    bottomRight: rowIndex == state.rows.count - 1 && columnIndex == row.items.count - 1 ? self.cornerRadius : 0.0
+                )
             
                 var effectiveItemFrame = itemFrame
+                let isReordering = self.reorderingItem?.id == id
                 let itemScale: CGFloat
-                let itemCornerRadius: CGFloat
-                if let reorderingItem = self.reorderingItem, item.uniqueId == reorderingItem.id {
+                if isReordering, let reorderingItem = self.reorderingItem {
                     itemScale = 0.9
-                    itemCornerRadius = 12.0
                     effectiveItemFrame = itemFrame.size.centered(around: reorderingItem.position)
                 } else {
                     itemScale = 1.0
-                    itemCornerRadius = 0.0
                 }
                 
                 var itemTransition = transition
@@ -1294,7 +1411,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                         itemTransition = .immediate
                     }
                 }
-                itemView.update(item: item, size: effectiveItemFrame.size, cameraContainerView: self.cameraContainerView, transition: itemTransition)
+                itemView.update(item: item, size: effectiveItemFrame.size, gridCornerRadii: gridCornerRadii, isReordering: isReordering, cameraContainerView: self.cameraContainerView, transition: itemTransition)
                 itemView.contextAction = { [weak self] id, sourceView, gesture in
                     guard let self else {
                         return
@@ -1305,18 +1422,6 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 itemTransition.setBounds(view: itemView, bounds: CGRect(origin: .zero, size: effectiveItemFrame.size))
                 itemTransition.setPosition(view: itemView, position: effectiveItemFrame.center)
                 itemTransition.setScale(view: itemView, scale: itemScale)
-                
-                if !itemTransition.animation.isImmediate {
-                    let cornerTransition: ComponentTransition
-                    if itemCornerRadius > 0.0 {
-                        cornerTransition = ComponentTransition(animation: .curve(duration: 0.1, curve: .linear))
-                    } else {
-                        cornerTransition = .easeInOut(duration: 0.4)
-                    }
-                    cornerTransition.setCornerRadius(layer: itemView.layer, cornerRadius: itemCornerRadius)
-                } else {
-                    itemTransition.setCornerRadius(layer: itemView.layer, cornerRadius: itemCornerRadius)
-                }
                 
                 itemFrame.origin.x += columnWidth
             }
@@ -1568,23 +1673,6 @@ private extension AVAsset {
 }
 
 private extension UIScrollView {
-    func resetZooming() {
-        guard let contentView = self.delegate?.viewForZooming?(in: self) else { return }
-        
-        let scrollViewSize = self.bounds.size
-        let contentSize = contentView.frame.size
-        
-        let offsetX = (scrollViewSize.width - contentSize.width) * 0.5
-        let offsetY = (scrollViewSize.height - contentSize.height) * 0.5
-        
-        contentView.center = CGPoint(
-            x: scrollViewSize.width / 2.0 + self.contentOffset.x,
-            y: scrollViewSize.height / 2.0 + self.contentOffset.y
-        )
-
-        self.contentOffset = CGPoint(x: -offsetX, y: -offsetY)
-    }
-    
     var offsetFromCenter: CGPoint {
         let contentCenterX = (self.contentSize.width - self.bounds.width) / 2.0
         let contentCenterY = (self.contentSize.height - self.bounds.height) / 2.0

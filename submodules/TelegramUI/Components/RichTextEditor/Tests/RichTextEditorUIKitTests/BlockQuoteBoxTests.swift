@@ -28,7 +28,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         let bq = BlockQuote(id: BlockID("q"), children: [.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hi")]))], collapsed: true)
         let c = canvas([.blockQuote(bq)])
         let box = c.boxes.first as! BlockQuoteBox
-        c.anchor = box.nodeStart; c.head = box.nodeStart          // caret on the collapsed atom
+        c.setSelectionForTesting(anchor: box.nodeStart, head: box.nodeStart)   // caret on the collapsed atom
         c.toggleCollapsed(box: box)
         guard let newBox = c.boxes.first as? BlockQuoteBox else { return XCTFail() }
         XCTAssertGreaterThan(newBox.nodeSize, 3)                 // expanded
@@ -81,13 +81,57 @@ final class BlockQuoteBoxTests: XCTestCase {
         let c = canvas([.blockQuote(bq), .paragraph(after)])
         let box = c.boxes[0] as! BlockQuoteBox
         let insidePos = box.children.boxes.first?.leafRegions().first?.globalStart ?? 0
-        c.anchor = insidePos; c.head = insidePos
+        c.setSelectionForTesting(anchor: insidePos, head: insidePos)
         c.toggleCollapsed(box: box)
         XCTAssertEqual(c.boxes.count, 2, "no block added/removed (quote + the existing following paragraph)")
         guard let collapsedBox = c.boxes.first as? BlockQuoteBox else { return XCTFail("box should remain a BlockQuoteBox") }
         XCTAssertEqual(collapsedBox.nodeSize, 3, "quote should now be a collapsed atom")
         XCTAssertEqual(c.head, collapsedBox.nodeStart, "caret focuses the collapsed quote's leading gap")
         XCTAssertEqual(c.anchor, c.head, "selection collapsed")
+    }
+
+    // MARK: - The caret-OUTSIDE arm preserves a RANGE (Task 39 Step 0a)
+
+    /// TASK 39 STEP 0a — the twin of `DetailsBoxFoldTests`' pin, for `toggleCollapsed`'s caret-outside
+    /// arm. That arm returns `.range(remap(beforeAnchor), remap(beforeHead))`; the mechanical
+    /// simplification `.caret(at: remap(beforeHead))` compiles and passed Task 38's full 2630-case run
+    /// byte-identically. **Characterization, not design**: the oracle is `e626bbd2fc`, where the arm was
+    /// the raw pair `anchor = remap(beforeAnchor); head = remap(beforeHead)`.
+    ///
+    /// The two spellings differ in EXACTLY ONE state — a non-collapsed selection OUTSIDE the folded box
+    /// — so the seed must be a real range there and BOTH endpoints must be asserted (Rule 16). The
+    /// `XCTAssertNotEqual` proves the fold actually moved the following block, so `remap` is exercised
+    /// rather than being an identity. The measurement's numbers live on the `+Details.swift` twin arm.
+    func test_toggleCollapsed_withARangeSelectionOutsideTheQuote_preservesBOTHEndpoints() {
+        let bq = BlockQuote(id: BlockID("q"), children: [
+            .paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "inside text")]))
+        ], collapsed: false)
+        let c = canvas([.blockQuote(bq), .paragraph(ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "after text")]))])
+        let box = c.boxes[0] as! BlockQuoteBox
+        let beforeStart = c.boxes[1].textStart
+        c.setSelectionForTesting(anchor: beforeStart + 1, head: beforeStart + 4)
+        c.toggleCollapsed(box: box)
+        let newStart = c.boxes[1].textStart
+        XCTAssertNotEqual(newStart, beforeStart, "collapsing must shift the following block, else remap() is untested")
+        XCTAssertEqual(c.anchor, newStart + 1, "the ANCHOR is remapped and kept — not collapsed onto the head")
+        XCTAssertEqual(c.head, newStart + 4)
+    }
+
+    /// `.range` does not normalize its arguments and neither did the raw pair — a reversed drag stays
+    /// reversed. Red under `.caret(at:)` and under any normalizing spelling.
+    func test_toggleCollapsed_withAReversedRangeOutsideTheQuote_keepsItReversed() {
+        let bq = BlockQuote(id: BlockID("q"), children: [
+            .paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "inside text")]))
+        ], collapsed: false)
+        let c = canvas([.blockQuote(bq), .paragraph(ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "after text")]))])
+        let box = c.boxes[0] as! BlockQuoteBox
+        let beforeStart = c.boxes[1].textStart
+        c.setSelectionForTesting(anchor: beforeStart + 4, head: beforeStart + 1)
+        c.toggleCollapsed(box: box)
+        let newStart = c.boxes[1].textStart
+        XCTAssertNotEqual(newStart, beforeStart)
+        XCTAssertEqual(c.anchor, newStart + 4)
+        XCTAssertEqual(c.head, newStart + 1)
     }
 
     // MARK: - Glyph hit walks table cells (Finding 1)
@@ -159,10 +203,10 @@ final class BlockQuoteBoxTests: XCTestCase {
 
     // MARK: - 15pt body font (render-only)
 
-    /// Block-quote children render at 15pt (bodyBaseSize = 15 via withBodyBaseSize), matching the
+    /// Block-quote children render at 15pt (body font size 15 via withBodyFontSize), matching the
     /// old flat `.quote` fixed size. The mapper stored on the child BlockBox carries the 15pt base
     /// so every downstream render path (collapsed preview, child boxes, headings — which are
-    /// independent of bodyBaseSize — all stay correct). Headings keep their fixed size.
+    /// independent of the body font size — all stay correct). Headings keep their fixed size.
     func test_blockQuoteBox_childBodyFontIs15pt() {
         let bq = BlockQuote(id: BlockID("q"), children: [
             .paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hello")]))
@@ -173,7 +217,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         guard let childBox = box.children.boxes.first as? BlockBox else { return XCTFail("child should be a BlockBox") }
         XCTAssertEqual(childBox.mapper.styleSheet.font(for: .body, attributes: .plain).pointSize, 15,
                        accuracy: 0.5, "block-quote body content renders at 15pt, not the document's 17pt")
-        // Headings inside a quote keep their fixed size (they don't use bodyBaseSize).
+        // Headings inside a quote keep their fixed size (they don't use the body font size).
         XCTAssertGreaterThan(childBox.mapper.styleSheet.font(for: .heading1, attributes: .plain).pointSize, 20,
                              "heading1 inside a quote keeps its fixed large size")
         // currentBlock() round-trips the children's text content (structural integrity).
@@ -183,7 +227,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         XCTAssertEqual(p.runs.map(\.text).joined(), "hello", "text content is unchanged by the 15pt mapping")
     }
 
-    /// Nested quotes and quotes-in-cells stay 15pt — withBodyBaseSize(15) on an already-15pt mapper
+    /// Nested quotes and quotes-in-cells stay 15pt — withBodyFontSize(15) on an already-15pt mapper
     /// is idempotent; there is no per-level shrink.
     func test_blockQuoteBox_nestedQuote_staysAt15pt() {
         let inner = BlockQuote(id: BlockID("i"), children: [
@@ -198,7 +242,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         // The inner (nested) BlockQuoteBox also stores a 15pt mapper — no further shrink.
         guard let innerBox = box.children.boxes.first as? BlockQuoteBox else { return XCTFail("inner should be BlockQuoteBox") }
         XCTAssertEqual(innerBox.mapper.styleSheet.font(for: .body, attributes: .plain).pointSize, 15,
-                       accuracy: 0.5, "nested quote stays at 15pt (withBodyBaseSize is idempotent)")
+                       accuracy: 0.5, "nested quote stays at 15pt (withBodyFontSize is idempotent)")
     }
 
     func test_canvasBuildsBlockQuoteBox_recursively() {
@@ -259,7 +303,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         let box = c.boxes[1] as! BlockQuoteBox
         let childStart = box.children.boxes.first?.leafRegions().first?.globalStart ?? 0
         let prevEnd = c.prevTextPosition(before: childStart)
-        c.anchor = prevEnd; c.head = childStart          // the OS-delivered object-replacement range
+        c.setSelectionForTesting(anchor: prevEnd, head: childStart)   // the OS-delivered object-replacement range
         c.deleteBackward()
         XCTAssertFalse(c.boxes.contains { $0 is BlockQuoteBox }, "quote deleted, not merged into the previous block")
         XCTAssertEqual(c.boxes.count, 2, "hello paragraph + empty body paragraph in the quote's place")
@@ -273,7 +317,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         let prev = ParagraphBlock(id: BlockID("prev"), runs: [TextRun(text: "hello")])
         let c = canvas([.paragraph(prev), .code(CodeBlock(id: BlockID("c"), runs: []))])
         let codeStart = c.boxes[1].textStart
-        c.anchor = c.prevTextPosition(before: codeStart); c.head = codeStart   // OS object-replacement range
+        c.setSelectionForTesting(anchor: c.prevTextPosition(before: codeStart), head: codeStart)   // OS object-replacement range
         c.deleteBackward()
         XCTAssertFalse(c.boxes.contains { $0 is CodeBlockBox }, "code block deleted, not merged into the previous block")
         guard case let .paragraph(e) = c.boxes[1].currentBlock() else { return XCTFail("2nd block paragraph") }
@@ -283,7 +327,7 @@ final class BlockQuoteBoxTests: XCTestCase {
         let prev = ParagraphBlock(id: BlockID("prev"), runs: [TextRun(text: "hello")])
         let c = canvas([.paragraph(prev), .pullQuote(PullQuote(id: BlockID("pq"), runs: []))])
         let pqStart = c.boxes[1].textStart
-        c.anchor = c.prevTextPosition(before: pqStart); c.head = pqStart       // OS object-replacement range
+        c.setSelectionForTesting(anchor: c.prevTextPosition(before: pqStart), head: pqStart)   // OS object-replacement range
         c.deleteBackward()
         XCTAssertFalse(c.boxes.contains { $0 is PullQuoteBox }, "pull quote deleted, not merged into the previous block")
         guard case let .paragraph(e) = c.boxes[1].currentBlock() else { return XCTFail("2nd block paragraph") }

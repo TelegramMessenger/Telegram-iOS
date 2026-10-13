@@ -55,6 +55,10 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
     let icon: Icon?
     let action: () -> Void
     let header: ListViewItemHeader? = nil
+
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .mediaGroupsAlbum))
+    }
     
     init(presentationData: ItemListPresentationData, title: String, count: String, icon: Icon?, action: @escaping () -> Void) {
         self.presentationData = presentationData
@@ -64,10 +68,10 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = MediaGroupsAlbumItemNode()
-            let (first, last) = MediaGroupsAlbumItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (first, last) = MediaGroupsAlbumItem.mergeType(item: self, neighbors: neighbors)
             let (layout, apply) = node.asyncLayout()(self, params, first, last)
             
             node.contentSize = layout.contentSize
@@ -81,13 +85,13 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? MediaGroupsAlbumItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (first, last) = MediaGroupsAlbumItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (first, last) = MediaGroupsAlbumItem.mergeType(item: self, neighbors: neighbors)
                     let (layout, apply) = makeLayout(self, params, first, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
@@ -107,14 +111,14 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
         listView.clearHighlightAnimated(true)
     }
     
-    static func mergeType(item: MediaGroupsAlbumItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool) {
+    static func mergeType(item: MediaGroupsAlbumItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool) {
         var first = false
         var last = false
 
-        if let previousItem = previousItem, !(previousItem is MediaGroupsAlbumItem) {
+        if let previousDescriptor = neighbors.previous, previousDescriptor.base(HeaderNeighborFacet.self)?.headerFamily != .mediaGroupsAlbum {
             first = true
         }
-        if nextItem == nil {
+        if neighbors.next == nil {
             last = true
         }
        
@@ -191,7 +195,7 @@ class MediaGroupsAlbumItemNode: ListViewItemNode {
         let makeCountLayout = TextNode.asyncLayout(self.countNode)
         let currentItem = self.item
         
-        return { item, params, first, last in
+        return { [weak self] item, params, first, last in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -327,4 +331,8 @@ class MediaGroupsAlbumItemNode: ListViewItemNode {
             return nil
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let mediaGroupsAlbum = ListViewItemHeaderFamily("mediaGroupsAlbum")
 }

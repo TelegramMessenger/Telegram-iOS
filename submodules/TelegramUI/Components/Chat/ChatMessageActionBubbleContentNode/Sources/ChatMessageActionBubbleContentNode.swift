@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -78,7 +79,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
         self.labelNode.textNode.displaysAsynchronously = false
@@ -90,7 +91,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.mediaBackgroundNode.displaysAsynchronously = false
         self.mediaBackgroundNode.displayWithoutProcessing = true
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
 
         self.addSubnode(self.labelNode.textNode)
     }
@@ -179,7 +180,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
 
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             var isDetached = false
             if let _ = item.message.paidStarsAttribute {
                 isDetached = true
@@ -871,26 +872,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
 
-        if let backgroundNode = self.backgroundNode {
-            var backgroundFrame = backgroundNode.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundNode.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
 
-    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        if let backgroundNode = self.backgroundNode {
-            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-        }
-    }
-
-    override public func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-        if let backgroundNode = self.backgroundNode {
-            backgroundNode.offsetSpring(value: value, duration: duration, damping: damping)
-        }
-    }
-    
     override public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [(CGRect, CGRect)]?

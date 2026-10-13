@@ -124,6 +124,7 @@ public final class AlertMultilineInputFieldComponent: Component {
     let placeholder: String
     let prefix: NSAttributedString?
     let characterLimit: Int?
+    let maxHeight: CGFloat?
     let returnKeyType: UIReturnKeyType
     let keyboardType: UIKeyboardType
     let autocapitalizationType: UITextAutocapitalizationType
@@ -141,6 +142,7 @@ public final class AlertMultilineInputFieldComponent: Component {
         placeholder: String,
         prefix: NSAttributedString? = nil,
         characterLimit: Int? = nil,
+        maxHeight: CGFloat? = nil,
         returnKeyType: UIReturnKeyType = .default,
         keyboardType: UIKeyboardType = .default,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
@@ -157,6 +159,7 @@ public final class AlertMultilineInputFieldComponent: Component {
         self.placeholder = placeholder
         self.prefix = prefix
         self.characterLimit = characterLimit
+        self.maxHeight = maxHeight
         self.returnKeyType = returnKeyType
         self.keyboardType = keyboardType
         self.autocapitalizationType = autocapitalizationType
@@ -186,6 +189,9 @@ public final class AlertMultilineInputFieldComponent: Component {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
+            return false
+        }
+        if lhs.maxHeight != rhs.maxHeight {
             return false
         }
         if lhs.keyboardType != rhs.keyboardType {
@@ -255,9 +261,27 @@ public final class AlertMultilineInputFieldComponent: Component {
             
             let environment = environment[AlertComponentEnvironment.self]
             
-            let topInset: CGFloat = 15.0
+            let maxHeight = component.maxHeight.map { max(0.0, $0) }
+            let topInset: CGFloat = min(15.0, maxHeight ?? 15.0)
             let horizontalInset: CGFloat = 4.0
-            let verticalInset: CGFloat = 11.0 - UIScreenPixel
+            var verticalInset: CGFloat = 11.0 - UIScreenPixel
+            var textFieldAvailableHeight = availableSize.height
+            if let maxHeight {
+                verticalInset = min(verticalInset, (maxHeight - topInset) * 0.5)
+                textFieldAvailableHeight = min(textFieldAvailableHeight, max(0.0, maxHeight - topInset - verticalInset * 2.0))
+            }
+
+            let returnKeyAction: (() -> Void)?
+            if component.returnKeyAction != nil {
+                returnKeyAction = { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.returnKeyAction?()
+                }
+            } else {
+                returnKeyAction = nil
+            }
             
             let textFieldSize = self.textField.update(
                 transition: transition,
@@ -291,23 +315,22 @@ public final class AlertMultilineInputFieldComponent: Component {
                     },
                     paste: { _ in
                     },
-                    returnKeyAction: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.returnKeyAction?()
-                    },
+                    returnKeyAction: returnKeyAction,
                     backspaceKeyAction: {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width + horizontalInset * 2.0, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width + horizontalInset * 2.0, height: textFieldAvailableHeight)
             )
             component.externalState.value = self.textFieldExternalState.text
             component.externalState.valuePromise.set(component.externalState.value)
             
             let backgroundPadding: CGFloat = 14.0
-            let size = CGSize(width: availableSize.width, height: max(50.0, floor(textFieldSize.height + verticalInset * 2.0)))
+            var height = max(50.0, floor(textFieldSize.height + verticalInset * 2.0))
+            if let maxHeight {
+                height = min(height, maxHeight - topInset)
+            }
+            let size = CGSize(width: availableSize.width, height: height)
             
             let backgroundSize = self.background.update(
                 transition: transition,
@@ -325,7 +348,7 @@ public final class AlertMultilineInputFieldComponent: Component {
                 transition.setFrame(view: backgroundView, frame: backgroundFrame)
             }
             
-            let textFieldFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textFieldSize.width) / 2.0), y: topInset + 11.0 - UIScreenPixel), size: textFieldSize)
+            let textFieldFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textFieldSize.width) / 2.0), y: topInset + verticalInset), size: textFieldSize)
             if let textFieldView = self.textField.view {
                 if textFieldView.superview == nil {
                     self.addSubview(textFieldView)

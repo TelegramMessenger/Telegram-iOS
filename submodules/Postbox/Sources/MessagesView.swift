@@ -31,11 +31,20 @@ final class MutableMessagesView: MutablePostboxView {
                                     updatedIds.insert(index.0.id)
                                 }
                             }
+                        case let .UpdateEmbeddedMedia(index, _):
+                            if self.ids.contains(index.id) {
+                                updatedIds.insert(index.id)
+                            }
                         default:
                             break
                     }
                 }
             }
+        }
+        // Media shared by several messages lives in a record of its own; updating it
+        // rewrites that record and reports the id here, with no history operation.
+        for (id, message) in self.messages where !updatedIds.contains(id) && message.referencesAnyMedia(in: transaction.updatedMedia) {
+            updatedIds.insert(id)
         }
         if !updatedIds.isEmpty {
             for id in updatedIds {

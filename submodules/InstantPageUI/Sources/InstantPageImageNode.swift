@@ -16,6 +16,7 @@ import AppBundle
 import TelegramUIPreferences
 import ContextUI
 import Tuples
+import UIKitRuntimeUtils
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -54,10 +55,18 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
     private let context: AccountContext
     private let webPage: TelegramMediaWebpage
     private var theme: InstantPageTheme
-    let media: InstantPageMedia
+    private(set) var media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     private let interactive: Bool
     private let roundCorners: Bool
+    /// When true, the media is aspect-FITTED (letterboxed) within the node's bounds — with a blurred,
+    /// scaled-up copy of the media filling the letterbox/pillarbox gap (`resizeMode: .blurBackground`) —
+    /// instead of the default aspect-FILL (cover + crop). Mirrors the RichText editor's
+    /// `RichTextMediaContentComponent` (`usesAspectFit`), so a sent rich message matches its authoring
+    /// preview. Used by single media (whose frame height is capped at `min(1000, boundingWidth)`, so a
+    /// tall portrait shows whole + blurred rather than cropped) and by every slideshow page (whose shared
+    /// block frame is the tallest page). A landscape image that fills its slot shows no blur
+    /// (`aspectFitted == boundingSize`). Honored in `layout()` for image/file media.
     private let fit: Bool
     /// When set, overrides the per-media-type placeholder/letterbox `emptyColor` (e.g. the slideshow uses
     /// black instead of the panel/placeholder color). nil = keep the per-type default.
@@ -93,7 +102,25 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
     // separate node also gives an instant reveal (remove it → the always-sharp `imageNode` shows). The
     // enclosing V2 media view drives the dust cover + reveal timing. Default off (no effect on web IV).
     private var contentBlurredSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-    
+
+    /// Excludes the rendered media from screenshots and screen recordings, matching what
+    /// `ChatMessageInteractiveMediaNode` does for a copy-protected regular media message. Driven by
+    /// the enclosing V2 media view from `InstantPageV2RenderContext.captureProtected`; default off,
+    /// so web IV and V1 Instant View are unaffected.
+    ///
+    /// The spoiler blur node is a sibling the caller owns (see `makeSpoilerBlurredNode`), so it is
+    /// tracked weakly here and kept in sync — a concealed spoiler must be protected too, otherwise
+    /// a screenshot of a blurred-but-unprotected cover still reveals the shape of the media.
+    var captureProtected: Bool = false {
+        didSet {
+            if self.captureProtected != oldValue {
+                self.imageNode.captureProtected = self.captureProtected
+                self.spoilerBlurredNode?.captureProtected = self.captureProtected
+            }
+        }
+    }
+    private weak var spoilerBlurredNode: TransformImageNode?
+
     init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, imageReferenceForMedia: ((TelegramMediaImage) -> ImageMediaReference)? = nil, fileReferenceForMedia: ((TelegramMediaFile) -> FileMediaReference)? = nil, autoDownloadImage: ((TelegramMediaImage) -> Bool)? = nil, autoDownloadFile: ((TelegramMediaFile) -> Bool)? = nil, emptyColor: UIColor? = nil, getPreloadedResource: @escaping (String) -> Data?) {
         self.context = context
         self.theme = theme
@@ -243,7 +270,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
         }
         let node = TransformImageNode()
         node.contentAnimations = []
+        node.captureProtected = self.captureProtected
         node.setSignal(contentBlurredSignal)
+        self.spoilerBlurredNode = node
         return node
     }
 
@@ -270,6 +299,64 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
             self.themeUpdated = true
             self.setNeedsLayout()
         }
+    }
+
+    /// Re-point interactive bindings — `self.media` identity, the fetch-status subscription, and
+    /// `fetchControls` — at a new media reference WITHOUT resetting the displayed image signal.
+    ///
+    /// Used when a rich message's media transitions Local→Cloud on send: `ApplyUpdateMessage` moved
+    /// the bytes onto the new (cloud) resource id, so the already-decoded pixels stay valid — no
+    /// reload, no blink. But the node's `media` (matched against the fresh gallery entries in
+    /// `openInstantPageMedia`'s `centralIndex` lookup, and by `transitionNode`) and its fetch-status
+    /// (which gates tap-to-open for images) still point at the stale local resource; without this
+    /// refresh, tap-to-open silently fails until the bubble is rebuilt on the next scroll-recycle.
+    /// The image signal is deliberately NOT re-set (that is what preserves the pixels / avoids the
+    /// flash); the poster stays the moved-bytes image, which is identical to the cloud image.
+    func updateInteractiveMediaBinding(sourceLocation: InstantPageSourceLocation, media: InstantPageMedia, imageReferenceForMedia: ((TelegramMediaImage) -> ImageMediaReference)?, fileReferenceForMedia: ((TelegramMediaFile) -> FileMediaReference)?) {
+        self.media = media
+        guard self.interactive else {
+            return
+        }
+        let context = self.context
+        if case let .image(image) = media.media, let largest = largestImageRepresentation(image.representations) {
+            if largest.resource is InstantPageExternalMediaResource {
+                return
+            }
+            let imageReference = imageReferenceForMedia?(image) ?? ImageMediaReference.webPage(webPage: WebpageReference(self.webPage), media: image)
+            self.fetchControls = FetchControls(fetch: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                }
+            }, cancel: {
+                chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: imageReference)
+            })
+            self.statusDisposable.set((context.engine.resources.status(resource: EngineMediaResource(largest.resource)) |> deliverOnMainQueue).start(next: { [weak self] status in
+                displayLinkDispatcher.dispatch {
+                    if let strongSelf = self {
+                        strongSelf.fetchStatus = status
+                        strongSelf.updateFetchStatus()
+                    }
+                }
+            }))
+        }
+        // The file/video branch installs no status/fetchControls (video tap is ungated and uses
+        // `self.media`, refreshed above), so no further work is needed for it.
+    }
+
+    /// Re-points ONLY the `media` value — no reference, fetch-status or image-signal work.
+    ///
+    /// For a re-layout that keeps the same media id but changes the surrounding `InstantPageMedia`
+    /// (caption, credit, url, or a photo/file that compares unequal under the same id — a message
+    /// edit, or a server round-trip returning different representations). `self.media` is the value
+    /// the tap hands to `openInstantPageMedia`, which matches it against the CURRENT layout's
+    /// medias, and it is what `transitionNode` / `updateHiddenMedia` are matched against; letting it
+    /// drift means those lookups stop resolving and the gallery never opens.
+    ///
+    /// Distinct from `updateInteractiveMediaBinding`, which is for the Local→Cloud id flip and
+    /// additionally re-subscribes the fetch status — deliberately NOT done here, since re-arming
+    /// that subscription for an unchanged resource would flicker the status back through `.Remote`.
+    func updateMediaValue(_ media: InstantPageMedia) {
+        self.media = media
     }
     
     private func loadExternalImage(resourceUrl: String) {
@@ -393,6 +480,16 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
                     break
             }
         }
+        // Re-attach before showing anything: the `.none` transition below detaches the node, so a
+        // status that goes back to `.Remote`/`.Fetching` — which happens when
+        // `updateInteractiveMediaBinding` re-points the subscription at a Cloud resource whose bytes
+        // are not local yet — would otherwise render its download/progress ring on a node that is no
+        // longer in the hierarchy. The tap then takes the `.Remote` branch (fetch instead of open)
+        // with NO visible indicator, reading as "tapping the image does nothing".
+        // Mirrors `updateExternalImageLoadState`.
+        if state != .none, self.statusNode.supernode == nil {
+            self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+        }
         self.statusNode.transitionToState(state, completion: { [weak statusNode] in
             if state == .none {
                 statusNode?.removeFromSupernode()
@@ -418,21 +515,23 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
             self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
             
             if case .image = self.media.media, let dimensions = self.effectiveMediaDimensions() {
-                let imageSize = dimensions.cgSize.aspectFilled(size)
+                let imageSize = self.fit ? dimensions.cgSize.aspectFitted(size) : dimensions.cgSize.aspectFilled(size)
                 let boundingSize = size
+                let resizeMode: TransformImageResizeMode = self.fit ? .blurBackground : .fill(.black)
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.emptyColorOverride ?? self.theme.panelBackgroundColor))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: resizeMode, emptyColor: self.emptyColorOverride ?? self.theme.panelBackgroundColor))
                 apply()
 
                 self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
             } else if case let .file(file) = self.media.media, let dimensions = self.effectiveMediaDimensions() {
                 let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageTintColor : nil
 
-                let imageSize = dimensions.cgSize.aspectFilled(size)
+                let imageSize = self.fit ? dimensions.cgSize.aspectFitted(size) : dimensions.cgSize.aspectFilled(size)
                 let boundingSize = size
+                let resizeMode: TransformImageResizeMode = self.fit ? .blurBackground : .fill(.black)
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.emptyColorOverride ?? emptyColor))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: resizeMode, emptyColor: self.emptyColorOverride ?? emptyColor))
                 apply()
             } else if case .geo = self.media.media {
                 let presentationTheme = self.context.sharedContext.currentPresentationData.with { $0 }.theme
@@ -467,7 +566,31 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
         if instantPageMediaMatchesNodeIdentity(media, self.media) {
             let imageNode = self.imageNode
             return (self.imageNode, self.imageNode.bounds, { [weak imageNode] in
-                return (imageNode?.view.snapshotContentTree(unhide: true), nil)
+                guard let imageNode else {
+                    return (nil, nil)
+                }
+                guard imageNode.captureProtected else {
+                    return (imageNode.view.snapshotContentTree(unhide: true), nil)
+                }
+                // A capture-protected layer is excluded from snapshots too, so snapshotting it
+                // directly yields an empty view and the gallery open/close animation flies a blank
+                // rect. Mirror `ChatMessageInteractiveMediaNode.transitionNode(adjustRect:)`: stand an
+                // UNPROTECTED copy of the image in front of the protected node, snapshot that, then
+                // protect the resulting snapshot so the transition itself stays uncapturable.
+                let standInView = UIImageView()
+                standInView.contentMode = .scaleToFill
+                standInView.image = imageNode.image
+                standInView.frame = imageNode.bounds
+                if standInView.layer.contents == nil {
+                    standInView.layer.contents = standInView.image?.cgImage
+                }
+                imageNode.view.addSubview(standInView)
+                let view = imageNode.view.snapshotContentTree(unhide: true)
+                standInView.removeFromSuperview()
+                if let view {
+                    setLayerDisableScreenshots(view.layer, true)
+                }
+                return (view, nil)
             })
         } else {
             return nil

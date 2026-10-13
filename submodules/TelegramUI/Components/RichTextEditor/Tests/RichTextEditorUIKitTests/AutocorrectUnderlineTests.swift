@@ -32,7 +32,7 @@ final class AutocorrectUnderlineTests: XCTestCase {
     }
     func test_applyCorrectionFlag_flagsAndStashesOriginal_bypassingCaretWord() {
         let v = makeCanvas()
-        v.head = g(v, 4); v.anchor = g(v, 4)   // caret at the END of "Well"-to-be — the caret-word case
+        v.setSelectionForTesting(anchor: g(v, 4), head: g(v, 4))   // caret at the END of "Well"-to-be — the caret-word case
         v.applyCorrectionFlag(global: NSRange(location: g(v, 0), length: 4), original: "Wrl")   // "Well" spans local 0..4
         XCTAssertEqual(corrections(v), [NSRange(location: 0, length: 4)], "correction flag present despite caret at word end")
         let alt = v.spellingAlternatives[BlockID("p")]?.first { $0.range == NSRange(location: 0, length: 4) }
@@ -81,7 +81,7 @@ final class AutocorrectUnderlineTests: XCTestCase {
         // this canvas is never hosted in one, so install native checking explicitly — same pattern used there.
         _ = v.becomeFirstResponder(); v.installNativeCheckingIfNeeded()
         v.applyCorrectionFlag(global: NSRange(location: g(v, 0), length: 4), original: "Wrl")
-        v.head = g(v, 6); v.anchor = g(v, 6)   // caret still in the SAME region ("today")
+        v.setSelectionForTesting(anchor: g(v, 6), head: g(v, 6))   // caret still in the SAME region ("today")
         v.nativeCheckOnSelectionChange()
         XCTAssertEqual(corrections(v).count, 1, "same-region caret move keeps the correction")
         // Now a genuinely different region: add a second paragraph and move the caret into it.
@@ -90,7 +90,7 @@ final class AutocorrectUnderlineTests: XCTestCase {
         v.layoutIfNeeded()
         v.applyCorrectionFlag(global: NSRange(location: v.boxes[0].textStart, length: 4), original: "Wrl")
         let q = v.boxes[1].textStart + 2
-        v.head = q; v.anchor = q
+        v.setSelectionForTesting(anchor: q, head: q)
         v.nativeCheckOnSelectionChange()
         XCTAssertTrue(corrections(v).isEmpty, "moving the caret to a different region clears the correction")
     }

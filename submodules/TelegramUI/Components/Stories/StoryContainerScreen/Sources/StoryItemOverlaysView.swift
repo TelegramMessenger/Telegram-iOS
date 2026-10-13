@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AccountContext
 import TelegramCore
@@ -43,7 +44,7 @@ public func storyPreviewWithAddedReactions(
     let loadFile: (MessageReaction.Reaction, TelegramMediaFile) -> Signal<(MessageReaction.Reaction, CGImage?), NoError> = { reaction, file in
         return Signal { subscriber in
             let isTemplate = !"".isEmpty
-            return context.animationRenderer.loadFirstFrameAsImage(cache: context.animationCache, itemId: file.resource.id.stringRepresentation, size: CGSize(width: 128.0, height: 128.0), fetch: animationCacheFetchFile(postbox: context.account.postbox, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { result in
+            return context.animationRenderer.loadFirstFrameAsImage(cache: context.animationCache, itemId: file.resource.id.stringRepresentation, size: CGSize(width: 128.0, height: 128.0), fetch: animationCacheFetchFile(postbox: context.account.postbox, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil, lottieSettings: context.lottieRenderingSettings), completion: { result in
                 subscriber.putNext((reaction, result))
                 if result != nil {
                     subscriber.putCompletion()
@@ -438,7 +439,8 @@ final class StoryItemOverlaysView: UIView {
                             color: color,
                             placeholderColor: placeholderColor,
                             renderingScale: 2.0,
-                            loop: true
+                            loop: true,
+                            lottieSettings: context.lottieRenderingSettings
                         )),
                         environment: {},
                         containerSize: itemSize
@@ -601,7 +603,8 @@ final class StoryItemOverlaysView: UIView {
                         content: LottieComponent.ResourceContent(context: context, file: file, attemptSynchronously: synchronous, providesPlaceholder: true),
                         placeholderColor: placeholderColor,
                         renderingScale: 2.0,
-                        loop: true
+                        loop: true,
+                        lottieSettings: context.lottieRenderingSettings
                     )),
                     environment: {},
                     containerSize: itemSize

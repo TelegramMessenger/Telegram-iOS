@@ -48,8 +48,7 @@ final class FloatingCursorTests: XCTestCase {
 
     func test_begin_collapsesRangedSelection() {
         let (v, _) = makeCanvas()
-        v.anchor = v.boxes[0].textStart + 1
-        v.head = v.boxes[0].textStart + 4   // ranged
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: v.boxes[0].textStart + 4)   // ranged
         v.beginFloatingCursor(at: CGPoint(x: 10, y: 10))
         XCTAssertEqual(v.anchor, v.head, "begin collapses a ranged selection")
         XCTAssertEqual(v.head, v.boxes[0].textStart + 4, "collapses to the old head")
@@ -146,6 +145,10 @@ final class FloatingCursorTests: XCTestCase {
                              abs(v.floatingAutoScrollStep(forViewportY: 50, viewportHeight: h, band: band)))
     }
 
+    /// `@MainActor` (and only this case in the suite) because it SEEDS backend-owned state through the
+    /// `RichTextInputBackend` contract, which is `@MainActor`-isolated; the two properties it used to
+    /// write directly were plain canvas fields until Task 42.
+    @MainActor
     func test_autoScrollTick_advancesOffsetAndResnaps() {
         // Tall content so there is room to scroll; caret pinned near the bottom edge.
         let scroll = UIScrollView(frame: CGRect(x: 0, y: 0, width: 300, height: 200))
@@ -156,8 +159,10 @@ final class FloatingCursorTests: XCTestCase {
         scroll.addSubview(v); scroll.contentSize = v.frame.size; v.layoutIfNeeded()
         v.setCaret(global: v.boxes[0].textStart)
         v.beginFloatingCursor(at: CGPoint(x: 40, y: 20))
-        v.floatingCursorPoint = CGPoint(x: 40, y: 190)   // in the bottom band
-        v.floatingScrollVelocity = 12
+        // TASK 42 — the two properties moved to the backend and the canvas keeps read-only projections,
+        // so a test that SEEDS them writes through the same doors the canvas bodies use.
+        v.inputBackend.setFloatingCursorPoint(CGPoint(x: 40, y: 190))   // in the bottom band
+        v.inputBackend.setFloatingScrollVelocity(12)
         let beforeY = scroll.contentOffset.y
         let beforeHead = v.head
         v.floatingAutoScrollTick()

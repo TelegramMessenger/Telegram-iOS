@@ -24,7 +24,7 @@ let package = Package(
             name: "MtProtoKit",
             dependencies: [.product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil)],
             path: ".",
-            exclude: ["BUILD"],
+            exclude: ["BUILD", "Tests"],
             publicHeadersPath: "PublicHeaders",
             cSettings: [
                 .headerSearchPath("PublicHeaders"),

@@ -142,14 +142,11 @@ public final class SharedDisplayLinkDriver {
         var hasActiveItems = false
         var maxFramesPerSecond: FramesPerSecond = .fps(30)
         for request in self.requests {
-            if let link = request.link {
+            if let link = request.link, link.isValid && !link.isPaused {
                 if link.framesPerSecond > maxFramesPerSecond {
                     maxFramesPerSecond = link.framesPerSecond
                 }
-                if link.isValid && !link.isPaused {
-                    hasActiveItems = true
-                    break
-                }
+                hasActiveItems = true
             }
         }
         
@@ -239,9 +236,7 @@ public final class SharedDisplayLinkDriver {
                 self.requests.remove(at: index)
             }
             
-            if self.requests.isEmpty {
-                self.isUpdateRequested = true
-            }
+            self.isUpdateRequested = true
         }
         
         self.isProcessingEvent = false

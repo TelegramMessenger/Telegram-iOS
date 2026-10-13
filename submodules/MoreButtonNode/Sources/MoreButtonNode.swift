@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -17,22 +18,22 @@ public final class MoreButtonNode: ASDisplayNode {
         private let duration: Double = 0.21
         public var iconState: State = .search
         
-        init(size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool) {
+        init(size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool, lottieSettings: LottieRenderingSettings) {
             self.encircled = encircled
             
-            super.init(size: size)
+            super.init(size: size, lottieSettings: lottieSettings)
             
             if self.encircled {
                 self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 90, endFrame: 90), duration: 0.0))
             } else {
                 self.iconState = .more
-                self.trackTo(item: ManagedAnimationItem(source: .local("anim_baremoredots"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
+                self.trackTo(item: ManagedAnimationItem(source: .local("anim_morewide"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
             }
         }
             
         func play() {
             if case .more = self.iconState {
-                let animationName = self.encircled ? "anim_moredots" : "anim_baremoredots"
+                let animationName = self.encircled ? "anim_moredots" : "anim_morewide"
                 self.trackTo(item: ManagedAnimationItem(source: .local(animationName), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
             }
         }
@@ -91,6 +92,7 @@ public final class MoreButtonNode: ASDisplayNode {
         }
     }
     private let size: CGSize
+    private let navigation: Bool
     
     public func updateColor(_ color: UIColor?, transition: ContainedViewLayoutTransition) {
         self.color = color
@@ -114,17 +116,18 @@ public final class MoreButtonNode: ASDisplayNode {
         self.iconNode.customColor = color
     }
     
-    public init(theme: PresentationTheme, size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool = true) {
+    public init(theme: PresentationTheme, size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool = true, navigation: Bool = false) {
         self.theme = theme
         self.size = size
+        self.navigation = navigation
         
         self.contextSourceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         
         self.buttonNode = HighlightableButtonNode()
-        self.iconNode = MoreIconNode(size: size, encircled: encircled)
-        self.iconNode.customColor = self.theme.rootController.navigationBar.buttonColor
+        self.iconNode = MoreIconNode(size: size, encircled: encircled, lottieSettings: .noAccountFallback)
+        self.iconNode.customColor = self.theme.chat.inputPanel.panelControlColor
         
         super.init()
         
@@ -155,13 +158,13 @@ public final class MoreButtonNode: ASDisplayNode {
         
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let animationSize = self.size
-        let inset: CGFloat = 0.0
-        let iconFrame = CGRect(origin: CGPoint(x: inset + 6.0, y: floor((constrainedSize.height - animationSize.height) / 2.0) + 1.0), size: animationSize)
+        let iconOrigin: CGPoint = self.navigation ? .zero : CGPoint(x: 6.0, y: 1.0)
+        let iconFrame = CGRect(origin: CGPoint(x: iconOrigin.x, y: floor((constrainedSize.height - animationSize.height) / 2.0) + iconOrigin.y), size: animationSize)
         
         self.iconNode.position = iconFrame.center
         self.iconNode.bounds = CGRect(origin: .zero, size: iconFrame.size)
         
-        let size = CGSize(width: animationSize.width + inset * 2.0, height: constrainedSize.height)
+        let size = CGSize(width: animationSize.width, height: constrainedSize.height)
         let bounds = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = bounds
         self.containerNode.frame = bounds

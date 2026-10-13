@@ -46,6 +46,9 @@ public struct AttachmentMainButtonState {
     public let smallSpacing: Bool
     public let position: Position?
     public let hidesPanelBackground: Bool
+    /// The button is an alternative to the tabs' content (e.g. "Edit Current Photo" while replacing a
+    /// message's media), so it is laid out above the tab row instead of replacing it.
+    public let keepsTabRow: Bool
     
     public init(
         text: String?,
@@ -61,7 +64,8 @@ public struct AttachmentMainButtonState {
         iconCustomEmojiId: Int64? = nil,
         smallSpacing: Bool = false,
         position: Position? = nil,
-        hidesPanelBackground: Bool = false
+        hidesPanelBackground: Bool = false,
+        keepsTabRow: Bool = false
     ) {
         self.text = text
         self.badge = badge
@@ -77,6 +81,7 @@ public struct AttachmentMainButtonState {
         self.smallSpacing = smallSpacing
         self.position = position
         self.hidesPanelBackground = hidesPanelBackground
+        self.keepsTabRow = keepsTabRow
     }
     
     public static var initial: AttachmentMainButtonState {

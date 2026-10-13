@@ -18,6 +18,4 @@ func quoteAuthorStripAmbientStyle(_ runs: [TextRun], textColor: RGBAColor?, ital
     runs.map { var r = $0; r.attributes.bold = false; if italic { r.attributes.italic = false }
                if r.attributes.foreground == textColor { r.attributes.foreground = nil }; return r }
 }
-/// Placeholder shown while a quote's author line is empty (mirrors MediaBlockBox's "Add caption").
-let quoteAuthorPlaceholderText = "Add author"
 #endif

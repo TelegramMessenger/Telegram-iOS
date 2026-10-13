@@ -73,9 +73,6 @@ typedef enum
     CGFloat _keyboardOffset;
     id _keyboardWillChangeFrameProxy;
     
-    bool _checked3dTouch;
-    NSDictionary *_3dTouchHandlers;
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIPopoverController *_popoverController;
@@ -549,8 +546,6 @@ typedef enum
         [_sheetView menuDidAppearAnimated:false];
         _presented = true;
     }
-    
-    [self setup3DTouch];
 }
 
 - (void)dismissAnimated:(bool)animated
@@ -1114,12 +1109,6 @@ typedef enum
         _customRemoveFromParentViewController();
     }
     [super removeFromParentViewController];
-}
-
-#pragma mark - 
-
-- (void)setup3DTouch
-{
 }
 
 - (void)popoverPresentationControllerDidDismissPopover:(UIPopoverPresentationController *)__unused popoverPresentationController {

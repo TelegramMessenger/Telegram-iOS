@@ -221,6 +221,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         var labelConstrainWidth = width - textSize.width - (leftInset + rightInset)
         if case .semitransparentBadge = item.label {
             labelConstrainWidth -= 16.0
+        } else {
+            labelConstrainWidth -= 8.0
         }
         let labelSize = self.labelNode.updateLayout(CGSize(width: labelConstrainWidth, height: .greatestFiniteMagnitude))
         

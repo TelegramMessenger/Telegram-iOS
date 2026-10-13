@@ -12,7 +12,7 @@ public final class AnimatedAvatarSetContext {
     public final class Content {
         fileprivate final class Item {
             fileprivate enum Key: Hashable {
-                case peer(EnginePeer.Id)
+                case peer(EnginePeer.Id, isDeleted: Bool)
                 case placeholder(Int)
             }
             
@@ -49,7 +49,7 @@ public final class AnimatedAvatarSetContext {
     public func update(peers: [EnginePeer], animated: Bool) -> Content {
         var items: [(Content.Item.Key, Content.Item)] = []
         for peer in peers {
-            items.append((.peer(peer.id), Content.Item(peer: peer, placeholderColor: .white)))
+            items.append((.peer(peer.id, isDeleted: peer.isDeleted), Content.Item(peer: peer, placeholderColor: .white)))
         }
         return Content(items: items)
     }
@@ -91,7 +91,10 @@ private final class ContentNode: ASDisplayNode {
         self.addSubnode(self.clippedNode)
 
         if let peer = peer {
-            if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: synchronousLoad) {
+            if peer.isDeleted {
+                let image = generateDeletedAccountAvatarImage(size: size)!
+                self.updateImage(image: image, size: size, spacing: spacing)
+            } else if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: synchronousLoad) {
                 let image = generateImage(size, rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
                     context.setFillColor(UIColor.lightGray.cgColor)
@@ -296,7 +299,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
     
     public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [EnginePeer.Id: Float]) {
         for (key, itemNode) in self.contentNodes {
-            if case let .peer(peerId) = key, let value = levels[peerId] {
+            if case let .peer(peerId, _) = key, let value = levels[peerId] {
                 itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: value)
             } else {
                 itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: 0.0)
@@ -328,7 +331,10 @@ public final class AnimatedAvatarSetView: UIView {
             self.addSubview(self.clippedView)
 
             if let peer = peer {
-                if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: synchronousLoad) {
+                if peer.isDeleted {
+                    let image = generateDeletedAccountAvatarImage(size: size)!
+                    self.updateImage(image: image, size: size, spacing: spacing)
+                } else if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: synchronousLoad) {
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.setFillColor(UIColor.lightGray.cgColor)

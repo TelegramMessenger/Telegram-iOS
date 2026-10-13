@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
@@ -7,6 +8,7 @@ import ComponentFlow
 import AccountContext
 import ViewControllerComponent
 import TelegramCore
+import TelegramNotices
 import SwiftSignalKit
 import Display
 import MultilineTextComponent
@@ -283,7 +285,8 @@ private final class BadgeComponent: Component {
                     size: badgeShapeSize,
                     renderingScale: UIScreenScale,
                     loop: false,
-                    playOnce: nil
+                    playOnce: nil,
+                    lottieSettings: .noAccountFallback
                 )),
                 environment: {},
                 containerSize: badgeShapeSize
@@ -1922,7 +1925,7 @@ private final class GiftAuctionBidScreenComponent: Component {
             if case .regular = environment.metrics.widthClass {
                 fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
             } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - environment.safeInsets.left * 2.0
             }
             let rawSideInset = floor((availableSize.width - fillingSize) * 0.5)
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 24.0
@@ -2050,28 +2053,36 @@ private final class GiftAuctionBidScreenComponent: Component {
                         if !isFirstTime {
                             if let bidPeerId = previousState?.myState.bidPeerId, let controller = self.environment?.controller() {
                                 if let navigationController = controller.navigationController as? NavigationController {
-                                    var controllers = navigationController.viewControllers
-                                    controllers = controllers.filter { !($0 is GiftAuctionBidScreen) && !($0 is GiftSetupScreenProtocol) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                                                                        
-                                    var foundController = false
-                                    for controller in controllers.reversed() {
-                                        if let chatController = controller as? ChatController, case .peer(id: bidPeerId) = chatController.chatLocation {
+                                    let navigateToChat = {
+                                        var controllers = navigationController.viewControllers
+                                        controllers = controllers.filter { !($0 is GiftAuctionBidScreen) && !($0 is GiftSetupScreenProtocol) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                                                            
+                                        var foundController = false
+                                        for controller in controllers.reversed() {
+                                            if let chatController = controller as? ChatController, case .peer(id: bidPeerId) = chatController.chatLocation {
+                                                chatController.hintPlayNextOutgoingGift()
+                                                foundController = true
+                                                break
+                                            }
+                                        }
+                                        if !foundController {
+                                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: bidPeerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                                             chatController.hintPlayNextOutgoingGift()
-                                            foundController = true
-                                            break
+                                            controllers.append(chatController)
+                                        }
+                                        navigationController.setViewControllers(controllers, animated: true)
+                                        
+                                        for controller in controllers {
+                                            if controller is MinimizableController {
+                                                controller.dismiss(animated: true)
+                                            }
                                         }
                                     }
-                                    if !foundController {
-                                        let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: bidPeerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                        chatController.hintPlayNextOutgoingGift()
-                                        controllers.append(chatController)
-                                    }
-                                    navigationController.setViewControllers(controllers, animated: true)
-                                    
-                                    for controller in controllers {
-                                        if controller is MinimizableController {
-                                            controller.dismiss(animated: true)
-                                        }
+                                    if bidPeerId.namespace == Namespaces.Peer.CloudUser {
+                                        let _ = (ApplicationSpecificNotice.incrementDismissedBirthdayPremiumGiftTip(accountManager: component.context.sharedContext.accountManager, peerId: bidPeerId, timestamp: Int32(Date().timeIntervalSince1970))
+                                        |> deliverOnMainQueue).startStandalone(completed: navigateToChat)
+                                    } else {
+                                        navigateToChat()
                                     }
                                 }
                             } else {
@@ -2725,7 +2736,8 @@ private final class GiftAuctionBidScreenComponent: Component {
                             ),
                             color: environment.theme.chat.inputPanel.panelControlColor,
                             size: CGSize(width: 34.0, height: 34.0),
-                            playOnce: self.moreButtonPlayOnce
+                            playOnce: self.moreButtonPlayOnce,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )
                     )),
                     action: { [weak self] view in
@@ -3084,7 +3096,8 @@ private final class GiftAuctionBidScreenComponent: Component {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

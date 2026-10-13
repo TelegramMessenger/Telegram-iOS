@@ -1,5 +1,8 @@
 #import <MtProtoKit/MTTransport.h>
 
+NSUInteger const MTMaxTransportPayloadLength = 16 * 1024 * 1024;
+NSUInteger const MTMaxUnpackedMessageLength = 32 * 1024 * 1024;
+
 #import <MtProtoKit/MTContext.h>
 #import <MtProtoKit/MTNetworkAvailability.h>
 

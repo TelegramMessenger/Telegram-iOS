@@ -26,7 +26,7 @@ final class TableControlsTests: XCTestCase {
     func test_handles_forCaretRowAndColumn() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         let handles = v.tableHandles()
         XCTAssertEqual(handles.count, 2)
         let kinds = handles.map(\.kind)
@@ -38,7 +38,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_handles_emptyWhenCaretNotInTable() {
         let v = canvasWithTable()
-        v.anchor = 0; v.head = 0
+        v.setSelectionForTesting(anchor: 0, head: 0)
         XCTAssertTrue(v.tableHandles().isEmpty)
     }
 
@@ -47,7 +47,7 @@ final class TableControlsTests: XCTestCase {
     func test_cursorLongPress_prohibitedOnRowAndColumnGrips() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor   // collapsed caret in a cell → grips show
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)   // collapsed caret in a cell → grips show
         let handles = v.tableHandles()
         let rowGrip = handles.first { $0.kind == .rows(1...1) }!.rect
         let colGrip = handles.first { $0.kind == .columns(1...1) }!.rect
@@ -64,7 +64,7 @@ final class TableControlsTests: XCTestCase {
     func test_columnHandle_staysWithinTableFrame_soTrailingTableHandleIsntClipped() {
         let v = canvasWithTable()   // [paragraph, table] — the table is the LAST block
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         let colHandle = v.tableHandles().first { if case .columns = $0.kind { return true }; return false }!.rect
         // The table reserves space below its grid, so the ••• column handle's dots fall inside the
         // table's own frame. For a trailing table the canvas height == the table's bottom, so if the
@@ -75,7 +75,7 @@ final class TableControlsTests: XCTestCase {
     func test_selectColumn_setsStateAndLandsCaret() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(2)
         XCTAssertEqual(v.tableSelection?.kind, .columns(2...2))
         XCTAssertEqual(v.tableSelection?.table, BlockID("t"))
@@ -85,7 +85,7 @@ final class TableControlsTests: XCTestCase {
     func test_selectRow_setsStateAndLandsCaret() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 2)!; v.anchor = v.head   // caret in the table
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 2)!, head: t.cellTextStart(row: 0, column: 2)!)   // caret in the table
         v.selectTableRow(1)
         XCTAssertEqual(v.tableSelection?.kind, .rows(1...1))
         XCTAssertEqual(v.tableSelection?.table, BlockID("t"))
@@ -95,7 +95,7 @@ final class TableControlsTests: XCTestCase {
     func test_selectColumn_thenDelete_removesThatColumn() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         v.deleteTableColumn()
         guard case .table(let tb) = v.boxes[1].currentBlock() else { return XCTFail() }
@@ -107,7 +107,7 @@ final class TableControlsTests: XCTestCase {
     func test_clear_resetsSelection() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         XCTAssertNotNil(v.tableSelection)
         v.clearTableSelection()
@@ -117,7 +117,7 @@ final class TableControlsTests: XCTestCase {
     func test_caretHidden_whileStructurallySelected() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head   // caret in the table
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)   // caret in the table
         v.selectTableColumn(0)
         XCTAssertEqual(v.caretRect(for: DocumentTextPosition(v.head)), .zero)   // no caret while selected
         v.clearTableSelection()
@@ -133,7 +133,7 @@ final class TableControlsTests: XCTestCase {
     func test_columnMenu_hasAddDeleteAlign() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         let req = v.tableStructuralMenuRequest()
         let kinds = actionKinds(req)
@@ -144,7 +144,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_structuralMenuRequest_carriesHVAlignment_forColumnAndRow() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)
         let colReq = v.tableStructuralMenuRequest()
         XCTAssertNotNil(colReq?.alignment, "column selection carries alignment")
@@ -163,7 +163,7 @@ final class TableControlsTests: XCTestCase {
     func test_rowMenu_headerOmitsDeleteAndAddAbove() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRow(0)                       // header row
         let kinds = actionKinds(v.tableStructuralMenuRequest())
         XCTAssertFalse(kinds.contains(.deleteRow))
@@ -174,7 +174,7 @@ final class TableControlsTests: XCTestCase {
     func test_rowMenu_bodyHasAllRowActions() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         let kinds = actionKinds(v.tableStructuralMenuRequest())
         XCTAssertTrue(kinds.contains(.addRowAbove) && kinds.contains(.addRowBelow) && kinds.contains(.deleteRow))
@@ -187,7 +187,7 @@ final class TableControlsTests: XCTestCase {
                    Row(id: BlockID("r1"), cells: [cell("b","x")])]))], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 400); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(0)
         XCTAssertFalse(actionKinds(v.tableStructuralMenuRequest()).contains(.deleteColumn))
     }
@@ -197,7 +197,7 @@ final class TableControlsTests: XCTestCase {
     func test_tapColumnHandle_selectsColumn() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 2)!; v.head = v.anchor   // caret in (1,2) → handles for row1/col2
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 2)!, head: t.cellTextStart(row: 1, column: 2)!)   // caret in (1,2) → handles for row1/col2
         let colHandle = v.tableHandles().first { $0.kind == .columns(2...2) }!.rect
         v.performSingleTap(at: CGPoint(x: colHandle.midX, y: colHandle.midY))
         XCTAssertEqual(v.tableSelection?.kind, .columns(2...2))
@@ -206,7 +206,7 @@ final class TableControlsTests: XCTestCase {
     func test_tapRowHandle_selectsRow() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         let rowHandle = v.tableHandles().first { $0.kind == .rows(1...1) }!.rect
         v.performSingleTap(at: CGPoint(x: rowHandle.midX, y: rowHandle.midY))
         XCTAssertEqual(v.tableSelection?.kind, .rows(1...1))
@@ -215,7 +215,7 @@ final class TableControlsTests: XCTestCase {
     func test_tapSelectedColumnHandle_firesStructuralMenuRequest() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 2)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 2)!, head: t.cellTextStart(row: 1, column: 2)!)
         v.selectTableColumn(2)                                   // 1st: select column 2
         var received: TableStructuralMenuRequest?
         v.onRequestTableStructuralMenu = { received = $0 }
@@ -232,7 +232,7 @@ final class TableControlsTests: XCTestCase {
     // has a `tableSelection` branch, so falling through to `presentEditMenu()` shows the wrong menu).
     func test_knobDragEnd_firesStructuralMenuRequest_notSystemMenu() {
         let v = canvasWithTable(); let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)                                   // active structural selection (as after a knob extend)
         var received: TableStructuralMenuRequest?
         v.onRequestTableStructuralMenu = { received = $0 }
@@ -241,12 +241,33 @@ final class TableControlsTests: XCTestCase {
         XCTAssertTrue((received?.actions.map { $0.kind } ?? []).contains(.addColumnLeft))
     }
 
+    func test_toggleTableCompact_flipsModelAndState_inOneUndoStep() {
+        let v = canvasWithTable()
+        let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
+        let t = table(v)
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
+        XCTAssertFalse(v.currentState().isTableCompact)
+
+        let before = v.undoRegistrationCount
+        um.beginUndoGrouping(); v.toggleTableCompact(); um.endUndoGrouping()
+        XCTAssertEqual(v.undoRegistrationCount - before, 1, "the toggle registers exactly one undo step")
+
+        guard case .table(let out) = v.currentBlocks()[1] else { return XCTFail("expected a table") }
+        XCTAssertTrue(out.compact, "the model flipped")
+        XCTAssertTrue(v.currentState().isTableCompact, "EditorState agrees with the model")
+
+        um.undo()
+        guard case .table(let back) = v.currentBlocks()[1] else { return XCTFail("expected a table") }
+        XCTAssertFalse(back.compact)
+        XCTAssertFalse(v.currentState().isTableCompact)
+    }
+
     // MARK: - Draw helpers (Task 5)
 
     func test_selectionOutlineRect_wrapsColumn() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         let rect = v.tableSelectionOutlineRect()!
         let top = t.cellRect(row: 0, column: 1)!, bot = t.cellRect(row: 1, column: 1)!
@@ -263,7 +284,7 @@ final class TableControlsTests: XCTestCase {
     func test_tableControls_renderNonBlank() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)
         let img = UIGraphicsImageRenderer(bounds: v.bounds).image { _ in v.drawHierarchy(in: v.bounds, afterScreenUpdates: true) }
         XCTAssertNotNil(img.cgImage)
@@ -272,7 +293,7 @@ final class TableControlsTests: XCTestCase {
     func test_setCaret_clearsStructuralSelection() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         XCTAssertNotNil(v.tableSelection)
         v.setCaret(global: v.boxes[0].textStart)   // move the caret into the intro paragraph
@@ -282,7 +303,7 @@ final class TableControlsTests: XCTestCase {
     func test_insertText_clearsStructuralSelection() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         v.insertText("x")
         XCTAssertNil(v.tableSelection)
@@ -291,7 +312,7 @@ final class TableControlsTests: XCTestCase {
     func test_tapOutsideTable_clearsStructuralSelection() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         XCTAssertNotNil(v.tableSelection)
         // tap in the intro paragraph (top of the canvas, well above the table)
@@ -302,7 +323,7 @@ final class TableControlsTests: XCTestCase {
     func test_arrowKeyCaretMove_clearsStructuralSelection() {
         let v = canvasWithTable()
         let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(1)
         XCTAssertNotNil(v.tableSelection)
         // simulate a system caret commit (e.g. arrow key) via the UITextInput selectedTextRange setter
@@ -315,7 +336,7 @@ final class TableControlsTests: XCTestCase {
     func test_tapSelectedHandle_opensMenu() {
         let v = canvasWithTable()
         let t = table(v)
-        v.anchor = t.cellTextStart(row: 1, column: 1)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         let h = v.tableHandles().first { $0.kind == .columns(1...1) }!.rect
         let p = CGPoint(x: h.midX, y: h.midY)
         XCTAssertEqual(v.tableHandleTap(at: p), .select(.columns(1...1)))   // not selected → first tap selects
@@ -365,7 +386,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_outlineCorners_firstColumn_roundsTopLeftOnly() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumn(0)
         // column handle is at the bottom → bottom corners square; only the top-left table corner rounds
         let c = v.tableSelectionOutlineCorners()
@@ -374,13 +395,13 @@ final class TableControlsTests: XCTestCase {
     }
     func test_outlineCorners_middleColumn_square() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 1)!, head: t.cellTextStart(row: 0, column: 1)!)
         v.selectTableColumn(1)                                   // 3-column table → col 1 is interior
         XCTAssertTrue(v.tableSelectionOutlineCorners().isEmpty)
     }
     func test_outlineCorners_lastColumn_roundsTopRightOnly() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 2)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 2)!, head: t.cellTextStart(row: 0, column: 2)!)
         v.selectTableColumn(2)
         let c = v.tableSelectionOutlineCorners()
         XCTAssertTrue(c.contains(.topRight))
@@ -388,7 +409,7 @@ final class TableControlsTests: XCTestCase {
     }
     func test_outlineCorners_headerRow_roundsTopRightOnly() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRow(0)                                      // header (first) row
         // row handle is at the left → left corners square; only the top-right table corner rounds
         let c = v.tableSelectionOutlineCorners()
@@ -398,7 +419,7 @@ final class TableControlsTests: XCTestCase {
     func test_outlineCorners_lastRow_roundsBottomRightOnly() {
         let v = canvasWithTable(); let t = table(v)
         let last = t.rowCount - 1
-        v.head = t.cellTextStart(row: last, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: last, column: 0)!, head: t.cellTextStart(row: last, column: 0)!)
         v.selectTableRow(last)
         let c = v.tableSelectionOutlineCorners()
         XCTAssertTrue(c.contains(.bottomRight))
@@ -413,7 +434,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_resizeKnobs_columnSelection_atLeftAndRightEdges() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 1)!, head: t.cellTextStart(row: 0, column: 1)!)
         v.selectTableColumn(1)
         let knobs = v.tableResizeKnobs()
         XCTAssertEqual(knobs.count, 2)
@@ -429,7 +450,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_resizeKnobs_rowSelection_atTopAndBottomEdges() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableRow(1)
         let knobs = v.tableResizeKnobs()
         let inset = DocumentCanvasView.selectionOutlineWidth / 2
@@ -440,7 +461,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_resizeKnobs_multiColumnRange_spansRangeEnds() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumns(0...1)
         let knobs = v.tableResizeKnobs()
         let inset = DocumentCanvasView.selectionOutlineWidth / 2
@@ -457,7 +478,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_resizeKnobAt_hitsTheKnob() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 1)!, head: t.cellTextStart(row: 0, column: 1)!)
         v.selectTableColumn(1)
         let upper = v.tableResizeKnobs().first { $0.end == .upper }!.rect
         XCTAssertEqual(v.tableResizeKnob(at: CGPoint(x: upper.midX, y: upper.midY)), .upper)
@@ -472,7 +493,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_deleteColumns_range_removesAllSelected() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumns(0...1)                       // a 2-column range of the 3-column table
         v.deleteTableColumn()
         guard case .table(let tb) = v.boxes[1].currentBlock() else { return XCTFail() }
@@ -490,7 +511,7 @@ final class TableControlsTests: XCTestCase {
                    Row(id: BlockID("r2"), cells: [cell("e","B0"), cell("f","B1")])]))], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 600); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRows(0...2)
         v.deleteTableRow()
         guard case .table(let tb) = v.boxes[0].currentBlock() else { return XCTFail() }
@@ -501,7 +522,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_addColumnRight_range_insertsAfterUpperBound() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumns(0...1)
         v.insertTableColumnRight()
         guard case .table(let tb) = v.boxes[1].currentBlock() else { return XCTFail() }
@@ -511,7 +532,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_alignRight_range_setsEverySelectedColumn() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumns(0...1)
         v.setSelectionHorizontalAlignment(.right)
         guard case .table(let tb) = v.boxes[1].currentBlock() else { return XCTFail() }
@@ -525,7 +546,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_menu_hidesDeleteWhenAllColumns() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumns(0...1)                                   // multi-column, not all → delete shown
         XCTAssertTrue(actionKinds(v.tableStructuralMenuRequest()).contains(.deleteColumn))
         v.selectTableColumns(0...2)                                   // all 3 columns → no delete
@@ -534,7 +555,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_menu_rowRangeIncludingHeader_hidesAddAbove_keepsDeleteRows() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRows(0...1)                                       // header + body row
         let kinds = actionKinds(v.tableStructuralMenuRequest())
         XCTAssertFalse(kinds.contains(.addRowAbove))                  // range includes the header
@@ -545,7 +566,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_extendColumns_growsRightThenClampsAtLastColumn() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumn(0)
         // drag the upper (right) knob toward column 1, then far right
         v.extendTableSelection(end: .upper, toward: CGPoint(x: t.cellRect(row: 0, column: 1)!.midX, y: 0))
@@ -556,7 +577,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_extendColumns_upperKnobCannotCrossLowerBound() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 1)!, head: t.cellTextStart(row: 0, column: 1)!)
         v.selectTableColumn(1)
         // drag the upper knob far LEFT — it must not pass the fixed lower bound (col 1); min width 1
         v.extendTableSelection(end: .upper, toward: CGPoint(x: -9999, y: 0))
@@ -565,7 +586,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_extendColumns_lowerKnobMovesLeft() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 2)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 2)!, head: t.cellTextStart(row: 0, column: 2)!)
         v.selectTableColumn(2)
         v.extendTableSelection(end: .lower, toward: CGPoint(x: t.cellRect(row: 0, column: 0)!.midX, y: 0))
         XCTAssertEqual(v.tableSelection?.kind, .columns(0...2))
@@ -573,7 +594,7 @@ final class TableControlsTests: XCTestCase {
 
     func test_extendRows_growsDown() {
         let v = canvasWithTable(); let t = table(v)
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableRow(0)
         v.extendTableSelection(end: .upper, toward: CGPoint(x: 0, y: t.cellRect(row: 1, column: 0)!.midY))
         XCTAssertEqual(v.tableSelection?.kind, .rows(0...1))
@@ -593,7 +614,7 @@ final class TableControlsTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 600); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
         // Place the caret in the table so activeTable() resolves before calling selectTableColumns.
-        v.anchor = t.cellTextStart(row: 0, column: 4)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 4)!, head: t.cellTextStart(row: 0, column: 4)!)
         v.selectTableColumns(0...0)
         t.contentOffsetX = 150
         // Drag the upper knob toward column 3, addressed by its VISIBLE canvas x (unscrolled midX − offset).
@@ -616,7 +637,7 @@ final class TableControlsTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 600); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
         // Place the caret in the table so activeTable() resolves before calling selectTableColumns.
-        v.anchor = t.cellTextStart(row: 0, column: 4)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 4)!, head: t.cellTextStart(row: 0, column: 4)!)
         v.selectTableColumns(4...4)
         let unscrolled = v.tableSelectionOutlineRect()!
         t.contentOffsetX = 150
@@ -664,7 +685,7 @@ final class TableControlsTests: XCTestCase {
                    Row(id: BlockID("r1"), cells: [cell("c"), cell("d")])]))], width: 390)
         v.frame = CGRect(x: 0, y: 0, width: 390, height: 400); v.layoutIfNeeded()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 0)!, head: t.cellTextStart(row: 0, column: 0)!)
         v.selectTableColumn(0)   // column 0: r0 header, r1 body → mixed
         let req = v.tableStructuralMenuRequest()
         XCTAssertNotNil(req?.header)

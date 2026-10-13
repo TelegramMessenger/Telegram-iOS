@@ -39,8 +39,7 @@ final class UndoBufferIsolationTests: XCTestCase {
     func test_contentEdit_enablesUndo_andIsIsolatedPerCanvas() {
         let v = canvas("hello")
         let other = canvas("world")
-        v.head = v.allLeafRegions().first!.globalStart + 5
-        v.anchor = v.head
+        v.setSelectionForTesting(anchor: v.allLeafRegions().first!.globalStart + 5, head: v.allLeafRegions().first!.globalStart + 5)
         v.insertText("!")
         XCTAssertTrue(v.currentState().canUndo, "a content edit enables undo")
         XCTAssertFalse(other.currentState().canUndo, "another canvas's undo buffer is unaffected")
@@ -49,7 +48,7 @@ final class UndoBufferIsolationTests: XCTestCase {
     /// Undoing the only edit must drive `canUndo` back to false (so the host can disable the undo control).
     func test_canUndo_reachesFalse_afterUndoingTheOnlyEdit() {
         let v = canvas("hello")
-        v.head = v.allLeafRegions().first!.globalStart + 5; v.anchor = v.head
+        v.setSelectionForTesting(anchor: v.allLeafRegions().first!.globalStart + 5, head: v.allLeafRegions().first!.globalStart + 5)
         v.insertText("!")
         XCTAssertTrue(v.currentState().canUndo, "the edit is undoable")
         v.effectiveUndoManager?.undo()

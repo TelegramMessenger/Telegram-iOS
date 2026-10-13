@@ -23,6 +23,7 @@ public enum TelegramChannelPermission {
     case manageDirect
     case editRank
     case manageRanks
+    case manageWelcomeMessages
 }
 
 public extension TelegramChannel {
@@ -277,6 +278,12 @@ public extension TelegramChannel {
             case .manageRanks:
                 if let adminRights = self.adminRights {
                     return adminRights.rights.contains(.canManageRanks)
+                } else {
+                    return false
+                }
+            case .manageWelcomeMessages:
+                if let adminRights = self.adminRights {
+                    return adminRights.rights.contains(.canManageWelcomeMessages)
                 } else {
                     return false
                 }

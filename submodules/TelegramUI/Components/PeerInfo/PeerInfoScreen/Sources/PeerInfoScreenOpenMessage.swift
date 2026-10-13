@@ -140,7 +140,9 @@ extension PeerInfoScreenNode {
         }
         self.view.endEditing(true)
 
-        return self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: self.chatLocation, chatFilterTag: nil, chatLocationContextHolder: self.chatLocationContextHolder, message: galleryMessage._asMessage(), standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: { [weak self] in
+        // The gallery browses the chat the panes (and the in-profile search) list.
+        let sharedMediaChatLocation = self.sharedMediaChatLocation
+        return self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: sharedMediaChatLocation.chatLocation, chatFilterTag: nil, chatLocationContextHolder: sharedMediaChatLocation.chatLocationContextHolder, message: galleryMessage._asMessage(), standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: { [weak self] in
             self?.view.endEditing(true)
         }, present: { [weak self] c, a, _ in
             self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)

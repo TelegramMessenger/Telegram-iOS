@@ -1021,6 +1021,53 @@ public struct ComponentTransition {
         }
     }
     
+    /// Per-corner radii — see `CornerRadii` and `CALayer.setCornerRadii`. Silently no-ops where the
+    /// underlying property is unavailable; check `CALayer.cornerRadiiSupported` if you need a
+    /// guaranteed clip and must fall back to a mask.
+    ///
+    public func setCornerRadii(layer: CALayer, cornerRadii radii: CornerRadii, completion: ((Bool) -> Void)? = nil) {
+        guard CALayer.cornerRadiiSupported else {
+            completion?(true)
+            return
+        }
+        let keyPath = layer.cornerRadiiKeyPath
+        if layer.cornerRadii == radii, layer.animation(forKey: keyPath) == nil {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.removeAnimation(forKey: keyPath)
+            layer.setCornerRadii(radii)
+            completion?(true)
+        case let .curve(duration, curve):
+            // Resume from the presented value when interrupting an in-flight animation, matching
+            // `setCornerRadius`.
+            let fromRadii: CornerRadii?
+            if layer.animation(forKey: keyPath) != nil, let presentationRadii = layer.presentation()?.cornerRadii {
+                fromRadii = presentationRadii
+            } else {
+                fromRadii = layer.cornerRadii
+            }
+            layer.setCornerRadii(radii)
+            guard let fromRadii else {
+                completion?(true)
+                return
+            }
+            layer.animate(
+                from: fromRadii.boxedValue,
+                to: radii.boxedValue,
+                keyPath: keyPath,
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+
     public func setCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if layer.cornerRadius == cornerRadius {
             completion?(true)

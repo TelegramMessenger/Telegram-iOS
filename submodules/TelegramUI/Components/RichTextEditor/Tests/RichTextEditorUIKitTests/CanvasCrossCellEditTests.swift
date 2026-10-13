@@ -41,8 +41,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         XCTAssertEqual(cellInfo(v, 0, 0)?.blocks, 2)
         let regions = v.allLeafRegions()
         let i = regions.firstIndex { $0.ref == .paragraph(BlockID("ap")) }!
-        v.anchor = regions[i].globalStart + 1
-        v.head = regions[i + 1].globalStart + 1
+        v.setSelectionForTesting(anchor: regions[i].globalStart + 1, head: regions[i + 1].globalStart + 1)
         v.deleteBackward()
         XCTAssertEqual(cellInfo(v, 0, 0)?.blocks, 1)
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "Aha")
@@ -53,7 +52,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
     func test_sameCellSingleParagraphSelection_deleteClearsRange() {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
-        v.anchor = cellA.globalStart + 1; v.head = cellA.globalStart + 4
+        v.setSelectionForTesting(anchor: cellA.globalStart + 1, head: cellA.globalStart + 4)
         v.deleteBackward()
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "Aa")
     }
@@ -62,8 +61,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart + 2          // after "Al"
-        v.head = cellB.globalStart + 2            // after "Be"
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)   // after "Al" after "Be"
         v.deleteBackward()
         XCTAssertTrue(hasTable(v))
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "Al")    // cell A prefix kept
@@ -78,7 +76,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart + 2; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)
         v.insertText("Z")
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "AlZ")   // text lands in the FIRST region
         XCTAssertEqual(cellInfo(v, 0, 1)?.firstText, "ta")    // later regions only clear
@@ -88,8 +86,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas()                                       // [Top, table, Bot]
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         let bot = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bot")) }!
-        v.anchor = cellB.globalStart + 2                       // in cell B, after "Be"
-        v.head = bot.globalStart + 1                           // in "Bot", after "B"
+        v.setSelectionForTesting(anchor: cellB.globalStart + 2, head: bot.globalStart + 1)   // in cell B, after "Be" in "Bot", after "B"
         v.deleteBackward()
         XCTAssertTrue(hasTable(v), "table survives a cell↔body selection delete")
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "Alpha")  // cell A untouched
@@ -105,7 +102,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart + 2; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)
         um.beginUndoGrouping()
         v.deleteBackward()
         um.endUndoGrouping()
@@ -119,7 +116,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart + 2; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)
         v.deleteBackward()
         let doc = Document(blocks: v.currentBlocks())
         XCTAssertEqual(v.documentSizeValue, DocumentTree.documentSize(doc))
@@ -131,7 +128,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
             let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
             let bot = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bot")) }!
             let p = cellB.globalStart + 2, q = bot.globalStart + 1
-            if swap { v.anchor = q; v.head = p } else { v.anchor = p; v.head = q }
+            if swap { v.setSelectionForTesting(anchor: q, head: p) } else { v.setSelectionForTesting(anchor: p, head: q) }
             v.deleteBackward()
             let botText = v.currentBlocks().compactMap { b -> String? in
                 if case .paragraph(let x) = b { return x.id == BlockID("bot") ? x.text : nil }; return nil
@@ -159,8 +156,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 700); v.layoutIfNeeded()
         let dCell = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("dp")) }!
-        v.anchor = 1
-        v.head = dCell.globalStart + 2
+        v.setSelectionForTesting(anchor: 1, head: dCell.globalStart + 2)
         v.deleteBackward()
         guard case .table(let model) = v.currentBlocks().first(where: { if case .table = $0 { return true } else { return false } })!
         else { return XCTFail() }
@@ -199,7 +195,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvasEmptyCells()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart; v.head = cellB.globalStart
+        v.setSelectionForTesting(anchor: cellA.globalStart, head: cellB.globalStart)
         XCTAssertNotEqual(v.anchor, v.head)        // a real cross-cell selection over empty regions
         v.insertText("X")
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "X")   // lands in selFrom's cell
@@ -216,7 +212,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvasEmptyCells()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart; v.head = cellB.globalStart   // covers every cell of the table
+        v.setSelectionForTesting(anchor: cellA.globalStart, head: cellB.globalStart)   // covers every cell of the table
         v.deleteBackward()
         v.layoutIfNeeded()
         XCTAssertEqual(v.anchor, v.head, "selection collapses to a caret")
@@ -234,7 +230,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 300); v.layoutIfNeeded()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart, head: cellB.globalStart + 2)
         v.insertText("X")
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "X")    // text lands in selFrom's (empty) cell
         XCTAssertEqual(cellInfo(v, 0, 1)?.firstText, "ta")   // cell B prefix "Be" cleared
@@ -245,7 +241,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas2x2()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!   // (0,0) "Alpha"
         let d = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("dp")) }!   // (1,1) "Delta"
-        v.anchor = a.globalStart + 2; v.head = d.globalStart + 2
+        v.setSelectionForTesting(anchor: a.globalStart + 2, head: d.globalStart + 2)
         v.deleteBackward()
         XCTAssertTrue(hasTable(v))
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)] { XCTAssertEqual(cellInfo(v, loc.0, loc.1)?.blocks, 1) }
@@ -264,7 +260,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         um.beginUndoGrouping()
-        v.anchor = cellA.globalStart + 2; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)
         v.deleteBackward()
         um.endUndoGrouping()
         XCTAssertEqual(cellInfo(v, 0, 0)?.firstText, "Al")
@@ -281,7 +277,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellA.globalStart + 2; v.head = cellB.globalStart + 2
+        v.setSelectionForTesting(anchor: cellA.globalStart + 2, head: cellB.globalStart + 2)
         v.insertText("\n")
         XCTAssertTrue(hasTable(v))
         XCTAssertEqual(cellInfo(v, 0, 0)?.blocks, 2)          // "Al" split into "Al" + ""
@@ -300,7 +296,7 @@ final class CanvasCrossCellEditTests: XCTestCase {
     }
 
     // Finding 2: the replace(_:withText:) witness (autocorrect/dictation/marked-text) over a
-    // cross-cell range must route structure-preservingly — not silently no-op via applyReplace's guard.
+    // cross-cell range must route structure-preservingly — not silently no-op via applyReplaceOutcome's guard.
     func test_replaceWitness_crossCellRange_clearsStructurePreserving() {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!

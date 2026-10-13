@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -94,7 +95,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
                 self.animationBeginTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
             }
             
-            let animationNode = FireIconNode(animate: animate)
+            let animationNode = FireIconNode(animate: animate, lottieSettings: .noAccountFallback)
             self.animationNode = animationNode
             self.addSubnode(animationNode)
         }
@@ -279,8 +280,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
 }
 
 final class FireIconNode: ManagedAnimationNode {    
-    init(animate: Bool) {
-        super.init(size: CGSize(width: 100.0, height: 100.0))
+    init(animate: Bool, lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 100.0, height: 100.0), lottieSettings: lottieSettings)
         
         if animate {
             self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0))

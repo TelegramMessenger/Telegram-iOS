@@ -322,7 +322,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     videoLayer.blurredLayer.isHidden = component.isSelected
                     videoLayer.isHidden = component.isSelected
                     
-                    let rotationAngle = resolveCallVideoRotationAngle(angle: videoSpec.rotationAngle, followsDeviceOrientation: videoSpec.followsDeviceOrientation, interfaceOrientation: component.interfaceOrientation)
+                    let rotationAngle = resolveCallVideoRotationAngle(angle: videoSpec.rotationAngle, followsDeviceOrientation: videoSpec.followsDeviceOrientation, interfaceOrientation: component.interfaceOrientation, deviceOrientation: deviceOrientationMatching(component.interfaceOrientation))
                     
                     var rotatedResolution = videoSpec.resolution
                     var videoIsRotated = false

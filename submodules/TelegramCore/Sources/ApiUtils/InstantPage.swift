@@ -215,6 +215,10 @@ extension InstantPageBlock {
         switch apiBlock {
             case .pageBlockUnsupported:
                 self = .unsupported
+            case let .pageBlockButtonRow(data):
+                self = .buttonRow(alignment: InstantPageButtonRowAlignment(apiFlags: data.flags), buttons: data.buttons.map(InstantPageButton.init(apiButton:)))
+            case let .pageBlockDocument(data):
+                self = .document(id: MediaId(namespace: Namespaces.Media.CloudFile, id: data.documentId), caption: InstantPageCaption(apiCaption: data.caption))
             case let .pageBlockTitle(pageBlockTitleData):
                 let text = pageBlockTitleData.text
                 self = .title(RichText(apiText: text))
@@ -235,7 +239,11 @@ extension InstantPageBlock {
                 self = .paragraph(RichText(apiText: text))
             case let .pageBlockPreformatted(pageBlockPreformattedData):
                 let text = pageBlockPreformattedData.text
-                self = .preformatted(text: RichText(apiText: text), language: nil)
+                // The wire carries the code block's language and this dropped it, hard-coding nil, while
+                // the outgoing side below sends it — so a page survived a send and came back
+                // language-less. Empty means "none", matching what `apiBlock()` writes for nil.
+                let language = pageBlockPreformattedData.language
+                self = .preformatted(text: RichText(apiText: text), language: language.isEmpty ? nil : language)
             case let .pageBlockFooter(pageBlockFooterData):
                 let text = pageBlockFooterData.text
                 self = .footer(RichText(apiText: text))
@@ -245,10 +253,14 @@ extension InstantPageBlock {
                 let name = pageBlockAnchorData.name
                 self = .anchor(name)
             case let .pageBlockBlockquote(pageBlockBlockquoteData):
-                let (text, caption) = (pageBlockBlockquoteData.text, pageBlockBlockquoteData.caption)
-                self = .blockQuote(blocks: [.paragraph(RichText(apiText: text))], caption: RichText(apiText: caption), collapsed: nil)
+                let (flags, text, caption) = (pageBlockBlockquoteData.flags, pageBlockBlockquoteData.text, pageBlockBlockquoteData.caption)
+                self = .blockQuote(blocks: [.paragraph(RichText(apiText: text))], caption: RichText(apiText: caption), collapsed: (flags & (1 << 0)) != 0)
             case let .pageBlockBlockquoteBlocks(pageBlockBlockquoteBlocksData):
-                self = .blockQuote(blocks: pageBlockBlockquoteBlocksData.blocks.map { InstantPageBlock(apiBlock: $0) }, caption: RichText(apiText: pageBlockBlockquoteBlocksData.caption), collapsed: nil)
+                // `pageBlockBlockquoteBlocks` has no `collapsed` flag, so a quote arriving in this form is
+                // not collapsed as far as the wire is concerned — `false`, not "unknown". Keeping every
+                // cloud-received quote non-nil is what lets `==` read the field without spurious inequality
+                // against locally-composed blocks (which always hold a concrete Bool).
+                self = .blockQuote(blocks: pageBlockBlockquoteBlocksData.blocks.map { InstantPageBlock(apiBlock: $0) }, caption: RichText(apiText: pageBlockBlockquoteBlocksData.caption), collapsed: false)
             case let .pageBlockPullquote(pageBlockPullquoteData):
                 let (text, caption) = (pageBlockPullquoteData.text, pageBlockPullquoteData.caption)
                 self = .pullQuote(text: RichText(apiText: text), caption: RichText(apiText: caption))
@@ -292,7 +304,7 @@ extension InstantPageBlock {
                 self = .kicker(RichText(apiText: text))
             case let .pageBlockTable(pageBlockTableData):
                 let (flags, title, rows) = (pageBlockTableData.flags, pageBlockTableData.title, pageBlockTableData.rows)
-                self = .table(title: RichText(apiText: title), rows: rows.map({ InstantPageTableRow(apiTableRow: $0) }), bordered: (flags & (1 << 0)) != 0, striped: (flags & (1 << 1)) != 0)
+                self = .table(title: RichText(apiText: title), rows: rows.map({ InstantPageTableRow(apiTableRow: $0) }), bordered: (flags & (1 << 0)) != 0, striped: (flags & (1 << 1)) != 0, compact: (flags & (1 << 2)) != 0)
             case let .pageBlockList(pageBlockListData):
                 let items = pageBlockListData.items
                 self = .list(items: items.map({ InstantPageListItem(apiListItem: $0) }), ordered: false)
@@ -378,13 +390,18 @@ extension InstantPageBlock {
             } else {
                 return .pageBlockList(Api.PageBlock.Cons_pageBlockList(items: items.map { $0.apiInputPageListItem() }))
             }
-        case let .blockQuote(blocks, caption, _):
+        case let .blockQuote(blocks, caption, collapsed):
+            let quoteFlags: Int32 = collapsed == true ? (1 << 0) : 0
             if blocks.isEmpty {
-                return .pageBlockBlockquote(Api.PageBlock.Cons_pageBlockBlockquote(text: RichText.empty.apiRichText(), caption: caption.apiRichText()))
+                return .pageBlockBlockquote(Api.PageBlock.Cons_pageBlockBlockquote(flags: quoteFlags, text: RichText.empty.apiRichText(), caption: caption.apiRichText()))
             }
             if blocks.count == 1, case let .paragraph(text) = blocks[0] {
-                return .pageBlockBlockquote(Api.PageBlock.Cons_pageBlockBlockquote(text: text.apiRichText(), caption: caption.apiRichText()))
+                return .pageBlockBlockquote(Api.PageBlock.Cons_pageBlockBlockquote(flags: quoteFlags, text: text.apiRichText(), caption: caption.apiRichText()))
             }
+            // `pageBlockBlockquoteBlocks` has no `collapsed` flag in the schema, so a multi-block quote
+            // sends without it and arrives expanded. Not an oversight — see the "Known gap" section of
+            // docs/superpowers/specs/2026-07-31-inline-button-split-and-blockquote-collapsed-design.md.
+            // Fixing it needs `pageBlockBlockquoteBlocks flags:# collapsed:flags.0?true` server-side.
             return .pageBlockBlockquoteBlocks(Api.PageBlock.Cons_pageBlockBlockquoteBlocks(blocks: blocks.compactMap { $0.apiInputBlock(mediaIdRemap: mediaIdRemap) }, caption: caption.apiRichText()))
         case let .pullQuote(text, caption):
             return .pageBlockPullquote(Api.PageBlock.Cons_pageBlockPullquote(text: text.apiRichText(), caption: caption.apiRichText()))
@@ -414,17 +431,26 @@ extension InstantPageBlock {
         case let .audio(id, caption):
             let audioId = mediaIdRemap[id] ?? id.id
             return .pageBlockAudio(Api.PageBlock.Cons_pageBlockAudio(audioId: audioId, caption: .pageCaption(Api.PageCaption.Cons_pageCaption(text: caption.text.apiRichText(), credit: caption.credit.apiRichText()))))
+        case let .document(id, caption):
+            // Same media-id remap as .audio: on send, local ids are rewritten to cloud ids.
+            let documentId = mediaIdRemap[id] ?? id.id
+            return .pageBlockDocument(Api.PageBlock.Cons_pageBlockDocument(documentId: documentId, caption: .pageCaption(Api.PageCaption.Cons_pageCaption(text: caption.text.apiRichText(), credit: caption.credit.apiRichText()))))
+        case let .buttonRow(alignment, buttons):
+            return .pageBlockButtonRow(Api.PageBlock.Cons_pageBlockButtonRow(flags: alignment.apiFlags, buttons: buttons.map { $0.apiPageButton() }))
         case let .collage(items, caption):
             return .pageBlockCollage(Api.PageBlock.Cons_pageBlockCollage(items: items.compactMap { $0.apiInputBlock(mediaIdRemap: mediaIdRemap) }, caption: .pageCaption(Api.PageCaption.Cons_pageCaption(text: caption.text.apiRichText(), credit: caption.credit.apiRichText()))))
         case let .slideshow(items, caption):
             return .pageBlockSlideshow(Api.PageBlock.Cons_pageBlockSlideshow(items: items.compactMap { $0.apiInputBlock(mediaIdRemap: mediaIdRemap) }, caption: .pageCaption(Api.PageCaption.Cons_pageCaption(text: caption.text.apiRichText(), credit: caption.credit.apiRichText()))))
-        case let .table(title, rows, bordered, striped):
+        case let .table(title, rows, bordered, striped, compact):
             var flags: Int32 = 0
             if bordered {
                 flags |= (1 << 0)
             }
             if striped {
                 flags |= (1 << 1)
+            }
+            if compact {
+                flags |= (1 << 2)
             }
             return .pageBlockTable(Api.PageBlock.Cons_pageBlockTable(flags: flags, title: title.apiRichText(), rows: rows.map { $0.inputPageTableRow() }))
         case let .details(title, blocks, expanded):

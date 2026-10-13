@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -395,10 +396,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.debugAction = debugAction
         self.hasOtherAccounts = hasOtherAccounts
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         
-        self.managedAnimationNode = ManagedPhoneAnimationNode()
+        self.managedAnimationNode = ManagedPhoneAnimationNode(lottieSettings: .noAccountFallback)
         self.managedAnimationNode.isHidden = true
         
         self.titleNode = ASTextNode()
@@ -1239,7 +1240,7 @@ private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
     private let plateNode: ASDisplayNode
     private var nodes: [PhoneKeyNode]
     
-    init() {
+    init(lottieSettings: LottieRenderingSettings) {
         self.plateNode = ASDisplayNode()
         self.plateNode.backgroundColor = UIColor(rgb: 0xc30023)
         self.plateNode.frame = CGRect(x: 27.0, y: 38.0, width: 46.0, height: 32.0)
@@ -1276,7 +1277,7 @@ private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
         }
         self.nodes = nodes
         
-        super.init(size: CGSize(width: 100.0, height: 100.0))
+        super.init(size: CGSize(width: 100.0, height: 100.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
         

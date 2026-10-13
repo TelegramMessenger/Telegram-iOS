@@ -38,4 +38,14 @@ final class DocNodeTests: XCTestCase {
         let root = DocumentTree.build(from: doc)
         XCTAssertEqual(root.children[0].nodeSize, 12)
     }
+
+    func test_detailsNode_recursesLikeContainer() {
+        // A .details node with two children paragraphs "ab"(2→4) + "c"(1→3): container = 4+3+2 = 9
+        let n = DocNode.details(id: BlockID("d"), children: [
+            .paragraph(id: BlockID("t"), children: [.text(length: 2, ref: .detailsTitle(BlockID("d")))]),
+            .paragraph(id: BlockID("b"), children: [.text(length: 1, ref: .paragraph(BlockID("b")))]),
+        ])
+        XCTAssertEqual(n.nodeSize, 9)
+        XCTAssertEqual(n.children.count, 2)
+    }
 }

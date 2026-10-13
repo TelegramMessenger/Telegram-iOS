@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -163,6 +164,7 @@ public final class MessageInputActionButtonComponent: Component {
     public enum Style: Equatable {
         case legacy
         case glass(isTinted: Bool)
+        case accent
     }
 
     public let mode: Mode
@@ -259,6 +261,7 @@ public final class MessageInputActionButtonComponent: Component {
         public let referenceNode: ContextReferenceContentNode
         public let containerNode: ContextControllerSourceNode
         private var backgroundView: GlassBackgroundView?
+        private var accentBackgroundView: UIView?
         private let sendIconView: UIImageView
         private var reactionHeartView: UIImageView?
         private var starsIconView: UIImageView?
@@ -480,7 +483,8 @@ public final class MessageInputActionButtonComponent: Component {
                         content: LottieComponent.AppBundleContent(name: animationName),
                         color: .white,
                         startingPosition: startingPosition,
-                        playOnce: playOnce
+                        playOnce: playOnce,
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     environment: {},
                     containerSize: CGSize(width: 30.0, height: 30.0)
@@ -530,6 +534,7 @@ public final class MessageInputActionButtonComponent: Component {
                     self.button.view.insertSubview(backgroundView, at: 0)
                     self.backgroundView = backgroundView
                 }
+                backgroundView.isHidden = false
                 
                 var tintColor = UIColor(rgb: 0x25272e, alpha: 0.72)
                 if case .send = component.mode {
@@ -547,10 +552,45 @@ public final class MessageInputActionButtonComponent: Component {
                 let buttonSize = CGSize(width: 40.0, height: 40.0)
                 backgroundView.update(size: buttonSize, cornerRadius: buttonSize.height / 2.0, isDark: true, tintColor: glassTint, transition: transition)
                 backgroundView.frame = CGRect(origin: .zero, size: buttonSize)
+            } else if let backgroundView = self.backgroundView {
+                backgroundView.isHidden = true
+            }
+
+            if component.style == .accent {
+                let accentBackgroundView: UIView
+                if let current = self.accentBackgroundView {
+                    accentBackgroundView = current
+                } else {
+                    accentBackgroundView = UIView()
+                    accentBackgroundView.isUserInteractionEnabled = false
+                    self.button.view.insertSubview(accentBackgroundView, at: 0)
+                    self.accentBackgroundView = accentBackgroundView
+                }
+
+                let accentBackgroundSize = CGSize(width: 35.0, height: 31.0)
+                let accentBackgroundFrame = CGRect(
+                    origin: CGPoint(
+                        x: floorToScreenPixels((availableSize.width - accentBackgroundSize.width) * 0.5),
+                        y: floorToScreenPixels((availableSize.height - accentBackgroundSize.height) * 0.5)
+                    ),
+                    size: accentBackgroundSize
+                )
+                accentBackgroundView.backgroundColor = component.theme.chat.inputPanel.panelControlAccentColor
+                transition.setFrame(view: accentBackgroundView, frame: accentBackgroundFrame)
+                transition.setCornerRadius(layer: accentBackgroundView.layer, cornerRadius: accentBackgroundFrame.height * 0.5)
+            } else if let accentBackgroundView = self.accentBackgroundView {
+                self.accentBackgroundView = nil
+                accentBackgroundView.removeFromSuperview()
             }
             
-            if self.sendIconView.image == nil || previousComponent?.mode.icon != component.mode.icon {
-                if let image = component.mode.icon?.image(withBackground: component.style == .legacy) {
+            if self.sendIconView.image == nil || previousComponent?.mode.icon != component.mode.icon || previousComponent?.style != component.style || (component.style == .accent && themeUpdated) {
+                let updatedImage: UIImage?
+                if component.style == .accent, case .send = component.mode {
+                    updatedImage = PresentationResourcesChat.chatInputPanelSendIconImage(component.theme)
+                } else {
+                    updatedImage = component.mode.icon?.image(withBackground: component.style == .legacy)
+                }
+                if let image = updatedImage {
                     switch component.mode {
                     case .send, .close:
                         if !transition.animation.isImmediate {

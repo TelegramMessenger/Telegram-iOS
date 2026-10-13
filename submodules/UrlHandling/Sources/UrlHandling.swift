@@ -7,6 +7,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramNotices
 import AccountContext
+import WalletContext
 
 private let baseTelegramMePaths = [
     "telegram.me",
@@ -136,6 +137,7 @@ public enum ParsedInternalUrl {
     case joinCall(String)
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
+    case webProxy(host: String, path: String, secret: Data)
     case internalInstantView(url: String)
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
@@ -146,6 +148,7 @@ public enum ParsedInternalUrl {
     case startAttach(String, String?, String?)
     case contactToken(String)
     case chatFolder(slug: String)
+    case premiumOffer(reference: String)
     case premiumGiftCode(slug: String)
     case messageLink(slug: String)
     case collectible(slug: String)
@@ -153,6 +156,7 @@ public enum ParsedInternalUrl {
     case oauth(url: String)
     case createBot(parentBot: String, username: String?, title: String?)
     case textStyle(slug: String)
+    case sendGrams(queryItems: [URLQueryItem])
     case externalUrl(url: String)
 }
 
@@ -165,6 +169,20 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
     var query = query
     if query.hasPrefix("s/") {
         query = String(query[query.index(query.startIndex, offsetBy: 2)...])
+    }
+    if let components = URLComponents(string: "/" + query) {
+        if components.path.components(separatedBy: "/").dropFirst().first?.lowercased() == "getpremium" {
+            var reference = "tme_getpremium"
+            if let ref = components.queryItems?.first(where: { $0.name == "ref" })?.value,
+               !ref.isEmpty, ref.count <= 32,
+               ref.rangeOfCharacter(from: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_").inverted) == nil {
+                reference += "_" + ref.lowercased()
+            }
+            return .premiumOffer(reference: reference)
+        }
+        if components.path.lowercased() == "/sendgrams" || components.path.lowercased() == "/sendgrams/" {
+            return .sendGrams(queryItems: components.queryItems ?? [])
+        }
     }
     if query.hasSuffix("/") {
         query.removeLast()
@@ -211,6 +229,15 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
             }
             if pathComponents.count == 1 {
                 if let queryItems = components.queryItems {
+                    if peerName == "webproxy" {
+                        // Deliberately the same strict rule the proxy editor applies, not a
+                        // looser local loop: a link must resolve identically however the user
+                        // reached it.
+                        if let link = parseWebProxyLinkQueryItems(queryItems) {
+                            return .webProxy(host: link.host, path: link.path, secret: link.secret)
+                        }
+                        return nil
+                    }
                     if peerName == "socks" || peerName == "proxy" {
                         var server: String?
                         var port: String?
@@ -824,8 +851,86 @@ private enum ResolveInternalUrlResult {
     case result(ResolvedUrl?)
 }
 
+// Resolves a link that points inside a forum topic.
+//
+// A link whose target message *is* the topic's root message (`messageId.id == threadId`) addresses
+// the topic itself, not a message within it — that is the canonical topic link, e.g.
+// `t.me/<name>/<threadId>` or `t.me/c/<channelId>/<threadId>`. Resolving it to a specific message
+// would pin the history anchor to the topic's very first message, so the topic would always open at
+// its oldest message instead of at the unread position. Returning `.replyThread` leaves the anchor
+// unset, which lets it fall back to `maxReadIncomingMessageId`.
+//
+// `.replyThread` carries no thread id: every consumer rederives one as `Int64(messageId.id)`, which is
+// well-formed only because the equality below holds. Widening that condition therefore means changing
+// the case that is returned, not just the set of links that collapse.
+//
+// The forum flags — not the numeric comparison — are what exclude monoforums. A monoforum's `threadId`
+// is a `PeerId.toInt64()`, and for a `CloudUser` peer (namespace 0) that is just the raw user id, so it
+// can collide with a small message id. `isForum` and `isMonoforum` are independent server flags, so
+// both are checked. A monoforum link therefore always takes the `.replyThreadMessage` branch below,
+// where `isMonoforumPost` tells the consumer to open the sublist by thread id rather than rediscover
+// it from a root message id it does not have.
+private func resolvedForumTopicUrl(channel: TelegramChannel, threadId: Int64, messageId: EngineMessage.Id) -> ResolvedUrl {
+    if channel.flags.contains(.isForum), !channel.flags.contains(.isMonoforum), threadId == Int64(messageId.id) {
+        return .replyThread(messageId: messageId)
+    }
+    return .replyThreadMessage(
+        replyThreadMessage: ChatReplyThreadMessage(
+            peerId: channel.id,
+            threadId: threadId,
+            channelMessageId: nil,
+            isChannelPost: false,
+            isForumPost: true,
+            isMonoforumPost: channel.flags.contains(.isMonoforum),
+            maxMessage: nil,
+            maxReadIncomingMessageId: nil,
+            maxReadOutgoingMessageId: nil,
+            unreadCount: 0,
+            initialFilledHoles: IndexSet(),
+            initialAnchor: .automatic,
+            isNotAvailable: false
+        ),
+        messageId: messageId
+    )
+}
+
 private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolveInternalUrlResult, NoError> {
     switch url {
+        case let .premiumOffer(reference):
+            return .single(.result(.premiumOffer(reference: reference)))
+        case let .sendGrams(queryItems):
+            var walletUrl = URLComponents(string: "https://t.me/sendgrams")!
+            walletUrl.queryItems = queryItems
+            walletUrl.percentEncodedQuery = walletUrl.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            if let value = walletUrl.string, WalletContext.isTonConnectUrl(value) {
+                return .single(.result(.sendGrams(transfer: nil, tonConnectUrl: value)))
+            }
+            guard let link = SendGramsLink(queryItems: queryItems) else {
+                return .complete()
+            }
+            guard let recipient = link.recipient else {
+                return .single(.result(.sendGrams(transfer: nil)))
+            }
+            if recipient.hasPrefix("@") {
+                return context.engine.peers.resolvePeerByName(name: String(recipient.dropFirst()), referrer: nil)
+                |> map { result -> ResolveInternalUrlResult in
+                    switch result {
+                    case .progress:
+                        return .progress
+                    case let .result(peer):
+                        guard let peer, case let .user(user) = peer,
+                              user.isGenericUser, !peer.isService, peer.id != context.account.peerId else {
+                            return .result(.inaccessiblePeer)
+                        }
+                        return .result(.sendGrams(transfer: WalletSendRequest(recipient: .peer(peer), amountNanograms: link.amountNanograms)))
+                    }
+                }
+            } else {
+                guard WalletContext.transferAddress(from: recipient) != nil else {
+                    return .complete()
+                }
+                return .single(.result(.sendGrams(transfer: WalletSendRequest(recipient: .address(recipient), amountNanograms: link.amountNanograms))))
+            }
         case let .phone(phone, attach, startAttach, text):
             return context.engine.peers.resolvePeerByPhone(phone: phone)
             |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
@@ -999,7 +1104,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                                         return .progress
                                                     case let .result(info):
                                                         if let _ = info {
-                                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                            return .result(resolvedForumTopicUrl(channel: channel, threadId: threadId, messageId: messageId))
                                                         } else {
                                                             return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                                         }
@@ -1024,7 +1129,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                             return .progress
                                         case let .result(info):
                                             if let _ = info {
-                                                return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: Int64(replyThreadMessageId.id), channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: EngineMessage.Id(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId)))
+                                                return .result(resolvedForumTopicUrl(channel: channel, threadId: Int64(replyThreadMessageId.id), messageId: EngineMessage.Id(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId)))
                                             } else {
                                                 return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                             }
@@ -1132,7 +1237,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         return .progress
                                     case let .result(info):
                                         if let _ = info {
-                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: Int64(threadId), channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                            return .result(resolvedForumTopicUrl(channel: channel, threadId: Int64(threadId), messageId: messageId))
                                         } else {
                                             return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                         }
@@ -1156,7 +1261,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                                     return .progress
                                                 case let .result(info):
                                                     if let _ = info {
-                                                        return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                        return .result(resolvedForumTopicUrl(channel: channel, threadId: threadId, messageId: messageId))
                                                     } else {
                                                         return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                                     }
@@ -1252,6 +1357,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return .single(.result(.localization(identifier)))
         case let .proxy(host, port, username, password, secret):
             return .single(.result(.proxy(host: host, port: port, username: username, password: password, secret: secret)))
+        case let .webProxy(host, path, secret):
+            return .single(.result(.webProxy(host: host, path: path, secret: secret)))
         case let .internalInstantView(url):
             return resolveInstantViewUrl(account: context.account, url: url)
             |> map { result in

@@ -172,13 +172,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         var size: CGSize
         var insets: UIEdgeInsets
         var interfaceOrientation: UIInterfaceOrientation
+        var deviceOrientation: UIDeviceOrientation
         var screenCornerRadius: CGFloat
         var state: State
         
-        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State) {
+        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, screenCornerRadius: CGFloat, state: State) {
             self.size = size
             self.insets = insets
             self.interfaceOrientation = interfaceOrientation
+            self.deviceOrientation = deviceOrientation
             self.screenCornerRadius = screenCornerRadius
             self.state = state
         }
@@ -541,8 +543,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         return nil
     }
     
-    public func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State, transition: ComponentTransition) {
-        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, screenCornerRadius: screenCornerRadius, state: state)
+    /// - Parameters:
+    ///   - interfaceOrientation: how far UIKit rotated this screen's surface away from the device.
+    ///   - deviceOrientation: how far the device is turned away from gravity. Where the interface
+    ///     follows the device the two cancel for remote video; where it is locked (iPhone) remote
+    ///     video is counter-rotated by the device. See `resolveCallVideoRotationAngle`.
+    public func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, screenCornerRadius: CGFloat, state: State, transition: ComponentTransition) {
+        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, deviceOrientation: deviceOrientation, screenCornerRadius: screenCornerRadius, state: state)
         if self.params == params {
             return
         }
@@ -554,7 +561,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 if remoteVideo.currentOutput != nil {
                     self.activeRemoteVideoSource = remoteVideo
                 } else {
-                    let firstVideoFrameSignal = Signal<Never, NoError> { subscriber in
+                    let firstVideoFrameSignal = Signal<Never, NoError> { [remoteVideo] subscriber in
                         return remoteVideo.addOnUpdated { [weak remoteVideo] in
                             guard let remoteVideo else {
                                 subscriber.putCompletion()
@@ -589,7 +596,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 if localVideo.currentOutput != nil {
                     self.activeLocalVideoSource = localVideo
                 } else {
-                    let firstVideoFrameSignal = Signal<Never, NoError> { subscriber in
+                    let firstVideoFrameSignal = Signal<Never, NoError> { [localVideo] subscriber in
                         return localVideo.addOnUpdated { [weak localVideo] in
                             guard let localVideo else {
                                 subscriber.putCompletion()
@@ -1049,7 +1056,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                     videoContainerView.blurredContainerLayer.position = self.avatarTransformLayer.position
                     videoContainerView.blurredContainerLayer.bounds = self.avatarTransformLayer.bounds
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, deviceOrientation: params.deviceOrientation, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
                     ComponentTransition.immediate.setScale(view: videoContainerView, scale: self.currentAvatarAudioScale)
                     ComponentTransition.immediate.setScale(view: self.videoContainerBackgroundView, scale: self.currentAvatarAudioScale)
                 } else {
@@ -1059,7 +1066,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                     videoContainerView.blurredContainerLayer.position = expandedVideoFrame.center
                     videoContainerView.blurredContainerLayer.bounds = CGRect(origin: CGPoint(), size: expandedVideoFrame.size)
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, deviceOrientation: params.deviceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
                 }
             }
             
@@ -1069,7 +1076,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             videoContainerTransition.setPosition(layer: videoContainerView.blurredContainerLayer, position: expandedVideoFrame.center)
             videoContainerTransition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
             videoContainerTransition.setScale(layer: videoContainerView.blurredContainerLayer, scale: 1.0)
-            videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
+            videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, deviceOrientation: params.deviceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
             
             let alphaTransition: ComponentTransition
             switch transition.animation {
@@ -1105,7 +1112,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 if self.videoContainerViews.count == 1 || (i == 0 && !havePrimaryVideo) {
                     let alphaTransition: ComponentTransition = genericAlphaTransition
                     
-                    videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
+                    videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, deviceOrientation: params.deviceOrientation, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
                     transition.setPosition(layer: videoContainerView.blurredContainerLayer, position: avatarFrame.center)
                     transition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
                     transition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 0.0)
@@ -1144,7 +1151,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                     })
                     alphaTransition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 0.0)
                     
-                    videoContainerView.update(size: params.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: true, isAnimatedOut: true, transition: transition)
+                    videoContainerView.update(size: params.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, deviceOrientation: params.deviceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: true, isAnimatedOut: true, transition: transition)
                 }
             }
         }

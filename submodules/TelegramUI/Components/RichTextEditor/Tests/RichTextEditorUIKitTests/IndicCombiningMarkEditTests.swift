@@ -9,7 +9,7 @@ import RichTextEditorCore
 /// "க" the keyboard selects ONLY the virama (`setSelectedTextRange` over its one unit) and calls
 /// `deleteBackward` — verified against the real iOS Tamil (Anjal) keyboard driving `DocumentCanvasView`.
 ///
-/// The surrogate-pair guard in `applySelectionReplace` must therefore snap only across UTF-16 surrogate
+/// The surrogate-pair guard in `applySelectionReplaceOutcome` must therefore snap only across UTF-16 surrogate
 /// pairs (a single astral scalar), NOT across whole GRAPHEME CLUSTERS: a Tamil consonant+combining-mark
 /// cluster is two independent scalars the IME edits individually, so expanding the selection to the whole
 /// cluster erases the base consonant and the syllable can never be formed (the reported "can't type
@@ -33,7 +33,7 @@ final class IndicCombiningMarkEditTests: XCTestCase {
     func test_rangedDelete_ofLoneVirama_keepsBaseConsonant() {
         let c = makeCanvas(text: "\u{0B95}\u{0BCD}")     // க்
         let ts = c.boxes[0].textStart
-        c.anchor = ts + 1; c.head = ts + 2               // select ONLY the virama (the Anjal recompose step)
+        c.setSelectionForTesting(anchor: ts + 1, head: ts + 2)   // select ONLY the virama (the Anjal recompose step)
         c.deleteBackward()
         XCTAssertEqual(firstParagraphText(c), "\u{0B95}",
                        "deleting the virama must leave க, not empty the paragraph")
@@ -42,7 +42,7 @@ final class IndicCombiningMarkEditTests: XCTestCase {
     func test_rangedReplace_viramaWithVowelSign_formsSyllable() {
         let c = makeCanvas(text: "\u{0B95}\u{0BCD}")     // க்
         let ts = c.boxes[0].textStart
-        c.anchor = ts + 1; c.head = ts + 2               // select the virama
+        c.setSelectionForTesting(anchor: ts + 1, head: ts + 2)   // select the virama
         c.insertText("\u{0BBF}")                         // replace it with the i-vowel sign ி → கி
         XCTAssertEqual(firstParagraphText(c), "\u{0B95}\u{0BBF}",
                        "க் with its virama replaced by the i-sign becomes கி")
@@ -53,7 +53,7 @@ final class IndicCombiningMarkEditTests: XCTestCase {
     func test_rangedDelete_ofSurrogateHalf_stillRemovesWholeScalar() {
         let c = makeCanvas(text: "a\u{1F600}")           // "a😀" — a(0..1), 😀(1..3)
         let ts = c.boxes[0].textStart
-        c.anchor = ts + 2; c.head = ts + 3               // select ONLY the low surrogate half
+        c.setSelectionForTesting(anchor: ts + 2, head: ts + 3)   // select ONLY the low surrogate half
         c.deleteBackward()
         XCTAssertEqual(firstParagraphText(c), "a",
                        "a surrogate-pair half selection still deletes the whole emoji")

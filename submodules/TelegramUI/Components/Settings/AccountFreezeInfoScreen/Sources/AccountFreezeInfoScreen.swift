@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -99,7 +100,8 @@ private final class SheetContent: CombinedComponent {
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "Banned"),
                     startingPosition: .begin,
-                    playOnce: state.playOnce
+                    playOnce: state.playOnce,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ),
                 environment: {},
                 availableSize: CGSize(width: animationHeight, height: animationHeight),
@@ -356,7 +358,8 @@ private final class SheetContainerComponent: CombinedComponent {
                     statusBarHeight: environment.statusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }

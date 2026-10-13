@@ -20,4 +20,8 @@ public struct CodeBlock: Codable, Equatable {
 
     /// Total UTF-16 length of the block's text.
     public var utf16Count: Int { runs.reduce(0) { $0 + $1.utf16Count } }
+
+    /// Total UTF-16 length of the language line. Mirrors `PullQuote.authorUTF16Count` — the language is a
+    /// second editable region on the block, so the position model needs its length. nil and "" are both 0.
+    public var languageUTF16Count: Int { language?.utf16.count ?? 0 }
 }

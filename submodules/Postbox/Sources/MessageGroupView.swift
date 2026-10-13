@@ -33,10 +33,20 @@ final class MutableMessageGroupView: MutablePostboxView {
                             }
                         }
                     }
+                case let .UpdateEmbeddedMedia(index, _):
+                    if self.messages.contains(where: { $0.id == index.id }) {
+                        updated = true
+                        break outer
+                    }
                 default:
                     break
                 }
             }
+        }
+        // Media shared by several messages lives in a record of its own; updating it
+        // rewrites that record and reports the id here, with no history operation.
+        if !updated, self.messages.contains(where: { $0.referencesAnyMedia(in: transaction.updatedMedia) }) {
+            updated = true
         }
         if updated {
             self.messages = postbox.getMessageGroup(at: self.id) ?? []

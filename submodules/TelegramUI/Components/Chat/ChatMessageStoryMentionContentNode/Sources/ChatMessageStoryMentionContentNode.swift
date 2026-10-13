@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -38,7 +39,7 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     
     private let fetchDisposable = MetaDisposable()
             
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
@@ -58,7 +59,7 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
 
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.subtitleNode)
@@ -146,7 +147,7 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         
         let currentItem = self.item
 
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
                         
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
@@ -352,12 +353,6 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         
-        if let mediaBackgroundContent = self.mediaBackgroundContent {
-            var backgroundFrame = mediaBackgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            mediaBackgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {

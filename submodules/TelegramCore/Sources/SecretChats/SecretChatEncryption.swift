@@ -145,7 +145,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
         case .v1:
             let (aesKey, aesIv) = messageKey(key: parameters.key, msgKey: msgKey, mode: parameters.mode)
             
-            let decryptedData = MTAesDecrypt(Data(bytes: data.memory.advanced(by: 8 + 16), count: data.length - (8 + 16)), aesKey, aesIv)!
+            guard let decryptedData = MTAesDecrypt(Data(bytes: data.memory.advanced(by: 8 + 16), count: data.length - (8 + 16)), aesKey, aesIv) else {
+                return nil
+            }
             
             if decryptedData.count < 4 * 3 {
                 return nil
@@ -159,7 +161,7 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             }
             
             let paddingLength = decryptedData.count - (Int(payloadLength) + 4)
-            if Int(payloadLength) > decryptedData.count - 4 || paddingLength > 16 {
+            if Int(payloadLength) <= 0 || Int(payloadLength) > decryptedData.count - 4 || paddingLength > 16 {
                 return nil
             }
             
@@ -190,7 +192,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             }
             let (aesKey, aesIv) = messageKey(key: parameters.key, msgKey: msgKey, mode: .v2(role: senderRole))
             
-            let decryptedData = MTAesDecrypt(Data(bytes: data.memory.advanced(by: 8 + 16), count: data.length - (8 + 16)), aesKey, aesIv)!
+            guard let decryptedData = MTAesDecrypt(Data(bytes: data.memory.advanced(by: 8 + 16), count: data.length - (8 + 16)), aesKey, aesIv) else {
+                return nil
+            }
             
             if decryptedData.count < 4 * 3 {
                 return nil

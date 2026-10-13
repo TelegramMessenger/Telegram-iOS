@@ -105,7 +105,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
             pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
             pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.pipelineState = pipelineState
@@ -124,7 +124,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             guard let functionDustEffectInitializeParticle = library.makeFunction(name: "dustEffectInitializeParticle") else {
                 return nil
             }
-            guard let computePipelineStateInitializeParticle = try? device.makeComputePipelineState(function: functionDustEffectInitializeParticle) else {
+            guard let computePipelineStateInitializeParticle = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionDustEffectInitializeParticle) else {
                 return nil
             }
             self.computePipelineStateInitializeParticle = computePipelineStateInitializeParticle
@@ -132,7 +132,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             guard let functionDustEffectUpdateParticle = library.makeFunction(name: "dustEffectUpdateParticle") else {
                 return nil
             }
-            guard let computePipelineStateUpdateParticle = try? device.makeComputePipelineState(function: functionDustEffectUpdateParticle) else {
+            guard let computePipelineStateUpdateParticle = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionDustEffectUpdateParticle) else {
                 return nil
             }
             

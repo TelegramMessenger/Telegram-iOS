@@ -79,7 +79,11 @@ final class BlockViewVirtualizationTests: XCTestCase {
         v.reconcileBlockViews(visibleRect: CGRect(x: 0, y: 0, width: 300, height: 300))
         let p0view = v.blockViews[BlockID("p0")]
         XCTAssertNotNil(p0view)
-        v.reconcileBlockViews(visibleRect: CGRect(x: 0, y: 3000, width: 300, height: 300))   // cull p0
+        // Scroll just far enough to cull p0 (past the overscan band), NOT a whole-document jump: the
+        // recycle queue is a LIFO capped at 24, so culling many screenfuls at once evicts p0's instance
+        // through overflow and the round trip legitimately reallocates. Tightened when V2's 1pt
+        // inter-paragraph gap made a y=3000 jump span far more paragraphs than it used to.
+        v.reconcileBlockViews(visibleRect: CGRect(x: 0, y: 700, width: 300, height: 300))   // cull p0
         XCTAssertNil(v.blockViews[BlockID("p0")], "p0 culled")
         v.reconcileBlockViews(visibleRect: CGRect(x: 0, y: 0, width: 300, height: 300))       // realize the top again
         XCTAssertTrue(v.blockViews.values.contains { $0 === p0view }, "the recycled instance is reused, not reallocated")
@@ -179,7 +183,7 @@ final class BlockViewVirtualizationTests: XCTestCase {
         ], width: 300)
         v.frame = CGRect(x: 0, y: 0, width: 300, height: v.intrinsicContentSize.height); v.layoutIfNeeded()
         // Every run is on-screen via the bounds band.
-        XCTAssertEqual(v.visibleBlockquoteFills(band: v.viewportBand()).count, v.blockquoteDecorations().count,
+        XCTAssertEqual(v.visibleBlockquoteFills(band: v.viewportBand()).count, v.blockQuoteFillRects().count,
                        "no scroll host ⇒ every run kept (invariance)")
     }
 

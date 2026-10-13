@@ -43,7 +43,7 @@ final class BlockViewTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 300, height: 100); v.layoutIfNeeded()
         let box = v.boxes[0] as! BlockBox
         let s1 = box.renderSignature
-        v.anchor = box.textStart; v.head = box.textStart + box.textLength   // select the whole word
+        v.setSelectionForTesting(anchor: box.textStart, head: box.textStart + box.textLength)   // select the whole word
         v.toggleBold()
         XCTAssertNotEqual(box.renderSignature, s1,
                           "toggling bold changes the render signature (so a view-backed paragraph repaints)")
@@ -56,7 +56,7 @@ final class BlockViewTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 300, height: 100); v.layoutIfNeeded()
         let box = v.boxes[0] as! BlockBox
         let s1 = box.renderSignature
-        v.anchor = box.textStart; v.head = box.textStart + box.textLength
+        v.setSelectionForTesting(anchor: box.textStart, head: box.textStart + box.textLength)
         v.setLink("https://example.com")
         XCTAssertNotEqual(box.renderSignature, s1,
                           "setting a link changes the render signature (so a view-backed paragraph repaints)")
@@ -306,7 +306,7 @@ final class BlockViewTests: XCTestCase {
         let v = tableCanvas()
         // Park the caret inside the table (activeTable() requires head inside a cell).
         let t = v.boxes[0] as! TableBlockBox
-        v.anchor = t.cellTextStart(row: 1, column: 0)!; v.head = v.anchor
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(0)
         XCTAssertNotNil(v.tableSelectionOutlineRect(), "structural outline geometry still computes")
     }

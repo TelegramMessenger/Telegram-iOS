@@ -526,6 +526,24 @@ private enum RichMediaUploadStep {
     case done(MediaId, UploadedRichMedia)
 }
 
+/// Cloud `Media` -> the wire form a rich message references it by.
+private func uploadedRichMedia(from cloudMedia: Media) -> UploadedRichMedia? {
+    if let image = cloudMedia as? TelegramMediaImage,
+       let reference = image.reference,
+       case let .cloud(id, accessHash, maybeFileReference) = reference,
+       let fileReference = maybeFileReference {
+        let inputPhoto = Api.InputPhoto.inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)))
+        return .photo(inputPhoto, cloudId: id)
+    }
+    if let file = cloudMedia as? TelegramMediaFile,
+       let resource = file.resource as? CloudDocumentMediaResource,
+       let fileReference = resource.fileReference {
+        let inputDocument = Api.InputDocument.inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)))
+        return .document(inputDocument, cloudId: resource.fileId)
+    }
+    return nil
+}
+
 func richMessageContentToUpload(
     network: Network,
     postbox: Postbox,
@@ -549,72 +567,52 @@ func richMessageContentToUpload(
     var stepMediaIds: [MediaId] = []
 
     for (mediaId, media) in entries {
-        if let image = media as? TelegramMediaImage {
-            // The image helper performs the uploadMedia round-trip (non-grouped,
-            // non-autoclear) and short-circuits already-cloud images, returning a
-            // cloud .inputMediaPhoto in both cases. transform is skipped (messageId nil)
-            // so it never writes back to the empty message.media.
-            let signal = uploadedMediaImageContent(
-                network: network,
-                postbox: postbox,
-                transformOutgoingMessageMedia: nil,
-                messageMediaPreuploadManager: messageMediaPreuploadManager,
-                forceReupload: forceReupload,
-                isGrouped: false,
-                peerId: peerId,
-                image: image,
-                messageId: nil,
-                text: "",
-                attributes: [],
-                autoremoveMessageAttribute: nil,
-                autoclearMessageAttribute: nil,
-                auxiliaryMethods: auxiliaryMethods
-            )
-            |> mapToSignal { result -> Signal<RichMediaUploadStep, PendingMessageUploadError> in
-                switch result {
-                case let .progress(progress):
-                    return .single(.progress(progress.progress))
-                case let .content(content):
-                    if case let .media(inputMedia, _) = content.content,
-                       case let .inputMediaPhoto(photo) = inputMedia,
-                       case let .inputPhoto(inputPhoto) = photo.id {
-                        return .single(.done(mediaId, .photo(photo.id, cloudId: inputPhoto.id)))
-                    }
-                    return .fail(.generic)
-                }
-            }
-            stepSignals.append(signal)
+        // A forced re-upload must reuse NOTHING: not a parked result, and not the cloud reference we
+        // are holding — `forceReupload` is set by PendingMessageManager's FILEREF_INVALID /
+        // FILE_REFERENCE_*_EXPIRED retry, so that reference is exactly what the server just rejected.
+        // Taking the already-cloud fast path here would resend it, and `forcedReuploadOnce` allows
+        // only one retry, so the send would fail permanently. Cloud promotion makes this reachable in
+        // ordinary use: every pre-uploaded medium becomes cloud media inside a draft that may sit for
+        // a long time before it is sent.
+        if forceReupload {
+            messageMediaPreuploadManager.evictMedia(id: mediaId)
+        }
+        // Already-cloud media — IMAGE OR FILE — is referenced directly: no upload, no registry.
+        //
+        // `uploadedRichMedia` returns non-nil exactly when a medium already carries a usable cloud
+        // reference, which is precisely the right question here. Do NOT gate this on
+        // `isPreuploadableMedia`: that answers a DIFFERENT question ("is this worth pre-uploading?"),
+        // and it answers `false` for already-cloud media. Routing a promoted medium into `mediaSignal`
+        // therefore fails it outright — which is what broke sending after a successful pre-upload,
+        // because cloud promotion turns every attached image into exactly this case.
+        if !forceReupload, let uploaded = uploadedRichMedia(from: media) {
+            stepSignals.append(.single(.done(mediaId, uploaded)))
             stepMediaIds.append(mediaId)
-        } else if let file = media as? TelegramMediaFile {
-            // Already-cloud fast path: build the InputDocument directly, no upload.
-            if let resource = file.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
-                let inputDocument = Api.InputDocument.inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)))
-                stepSignals.append(.single(.done(mediaId, .document(inputDocument, cloudId: resource.fileId))))
-                stepMediaIds.append(mediaId)
-            } else {
-                let signal = uploadedMediaPhotoVideoContent(
-                    network: network,
-                    postbox: postbox,
-                    messageMediaPreuploadManager: messageMediaPreuploadManager,
-                    peerId: peerId,
-                    file: file
-                )
-                |> mapToSignal { result -> Signal<RichMediaUploadStep, PendingMessageUploadError> in
-                    switch result {
-                    case let .progress(progress):
-                        return .single(.progress(progress))
-                    case let .inputDocument(inputDocument):
-                        if case let .inputDocument(doc) = inputDocument {
-                            return .single(.done(mediaId, .document(inputDocument, cloudId: doc.id)))
-                        }
-                        return .fail(.generic)
-                    }
-                }
-                stepSignals.append(signal)
-                stepMediaIds.append(mediaId)
-            }
+            continue
         }
         // Media that is neither image nor file is ignored (no block can reference it).
+        guard media is TelegramMediaImage || media is TelegramMediaFile else {
+            continue
+        }
+        // Create-or-join. If a pre-upload is already running for this MediaId, this inherits its
+        // progress and awaits its result rather than starting a second transfer.
+        let signal = messageMediaPreuploadManager.mediaSignal(network: network, postbox: postbox, peerId: peerId, media: media, forceReupload: forceReupload)
+        |> castError(PendingMessageUploadError.self)
+        |> mapToSignal { state -> Signal<RichMediaUploadStep, PendingMessageUploadError> in
+            switch state {
+            case let .progress(value):
+                return .single(.progress(value))
+            case let .done(cloudMedia):
+                guard let uploaded = uploadedRichMedia(from: cloudMedia._asMedia()) else {
+                    return .fail(.generic)
+                }
+                return .single(.done(mediaId, uploaded))
+            case .failed:
+                return .fail(.generic)
+            }
+        }
+        stepSignals.append(signal)
+        stepMediaIds.append(mediaId)
     }
 
     if stepSignals.isEmpty {
@@ -686,13 +684,13 @@ func uploadedRichMessage(
     }
 }
 
-private enum PredownloadedResource {
+enum PredownloadedResource {
     case localReference(CachedSentMediaReferenceKey?)
     case media(Media, CachedSentMediaReferenceKey?)
     case none
 }
 
-private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, resource: MediaResource, forceRefresh: Bool) -> Signal<PredownloadedResource, PendingMessageUploadError> {
+func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, resource: MediaResource, forceRefresh: Bool) -> Signal<PredownloadedResource, PendingMessageUploadError> {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         return .single(.none)
     }
@@ -785,7 +783,7 @@ private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: 
     |> mapError { _ -> PendingMessageUploadError in }
 }
 
-private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaReferenceKey?, result: PendingMessageUploadedContentResult, media: Media) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
+func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaReferenceKey?, result: PendingMessageUploadedContentResult, media: Media) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let key = key {
         return postbox.transaction { transaction -> PendingMessageUploadedContentResult in
             storeCachedSentMediaReference(transaction: transaction, key: key, media: media)
@@ -1150,101 +1148,23 @@ private enum UploadedMediaFileAndThumbnail {
 }
 
 private func uploadedMediaPhotoVideoContent(network: Network, postbox: Postbox, messageMediaPreuploadManager: MessageMediaPreuploadManager, peerId: PeerId, file: TelegramMediaFile) -> Signal<UploadedMediaPhotoVideoResult, PendingMessageUploadError> {
-    var hintFileIsLarge = false
-    var hintSize: Int64?
-    if let size = file.size {
-        hintSize = size
-    } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
-        hintSize = size
-    }
-    
-    loop: for attribute in file.attributes {
-        switch attribute {
-        case .hintFileIsLarge:
-            hintFileIsLarge = true
-            break loop
-        default:
-            break
-        }
-    }
-    
-    let fileReference: AnyMediaReference
-    if let partialReference = file.partialReference {
-        fileReference = partialReference.mediaReference(file)
-    } else {
-        fileReference = .standalone(media: file)
-    }
-    
-    return messageMediaPreuploadManager.upload(
-        network: network,
-        postbox: postbox,
-        source: .resource(fileReference.resourceReference(file.resource)),
-        encrypt: false,
-        tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video),
-        hintFileSize: hintSize,
-        hintFileIsLarge: hintFileIsLarge,
-        forceNoBigParts: false
-    )
-    |> mapError { _ -> PendingMessageUploadError in
-        return .generic
-    }
-    |> mapToSignal { result -> Signal<UploadedMediaPhotoVideoResult, PendingMessageUploadError> in
-        switch result {
-        case let .progress(progress):
-            return .single(.progress(progress))
-        case let .inputFile(inputFile):
-            return postbox.transaction { transaction -> Api.InputPeer? in
-                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    // Delegates to the shared round trip so the pre-upload path and this one cannot drift.
+    return uploadFileToCloud(network: network, postbox: postbox, messageMediaPreuploadManager: messageMediaPreuploadManager, peerId: peerId, file: file)
+    |> mapToSignal { event -> Signal<UploadedMediaPhotoVideoResult, PendingMessageUploadError> in
+        switch event {
+        case let .progress(value):
+            return .single(.progress(value))
+        case let .done(media):
+            guard let cloudFile = media as? TelegramMediaFile,
+                  let resource = cloudFile.resource as? CloudDocumentMediaResource,
+                  let fileReference = resource.fileReference else {
+                return .fail(.generic)
             }
-            |> mapError { _ -> PendingMessageUploadError in
-            }
-            |> mapToSignal { inputPeer -> Signal<UploadedMediaPhotoVideoResult, PendingMessageUploadError> in
-                guard let inputPeer else {
-                    return .fail(.generic)
-                }
-                
-                return network.request(Api.functions.messages.uploadMedia(
-                    flags: 0,
-                    businessConnectionId: nil,
-                    peer: inputPeer,
-                    media: .inputMediaUploadedDocument(.init(
-                        flags: 0,
-                        file: inputFile,
-                        thumb: nil,
-                        mimeType: file.mimeType,
-                        attributes: inputDocumentAttributesFromFileAttributes(file.attributes),
-                        stickers: nil,
-                        videoCover: nil,
-                        videoTimestamp: nil,
-                        ttlSeconds: nil
-                    ))
-                ))
-                |> mapError { _ -> PendingMessageUploadError in
-                    return .generic
-                }
-                |> mapToSignal { result -> Signal<UploadedMediaPhotoVideoResult, PendingMessageUploadError> in
-                    switch result {
-                    case let .messageMediaDocument(messageMediaDocumentData):
-                        let (document, altDocuments) = (messageMediaDocumentData.document, messageMediaDocumentData.altDocuments)
-                        if let document = document,
-                           let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments),
-                           let resource = mediaFile.resource as? CloudDocumentMediaResource,
-                           let fileReference = resource.fileReference {
-                            return .single(.inputDocument(.inputDocument(.init(
-                                id: resource.fileId,
-                                accessHash: resource.accessHash,
-                                fileReference: Buffer(data: fileReference)
-                            ))))
-                        } else {
-                            return .fail(.generic)
-                        }
-                    default:
-                        return .fail(.generic)
-                    }
-                }
-            }
-        case .inputSecretFile:
-            return .fail(.generic)
+            return .single(.inputDocument(.inputDocument(.init(
+                id: resource.fileId,
+                accessHash: resource.accessHash,
+                fileReference: Buffer(data: fileReference)
+            ))))
         }
     }
 }

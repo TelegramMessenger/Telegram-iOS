@@ -26,7 +26,7 @@ private final class MultipartDownloadState {
     }
     
     func transform(offset: Int64, data: Data) -> Data {
-        if self.aesKey.count != 0 {
+        if self.aesKey.count == 32 && self.aesIv.count == 32 {
             var decryptedData = data
             assert(decryptedSize != nil)
             assert(decryptedData.count % 16 == 0)
@@ -381,7 +381,12 @@ private enum MultipartFetchSource {
                                                 }
                                             }
                                             parsedPartHashes.removeAll()
-                                            return .fail(.switchToCdn(id: dcId, token: fileToken.makeData(), key: encryptionKey.makeData(), iv: encryptionIv.makeData(), partHashes: parsedPartHashes))
+                                            let key = encryptionKey.makeData()
+                                            let iv = encryptionIv.makeData()
+                                            if !cdnRedirectKeyMaterialIsValid(encryptionKey: key, encryptionIv: iv) {
+                                                return .fail(.fatal)
+                                            }
+                                            return .fail(.switchToCdn(id: dcId, token: fileToken.makeData(), key: key, iv: iv, partHashes: parsedPartHashes))
                                     }
                                 }
                         }
@@ -438,7 +443,10 @@ private enum MultipartFetchSource {
                                     var ivOffset: Int32 = Int32(clamping: (offset / 16)).bigEndian
                                     memcpy(bytes.advanced(by: partIvCount - 4), &ivOffset, 4)
                                 }
-                                return .single((MTAesCtrDecrypt(bytes.makeData(), key, partIv)!, info))
+                                guard let decryptedData = MTAesCtrDecrypt(bytes.makeData(), key, partIv) else {
+                                    return .fail(.generic)
+                                }
+                                return .single((decryptedData, info))
                             }
                     }
                 }

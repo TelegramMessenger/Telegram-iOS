@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ManagedAnimationNode
@@ -106,7 +107,7 @@ final class SemanticStatusNodeSecretTimeoutContext: SemanticStatusNodeStateConte
         self.generationTimestamp = generationTimestamp
         self.appearance = appearance
         
-        self.animationNode = FireIconNode()
+        self.animationNode = FireIconNode(lottieSettings: .noAccountFallback)
         self.animationNode?.imageUpdated = { [weak self] image in
             if let strongSelf = self {
                 strongSelf.iconImage = image
@@ -217,8 +218,8 @@ private struct ContentParticle {
 }
 
 private final class FireIconNode: ManagedAnimationNode {
-    init() {
-        super.init(size: CGSize(width: 32.0, height: 32.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 32.0, height: 32.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_flame_1"), frames: .range(startFrame: 0, endFrame: 60), duration: 1.5))
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_flame_2"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0, loop: true))

@@ -116,6 +116,55 @@ public protocol SharedMediaPlaylistItemId {
     func isEqual(to: SharedMediaPlaylistItemId) -> Bool
 }
 
+/// Lets a host recognise a rich message's InstantPage playlist without importing InstantPageUI.
+public protocol InstantPagePlaylistIdProviding {
+    var instantPageRichMessageId: EngineMessage.Id? { get }
+}
+
+/// A host-constructible stand-in for `InstantPageMediaPlaylistId.richMessage`. The real enum lives
+/// in InstantPageUI, which AccountContext must not import, so this is what a host passes to
+/// `filteredPlaylistState`; the real id's `isEqual(to:)` matches it on the rich message id.
+public struct RichMessagePlaylistId: SharedMediaPlaylistId, InstantPagePlaylistIdProviding {
+    public let instantPageRichMessageId: EngineMessage.Id?
+
+    public init(messageId: EngineMessage.Id) {
+        self.instantPageRichMessageId = messageId
+    }
+
+    public func isEqual(to: SharedMediaPlaylistId) -> Bool {
+        guard let to = to as? InstantPagePlaylistIdProviding else {
+            return false
+        }
+        guard let lhs = self.instantPageRichMessageId, let rhs = to.instantPageRichMessageId else {
+            return false
+        }
+        return lhs == rhs
+    }
+}
+
+/// The item counterpart of `RichMessagePlaylistId`, identifying one track by its media index.
+public struct RichMessagePlaylistItemId: SharedMediaPlaylistItemId, InstantPagePlaylistItemIndexProviding {
+    public let instantPageMediaIndex: Int
+
+    public init(index: Int) {
+        self.instantPageMediaIndex = index
+    }
+
+    public func isEqual(to: SharedMediaPlaylistItemId) -> Bool {
+        guard let to = to as? InstantPagePlaylistItemIndexProviding else {
+            return false
+        }
+        return self.instantPageMediaIndex == to.instantPageMediaIndex
+    }
+}
+
+/// Lets a host read an InstantPage playlist item's media index without importing InstantPageUI.
+/// The conforming id type is internal to InstantPageUI, so this existential is the only way to
+/// recover the index that identifies a track within a rich message's playlist.
+public protocol InstantPagePlaylistItemIndexProviding {
+    var instantPageMediaIndex: Int { get }
+}
+
 public func areSharedMediaPlaylistItemIdsEqual(_ lhs: SharedMediaPlaylistItemId?, _ rhs: SharedMediaPlaylistItemId?) -> Bool {
     if let lhs = lhs, let rhs = rhs {
         return lhs.isEqual(to: rhs)

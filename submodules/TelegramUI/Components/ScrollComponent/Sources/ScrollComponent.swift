@@ -24,6 +24,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     
     public class ExternalState {
         public var contentHeight: CGFloat = 0.0
+        public fileprivate(set) weak var scrollView: UIScrollView?
         
         public init() {
             
@@ -140,6 +141,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
                 self.horizontalScrollIndicatorInsets = horizontalScrollIndicatorInsets
             }
             component.externalState?.contentHeight = contentSize.height
+            component.externalState?.scrollView = self
             
             self.component = component
             

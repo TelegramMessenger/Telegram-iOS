@@ -282,7 +282,7 @@ func addTemporaryKeyboardSnapshotView(navigationController: NavigationController
                         keyboardWindow.addSubview(snapshotView)
                     }
                     
-                    Queue.mainQueue().after(local ? 0.8 : 0.7, {
+                    Queue.mainQueue().after(local ? 0.8 : 0.7, { [snapshotView] in
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })

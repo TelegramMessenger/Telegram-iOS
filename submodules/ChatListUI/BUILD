@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
 swift_library(
     name = "ChatListUI",
@@ -11,6 +13,7 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
@@ -43,6 +46,7 @@ swift_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/AppBundle:AppBundle",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/Markdown:Markdown",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
@@ -136,4 +140,35 @@ swift_library(
     visibility = [
         "//visibility:public",
     ],
+)
+
+swift_library(
+    name = "ChatListUITestsLib",
+    testonly = True,
+    srcs = glob(["Tests/**/*.swift"]),
+    deps = [
+        ":ChatListUI",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/AppBundle:AppBundle",
+    ],
+)
+
+ios_test_runner(
+    name = "ChatListUITestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "ChatListUITests",
+    minimum_os_version = "15.0",
+    runner = ":ChatListUITestRunner",
+    resources = ["//Telegram:InstantPagePreviewTestStrings"],
+    deps = [":ChatListUITestsLib"],
+    visibility = ["//visibility:public"],
 )

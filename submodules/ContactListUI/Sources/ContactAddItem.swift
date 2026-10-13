@@ -19,6 +19,10 @@ public class ContactsAddItem: ListViewItem {
     let action: () -> Void
     
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .contactsAdd))
+    }
     
     public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, phoneNumber: String, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.context = context
@@ -29,11 +33,11 @@ public class ContactsAddItem: ListViewItem {
         self.header = header
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactsAddItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: self, neighbors: neighbors)
             let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
@@ -44,12 +48,12 @@ public class ContactsAddItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactsAddItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: self, neighbors: neighbors)
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
@@ -69,14 +73,14 @@ public class ContactsAddItem: ListViewItem {
         self.action()
     }
     
-    static func mergeType(item: ContactsAddItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ContactsAddItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ContactsAddItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .contactsAdd {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -85,10 +89,10 @@ public class ContactsAddItem: ListViewItem {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? ContactsAddItem {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .contactsAdd {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
@@ -137,9 +141,9 @@ class ContactsAddItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let (item, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: item, neighbors: neighbors)
             self.layoutParams = (item, params, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
             let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader)
@@ -253,4 +257,8 @@ class ContactsAddItemNode: ListViewItemNode {
             return nil
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let contactsAdd = ListViewItemHeaderFamily("contactsAdd")
 }

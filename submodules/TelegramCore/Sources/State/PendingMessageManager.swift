@@ -207,6 +207,11 @@ private final class CorrelationIdToSentMessageId {
     var mapping: [Int64: MessageId] = [:]
 }
 
+private struct PendingForwardBatchKey: Hashable {
+    let destination: PeerIdAndNamespace
+    let fromEphemeral: Bool
+}
+
 public final class PendingMessageManager {
     public enum NewTopicEvent {
         case willMove(fromThreadId: Int64, toThreadId: Int64)
@@ -409,7 +414,7 @@ public final class PendingMessageManager {
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
         Logger.shared.log("PendingMessageManager", "update on postboxQueue: \(messageIds)")
 
-        self.queue.async {
+        self.queue.async { [self] in
             Logger.shared.log("PendingMessageManager", "update: \(messageIds)")
             
             let addedMessageIds = messageIds.subtracting(self.pendingMessageIds)
@@ -647,7 +652,7 @@ public final class PendingMessageManager {
                 }
                 
                 var messagesToUpload: [(PendingMessageContext, Message, PendingMessageUploadedContentType, Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)] = []
-                var messagesToForward: [PeerIdAndNamespace: [(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = [:]
+                var messagesToForward: [PendingForwardBatchKey: [(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = [:]
                 
                 Logger.shared.log("PendingMessageManager", "beginSendingMessages messageContexts.count: \(strongSelf.messageContexts.count)")
                 
@@ -770,11 +775,14 @@ public final class PendingMessageManager {
                                 switch content.content {
                                 case let .forward(forwardInfo):
                                     isForward = true
-                                    let peerIdAndNamespace = PeerIdAndNamespace(peerId: message.id.peerId, namespace: message.id.namespace)
-                                    if messagesToForward[peerIdAndNamespace] == nil {
-                                        messagesToForward[peerIdAndNamespace] = []
+                                    let batchKey = PendingForwardBatchKey(
+                                        destination: PeerIdAndNamespace(peerId: message.id.peerId, namespace: message.id.namespace),
+                                        fromEphemeral: Namespaces.Message.allEphemeral.contains(forwardInfo.messageId.namespace)
+                                    )
+                                    if messagesToForward[batchKey] == nil {
+                                        messagesToForward[batchKey] = []
                                     }
-                                    messagesToForward[peerIdAndNamespace]!.append((messageContext, message, forwardInfo))
+                                    messagesToForward[batchKey]!.append((messageContext, message, forwardInfo))
                                 default:
                                     break
                                 }
@@ -1222,7 +1230,7 @@ public final class PendingMessageManager {
                 for attribute in messages[0].0.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
-                        if peerId != replyAttribute.messageId.peerId {
+                        if outgoingReplyRequiresExplicitPeer(destinationPeer: peer, destinationThreadId: messages[0].0.threadId, replyMessageId: replyAttribute.messageId, replyThreadId: transaction.getMessage(replyAttribute.messageId)?.threadId ?? replyAttribute.threadMessageId.flatMap { Int64($0.id) }) {
                             replyPeerId = replyAttribute.messageId.peerId
                         }
                         if replyAttribute.isQuote {
@@ -1352,8 +1360,16 @@ public final class PendingMessageManager {
                         flags |= 1 << 23
                     }
                     
+                    let forwardSourceKinds = Set(forwardIds.map { Namespaces.Message.allEphemeral.contains($0.0.namespace) })
+                    if forwardSourceKinds.first == true {
+                        flags |= 1 << 25
+                    }
+
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
-                    if forwardPeerIds.count != 1 {
+                    if forwardSourceKinds.count != 1 {
+                        assertionFailure()
+                        sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid mixed forward source kinds"))
+                    } else if forwardPeerIds.count != 1 {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward peer ids"))
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
@@ -1753,7 +1769,7 @@ public final class PendingMessageManager {
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
-                        if peer.id != replyAttribute.messageId.peerId {
+                        if outgoingReplyRequiresExplicitPeer(destinationPeer: peer, destinationThreadId: message.threadId, replyMessageId: replyAttribute.messageId, replyThreadId: transaction.getMessage(replyAttribute.messageId)?.threadId ?? replyAttribute.threadMessageId.flatMap { Int64($0.id) }) {
                             replyPeerId = replyAttribute.messageId.peerId
                         }
                         if replyAttribute.isQuote {
@@ -2079,6 +2095,10 @@ public final class PendingMessageManager {
                     
                         if suggestedPost != nil {
                             flags |= 1 << 23
+                        }
+
+                        if Namespaces.Message.allEphemeral.contains(sourceInfo.messageId.namespace) {
+                            flags |= 1 << 25
                         }
                     
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {

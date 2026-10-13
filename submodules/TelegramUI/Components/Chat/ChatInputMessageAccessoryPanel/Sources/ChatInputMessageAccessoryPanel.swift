@@ -32,9 +32,9 @@ private func generateCloseIcon() -> UIImage {
     })!.withRenderingMode(.alwaysTemplate)
 }
 
-private func textStringForForwardedMessage(_ message: EngineMessage, strings: PresentationStrings) -> (text: NSAttributedString, entities: [MessageTextEntity], isMedia: Bool) {
+private func textStringForForwardedMessage(_ message: EngineMessage, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> (text: NSAttributedString, entities: [MessageTextEntity], isMedia: Bool) {
     if let richText = message.richText {
-        return (richText.instantPage.previewAttributedText(strings: strings), [], false)
+        return (richText.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia), [], false)
     }
     for media in message.media {
         switch media {
@@ -539,12 +539,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 let textFont = Font.regular(14.0)
                 let messageText: NSAttributedString
                 if isText, message.richText != nil {
-                    let mutablePreviewText = NSMutableAttributedString(attributedString: attributedText)
-                    mutablePreviewText.addAttributes([
-                        .font: textFont,
-                        .foregroundColor: environment.theme.chat.inputPanel.primaryTextColor
-                    ], range: NSRange(location: 0, length: mutablePreviewText.length))
-                    messageText = mutablePreviewText
+                    messageText = styleInstantPagePreview(attributedText, font: textFont, italicFont: Font.italic(14.0), textColor: environment.theme.chat.inputPanel.primaryTextColor)
                 } else if isText {
                     let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
                         switch entity.type {
@@ -702,15 +697,11 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 
                 if self.messages.count == 1 {
                     title = environment.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                    let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: environment.strings)
+                    let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
                     text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(14.0), textColor: secondaryTextColor))
                     
-                    let additionalText = NSMutableAttributedString(attributedString: string)
-                    additionalText.addAttributes([
-                        .font: Font.regular(14.0),
-                        .foregroundColor: secondaryTextColor
-                    ], range: NSRange(location: 0, length: additionalText.length))
+                    let additionalText = NSMutableAttributedString(attributedString: styleInstantPagePreview(string, font: Font.regular(14.0), italicFont: Font.italic(14.0), textColor: secondaryTextColor))
                     for entity in entities {
                         switch entity.type {
                         case let .CustomEmoji(_, fileId):
@@ -723,7 +714,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         }
                     }
                     
-                    text.append(additionalText)
+                    text.append(renderInstantPagePreviewIcons(additionalText, font: Font.regular(14.0), textColor: secondaryTextColor))
                 } else {
                     title = environment.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
                     text = NSMutableAttributedString(attributedString: NSAttributedString(string: environment.strings.Conversation_ForwardFrom(authors).string, font: Font.regular(14.0), textColor: secondaryTextColor))
@@ -928,9 +919,15 @@ public final class ChatInputMessageAccessoryPanel: Component {
             let textRenderInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
             let textSize = self.text.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    placeholderColor: environment.theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.1),
                     text: .plain(textString),
-                    insets: textRenderInsets
+                    insets: textRenderInsets,
+                    spoilerColor: environment.theme.chat.inputPanel.primaryTextColor,
+                    handleSpoilers: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
@@ -939,8 +936,15 @@ public final class ChatInputMessageAccessoryPanel: Component {
             tintTextString.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintTextString.length))
             let _ = self.tintText.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    placeholderColor: UIColor.black.withAlphaComponent(0.1),
                     text: .plain(tintTextString),
+                    insets: textRenderInsets,
+                    spoilerColor: .black,
+                    handleSpoilers: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)

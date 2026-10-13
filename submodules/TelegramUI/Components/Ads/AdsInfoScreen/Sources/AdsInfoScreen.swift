@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -578,7 +579,8 @@ private final class AdsInfoSheetComponent: CombinedComponent {
                                     ),
                                     color: theme.chat.inputPanel.panelControlColor,
                                     size: CGSize(width: 34.0, height: 34.0),
-                                    playOnce: moreButtonPlayOnce
+                                    playOnce: moreButtonPlayOnce,
+                                    lottieSettings: context.component.context.lottieRenderingSettings
                                 )
                             )
                         ),

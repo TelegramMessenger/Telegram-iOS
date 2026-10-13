@@ -348,6 +348,10 @@ public final class GiftItemComponent: Component {
         private var outlineRenderState: OutlineRenderState?
         
         private var animationFile: TelegramMediaFile?
+        private let premiumGiftStickersDisposable = MetaDisposable()
+        private var premiumGiftStickersContextId: ObjectIdentifier?
+        private let premiumGiftFetchDisposable = MetaDisposable()
+        private var premiumGiftResourceId: String?
         
         private var disposables = DisposableSet()
         private var fetchedFiles = Set<Int64>()
@@ -404,6 +408,8 @@ public final class GiftItemComponent: Component {
         
         deinit {
             self.disposables.dispose()
+            self.premiumGiftStickersDisposable.dispose()
+            self.premiumGiftFetchDisposable.dispose()
             self.giftAuctionTimer?.invalidate()
         }
         
@@ -507,6 +513,29 @@ public final class GiftItemComponent: Component {
             let previousComponent = self.component
             self.component = component
             self.componentState = state
+
+            if case .premium = component.subject {
+                let contextId = ObjectIdentifier(component.context)
+                if self.premiumGiftStickersContextId != contextId {
+                    self.premiumGiftStickersContextId = contextId
+                    self.premiumGiftResourceId = nil
+                    self.premiumGiftFetchDisposable.set(nil)
+                    self.premiumGiftStickersDisposable.set((component.context.premiumGiftStickers
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        Queue.mainQueue().justDispatch { [weak self] in
+                            guard let self, self.premiumGiftStickersContextId == contextId else {
+                                return
+                            }
+                            self.componentState?.updated(transition: .immediate)
+                        }
+                    }))
+                }
+            } else if self.premiumGiftStickersContextId != nil {
+                self.premiumGiftStickersContextId = nil
+                self.premiumGiftStickersDisposable.set(nil)
+                self.premiumGiftResourceId = nil
+                self.premiumGiftFetchDisposable.set(nil)
+            }
                         
             self.isGestureEnabled = component.contextAction != nil
             
@@ -636,12 +665,25 @@ public final class GiftItemComponent: Component {
             var explicitAnimationOffset: CGFloat = 0.0
             switch component.subject {
             case let .premium(months, _):
-                emoji = ChatTextInputTextCustomEmojiAttribute(
-                    interactivelySelectedFromPackId: nil,
-                    fileId: 0,
-                    file: nil,
-                    custom: .animation(name: "Gift\(months)")
-                )
+                animationFile = component.context.premiumGiftStickersValue[months]?.file._parse()
+                if let animationFile {
+                    emoji = ChatTextInputTextCustomEmojiAttribute(
+                        interactivelySelectedFromPackId: nil,
+                        fileId: animationFile.fileId.id,
+                        file: animationFile
+                    )
+                } else {
+                    emoji = nil
+                }
+
+                let resourceId = animationFile?.resource.id.stringRepresentation
+                if self.premiumGiftResourceId != resourceId {
+                    self.premiumGiftResourceId = resourceId
+                    self.premiumGiftFetchDisposable.set(nil)
+                    if let animationFile {
+                        self.premiumGiftFetchDisposable.set(freeMediaFileResourceInteractiveFetched(postbox: component.context.account.postbox, userLocation: .other, fileReference: .stickerPack(stickerPack: .premiumGifts, media: animationFile), resource: animationFile.resource).start())
+                    }
+                }
             case let .starGift(gift, _):
                 animationFile = gift.file
                 emoji = ChatTextInputTextCustomEmojiAttribute(
@@ -790,7 +832,14 @@ public final class GiftItemComponent: Component {
             
             var animationTransition = transition
             var animateBackgroundChange = false
-            if self.animationLayer == nil || self.animationFile?.fileId != animationFile?.fileId, let emoji {
+            let animationSourceUpdated = previousComponent?.context !== component.context
+                || self.animationFile?.fileId != animationFile?.fileId
+                || self.animationFile?.resource.id != animationFile?.resource.id
+            if emoji == nil {
+                self.animationFile = nil
+                self.animationLayer?.removeFromSuperlayer()
+                self.animationLayer = nil
+            } else if self.animationLayer == nil || animationSourceUpdated, let emoji {
                 animationTransition = .immediate
                 self.animationFile = animationFile
                 var animateAppearance = false

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -366,7 +367,8 @@ private final class ItemComponent: Component {
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: animationName),
                     color: component.theme.chat.inputPanel.panelControlColor,
-                    playOnce: self.playOnce
+                    playOnce: self.playOnce,
+                    lottieSettings: component.context?.lottieRenderingSettings ?? .noAccountFallback
                 )),
                 environment: {},
                 containerSize: CGSize(width: 22.0, height: 22.0)

@@ -24,6 +24,7 @@ swift_library(
         "//submodules/TextInputMenu",
         "//submodules/ObjCRuntimeUtils",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Speak",
     ],
     visibility = [
         "//visibility:public",

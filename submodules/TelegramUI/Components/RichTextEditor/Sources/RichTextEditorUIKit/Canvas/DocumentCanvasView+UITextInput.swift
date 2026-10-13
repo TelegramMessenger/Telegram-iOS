@@ -6,30 +6,60 @@ import RichTextEditorCore
 extension DocumentCanvasView: UITextInput {
     private func clamp(_ n: Int) -> Int { clampGlobal(n) }
 
-    func text(in range: UITextRange) -> String? {
-        guard let r = range as? DocumentTextRange else { return nil }
-        let lo = clamp(min(r.from.offset, r.to.offset)), hi = clamp(max(r.from.offset, r.to.offset))
-        var result = ""
-        // The global position axis carries NO newline character between top-level blocks — only a
-        // structural token gap. A real UITextView returns "\n" there, and the system keyboard depends on
-        // it: the Hangul/CJK IME reads document context through `text(in:)` (it does NOT drive marked text
-        // on this view — it composes via insert + ranged delete/replace), and without the separator it
-        // sees two stacked paragraphs as one continuous line and recomposes a syllable ACROSS the invisible
-        // line break — the reported bug where a trailing consonant from the lower line migrates onto the
-        // line above. So emit "\n" for each top-level paragraph boundary the range crosses, including a
-        // range that lands entirely inside the inter-block gap (the read the keyboard makes immediately
-        // before a lower line's first character). Table-cell boundaries stay glued: a table is one editing
-        // surface, cells don't compose marked text, and cross-cell `text(in:)` is relied on un-separated.
+    // TASK 24 (Family 1): one-line router. The real body — still routed through `legacyPlainText`
+    // below, NOT the document client's `plainText(in:)` (which REJECTS an out-of-bounds range instead
+    // of clamping it, a real edge-case behavior change) — lives on `LegacyRichTextInputBackend`
+    // (`+TextReads.swift`).
+    func text(in range: UITextRange) -> String? { inputBackend.text(in: range) }
+
+    /// The SOLE separator rule for every linear projection of the structured document (currently
+    /// `legacyPlainText` and `legacyAttributedText`): "\n" at each crossed TOP-LEVEL paragraph boundary,
+    /// table cells deliberately glued. Walks every leaf region in document order — not just the ones
+    /// intersecting `[lo, hi)` — threading the topLevel/`prevTopLevelEnd` state exactly like the original
+    /// single-purpose loop did, and reports, PER REGION, whether the shared rule requires a "\n" before
+    /// it. That flag is independent of whether the region itself contributes any text: a range that lands
+    /// entirely inside an inter-block gap still crosses the boundary. `body` decides what (if anything) to
+    /// append for the region's own contribution — text or attributed content — so the two callers cannot
+    /// independently reimplement (and redisagree on) where separators go. See Task 12 fix round 1: an
+    /// early `legacyAttributedText` inserted "\n" between EVERY pair of included regions with no
+    /// topLevel-vs-table-interior distinction, so it glued differently than `legacyPlainText` on any
+    /// range spanning more than one leaf region inside a table.
+    func forEachLeafRegionInRange(
+        _ lo: Int, _ hi: Int, _ body: (_ region: LeafTextRegion, _ needsSeparatorBefore: Bool) -> Void
+    ) {
         var prevTopLevelEnd: Int? = nil
         for region in allLeafRegions() {
             let rStart = region.globalStart, rEnd = region.globalStart + region.length
             let topLevel = !isInsideTable(rStart)
-            if topLevel, let prevEnd = prevTopLevelEnd, lo < rStart, hi > prevEnd {
-                result += "\n"   // the requested range covers this paragraph break
-            }
-            defer { prevTopLevelEnd = topLevel ? rEnd : nil }
+            let needsSeparator = topLevel && prevTopLevelEnd.map { lo < rStart && hi > $0 } ?? false
+            body(region, needsSeparator)
+            prevTopLevelEnd = topLevel ? rEnd : nil
+        }
+    }
+
+    /// The one projection of the structured document into the keyboard's linear UTF-16 view: "\n" at
+    /// each crossed TOP-LEVEL paragraph boundary (table cells are deliberately glued), EmojiTextAttachment
+    /// → ref.altText, FormulaTextAttachment → att.latex. Load-bearing for the Hangul/CJK IME.
+    ///
+    /// The global position axis carries NO newline character between top-level blocks — only a
+    /// structural token gap. A real UITextView returns "\n" there, and the system keyboard depends on
+    /// it: the Hangul/CJK IME reads document context through `text(in:)` (it does NOT drive marked text
+    /// on this view — it composes via insert + ranged delete/replace), and without the separator it
+    /// sees two stacked paragraphs as one continuous line and recomposes a syllable ACROSS the invisible
+    /// line break — the reported bug where a trailing consonant from the lower line migrates onto the
+    /// line above. So emit "\n" for each top-level paragraph boundary the range crosses, including a
+    /// range that lands entirely inside the inter-block gap (the read the keyboard makes immediately
+    /// before a lower line's first character). Table-cell boundaries stay glued: a table is one editing
+    /// surface, cells don't compose marked text, and cross-cell `text(in:)` is relied on un-separated.
+    /// The separator decision itself lives in `forEachLeafRegionInRange`, shared with `legacyAttributedText`.
+    func legacyPlainText(globalFrom: Int, globalTo: Int) -> String? {
+        let lo = clamp(min(globalFrom, globalTo)), hi = clamp(max(globalFrom, globalTo))
+        var result = ""
+        forEachLeafRegionInRange(lo, hi) { region, needsSeparator in
+            if needsSeparator { result += "\n" }
+            let rStart = region.globalStart, rEnd = region.globalStart + region.length
             let a = max(lo, rStart), b = min(hi, rEnd)
-            guard a < b else { continue }
+            guard a < b else { return }
             let attr = region.layout.attributedString
             let ns = attr.string as NSString
             let slice = NSRange(location: a - rStart, length: b - a)
@@ -47,20 +77,71 @@ extension DocumentCanvasView: UITextInput {
         return result
     }
 
-    func replace(_ range: UITextRange, withText text: String) {
-        guard let r = range as? DocumentTextRange else { return }
-        let lo = min(r.from.offset, r.to.offset)
-        let hi = max(r.from.offset, r.to.offset)
+    // TASK 27a (Family 4, the routable half): one-line router. See `legacyReplace(globalFrom:globalTo:text:)`
+    // just below for the body, which is byte-for-byte the body this witness used to carry.
+    func replace(_ range: UITextRange, withText text: String) { inputBackend.replace(range, withText: text) }
+
+    /// TASK 27a — was `replace(_:withText:)`'s whole body, moved here unchanged and reached from
+    /// `LegacyRichTextInputBackend.replace(_:withText:)` through the D24 `legacyCanvas` accessor.
+    ///
+    /// TWO things about the split are load-bearing:
+    ///
+    /// 1. **The backend forwards to this hook with NO bracket of its own.** This body already runs an
+    ///    `editing { }` (i.e. the backend's `notifyingContentAndSelectionChange`), so the observable
+    ///    trace of one `replace(_:withText:)` is exactly six events — `textWillChange`,
+    ///    `selectionWillChange`, `selectionDidChange`, `textDidChange`, `canvasContentSizeChanged`,
+    ///    `canvasSelectionChanged`. `AutocorrectOriginCharacterizationTests` pins that array by exact
+    ///    equality in three separate tests, and `InsertionRouterTests
+    ///    .test_replaceWithText_emitsExactlyThePlainEditingBracket_theBackendAddsNoneOfItsOwn` pins it
+    ///    again from the router side. A wrapping bracket on the backend member would make it eight.
+    /// 2. **`oldText` must be re-derived through `legacyPlainText`, not through the document client.**
+    ///    The pre-seam body called `self.text(in: range)`, which since Task 24 is
+    ///    `LegacyRichTextInputBackend.text(in:)` → `legacyCanvas.legacyPlainText(globalFrom:globalTo:)`
+    ///    (`+TextReads.swift`) — a CLAMPING projection. `TelegramDocumentInputClient.plainText(in:)`
+    ///    REJECTS an out-of-bounds range instead, so re-deriving through the client would silently turn
+    ///    a clamped autocorrect read into a `nil` one and drop the correction flag. Passing the range's
+    ///    RAW `from`/`to` (not the `min`/`max` pair below) keeps the two spellings identical argument
+    ///    for argument; `legacyPlainText` orders them itself.
+    func legacyReplace(globalFrom: Int, globalTo: Int, text: String) {
+        var lo = min(globalFrom, globalTo)
+        var hi = max(globalFrom, globalTo)
+        // PHASE 0b / TASK 9d — found by the differential oracle against stock UIKit, where all 9
+        // inline-prediction scenarios produced a wrong document.
+        //
+        // `editing { }`'s prologue (`performEditing`) opens with `finalizeMarkedText()`. For a
+        // COMPOSITION that is `commitMarkedText()`, which moves no text, so the caller's offsets stay
+        // valid. For a PREDICTION (`markedTextIsPrediction`, i.e. the composition caret at `{0,0}`) it is
+        // `dismissPrediction()`, which REMOVES the ghost — the document shrinks by the ghost's length and
+        // `lo`/`hi`, captured above from the caller, are stale by exactly that much. The replace then ate
+        // that many characters PAST the intended range: with ghost "untry" over "coBeta", replacing the
+        // ghost yielded "country" instead of "countryBeta".
+        //
+        // So dismiss FIRST and rebase across the removal. Deliberately gated on `markedTextIsPrediction`
+        // rather than finalizing unconditionally: the commit path is correct today and its
+        // `finalizeMarkedText()` must keep happening inside `performEditing`, where its undo grouping is
+        // established. This changes the broken path ONLY — for every other caller `finalizeMarkedText()`
+        // returns nil and nothing here runs.
+        if markedTextIsPrediction, let removed = finalizeMarkedText() {
+            let removedLength = removed.to - removed.from
+            func rebase(_ offset: Int) -> Int {
+                if offset <= removed.from { return offset }
+                if offset >= removed.to { return offset - removedLength }
+                return removed.from   // an offset INSIDE the removed ghost collapses to its start
+            }
+            lo = rebase(lo)
+            hi = rebase(hi)
+        }
         // A keyboard autocorrection arrives here as `replace(word, correction)` — capture the original BEFORE the
         // edit so we can flag the corrected word (below) with a "Revert to …" affordance.
-        let autocorrectOriginal = detectAutocorrection(oldText: self.text(in: range), newText: text)
-        // Route through the 3-way selection logic, not applyReplace directly: a system-initiated
+        let autocorrectOriginal = detectAutocorrection(
+            oldText: legacyPlainText(globalFrom: globalFrom, globalTo: globalTo), newText: text)
+        // Route through the 3-way selection logic, not applyReplaceOutcome directly: a system-initiated
         // replacement (autocorrect/dictation/marked-text) can span a table boundary, which the
-        // same-stack-guarded applyReplace would silently drop.
+        // same-stack-guarded applyReplaceOutcome would silently drop.
         // System-initiated replacement (autocorrect / dictation / marked-text spanning). Kept .none
         // (its own undo step) — coalescing is scoped to insertText/deleteBackward typing/deleting, so a
         // dictation utterance is one undo step. Intentional, not an oversight.
-        editing { applySelectionReplace(globalFrom: lo, globalTo: hi, text: text) }
+        editing { applySelectionReplaceOutcome(globalFrom: lo, globalTo: hi, text: text) }
         if let original = autocorrectOriginal, isSpellCheckingEnabled {
             applyCorrectionFlag(global: NSRange(location: lo, length: (text as NSString).length), original: original)
         }
@@ -76,7 +157,10 @@ extension DocumentCanvasView: UITextInput {
             }
             // An empty code block types the monospace code attributes, not the body default — without this the
             // first character typed into a just-created (empty) code block lands non-monospace at body size.
-            if case .code = region.ref { return CodeBlockBox.codeAttributes() }
+            if case .code = region.ref { return CodeBlockBox.codeAttributes(textColor: self.mapper.theme.primaryText) }
+            // An empty LANGUAGE line types the language attributes (bold, body size) — without this the
+            // first character lands 17pt body-styled and read-back writes that string into the model.
+            if case .codeLanguage = region.ref { return CodeBlockBox.languageAttributes(mapper: self.mapper) }
             // An empty pull quote types the italic/centered pull-quote attributes — without this the first
             // character typed into an empty pull quote lands body-upright-left instead of italic/centered.
             if case .pullQuote = region.ref { return PullQuoteBox.pullQuoteTypingAttributes(mapper) }
@@ -139,114 +223,251 @@ extension DocumentCanvasView: UITextInput {
         return mapper.attributes(for: CharacterAttributes(), style: .body)
     }
 
+    // TASK 26 (Family 3): both halves are one-line routers. The real bodies live on
+    // `LegacyRichTextInputBackend` (`LegacyRichTextInputBackend.swift`), reached through the
+    // `legacyApplySelectedTextRange(_:)` hook just below for the setter's canvas half.
     var selectedTextRange: UITextRange? {
-        get { DocumentTextRange(DocumentTextPosition(anchor), DocumentTextPosition(head)) }
-        set {
-            // During a floating-cursor (spacebar-trackpad) gesture, the floating handlers
-            // (updateFloatingCursor → moveFloatingCaret) own the caret. iOS ALSO pushes selection RANGES
-            // anchored at the gesture's start position through this setter; applying them turns the cursor
-            // MOVE into a text SELECTION. Ignore them while the gesture owns the caret.
-            if floatingCursorActive { return }
-            // iOS sets the object-replacement RANGE for a tap-selected media right before its Backspace.
-            // `clearStructuralSelections()` below drops `imageSelection`; stash it so `deleteBackward` can
-            // still recognise the structural-delete intent (its object geometry doesn't cover the media node).
-            imageObjectDeletePending = imageSelection
-            finalizeMarkedText()     // a deliberate selection move commits a composition / dismisses a prediction
-            clearStructuralSelections()
-            dismissEditMenuForSelectionOrTextChange()   // system-driven move (keyboard cursor-drag / autocorrect) closes the menu too
-            let r = newValue as? DocumentTextRange
-            anchor = clamp(r?.from.offset ?? 0); head = clamp(r?.to.offset ?? 0)
-            setNeedsDisplay(); refreshSelectionUI()
-            onSelectionChange?()     // host scrolls the (possibly off-screen) caret into view — e.g. arrow-key nav up out of a tall image
-        }
+        get { inputBackend.selectedTextRange }
+        set { inputBackend.selectedTextRange = newValue }
     }
 
+    /// D24 legacy hook for the `selectedTextRange` SETTER routed above. Carries the pre-seam canvas
+    /// body VERBATIM, in order, EXCEPT for its last two statements — `refreshSelectionUI()` and
+    /// `onSelectionChange?()` — which the backend now delivers through `setSelection`'s publication:
+    /// `presentationClient.apply` is `refreshSelectionUI()` and `lifecycleClient.backendDidPublishState(.selection)`
+    /// is `onSelectionChange?()`, in that same order, immediately after this hook returns. Splitting
+    /// them out is what keeps the seam from emitting each of those twice.
+    ///
+    /// The floating-cursor early return is deliberately NOT here: it is the backend's own
+    /// `floatingCursorActive` guard (`LegacyRichTextInputBackend.swift`), which runs before this hook
+    /// is called at all — that flag is backend state, and Task 33 makes the backend its writer.
+    ///
+    /// Returns the CLAMPED endpoints actually written, so the backend records the same pair the canvas
+    /// did rather than re-deriving one (the canvas is the only party that knows `documentSize`).
+    @discardableResult
+    func legacyApplySelectedTextRange(_ newValue: UITextRange?) -> (anchor: Int, head: Int) {
+        // iOS sets the object-replacement RANGE for a tap-selected media right before its Backspace.
+        // `clearStructuralSelections()` below drops `imageSelection`; stash it so `deleteBackward` can
+        // still recognise the structural-delete intent (its object geometry doesn't cover the media node).
+        imageObjectDeletePending = imageSelection
+        finalizeMarkedText()     // a deliberate selection move commits a composition / dismisses a prediction
+        clearStructuralSelections()
+        dismissEditMenuForSelectionOrTextChange()   // system-driven move (keyboard cursor-drag / autocorrect) closes the menu too
+        // TASK 44: was `newValue as? DocumentTextRange`. Same downcast, same `nil` on a range this
+        // backend did not mint — it just happens inside the backend now (`LegacyTextIdentity`), so
+        // this hook reads a plain `(Int, Int)?` and names no identity type. The `?? 0` collapse and
+        // both `clamp()`s below are untouched; they are this hook's documented raw behaviour.
+        let r = newValue.flatMap(LegacyTextIdentity.globalRange(of:))
+        // TASK 37, POPULATION B. The nil-collapse (`?? 0`) and the two `clamp()`s are this hook's
+        // documented raw behaviour and are preserved exactly; only the WRITE moves off the deprecated
+        // forwarders onto `applyCaretOutcome` (`+Editing.swift`), the same raw, non-publishing pair.
+        // **NOT `setSelection(_:reason: .keyboard)`, and the reason is unique to this site:** this hook
+        // is called BY `LegacyRichTextInputBackend`'s `selectedTextRange` setter, which calls
+        // `setSelection(…, reason: .keyboard)` itself THREE STATEMENTS LATER, in the same call — after
+        // binding `raw`, `anchorOffset` and `headOffset` from the pair this hook returns. **The
+        // distance is not the point and stating it as "the very next statement" was wrong** (an earlier
+        // draft of this note did); what matters is that the publish is in the SAME call, so a
+        // `setSelection` here would not double a delegate bracket — it would double the CALLER's
+        // publish, whatever sits between the two. Measured:
+        // `SelectionRouterTests.test_selectedTextRangeSetter_runsTheWholeCanvasBodyThroughTheBackend`
+        // reports 2 `onSelectionChange` where it requires 1 (recorded at `applyCaretOutcome`).
+        // The DIRECTIONAL pair is preserved: `.range(_:_:)` does not normalize, and an unordered range
+        // is load-bearing for a reversed drag (`RichTextCanonicalSelection.normalizedRange`).
+        applyCaretOutcome(.range(clamp(r?.from ?? 0), clamp(r?.to ?? 0)))
+        setNeedsDisplay()
+        return (anchor, head)
+    }
+
+    // TASK 26 (Family 3): a one-line router each way. The delegate itself is stored on the backend,
+    // which is now the only sender of `UITextInputDelegate` notifications in the package (rule R16).
     var inputDelegate: UITextInputDelegate? {
-        get { textInputDelegate }
-        set { textInputDelegate = newValue }
+        get { inputBackend.inputDelegate }
+        set { inputBackend.inputDelegate = newValue }
     }
-    var tokenizer: UITextInputTokenizer {
-        if let t = inputTokenizer { return t }
-        let t = DocumentTokenizer(canvas: self)
-        inputTokenizer = t
-        return t
-    }
+    // TASK 24 (Family 1): `tokenizer` is a one-line router — the real body (still the canvas's own
+    // custom `DocumentTokenizer`, NOT a stock `UITextInputStringTokenizer`) lives on
+    // `LegacyRichTextInputBackend` (`+TextReads.swift`), and the cache with it (`tokenizerStorage`).
+    //
+    // TASK 43 DELETED THE D24 HOOK THIS USED TO REACH THROUGH, `legacyMakeTokenizer()`. The backend
+    // now writes `DocumentTokenizer(canvas:)` itself, in `attach(to:)`, so the tokenizer is
+    // constructed AND owned on one side of the seam instead of minted on the other and cached on this
+    // one. The canvas kept nothing: `inputTokenizer` is gone from `DocumentCanvasView.swift` too.
+    // `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` is what makes
+    // "one construction site" checkable — the obvious runtime spelling of that claim,
+    // `responds(to: Selector(("legacyMakeTokenizer")))`, is VACUOUS on a non-`@objc` Swift method and
+    // passed against the un-migrated tree. (FIX ROUND 1: that rule's FIRST version was itself evadable
+    // by `DocumentTokenizer.init(canvas:)`; it is now two assertions — a construction scan that sees
+    // both parenthesised spellings, plus an exact identifier-mention allowance for the three
+    // unparenthesised ones. All five were planted and reddened.)
+    var tokenizer: UITextInputTokenizer { inputBackend.tokenizer }
 
     // The first/last positions the caret can occupy must be RENDERABLE (a leaf region start/end or an
     // image gap), not the document's structural open/close token slots (0 / documentSize) — otherwise
-    // "move to start/end of document" would hide the caret.
-    var beginningOfDocument: UITextPosition { DocumentTextPosition(snapToRenderable(0, forward: true)) }
-    var endOfDocument: UITextPosition { DocumentTextPosition(snapToRenderable(documentSize, forward: false)) }
+    // "move to start/end of document" would hide the caret. TASK 24: both are now one-line routers;
+    // the renderable-snapping itself is unchanged, reached through `legacySnapToRenderable(_:forward:)`
+    // (`+Navigation.swift`).
+    var beginningOfDocument: UITextPosition { inputBackend.beginningOfDocument }
+    var endOfDocument: UITextPosition { inputBackend.endOfDocument }
+
+    // MARK: - The identity-free selection/geometry surface (TASK 44)
+    //
+    // **Why these four members exist.** Until this task the PUBLIC FACADE itself downcast and
+    // constructed the backend's UIKit identity objects — `RichTextEditorView` held five such sites,
+    // which is the violation D19 and the Task 44 brief both open with ("UIKit identity is
+    // backend-owned / opaque outside the active backend", broken by the facade before any work
+    // started). These are what it calls instead. They are ALSO what the canvas layer's own former
+    // identity sites call, so the whole package now has exactly one place that knows what a
+    // `LegacyTextPosition` is: `S/InputBackend/Legacy/`.
+    //
+    // **Each one preserves its former path exactly** — it mints or unwraps the same object, through
+    // `LegacyTextIdentity`, and then calls the same routed member the old inline expression called.
+    // Task 44 is a zero-behavior-change task and this is where that claim is cashed.
+
+    /// The selection as canonical offsets. A read-only projection of the backend's single store, the
+    /// same one `anchor`/`head` project — this is the whole-value spelling, for a caller that wants
+    /// the pair atomically rather than as two reads that could straddle a change.
+    var canonicalSelection: RichTextCanonicalSelection { inputBackend.canonicalSelection }
+
+    /// The last RENDERABLE caret slot (end of document), or `nil` when the active backend's
+    /// `endOfDocument` is not one of the legacy backend's identity objects. Exactly `endOfDocument`'s
+    /// offset: the same backend member, unwrapped here instead of at the caller.
+    ///
+    /// **OPTIONAL, and TASK 44 FIX ROUND 1 (review Minor 2) made it so.** It first shipped as
+    /// `Int` with a `?? 0`, on a proof that read: `LegacyRichTextInputBackend.endOfDocument`
+    /// (`+TextReads.swift`) returns a `LegacyTextPosition` on BOTH of its paths — the attached one
+    /// and the detached one, which reports a contract violation and returns `LegacyTextPosition(0)`
+    /// — so the downcast inside `globalOffset(of:)` cannot fail. **That proof is sound and its scope
+    /// was not stated: it holds for the LEGACY backend only.** This member lives on
+    /// `DocumentCanvasView`, whose `inputBackend` is a protocol EXISTENTIAL
+    /// (`init(… inputBackend: RichTextInputBackend? = nil)`), while `LegacyTextIdentity` is by
+    /// definition the *legacy* reader. Under any other backend the downcast fails, and `?? 0` turned
+    /// the pre-task facade's silent no-op (`guard let end = canvas.endOfDocument as?
+    /// DocumentTextPosition else { return }`) into a caret JUMP TO OFFSET 0 — the start of the
+    /// document, from a method named `moveCaretToDocumentEnd`. Optional restores the original
+    /// semantics exactly and pushes the decision to the caller, which is where it was.
+    var documentEndOffset: Int? { LegacyTextIdentity.globalOffset(of: endOfDocument) }
+
+    /// Set the selection to the global UTF-16 range `[from, to)` — UNORDERED, `from`/`to` verbatim.
+    ///
+    /// **This routes through `selectedTextRange`'s setter, which is the point.** That setter is the
+    /// path the facade's `selectAll()`/`moveCaretToDocumentEnd()` already took (they assigned a
+    /// hand-built `DocumentTextRange` to it), so behaviour — the `finalizeMarkedText()`, the
+    /// structural-selection clear, the edit-menu dismissal, the clamp, and the single publish the
+    /// backend's setter performs with `reason: .keyboard` — is preserved to the statement.
+    ///
+    /// **It deliberately does NOT call `inputBackend.setSelection(_:reason:)`.** Two independent
+    /// reasons, both measured:
+    ///  1. **Door 1.** `test_theWriteDoorsIntoBackendOwnedInputStateAreEnumerated` asserts that
+    ///     `setSelection(` appears at exactly ONE call site in `Sources/`
+    ///     (`LegacyRichTextInputBackend.swift`). `SwiftSourceScan.callSiteCount`'s pattern excludes a
+    ///     `func setSelection(` DECLARATION but not an `inputBackend.setSelection(` CALL, so a
+    ///     forwarder here would make that dictionary read two files. Verified by planting exactly that
+    ///     forwarder and running the rule (Task 44 report).
+    ///  2. **Reason, and therefore behaviour.** The backend's `selectedTextRange` setter publishes with
+    ///     `reason: .keyboard`; a direct `setSelection(…, reason: .command)` would change the reason the
+    ///     host observes. `DocumentCanvasView.swift`'s `anchor` doc records what happened the last time
+    ///     a caller was "simplified" onto a publishing `setSelection` (measurement 1 there: exit 65, 2
+    ///     red) — the shape is wrong, not merely differently spelled.
+    func setSelectedGlobalRange(from: Int, to: Int) {
+        selectedTextRange = LegacyTextIdentity.range(fromGlobal: from, toGlobal: to)
+    }
+
+    /// The identity-free spelling of `caretRect(for:)`. Replaces the six
+    /// `caretRect(for: DocumentTextPosition(n))` sites (five canvas, one facade) with one member that
+    /// mints the position on the backend side. Same routed member, same argument, same result — the
+    /// `.zero` its callers branch on still comes from the backend's own D9 translation
+    /// (`+Geometry.swift`), not from anything added here.
+    func caretRect(atGlobal offset: Int) -> CGRect {
+        caretRect(for: LegacyTextIdentity.position(atGlobal: offset))
+    }
 
     // Optional iOS-18 UITextInput member: tells the system the view supports editing so Writing Tools
     // can apply results in place (vs treating content as read-only). Together with our `UIEditMenuInteraction`
     // (the non-UITextInteraction path, WWDC24 #10168), this surfaces the system Writing Tools item on
     // Apple-Intelligence hardware.
+    //
+    // TASK 31, DEVIATION D3: a one-line router, but the two sides are gated DIFFERENTLY on purpose.
+    // The WITNESS keeps its `@available(iOS 18.0, *)` — that is UIKit's own gate on the member. The
+    // BACKEND member is `isEditableForWritingTools`, declared with NO availability above the package's
+    // iOS 13 floor (hard invariant 12), so `RichTextInputResponderBackend` stays a single existential
+    // surface rather than one whose shape depends on the deployment target. The rename is the other
+    // half of D3: `isEditable` is a UIKit witness name and would collide with the far broader meaning
+    // `RichTextInputEditPolicy.isEditable` already carries on the contract side.
     @available(iOS 18.0, *)
-    var isEditable: Bool { true }
+    var isEditable: Bool { inputBackend.isEditableForWritingTools }
 
+    // TASK 24 (Family 1): the six members below are all one-line routers now — their bodies (byte-for-
+    // byte ports) live on `LegacyRichTextInputBackend` (`+TextReads.swift`). `textRange(from:to:)`
+    // still ORDERS its two arguments (load-bearing — do not "fix"); `position(from:offset:)` still
+    // snaps to a renderable slot.
     func textRange(from fromPosition: UITextPosition, to toPosition: UITextPosition) -> UITextRange? {
-        guard let f = fromPosition as? DocumentTextPosition, let t = toPosition as? DocumentTextPosition else { return nil }
-        return f.offset <= t.offset ? DocumentTextRange(f, t) : DocumentTextRange(t, f)
+        inputBackend.textRange(from: fromPosition, to: toPosition)
     }
 
     func position(from position: UITextPosition, offset: Int) -> UITextPosition? {
-        guard let p = position as? DocumentTextPosition else { return nil }
-        let n = p.offset + offset
-        guard n >= 0, n <= documentSize else { return nil }
-        // The system tokenizer (Option+Arrow word nav, double-tap select, …) steps through positions
-        // via this primitive; snap to a renderable slot so it can never park the caret on a structural
-        // token (which would be invisible). No-op for positions already renderable.
-        return DocumentTextPosition(snapToRenderable(n, forward: offset >= 0))
+        inputBackend.position(from: position, offset: offset)
     }
 
     func compare(_ position: UITextPosition, to other: UITextPosition) -> ComparisonResult {
-        let a = (position as? DocumentTextPosition)?.offset ?? 0
-        let b = (other as? DocumentTextPosition)?.offset ?? 0
-        return a < b ? .orderedAscending : (a > b ? .orderedDescending : .orderedSame)
+        inputBackend.compare(position, to: other)
     }
 
     func offset(from: UITextPosition, to toPosition: UITextPosition) -> Int {
-        ((toPosition as? DocumentTextPosition)?.offset ?? 0) - ((from as? DocumentTextPosition)?.offset ?? 0)
+        inputBackend.offset(from: from, to: toPosition)
     }
 
     func position(within range: UITextRange, farthestIn direction: UITextLayoutDirection) -> UITextPosition? {
-        guard let r = range as? DocumentTextRange else { return nil }
-        return (direction == .left || direction == .up) ? r.start : r.end
+        inputBackend.position(within: range, farthestIn: direction)
     }
 
     func characterRange(byExtending position: UITextPosition, in direction: UITextLayoutDirection) -> UITextRange? {
-        guard let p = position as? DocumentTextPosition else { return nil }
-        return (direction == .left || direction == .up)
-            ? DocumentTextRange(DocumentTextPosition(0), p)
-            : DocumentTextRange(p, DocumentTextPosition(documentSize))
+        inputBackend.characterRange(byExtending: position, in: direction)
     }
 
+    // TASK 25 (Family 2): the eight members below (through `setBaseWritingDirection` further down) are
+    // all one-line routers now — their bodies (byte-for-byte translations of the originals) live on
+    // `LegacyRichTextInputBackend` (`+Geometry.swift`). The `?? .zero`/`?? []` translation (Deviation D9)
+    // lives in the BACKEND's UIKit-facing member, NOT here — see that file's header comment.
     func baseWritingDirection(for position: UITextPosition, in direction: UITextStorageDirection) -> NSWritingDirection {
-        guard let p = position as? DocumentTextPosition else { return typingWritingDirection }
-        return resolvedDirection(forGlobal: p.offset)
+        inputBackend.baseWritingDirection(for: position, in: direction)
     }
     // No-op by design: the whole-document override (`layoutDirectionModel`) is the single manual control,
     // so we do not honor per-range UIKit writing-direction writes (which would imply per-paragraph control
-    // we deliberately did not build).
-    func setBaseWritingDirection(_ writingDirection: NSWritingDirection, for range: UITextRange) {}
+    // we deliberately did not build). TASK 25: routed to a backend no-op stating the same rationale.
+    func setBaseWritingDirection(_ writingDirection: NSWritingDirection, for range: UITextRange) {
+        inputBackend.setBaseWritingDirection(writingDirection, for: range)
+    }
 
     func firstRect(for range: UITextRange) -> CGRect {
-        guard let r = range as? DocumentTextRange else { return .zero }
-        return selectionRects(globalFrom: min(r.from.offset, r.to.offset),
-                              globalTo: max(r.from.offset, r.to.offset)).first ?? .zero
+        inputBackend.firstRect(for: range)
+    }
+
+    /// Deviation D9: the CLIENT boundary (`TelegramGeometryInputClient.firstRect`) uses `nil` for a
+    /// missing/empty selection rect; the backend's UIKit-facing `firstRect(for:)`
+    /// (`+Geometry.swift`) keeps the `.zero` its callers already branch on. `nil` exactly where
+    /// `selectionRects(globalFrom:globalTo:)` yields no rects — an empty range, or a range that
+    /// resolves to no leaf region at all. Still called only from the geometry client (Task 25 did not
+    /// touch this canvas-level helper itself).
+    func legacyFirstRect(globalFrom: Int, globalTo: Int) -> CGRect? {
+        selectionRects(globalFrom: globalFrom, globalTo: globalTo).first
     }
 
     func caretRect(for position: UITextPosition) -> CGRect {
+        inputBackend.caretRect(for: position)
+    }
+
+    /// Deviation D9: see `caretRect(for:)`'s backend body (`+Geometry.swift`) — this is the
+    /// nil-returning helper the geometry client wraps. Still called only from the geometry client
+    /// (Task 25 did not touch this canvas-level helper itself).
+    func legacyCaretRect(globalOffset: Int) -> CGRect? {
         // A structural row/column selection hides the caret entirely (the outline is the indicator).
         // An image atom selection does NOT zero the caret here: `caretRect` must keep reporting the gap
         // geometry so the OS can run arrow-key navigation OUT of a tap-selected image — vertical arrows
         // read the caret's rect to step a line, so a `.zero` rect strands them (the reported "Up does
         // nothing / caret vanishes" bug). The VISIBLE caret is suppressed separately in `updateCaretView`
         // (the image tint is the selection indicator), so no blinking caret shows over a selected image.
-        if tableSelection != nil { return .zero }
-        guard let p = position as? DocumentTextPosition else { return .zero }
-        let pos = clamp(p.offset)
+        if tableSelection != nil { return nil }
+        let pos = clamp(globalOffset)
         if let (r, local) = leafRegion(containingGlobal: pos) {
             // `emptyLineLeadingIndent`/`emptyLineHeight` only matter on an empty line, whose caret TextKit
             // would otherwise place at x=0 with a fixed 20pt height (no glyphs to carry the indent/metrics).
@@ -267,45 +488,71 @@ extension DocumentCanvasView: UITextInput {
         if let bq = collapsedBlockQuoteBox(atGap: pos) {
             return bq.collapsedCaretRect
         }
-        return .zero
+        return nil
     }
 
     func selectionRects(for range: UITextRange) -> [UITextSelectionRect] {
-        guard let r = range as? DocumentTextRange else { return [] }
-        let rects = selectionRects(globalFrom: min(r.from.offset, r.to.offset),
-                                   globalTo: max(r.from.offset, r.to.offset))
-        return rects.enumerated().map { index, frame in
-            DocumentSelectionRect(rect: frame, containsStart: index == 0, containsEnd: index == rects.count - 1)
-        }
+        inputBackend.selectionRects(for: range)
     }
 
     func closestPosition(to point: CGPoint) -> UITextPosition? {
-        DocumentTextPosition(closestGlobalPosition(to: point))
+        inputBackend.closestPosition(to: point)
     }
 
     func closestPosition(to point: CGPoint, within range: UITextRange) -> UITextPosition? {
-        guard let p = closestPosition(to: point) as? DocumentTextPosition, let r = range as? DocumentTextRange else { return nil }
-        return DocumentTextPosition(min(max(p.offset, r.from.offset), r.to.offset))
+        inputBackend.closestPosition(to: point, within: range)
     }
 
     func characterRange(at point: CGPoint) -> UITextRange? {
-        guard let p = closestPosition(to: point) as? DocumentTextPosition else { return nil }
-        return DocumentTextRange(p, DocumentTextPosition(min(p.offset + 1, documentSize)))
+        inputBackend.characterRange(at: point)
     }
 }
 
 @available(iOS 13.0, *)
 extension DocumentCanvasView: UIKeyInput {
-    var hasText: Bool { documentSize > 0 }
+    // TASK 27a (Family 4): one-line router. The backend answers from
+    // `RichTextInputDocumentClient.utf16Length`, which for the Telegram client IS this canvas's
+    // `documentSize` (`TelegramDocumentInputClient.utf16Length` → `documentSizeValue` → `documentSize`),
+    // so the value is identical by construction rather than by coincidence.
+    var hasText: Bool { inputBackend.hasText }
 
-    func insertText(_ text: String) {
+    // TASK 27b (Family 4): one-line router. The body below moved to `legacyInsertText(_:)` and the
+    // backend forwards straight back to it (`LegacyRichTextInputBackend+Insertion.swift`) — a PLAIN
+    // D24 forward with no bracket of its own, because the body brackets itself per branch.
+    func insertText(_ text: String) { inputBackend.insertText(text) }
+
+    /// Was `DocumentCanvasView.insertText(_:)`, renamed by TASK 27b when the witness became a router;
+    /// the body is untouched. `LegacyRichTextInputBackend.insertText(_:)` forwards here, and
+    /// `legacyApplyMutation`'s `.insertText` case dispatches here directly (never to the witness — see
+    /// that method's ⚠️ RECURSION HAZARD note).
+    ///
+    /// **Bracket ownership lives HERE, and that is why the backend's forward is bare.** This body runs
+    /// its own `editing { }` / `notifyingContentChange` brackets PER BRANCH — a text-only bracket for
+    /// the marked-commit branch (pinned by
+    /// `DelegateTraceCharacterizationTests.test_insertTextWhileMarked_emitsATextOnlyBracket`), all four
+    /// notifications for the normal and structural branches, and none at all for the quote-author
+    /// `default:` early return. A bracket added at the backend would double every one of them
+    /// (measured: six recorded events became ten for the sibling `replace` witness).
+    func legacyInsertText(_ text: String) {
         imageObjectDeletePending = nil   // a non-delete edit cancels a pending structural-media delete
         // A committing keystroke while composing: replace the WHOLE marked range with `text`, then
         // finalize the composition as one undo step. (The system delivers a confirming char this way.)
         if let m = markedRange {
-            textInputDelegate?.textWillChange(self)
-            applyReplace(globalFrom: m.from, globalTo: m.to, text: text)   // in place; caret → end
-            textInputDelegate?.textDidChange(self)
+            // TASK 26: a TEXT-ONLY bracket (`notifyingContentChange`) even though the caret moves —
+            // the marked-commit asymmetry, pinned by
+            // `DelegateTraceCharacterizationTests.test_insertTextWhileMarked_emitsATextOnlyBracket`.
+            inputBackend.notifyingContentChange {
+                // THE CLAIM IS APPLIED HERE, ON THE NEXT INSTRUCTION. Outside any `editing { }`, and
+                // `commitMarkedText()` three lines below reads the caret back through its
+                // `inputBackend.compositionSnapshot ?? (anchor, head)` fallback (TASK 41 renamed it
+                // from `compositionAnchorHead` when composition state moved to the backend; the
+                // read-back is unchanged) — a read-back ACROSS A FUNCTION
+                // BOUNDARY, which no grep of this body will show you. See `applyReplaceOutcome`'s doc in
+                // `+Editing.swift`. Pinned by `CaretLandingCharacterizationTests
+                // .test_markedCommitLandsTheCaretAtTheEndOfTheCommittedText`.
+                applyCaretOutcome(applyReplaceOutcome(globalFrom: m.from, globalTo: m.to, text: text))   // in place; caret → end
+                bumpDocumentRevision()   // marked-commit's applyReplaceOutcome is OUTSIDE `editing { }`
+            }
             commitMarkedText()
             notifyContentSizeChanged(); setNeedsDisplay(); refreshSelectionUI()
             onSelectionChange?()   // committing a composition moves the caret — scroll it into view too
@@ -316,16 +563,26 @@ extension DocumentCanvasView: UIKeyInput {
         // (Enter inserts an empty one), rather than letting the text fall into the caption. Symmetric
         // to deleteBackward's gap branch below.
         if selFrom == selTo, let img = mediaBox(atGap: head), let i = boxIndex(of: img) {
-            editing { insertBodyParagraph(beforeBoxAt: i, text: text == "\n" ? "" : text) }
+            editing { insertBodyParagraphOutcome(beforeBoxAt: i, text: text == "\n" ? "" : text) }
             return
         }
         // Caret focused on a COLLAPSED quote's gap → open a body paragraph immediately before the folded
         // quote (the atom holds no editable text), so a keystroke there isn't swallowed. Mirrors the media gap.
         if selFrom == selTo, let bq = collapsedBlockQuoteBox(atGap: head), let i = boxIndex(of: bq) {
-            editing { insertBodyParagraph(beforeBoxAt: i, text: text == "\n" ? "" : text) }
+            editing { insertBodyParagraphOutcome(beforeBoxAt: i, text: text == "\n" ? "" : text) }
             return
         }
         if text == "\n" {
+            // Return in a code block's LANGUAGE line moves the caret to the start of the code text. It
+            // inserts nothing and splits nothing: a `.Pre` language has no second line. (The quote author
+            // splits instead, because it is a TRAILING region — the tail becomes a paragraph after the
+            // quote. A leading region has no such tail.)
+            if selFrom == selTo, let (region, _) = leafRegion(containingGlobal: head),
+               case let .codeLanguage(id) = region.ref,
+               let owner = stackContainingCodeBox(id: id) {
+                setCaret(global: owner.box.textStart)
+                return
+            }
             // Return in a quote AUTHOR line splits the author at the caret (like a media caption): the head runs
             // stay as the author, the tail runs become a NEW body paragraph immediately after the quote (caret
             // there). Handled here, at the TOP of the "\n" dispatch, because a caret in the author resolves
@@ -351,12 +608,12 @@ extension DocumentCanvasView: UIKeyInput {
                     let parts = tmp.split(at: authorLocal, newID: BlockID.generate())   // .0 = head (author), .1 = tail (new paragraph)
                     guard let newQuoteBox = makeBox(for: rebuildQuote(parts.0.runs), mapper: mapper, quoteStyle: quoteStyle,
                                                     pullQuoteStyle: pullQuoteStyle, expandImage: quoteCollapseIcons?.expand,
-                                                    collapseImage: quoteCollapseIcons?.collapse, width: effectiveWidth) else { return }
+                                                    collapseImage: quoteCollapseIcons?.collapse, width: effectiveWidth) else { return .unchanged }
                     let bodyBox = BlockBox(paragraph: ParagraphBlock(id: BlockID.generate(), style: .body, runs: parts.1.runs),
                                            mapper: mapper, width: effectiveWidth)
                     parentStack.boxes.replaceSubrange(index...index, with: [newQuoteBox, bodyBox])
                     recomputeSpans()
-                    anchor = bodyBox.textStart; head = bodyBox.textStart
+                    return .caret(at: bodyBox.textStart)
                 }
                 return
             }
@@ -397,6 +654,11 @@ extension DocumentCanvasView: UIKeyInput {
                 // Double-return at the BEGINNING → body paragraph BEFORE the quote (the leading blank line is
                 // dropped). Checked after the trailing exit so a wholly-empty quote takes the un-quote path.
                 _ = ()
+            } else if selFrom == selTo, isInsideDetails(head), detailsEmptyTrailingBodyExit() {
+                // Double-return on an empty trailing line of a detail block's BODY EXITS to a body paragraph
+                // AFTER the details block (the title, children[0], is never the escape target). A single empty
+                // body line adds a line on the first Return and escapes on the second (handled in the helper).
+                _ = ()
             } else if selFrom == selTo, let active = activeStack(at: head),
                       headerCellDoubleReturnExitsAbove(active) {
                 // Double-return on the START of a header cell's second block (empty first block) EXITS the
@@ -409,15 +671,27 @@ extension DocumentCanvasView: UIKeyInput {
             return
         }
         if selFrom != selTo {
-            editing(coalescing: .typing) { applySelectionReplace(globalFrom: selFrom, globalTo: selTo, text: text) }
+            editing(coalescing: .typing) { applySelectionReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: text) }
             return
         }
         // A collapsed caret in a quote AUTHOR line: the author is a SECOND leaf region on the box (outside the
-        // box's primary textStart/textLength extent and off the child stack), so applyReplace/activeStack would
-        // mis-route the insert to the following block. Route it through the region-aware applyLeafReplace, exactly
+        // box's primary textStart/textLength extent and off the child stack), so applyReplaceOutcome/activeStack would
+        // mis-route the insert to the following block. Route it through the region-aware applyLeafReplaceOutcome, exactly
         // as an in-cell edit does below.
         if let (region, _) = leafRegion(containingGlobal: head), case .quoteAuthor = region.ref {
-            editing(coalescing: .typing) { applyLeafReplace(globalFrom: selFrom, globalTo: selTo, text: text) }
+            editing(coalescing: .typing) { applyLeafReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: text) }
+            return
+        }
+        // A collapsed caret in a code block's LANGUAGE line: like the quote author, it is a second leaf
+        // region outside the box's primary `textStart`/`textLength` extent, so `activeStack` resolves nil
+        // and `applyReplaceOutcome` would drop the keystroke. Route it through the region-aware path.
+        // Newlines are stripped: a `.Pre` language is a single-line string, and a multi-line paste
+        // (which reaches this path flattened — `insertingFragment` refuses a language locus, so the
+        // clipboard falls back to plain text) would otherwise put interior "\n"s in the model, where
+        // `currentCode()`'s edge-trim cannot reach them.
+        if let (region, _) = leafRegion(containingGlobal: head), case .codeLanguage = region.ref {
+            let flat = text.replacingOccurrences(of: "\n", with: " ")
+            editing(coalescing: .typing) { applyLeafReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: flat) }
             return
         }
         // A collapsed caret that resolves to a table or block-quote box (e.g. before a leading
@@ -427,14 +701,18 @@ extension DocumentCanvasView: UIKeyInput {
         if !isInsideTable(head) && !isInsideBlockQuote(head),
            let r = resolveBox(at: head), r.box is TableBlockBox || r.box is BlockQuoteBox {
             let snapped = caretSnappedIntoContainer(head)
-            anchor = snapped; head = snapped
+            // TASK 37, POPULATION B — a container SNAP, read back by `isInsideTable(head)` on the very
+            // next line and by the `editing` transactions after it, so it cannot ride to the end of a
+            // transaction. Same mechanism and same reason as the four normalization writes in
+            // `legacyDeleteBackward` below.
+            applyCaretOutcome(.caret(at: snapped))
         }
         if isInsideTable(head) {
             // collapsed caret in a cell: text is in-place.
-            editing(coalescing: .typing) { applyLeafReplace(globalFrom: selFrom, globalTo: selTo, text: text) }
+            editing(coalescing: .typing) { applyLeafReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: text) }
             return
         }
-        editing(coalescing: .typing) { applyReplace(globalFrom: selFrom, globalTo: selTo, text: text) }
+        editing(coalescing: .typing) { applyReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: text) }
     }
 
     /// The number of UTF-16 units the composed character sequence (grapheme cluster) immediately
@@ -494,7 +772,30 @@ extension DocumentCanvasView: UIKeyInput {
         return false
     }
 
-    func deleteBackward() {
+    // TASK 28 (Family 5): one-line router. The body below moved to `legacyDeleteBackward()` and the
+    // backend forwards straight back to it (`LegacyRichTextInputBackend+Deletion.swift`) — a PLAIN
+    // D24 forward with no bracket of its own, because the body brackets itself per branch.
+    func deleteBackward() { inputBackend.deleteBackward() }
+
+    /// Was `DocumentCanvasView.deleteBackward()`, renamed by TASK 28 when the witness became a router;
+    /// the body is untouched. `LegacyRichTextInputBackend.deleteBackward()` forwards here, and
+    /// `legacyApplyMutation`'s `.deleteBackward` case dispatches here directly (never to the witness —
+    /// see that method's ⚠️ RECURSION HAZARD note).
+    ///
+    /// **Bracket ownership lives HERE, and that is why the backend's forward is bare.** This body runs
+    /// its own bracket PER BRANCH, across **24** `editing { … }` call sites (18 bare, 6
+    /// `editing(coalescing: .deleting)`), and `editing` IS `notifyingContentAndSelectionChange` since
+    /// Task 26. Several branches deliberately emit NOTHING (the media-gap no-ops, the caret-only
+    /// `setCaret` arm, the `guard !boxes.isEmpty` early return); several emit through a nested helper
+    /// that self-brackets (`unwrapBlockQuoteLevel()`, `deleteTableRow()`, `deleteTableColumn()`). A
+    /// bracket added at the backend would double every one of them and add a `publishState` tail on top
+    /// of `editing`'s own — measured for the sibling `replace` witness: six recorded events became ten.
+    ///
+    /// The count is worth stating because it has been miscounted three times: a naive
+    /// `grep -c 'editing {'` over this body returns 19, one of which is the PROSE
+    /// `// already wraps itself in editing { }` on the `unwrapBlockQuoteLevel()` line. Exclude trailing
+    /// comments, not just comment-only lines.
+    func legacyDeleteBackward() {
         if markedRange != nil { commitMarkedText() }   // delete acts on committed text, not the composition
         guard !boxes.isEmpty else { return }
         // A tap-selected media block's Backspace: iOS represents the deletion by OVERRIDING the selection
@@ -504,14 +805,46 @@ extension DocumentCanvasView: UIKeyInput {
         // KEEP the media. The setter stashes the just-cleared image into `imageObjectDeletePending`; honor it
         // here by replacing that media with an empty body paragraph in place.
         if let pendingId = imageObjectDeletePending,
-           let i = boxes.firstIndex(where: { $0.id == pendingId && $0 is MediaBlockBox }),
-           head == boxes[i].nodeStart || selFrom == boxes[i].nodeStart || selTo == boxes[i].nodeStart {
+           let (stack, i) = owningStack(ofBlockID: pendingId), let mb = stack.boxes[i] as? MediaBlockBox,
+           head == mb.nodeStart || selFrom == mb.nodeStart || selTo == mb.nodeStart {
             imageObjectDeletePending = nil
-            editing { replaceMediaWithEmptyParagraph(at: i) }
+            editing { replaceMediaWithEmptyParagraphOutcome(id: pendingId) }   // stack-aware: in place, even nested
             clearImageSelection()
             return
         }
         imageObjectDeletePending = nil
+        // A button row is TEXT-FREE, so `prevTextPosition` skips back over an entire RUN of adjacent
+        // rows and iOS's object-replacement range spans all of them — the generic selection-replace
+        // below then drops every one at once. Delete exactly ONE pill (and the row with its last pill)
+        // so repeated Backspaces walk through them one by one. Must run BEFORE the media/quote arms:
+        // those collapse a range to a caret, which would strand this one mid-run.
+        if deleteButtonPillIfNeeded() {
+            return
+        }
+        // iOS may deliver Backspace at a NON-tap-selected media block's leading gap as an object-
+        // replacement RANGE running from the previous block's text end to the gap ([prevEnd … gap]),
+        // NOT a collapsed caret. Left as a range it falls to the generic selection-replace below, which
+        // deletes only the structural break and strands the caret at the previous block's end without
+        // deleting anything (the reported "jumps to the end of the previous block, nothing happens"
+        // symptom). When the range only spans the structural slots before the gap (`selFrom >=
+        // prevTextPosition(before: selTo)`, which excludes a genuine text selection ending at the gap),
+        // COLLAPSE it to a caret at the gap so the gap branch below acts on the previous block. A
+        // tap-selected image is excluded (`imageSelection != img.id`) — it already returned above via
+        // `imageObjectDeletePending`.
+        if selFrom != selTo, let img = mediaBox(atGap: selTo), imageSelection != img.id,
+           selFrom >= prevTextPosition(before: selTo) {
+            // TASK 37, POPULATION B — **the four collapse-to-`selTo` writes in this method
+            // are NORMALIZATION, not a deliberate selection**, and this note covers all four (the
+            // other three point here). Each collapses one of iOS's object-replacement RANGES to the
+            // caret the branches below act on, and `selFrom`/`selTo` are READ BACK by the very next
+            // `if`. The write moves off the deprecated forwarders onto `applyCaretOutcome`
+            // (`+Editing.swift`) — the raw, NON-PUBLISHING endpoint pair — and deliberately NOT onto
+            // `setSelection(_:reason:)`, which the brief specified: none of these sits in an open
+            // bracket, so a `setSelection` would take the full publish path and report a selection
+            // change to the host BEFORE the delete that motivates it. **No suite catches that** —
+            // see the Rule-24 row in the Task-37 measurement at `applyCaretOutcome`.
+            applyCaretOutcome(.caret(at: selTo))
+        }
         if tableSelection != nil {
             // A structural row/column selection is active → Backspace deletes those rows/columns (or the
             // whole table when every row/column is selected). The caret is parked in a cell, so the normal
@@ -532,7 +865,8 @@ extension DocumentCanvasView: UIKeyInput {
         if selFrom != selTo, isInsideBlockQuote(selTo),
            let active = activeStack(at: selTo), active.box is BlockBox, active.local == 0, active.index > 0,
            selFrom >= prevTextPosition(before: selTo) {
-            anchor = selTo; head = selTo
+            // TASK 37, POPULATION B — normalization; the note is on the first of these four, above.
+            applyCaretOutcome(.caret(at: selTo))
         }
         // iOS delivers Backspace at the START of an empty CONTAINER (block quote / code block / pull quote) as an
         // object-replacement RANGE anchored at the previous block's text end — the same offset geometry as a
@@ -544,7 +878,8 @@ extension DocumentCanvasView: UIKeyInput {
         // collapsed-caret un-quote / un-code / un-make branches below un-make it — exactly like a direct tap.
         if selFrom != selTo, startsEmptyContainer(at: selTo),
            selFrom >= prevTextPosition(before: selTo) {
-            anchor = selTo; head = selTo
+            // TASK 37, POPULATION B — normalization; the note is on the first of these four, above.
+            applyCaretOutcome(.caret(at: selTo))
         }
         // iOS delivers Backspace in an empty paragraph immediately AFTER a non-paragraph atom (image /
         // table / code / collapsed quote) as an object-replacement RANGE running from the atom's text end
@@ -566,8 +901,22 @@ extension DocumentCanvasView: UIKeyInput {
            posTo.local == 0, posTo.box.textLength == 0, posTo.index > 0,
            isNonParagraphAtom(boxes[posTo.index - 1]),
            selFrom >= prevTextPosition(before: selTo) {
-            editing { removeBlock(at: posTo.index, parkingCaretAt: prevTextPosition(before: selTo)) }
+            if selectPrecedingTableOnBackspace(paragraphIndex: posTo.index) { return }   // table → select whole table
+            editing { removeBlockOutcome(at: posTo.index, parkingCaretAt: prevTextPosition(before: selTo)) }
             return
+        }
+        // Object-replacement RANGE at the START of a NON-EMPTY paragraph whose previous block is a table
+        // (device-form parity with the empty-paragraph range above — iOS may deliver Backspace at this
+        // boundary as `[tableLastCellEnd … paragraphStart]`). Route it to the whole-table select helper.
+        // The `selFrom >= prevTextPosition(before: selTo)` gate admits ONLY the object-replacement range
+        // (its head anchors at the table's last-cell end), NOT a genuine selection that merely ends at the
+        // paragraph start (that must still delete-and-merge via the generic path below). `!isInsideBlockQuote`
+        // / `!isInsideTable` avoid the resolveBox degenerate-container misroute.
+        if selFrom != selTo, !isInsideBlockQuote(selTo), !isInsideTable(selTo), let posTo = resolveBox(at: selTo),
+           posTo.local == 0, posTo.box.textLength > 0, posTo.index > 0,
+           boxes[posTo.index - 1] is TableBlockBox,
+           selFrom >= prevTextPosition(before: selTo) {
+            if selectPrecedingTableOnBackspace(paragraphIndex: posTo.index) { return }
         }
         // iOS may deliver Backspace at the START (local 0) of a quote AUTHOR line as an object-replacement
         // RANGE anchored at the previous child's text end (the same offset geometry as an empty container /
@@ -577,7 +926,8 @@ extension DocumentCanvasView: UIKeyInput {
         if selFrom != selTo, let (region, local) = leafRegion(containingGlobal: selTo),
            case .quoteAuthor = region.ref, local == 0,
            selFrom >= prevTextPosition(before: selTo) {
-            anchor = selTo; head = selTo
+            // TASK 37, POPULATION B — normalization; the note is on the first of these four, above.
+            applyCaretOutcome(.caret(at: selTo))
         }
         // Backspace with a collapsed caret at the START of a quote author line: relocate the caret to the end
         // of the quote's last child (recursive via `prevTextPosition`) — the author is always present, so you
@@ -587,17 +937,52 @@ extension DocumentCanvasView: UIKeyInput {
             setCaret(global: prevTextPosition(before: region.globalStart))
             return
         }
+        // Backspace with a collapsed caret at the START of a code block's LANGUAGE line. The language is
+        // the block's FIRST position, so there is nothing inside the block to merge into:
+        //   • a WHOLLY empty block (no language, no code) is un-made to a body paragraph — today's
+        //     empty-code rule, relocated to the block's new first position;
+        //   • otherwise the caret steps OUT to the previous block's end, deleting nothing. When the code
+        //     block is the document's first block there is nowhere to step, so it is a no-op.
+        // Never merges the language into the previous block; never deletes a block that has content.
+        if selFrom == selTo, let (region, local) = leafRegion(containingGlobal: head),
+           case let .codeLanguage(id) = region.ref, local == 0,
+           let owner = stackContainingCodeBox(id: id) {
+            if region.length == 0, owner.box.textLength == 0 {
+                editing {
+                    let body = BlockBox(paragraph: ParagraphBlock(id: owner.box.id, style: .body, runs: []),
+                                        mapper: mapper, width: effectiveWidth)
+                    var newBoxes = owner.stack.boxes
+                    newBoxes.replaceSubrange(owner.index...owner.index, with: [body])
+                    owner.stack.boxes = newBoxes
+                    recomputeSpans()
+                    return .caret(at: body.textStart)
+                }
+                return
+            }
+            let prev = prevTextPosition(before: region.globalStart)
+            if prev != head { setCaret(global: prev) }
+            return
+        }
+        // Backspace INSIDE a code block's language line (text before the caret): delete that grapheme in
+        // the language region. `activeStack` resolves nil there by design, so the generic paths below
+        // would mis-route it. Mirrors the block-quote author/child branch.
+        if selFrom == selTo, let (region, local) = leafRegion(containingGlobal: head),
+           case .codeLanguage = region.ref, local > 0 {
+            let n = graphemeClusterLengthBeforeCaret(global: head)
+            editing(coalescing: .deleting) { applyLeafReplaceOutcome(globalFrom: head - n, globalTo: head, text: "") }
+            return
+        }
         if selFrom != selTo {
-            editing(coalescing: .deleting) { applySelectionReplace(globalFrom: selFrom, globalTo: selTo, text: "") }
+            editing(coalescing: .deleting) { applySelectionReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: "") }
             return
         }
         if isInsideTable(head) {
             guard let active = activeStack(at: head) else { return }
             if active.local > 0 {
                 let n = graphemeClusterLengthBeforeCaret(global: head)
-                editing(coalescing: .deleting) { applyLeafReplace(globalFrom: head - n, globalTo: head, text: "") }
+                editing(coalescing: .deleting) { applyLeafReplaceOutcome(globalFrom: head - n, globalTo: head, text: "") }
             } else if active.index > 0 {
-                editing { mergeParagraphs(in: active.stack, upperIndex: active.index - 1) }
+                editing { mergeParagraphsOutcome(in: active.stack, upperIndex: active.index - 1) }
             } else {
                 // Caret at the cell's first-paragraph start: move WITHOUT deleting to the previous text
                 // position — the previous cell's end (row-major), or, at the table's FIRST cell, the end
@@ -608,15 +993,51 @@ extension DocumentCanvasView: UIKeyInput {
             }
             return
         }
-        // Caret at a media block's leading gap → replace the media with an empty body paragraph in place.
-        if let img = mediaBox(atGap: head), let i = boxIndex(of: img) {
-            // The gap caret is where a tap / structural image selection lands. The OS clears `imageSelection`
-            // via the `selectedTextRange` setter (which calls `clearStructuralSelections()`) BEFORE this runs,
-            // so the deletion can't be gated on it — a collapsed gap caret IS the structural-selection signal.
-            // Backspace replaces the media with an empty body paragraph in place (caret there), rather than
-            // acting on the previous paragraph.
-            editing { replaceMediaWithEmptyParagraph(at: i) }
+        // (A) A TAP-SELECTED image (the tint highlight; `imageSelection` is still set because `selectImage`
+        // doesn't go through the `selectedTextRange` setter) → replace the media with an empty body paragraph
+        // in place, caret there. (The range-driven tap-select path returns earlier via `imageObjectDeletePending`.)
+        // Stack-aware (by id, not a top-level index) so a NESTED tap-selected media is replaced in place too,
+        // not removed — so this runs BEFORE the `boxIndex(of:)` gap branch, which resolves only at top level.
+        if let img = mediaBox(atGap: head), imageSelection == img.id {
+            editing { replaceMediaWithEmptyParagraphOutcome(id: img.id) }
             clearImageSelection()
+            return
+        }
+        // Caret at a media block's leading gap (the slot to the LEFT of the image).
+        if let img = mediaBox(atGap: head), let i = boxIndex(of: img) {
+            // (B) A plain, non-selected caret at the gap → Backspace acts on the PREVIOUS block (delete
+            // leftward, like a text caret sitting just before the image), NOT on the media.
+            if i == 0 {
+                return   // no previous block — no-op (Backspace at document start). Tap-select to delete a leading image.
+            }
+            if let prev = boxes[i - 1] as? BlockBox {
+                if prev.textLength == 0 {
+                    // Empty previous paragraph → delete it; the caret stays at the image's (now-shifted) gap.
+                    editing {
+                        var newBoxes = boxes
+                        newBoxes.remove(at: i - 1)
+                        boxes = newBoxes
+                        recomputeSpans()
+                        let gap = boxes[i - 1].nodeStart   // the image is now at i-1
+                        return .caret(at: gap)
+                    }
+                } else {
+                    // Non-empty → delete its last grapheme; the caret moves INTO it so subsequent
+                    // Backspaces keep deleting there.
+                    let prevEnd = prev.textStart + prev.textLength
+                    let n = graphemeClusterLengthBeforeCaret(global: prevEnd)
+                    editing(coalescing: .deleting) { applyReplaceOutcome(globalFrom: prevEnd - n, globalTo: prevEnd, text: "") }
+                }
+            } else {
+                // Previous block is a non-text atom. Step the caret onto it WITHOUT deleting, but only to
+                // a RENDERABLE position (a media block's caption slot / a code block's text end). A table or
+                // block quote reports a non-renderable structural boundary (its own `nodeStart`,
+                // since its `textLength` is 0) from `prevTextPosition`; moving the caret there would HIDE it
+                // (and a follow-up Backspace could structurally delete the container). In that case leave the
+                // caret at the gap — a safe, visible no-op.
+                let dest = prevTextPosition(before: head)
+                if dest != head, isRenderablePosition(dest) { setCaret(global: dest) }
+            }
             return
         }
         // Collapsed caret with text before it inside a block quote (a child's body OR the author line) →
@@ -626,7 +1047,7 @@ extension DocumentCanvasView: UIKeyInput {
         if selFrom == selTo, isInsideBlockQuote(head),
            let (_, local) = leafRegion(containingGlobal: head), local > 0 {
             let n = graphemeClusterLengthBeforeCaret(global: head)
-            editing(coalescing: .deleting) { applyLeafReplace(globalFrom: head - n, globalTo: head, text: "") }
+            editing(coalescing: .deleting) { applyLeafReplaceOutcome(globalFrom: head - n, globalTo: head, text: "") }
             return
         }
         // Collapsed caret at the START (local 0) of a block quote CHILD. resolveBox below mis-resolves any
@@ -649,12 +1070,13 @@ extension DocumentCanvasView: UIKeyInput {
                     }
                     restyle(child)
                     recomputeSpans()
+                    return .unchanged
                 }
                 return
             }
             if active.stack.boxes.count > 1 {
                 if active.index > 0 {
-                    editing { mergeParagraphs(in: active.stack, upperIndex: active.index - 1) }
+                    editing { mergeParagraphsOutcome(in: active.stack, upperIndex: active.index - 1) }
                     return
                 }
                 if child.textLength == 0 {
@@ -662,7 +1084,7 @@ extension DocumentCanvasView: UIKeyInput {
                         active.stack.boxes.removeFirst()
                         recomputeSpans()
                         let caret = active.stack.boxes.first?.leafRegions().first?.globalStart ?? head
-                        anchor = caret; head = caret
+                        return .caret(at: caret)
                     }
                     return
                 }
@@ -682,7 +1104,7 @@ extension DocumentCanvasView: UIKeyInput {
                         parentStack.boxes.replaceSubrange(qIndex...qIndex, with: replacement)
                         recomputeSpans()
                         let caret = firstBox?.leafRegions().first?.globalStart ?? head
-                        anchor = caret; head = caret
+                        return .caret(at: caret)
                     }
                     return
                 }
@@ -693,6 +1115,45 @@ extension DocumentCanvasView: UIKeyInput {
                 // activeStack so a mis-resolved following block can't pre-empt it. (The later count==1
                 // un-quote branch is now redundant but harmless.)
                 unwrapBlockQuoteLevel()
+                return
+            }
+        }
+        // Backspace inside a DETAILS body. `resolveBox` below mis-resolves a nested position (the details is a
+        // degenerate container — `textLength == 0` — so a position inside it falls through to the following /
+        // last top-level block), so resolve via `activeStack` here — mirrors the `isInsideTable` /
+        // `isInsideBlockQuote` collapsed branches above. Without this, a caret at the start of a nested empty
+        // paragraph whose previous sibling is an image cross-deletes into the image's caption instead of
+        // removing the paragraph. (A nested block quote / table inside the details is handled by their own
+        // branches above; this covers the details' own direct body paragraphs.)
+        if selFrom == selTo, isInsideDetails(head), let active = activeStack(at: head), let child = active.box as? BlockBox {
+            if active.local > 0 {
+                let n = graphemeClusterLengthBeforeCaret(global: head)
+                editing(coalescing: .deleting) { applyLeafReplaceOutcome(globalFrom: head - n, globalTo: head, text: "") }
+                return
+            }
+            // local == 0 → start of a nested paragraph. (A details body paragraph is always index >= 1;
+            // `children[0]` is the title.)
+            if let list = child.listMembership {
+                if list.level > 0 { outdent() }
+                else { editing { child.listMembership = nil; child.style = .body; restyle(child); recomputeSpans(); return .unchanged } }
+                return
+            }
+            if active.index > 0 {
+                let prev = active.stack.boxes[active.index - 1]
+                // The title (`index 0`) and a non-paragraph atom (image / table / code / quote) can't absorb a
+                // text merge: an EMPTY paragraph is removed (caret steps to the previous block's nearest text
+                // slot); a non-empty one is kept (caret steps back).
+                if active.index == 1 || isNonParagraphAtom(prev) {
+                    let dest = prevTextPosition(before: head)
+                    if child.textLength == 0 {
+                        editing { active.stack.boxes.remove(at: active.index); recomputeSpans(); return .caret(at: dest) }
+                    } else if dest != head, isRenderablePosition(dest) {
+                        setCaret(global: dest)
+                    }
+                } else {
+                    // Previous sibling is a text body paragraph → merge into it within the details stack.
+                    editing { mergeParagraphsOutcome(in: active.stack, upperIndex: active.index - 1) }
+                }
                 return
             }
         }
@@ -707,7 +1168,7 @@ extension DocumentCanvasView: UIKeyInput {
             if list.level > 0 {
                 outdent()
             } else {
-                editing { p.listMembership = nil; p.style = .body; restyle(p); recomputeSpans() }
+                editing { p.listMembership = nil; p.style = .body; restyle(p); recomputeSpans(); return .unchanged }
             }
             return
         }
@@ -736,7 +1197,7 @@ extension DocumentCanvasView: UIKeyInput {
                 newBoxes.replaceSubrange(active.index...active.index, with: [body])
                 active.stack.boxes = newBoxes
                 recomputeSpans()
-                anchor = body.textStart; head = body.textStart
+                return .caret(at: body.textStart)
             }
             return
         }
@@ -752,36 +1213,39 @@ extension DocumentCanvasView: UIKeyInput {
                 newBoxes.replaceSubrange(active.index...active.index, with: [body])
                 active.stack.boxes = newBoxes
                 recomputeSpans()
-                anchor = body.textStart; head = body.textStart
+                return .caret(at: body.textStart)
             }
             return
         }
         if pos.box is MediaBlockBox, pos.local == 0 {
             // Backspace at the start of a caption replaces the whole media block with an empty body paragraph
             // in place (caret there), discarding any caption text — consistent with the tap-selected and
-            // object-replacement-selection paths (the gap branch above / applySelectionReplace).
-            editing { replaceMediaWithEmptyParagraph(at: pos.index) }
+            // object-replacement-selection paths (the gap branch above / applySelectionReplaceOutcome).
+            editing { replaceMediaWithEmptyParagraphOutcome(at: pos.index) }
         } else if pos.local > 0 {
             let n = graphemeClusterLengthBeforeCaret(global: head)
-            editing(coalescing: .deleting) { applyReplace(globalFrom: head - n, globalTo: head, text: "") }
+            editing(coalescing: .deleting) { applyReplaceOutcome(globalFrom: head - n, globalTo: head, text: "") }
         } else if pos.index > 0, isNonParagraphAtom(boxes[pos.index - 1]) {
-            // Start of a paragraph after a NON-TEXT block (image / table / code) that can't absorb a text
+            // A TABLE gets the select-then-delete treatment: first Backspace moves in + selects the whole
+            // table, a second deletes it (deleteTableStructuralSelection at the top of deleteBackward).
+            if selectPrecedingTableOnBackspace(paragraphIndex: pos.index) { return }
+            // Start of a paragraph after a NON-TEXT block (image / code) that can't absorb a text
             // merge. Backspace must NOT delete that block. An EMPTY paragraph is removed — so "deleting the
             // last paragraph" is always possible; a non-empty one is kept. Either way the caret steps back
-            // to that block's nearest text slot (an image's caption end, a table's last cell end, a code
-            // block's end) via prevTextPosition — never the block's degenerate node-start boundary.
+            // to that block's nearest text slot (an image's caption end, a code block's end) via
+            // prevTextPosition — never the block's degenerate node-start boundary.
             let prev = prevTextPosition(before: head)
             if pos.box.textLength == 0 {
-                editing { removeBlock(at: pos.index, parkingCaretAt: prev) }
+                editing { removeBlockOutcome(at: pos.index, parkingCaretAt: prev) }
             } else if prev != head {
                 setCaret(global: prev)
             }
         } else if pos.index > 0 {
             let prev = boxes[pos.index - 1]
             let from = prev.textStart + prev.textLength
-            // The cross-block merge runs through applyReplace → ParagraphBlock.merging, which drops the merged-
+            // The cross-block merge runs through applyReplaceOutcome → ParagraphBlock.merging, which drops the merged-
             // in runs' pinned font size on a style mismatch (body→heading renders heading-sized).
-            editing { applyReplace(globalFrom: from, globalTo: head, text: "") }
+            editing { applyReplaceOutcome(globalFrom: from, globalTo: head, text: "") }
         }
     }
 }

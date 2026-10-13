@@ -55,6 +55,10 @@ private var fadeImage: UIImage? = {
 }()
 
 final class VoiceChatFullscreenParticipantItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     enum Icon {
         case none
         case microphone(Bool, UIColor)
@@ -111,10 +115,10 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
         self.getUpdatingAvatar = getUpdatingAvatar
     }
         
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatFullscreenParticipantItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, previousItem == nil, nextItem == nil)
+            let (layout, apply) = node.asyncLayout()(self, params, neighbors.previous == nil, neighbors.next == nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -127,7 +131,7 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? VoiceChatFullscreenParticipantItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -138,7 +142,7 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, previousItem == nil, nextItem == nil)
+                    let (layout, apply) = makeLayout(self, params, neighbors.previous == nil, neighbors.next == nil)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(false, animated)
@@ -432,7 +436,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         let currentItem = self.layoutParams?.0
         var hasVideo = self.videoNode != nil
         
-        return { item, params, first, last in
+        return { [weak self] item, params, first, last in
             let titleFont = Font.semibold(13.0)
             var titleAttributedString: NSAttributedString?
             

@@ -34,6 +34,11 @@ final class PeerInfoPaneWrapper {
         self.key = key
         self.node = node
     }
+
+    func removeFromContainer() {
+        self.node.removeFromSupernode()
+        self.node.parentController = nil
+    }
     
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         if let (currentSize, currentTopInset, currentSideInset, currentBottomInset, _, currentVisibleHeight, currentIsScrollingLockedAtTop, currentExpandProgress, currentNavigationHeight, currentPresentationData) = self.appliedParams {
@@ -397,6 +402,16 @@ private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGF
     return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
 }
 
+/// The chat the shared-media panes list, with the context holder to resolve it through. A user's
+/// profile opened from a channel's direct messages lists that channel's thread with the user, not
+/// the profile's own chat, and that thread gets a holder of its own.
+func peerInfoSharedMediaChatLocation(peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> (peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) {
+    guard let sharedMediaFromForumTopic else {
+        return (peerId, chatLocation, chatLocationContextHolder)
+    }
+    return (sharedMediaFromForumTopic.0, .replyThread(message: peerInfoMonoforumThread(peerId: sharedMediaFromForumTopic.0, threadId: sharedMediaFromForumTopic.1)), Atomic(value: nil))
+}
+
 private final class PeerInfoPendingPane {
     let pane: PeerInfoPaneWrapper
     private var disposable: Disposable?
@@ -428,30 +443,9 @@ private final class PeerInfoPendingPane {
         externalDataUpdated: @escaping (ContainedViewLayoutTransition) -> Void,
         openShareLink: @escaping (String) -> Void
     ) {
-        var chatLocationPeerId = peerId
-        var chatLocation = chatLocation
-        var chatLocationContextHolder = chatLocationContextHolder
-        if let sharedMediaFromForumTopic {
-            chatLocationPeerId = sharedMediaFromForumTopic.0
-            chatLocation = .replyThread(message: ChatReplyThreadMessage(
-                peerId: sharedMediaFromForumTopic.0,
-                threadId: sharedMediaFromForumTopic.1,
-                channelMessageId: nil,
-                isChannelPost: false,
-                isForumPost: true,
-                isMonoforumPost: true,
-                maxMessage: nil,
-                maxReadIncomingMessageId: nil,
-                maxReadOutgoingMessageId: nil,
-                unreadCount: 0,
-                initialFilledHoles: IndexSet(),
-                initialAnchor: .automatic,
-                isNotAvailable: false
-            ))
-            chatLocationContextHolder = Atomic(value: nil)
-        }
+        let (chatLocationPeerId, chatLocation, chatLocationContextHolder) = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         
-        var captureProtected = peerInfoIsCopyProtected(data: data)
+        var captureProtected = peerInfoIsCopyProtected(data: data, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         let paneNode: PeerInfoPaneNode
         switch key {
         case .gifts:
@@ -467,7 +461,9 @@ private final class PeerInfoPendingPane {
                     }
                 }
             }
-            let giftPaneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, profileGiftsCollections: data.profileGiftsCollectionsContext!, profileGifts: data.profileGiftsContext!, canManage: canManage, canGift: canGift, initialGiftCollectionId: initialGiftCollectionId)
+            // The gifts' owner, the peer `profileGiftsContext` is keyed by: on a secret chat's
+            // profile that is the user, not the secret chat `peerId` names.
+            let giftPaneNode = PeerInfoGiftsPaneNode(context: context, peerId: data.peer?.id ?? peerId, chatControllerInteraction: chatControllerInteraction, profileGiftsCollections: data.profileGiftsCollectionsContext!, profileGifts: data.profileGiftsContext!, canManage: canManage, canGift: canGift, initialGiftCollectionId: initialGiftCollectionId)
             giftPaneNode.openShareLink = openShareLink
             paneNode = giftPaneNode
         case .stories, .storyArchive, .botPreview:
@@ -890,7 +886,11 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             guard let tab = key.tab else {
                 return
             }
-            Queue.mainQueue().after(0.15) {
+            Queue.mainQueue().after(0.15) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.didJustReorderTabs = true
                 let _ = (self.context.engine.peers.setMainProfileTab(peerId: self.peerId, tab: tab)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -1194,7 +1194,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         if let availablePanes = data?.availablePanes, let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), abs(paneIndex - currentIndex) <= 1 {
                         } else {
                             if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
-                                pane.node.removeFromSupernode()
+                                pane.removeFromContainer()
                             }
                         }
                     }
@@ -1402,7 +1402,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         for (key, paneNode) in self.pendingPanes {
             if !availablePanes.contains(key) && self.pendingSwitchToPaneKey != key {
                 removeKeys.append(key)
-                paneNode.pane.node.removeFromSupernode()
+                paneNode.pane.removeFromContainer()
             }
         }
         for key in removeKeys {
@@ -1413,7 +1413,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         for (key, paneNode) in self.currentPanes {
             if !availablePanes.contains(key) && self.pendingSwitchToPaneKey != key {
                 removeKeys.append(key)
-                paneNode.node.removeFromSupernode()
+                paneNode.removeFromContainer()
             }
         }
         for key in removeKeys {
