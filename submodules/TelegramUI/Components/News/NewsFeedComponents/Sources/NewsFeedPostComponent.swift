@@ -13,6 +13,7 @@ import AvatarComponent
 import EmojiStatusComponent
 import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
+import NewsFeedSupport
 
 private enum NewsPostThumbnail {
     case image(TelegramMediaImage)
@@ -54,7 +55,7 @@ private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedStrin
         var entities: [MessageTextEntity] = []
         for attribute in message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
-                entities = attribute.entities
+                entities = newsPostPreviewEntities(attribute.entities)
             }
         }
         // One character for one, so the entity ranges stay valid.

@@ -67,6 +67,21 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(resolved[0].messageIds, [album.messageIds[1]])
     }
 
+    // MARK: post text
+
+    // A block quote lays the text out in blocks, and the 3-line limit does not hold across them: the row ran on
+    // with overlapping lines. Inline formatting stays.
+    func testPostPreviewDropsBlockFormatting() {
+        let entities = [
+            MessageTextEntity(range: 0 ..< 4, type: .Bold),
+            MessageTextEntity(range: 5 ..< 40, type: .BlockQuote(isCollapsed: false)),
+            MessageTextEntity(range: 41 ..< 60, type: .Pre(language: nil)),
+            MessageTextEntity(range: 61 ..< 65, type: .Italic),
+            MessageTextEntity(range: 66 ..< 68, type: .CustomEmoji(stickerPack: nil, fileId: 1)),
+        ]
+        XCTAssertEqual(newsPostPreviewEntities(entities), [entities[0], entities[3], entities[4]])
+    }
+
     // MARK: For you interests block
 
     // The test server sends an empty For you without the block, which left no way to pick interests.
