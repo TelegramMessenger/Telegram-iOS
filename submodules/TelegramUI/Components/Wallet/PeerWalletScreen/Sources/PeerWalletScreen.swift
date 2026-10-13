@@ -79,7 +79,9 @@ private final class PeerWalletOverlayComponent: Component {
             guard self.card != card else { return }
             let previous = self.card
             self.card = card
-            self.stickers = (card?.stickers ?? []).compactMap(WalletContext.CardSticker.init(serverSticker:))
+            self.stickers = (card?.stickers ?? []).compactMap {
+                WalletContext.CardSticker(serverSticker: $0, backgroundNftAddress: card?.backgroundNft?.address)
+            }
             let ids = Set(self.stickers.map { $0.gift.address })
             for id in Array(self.stickerMedia.keys) where !ids.contains(id) { self.stickerMedia.removeValue(forKey: id) }
             for sticker in self.stickers {
@@ -218,6 +220,9 @@ private final class PeerWalletOverlayComponent: Component {
 
             if let cardView = self.card.view as? WalletCardComponent.View {
                 cardView.setCardStickers(state.stickers, images: state.stickerMedia.compactMapValues { $0.first?.image }, hidden: [])
+                let source = state.stickers.last(where: { $0.style != nil })
+                cardView.setGiftStyle(from: source?.style, to: source?.style, origin: .zero, progress: 1,
+                    pattern: source.flatMap { state.stickerMedia[$0.gift.address]?.patternImage })
             }
 
             let buttonSize = self.sendButton.update(

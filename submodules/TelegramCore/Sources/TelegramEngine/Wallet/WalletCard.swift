@@ -27,11 +27,13 @@ public struct WalletCard: Codable, Equatable, Sendable {
     public let address: String
     public let balance: Int64
     public let stickers: [Sticker]
+    public let backgroundNft: WalletNftItem?
 
-    public init(address: String, balance: Int64, stickers: [Sticker]) {
+    public init(address: String, balance: Int64, stickers: [Sticker], backgroundNft: WalletNftItem? = nil) {
         self.address = address
         self.balance = balance
         self.stickers = stickers
+        self.backgroundNft = backgroundNft
     }
 
     init(apiCard: Api.wallet.Card) {
@@ -46,7 +48,7 @@ public struct WalletCard: Codable, Equatable, Sendable {
                             rotation: c.rotation, cornerRadius: c.radius), nft: WalletNftItem(apiItem: data.nft))
                     }
                 }
-            })
+            }, backgroundNft: data.bgNftItem.map { WalletNftItem(apiItem: $0) })
         }
     }
 }
@@ -81,7 +83,10 @@ public enum WalletCardUpdateError: Error, Equatable, Sendable {
     }
 }
 
-func _internal_setWalletCardStickers(account: Account, stickers: [WalletCard.InputSticker]) -> Signal<WalletCard, WalletCardUpdateError> {
+func _internal_setWalletCardStickers(account: Account, stickers: [WalletCard.InputSticker], backgroundNftAddress: String?) -> Signal<WalletCard, WalletCardUpdateError> {
+    if let backgroundNftAddress, !stickers.contains(where: { $0.nftAddress == backgroundNftAddress }) {
+        return .fail(.invalidSticker)
+    }
     guard stickers.count <= 10 else { return .fail(.limitExceeded) }
     guard Set(stickers.map(\.nftAddress)).count == stickers.count else { return .fail(.duplicate) }
     guard stickers.allSatisfy({ sticker in
@@ -97,7 +102,7 @@ func _internal_setWalletCardStickers(account: Account, stickers: [WalletCard.Inp
             flags: c.cornerRadius == nil ? 0 : 1, x: c.x, y: c.y, w: c.width, h: c.height,
             rotation: c.rotation, radius: c.cornerRadius)), nftAddress: sticker.nftAddress))
     }
-    return account.network.request(Api.functions.wallet.setCardStickers(stickers: input), automaticFloodWait: false)
+    return account.network.request(Api.functions.wallet.setCardStickers(flags: backgroundNftAddress == nil ? 0 : 1, stickers: input, bgNftAddress: backgroundNftAddress), automaticFloodWait: false)
     |> mapError { WalletCardUpdateError(description: $0.errorDescription) }
     |> map { WalletCard(apiCard: $0) }
 }

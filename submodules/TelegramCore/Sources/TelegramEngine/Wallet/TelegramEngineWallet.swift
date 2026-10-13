@@ -30,8 +30,8 @@ public extension TelegramEngine {
                 peerId: self.account.peerId, network: self.account.network, postbox: self.account.postbox)
         }
 
-        public func setCardStickers(_ stickers: [WalletCard.InputSticker]) -> Signal<WalletCard, WalletCardUpdateError> {
-            return _internal_setWalletCardStickers(account: self.account, stickers: stickers)
+        public func setCardStickers(_ stickers: [WalletCard.InputSticker], backgroundNftAddress: String? = nil) -> Signal<WalletCard, WalletCardUpdateError> {
+            return _internal_setWalletCardStickers(account: self.account, stickers: stickers, backgroundNftAddress: backgroundNftAddress)
         }
 
         public func getNfts(offset: String, limit: Int32 = 20) -> Signal<WalletNfts, WalletGetNftsError> {

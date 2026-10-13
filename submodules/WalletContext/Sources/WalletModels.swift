@@ -954,7 +954,7 @@ public extension WalletContext {
         }
     }
 
-    /// Editor geometry, relative to the untransformed card. Color remains local.
+    /// Editor geometry, relative to the untransformed card.
     struct CardSticker: Codable, Equatable, Sendable {
         public let gift: Collectible
         public let x: Double

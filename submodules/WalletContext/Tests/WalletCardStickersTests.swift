@@ -113,7 +113,8 @@ final class WalletCardStickersTests: XCTestCase {
     }
     private func nft(_ address: String = "gift") -> WalletNftItem {
         let gift = StarGift.UniqueGift(id: 1, giftId: 2, title: "Cake", number: 42, slug: "Cake-42",
-            owner: nil, attributes: [], availability: .init(issued: 1, total: 100), giftAddress: address,
+            owner: nil, attributes: [.backdrop(name: "Gold", id: 1, innerColor: 0xffaa00, outerColor: 0x884400,
+                patternColor: 0x663300, textColor: 0xffffff, rarity: .permille(10))], availability: .init(issued: 1, total: 100), giftAddress: address,
             resellAmounts: nil, resellForTonOnly: false, releasedBy: nil, valueAmount: nil,
             valueCurrency: nil, valueUsdAmount: nil, flags: [], themePeerId: nil, peerColor: nil,
             hostPeerId: nil, minOfferStars: nil, craftChancePermille: nil)
@@ -189,6 +190,43 @@ final class WalletCardStickersTests: XCTestCase {
         let friendlyInput = WalletCard.InputSticker(coordinates: first.serverSticker.coordinates,
             nftAddress: "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c")
         XCTAssertTrue(walletCardStickerLayoutsEqual([rawInput], [friendlyInput]))
+    }
+
+    func testColorChangesDuringSaveRemainPending() {
+        let layout = [self.sticker("one").serverSticker, self.sticker("two").serverSticker]
+        XCTAssertFalse(walletCardStickerLayoutsEqual(layout, layout, backgroundA: nil, backgroundB: "one"))
+        XCTAssertFalse(walletCardStickerLayoutsEqual(layout, layout, backgroundA: "one", backgroundB: nil))
+        XCTAssertFalse(walletCardStickerLayoutsEqual(layout, layout, backgroundA: "one", backgroundB: "two"))
+        XCTAssertTrue(walletCardStickerLayoutsEqual(layout, layout, backgroundA: "one", backgroundB: "one"))
+        XCTAssertTrue(walletCardStickerLayoutsEqual(layout, layout,
+            backgroundA: "0:" + String(repeating: "0", count: 64),
+            backgroundB: "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"))
+    }
+
+    func testServerSelectsAndClearsBackgroundStyle() throws {
+        let sticker = WalletCard.Sticker(coordinates: .init(x: 50, y: 50, width: 20, height: 30,
+            rotation: 0, cornerRadius: nil), nft: self.nft("one"))
+        let selected = try XCTUnwrap(WalletContext.CardSticker(serverSticker: sticker, backgroundNftAddress: "one"))
+        XCTAssertNotNil(selected.style)
+        XCTAssertEqual(selected.style, selected.giftStyle)
+        let cleared = try XCTUnwrap(WalletContext.CardSticker(serverSticker: sticker))
+        XCTAssertNil(cleared.style)
+        XCTAssertEqual(cleared.giftStyle, selected.giftStyle)
+        XCTAssertNil(WalletContext.CardSticker(serverSticker: sticker, backgroundNftAddress: "two")?.style)
+    }
+
+    func testBackgroundSurvivesCacheAndOldCardsDecodeWithoutIt() throws {
+        let nft = self.nft()
+        let sticker = WalletCard.Sticker(coordinates: .init(x: 50, y: 50, width: 20, height: 30,
+            rotation: 0, cornerRadius: nil), nft: nft)
+        let card = WalletCard(address: "wallet", balance: 50, stickers: [sticker], backgroundNft: nft)
+        let data = try JSONEncoder().encode(card)
+        XCTAssertEqual(try JSONDecoder().decode(WalletCard.self, from: data), card)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        old.removeValue(forKey: "backgroundNft")
+        let restored = try JSONDecoder().decode(WalletCard.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertNil(restored.backgroundNft)
+        XCTAssertEqual(restored.stickers, card.stickers)
     }
 
     func testInlineGiftSurvivesCacheAndTransactionConversion() throws {

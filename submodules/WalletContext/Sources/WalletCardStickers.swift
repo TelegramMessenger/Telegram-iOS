@@ -16,11 +16,14 @@ extension WalletContextImpl {
         guard !self.isShutdown, case let .wallet(info) = self.currentState.phase,
               info.address == walletAddress else { return }
         let value = WalletContext.CardSticker.validated(stickers)
-        let before = (self.cardStickersByWallet[walletAddress] ?? []).map(\.serverSticker)
+        let previous = self.cardStickersByWallet[walletAddress] ?? []
+        let before = previous.map(\.serverSticker)
+        let beforeBackground = previous.last(where: { $0.style != nil })?.gift.address
+        let afterBackground = value.last(where: { $0.style != nil })?.gift.address
         let after = value.map(\.serverSticker)
-        if !walletCardStickerLayoutsEqual(before, after) {
+        if !walletCardStickerLayoutsEqual(before, after, backgroundA: beforeBackground, backgroundB: afterBackground) {
             let saved = self.serverCardsByWallet[walletAddress]?.stickers.map { WalletCard.InputSticker(coordinates: $0.coordinates, nftAddress: $0.nft.address) } ?? []
-            if self.cardStickerSavingAddress != walletAddress && walletCardStickerLayoutsEqual(saved, after) { self.cardStickerDirtyWallets.remove(walletAddress) }
+            if self.cardStickerSavingAddress != walletAddress && walletCardStickerLayoutsEqual(saved, after, backgroundA: self.serverCardsByWallet[walletAddress]?.backgroundNft?.address, backgroundB: afterBackground) { self.cardStickerDirtyWallets.remove(walletAddress) }
             else { self.cardStickerDirtyWallets.insert(walletAddress) }
             self.cardStickerSaveError = nil
         }
@@ -30,7 +33,7 @@ extension WalletContextImpl {
             transactions: self.currentState.transactions, pendingTransfers: self.currentState.pendingTransfers,
             activeOperation: self.currentState.activeOperation
         )
-        if !walletCardStickerLayoutsEqual(before, after) {
+        if !walletCardStickerLayoutsEqual(before, after, backgroundA: beforeBackground, backgroundB: afterBackground) {
             self.scheduleCardStickerSave(immediate: self.walletScreenCount == 0)
         }
     }
@@ -64,7 +67,7 @@ public extension WalletContext.CardSticker {
             rotation: self.angle * 180 / .pi, cornerRadius: self.cornerRadius), nftAddress: self.gift.address)
     }
 
-    init?(serverSticker: WalletCard.Sticker) {
+    init?(serverSticker: WalletCard.Sticker, backgroundNftAddress: String? = nil) {
         let c = serverSticker.coordinates
         guard [c.x, c.y, c.width, c.height, c.rotation].allSatisfy({ $0.isFinite }),
               (0...100).contains(c.x), (0...100).contains(c.y),
@@ -89,12 +92,14 @@ public extension WalletContext.CardSticker {
         }
         self.init(gift: gift, x: c.x / 100, y: c.y / 100, angle: c.rotation * .pi / 180,
             scale: c.width / 100 / Self.widthFraction, modelFile: model, geometryVersion: 2,
+            style: backgroundNftAddress.map { walletEngineAddressesEqual($0, gift.address) } == true ? style : nil,
             giftStyle: style, aspectRatio: c.height * 220 / (c.width * 370), cornerRadius: c.cornerRadius)
     }
 }
 
 @available(macOS 10.15, *)
-func walletCardStickerLayoutsEqual(_ a: [WalletCard.InputSticker], _ b: [WalletCard.InputSticker]) -> Bool {
+func walletCardStickerLayoutsEqual(_ a: [WalletCard.InputSticker], _ b: [WalletCard.InputSticker], backgroundA: String? = nil, backgroundB: String? = nil) -> Bool {
+    guard backgroundA.map(walletCollectibleAddressKey) == backgroundB.map(walletCollectibleAddressKey) else { return false }
     guard a.count == b.count else { return false }
     return zip(a, b).allSatisfy { a, b in
         let x = a.coordinates, y = b.coordinates
@@ -144,11 +149,8 @@ extension WalletContextImpl {
     }
 
     private func applyServerCard(_ card: WalletCard, address: String) {
-        let previous = self.cardStickersByWallet[address] ?? []
-        self.cardStickersByWallet[address] = card.stickers.compactMap { item in
-            guard let sticker = WalletContext.CardSticker(serverSticker: item) else { return nil }
-            let old = previous.first(where: { walletEngineAddressesEqual($0.gift.address, sticker.gift.address) })
-            return sticker.withStyle(old?.style)
+        self.cardStickersByWallet[address] = card.stickers.compactMap {
+            WalletContext.CardSticker(serverSticker: $0, backgroundNftAddress: card.backgroundNft?.address)
         }
     }
 
@@ -165,7 +167,9 @@ extension WalletContextImpl {
         guard !self.isShutdown, case let .wallet(info) = self.currentState.phase,
               walletEngineAddressesEqual(info.address, walletAddress), self.cardStickerSavingAddress == nil,
               self.cardStickerDirtyWallets.contains(walletAddress) else { return }
-        let submitted = (self.cardStickersByWallet[walletAddress] ?? []).map(\.serverSticker)
+        let submittedStickers = self.cardStickersByWallet[walletAddress] ?? []
+        let submitted = submittedStickers.map(\.serverSticker)
+        let submittedBackground = submittedStickers.last(where: { $0.style != nil })?.gift.address
         self.cardStickerSavingAddress = walletAddress
         self.cardStickerSaveError = nil
         self.publishCardState()
@@ -179,7 +183,7 @@ extension WalletContextImpl {
             }
         }
         do {
-            let card = try await WalletSignalRequestContext<WalletCard>().run(self.engine.wallet.setCardStickers(submitted))
+            let card = try await WalletSignalRequestContext<WalletCard>().run(self.engine.wallet.setCardStickers(submitted, backgroundNftAddress: submittedBackground))
             self.cardStickerSavingAddress = nil
             guard !self.isShutdown, case let .wallet(current) = self.currentState.phase,
                   walletEngineAddressesEqual(current.address, walletAddress), walletEngineAddressesEqual(card.address, walletAddress) else { return }
@@ -187,7 +191,9 @@ extension WalletContextImpl {
             self.latestServerCard = card
             self.refreshCard(afterCurrentRequest: true)
             let currentLayout = (self.cardStickersByWallet[walletAddress] ?? []).map(\.serverSticker)
-            if walletCardStickerLayoutsEqual(currentLayout, submitted) {
+            if walletCardStickerLayoutsEqual(currentLayout, submitted,
+                backgroundA: self.cardStickersByWallet[walletAddress]?.last(where: { $0.style != nil })?.gift.address,
+                backgroundB: submittedBackground) {
                 self.cardStickerDirtyWallets.remove(walletAddress)
                 self.applyServerCard(card, address: walletAddress)
             }
