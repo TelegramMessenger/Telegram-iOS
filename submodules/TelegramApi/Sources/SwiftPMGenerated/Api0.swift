@@ -10,6 +10,7 @@ public enum Api {
     public enum communities {}
     public enum contacts {}
     public enum ephemeral {}
+    public enum feed {}
     public enum fragment {}
     public enum help {}
     public enum messages {}
@@ -37,6 +38,7 @@ public enum Api {
         public enum communities {}
         public enum contacts {}
         public enum ephemeral {}
+        public enum feed {}
         public enum folders {}
         public enum fragment {}
         public enum help {}
@@ -164,8 +166,11 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.ExportedChatlistInvite(tlObject: $0) },
     { Api.ExportedContactToken(tlObject: $0) },
     { Api.ExportedMessageLink(tlObject: $0) },
+    { Api.ExportedNoPaidMessagesToken(tlObject: $0) },
     { Api.ExportedStoryLink(tlObject: $0) },
     { Api.FactCheck(tlObject: $0) },
+    { Api.FeedItem(tlObject: $0) },
+    { Api.FeedPosition(tlObject: $0) },
     { Api.FileHash(tlObject: $0) },
     { Api.Folder(tlObject: $0) },
     { Api.FolderPeer(tlObject: $0) },
@@ -248,6 +253,7 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.InputStorePaymentPurpose(tlObject: $0) },
     { Api.InputTheme(tlObject: $0) },
     { Api.InputThemeSettings(tlObject: $0) },
+    { Api.InputTonConnectOauthSession(tlObject: $0) },
     { Api.InputUser(tlObject: $0) },
     { Api.InputWallPaper(tlObject: $0) },
     { Api.InputWalletReplacement(tlObject: $0) },
@@ -533,6 +539,10 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.contacts.SponsoredPeers(tlObject: $0) },
     { Api.contacts.TopPeers(tlObject: $0) },
     { Api.ephemeral.WelcomeMessages(tlObject: $0) },
+    { Api.feed.FeedMessages(tlObject: $0) },
+    { Api.feed.ForYouFeed(tlObject: $0) },
+    { Api.feed.InterestCategories(tlObject: $0) },
+    { Api.feed.InterestCategory(tlObject: $0) },
     { Api.fragment.CollectibleInfo(tlObject: $0) },
     { Api.help.AppConfig(tlObject: $0) },
     { Api.help.AppUpdate(tlObject: $0) },
@@ -707,13 +717,13 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.wallet.UserAddresses(tlObject: $0) },
 ]
 
-let tlSwiftSchemaHash: UInt64 = 0x2b8255422566d37c
+let tlSwiftSchemaHash: UInt64 = 0xf38f5bc41fbafe75
 
 /// Accessor offsets are compiled into clients (`@_alwaysEmitIntoClient`). This check is too:
 /// a client left over from another generation (an incremental non-Bazel build) carries the
 /// old literal and traps here instead of reading fields at stale offsets.
 @_alwaysEmitIntoClient public func tlVerifyClientLayout() {
-    if tlSchemaHashForClients() != 0x2b8255422566d37c {
+    if tlSchemaHashForClients() != 0xf38f5bc41fbafe75 {
         preconditionFailure("TelegramApi was regenerated; rebuild its clients (stale inlined field offsets)")
     }
 }

@@ -73,27 +73,27 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .privacyValueAllowAll:
-                return TLObjectSingleton(TLApiConstructorAt(646))
+                return TLObjectSingleton(TLApiConstructorAt(648))
             case .privacyValueAllowBots:
                 return TLObjectSingleton(TLApiConstructorAt(230))
             case .privacyValueAllowChatParticipants(let _data):
                 return _data.tlObject
             case .privacyValueAllowCloseFriends:
-                return TLObjectSingleton(TLApiConstructorAt(1628))
+                return TLObjectSingleton(TLApiConstructorAt(1641))
             case .privacyValueAllowContacts:
-                return TLObjectSingleton(TLApiConstructorAt(1699))
+                return TLObjectSingleton(TLApiConstructorAt(1712))
             case .privacyValueAllowPremium:
-                return TLObjectSingleton(TLApiConstructorAt(1551))
+                return TLObjectSingleton(TLApiConstructorAt(1564))
             case .privacyValueAllowUsers(let _data):
                 return _data.tlObject
             case .privacyValueDisallowAll:
-                return TLObjectSingleton(TLApiConstructorAt(885))
+                return TLObjectSingleton(TLApiConstructorAt(892))
             case .privacyValueDisallowBots:
-                return TLObjectSingleton(TLApiConstructorAt(1622))
+                return TLObjectSingleton(TLApiConstructorAt(1635))
             case .privacyValueDisallowChatParticipants(let _data):
                 return _data.tlObject
             case .privacyValueDisallowContacts:
-                return TLObjectSingleton(TLApiConstructorAt(1633))
+                return TLObjectSingleton(TLApiConstructorAt(1646))
             case .privacyValueDisallowUsers(let _data):
                 return _data.tlObject
             }
@@ -114,7 +114,7 @@ public extension Api.PrivacyRule.Cons_privacyValueAllowChatParticipants {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(chats: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(681))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(683))
         tlStoreReference(_tlObject, 24, tlPackInt64(chats) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -124,7 +124,7 @@ public extension Api.PrivacyRule.Cons_privacyValueAllowUsers {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(users: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1203))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1211))
         tlStoreReference(_tlObject, 24, tlPackInt64(users) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -134,7 +134,7 @@ public extension Api.PrivacyRule.Cons_privacyValueDisallowChatParticipants {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(chats: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(428))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(427))
         tlStoreReference(_tlObject, 24, tlPackInt64(chats) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -144,7 +144,7 @@ public extension Api.PrivacyRule.Cons_privacyValueDisallowUsers {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(users: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1487))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1499))
         tlStoreReference(_tlObject, 24, tlPackInt64(users) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -187,21 +187,21 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .profileTabFiles:
-                return TLObjectSingleton(TLApiConstructorAt(1108))
+                return TLObjectSingleton(TLApiConstructorAt(1116))
             case .profileTabGifs:
-                return TLObjectSingleton(TLApiConstructorAt(1055))
+                return TLObjectSingleton(TLApiConstructorAt(1063))
             case .profileTabGifts:
-                return TLObjectSingleton(TLApiConstructorAt(499))
+                return TLObjectSingleton(TLApiConstructorAt(498))
             case .profileTabLinks:
-                return TLObjectSingleton(TLApiConstructorAt(1383))
+                return TLObjectSingleton(TLApiConstructorAt(1393))
             case .profileTabMedia:
-                return TLObjectSingleton(TLApiConstructorAt(728))
+                return TLObjectSingleton(TLApiConstructorAt(732))
             case .profileTabMusic:
-                return TLObjectSingleton(TLApiConstructorAt(1028))
+                return TLObjectSingleton(TLApiConstructorAt(1036))
             case .profileTabPosts:
-                return TLObjectSingleton(TLApiConstructorAt(1213))
+                return TLObjectSingleton(TLApiConstructorAt(1221))
             case .profileTabVoice:
-                return TLObjectSingleton(TLApiConstructorAt(1488))
+                return TLObjectSingleton(TLApiConstructorAt(1500))
             }
         }
 
@@ -281,7 +281,7 @@ public extension Api.PublicForward.Cons_publicForwardStory {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StoryItem(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(peer: Api.Peer, story: Api.StoryItem) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1561))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1574))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, story.tlObject)
         self.init(tlObject: _tlObject)
@@ -388,7 +388,7 @@ public extension Api {
             case .reactionEmoji(let _data):
                 return _data.tlObject
             case .reactionEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(776))
+                return TLObjectSingleton(TLApiConstructorAt(782))
             case .reactionPaid:
                 return TLObjectSingleton(TLApiConstructorAt(533))
             }
@@ -409,7 +409,7 @@ public extension Api.Reaction.Cons_reactionCustomEmoji {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(documentId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(872))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(879))
         tlStore(_tlObject, 24, documentId)
         self.init(tlObject: _tlObject)
     }
@@ -475,7 +475,7 @@ public extension Api.ReactionCount.Cons_reactionCount {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(flags: Int32, chosenOrder: Int32?, reaction: Api.Reaction, count: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1060))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1068))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = chosenOrder { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
@@ -505,9 +505,9 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .reactionNotificationsFromAll:
-                return TLObjectSingleton(TLApiConstructorAt(488))
+                return TLObjectSingleton(TLApiConstructorAt(487))
             case .reactionNotificationsFromContacts:
-                return TLObjectSingleton(TLApiConstructorAt(1220))
+                return TLObjectSingleton(TLApiConstructorAt(1228))
             }
         }
 
@@ -578,7 +578,7 @@ public extension Api.ReactionsNotifySettings.Cons_reactionsNotifySettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, messagesNotifyFrom: Api.ReactionNotificationsFrom?, storiesNotifyFrom: Api.ReactionNotificationsFrom?, pollVotesNotifyFrom: Api.ReactionNotificationsFrom?, sound: Api.NotificationSound, showPreviews: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(722))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(726))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, messagesNotifyFrom?.tlObject)
         tlStoreReference(_tlObject, 40, storiesNotifyFrom?.tlObject)
@@ -633,7 +633,7 @@ public extension Api.ReadParticipantDate.Cons_readParticipantDate {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(userId: Int64, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(478))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(477))
         tlStore(_tlObject, 32, userId)
         tlStore(_tlObject, 24, date)
         self.init(tlObject: _tlObject)
@@ -684,7 +684,7 @@ public extension Api.ReceivedNotifyMessage.Cons_receivedNotifyMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(id: Int32, flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1057))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1065))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 28, flags)
         self.init(tlObject: _tlObject)
@@ -779,7 +779,7 @@ public extension Api.RecentMeUrl.Cons_recentMeUrlChat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(url: String, chatId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1156))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1164))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStore(_tlObject, 32, chatId)
         self.init(tlObject: _tlObject)
@@ -793,7 +793,7 @@ public extension Api.RecentMeUrl.Cons_recentMeUrlChatInvite {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChatInvite(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(url: String, chatInvite: Api.ChatInvite) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1541))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1553))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStoreReference(_tlObject, 32, chatInvite.tlObject)
         self.init(tlObject: _tlObject)
@@ -807,7 +807,7 @@ public extension Api.RecentMeUrl.Cons_recentMeUrlStickerSet {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StickerSetCovered(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(url: String, set: Api.StickerSetCovered) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1233))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1241))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStoreReference(_tlObject, 32, set.tlObject)
         self.init(tlObject: _tlObject)
@@ -818,7 +818,7 @@ public extension Api.RecentMeUrl.Cons_recentMeUrlUnknown {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(url: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(457))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(456))
         tlStoreReference(_tlObject, 24, url as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -831,7 +831,7 @@ public extension Api.RecentMeUrl.Cons_recentMeUrlUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(url: String, userId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1209))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1217))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStore(_tlObject, 32, userId)
         self.init(tlObject: _tlObject)

@@ -73,19 +73,19 @@ public extension Api {
             case .inputStickerSetDice(let _data):
                 return _data.tlObject
             case .inputStickerSetEmojiChannelDefaultStatuses:
-                return TLObjectSingleton(TLApiConstructorAt(473))
+                return TLObjectSingleton(TLApiConstructorAt(472))
             case .inputStickerSetEmojiDefaultStatuses:
                 return TLObjectSingleton(TLApiConstructorAt(270))
             case .inputStickerSetEmojiDefaultTopicIcons:
-                return TLObjectSingleton(TLApiConstructorAt(447))
+                return TLObjectSingleton(TLApiConstructorAt(446))
             case .inputStickerSetEmojiGenericAnimations:
                 return TLObjectSingleton(TLApiConstructorAt(33))
             case .inputStickerSetEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(1695))
+                return TLObjectSingleton(TLApiConstructorAt(1708))
             case .inputStickerSetID(let _data):
                 return _data.tlObject
             case .inputStickerSetPremiumGifts:
-                return TLObjectSingleton(TLApiConstructorAt(1323))
+                return TLObjectSingleton(TLApiConstructorAt(1333))
             case .inputStickerSetShortName(let _data):
                 return _data.tlObject
             case .inputStickerSetTonGifts:
@@ -108,7 +108,7 @@ public extension Api.InputStickerSet.Cons_inputStickerSetDice {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(emoticon: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1504))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1516))
         tlStoreReference(_tlObject, 24, emoticon as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -121,7 +121,7 @@ public extension Api.InputStickerSet.Cons_inputStickerSetID {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1017))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1024))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -132,7 +132,7 @@ public extension Api.InputStickerSet.Cons_inputStickerSetShortName {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(shortName: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(850))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(857))
         tlStoreReference(_tlObject, 24, shortName as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -263,7 +263,7 @@ public extension Api.InputStickeredMedia.Cons_inputStickeredMediaPhoto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPhoto(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(id: Api.InputPhoto) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(482))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(481))
         tlStoreReference(_tlObject, 24, id.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -402,7 +402,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentAuthCode {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 56, as: Int64.self) } }
     }
     init(flags: Int32, phoneNumber: String, phoneCodeHash: String, premiumDays: Int32, currency: String, amount: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(413))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(412))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, phoneNumber as NSString)
         tlStoreReference(_tlObject, 40, phoneCodeHash as NSString)
@@ -423,7 +423,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentGiftPremium 
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(userId: Api.InputUser, currency: String, amount: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(619))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(620))
         tlStoreReference(_tlObject, 24, userId.tlObject)
         tlStoreReference(_tlObject, 32, currency as NSString)
         tlStore(_tlObject, 40, amount)
@@ -450,7 +450,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentPremiumGiftC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.TextWithEntities(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64, message: Api.TextWithEntities?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1660))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1673))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, users.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, boostPeer?.tlObject)
@@ -507,7 +507,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentPremiumSubsc
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1078))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1086))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -569,7 +569,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentStarsGiveawa
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(flags: Int32, stars: Int64, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(742))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(747))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 40, stars)
         tlStoreReference(_tlObject, 48, boostPeer.tlObject)
@@ -601,7 +601,7 @@ public extension Api.InputStorePaymentPurpose.Cons_inputStorePaymentStarsTopup {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.InputPeer(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, stars: Int64, currency: String, amount: Int64, spendPurposePeer: Api.InputPeer?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1642))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1655))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, stars)
         tlStoreReference(_tlObject, 40, currency as NSString)
@@ -677,7 +677,7 @@ public extension Api.InputTheme.Cons_inputThemeSlug {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(slug: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1619))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1632))
         tlStoreReference(_tlObject, 24, slug as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -742,7 +742,7 @@ public extension Api.InputThemeSettings.Cons_inputThemeSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.WallPaperSettings(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, outboxAccentColor: Int32?, messageColors: [Int32]?, wallpaper: Api.InputWallPaper?, wallpaperSettings: Api.WallPaperSettings?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(910))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(917))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, baseTheme.tlObject)
@@ -752,6 +752,65 @@ public extension Api.InputThemeSettings.Cons_inputThemeSettings {
         tlStoreReference(_tlObject, 56, wallpaper?.tlObject)
         tlStoreReference(_tlObject, 64, wallpaperSettings?.tlObject)
         tlStore(_tlObject, 72, _tlPresent)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
+    enum InputTonConnectOauthSession: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_inputTonConnectOauthSession {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case inputTonConnectOauthSession(Cons_inputTonConnectOauthSession)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .inputTonConnectOauthSession(Cons_inputTonConnectOauthSession(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .inputTonConnectOauthSession(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.InputTonConnectOauthSession] {
+            return tlObjectsAt(object, offset).map { Api.InputTonConnectOauthSession(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.InputTonConnectOauthSession.Cons_inputTonConnectOauthSession {
+    @_alwaysEmitIntoClient var sessionId: Int64 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
+    }
+    @_alwaysEmitIntoClient var challengeAnswer: Buffer {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
+    }
+    @_alwaysEmitIntoClient var body: Buffer {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 40) } }
+    }
+    @_alwaysEmitIntoClient var proof: Api.WalletOwnershipProof {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.WalletOwnershipProof(tlObject: tlObjectAt(self.tlObject, 48)) } }
+    }
+    init(sessionId: Int64, challengeAnswer: Buffer, body: Buffer, proof: Api.WalletOwnershipProof) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(627))
+        tlStore(_tlObject, 24, sessionId)
+        tlStoreReference(_tlObject, 32, challengeAnswer.makeData() as NSData)
+        tlStoreReference(_tlObject, 40, body.makeData() as NSData)
+        tlStoreReference(_tlObject, 48, proof.tlObject)
         self.init(tlObject: _tlObject)
     }
 }
@@ -795,11 +854,11 @@ public extension Api {
             case .inputUser(let _data):
                 return _data.tlObject
             case .inputUserEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(1212))
+                return TLObjectSingleton(TLApiConstructorAt(1220))
             case .inputUserFromMessage(let _data):
                 return _data.tlObject
             case .inputUserSelf:
-                return TLObjectSingleton(TLApiConstructorAt(1627))
+                return TLObjectSingleton(TLApiConstructorAt(1640))
             }
         }
 
@@ -821,7 +880,7 @@ public extension Api.InputUser.Cons_inputUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(userId: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1594))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1607))
         tlStore(_tlObject, 24, userId)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -912,7 +971,7 @@ public extension Api.InputWallPaper.Cons_inputWallPaper {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1501))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1513))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -923,7 +982,7 @@ public extension Api.InputWallPaper.Cons_inputWallPaperNoFile {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(id: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(957))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(964))
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
     }
@@ -933,7 +992,7 @@ public extension Api.InputWallPaper.Cons_inputWallPaperSlug {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(slug: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(724))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(728))
         tlStoreReference(_tlObject, 24, slug as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -966,7 +1025,7 @@ public extension Api {
             case .inputWalletImported(let _data):
                 return _data.tlObject
             case .inputWalletNew:
-                return TLObjectSingleton(TLApiConstructorAt(633))
+                return TLObjectSingleton(TLApiConstructorAt(635))
             }
         }
 
@@ -994,7 +1053,7 @@ public extension Api.InputWalletReplacement.Cons_inputWalletImported {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.WalletOwnershipProof(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, publicKey: Buffer, anchorPublicKey: Buffer?, proof: Api.WalletOwnershipProof) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(654))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(656))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, publicKey.makeData() as NSData)
         tlStoreReference(_tlObject, 40, anchorPublicKey.map { value in value.makeData() as NSData })
@@ -1053,7 +1112,7 @@ public extension Api.InputWebDocument.Cons_inputWebDocument {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.DocumentAttribute.tlArray(self.tlObject, 48) } }
     }
     init(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1001))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1008))
         tlStoreReference(_tlObject, 32, url as NSString)
         tlStore(_tlObject, 24, size)
         tlStoreReference(_tlObject, 40, mimeType as NSString)
@@ -1134,7 +1193,7 @@ public extension Api.InputWebFileLocation.Cons_inputWebFileAudioAlbumThumbLocati
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : tlStringAt(self.tlObject, 48) } }
     }
     init(flags: Int32, document: Api.InputDocument?, title: String?, performer: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1610))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1623))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, document?.tlObject)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -1162,7 +1221,7 @@ public extension Api.InputWebFileLocation.Cons_inputWebFileGeoPointLocation {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) } }
     }
     init(geoPoint: Api.InputGeoPoint, accessHash: Int64, w: Int32, h: Int32, zoom: Int32, scale: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1026))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1034))
         tlStoreReference(_tlObject, 40, geoPoint.tlObject)
         tlStore(_tlObject, 48, accessHash)
         tlStore(_tlObject, 24, w)
@@ -1180,7 +1239,7 @@ public extension Api.InputWebFileLocation.Cons_inputWebFileLocation {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(url: String, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1286))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1296))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -1256,57 +1315,6 @@ public extension Api.Invoice.Cons_invoice {
         tlStoreReference(_tlObject, 64, termsUrl.map { value in value as NSString })
         if let _tlValue = subscriptionPeriod { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 1 }
         tlStore(_tlObject, 72, _tlPresent)
-        self.init(tlObject: _tlObject)
-    }
-}
-public extension Api {
-    enum JSONObjectValue: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
-        @frozen public struct Cons_jsonObjectValue {
-            @usableFromInline let tlObject: TLObject
-            init(tlObject: TLObject) {
-                self.tlObject = tlObject
-            }
-        }
-        case jsonObjectValue(Cons_jsonObjectValue)
-
-
-        @usableFromInline init(tlObject object: TLObject) {
-            switch object.tl_caseIndex {
-            case 0:
-                self = .jsonObjectValue(Cons_jsonObjectValue(tlObject: object))
-            default:
-                preconditionFailure()
-            }
-        }
-
-        @usableFromInline var tlObject: TLObject {
-            switch self {
-            case .jsonObjectValue(let _data):
-                return _data.tlObject
-            }
-        }
-
-        public var tlBackingObject: TLObject {
-            return self.tlObject
-        }
-
-        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.JSONObjectValue] {
-            return tlObjectsAt(object, offset).map { Api.JSONObjectValue(tlObject: $0) }
-        }
-
-    }
-}
-public extension Api.JSONObjectValue.Cons_jsonObjectValue {
-    @_alwaysEmitIntoClient var key: String {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
-    }
-    @_alwaysEmitIntoClient var value: Api.JSONValue {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.JSONValue(tlObject: tlObjectAt(self.tlObject, 32)) } }
-    }
-    init(key: String, value: Api.JSONValue) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1273))
-        tlStoreReference(_tlObject, 24, key as NSString)
-        tlStoreReference(_tlObject, 32, value.tlObject)
         self.init(tlObject: _tlObject)
     }
 }

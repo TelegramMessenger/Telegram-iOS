@@ -26,7 +26,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
         if let hash = hash {
             request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
         } else if let inputChannel = apiInputChannel(peer) {
-            request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+            request = account.network.request(Api.functions.channels.joinChannel(flags: 0, channel: inputChannel))
         } else {
             request = .fail(.init())
         }

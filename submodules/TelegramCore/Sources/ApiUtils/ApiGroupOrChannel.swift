@@ -191,6 +191,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags2 & Int32(1 << 19)) != 0 {
             channelFlags.insert(.displayForumAsTabs)
         }
+        if (flags2 & Int32(1 << 21)) != 0 {
+            channelFlags.insert(.isInNews)
+        }
         var storiesHidden: Bool?
         if flags2 & (1 << 2) == 0 { // stories_hidden_min
             if flags2 & (1 << 1) != 0 {

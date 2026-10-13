@@ -435,12 +435,24 @@ func fx_ExportedMessageLink() -> Api.ExportedMessageLink {
     return Api.ExportedMessageLink.exportedMessageLink(Api.ExportedMessageLink.Cons_exportedMessageLink(link: "", html: ""))
 }
 
+func fx_ExportedNoPaidMessagesToken() -> Api.ExportedNoPaidMessagesToken {
+    return Api.ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken(Api.ExportedNoPaidMessagesToken.Cons_exportedNoPaidMessagesToken(flags: 0, token: "", url: nil))
+}
+
 func fx_ExportedStoryLink() -> Api.ExportedStoryLink {
     return Api.ExportedStoryLink.exportedStoryLink(Api.ExportedStoryLink.Cons_exportedStoryLink(link: ""))
 }
 
 func fx_FactCheck() -> Api.FactCheck {
     return Api.FactCheck.factCheck(Api.FactCheck.Cons_factCheck(flags: 0, country: nil, text: nil, hash: Int64(1099705628358)))
+}
+
+func fx_FeedItem() -> Api.FeedItem {
+    return Api.FeedItem.feedItemInterestCategories
+}
+
+func fx_FeedPosition() -> Api.FeedPosition {
+    return Api.FeedPosition.feedPosition(Api.FeedPosition.Cons_feedPosition(date: Int32(68), peer: fx_Peer(), id: Int32(105)))
 }
 
 func fx_FileHash() -> Api.FileHash {
@@ -769,6 +781,10 @@ func fx_InputTheme() -> Api.InputTheme {
 
 func fx_InputThemeSettings() -> Api.InputThemeSettings {
     return Api.InputThemeSettings.inputThemeSettings(Api.InputThemeSettings.Cons_inputThemeSettings(flags: 0, baseTheme: fx_BaseTheme(), accentColor: Int32(388), outboxAccentColor: nil, messageColors: nil, wallpaper: nil, wallpaperSettings: nil))
+}
+
+func fx_InputTonConnectOauthSession() -> Api.InputTonConnectOauthSession {
+    return Api.InputTonConnectOauthSession.inputTonConnectOauthSession(Api.InputTonConnectOauthSession.Cons_inputTonConnectOauthSession(sessionId: Int64(1099998629237), challengeAnswer: Buffer(), body: Buffer(), proof: fx_WalletOwnershipProof()))
 }
 
 func fx_InputUser() -> Api.InputUser {
@@ -1911,6 +1927,22 @@ func fx_ephemeral_WelcomeMessages() -> Api.ephemeral.WelcomeMessages {
     return Api.ephemeral.WelcomeMessages.welcomeMessages(Api.ephemeral.WelcomeMessages.Cons_welcomeMessages(hash: Int64(1100087629504), messages: []))
 }
 
+func fx_feed_FeedMessages() -> Api.feed.FeedMessages {
+    return Api.feed.FeedMessages.feedMessages(Api.feed.FeedMessages.Cons_feedMessages(flags: 0, maxPosition: nil, minPosition: nil, readMaxPosition: nil, messages: [], chats: [], users: []))
+}
+
+func fx_feed_ForYouFeed() -> Api.feed.ForYouFeed {
+    return Api.feed.ForYouFeed.forYouFeed(Api.feed.ForYouFeed.Cons_forYouFeed(flags: Int32(-607), items: [], chats: [], users: []))
+}
+
+func fx_feed_InterestCategories() -> Api.feed.InterestCategories {
+    return Api.feed.InterestCategories.interestCategories(Api.feed.InterestCategories.Cons_interestCategories(categories: [], selected: []))
+}
+
+func fx_feed_InterestCategory() -> Api.feed.InterestCategory {
+    return Api.feed.InterestCategory.interestCategory(Api.feed.InterestCategory.Cons_interestCategory(flags: 0, id: Int32(61), title: "", emoji: nil, emojiDocumentId: nil))
+}
+
 func fx_fragment_CollectibleInfo() -> Api.fragment.CollectibleInfo {
     return Api.fragment.CollectibleInfo.collectibleInfo(Api.fragment.CollectibleInfo.Cons_collectibleInfo(purchaseDate: Int32(625), currency: "", amount: Int64(1099610628073), cryptoCurrency: "", cryptoAmount: Int64(1099611628076), url: ""))
 }
@@ -2884,7 +2916,7 @@ func schemaConstructorFixtures1() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "ChannelParticipantsFilter.channelParticipantsRecent", make: { Api.ChannelParticipantsFilter.channelParticipantsRecent }))
     f.append(SchemaConstructorFixture(name: "ChannelParticipantsFilter.channelParticipantsSearch#full", make: { Api.ChannelParticipantsFilter.channelParticipantsSearch(Api.ChannelParticipantsFilter.Cons_channelParticipantsSearch(q: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "ChannelParticipantsFilter.channelParticipantsSearch#empty", make: { Api.ChannelParticipantsFilter.channelParticipantsSearch(Api.ChannelParticipantsFilter.Cons_channelParticipantsSearch(q: "")) }))
-    f.append(SchemaConstructorFixture(name: "Chat.channel#full", make: { Api.Chat.channel(Api.Chat.Cons_channel(flags: Int32(bitPattern: UInt32(2147417061)), flags2: Int32(bitPattern: UInt32(2097055)), id: Int64(1099849628790), accessHash: Int64(1099850628793), title: String(repeating: "aü🙂", count: 100) + "b", username: "s340", photo: fx_ChatPhoto(), date: Int32(-389), restrictionReason: [fx_RestrictionReason(), fx_RestrictionReason()], adminRights: fx_ChatAdminRights(), bannedRights: fx_ChatBannedRights(), defaultBannedRights: fx_ChatBannedRights(), participantsCount: Int32(-352), usernames: [fx_Username(), fx_Username()], storiesMaxId: fx_RecentStory(), color: fx_PeerColor(), profileColor: fx_PeerColor(), emojiStatus: fx_EmojiStatus(), level: Int32(-315), subscriptionUntilDate: Int32(-278), botVerificationIcon: Int64(1099856628811), sendPaidMessagesStars: Int64(1099857628814), linkedMonoforumId: Int64(1099858628817), linkedCommunityId: Int64(1099859628820))) }))
+    f.append(SchemaConstructorFixture(name: "Chat.channel#full", make: { Api.Chat.channel(Api.Chat.Cons_channel(flags: Int32(bitPattern: UInt32(2147417061)), flags2: Int32(bitPattern: UInt32(4194207)), id: Int64(1099849628790), accessHash: Int64(1099850628793), title: String(repeating: "aü🙂", count: 100) + "b", username: "s340", photo: fx_ChatPhoto(), date: Int32(-389), restrictionReason: [fx_RestrictionReason(), fx_RestrictionReason()], adminRights: fx_ChatAdminRights(), bannedRights: fx_ChatBannedRights(), defaultBannedRights: fx_ChatBannedRights(), participantsCount: Int32(-352), usernames: [fx_Username(), fx_Username()], storiesMaxId: fx_RecentStory(), color: fx_PeerColor(), profileColor: fx_PeerColor(), emojiStatus: fx_EmojiStatus(), level: Int32(-315), subscriptionUntilDate: Int32(-278), botVerificationIcon: Int64(1099856628811), sendPaidMessagesStars: Int64(1099857628814), linkedMonoforumId: Int64(1099858628817), linkedCommunityId: Int64(1099859628820))) }))
     f.append(SchemaConstructorFixture(name: "Chat.channel#empty", make: { Api.Chat.channel(Api.Chat.Cons_channel(flags: 0, flags2: 0, id: Int64(1099849628790), accessHash: nil, title: "", username: nil, photo: fx_ChatPhoto(), date: Int32(-463), restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil)) }))
     f.append(SchemaConstructorFixture(name: "Chat.channelForbidden#full", make: { Api.Chat.channelForbidden(Api.Chat.Cons_channelForbidden(flags: Int32(bitPattern: UInt32(66848)), id: Int64(1099987629204), accessHash: Int64(1099988629207), title: String(repeating: "aü🙂", count: 100) + "b", untilDate: Int32(678))) }))
     f.append(SchemaConstructorFixture(name: "Chat.channelForbidden#empty", make: { Api.Chat.channelForbidden(Api.Chat.Cons_channelForbidden(flags: 0, id: Int64(1099987629204), accessHash: Int64(1099988629207), title: "", untilDate: nil)) }))
@@ -3080,10 +3112,17 @@ func schemaConstructorFixtures2() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "ExportedContactToken.exportedContactToken#empty", make: { Api.ExportedContactToken.exportedContactToken(Api.ExportedContactToken.Cons_exportedContactToken(url: "", expires: Int32(552))) }))
     f.append(SchemaConstructorFixture(name: "ExportedMessageLink.exportedMessageLink#full", make: { Api.ExportedMessageLink.exportedMessageLink(Api.ExportedMessageLink.Cons_exportedMessageLink(link: String(repeating: "aü🙂", count: 100) + "b", html: "s314")) }))
     f.append(SchemaConstructorFixture(name: "ExportedMessageLink.exportedMessageLink#empty", make: { Api.ExportedMessageLink.exportedMessageLink(Api.ExportedMessageLink.Cons_exportedMessageLink(link: "", html: "")) }))
+    f.append(SchemaConstructorFixture(name: "ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken#full", make: { Api.ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken(Api.ExportedNoPaidMessagesToken.Cons_exportedNoPaidMessagesToken(flags: Int32(bitPattern: UInt32(1)), token: String(repeating: "aü🙂", count: 100) + "b", url: "s16")) }))
+    f.append(SchemaConstructorFixture(name: "ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken#empty", make: { Api.ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken(Api.ExportedNoPaidMessagesToken.Cons_exportedNoPaidMessagesToken(flags: 0, token: "", url: nil)) }))
     f.append(SchemaConstructorFixture(name: "ExportedStoryLink.exportedStoryLink#full", make: { Api.ExportedStoryLink.exportedStoryLink(Api.ExportedStoryLink.Cons_exportedStoryLink(link: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "ExportedStoryLink.exportedStoryLink#empty", make: { Api.ExportedStoryLink.exportedStoryLink(Api.ExportedStoryLink.Cons_exportedStoryLink(link: "")) }))
     f.append(SchemaConstructorFixture(name: "FactCheck.factCheck#full", make: { Api.FactCheck.factCheck(Api.FactCheck.Cons_factCheck(flags: Int32(bitPattern: UInt32(3)), country: String(repeating: "aü🙂", count: 100) + "b", text: fx_TextWithEntities(), hash: Int64(1099705628358))) }))
     f.append(SchemaConstructorFixture(name: "FactCheck.factCheck#empty", make: { Api.FactCheck.factCheck(Api.FactCheck.Cons_factCheck(flags: 0, country: nil, text: nil, hash: Int64(1099705628358))) }))
+    f.append(SchemaConstructorFixture(name: "FeedItem.feedItemInterestCategories", make: { Api.FeedItem.feedItemInterestCategories }))
+    f.append(SchemaConstructorFixture(name: "FeedItem.feedItemMessage#full", make: { Api.FeedItem.feedItemMessage(Api.FeedItem.Cons_feedItemMessage(message: fx_Message())) }))
+    f.append(SchemaConstructorFixture(name: "FeedItem.feedItemMessage#empty", make: { Api.FeedItem.feedItemMessage(Api.FeedItem.Cons_feedItemMessage(message: fx_Message())) }))
+    f.append(SchemaConstructorFixture(name: "FeedPosition.feedPosition#full", make: { Api.FeedPosition.feedPosition(Api.FeedPosition.Cons_feedPosition(date: Int32(68), peer: fx_Peer(), id: Int32(105))) }))
+    f.append(SchemaConstructorFixture(name: "FeedPosition.feedPosition#empty", make: { Api.FeedPosition.feedPosition(Api.FeedPosition.Cons_feedPosition(date: Int32(68), peer: fx_Peer(), id: Int32(105))) }))
     f.append(SchemaConstructorFixture(name: "FileHash.fileHash#full", make: { Api.FileHash.fileHash(Api.FileHash.Cons_fileHash(offset: Int64(1099900628943), limit: Int32(-577), hash: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })))) }))
     f.append(SchemaConstructorFixture(name: "FileHash.fileHash#empty", make: { Api.FileHash.fileHash(Api.FileHash.Cons_fileHash(offset: Int64(1099900628943), limit: Int32(-577), hash: Buffer())) }))
     f.append(SchemaConstructorFixture(name: "Folder.folder#full", make: { Api.Folder.folder(Api.Folder.Cons_folder(flags: Int32(bitPattern: UInt32(15)), id: Int32(-536), title: String(repeating: "aü🙂", count: 100) + "b", photo: fx_ChatPhoto())) }))
@@ -3204,6 +3243,11 @@ func schemaConstructorFixtures2() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "InputBusinessAwayMessage.inputBusinessAwayMessage#empty", make: { Api.InputBusinessAwayMessage.inputBusinessAwayMessage(Api.InputBusinessAwayMessage.Cons_inputBusinessAwayMessage(flags: 0, shortcutId: Int32(665), schedule: fx_BusinessAwayMessageSchedule(), recipients: fx_InputBusinessRecipients())) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessBotRecipients.inputBusinessBotRecipients#full", make: { Api.InputBusinessBotRecipients.inputBusinessBotRecipients(Api.InputBusinessBotRecipients.Cons_inputBusinessBotRecipients(flags: Int32(bitPattern: UInt32(127)), users: [fx_InputUser(), fx_InputUser()], excludeUsers: [fx_InputUser(), fx_InputUser()])) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessBotRecipients.inputBusinessBotRecipients#empty", make: { Api.InputBusinessBotRecipients.inputBusinessBotRecipients(Api.InputBusinessBotRecipients.Cons_inputBusinessBotRecipients(flags: 0, users: nil, excludeUsers: nil)) }))
+    return f
+}
+
+func schemaConstructorFixtures3() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "InputBusinessChatLink.inputBusinessChatLink#full", make: { Api.InputBusinessChatLink.inputBusinessChatLink(Api.InputBusinessChatLink.Cons_inputBusinessChatLink(flags: Int32(bitPattern: UInt32(3)), message: String(repeating: "aü🙂", count: 100) + "b", entities: [fx_MessageEntity(), fx_MessageEntity()], title: "s398")) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessChatLink.inputBusinessChatLink#empty", make: { Api.InputBusinessChatLink.inputBusinessChatLink(Api.InputBusinessChatLink.Cons_inputBusinessChatLink(flags: 0, message: "", entities: nil, title: nil)) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessGreetingMessage.inputBusinessGreetingMessage#full", make: { Api.InputBusinessGreetingMessage.inputBusinessGreetingMessage(Api.InputBusinessGreetingMessage.Cons_inputBusinessGreetingMessage(shortcutId: Int32(-355), recipients: fx_InputBusinessRecipients(), noActivityDays: Int32(-318))) }))
@@ -3211,11 +3255,6 @@ func schemaConstructorFixtures2() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "InputBusinessIntro.inputBusinessIntro#full", make: { Api.InputBusinessIntro.inputBusinessIntro(Api.InputBusinessIntro.Cons_inputBusinessIntro(flags: Int32(bitPattern: UInt32(1)), title: String(repeating: "aü🙂", count: 100) + "b", description: "s166", sticker: fx_InputDocument())) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessIntro.inputBusinessIntro#empty", make: { Api.InputBusinessIntro.inputBusinessIntro(Api.InputBusinessIntro.Cons_inputBusinessIntro(flags: 0, title: "", description: "", sticker: nil)) }))
     f.append(SchemaConstructorFixture(name: "InputBusinessRecipients.inputBusinessRecipients#full", make: { Api.InputBusinessRecipients.inputBusinessRecipients(Api.InputBusinessRecipients.Cons_inputBusinessRecipients(flags: Int32(bitPattern: UInt32(63)), users: [fx_InputUser(), fx_InputUser()])) }))
-    return f
-}
-
-func schemaConstructorFixtures3() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "InputBusinessRecipients.inputBusinessRecipients#empty", make: { Api.InputBusinessRecipients.inputBusinessRecipients(Api.InputBusinessRecipients.Cons_inputBusinessRecipients(flags: 0, users: nil)) }))
     f.append(SchemaConstructorFixture(name: "InputChannel.inputChannel#full", make: { Api.InputChannel.inputChannel(Api.InputChannel.Cons_inputChannel(channelId: Int64(1100017629294), accessHash: Int64(1100018629297))) }))
     f.append(SchemaConstructorFixture(name: "InputChannel.inputChannel#empty", make: { Api.InputChannel.inputChannel(Api.InputChannel.Cons_inputChannel(channelId: Int64(1100017629294), accessHash: Int64(1100018629297))) }))
@@ -3409,6 +3448,11 @@ func schemaConstructorFixtures3() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerChannelFromMessage#full", make: { Api.InputPeer.inputPeerChannelFromMessage(Api.InputPeer.Cons_inputPeerChannelFromMessage(peer: fx_InputPeer(), msgId: Int32(591), channelId: Int64(1099555627908))) }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerChannelFromMessage#empty", make: { Api.InputPeer.inputPeerChannelFromMessage(Api.InputPeer.Cons_inputPeerChannelFromMessage(peer: fx_InputPeer(), msgId: Int32(591), channelId: Int64(1099555627908))) }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerChat#full", make: { Api.InputPeer.inputPeerChat(Api.InputPeer.Cons_inputPeerChat(chatId: Int64(1100281630086))) }))
+    return f
+}
+
+func schemaConstructorFixtures4() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerChat#empty", make: { Api.InputPeer.inputPeerChat(Api.InputPeer.Cons_inputPeerChat(chatId: Int64(1100281630086))) }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerEmpty", make: { Api.InputPeer.inputPeerEmpty }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerSelf", make: { Api.InputPeer.inputPeerSelf }))
@@ -3416,11 +3460,6 @@ func schemaConstructorFixtures3() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerUser#empty", make: { Api.InputPeer.inputPeerUser(Api.InputPeer.Cons_inputPeerUser(userId: Int64(1099558627917), accessHash: Int64(1099559627920))) }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerUserFromMessage#full", make: { Api.InputPeer.inputPeerUserFromMessage(Api.InputPeer.Cons_inputPeerUserFromMessage(peer: fx_InputPeer(), msgId: Int32(-568), userId: Int64(1099740628463))) }))
     f.append(SchemaConstructorFixture(name: "InputPeer.inputPeerUserFromMessage#empty", make: { Api.InputPeer.inputPeerUserFromMessage(Api.InputPeer.Cons_inputPeerUserFromMessage(peer: fx_InputPeer(), msgId: Int32(-568), userId: Int64(1099740628463))) }))
-    return f
-}
-
-func schemaConstructorFixtures4() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "InputPeerNotifySettings.inputPeerNotifySettings#full", make: { Api.InputPeerNotifySettings.inputPeerNotifySettings(Api.InputPeerNotifySettings.Cons_inputPeerNotifySettings(flags: Int32(bitPattern: UInt32(463)), showPreviews: fx_Bool(), silent: fx_Bool(), muteUntil: Int32(-472), sound: fx_NotificationSound(), storiesMuted: fx_Bool(), storiesHideSender: fx_Bool(), storiesSound: fx_NotificationSound())) }))
     f.append(SchemaConstructorFixture(name: "InputPeerNotifySettings.inputPeerNotifySettings#empty", make: { Api.InputPeerNotifySettings.inputPeerNotifySettings(Api.InputPeerNotifySettings.Cons_inputPeerNotifySettings(flags: 0, showPreviews: nil, silent: nil, muteUntil: nil, sound: nil, storiesMuted: nil, storiesHideSender: nil, storiesSound: nil)) }))
     f.append(SchemaConstructorFixture(name: "InputPhoneCall.inputPhoneCall#full", make: { Api.InputPhoneCall.inputPhoneCall(Api.InputPhoneCall.Cons_inputPhoneCall(id: Int64(1100276630071), accessHash: Int64(1100277630074))) }))
@@ -3543,6 +3582,8 @@ func schemaConstructorFixtures4() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "InputTheme.inputThemeSlug#empty", make: { Api.InputTheme.inputThemeSlug(Api.InputTheme.Cons_inputThemeSlug(slug: "")) }))
     f.append(SchemaConstructorFixture(name: "InputThemeSettings.inputThemeSettings#full", make: { Api.InputThemeSettings.inputThemeSettings(Api.InputThemeSettings.Cons_inputThemeSettings(flags: Int32(bitPattern: UInt32(15)), baseTheme: fx_BaseTheme(), accentColor: Int32(388), outboxAccentColor: Int32(425), messageColors: [Int32(462), Int32(499)], wallpaper: fx_InputWallPaper(), wallpaperSettings: fx_WallPaperSettings())) }))
     f.append(SchemaConstructorFixture(name: "InputThemeSettings.inputThemeSettings#empty", make: { Api.InputThemeSettings.inputThemeSettings(Api.InputThemeSettings.Cons_inputThemeSettings(flags: 0, baseTheme: fx_BaseTheme(), accentColor: Int32(388), outboxAccentColor: nil, messageColors: nil, wallpaper: nil, wallpaperSettings: nil)) }))
+    f.append(SchemaConstructorFixture(name: "InputTonConnectOauthSession.inputTonConnectOauthSession#full", make: { Api.InputTonConnectOauthSession.inputTonConnectOauthSession(Api.InputTonConnectOauthSession.Cons_inputTonConnectOauthSession(sessionId: Int64(1099998629237), challengeAnswer: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })), body: Buffer(data: Data([232, 0, 255])), proof: fx_WalletOwnershipProof())) }))
+    f.append(SchemaConstructorFixture(name: "InputTonConnectOauthSession.inputTonConnectOauthSession#empty", make: { Api.InputTonConnectOauthSession.inputTonConnectOauthSession(Api.InputTonConnectOauthSession.Cons_inputTonConnectOauthSession(sessionId: Int64(1099998629237), challengeAnswer: Buffer(), body: Buffer(), proof: fx_WalletOwnershipProof())) }))
     f.append(SchemaConstructorFixture(name: "InputUser.inputUser#full", make: { Api.InputUser.inputUser(Api.InputUser.Cons_inputUser(userId: Int64(1099951629096), accessHash: Int64(1099952629099))) }))
     f.append(SchemaConstructorFixture(name: "InputUser.inputUser#empty", make: { Api.InputUser.inputUser(Api.InputUser.Cons_inputUser(userId: Int64(1099951629096), accessHash: Int64(1099952629099))) }))
     f.append(SchemaConstructorFixture(name: "InputUser.inputUserEmpty", make: { Api.InputUser.inputUserEmpty }))
@@ -3612,6 +3653,11 @@ func schemaConstructorFixtures4() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "MaskCoords.maskCoords#empty", make: { Api.MaskCoords.maskCoords(Api.MaskCoords.Cons_maskCoords(n: Int32(392), x: Double(958) + 0.25, y: Double(959) + 0.25, zoom: Double(960) + 0.25)) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.inputMediaAreaChannelPost#full", make: { Api.MediaArea.inputMediaAreaChannelPost(Api.MediaArea.Cons_inputMediaAreaChannelPost(coordinates: fx_MediaAreaCoordinates(), channel: fx_InputChannel(), msgId: Int32(96))) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.inputMediaAreaChannelPost#empty", make: { Api.MediaArea.inputMediaAreaChannelPost(Api.MediaArea.Cons_inputMediaAreaChannelPost(coordinates: fx_MediaAreaCoordinates(), channel: fx_InputChannel(), msgId: Int32(96))) }))
+    return f
+}
+
+func schemaConstructorFixtures5() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "MediaArea.inputMediaAreaVenue#full", make: { Api.MediaArea.inputMediaAreaVenue(Api.MediaArea.Cons_inputMediaAreaVenue(coordinates: fx_MediaAreaCoordinates(), queryId: Int64(1099867628844), resultId: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.inputMediaAreaVenue#empty", make: { Api.MediaArea.inputMediaAreaVenue(Api.MediaArea.Cons_inputMediaAreaVenue(coordinates: fx_MediaAreaCoordinates(), queryId: Int64(1099867628844), resultId: "")) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaChannelPost#full", make: { Api.MediaArea.mediaAreaChannelPost(Api.MediaArea.Cons_mediaAreaChannelPost(coordinates: fx_MediaAreaCoordinates(), channelId: Int64(1100459630620), msgId: Int32(96))) }))
@@ -3621,11 +3667,6 @@ func schemaConstructorFixtures4() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaStarGift#full", make: { Api.MediaArea.mediaAreaStarGift(Api.MediaArea.Cons_mediaAreaStarGift(coordinates: fx_MediaAreaCoordinates(), slug: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaStarGift#empty", make: { Api.MediaArea.mediaAreaStarGift(Api.MediaArea.Cons_mediaAreaStarGift(coordinates: fx_MediaAreaCoordinates(), slug: "")) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaSuggestedReaction#full", make: { Api.MediaArea.mediaAreaSuggestedReaction(Api.MediaArea.Cons_mediaAreaSuggestedReaction(flags: Int32(bitPattern: UInt32(3)), coordinates: fx_MediaAreaCoordinates(), reaction: fx_Reaction())) }))
-    return f
-}
-
-func schemaConstructorFixtures5() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaSuggestedReaction#empty", make: { Api.MediaArea.mediaAreaSuggestedReaction(Api.MediaArea.Cons_mediaAreaSuggestedReaction(flags: 0, coordinates: fx_MediaAreaCoordinates(), reaction: fx_Reaction())) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaUrl#full", make: { Api.MediaArea.mediaAreaUrl(Api.MediaArea.Cons_mediaAreaUrl(coordinates: fx_MediaAreaCoordinates(), url: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "MediaArea.mediaAreaUrl#empty", make: { Api.MediaArea.mediaAreaUrl(Api.MediaArea.Cons_mediaAreaUrl(coordinates: fx_MediaAreaCoordinates(), url: "")) }))
@@ -3710,6 +3751,7 @@ func schemaConstructorFixtures5() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionNoForwardsRequest#empty", make: { Api.MessageAction.messageActionNoForwardsRequest(Api.MessageAction.Cons_messageActionNoForwardsRequest(flags: 0, prevValue: fx_Bool(), newValue: fx_Bool())) }))
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionNoForwardsToggle#full", make: { Api.MessageAction.messageActionNoForwardsToggle(Api.MessageAction.Cons_messageActionNoForwardsToggle(prevValue: fx_Bool(), newValue: fx_Bool())) }))
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionNoForwardsToggle#empty", make: { Api.MessageAction.messageActionNoForwardsToggle(Api.MessageAction.Cons_messageActionNoForwardsToggle(prevValue: fx_Bool(), newValue: fx_Bool())) }))
+    f.append(SchemaConstructorFixture(name: "MessageAction.messageActionNoPaidMessagesTokenUsed", make: { Api.MessageAction.messageActionNoPaidMessagesTokenUsed }))
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionPaidMessagesPrice#full", make: { Api.MessageAction.messageActionPaidMessagesPrice(Api.MessageAction.Cons_messageActionPaidMessagesPrice(flags: Int32(bitPattern: UInt32(1)), stars: Int64(1099971629156))) }))
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionPaidMessagesPrice#empty", make: { Api.MessageAction.messageActionPaidMessagesPrice(Api.MessageAction.Cons_messageActionPaidMessagesPrice(flags: 0, stars: Int64(1099971629156))) }))
     f.append(SchemaConstructorFixture(name: "MessageAction.messageActionPaidMessagesRefunded#full", make: { Api.MessageAction.messageActionPaidMessagesRefunded(Api.MessageAction.Cons_messageActionPaidMessagesRefunded(count: Int32(178), stars: Int64(1099652628199))) }))
@@ -3816,6 +3858,11 @@ func schemaConstructorFixtures5() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityPre#empty", make: { Api.MessageEntity.messageEntityPre(Api.MessageEntity.Cons_messageEntityPre(offset: Int32(-829), length: Int32(-792), language: "")) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntitySpoiler#full", make: { Api.MessageEntity.messageEntitySpoiler(Api.MessageEntity.Cons_messageEntitySpoiler(offset: Int32(857), length: Int32(894))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntitySpoiler#empty", make: { Api.MessageEntity.messageEntitySpoiler(Api.MessageEntity.Cons_messageEntitySpoiler(offset: Int32(857), length: Int32(894))) }))
+    return f
+}
+
+func schemaConstructorFixtures6() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityStrike#full", make: { Api.MessageEntity.messageEntityStrike(Api.MessageEntity.Cons_messageEntityStrike(offset: Int32(-345), length: Int32(-308))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityStrike#empty", make: { Api.MessageEntity.messageEntityStrike(Api.MessageEntity.Cons_messageEntityStrike(offset: Int32(-345), length: Int32(-308))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityTextUrl#full", make: { Api.MessageEntity.messageEntityTextUrl(Api.MessageEntity.Cons_messageEntityTextUrl(offset: Int32(607), length: Int32(644), url: String(repeating: "aü🙂", count: 100) + "b")) }))
@@ -3826,11 +3873,6 @@ func schemaConstructorFixtures5() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityUnderline#empty", make: { Api.MessageEntity.messageEntityUnderline(Api.MessageEntity.Cons_messageEntityUnderline(offset: Int32(367), length: Int32(404))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityUnknown#full", make: { Api.MessageEntity.messageEntityUnknown(Api.MessageEntity.Cons_messageEntityUnknown(offset: Int32(370), length: Int32(407))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityUnknown#empty", make: { Api.MessageEntity.messageEntityUnknown(Api.MessageEntity.Cons_messageEntityUnknown(offset: Int32(370), length: Int32(407))) }))
-    return f
-}
-
-func schemaConstructorFixtures6() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityUrl#full", make: { Api.MessageEntity.messageEntityUrl(Api.MessageEntity.Cons_messageEntityUrl(offset: Int32(540), length: Int32(577))) }))
     f.append(SchemaConstructorFixture(name: "MessageEntity.messageEntityUrl#empty", make: { Api.MessageEntity.messageEntityUrl(Api.MessageEntity.Cons_messageEntityUrl(offset: Int32(540), length: Int32(577))) }))
     f.append(SchemaConstructorFixture(name: "MessageExtendedMedia.messageExtendedMedia#full", make: { Api.MessageExtendedMedia.messageExtendedMedia(Api.MessageExtendedMedia.Cons_messageExtendedMedia(media: fx_MessageMedia())) }))
@@ -4021,6 +4063,11 @@ func schemaConstructorFixtures6() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockRelatedArticles#full", make: { Api.PageBlock.pageBlockRelatedArticles(Api.PageBlock.Cons_pageBlockRelatedArticles(title: fx_RichText(), articles: [fx_PageRelatedArticle(), fx_PageRelatedArticle()])) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockRelatedArticles#empty", make: { Api.PageBlock.pageBlockRelatedArticles(Api.PageBlock.Cons_pageBlockRelatedArticles(title: fx_RichText(), articles: [])) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockSlideshow#full", make: { Api.PageBlock.pageBlockSlideshow(Api.PageBlock.Cons_pageBlockSlideshow(items: [fx_PageBlock(), fx_PageBlock()], caption: fx_PageCaption())) }))
+    return f
+}
+
+func schemaConstructorFixtures7() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockSlideshow#empty", make: { Api.PageBlock.pageBlockSlideshow(Api.PageBlock.Cons_pageBlockSlideshow(items: [], caption: fx_PageCaption())) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockSubheader#full", make: { Api.PageBlock.pageBlockSubheader(Api.PageBlock.Cons_pageBlockSubheader(text: fx_RichText())) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockSubheader#empty", make: { Api.PageBlock.pageBlockSubheader(Api.PageBlock.Cons_pageBlockSubheader(text: fx_RichText())) }))
@@ -4031,11 +4078,6 @@ func schemaConstructorFixtures6() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockThinking#full", make: { Api.PageBlock.pageBlockThinking(Api.PageBlock.Cons_pageBlockThinking(text: fx_RichText())) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockThinking#empty", make: { Api.PageBlock.pageBlockThinking(Api.PageBlock.Cons_pageBlockThinking(text: fx_RichText())) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockTitle#full", make: { Api.PageBlock.pageBlockTitle(Api.PageBlock.Cons_pageBlockTitle(text: fx_RichText())) }))
-    return f
-}
-
-func schemaConstructorFixtures7() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockTitle#empty", make: { Api.PageBlock.pageBlockTitle(Api.PageBlock.Cons_pageBlockTitle(text: fx_RichText())) }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockUnsupported", make: { Api.PageBlock.pageBlockUnsupported }))
     f.append(SchemaConstructorFixture(name: "PageBlock.pageBlockVideo#full", make: { Api.PageBlock.pageBlockVideo(Api.PageBlock.Cons_pageBlockVideo(flags: Int32(bitPattern: UInt32(7)), videoId: Int64(1099544627875), caption: fx_PageCaption())) }))
@@ -4226,6 +4268,11 @@ func schemaConstructorFixtures7() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "ReadParticipantDate.readParticipantDate#full", make: { Api.ReadParticipantDate.readParticipantDate(Api.ReadParticipantDate.Cons_readParticipantDate(userId: Int64(1100162629729), date: Int32(-888))) }))
     f.append(SchemaConstructorFixture(name: "ReadParticipantDate.readParticipantDate#empty", make: { Api.ReadParticipantDate.readParticipantDate(Api.ReadParticipantDate.Cons_readParticipantDate(userId: Int64(1100162629729), date: Int32(-888))) }))
     f.append(SchemaConstructorFixture(name: "ReceivedNotifyMessage.receivedNotifyMessage#full", make: { Api.ReceivedNotifyMessage.receivedNotifyMessage(Api.ReceivedNotifyMessage.Cons_receivedNotifyMessage(id: Int32(213), flags: Int32(250))) }))
+    return f
+}
+
+func schemaConstructorFixtures8() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "ReceivedNotifyMessage.receivedNotifyMessage#empty", make: { Api.ReceivedNotifyMessage.receivedNotifyMessage(Api.ReceivedNotifyMessage.Cons_receivedNotifyMessage(id: Int32(213), flags: Int32(250))) }))
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlChat#full", make: { Api.RecentMeUrl.recentMeUrlChat(Api.RecentMeUrl.Cons_recentMeUrlChat(url: String(repeating: "aü🙂", count: 100) + "b", chatId: Int64(1100013629282))) }))
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlChat#empty", make: { Api.RecentMeUrl.recentMeUrlChat(Api.RecentMeUrl.Cons_recentMeUrlChat(url: "", chatId: Int64(1100013629282))) }))
@@ -4236,11 +4283,6 @@ func schemaConstructorFixtures7() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlUnknown#full", make: { Api.RecentMeUrl.recentMeUrlUnknown(Api.RecentMeUrl.Cons_recentMeUrlUnknown(url: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlUnknown#empty", make: { Api.RecentMeUrl.recentMeUrlUnknown(Api.RecentMeUrl.Cons_recentMeUrlUnknown(url: "")) }))
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlUser#full", make: { Api.RecentMeUrl.recentMeUrlUser(Api.RecentMeUrl.Cons_recentMeUrlUser(url: String(repeating: "aü🙂", count: 100) + "b", userId: Int64(1099643628172))) }))
-    return f
-}
-
-func schemaConstructorFixtures8() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "RecentMeUrl.recentMeUrlUser#empty", make: { Api.RecentMeUrl.recentMeUrlUser(Api.RecentMeUrl.Cons_recentMeUrlUser(url: "", userId: Int64(1099643628172))) }))
     f.append(SchemaConstructorFixture(name: "RecentStory.recentStory#full", make: { Api.RecentStory.recentStory(Api.RecentStory.Cons_recentStory(flags: Int32(bitPattern: UInt32(3)), maxId: Int32(875))) }))
     f.append(SchemaConstructorFixture(name: "RecentStory.recentStory#empty", make: { Api.RecentStory.recentStory(Api.RecentStory.Cons_recentStory(flags: 0, maxId: nil)) }))
@@ -4431,6 +4473,11 @@ func schemaConstructorFixtures8() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "SendAsPeer.sendAsPeer#empty", make: { Api.SendAsPeer.sendAsPeer(Api.SendAsPeer.Cons_sendAsPeer(flags: 0, peer: fx_Peer())) }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.inputSendMessageRichMessageDraftAction#full", make: { Api.SendMessageAction.inputSendMessageRichMessageDraftAction(Api.SendMessageAction.Cons_inputSendMessageRichMessageDraftAction(flags: Int32(bitPattern: UInt32(3)), randomId: Int64(1100271630056), richMessage: fx_InputRichMessage())) }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.inputSendMessageRichMessageDraftAction#empty", make: { Api.SendMessageAction.inputSendMessageRichMessageDraftAction(Api.SendMessageAction.Cons_inputSendMessageRichMessageDraftAction(flags: 0, randomId: Int64(1100271630056), richMessage: fx_InputRichMessage())) }))
+    return f
+}
+
+func schemaConstructorFixtures9() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageCancelAction", make: { Api.SendMessageAction.sendMessageCancelAction }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageChooseContactAction", make: { Api.SendMessageAction.sendMessageChooseContactAction }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageChooseStickerAction", make: { Api.SendMessageAction.sendMessageChooseStickerAction }))
@@ -4441,11 +4488,6 @@ func schemaConstructorFixtures8() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageGamePlayAction", make: { Api.SendMessageAction.sendMessageGamePlayAction }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageGeoLocationAction", make: { Api.SendMessageAction.sendMessageGeoLocationAction }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageHistoryImportAction#full", make: { Api.SendMessageAction.sendMessageHistoryImportAction(Api.SendMessageAction.Cons_sendMessageHistoryImportAction(progress: Int32(-583))) }))
-    return f
-}
-
-func schemaConstructorFixtures9() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageHistoryImportAction#empty", make: { Api.SendMessageAction.sendMessageHistoryImportAction(Api.SendMessageAction.Cons_sendMessageHistoryImportAction(progress: Int32(-583))) }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageRecordAudioAction", make: { Api.SendMessageAction.sendMessageRecordAudioAction }))
     f.append(SchemaConstructorFixture(name: "SendMessageAction.sendMessageRecordRoundAction", make: { Api.SendMessageAction.sendMessageRecordRoundAction }))
@@ -4636,6 +4678,11 @@ func schemaConstructorFixtures9() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "TodoList.todoList#empty", make: { Api.TodoList.todoList(Api.TodoList.Cons_todoList(flags: 0, title: fx_TextWithEntities(), list: [])) }))
     f.append(SchemaConstructorFixture(name: "TonConnectManifest.tonConnectManifest#full", make: { Api.TonConnectManifest.tonConnectManifest(Api.TonConnectManifest.Cons_tonConnectManifest(flags: Int32(bitPattern: UInt32(1)), url: String(repeating: "aü🙂", count: 100) + "b", name: "s102", icon: fx_WebDocument())) }))
     f.append(SchemaConstructorFixture(name: "TonConnectManifest.tonConnectManifest#empty", make: { Api.TonConnectManifest.tonConnectManifest(Api.TonConnectManifest.Cons_tonConnectManifest(flags: 0, url: "", name: "", icon: nil)) }))
+    return f
+}
+
+func schemaConstructorFixtures10() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "TonConnectNextEventId.tonConnectNextEventId#full", make: { Api.TonConnectNextEventId.tonConnectNextEventId(Api.TonConnectNextEventId.Cons_tonConnectNextEventId(eventId: Int64(1100330630233))) }))
     f.append(SchemaConstructorFixture(name: "TonConnectNextEventId.tonConnectNextEventId#empty", make: { Api.TonConnectNextEventId.tonConnectNextEventId(Api.TonConnectNextEventId.Cons_tonConnectNextEventId(eventId: Int64(1100330630233))) }))
     f.append(SchemaConstructorFixture(name: "TonConnectRequest.tonConnectRequest#full", make: { Api.TonConnectRequest.tonConnectRequest(Api.TonConnectRequest.Cons_tonConnectRequest(flags: Int32(bitPattern: UInt32(3)), sessionId: Int64(1099889628910), msgId: Int32(-984), body: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })), expires: Int32(-947), topic: String(repeating: "aü🙂", count: 100) + "b", traceId: "s381")) }))
@@ -4646,11 +4693,6 @@ func schemaConstructorFixtures9() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "TopPeer.topPeer#empty", make: { Api.TopPeer.topPeer(Api.TopPeer.Cons_topPeer(peer: fx_Peer(), rating: Double(383) + 0.25)) }))
     f.append(SchemaConstructorFixture(name: "TopPeerCategory.topPeerCategoryBotsApp", make: { Api.TopPeerCategory.topPeerCategoryBotsApp }))
     f.append(SchemaConstructorFixture(name: "TopPeerCategory.topPeerCategoryBotsGuestChat", make: { Api.TopPeerCategory.topPeerCategoryBotsGuestChat }))
-    return f
-}
-
-func schemaConstructorFixtures10() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "TopPeerCategory.topPeerCategoryBotsInline", make: { Api.TopPeerCategory.topPeerCategoryBotsInline }))
     f.append(SchemaConstructorFixture(name: "TopPeerCategory.topPeerCategoryBotsPM", make: { Api.TopPeerCategory.topPeerCategoryBotsPM }))
     f.append(SchemaConstructorFixture(name: "TopPeerCategory.topPeerCategoryChannels", make: { Api.TopPeerCategory.topPeerCategoryChannels }))
@@ -4841,6 +4883,11 @@ func schemaConstructorFixtures10() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "Update.updateNewChannelMessage#empty", make: { Api.Update.updateNewChannelMessage(Api.Update.Cons_updateNewChannelMessage(message: fx_Message(), pts: Int32(-118), ptsCount: Int32(-81))) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewEncryptedMessage#full", make: { Api.Update.updateNewEncryptedMessage(Api.Update.Cons_updateNewEncryptedMessage(message: fx_EncryptedMessage(), qts: Int32(-932))) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewEncryptedMessage#empty", make: { Api.Update.updateNewEncryptedMessage(Api.Update.Cons_updateNewEncryptedMessage(message: fx_EncryptedMessage(), qts: Int32(-932))) }))
+    return f
+}
+
+func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "Update.updateNewEphemeralMessage#full", make: { Api.Update.updateNewEphemeralMessage(Api.Update.Cons_updateNewEphemeralMessage(message: fx_EphemeralMessage())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewEphemeralMessage#empty", make: { Api.Update.updateNewEphemeralMessage(Api.Update.Cons_updateNewEphemeralMessage(message: fx_EphemeralMessage())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewMessage#full", make: { Api.Update.updateNewMessage(Api.Update.Cons_updateNewMessage(message: fx_Message(), pts: Int32(-186), ptsCount: Int32(-149))) }))
@@ -4851,11 +4898,6 @@ func schemaConstructorFixtures10() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "Update.updateNewScheduledMessage#empty", make: { Api.Update.updateNewScheduledMessage(Api.Update.Cons_updateNewScheduledMessage(message: fx_Message())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewStickerSet#full", make: { Api.Update.updateNewStickerSet(Api.Update.Cons_updateNewStickerSet(stickerset: fx_messages_StickerSet())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewStickerSet#empty", make: { Api.Update.updateNewStickerSet(Api.Update.Cons_updateNewStickerSet(stickerset: fx_messages_StickerSet())) }))
-    return f
-}
-
-func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "Update.updateNewStoryReaction#full", make: { Api.Update.updateNewStoryReaction(Api.Update.Cons_updateNewStoryReaction(storyId: Int32(-114), peer: fx_Peer(), reaction: fx_Reaction())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNewStoryReaction#empty", make: { Api.Update.updateNewStoryReaction(Api.Update.Cons_updateNewStoryReaction(storyId: Int32(-114), peer: fx_Peer(), reaction: fx_Reaction())) }))
     f.append(SchemaConstructorFixture(name: "Update.updateNotifySettings#full", make: { Api.Update.updateNotifySettings(Api.Update.Cons_updateNotifySettings(peer: fx_NotifyPeer(), notifySettings: fx_PeerNotifySettings())) }))
@@ -4907,6 +4949,8 @@ func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "Update.updateReadChannelOutbox#empty", make: { Api.Update.updateReadChannelOutbox(Api.Update.Cons_updateReadChannelOutbox(channelId: Int64(1099556627911), maxId: Int32(702))) }))
     f.append(SchemaConstructorFixture(name: "Update.updateReadFeaturedEmojiStickers", make: { Api.Update.updateReadFeaturedEmojiStickers }))
     f.append(SchemaConstructorFixture(name: "Update.updateReadFeaturedStickers", make: { Api.Update.updateReadFeaturedStickers }))
+    f.append(SchemaConstructorFixture(name: "Update.updateReadFeed#full", make: { Api.Update.updateReadFeed(Api.Update.Cons_updateReadFeed(flags: Int32(bitPattern: UInt32(1)), filterId: Int32(-47), maxPosition: fx_FeedPosition(), unreadCount: Int32(-10), unreadMutedCount: Int32(27))) }))
+    f.append(SchemaConstructorFixture(name: "Update.updateReadFeed#empty", make: { Api.Update.updateReadFeed(Api.Update.Cons_updateReadFeed(flags: 0, filterId: Int32(-47), maxPosition: fx_FeedPosition(), unreadCount: nil, unreadMutedCount: nil)) }))
     f.append(SchemaConstructorFixture(name: "Update.updateReadHistoryInbox#full", make: { Api.Update.updateReadHistoryInbox(Api.Update.Cons_updateReadHistoryInbox(flags: Int32(bitPattern: UInt32(3)), folderId: Int32(-407), peer: fx_Peer(), topMsgId: Int32(-370), maxId: Int32(-333), stillUnreadCount: Int32(-296), pts: Int32(-259), ptsCount: Int32(-222))) }))
     f.append(SchemaConstructorFixture(name: "Update.updateReadHistoryInbox#empty", make: { Api.Update.updateReadHistoryInbox(Api.Update.Cons_updateReadHistoryInbox(flags: 0, folderId: nil, peer: fx_Peer(), topMsgId: nil, maxId: Int32(-407), stillUnreadCount: Int32(-370), pts: Int32(-333), ptsCount: Int32(-296))) }))
     f.append(SchemaConstructorFixture(name: "Update.updateReadHistoryOutbox#full", make: { Api.Update.updateReadHistoryOutbox(Api.Update.Cons_updateReadHistoryOutbox(peer: fx_Peer(), maxId: Int32(-721), pts: Int32(-684), ptsCount: Int32(-647))) }))
@@ -5004,8 +5048,8 @@ func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultAccepted#full", make: { Api.UrlAuthResult.urlAuthResultAccepted(Api.UrlAuthResult.Cons_urlAuthResultAccepted(flags: Int32(bitPattern: UInt32(1)), url: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultAccepted#empty", make: { Api.UrlAuthResult.urlAuthResultAccepted(Api.UrlAuthResult.Cons_urlAuthResultAccepted(flags: 0, url: nil)) }))
     f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultDefault", make: { Api.UrlAuthResult.urlAuthResultDefault }))
-    f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultRequest#full", make: { Api.UrlAuthResult.urlAuthResultRequest(Api.UrlAuthResult.Cons_urlAuthResultRequest(flags: Int32(bitPattern: UInt32(255)), bot: fx_User(), domain: String(repeating: "aü🙂", count: 100) + "b", browser: "s75", platform: "s76", ip: "s77", region: "s78", matchCodes: ["s79", "s80"], userIdHint: Int64(1099592628019), verifiedAppName: "s82")) }))
-    f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultRequest#empty", make: { Api.UrlAuthResult.urlAuthResultRequest(Api.UrlAuthResult.Cons_urlAuthResultRequest(flags: 0, bot: fx_User(), domain: "", browser: nil, platform: nil, ip: nil, region: nil, matchCodes: nil, userIdHint: nil, verifiedAppName: nil)) }))
+    f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultRequest#full", make: { Api.UrlAuthResult.urlAuthResultRequest(Api.UrlAuthResult.Cons_urlAuthResultRequest(flags: Int32(bitPattern: UInt32(2047)), bot: fx_User(), domain: String(repeating: "aü🙂", count: 100) + "b", browser: "s246", platform: "s247", ip: "s248", region: "s249", matchCodes: ["s250", "s251"], userIdHint: Int64(1099763628532), verifiedAppName: "s253", tcSessionId: Int64(1099765628538), tcClientId: "s255")) }))
+    f.append(SchemaConstructorFixture(name: "UrlAuthResult.urlAuthResultRequest#empty", make: { Api.UrlAuthResult.urlAuthResultRequest(Api.UrlAuthResult.Cons_urlAuthResultRequest(flags: 0, bot: fx_User(), domain: "", browser: nil, platform: nil, ip: nil, region: nil, matchCodes: nil, userIdHint: nil, verifiedAppName: nil, tcSessionId: nil, tcClientId: nil)) }))
     f.append(SchemaConstructorFixture(name: "User.user#full", make: { Api.User.user(Api.User.Cons_user(flags: Int32(bitPattern: UInt32(2147482751)), flags2: Int32(bitPattern: UInt32(4194111)), id: Int64(1099673628262), accessHash: Int64(1099674628265), firstName: String(repeating: "aü🙂", count: 100) + "b", lastName: "s164", username: "s165", phone: "s166", photo: fx_UserProfilePhoto(), status: fx_UserStatus(), botInfoVersion: Int32(-824), restrictionReason: [fx_RestrictionReason(), fx_RestrictionReason()], botInlinePlaceholder: "s168", langCode: "s169", emojiStatus: fx_EmojiStatus(), usernames: [fx_Username(), fx_Username()], storiesMaxId: fx_RecentStory(), color: fx_PeerColor(), profileColor: fx_PeerColor(), botActiveUsers: Int32(-713), botVerificationIcon: Int64(1099682628289), sendPaidMessagesStars: Int64(1099683628292), linkedCommunityId: Int64(1099684628295))) }))
     f.append(SchemaConstructorFixture(name: "User.user#empty", make: { Api.User.user(Api.User.Cons_user(flags: 0, flags2: 0, id: Int64(1099673628262), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: nil, status: nil, botInfoVersion: nil, restrictionReason: nil, botInlinePlaceholder: nil, langCode: nil, emojiStatus: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, botActiveUsers: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedCommunityId: nil)) }))
     f.append(SchemaConstructorFixture(name: "User.userEmpty#full", make: { Api.User.userEmpty(Api.User.Cons_userEmpty(id: Int64(1100241629966))) }))
@@ -5044,6 +5088,11 @@ func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "WalletOwnershipProof.walletOwnershipProof#empty", make: { Api.WalletOwnershipProof.walletOwnershipProof(Api.WalletOwnershipProof.Cons_walletOwnershipProof(timestamp: Int32(440), signature: Buffer())) }))
     f.append(SchemaConstructorFixture(name: "WalletState.walletState#full", make: { Api.WalletState.walletState(Api.WalletState.Cons_walletState(flags: Int32(bitPattern: UInt32(7)), address: String(repeating: "aü🙂", count: 100) + "b", publicKey: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })), balance: Int64(1099577627974))) }))
     f.append(SchemaConstructorFixture(name: "WalletState.walletState#empty", make: { Api.WalletState.walletState(Api.WalletState.Cons_walletState(flags: 0, address: "", publicKey: Buffer(), balance: Int64(1099577627974))) }))
+    return f
+}
+
+func schemaConstructorFixtures12() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "WalletState.walletStateEmpty#full", make: { Api.WalletState.walletStateEmpty(Api.WalletState.Cons_walletStateEmpty(flags: Int32(bitPattern: UInt32(1)))) }))
     f.append(SchemaConstructorFixture(name: "WalletState.walletStateEmpty#empty", make: { Api.WalletState.walletStateEmpty(Api.WalletState.Cons_walletStateEmpty(flags: 0)) }))
     f.append(SchemaConstructorFixture(name: "WalletTransaction.walletTransaction#full", make: { Api.WalletTransaction.walletTransaction(Api.WalletTransaction.Cons_walletTransaction(flags: Int32(bitPattern: UInt32(255)), id: String(repeating: "aü🙂", count: 100) + "b", amount: Int64(1100293630122), fee: Int64(1100294630125), date: Int32(-6), peer: fx_WalletTransactionPeer(), comment: "s785", txHash: "s786", nft: fx_wallet_NftItem())) }))
@@ -5056,11 +5105,6 @@ func schemaConstructorFixtures11() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "WalletTransactionPeer.walletTransactionPeerUser#full", make: { Api.WalletTransactionPeer.walletTransactionPeerUser(Api.WalletTransactionPeer.Cons_walletTransactionPeerUser(flags: Int32(bitPattern: UInt32(1)), userId: Int64(1100155629708), address: String(repeating: "aü🙂", count: 100) + "b", domain: "s645")) }))
     f.append(SchemaConstructorFixture(name: "WalletTransactionPeer.walletTransactionPeerUser#empty", make: { Api.WalletTransactionPeer.walletTransactionPeerUser(Api.WalletTransactionPeer.Cons_walletTransactionPeerUser(flags: 0, userId: Int64(1100155629708), address: "", domain: nil)) }))
     f.append(SchemaConstructorFixture(name: "WalletUserAddress.walletUserAddress#full", make: { Api.WalletUserAddress.walletUserAddress(Api.WalletUserAddress.Cons_walletUserAddress(flags: Int32(bitPattern: UInt32(1)), userId: Int64(1100380630383), address: String(repeating: "aü🙂", count: 100) + "b", publicKey: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })))) }))
-    return f
-}
-
-func schemaConstructorFixtures12() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "WalletUserAddress.walletUserAddress#empty", make: { Api.WalletUserAddress.walletUserAddress(Api.WalletUserAddress.Cons_walletUserAddress(flags: 0, userId: nil, address: "", publicKey: Buffer())) }))
     f.append(SchemaConstructorFixture(name: "WebAuthorization.webAuthorization#full", make: { Api.WebAuthorization.webAuthorization(Api.WebAuthorization.Cons_webAuthorization(hash: Int64(1100128629627), botId: Int64(1100129629630), domain: String(repeating: "aü🙂", count: 100) + "b", browser: "s619", platform: "s620", dateCreated: Int32(-34), dateActive: Int32(3), ip: "s623", region: "s624")) }))
     f.append(SchemaConstructorFixture(name: "WebAuthorization.webAuthorization#empty", make: { Api.WebAuthorization.webAuthorization(Api.WebAuthorization.Cons_webAuthorization(hash: Int64(1100128629627), botId: Int64(1100129629630), domain: "", browser: "", platform: "", dateCreated: Int32(-108), dateActive: Int32(-71), ip: "", region: "")) }))
@@ -5249,6 +5293,11 @@ func schemaConstructorFixtures12() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "channels.SponsoredMessageReportResult.sponsoredMessageReportResultChooseOption#empty", make: { Api.channels.SponsoredMessageReportResult.sponsoredMessageReportResultChooseOption(Api.channels.SponsoredMessageReportResult.Cons_sponsoredMessageReportResultChooseOption(title: "", options: [])) }))
     f.append(SchemaConstructorFixture(name: "channels.SponsoredMessageReportResult.sponsoredMessageReportResultReported", make: { Api.channels.SponsoredMessageReportResult.sponsoredMessageReportResultReported }))
     f.append(SchemaConstructorFixture(name: "chatlists.ChatlistInvite.chatlistInvite#full", make: { Api.chatlists.ChatlistInvite.chatlistInvite(Api.chatlists.ChatlistInvite.Cons_chatlistInvite(flags: Int32(bitPattern: UInt32(3)), title: fx_TextWithEntities(), emoticon: String(repeating: "aü🙂", count: 100) + "b", peers: [fx_Peer(), fx_Peer()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
+    return f
+}
+
+func schemaConstructorFixtures13() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "chatlists.ChatlistInvite.chatlistInvite#empty", make: { Api.chatlists.ChatlistInvite.chatlistInvite(Api.chatlists.ChatlistInvite.Cons_chatlistInvite(flags: 0, title: fx_TextWithEntities(), emoticon: nil, peers: [], chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "chatlists.ChatlistInvite.chatlistInviteAlready#full", make: { Api.chatlists.ChatlistInvite.chatlistInviteAlready(Api.chatlists.ChatlistInvite.Cons_chatlistInviteAlready(filterId: Int32(-556), missingPeers: [fx_Peer(), fx_Peer()], alreadyPeers: [fx_Peer(), fx_Peer()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "chatlists.ChatlistInvite.chatlistInviteAlready#empty", make: { Api.chatlists.ChatlistInvite.chatlistInviteAlready(Api.chatlists.ChatlistInvite.Cons_chatlistInviteAlready(filterId: Int32(-556), missingPeers: [], alreadyPeers: [], chats: [], users: [])) }))
@@ -5261,11 +5310,6 @@ func schemaConstructorFixtures12() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "communities.ParticipantJoinedChats.participantJoinedChats#full", make: { Api.communities.ParticipantJoinedChats.participantJoinedChats(Api.communities.ParticipantJoinedChats.Cons_participantJoinedChats(creatorChatIds: [Int64(1099908628967), Int64(1099909628970)], joinedChatIds: [Int64(1099910628973), Int64(1099911628976)], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "communities.ParticipantJoinedChats.participantJoinedChats#empty", make: { Api.communities.ParticipantJoinedChats.participantJoinedChats(Api.communities.ParticipantJoinedChats.Cons_participantJoinedChats(creatorChatIds: [], joinedChatIds: [], chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "communities.PeerLinkRequests.peerLinkRequests#full", make: { Api.communities.PeerLinkRequests.peerLinkRequests(Api.communities.PeerLinkRequests.Cons_peerLinkRequests(flags: Int32(bitPattern: UInt32(1)), totalCount: Int32(145), requests: [fx_CommunityPeerRequest(), fx_CommunityPeerRequest()], nextOffset: String(repeating: "aü🙂", count: 100) + "b", chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
-    return f
-}
-
-func schemaConstructorFixtures13() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "communities.PeerLinkRequests.peerLinkRequests#empty", make: { Api.communities.PeerLinkRequests.peerLinkRequests(Api.communities.PeerLinkRequests.Cons_peerLinkRequests(flags: 0, totalCount: Int32(145), requests: [], nextOffset: nil, chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "contacts.Blocked.blocked#full", make: { Api.contacts.Blocked.blocked(Api.contacts.Blocked.Cons_blocked(blocked: [fx_PeerBlocked(), fx_PeerBlocked()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "contacts.Blocked.blocked#empty", make: { Api.contacts.Blocked.blocked(Api.contacts.Blocked.Cons_blocked(blocked: [], chats: [], users: [])) }))
@@ -5292,6 +5336,16 @@ func schemaConstructorFixtures13() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "ephemeral.WelcomeMessages.welcomeMessages#full", make: { Api.ephemeral.WelcomeMessages.welcomeMessages(Api.ephemeral.WelcomeMessages.Cons_welcomeMessages(hash: Int64(1100087629504), messages: [fx_EphemeralMessage(), fx_EphemeralMessage()])) }))
     f.append(SchemaConstructorFixture(name: "ephemeral.WelcomeMessages.welcomeMessages#empty", make: { Api.ephemeral.WelcomeMessages.welcomeMessages(Api.ephemeral.WelcomeMessages.Cons_welcomeMessages(hash: Int64(1100087629504), messages: [])) }))
     f.append(SchemaConstructorFixture(name: "ephemeral.WelcomeMessages.welcomeMessagesNotModified", make: { Api.ephemeral.WelcomeMessages.welcomeMessagesNotModified }))
+    f.append(SchemaConstructorFixture(name: "feed.FeedMessages.feedMessages#full", make: { Api.feed.FeedMessages.feedMessages(Api.feed.FeedMessages.Cons_feedMessages(flags: Int32(bitPattern: UInt32(7)), maxPosition: fx_FeedPosition(), minPosition: fx_FeedPosition(), readMaxPosition: fx_FeedPosition(), messages: [fx_Message(), fx_Message()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
+    f.append(SchemaConstructorFixture(name: "feed.FeedMessages.feedMessages#empty", make: { Api.feed.FeedMessages.feedMessages(Api.feed.FeedMessages.Cons_feedMessages(flags: 0, maxPosition: nil, minPosition: nil, readMaxPosition: nil, messages: [], chats: [], users: [])) }))
+    f.append(SchemaConstructorFixture(name: "feed.FeedMessages.feedMessagesNotModified", make: { Api.feed.FeedMessages.feedMessagesNotModified }))
+    f.append(SchemaConstructorFixture(name: "feed.ForYouFeed.forYouFeed#full", make: { Api.feed.ForYouFeed.forYouFeed(Api.feed.ForYouFeed.Cons_forYouFeed(flags: Int32(-607), items: [fx_FeedItem(), fx_FeedItem()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
+    f.append(SchemaConstructorFixture(name: "feed.ForYouFeed.forYouFeed#empty", make: { Api.feed.ForYouFeed.forYouFeed(Api.feed.ForYouFeed.Cons_forYouFeed(flags: Int32(-607), items: [], chats: [], users: [])) }))
+    f.append(SchemaConstructorFixture(name: "feed.InterestCategories.interestCategories#full", make: { Api.feed.InterestCategories.interestCategories(Api.feed.InterestCategories.Cons_interestCategories(categories: [fx_feed_InterestCategory(), fx_feed_InterestCategory()], selected: [Int32(-703), Int32(-666)])) }))
+    f.append(SchemaConstructorFixture(name: "feed.InterestCategories.interestCategories#empty", make: { Api.feed.InterestCategories.interestCategories(Api.feed.InterestCategories.Cons_interestCategories(categories: [], selected: [])) }))
+    f.append(SchemaConstructorFixture(name: "feed.InterestCategories.interestCategoriesNotModified", make: { Api.feed.InterestCategories.interestCategoriesNotModified }))
+    f.append(SchemaConstructorFixture(name: "feed.InterestCategory.interestCategory#full", make: { Api.feed.InterestCategory.interestCategory(Api.feed.InterestCategory.Cons_interestCategory(flags: Int32(bitPattern: UInt32(3)), id: Int32(61), title: String(repeating: "aü🙂", count: 100) + "b", emoji: "s246", emojiDocumentId: Int64(1099758628517))) }))
+    f.append(SchemaConstructorFixture(name: "feed.InterestCategory.interestCategory#empty", make: { Api.feed.InterestCategory.interestCategory(Api.feed.InterestCategory.Cons_interestCategory(flags: 0, id: Int32(61), title: "", emoji: nil, emojiDocumentId: nil)) }))
     f.append(SchemaConstructorFixture(name: "fragment.CollectibleInfo.collectibleInfo#full", make: { Api.fragment.CollectibleInfo.collectibleInfo(Api.fragment.CollectibleInfo.Cons_collectibleInfo(purchaseDate: Int32(625), currency: String(repeating: "aü🙂", count: 100) + "b", amount: Int64(1099610628073), cryptoCurrency: "s100", cryptoAmount: Int64(1099612628079), url: "s102")) }))
     f.append(SchemaConstructorFixture(name: "fragment.CollectibleInfo.collectibleInfo#empty", make: { Api.fragment.CollectibleInfo.collectibleInfo(Api.fragment.CollectibleInfo.Cons_collectibleInfo(purchaseDate: Int32(625), currency: "", amount: Int64(1099610628073), cryptoCurrency: "", cryptoAmount: Int64(1099611628076), url: "")) }))
     f.append(SchemaConstructorFixture(name: "help.AppConfig.appConfig#full", make: { Api.help.AppConfig.appConfig(Api.help.AppConfig.Cons_appConfig(hash: Int32(281), config: fx_JSONValue())) }))
@@ -5444,6 +5498,11 @@ func schemaConstructorFixtures13() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "messages.HistoryImportParsed.historyImportParsed#full", make: { Api.messages.HistoryImportParsed.historyImportParsed(Api.messages.HistoryImportParsed.Cons_historyImportParsed(flags: Int32(bitPattern: UInt32(7)), title: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "messages.HistoryImportParsed.historyImportParsed#empty", make: { Api.messages.HistoryImportParsed.historyImportParsed(Api.messages.HistoryImportParsed.Cons_historyImportParsed(flags: 0, title: nil)) }))
     f.append(SchemaConstructorFixture(name: "messages.InactiveChats.inactiveChats#full", make: { Api.messages.InactiveChats.inactiveChats(Api.messages.InactiveChats.Cons_inactiveChats(dates: [Int32(918), Int32(955)], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
+    return f
+}
+
+func schemaConstructorFixtures14() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "messages.InactiveChats.inactiveChats#empty", make: { Api.messages.InactiveChats.inactiveChats(Api.messages.InactiveChats.Cons_inactiveChats(dates: [], chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "messages.InvitedUsers.invitedUsers#full", make: { Api.messages.InvitedUsers.invitedUsers(Api.messages.InvitedUsers.Cons_invitedUsers(updates: fx_Updates(), missingInvitees: [fx_MissingInvitee(), fx_MissingInvitee()])) }))
     f.append(SchemaConstructorFixture(name: "messages.InvitedUsers.invitedUsers#empty", make: { Api.messages.InvitedUsers.invitedUsers(Api.messages.InvitedUsers.Cons_invitedUsers(updates: fx_Updates(), missingInvitees: [])) }))
@@ -5466,11 +5525,6 @@ func schemaConstructorFixtures13() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "messages.PeerDialogs.peerDialogs#full", make: { Api.messages.PeerDialogs.peerDialogs(Api.messages.PeerDialogs.Cons_peerDialogs(dialogs: [fx_Dialog(), fx_Dialog()], messages: [fx_Message(), fx_Message()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()], state: fx_updates_State())) }))
     f.append(SchemaConstructorFixture(name: "messages.PeerDialogs.peerDialogs#empty", make: { Api.messages.PeerDialogs.peerDialogs(Api.messages.PeerDialogs.Cons_peerDialogs(dialogs: [], messages: [], chats: [], users: [], state: fx_updates_State())) }))
     f.append(SchemaConstructorFixture(name: "messages.PeerSettings.peerSettings#full", make: { Api.messages.PeerSettings.peerSettings(Api.messages.PeerSettings.Cons_peerSettings(settings: fx_PeerSettings(), chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
-    return f
-}
-
-func schemaConstructorFixtures14() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "messages.PeerSettings.peerSettings#empty", make: { Api.messages.PeerSettings.peerSettings(Api.messages.PeerSettings.Cons_peerSettings(settings: fx_PeerSettings(), chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "messages.PreparedInlineMessage.preparedInlineMessage#full", make: { Api.messages.PreparedInlineMessage.preparedInlineMessage(Api.messages.PreparedInlineMessage.Cons_preparedInlineMessage(queryId: Int64(1100467630644), result: fx_BotInlineResult(), peerTypes: [fx_InlineQueryPeerType(), fx_InlineQueryPeerType()], cacheTime: Int32(392), users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "messages.PreparedInlineMessage.preparedInlineMessage#empty", make: { Api.messages.PreparedInlineMessage.preparedInlineMessage(Api.messages.PreparedInlineMessage.Cons_preparedInlineMessage(queryId: Int64(1100467630644), result: fx_BotInlineResult(), peerTypes: [], cacheTime: Int32(392), users: [])) }))
@@ -5649,6 +5703,11 @@ func schemaConstructorFixtures14() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "stickers.SuggestedShortName.suggestedShortName#empty", make: { Api.stickers.SuggestedShortName.suggestedShortName(Api.stickers.SuggestedShortName.Cons_suggestedShortName(shortName: "")) }))
     f.append(SchemaConstructorFixture(name: "storage.FileType.fileGif", make: { Api.storage.FileType.fileGif }))
     f.append(SchemaConstructorFixture(name: "storage.FileType.fileJpeg", make: { Api.storage.FileType.fileJpeg }))
+    return f
+}
+
+func schemaConstructorFixtures15() -> [SchemaConstructorFixture] {
+    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "storage.FileType.fileMov", make: { Api.storage.FileType.fileMov }))
     f.append(SchemaConstructorFixture(name: "storage.FileType.fileMp3", make: { Api.storage.FileType.fileMp3 }))
     f.append(SchemaConstructorFixture(name: "storage.FileType.fileMp4", make: { Api.storage.FileType.fileMp4 }))
@@ -5671,11 +5730,6 @@ func schemaConstructorFixtures14() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "stories.PeerStories.peerStories#full", make: { Api.stories.PeerStories.peerStories(Api.stories.PeerStories.Cons_peerStories(stories: fx_PeerStories(), chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "stories.PeerStories.peerStories#empty", make: { Api.stories.PeerStories.peerStories(Api.stories.PeerStories.Cons_peerStories(stories: fx_PeerStories(), chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "stories.Stories.stories#full", make: { Api.stories.Stories.stories(Api.stories.Stories.Cons_stories(flags: Int32(bitPattern: UInt32(1)), count: Int32(-274), stories: [fx_StoryItem(), fx_StoryItem()], pinnedToTop: [Int32(-237), Int32(-200)], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()])) }))
-    return f
-}
-
-func schemaConstructorFixtures15() -> [SchemaConstructorFixture] {
-    var f: [SchemaConstructorFixture] = []
     f.append(SchemaConstructorFixture(name: "stories.Stories.stories#empty", make: { Api.stories.Stories.stories(Api.stories.Stories.Cons_stories(flags: 0, count: Int32(-274), stories: [], pinnedToTop: nil, chats: [], users: [])) }))
     f.append(SchemaConstructorFixture(name: "stories.StoryReactionsList.storyReactionsList#full", make: { Api.stories.StoryReactionsList.storyReactionsList(Api.stories.StoryReactionsList.Cons_storyReactionsList(flags: Int32(bitPattern: UInt32(1)), count: Int32(345), reactions: [fx_StoryReaction(), fx_StoryReaction()], chats: [fx_Chat(), fx_Chat()], users: [fx_User(), fx_User()], nextOffset: String(repeating: "aü🙂", count: 100) + "b")) }))
     f.append(SchemaConstructorFixture(name: "stories.StoryReactionsList.storyReactionsList#empty", make: { Api.stories.StoryReactionsList.storyReactionsList(Api.stories.StoryReactionsList.Cons_storyReactionsList(flags: 0, count: Int32(345), reactions: [], chats: [], users: [], nextOffset: nil)) }))
@@ -7513,6 +7567,14 @@ func schemaFunctionFixtures2() -> [SchemaFunctionFixture] {
         let call = Api.functions.channels.editBanned(channel: fx_InputChannel(), participant: fx_InputPeer(), bannedRights: fx_ChatBannedRights())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "channels.editChannelNews#full", make: {
+        let call = Api.functions.channels.editChannelNews(channel: fx_InputChannel(), news: fx_Bool())
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "channels.editChannelNews#empty", make: {
+        let call = Api.functions.channels.editChannelNews(channel: fx_InputChannel(), news: fx_Bool())
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "channels.editLocation#full", make: {
         let call = Api.functions.channels.editLocation(channel: fx_InputChannel(), geoPoint: fx_InputGeoPoint(), address: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
@@ -7658,11 +7720,11 @@ func schemaFunctionFixtures2() -> [SchemaFunctionFixture] {
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_InvitedUsers().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "channels.joinChannel#full", make: {
-        let call = Api.functions.channels.joinChannel(channel: fx_InputChannel())
+        let call = Api.functions.channels.joinChannel(flags: Int32(bitPattern: UInt32(1)), channel: fx_InputChannel())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_ChatInviteJoinResult().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "channels.joinChannel#empty", make: {
-        let call = Api.functions.channels.joinChannel(channel: fx_InputChannel())
+        let call = Api.functions.channels.joinChannel(flags: 0, channel: fx_InputChannel())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_ChatInviteJoinResult().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "channels.leaveChannel#full", make: {
@@ -8113,6 +8175,14 @@ func schemaFunctionFixtures2() -> [SchemaFunctionFixture] {
         let call = Api.functions.contacts.exportContactToken()
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_ExportedContactToken().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "contacts.exportNoPaidMessagesToken#full", make: {
+        let call = Api.functions.contacts.exportNoPaidMessagesToken(flags: Int32(bitPattern: UInt32(1)))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_ExportedNoPaidMessagesToken().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "contacts.exportNoPaidMessagesToken#empty", make: {
+        let call = Api.functions.contacts.exportNoPaidMessagesToken(flags: 0)
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_ExportedNoPaidMessagesToken().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "contacts.getBirthdays#full", make: {
         let call = Api.functions.contacts.getBirthdays()
         return (call.0, call.1, { call.2.parse($0) })
@@ -8169,6 +8239,11 @@ func schemaFunctionFixtures2() -> [SchemaFunctionFixture] {
         let call = Api.functions.contacts.getSponsoredPeers(q: "")
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_contacts_SponsoredPeers().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "contacts.getStatuses#full", make: {
         let call = Api.functions.contacts.getStatuses()
         return (call.0, call.1, { call.2.parse($0) })
@@ -8185,11 +8260,6 @@ func schemaFunctionFixtures2() -> [SchemaFunctionFixture] {
         let call = Api.functions.contacts.getTopPeers(flags: 0, offset: Int32(296), limit: Int32(333), hash: Int64(1100197629834))
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_contacts_TopPeers().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "contacts.importContactToken#full", make: {
         let call = Api.functions.contacts.importContactToken(token: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
@@ -8206,6 +8276,14 @@ func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
         let call = Api.functions.contacts.importContacts(contacts: [])
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_contacts_ImportedContacts().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "contacts.importNoPaidMessagesToken#full", make: {
+        let call = Api.functions.contacts.importNoPaidMessagesToken(userId: fx_InputUser(), token: String(repeating: "aü🙂", count: 100) + "b")
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_User().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "contacts.importNoPaidMessagesToken#empty", make: {
+        let call = Api.functions.contacts.importNoPaidMessagesToken(userId: fx_InputUser(), token: "")
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_User().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "contacts.resetSaved#full", make: {
         let call = Api.functions.contacts.resetSaved()
         return (call.0, call.1, { call.2.parse($0) })
@@ -8342,6 +8420,46 @@ func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
         let call = Api.functions.ephemeral.sendMessage(flags: 0, peer: nil, receiverId: fx_InputUser(), queryId: nil, message: "", entities: nil, media: nil, replyMarkup: nil, richMessage: nil, randomId: Int64(1100369630350), replyTo: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getFeed#full", make: {
+        let call = Api.functions.feed.getFeed(flags: Int32(bitPattern: UInt32(15)), filterId: Int32(-186), offsetPosition: fx_FeedPosition(), addOffset: Int32(-149), limit: Int32(-112), maxPosition: fx_FeedPosition(), minPosition: fx_FeedPosition(), hash: Int64(1099536627851))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_FeedMessages().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getFeed#empty", make: {
+        let call = Api.functions.feed.getFeed(flags: 0, filterId: Int32(-186), offsetPosition: nil, addOffset: Int32(-149), limit: Int32(-112), maxPosition: nil, minPosition: nil, hash: Int64(1099536627851))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_FeedMessages().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getForYou#full", make: {
+        let call = Api.functions.feed.getForYou(limit: Int32(184))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_ForYouFeed().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getForYou#empty", make: {
+        let call = Api.functions.feed.getForYou(limit: Int32(184))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_ForYouFeed().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getInterestCategories#full", make: {
+        let call = Api.functions.feed.getInterestCategories(hash: Int64(1099627628124))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_InterestCategories().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.getInterestCategories#empty", make: {
+        let call = Api.functions.feed.getInterestCategories(hash: Int64(1099627628124))
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_feed_InterestCategories().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.readFeed#full", make: {
+        let call = Api.functions.feed.readFeed(filterId: Int32(-13), maxPosition: fx_FeedPosition())
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.readFeed#empty", make: {
+        let call = Api.functions.feed.readFeed(filterId: Int32(-13), maxPosition: fx_FeedPosition())
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.setInterestCategories#full", make: {
+        let call = Api.functions.feed.setInterestCategories(categoryIds: [Int32(295), Int32(332)])
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Bool().serialize(b, true); return b }))
+    f.append(SchemaFunctionFixture(name: "feed.setInterestCategories#empty", make: {
+        let call = Api.functions.feed.setInterestCategories(categoryIds: [])
+        return (call.0, call.1, { call.2.parse($0) })
+    }, resultBytes: { let b = Buffer(); fx_Bool().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "folders.editPeerFolders#full", make: {
         let call = Api.functions.folders.editPeerFolders(folderPeers: [fx_InputFolderPeer(), fx_InputFolderPeer()])
         return (call.0, call.1, { call.2.parse($0) })
@@ -8615,11 +8733,11 @@ func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_EncryptedChat().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "messages.acceptUrlAuth#full", make: {
-        let call = Api.functions.messages.acceptUrlAuth(flags: Int32(bitPattern: UInt32(31)), peer: fx_InputPeer(), msgId: Int32(536), buttonId: Int32(573), url: String(repeating: "aü🙂", count: 100) + "b", matchCode: "s368")
+        let call = Api.functions.messages.acceptUrlAuth(flags: Int32(bitPattern: UInt32(63)), peer: fx_InputPeer(), msgId: Int32(-462), buttonId: Int32(-425), url: String(repeating: "aü🙂", count: 100) + "b", matchCode: "s990", tonconnectSession: fx_InputTonConnectOauthSession())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_UrlAuthResult().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "messages.acceptUrlAuth#empty", make: {
-        let call = Api.functions.messages.acceptUrlAuth(flags: 0, peer: nil, msgId: nil, buttonId: nil, url: nil, matchCode: nil)
+        let call = Api.functions.messages.acceptUrlAuth(flags: 0, peer: nil, msgId: nil, buttonId: nil, url: nil, matchCode: nil, tonconnectSession: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_UrlAuthResult().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "messages.addChatUser#full", make: {
@@ -8926,6 +9044,11 @@ func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.editChatDefaultBannedRights(peer: fx_InputPeer(), bannedRights: fx_ChatBannedRights())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures4() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.editChatParticipantRank#full", make: {
         let call = Api.functions.messages.editChatParticipantRank(peer: fx_InputPeer(), participant: fx_InputPeer(), rank: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
@@ -8990,11 +9113,6 @@ func schemaFunctionFixtures3() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.editMessage(flags: 0, peer: fx_InputPeer(), id: Int32(280), message: nil, media: nil, replyMarkup: nil, entities: nil, scheduleDate: nil, scheduleRepeatPeriod: nil, quickReplyShortcutId: nil, richMessage: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures4() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.editQuickReplyShortcut#full", make: {
         let call = Api.functions.messages.editQuickReplyShortcut(shortcutId: Int32(540), shortcut: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
@@ -9731,6 +9849,11 @@ func schemaFunctionFixtures4() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.getStickerSet(stickerset: fx_InputStickerSet(), hash: Int32(213))
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_StickerSet().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures5() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.getStickers#full", make: {
         let call = Api.functions.messages.getStickers(emoticon: String(repeating: "aü🙂", count: 100) + "b", hash: Int64(1099737628454))
         return (call.0, call.1, { call.2.parse($0) })
@@ -9795,11 +9918,6 @@ func schemaFunctionFixtures4() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.getWebPagePreview(flags: 0, message: "", entities: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_WebPagePreview().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures5() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.hideAllChatJoinRequests#full", make: {
         let call = Api.functions.messages.hideAllChatJoinRequests(flags: Int32(bitPattern: UInt32(3)), peer: fx_InputPeer(), link: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
@@ -10536,6 +10654,11 @@ func schemaFunctionFixtures5() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.togglePaidReactionPrivacy(peer: fx_InputPeer(), msgId: Int32(592), private: fx_PaidReactionPrivacy())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Bool().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures6() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.togglePeerTranslations#full", make: {
         let call = Api.functions.messages.togglePeerTranslations(flags: Int32(bitPattern: UInt32(1)), peer: fx_InputPeer())
         return (call.0, call.1, { call.2.parse($0) })
@@ -10600,11 +10723,6 @@ func schemaFunctionFixtures5() -> [SchemaFunctionFixture] {
         let call = Api.functions.messages.translateText(flags: 0, peer: nil, id: nil, text: nil, toLang: "", tone: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_messages_TranslatedText().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures6() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "messages.uninstallStickerSet#full", make: {
         let call = Api.functions.messages.uninstallStickerSet(stickerset: fx_InputStickerSet())
         return (call.0, call.1, { call.2.parse($0) })
@@ -11341,6 +11459,11 @@ func schemaFunctionFixtures6() -> [SchemaFunctionFixture] {
         let call = Api.functions.phone.deleteGroupCallParticipantMessages(flags: 0, call: fx_InputGroupCall(), participant: fx_InputPeer())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures7() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "phone.discardCall#full", make: {
         let call = Api.functions.phone.discardCall(flags: Int32(bitPattern: UInt32(1)), peer: fx_InputPhoneCall(), duration: Int32(73), reason: fx_PhoneCallDiscardReason(), connectionId: Int64(1099541627866))
         return (call.0, call.1, { call.2.parse($0) })
@@ -11405,11 +11528,6 @@ func schemaFunctionFixtures6() -> [SchemaFunctionFixture] {
         let call = Api.functions.phone.getGroupCallChainBlocks(call: fx_InputGroupCall(), subChainId: Int32(924), offset: Int32(961), limit: Int32(998))
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures7() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "phone.getGroupCallJoinAs#full", make: {
         let call = Api.functions.phone.getGroupCallJoinAs(peer: fx_InputPeer())
         return (call.0, call.1, { call.2.parse($0) })
@@ -12146,6 +12264,11 @@ func schemaFunctionFixtures7() -> [SchemaFunctionFixture] {
         let call = Api.functions.stories.togglePeerStoriesHidden(peer: fx_InputPeer(), hidden: fx_Bool())
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Bool().serialize(b, true); return b }))
+    return f
+}
+
+func schemaFunctionFixtures8() -> [SchemaFunctionFixture] {
+    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "stories.togglePinned#full", make: {
         let call = Api.functions.stories.togglePinned(peer: fx_InputPeer(), id: [Int32(-38), Int32(-1)], pinned: fx_Bool())
         return (call.0, call.1, { call.2.parse($0) })
@@ -12210,11 +12333,6 @@ func schemaFunctionFixtures7() -> [SchemaFunctionFixture] {
         let call = Api.functions.updates.getState()
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_updates_State().serialize(b, true); return b }))
-    return f
-}
-
-func schemaFunctionFixtures8() -> [SchemaFunctionFixture] {
-    var f: [SchemaFunctionFixture] = []
     f.append(SchemaFunctionFixture(name: "upload.getCdnFile#full", make: {
         let call = Api.functions.upload.getCdnFile(fileToken: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })), offset: Int64(1100192629819), limit: Int32(222))
         return (call.0, call.1, { call.2.parse($0) })

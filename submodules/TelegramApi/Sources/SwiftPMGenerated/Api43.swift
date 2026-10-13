@@ -1718,8 +1718,16 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func editLocation(channel: Api.InputChannel, geoPoint: Api.InputGeoPoint, address: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+    static func editChannelNews(channel: Api.InputChannel, news: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(216))
+        tlStoreReference(_tlObject, 24, channel.tlObject)
+        tlStoreReference(_tlObject, 32, news.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.channels {
+    static func editLocation(channel: Api.InputChannel, geoPoint: Api.InputGeoPoint, address: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(217))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, geoPoint.tlObject)
         tlStoreReference(_tlObject, 40, address as NSString)
@@ -1728,7 +1736,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func editPhoto(channel: Api.InputChannel, photo: Api.InputChatPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(217))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(218))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, photo.tlObject)
         return tlFunction(_tlObject)
@@ -1736,7 +1744,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func editTitle(channel: Api.InputChannel, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(218))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(219))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         return tlFunction(_tlObject)
@@ -1744,7 +1752,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func exportMessageLink(flags: Int32, channel: Api.InputChannel, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedMessageLink>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(219))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(220))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 28, id)
@@ -1753,7 +1761,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getAdminLog(flags: Int32, channel: Api.InputChannel, q: String, eventsFilter: Api.ChannelAdminLogEventsFilter?, admins: [Api.InputUser]?, maxId: Int64, minId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.AdminLogResults>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(220))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(221))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStoreReference(_tlObject, 40, q as NSString)
@@ -1767,14 +1775,14 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getAdminedPublicChannels(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(221))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(222))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func getChannelRecommendations(flags: Int32, channel: Api.InputChannel?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(222))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(223))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel?.tlObject)
         return tlFunction(_tlObject)
@@ -1782,40 +1790,40 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getChannels(id: [Api.InputChannel]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(223))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(224))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func getFullChannel(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatFull>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(224))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(225))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func getGroupsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(225))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.channels {
-    static func getInactiveChannels() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InactiveChats>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(226))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
-    static func getLeftChannels(offset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+    static func getInactiveChannels() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InactiveChats>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(227))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.channels {
+    static func getLeftChannels(offset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(228))
         tlStore(_tlObject, 24, offset)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func getMessageAuthor(channel: Api.InputChannel, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(228))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(229))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, id)
         return tlFunction(_tlObject)
@@ -1823,7 +1831,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getMessages(channel: Api.InputChannel, id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(229))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(230))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -1831,7 +1839,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getParticipant(channel: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipant>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(230))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(231))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, participant.tlObject)
         return tlFunction(_tlObject)
@@ -1839,7 +1847,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getParticipants(channel: Api.InputChannel, filter: Api.ChannelParticipantsFilter, offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipants>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(231))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(232))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStoreReference(_tlObject, 40, filter.tlObject)
         tlStore(_tlObject, 24, offset)
@@ -1850,7 +1858,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func getSendAs(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.SendAsPeers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(232))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(233))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -1858,29 +1866,30 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func inviteToChannel(channel: Api.InputChannel, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(233))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(234))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, users.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
-    static func joinChannel(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteJoinResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(234))
-        tlStoreReference(_tlObject, 24, channel.tlObject)
+    static func joinChannel(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteJoinResult>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(235))
+        tlStore(_tlObject, 24, flags)
+        tlStoreReference(_tlObject, 32, channel.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func leaveChannel(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(235))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(236))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.channels {
     static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(236))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(237))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, maxId)
         return tlFunction(_tlObject)
@@ -1888,7 +1897,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func readMessageContents(channel: Api.InputChannel, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(237))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(238))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -1896,7 +1905,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func reorderUsernames(channel: Api.InputChannel, order: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(238))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(239))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, order as NSArray)
         return tlFunction(_tlObject)
@@ -1904,7 +1913,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func reportAntiSpamFalsePositive(channel: Api.InputChannel, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(239))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(240))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -1912,7 +1921,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func reportSpam(channel: Api.InputChannel, participant: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(240))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(241))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, participant.tlObject)
         tlStoreReference(_tlObject, 40, tlPackInt32(id) as NSData)
@@ -1921,7 +1930,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func restrictSponsoredMessages(channel: Api.InputChannel, restricted: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(241))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(242))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, restricted.tlObject)
         return tlFunction(_tlObject)
@@ -1929,7 +1938,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func searchPosts(flags: Int32, hashtag: String?, query: String?, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32, allowPaidStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(242))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(243))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, hashtag.map { value in value as NSString })
@@ -1945,7 +1954,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func setBoostsToUnblockRestrictions(channel: Api.InputChannel, boosts: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(243))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(244))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, boosts)
         return tlFunction(_tlObject)
@@ -1953,7 +1962,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func setDiscussionGroup(broadcast: Api.InputChannel, group: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(244))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(245))
         tlStoreReference(_tlObject, 24, broadcast.tlObject)
         tlStoreReference(_tlObject, 32, group.tlObject)
         return tlFunction(_tlObject)
@@ -1961,7 +1970,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func setEmojiStickers(channel: Api.InputChannel, stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(245))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(246))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, stickerset.tlObject)
         return tlFunction(_tlObject)
@@ -1969,7 +1978,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func setMainProfileTab(channel: Api.InputChannel, tab: Api.ProfileTab) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(246))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(247))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, tab.tlObject)
         return tlFunction(_tlObject)
@@ -1977,7 +1986,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func setStickers(channel: Api.InputChannel, stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(247))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(248))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, stickerset.tlObject)
         return tlFunction(_tlObject)
@@ -1985,14 +1994,6 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleAntiSpam(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(248))
-        tlStoreReference(_tlObject, 24, channel.tlObject)
-        tlStoreReference(_tlObject, 32, enabled.tlObject)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.channels {
-    static func toggleAutotranslation(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(249))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, enabled.tlObject)
@@ -2000,8 +2001,16 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func toggleForum(channel: Api.InputChannel, enabled: Api.Bool, tabs: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func toggleAutotranslation(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(250))
+        tlStoreReference(_tlObject, 24, channel.tlObject)
+        tlStoreReference(_tlObject, 32, enabled.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.channels {
+    static func toggleForum(channel: Api.InputChannel, enabled: Api.Bool, tabs: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(251))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, enabled.tlObject)
         tlStoreReference(_tlObject, 40, tabs.tlObject)
@@ -2010,7 +2019,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleJoinRequest(flags: Int32, channel: Api.InputChannel, enabled: Api.Bool, guardBot: Api.InputUser?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(251))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(252))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStoreReference(_tlObject, 40, enabled.tlObject)
@@ -2020,14 +2029,6 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleJoinToSend(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(252))
-        tlStoreReference(_tlObject, 24, channel.tlObject)
-        tlStoreReference(_tlObject, 32, enabled.tlObject)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.channels {
-    static func toggleParticipantsHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(253))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, enabled.tlObject)
@@ -2035,7 +2036,7 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func togglePreHistoryHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func toggleParticipantsHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(254))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, enabled.tlObject)
@@ -2043,8 +2044,16 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func toggleSignatures(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func togglePreHistoryHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(255))
+        tlStoreReference(_tlObject, 24, channel.tlObject)
+        tlStoreReference(_tlObject, 32, enabled.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.channels {
+    static func toggleSignatures(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(256))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         return tlFunction(_tlObject)
@@ -2052,7 +2061,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleSlowMode(channel: Api.InputChannel, seconds: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(256))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(257))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, seconds)
         return tlFunction(_tlObject)
@@ -2060,7 +2069,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleUsername(channel: Api.InputChannel, username: String, active: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(257))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(258))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, username as NSString)
         tlStoreReference(_tlObject, 40, active.tlObject)
@@ -2069,7 +2078,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func toggleViewForumAsMessages(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(258))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(259))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, enabled.tlObject)
         return tlFunction(_tlObject)
@@ -2077,7 +2086,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func updateColor(flags: Int32, channel: Api.InputChannel, color: Int32?, backgroundEmojiId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(259))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(260))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
@@ -2089,7 +2098,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func updateEmojiStatus(channel: Api.InputChannel, emojiStatus: Api.EmojiStatus) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(260))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(261))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, emojiStatus.tlObject)
         return tlFunction(_tlObject)
@@ -2097,7 +2106,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func updatePaidMessagesPrice(flags: Int32, channel: Api.InputChannel, sendPaidMessagesStars: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(261))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(262))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 40, sendPaidMessagesStars)
@@ -2106,7 +2115,7 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.channels {
     static func updateUsername(channel: Api.InputChannel, username: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(262))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(263))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         tlStoreReference(_tlObject, 32, username as NSString)
         return tlFunction(_tlObject)
@@ -2114,14 +2123,14 @@ public extension Api.functions.channels {
 }
 public extension Api.functions.chatlists {
     static func checkChatlistInvite(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.chatlists.ChatlistInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(263))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(264))
         tlStoreReference(_tlObject, 24, slug as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.chatlists {
     static func deleteExportedInvite(chatlist: Api.InputChatlist, slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(264))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(265))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         tlStoreReference(_tlObject, 32, slug as NSString)
         return tlFunction(_tlObject)
@@ -2129,7 +2138,7 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.chatlists {
     static func editExportedInvite(flags: Int32, chatlist: Api.InputChatlist, slug: String, title: String?, peers: [Api.InputPeer]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatlistInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(265))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(266))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, chatlist.tlObject)
         tlStoreReference(_tlObject, 40, slug as NSString)
@@ -2140,7 +2149,7 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.chatlists {
     static func exportChatlistInvite(chatlist: Api.InputChatlist, title: String, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.chatlists.ExportedChatlistInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(266))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(267))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, peers.map { item in item.tlObject } as NSArray)
@@ -2149,35 +2158,35 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.chatlists {
     static func getChatlistUpdates(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.chatlists.ChatlistUpdates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(267))
-        tlStoreReference(_tlObject, 24, chatlist.tlObject)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.chatlists {
-    static func getExportedInvites(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.chatlists.ExportedInvites>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(268))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.chatlists {
-    static func getLeaveChatlistSuggestions(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Peer]>) {
+    static func getExportedInvites(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.chatlists.ExportedInvites>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(269))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.chatlists {
-    static func hideChatlistUpdates(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+    static func getLeaveChatlistSuggestions(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Peer]>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(270))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.chatlists {
-    static func joinChatlistInvite(slug: String, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func hideChatlistUpdates(chatlist: Api.InputChatlist) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(271))
+        tlStoreReference(_tlObject, 24, chatlist.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.chatlists {
+    static func joinChatlistInvite(slug: String, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(272))
         tlStoreReference(_tlObject, 24, slug as NSString)
         tlStoreReference(_tlObject, 32, peers.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -2185,7 +2194,7 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.chatlists {
     static func joinChatlistUpdates(chatlist: Api.InputChatlist, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(272))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(273))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         tlStoreReference(_tlObject, 32, peers.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -2193,7 +2202,7 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.chatlists {
     static func leaveChatlist(chatlist: Api.InputChatlist, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(273))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(274))
         tlStoreReference(_tlObject, 24, chatlist.tlObject)
         tlStoreReference(_tlObject, 32, peers.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -2201,7 +2210,7 @@ public extension Api.functions.chatlists {
 }
 public extension Api.functions.communities {
     static func create(flags: Int32, title: String, about: String?, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(274))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(275))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, about.map { value in value as NSString })
@@ -2211,13 +2220,13 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.communities {
     static func getJoinedCommunities() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(275))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(276))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.communities {
     static func getParticipantJoinedChats(community: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.communities.ParticipantJoinedChats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(276))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(277))
         tlStoreReference(_tlObject, 24, community.tlObject)
         tlStoreReference(_tlObject, 32, participant.tlObject)
         return tlFunction(_tlObject)
@@ -2225,7 +2234,7 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.communities {
     static func getPeerLinkRequests(community: Api.InputChannel, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.communities.PeerLinkRequests>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(277))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(278))
         tlStoreReference(_tlObject, 32, community.tlObject)
         tlStoreReference(_tlObject, 40, offset as NSString)
         tlStore(_tlObject, 24, limit)
@@ -2234,14 +2243,6 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.communities {
     static func toggleAllPeerLinkRequestApproval(flags: Int32, community: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(278))
-        tlStore(_tlObject, 24, flags)
-        tlStoreReference(_tlObject, 32, community.tlObject)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.communities {
-    static func toggleCommunityCollapsedInDialogs(flags: Int32, community: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(279))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, community.tlObject)
@@ -2249,8 +2250,16 @@ public extension Api.functions.communities {
     }
 }
 public extension Api.functions.communities {
-    static func toggleParticipantBanned(flags: Int32, community: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+    static func toggleCommunityCollapsedInDialogs(flags: Int32, community: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(280))
+        tlStore(_tlObject, 24, flags)
+        tlStoreReference(_tlObject, 32, community.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.communities {
+    static func toggleParticipantBanned(flags: Int32, community: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(281))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, community.tlObject)
         tlStoreReference(_tlObject, 40, participant.tlObject)
@@ -2259,7 +2268,7 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.communities {
     static func togglePeerLink(flags: Int32, community: Api.InputChannel, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(281))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(282))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, community.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -2268,7 +2277,7 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.communities {
     static func togglePeerLinkRequestApproval(flags: Int32, community: Api.InputChannel, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(282))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(283))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, community.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -2277,14 +2286,14 @@ public extension Api.functions.communities {
 }
 public extension Api.functions.contacts {
     static func acceptContact(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(283))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(284))
         tlStoreReference(_tlObject, 24, id.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func addContact(flags: Int32, id: Api.InputUser, firstName: String, lastName: String, phone: String, note: Api.TextWithEntities?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(284))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(285))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStoreReference(_tlObject, 40, firstName as NSString)
@@ -2296,7 +2305,7 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func block(flags: Int32, id: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(285))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(286))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         return tlFunction(_tlObject)
@@ -2304,7 +2313,7 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func blockFromReplies(flags: Int32, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(286))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(287))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, msgId)
         return tlFunction(_tlObject)
@@ -2312,40 +2321,47 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func deleteByPhones(phones: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(287))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(288))
         tlStoreReference(_tlObject, 24, phones as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func deleteContacts(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(288))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(289))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func editCloseFriends(id: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(289))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(290))
         tlStoreReference(_tlObject, 24, tlPackInt64(id) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func exportContactToken() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedContactToken>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(290))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.contacts {
-    static func getBirthdays() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ContactBirthdays>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(291))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
-    static func getBlocked(flags: Int32, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.Blocked>) {
+    static func exportNoPaidMessagesToken(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedNoPaidMessagesToken>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(292))
+        tlStore(_tlObject, 24, flags)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.contacts {
+    static func getBirthdays() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ContactBirthdays>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(293))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.contacts {
+    static func getBlocked(flags: Int32, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.Blocked>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(294))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, offset)
         tlStore(_tlObject, 32, limit)
@@ -2354,21 +2370,21 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func getContactIDs(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(293))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(295))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func getContacts(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.Contacts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(294))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(296))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func getLocated(flags: Int32, geoPoint: Api.InputGeoPoint, selfExpires: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(295))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(297))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, geoPoint.tlObject)
@@ -2379,26 +2395,26 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func getSaved() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.SavedContact]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(296))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(298))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func getSponsoredPeers(q: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.SponsoredPeers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(297))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(299))
         tlStoreReference(_tlObject, 24, q as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func getStatuses() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.ContactStatus]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(298))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(300))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func getTopPeers(flags: Int32, offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.TopPeers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(299))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(301))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, offset)
         tlStore(_tlObject, 32, limit)
@@ -2408,27 +2424,35 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func importContactToken(token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(300))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(302))
         tlStoreReference(_tlObject, 24, token as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func importContacts(contacts: [Api.InputContact]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ImportedContacts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(301))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(303))
         tlStoreReference(_tlObject, 24, contacts.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
+    static func importNoPaidMessagesToken(userId: Api.InputUser, token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(304))
+        tlStoreReference(_tlObject, 24, userId.tlObject)
+        tlStoreReference(_tlObject, 32, token as NSString)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.contacts {
     static func resetSaved() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(302))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(305))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func resetTopPeerRating(category: Api.TopPeerCategory, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(303))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(306))
         tlStoreReference(_tlObject, 24, category.tlObject)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -2436,14 +2460,14 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func resolvePhone(phone: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ResolvedPeer>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(304))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(307))
         tlStoreReference(_tlObject, 24, phone as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func resolveUsername(flags: Int32, username: String, referer: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ResolvedPeer>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(305))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(308))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, username as NSString)
         tlStoreReference(_tlObject, 40, referer.map { value in value as NSString })
@@ -2452,7 +2476,7 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func search(flags: Int32, q: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.Found>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(306))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(309))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, q as NSString)
         tlStore(_tlObject, 28, limit)
@@ -2461,7 +2485,7 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func setBlocked(flags: Int32, id: [Api.InputPeer], limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(307))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(310))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.map { item in item.tlObject } as NSArray)
         tlStore(_tlObject, 28, limit)
@@ -2470,14 +2494,14 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func toggleTopPeers(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(308))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(311))
         tlStoreReference(_tlObject, 24, enabled.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.contacts {
     static func unblock(flags: Int32, id: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(309))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(312))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         return tlFunction(_tlObject)
@@ -2485,7 +2509,7 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.contacts {
     static func updateContactNote(id: Api.InputUser, note: Api.TextWithEntities) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(310))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(313))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, note.tlObject)
         return tlFunction(_tlObject)
@@ -2493,14 +2517,14 @@ public extension Api.functions.contacts {
 }
 public extension Api.functions.ephemeral {
     static func deleteAllWelcomeMessages(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(311))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(314))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.ephemeral {
     static func deleteMessage(flags: Int32, peer: Api.InputPeer?, receiverId: Api.InputUser, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(312))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(315))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
         tlStoreReference(_tlObject, 40, receiverId.tlObject)
@@ -2510,7 +2534,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func deleteWelcomeMessage(peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(313))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(316))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         return tlFunction(_tlObject)
@@ -2518,7 +2542,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func editMessage(flags: Int32, peer: Api.InputPeer?, receiverId: Api.InputUser, id: Int32, message: String?, media: Api.InputMedia?, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?, richMessage: Api.InputRichMessage?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(314))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(317))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
         tlStoreReference(_tlObject, 40, receiverId.tlObject)
@@ -2533,7 +2557,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func getCallbackAnswer(flags: Int32, peer: Api.InputPeer, id: Int32, data: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotCallbackAnswer>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(315))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(318))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -2543,7 +2567,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func getWelcomeMessages(peer: Api.InputPeer, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ephemeral.WelcomeMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(316))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(319))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -2551,7 +2575,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func reportMessage(peer: Api.InputPeer, id: Int32, option: Buffer, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReportResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(317))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(320))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         tlStoreReference(_tlObject, 40, option.makeData() as NSData)
@@ -2561,7 +2585,7 @@ public extension Api.functions.ephemeral {
 }
 public extension Api.functions.ephemeral {
     static func sendMessage(flags: Int32, peer: Api.InputPeer?, receiverId: Api.InputUser, queryId: Int64?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, replyMarkup: Api.ReplyMarkup?, richMessage: Api.InputRichMessage?, randomId: Int64, replyTo: Api.InputReplyTo?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(318))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(321))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
@@ -2578,30 +2602,73 @@ public extension Api.functions.ephemeral {
         return tlFunction(_tlObject)
     }
 }
+public extension Api.functions.feed {
+    static func getFeed(flags: Int32, filterId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.FeedMessages>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(322))
+        tlStore(_tlObject, 24, flags)
+        tlStore(_tlObject, 28, filterId)
+        tlStoreReference(_tlObject, 40, offsetPosition?.tlObject)
+        tlStore(_tlObject, 32, addOffset)
+        tlStore(_tlObject, 36, limit)
+        tlStoreReference(_tlObject, 48, maxPosition?.tlObject)
+        tlStoreReference(_tlObject, 56, minPosition?.tlObject)
+        tlStore(_tlObject, 64, hash)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.feed {
+    static func getForYou(limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.ForYouFeed>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(323))
+        tlStore(_tlObject, 24, limit)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.feed {
+    static func getInterestCategories(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.InterestCategories>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(324))
+        tlStore(_tlObject, 24, hash)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.feed {
+    static func readFeed(filterId: Int32, maxPosition: Api.FeedPosition) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(325))
+        tlStore(_tlObject, 24, filterId)
+        tlStoreReference(_tlObject, 32, maxPosition.tlObject)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.feed {
+    static func setInterestCategories(categoryIds: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(326))
+        tlStoreReference(_tlObject, 24, tlPackInt32(categoryIds) as NSData)
+        return tlFunction(_tlObject)
+    }
+}
 public extension Api.functions.folders {
     static func editPeerFolders(folderPeers: [Api.InputFolderPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(319))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(327))
         tlStoreReference(_tlObject, 24, folderPeers.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.fragment {
     static func getCollectibleInfo(collectible: Api.InputCollectible) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.fragment.CollectibleInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(320))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(328))
         tlStoreReference(_tlObject, 24, collectible.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func acceptTermsOfService(id: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(321))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(329))
         tlStoreReference(_tlObject, 24, id.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func dismissSuggestion(peer: Api.InputPeer, suggestion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(322))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(330))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, suggestion as NSString)
         return tlFunction(_tlObject)
@@ -2609,7 +2676,7 @@ public extension Api.functions.help {
 }
 public extension Api.functions.help {
     static func editUserInfo(userId: Api.InputUser, message: String, entities: [Api.MessageEntity]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(323))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(331))
         tlStoreReference(_tlObject, 24, userId.tlObject)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { item in item.tlObject } as NSArray)
@@ -2618,33 +2685,33 @@ public extension Api.functions.help {
 }
 public extension Api.functions.help {
     static func getAppConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.AppConfig>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(324))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(332))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getAppUpdate(source: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.AppUpdate>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(325))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(333))
         tlStoreReference(_tlObject, 24, source as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getCdnConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.CdnConfig>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(326))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(334))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Config>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(327))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(335))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getCountriesList(langCode: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.CountriesList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(328))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(336))
         tlStoreReference(_tlObject, 32, langCode as NSString)
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
@@ -2652,112 +2719,112 @@ public extension Api.functions.help {
 }
 public extension Api.functions.help {
     static func getDeepLinkInfo(path: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.DeepLinkInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(329))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(337))
         tlStoreReference(_tlObject, 24, path as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getInviteText() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.InviteText>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(330))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(338))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getNearestDc() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.NearestDc>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(331))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(339))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getPassportConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PassportConfig>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(332))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(340))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func getPeerColors(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PeerColors>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(333))
-        tlStore(_tlObject, 24, hash)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getPeerProfileColors(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PeerColors>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(334))
-        tlStore(_tlObject, 24, hash)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getPremiumPromo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PremiumPromo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(335))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getPromoData() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PromoData>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(336))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getRecentMeUrls(referer: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.RecentMeUrls>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(337))
-        tlStoreReference(_tlObject, 24, referer as NSString)
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getSupport() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.Support>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(338))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getSupportName() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.SupportName>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(339))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getTermsOfServiceUpdate() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.TermsOfServiceUpdate>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(340))
-        return tlFunction(_tlObject)
-    }
-}
-public extension Api.functions.help {
-    static func getTimezonesList(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.TimezonesList>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(341))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
-    static func getUserInfo(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
+    static func getPeerProfileColors(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PeerColors>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(342))
+        tlStore(_tlObject, 24, hash)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getPremiumPromo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PremiumPromo>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(343))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getPromoData() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PromoData>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(344))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getRecentMeUrls(referer: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.RecentMeUrls>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(345))
+        tlStoreReference(_tlObject, 24, referer as NSString)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getSupport() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.Support>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(346))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getSupportName() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.SupportName>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(347))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getTermsOfServiceUpdate() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.TermsOfServiceUpdate>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(348))
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getTimezonesList(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.TimezonesList>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(349))
+        tlStore(_tlObject, 24, hash)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.help {
+    static func getUserInfo(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(350))
         tlStoreReference(_tlObject, 24, userId.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func hidePromoData(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(343))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(351))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func saveAppLog(events: [Api.InputAppEvent]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(344))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(352))
         tlStoreReference(_tlObject, 24, events.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.help {
     static func setBotUpdatesStatus(pendingUpdatesCount: Int32, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(345))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(353))
         tlStore(_tlObject, 24, pendingUpdatesCount)
         tlStoreReference(_tlObject, 32, message as NSString)
         return tlFunction(_tlObject)
@@ -2765,13 +2832,13 @@ public extension Api.functions.help {
 }
 public extension Api.functions.help {
     static func test() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(346))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(354))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.langpack {
     static func getDifference(langPack: String, langCode: String, fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(347))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(355))
         tlStoreReference(_tlObject, 32, langPack as NSString)
         tlStoreReference(_tlObject, 40, langCode as NSString)
         tlStore(_tlObject, 24, fromVersion)
@@ -2780,7 +2847,7 @@ public extension Api.functions.langpack {
 }
 public extension Api.functions.langpack {
     static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(348))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(356))
         tlStoreReference(_tlObject, 24, langPack as NSString)
         tlStoreReference(_tlObject, 32, langCode as NSString)
         return tlFunction(_tlObject)
@@ -2788,7 +2855,7 @@ public extension Api.functions.langpack {
 }
 public extension Api.functions.langpack {
     static func getLanguage(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackLanguage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(349))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(357))
         tlStoreReference(_tlObject, 24, langPack as NSString)
         tlStoreReference(_tlObject, 32, langCode as NSString)
         return tlFunction(_tlObject)
@@ -2796,14 +2863,14 @@ public extension Api.functions.langpack {
 }
 public extension Api.functions.langpack {
     static func getLanguages(langPack: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackLanguage]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(350))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(358))
         tlStoreReference(_tlObject, 24, langPack as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.langpack {
     static func getStrings(langPack: String, langCode: String, keys: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.LangPackString]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(351))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(359))
         tlStoreReference(_tlObject, 24, langPack as NSString)
         tlStoreReference(_tlObject, 32, langCode as NSString)
         tlStoreReference(_tlObject, 40, keys as NSArray)
@@ -2812,7 +2879,7 @@ public extension Api.functions.langpack {
 }
 public extension Api.functions.messages {
     static func acceptEncryption(peer: Api.InputEncryptedChat, gB: Buffer, keyFingerprint: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EncryptedChat>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(352))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(360))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, gB.makeData() as NSData)
         tlStore(_tlObject, 40, keyFingerprint)
@@ -2820,8 +2887,8 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?, matchCode: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(353))
+    static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?, matchCode: String?, tonconnectSession: Api.InputTonConnectOauthSession?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(361))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer?.tlObject)
@@ -2829,13 +2896,14 @@ public extension Api.functions.messages {
         if let _tlValue = buttonId { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 1 }
         tlStoreReference(_tlObject, 48, url.map { value in value as NSString })
         tlStoreReference(_tlObject, 56, matchCode.map { value in value as NSString })
-        tlStore(_tlObject, 64, _tlPresent)
+        tlStoreReference(_tlObject, 64, tonconnectSession?.tlObject)
+        tlStore(_tlObject, 72, _tlPresent)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func addChatUser(chatId: Int64, userId: Api.InputUser, fwdLimit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(354))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(362))
         tlStore(_tlObject, 32, chatId)
         tlStoreReference(_tlObject, 40, userId.tlObject)
         tlStore(_tlObject, 24, fwdLimit)
@@ -2844,7 +2912,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func addPollAnswer(peer: Api.InputPeer, msgId: Int32, answer: Api.PollAnswer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(355))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(363))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, answer.tlObject)
@@ -2853,7 +2921,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func appendTodoList(peer: Api.InputPeer, msgId: Int32, list: [Api.TodoItem]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(356))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(364))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, list.map { item in item.tlObject } as NSArray)
@@ -2862,35 +2930,35 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func checkChatInvite(hash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ChatInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(357))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(365))
         tlStoreReference(_tlObject, 24, hash as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func checkHistoryImport(importHead: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HistoryImportParsed>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(358))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(366))
         tlStoreReference(_tlObject, 24, importHead as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func checkHistoryImportPeer(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.CheckedHistoryImportPeer>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(359))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(367))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func checkQuickReplyShortcut(shortcut: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(360))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(368))
         tlStoreReference(_tlObject, 24, shortcut as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func checkUrlAuthMatchCode(url: String, matchCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(361))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(369))
         tlStoreReference(_tlObject, 24, url as NSString)
         tlStoreReference(_tlObject, 32, matchCode as NSString)
         return tlFunction(_tlObject)
@@ -2898,26 +2966,26 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func clearAllDrafts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(362))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(370))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func clearRecentReactions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(363))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(371))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func clearRecentStickers(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(364))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(372))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func clickSponsoredMessage(flags: Int32, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(365))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(373))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, randomId.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -2925,7 +2993,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func composeMessageWithAI(flags: Int32, text: Api.TextWithEntities, translateToLang: String?, tone: Api.InputAiComposeTone?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ComposedMessageWithAI>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(366))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(374))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text.tlObject)
         tlStoreReference(_tlObject, 40, translateToLang.map { value in value as NSString })
@@ -2935,7 +3003,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func composeRichMessageWithAI(flags: Int32, text: Api.InputRichMessage?, translateToLang: String?, tone: Api.InputAiComposeTone?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ComposedRichMessageWithAI>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(367))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(375))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text?.tlObject)
         tlStoreReference(_tlObject, 40, translateToLang.map { value in value as NSString })
@@ -2945,7 +3013,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func createChat(flags: Int32, users: [Api.InputUser], title: String, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(368))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(376))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, users.map { item in item.tlObject } as NSArray)
@@ -2957,7 +3025,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func createForumTopic(flags: Int32, peer: Api.InputPeer, title: String, iconColor: Int32?, iconEmojiId: Int64?, randomId: Int64, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(369))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(377))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -2972,21 +3040,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func declineUrlAuth(url: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(370))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(378))
         tlStoreReference(_tlObject, 24, url as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func deleteChat(chatId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(371))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(379))
         tlStore(_tlObject, 24, chatId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func deleteChatUser(flags: Int32, chatId: Int64, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(372))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(380))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, chatId)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -2995,7 +3063,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteExportedChatInvite(peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(373))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(381))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, link as NSString)
         return tlFunction(_tlObject)
@@ -3003,7 +3071,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteFactCheck(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(374))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(382))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -3011,7 +3079,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteHistory(flags: Int32, peer: Api.InputPeer, maxId: Int32, minDate: Int32?, maxDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(375))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(383))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -3024,7 +3092,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteMessages(flags: Int32, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(376))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(384))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -3032,7 +3100,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteParticipantReaction(peer: Api.InputPeer, msgId: Int32, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(377))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(385))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, participant.tlObject)
@@ -3041,7 +3109,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteParticipantReactions(peer: Api.InputPeer, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(378))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(386))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, participant.tlObject)
         return tlFunction(_tlObject)
@@ -3049,14 +3117,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deletePhoneCallHistory(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedFoundMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(379))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(387))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func deletePollAnswer(peer: Api.InputPeer, msgId: Int32, option: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(380))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(388))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, option.makeData() as NSData)
@@ -3065,7 +3133,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteQuickReplyMessages(shortcutId: Int32, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(381))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(389))
         tlStore(_tlObject, 24, shortcutId)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -3073,14 +3141,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteQuickReplyShortcut(shortcutId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(382))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(390))
         tlStore(_tlObject, 24, shortcutId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func deleteRevokedExportedChatInvites(peer: Api.InputPeer, adminId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(383))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(391))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, adminId.tlObject)
         return tlFunction(_tlObject)
@@ -3088,7 +3156,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteSavedHistory(flags: Int32, parentPeer: Api.InputPeer?, peer: Api.InputPeer, maxId: Int32, minDate: Int32?, maxDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(384))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(392))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, parentPeer?.tlObject)
@@ -3102,7 +3170,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteScheduledMessages(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(385))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(393))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -3110,7 +3178,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func deleteTopicHistory(peer: Api.InputPeer, topMsgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(386))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(394))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, topMsgId)
         return tlFunction(_tlObject)
@@ -3118,7 +3186,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func discardEncryption(flags: Int32, chatId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(387))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(395))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, chatId)
         return tlFunction(_tlObject)
@@ -3126,7 +3194,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatAbout(peer: Api.InputPeer, about: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(388))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(396))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, about as NSString)
         return tlFunction(_tlObject)
@@ -3134,7 +3202,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatAdmin(chatId: Int64, userId: Api.InputUser, isAdmin: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(389))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(397))
         tlStore(_tlObject, 24, chatId)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStoreReference(_tlObject, 40, isAdmin.tlObject)
@@ -3143,7 +3211,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatCreator(peer: Api.InputPeer, userId: Api.InputUser, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(390))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(398))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStoreReference(_tlObject, 40, password.tlObject)
@@ -3152,7 +3220,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatDefaultBannedRights(peer: Api.InputPeer, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(391))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(399))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, bannedRights.tlObject)
         return tlFunction(_tlObject)
@@ -3160,7 +3228,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatParticipantRank(peer: Api.InputPeer, participant: Api.InputPeer, rank: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(392))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(400))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, participant.tlObject)
         tlStoreReference(_tlObject, 40, rank as NSString)
@@ -3169,7 +3237,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatPhoto(chatId: Int64, photo: Api.InputChatPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(393))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(401))
         tlStore(_tlObject, 24, chatId)
         tlStoreReference(_tlObject, 32, photo.tlObject)
         return tlFunction(_tlObject)
@@ -3177,7 +3245,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editChatTitle(chatId: Int64, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(394))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(402))
         tlStore(_tlObject, 24, chatId)
         tlStoreReference(_tlObject, 32, title as NSString)
         return tlFunction(_tlObject)
@@ -3185,7 +3253,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editExportedChatInvite(flags: Int32, peer: Api.InputPeer, link: String, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Api.Bool?, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(395))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(403))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -3200,7 +3268,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editFactCheck(peer: Api.InputPeer, msgId: Int32, text: Api.TextWithEntities) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(396))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(404))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, text.tlObject)
@@ -3209,7 +3277,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editForumTopic(flags: Int32, peer: Api.InputPeer, topicId: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(397))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(405))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -3224,7 +3292,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editInlineBotMessage(flags: Int32, id: Api.InputBotInlineMessageID, message: String?, media: Api.InputMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, richMessage: Api.InputRichMessage?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(398))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(406))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStoreReference(_tlObject, 40, message.map { value in value as NSString })
@@ -3237,7 +3305,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editMessage(flags: Int32, peer: Api.InputPeer, id: Int32, message: String?, media: Api.InputMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, scheduleRepeatPeriod: Int32?, quickReplyShortcutId: Int32?, richMessage: Api.InputRichMessage?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(399))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(407))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, peer.tlObject)
@@ -3256,7 +3324,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func editQuickReplyShortcut(shortcutId: Int32, shortcut: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(400))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(408))
         tlStore(_tlObject, 24, shortcutId)
         tlStoreReference(_tlObject, 32, shortcut as NSString)
         return tlFunction(_tlObject)
@@ -3264,7 +3332,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func exportChatInvite(flags: Int32, peer: Api.InputPeer, expireDate: Int32?, usageLimit: Int32?, title: String?, subscriptionPricing: Api.StarsSubscriptionPricing?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedChatInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(401))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(409))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -3278,7 +3346,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func faveSticker(id: Api.InputDocument, unfave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(402))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(410))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, unfave.tlObject)
         return tlFunction(_tlObject)
@@ -3286,7 +3354,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func forwardMessages(flags: Int32, fromPeer: Api.InputPeer, id: [Int32], randomId: [Int64], toPeer: Api.InputPeer, topMsgId: Int32?, replyTo: Api.InputReplyTo?, scheduleDate: Int32?, scheduleRepeatPeriod: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?, videoTimestamp: Int32?, allowPaidStars: Int64?, suggestedPost: Api.SuggestedPost?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(403))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(411))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, fromPeer.tlObject)
@@ -3309,27 +3377,27 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getAdminsWithInvites(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatAdminsWithInvites>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(404))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(412))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAllDrafts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(405))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(413))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAllStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AllStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(406))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(414))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getArchivedStickers(flags: Int32, offsetId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ArchivedStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(407))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(415))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, offsetId)
         tlStore(_tlObject, 28, limit)
@@ -3338,42 +3406,42 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getAttachMenuBot(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.AttachMenuBotsBot>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(408))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(416))
         tlStoreReference(_tlObject, 24, bot.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAttachMenuBots(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.AttachMenuBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(409))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(417))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAttachedStickers(media: Api.InputStickeredMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.StickerSetCovered]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(410))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(418))
         tlStoreReference(_tlObject, 24, media.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAvailableEffects(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AvailableEffects>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(411))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(419))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getAvailableReactions(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AvailableReactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(412))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(420))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getBotApp(app: Api.InputBotApp, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotApp>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(413))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(421))
         tlStoreReference(_tlObject, 24, app.tlObject)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -3381,7 +3449,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getBotCallbackAnswer(flags: Int32, peer: Api.InputPeer, msgId: Int32, data: Buffer?, password: Api.InputCheckPasswordSRP?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotCallbackAnswer>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(414))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(422))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, msgId)
@@ -3392,7 +3460,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getChatInviteImporters(flags: Int32, peer: Api.InputPeer, link: String?, q: String?, offsetDate: Int32, offsetUser: Api.InputUser, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteImporters>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(415))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(423))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStoreReference(_tlObject, 48, link.map { value in value as NSString })
@@ -3405,14 +3473,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getChats(id: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(416))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(424))
         tlStoreReference(_tlObject, 24, tlPackInt64(id) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getCommonChats(userId: Api.InputUser, maxId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(417))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(425))
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStore(_tlObject, 40, maxId)
         tlStore(_tlObject, 24, limit)
@@ -3421,27 +3489,27 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getCustomEmojiDocuments(documentId: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Document]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(418))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(426))
         tlStoreReference(_tlObject, 24, tlPackInt64(documentId) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getDefaultHistoryTTL() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DefaultHistoryTTL>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(419))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(427))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getDefaultTagReactions(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Reactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(420))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(428))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getDhConfig(version: Int32, randomLength: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.DhConfig>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(421))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(429))
         tlStore(_tlObject, 24, version)
         tlStore(_tlObject, 28, randomLength)
         return tlFunction(_tlObject)
@@ -3449,13 +3517,13 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.DialogFilters>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(422))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(430))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getDialogUnreadMarks(flags: Int32, parentPeer: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogPeer]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(423))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(431))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, parentPeer?.tlObject)
         return tlFunction(_tlObject)
@@ -3463,7 +3531,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getDialogs(flags: Int32, folderId: Int32?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Dialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(424))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(432))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = folderId { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
@@ -3478,7 +3546,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getDiscussionMessage(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.DiscussionMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(425))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(433))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -3486,7 +3554,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getDocumentByHash(sha256: Buffer, size: Int64, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Document>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(426))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(434))
         tlStoreReference(_tlObject, 24, sha256.makeData() as NSData)
         tlStore(_tlObject, 32, size)
         tlStoreReference(_tlObject, 40, mimeType as NSString)
@@ -3495,27 +3563,27 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getEmojiGameInfo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGameInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(427))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(435))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(428))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(436))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiKeywords(langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiKeywordsDifference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(429))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(437))
         tlStoreReference(_tlObject, 24, langCode as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiKeywordsDifference(langCode: String, fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiKeywordsDifference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(430))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(438))
         tlStoreReference(_tlObject, 32, langCode as NSString)
         tlStore(_tlObject, 24, fromVersion)
         return tlFunction(_tlObject)
@@ -3523,49 +3591,49 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getEmojiKeywordsLanguages(langCodes: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.EmojiLanguage]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(431))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(439))
         tlStoreReference(_tlObject, 24, langCodes as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiProfilePhotoGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(432))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(440))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiStatusGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(433))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(441))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiStickerGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(434))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(442))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AllStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(435))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(443))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getEmojiURL(langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiURL>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(436))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(444))
         tlStoreReference(_tlObject, 24, langCode as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getExportedChatInvite(peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(437))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(445))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, link as NSString)
         return tlFunction(_tlObject)
@@ -3573,7 +3641,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getExportedChatInvites(flags: Int32, peer: Api.InputPeer, adminId: Api.InputUser, offsetDate: Int32?, offsetLink: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvites>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(438))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(446))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -3587,7 +3655,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getExtendedMedia(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(439))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(447))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -3595,7 +3663,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getFactCheck(peer: Api.InputPeer, msgId: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FactCheck]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(440))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(448))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(msgId) as NSData)
         return tlFunction(_tlObject)
@@ -3603,28 +3671,28 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getFavedStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FavedStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(441))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(449))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getFeaturedEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(442))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(450))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getFeaturedStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(443))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(451))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getForumTopics(flags: Int32, peer: Api.InputPeer, q: String?, offsetDate: Int32, offsetId: Int32, offsetTopic: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ForumTopics>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(444))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(452))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, peer.tlObject)
         tlStoreReference(_tlObject, 56, q.map { value in value as NSString })
@@ -3637,7 +3705,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getForumTopicsByID(peer: Api.InputPeer, topics: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ForumTopics>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(445))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(453))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(topics) as NSData)
         return tlFunction(_tlObject)
@@ -3645,21 +3713,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getFullChat(chatId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatFull>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(446))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(454))
         tlStore(_tlObject, 24, chatId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getFutureChatCreatorAfterLeave(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(447))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(455))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getGameHighScores(peer: Api.InputPeer, id: Int32, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HighScores>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(448))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(456))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -3668,7 +3736,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getHistory(peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(449))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(457))
         tlStoreReference(_tlObject, 48, peer.tlObject)
         tlStore(_tlObject, 24, offsetId)
         tlStore(_tlObject, 28, offsetDate)
@@ -3682,7 +3750,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getInlineBotResults(flags: Int32, bot: Api.InputUser, peer: Api.InputPeer, geoPoint: Api.InputGeoPoint?, query: String, offset: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotResults>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(450))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(458))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -3694,7 +3762,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getInlineGameHighScores(id: Api.InputBotInlineMessageID, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HighScores>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(451))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(459))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         return tlFunction(_tlObject)
@@ -3702,14 +3770,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMaskStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AllStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(452))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(460))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getMessageEditData(peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MessageEditData>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(453))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(461))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         return tlFunction(_tlObject)
@@ -3717,7 +3785,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMessageReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: Api.Reaction?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MessageReactionsList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(454))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(462))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -3729,7 +3797,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMessageReadParticipants(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.ReadParticipantDate]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(455))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(463))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -3737,14 +3805,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMessages(id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(456))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(464))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getMessagesReactions(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(457))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(465))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -3752,7 +3820,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMessagesViews(peer: Api.InputPeer, id: [Int32], increment: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MessageViews>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(458))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(466))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         tlStoreReference(_tlObject, 40, increment.tlObject)
@@ -3761,7 +3829,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getMyStickers(offsetId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MyStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(459))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(467))
         tlStore(_tlObject, 32, offsetId)
         tlStore(_tlObject, 24, limit)
         return tlFunction(_tlObject)
@@ -3769,7 +3837,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getOldFeaturedStickers(offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(460))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(468))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, limit)
         tlStore(_tlObject, 32, hash)
@@ -3778,14 +3846,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getOnlines(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ChatOnlines>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(461))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(469))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getOutboxReadDate(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OutboxReadDate>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(462))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(470))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -3793,27 +3861,27 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getPaidReactionPrivacy() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(463))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(471))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getPeerDialogs(peers: [Api.InputDialogPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerDialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(464))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(472))
         tlStoreReference(_tlObject, 24, peers.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getPeerSettings(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerSettings>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(465))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(473))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getPersonalChannelHistory(userId: Api.InputUser, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(466))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(474))
         tlStoreReference(_tlObject, 40, userId.tlObject)
         tlStore(_tlObject, 24, limit)
         tlStore(_tlObject, 28, maxId)
@@ -3824,20 +3892,20 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getPinnedDialogs(folderId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerDialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(467))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(475))
         tlStore(_tlObject, 24, folderId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getPinnedSavedDialogs() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(468))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(476))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getPollResults(peer: Api.InputPeer, msgId: Int32, pollHash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(469))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(477))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 40, pollHash)
@@ -3846,7 +3914,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getPollVotes(flags: Int32, peer: Api.InputPeer, id: Int32, option: Buffer?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.VotesList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(470))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(478))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -3858,7 +3926,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getPreparedInlineMessage(bot: Api.InputUser, id: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PreparedInlineMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(471))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(479))
         tlStoreReference(_tlObject, 24, bot.tlObject)
         tlStoreReference(_tlObject, 32, id as NSString)
         return tlFunction(_tlObject)
@@ -3866,14 +3934,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getQuickReplies(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.QuickReplies>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(472))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(480))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getQuickReplyMessages(flags: Int32, shortcutId: Int32, id: [Int32]?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(473))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(481))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, shortcutId)
         tlStoreReference(_tlObject, 32, id.map { value in tlPackInt32(value) as NSData })
@@ -3883,7 +3951,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getRecentLocations(peer: Api.InputPeer, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(474))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(482))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, limit)
         tlStore(_tlObject, 40, hash)
@@ -3892,7 +3960,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getRecentReactions(limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Reactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(475))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(483))
         tlStore(_tlObject, 24, limit)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -3900,7 +3968,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getRecentStickers(flags: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.RecentStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(476))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(484))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -3908,7 +3976,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getReplies(peer: Api.InputPeer, msgId: Int32, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(477))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(485))
         tlStoreReference(_tlObject, 56, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 28, offsetId)
@@ -3923,7 +3991,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getRichMessage(peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(478))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(486))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         return tlFunction(_tlObject)
@@ -3931,7 +3999,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSavedDialogs(flags: Int32, parentPeer: Api.InputPeer?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(479))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(487))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, parentPeer?.tlObject)
         tlStore(_tlObject, 28, offsetDate)
@@ -3944,7 +4012,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSavedDialogsByID(flags: Int32, parentPeer: Api.InputPeer?, ids: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(480))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(488))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, parentPeer?.tlObject)
         tlStoreReference(_tlObject, 40, ids.map { item in item.tlObject } as NSArray)
@@ -3953,14 +4021,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSavedGifs(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedGifs>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(481))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(489))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getSavedHistory(flags: Int32, parentPeer: Api.InputPeer?, peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(482))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(490))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 56, parentPeer?.tlObject)
         tlStoreReference(_tlObject, 64, peer.tlObject)
@@ -3976,7 +4044,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSavedReactionTags(flags: Int32, peer: Api.InputPeer?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedReactionTags>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(483))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(491))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
         tlStore(_tlObject, 40, hash)
@@ -3985,7 +4053,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getScheduledHistory(peer: Api.InputPeer, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(484))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(492))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -3993,7 +4061,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getScheduledMessages(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(485))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(493))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -4001,7 +4069,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSearchCounters(flags: Int32, peer: Api.InputPeer, savedPeerId: Api.InputPeer?, topMsgId: Int32?, filters: [Api.MessagesFilter]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.messages.SearchCounter]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(486))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(494))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4014,7 +4082,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSearchResultsCalendar(flags: Int32, peer: Api.InputPeer, savedPeerId: Api.InputPeer?, filter: Api.MessagesFilter, offsetId: Int32, offsetDate: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsCalendar>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(487))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(495))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStoreReference(_tlObject, 48, savedPeerId?.tlObject)
@@ -4026,7 +4094,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSearchResultsPositions(flags: Int32, peer: Api.InputPeer, savedPeerId: Api.InputPeer?, filter: Api.MessagesFilter, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsPositions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(488))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(496))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStoreReference(_tlObject, 48, savedPeerId?.tlObject)
@@ -4038,13 +4106,13 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSplitRanges() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.MessageRange]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(489))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(497))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getSponsoredMessages(flags: Int32, peer: Api.InputPeer, msgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SponsoredMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(490))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(498))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4055,7 +4123,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getStickerSet(stickerset: Api.InputStickerSet, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(491))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(499))
         tlStoreReference(_tlObject, 32, stickerset.tlObject)
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
@@ -4063,7 +4131,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getStickers(emoticon: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Stickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(492))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(500))
         tlStoreReference(_tlObject, 24, emoticon as NSString)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -4071,13 +4139,13 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getSuggestedDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogFilterSuggested]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(493))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(501))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func getTopReactions(limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Reactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(494))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(502))
         tlStore(_tlObject, 24, limit)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -4085,7 +4153,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getUnreadMentions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(495))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(503))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 56, peer.tlObject)
@@ -4101,7 +4169,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getUnreadPollVotes(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(496))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(504))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 56, peer.tlObject)
@@ -4117,7 +4185,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getUnreadReactions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, savedPeerId: Api.InputPeer?, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(497))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(505))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 56, peer.tlObject)
@@ -4134,7 +4202,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getWebPage(url: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.WebPage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(498))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(506))
         tlStoreReference(_tlObject, 32, url as NSString)
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
@@ -4142,7 +4210,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func getWebPagePreview(flags: Int32, message: String, entities: [Api.MessageEntity]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.WebPagePreview>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(499))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(507))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -4151,7 +4219,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func hideAllChatJoinRequests(flags: Int32, peer: Api.InputPeer, link: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(500))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(508))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, link.map { value in value as NSString })
@@ -4160,7 +4228,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func hideChatJoinRequest(flags: Int32, peer: Api.InputPeer, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(501))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(509))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -4169,21 +4237,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func hidePeerSettingsBar(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(502))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(510))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func importChatInvite(hash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteJoinResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(503))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(511))
         tlStoreReference(_tlObject, 24, hash as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func initHistoryImport(peer: Api.InputPeer, file: Api.InputFile, mediaCount: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.HistoryImport>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(504))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(512))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, file.tlObject)
         tlStore(_tlObject, 24, mediaCount)
@@ -4192,7 +4260,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func installStickerSet(stickerset: Api.InputStickerSet, archived: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSetInstallResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(505))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(513))
         tlStoreReference(_tlObject, 24, stickerset.tlObject)
         tlStoreReference(_tlObject, 32, archived.tlObject)
         return tlFunction(_tlObject)
@@ -4200,7 +4268,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func markDialogUnread(flags: Int32, parentPeer: Api.InputPeer?, peer: Api.InputDialogPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(506))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(514))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, parentPeer?.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -4209,14 +4277,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func migrateChat(chatId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(507))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(515))
         tlStore(_tlObject, 24, chatId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func prolongWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyTo: Api.InputReplyTo?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(508))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(516))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, bot.tlObject)
@@ -4228,7 +4296,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func rateTranscribedAudio(peer: Api.InputPeer, msgId: Int32, transcriptionId: Int64, good: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(509))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(517))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 40, transcriptionId)
@@ -4238,7 +4306,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readDiscussion(peer: Api.InputPeer, msgId: Int32, readMaxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(510))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(518))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 28, readMaxId)
@@ -4247,7 +4315,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readEncryptedHistory(peer: Api.InputEncryptedChat, maxDate: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(511))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(519))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, maxDate)
         return tlFunction(_tlObject)
@@ -4255,14 +4323,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readFeaturedStickers(id: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(512))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(520))
         tlStoreReference(_tlObject, 24, tlPackInt64(id) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func readHistory(peer: Api.InputPeer, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(513))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(521))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, maxId)
         return tlFunction(_tlObject)
@@ -4270,7 +4338,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readMentions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(514))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(522))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4281,14 +4349,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readMessageContents(id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedMessages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(515))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(523))
         tlStoreReference(_tlObject, 24, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func readPollVotes(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(516))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(524))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4299,7 +4367,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readReactions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, savedPeerId: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(517))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(525))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4311,7 +4379,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func readSavedHistory(parentPeer: Api.InputPeer, peer: Api.InputPeer, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(518))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(526))
         tlStoreReference(_tlObject, 32, parentPeer.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 24, maxId)
@@ -4320,21 +4388,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func receivedMessages(maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.ReceivedNotifyMessage]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(519))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(527))
         tlStore(_tlObject, 24, maxId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func receivedQueue(maxQts: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(520))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(528))
         tlStore(_tlObject, 24, maxQts)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func reorderPinnedDialogs(flags: Int32, folderId: Int32, order: [Api.InputDialogPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(521))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(529))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, folderId)
         tlStoreReference(_tlObject, 32, order.map { item in item.tlObject } as NSArray)
@@ -4343,7 +4411,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reorderPinnedForumTopics(flags: Int32, peer: Api.InputPeer, order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(522))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(530))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, tlPackInt32(order) as NSData)
@@ -4352,7 +4420,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reorderPinnedSavedDialogs(flags: Int32, order: [Api.InputDialogPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(523))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(531))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, order.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -4360,14 +4428,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reorderQuickReplies(order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(524))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(532))
         tlStoreReference(_tlObject, 24, tlPackInt32(order) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func reorderStickerSets(flags: Int32, order: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(525))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(533))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, tlPackInt64(order) as NSData)
         return tlFunction(_tlObject)
@@ -4375,7 +4443,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func report(peer: Api.InputPeer, id: [Int32], option: Buffer, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReportResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(526))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(534))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         tlStoreReference(_tlObject, 40, option.makeData() as NSData)
@@ -4385,14 +4453,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reportEncryptedSpam(peer: Api.InputEncryptedChat) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(527))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(535))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func reportMessagesDelivery(flags: Int32, peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(528))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(536))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, tlPackInt32(id) as NSData)
@@ -4401,7 +4469,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reportMusicListen(id: Api.InputDocument, listenedDuration: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(529))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(537))
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStore(_tlObject, 24, listenedDuration)
         return tlFunction(_tlObject)
@@ -4409,7 +4477,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reportReaction(peer: Api.InputPeer, id: Int32, reactionPeer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(530))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(538))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         tlStoreReference(_tlObject, 40, reactionPeer.tlObject)
@@ -4418,7 +4486,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reportReadMetrics(peer: Api.InputPeer, metrics: [Api.InputMessageReadMetric]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(531))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(539))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, metrics.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -4426,14 +4494,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func reportSpam(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(532))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(540))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func reportSponsoredMessage(randomId: Buffer, option: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.SponsoredMessageReportResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(533))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(541))
         tlStoreReference(_tlObject, 24, randomId.makeData() as NSData)
         tlStoreReference(_tlObject, 32, option.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -4441,7 +4509,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestAppWebView(flags: Int32, peer: Api.InputPeer, app: Api.InputBotApp, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(534))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(542))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, app.tlObject)
@@ -4453,7 +4521,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestChatJoinWebView(flags: Int32, queryId: Int64, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(535))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(543))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, queryId)
         tlStoreReference(_tlObject, 40, themeParams?.tlObject)
@@ -4463,7 +4531,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestEncryption(userId: Api.InputUser, randomId: Int32, gA: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EncryptedChat>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(536))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(544))
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStore(_tlObject, 24, randomId)
         tlStoreReference(_tlObject, 40, gA.makeData() as NSData)
@@ -4472,7 +4540,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestMainWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(537))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(545))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, bot.tlObject)
@@ -4484,7 +4552,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestSimpleWebView(flags: Int32, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(538))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(546))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot.tlObject)
         tlStoreReference(_tlObject, 40, url.map { value in value as NSString })
@@ -4496,7 +4564,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?, inAppOrigin: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(539))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(547))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer?.tlObject)
@@ -4510,7 +4578,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, platform: String, replyTo: Api.InputReplyTo?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(540))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(548))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, bot.tlObject)
@@ -4525,7 +4593,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func saveDefaultSendAs(peer: Api.InputPeer, sendAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(541))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(549))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, sendAs.tlObject)
         return tlFunction(_tlObject)
@@ -4533,7 +4601,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func saveDraft(flags: Int32, replyTo: Api.InputReplyTo?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, effect: Int64?, suggestedPost: Api.SuggestedPost?, richMessage: Api.InputRichMessage?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(542))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(550))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, replyTo?.tlObject)
@@ -4550,7 +4618,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func saveGif(id: Api.InputDocument, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(543))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(551))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, unsave.tlObject)
         return tlFunction(_tlObject)
@@ -4558,7 +4626,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func savePreparedInlineMessage(flags: Int32, result: Api.InputBotInlineResult, userId: Api.InputUser, peerTypes: [Api.InlineQueryPeerType]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotPreparedInlineMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(544))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(552))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, result.tlObject)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -4568,7 +4636,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func saveRecentSticker(flags: Int32, id: Api.InputDocument, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(545))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(553))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStoreReference(_tlObject, 40, unsave.tlObject)
@@ -4577,7 +4645,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func search(flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputPeer?, savedPeerId: Api.InputPeer?, savedReaction: [Api.Reaction]?, topMsgId: Int32?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(546))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(554))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 64, peer.tlObject)
@@ -4601,7 +4669,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchCustomEmoji(emoticon: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(547))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(555))
         tlStoreReference(_tlObject, 24, emoticon as NSString)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -4609,7 +4677,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchEmojiStickerSets(flags: Int32, q: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickerSets>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(548))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(556))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, q as NSString)
         tlStore(_tlObject, 40, hash)
@@ -4618,7 +4686,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchGlobal(flags: Int32, folderId: Int32?, community: Api.InputChannel?, q: String, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(549))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(557))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = folderId { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
@@ -4637,7 +4705,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchSentMedia(q: String, filter: Api.MessagesFilter, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(550))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(558))
         tlStoreReference(_tlObject, 32, q as NSString)
         tlStoreReference(_tlObject, 40, filter.tlObject)
         tlStore(_tlObject, 24, limit)
@@ -4646,7 +4714,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchStickerSets(flags: Int32, q: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickerSets>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(551))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(559))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, q as NSString)
         tlStore(_tlObject, 40, hash)
@@ -4655,7 +4723,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func searchStickers(flags: Int32, q: String, emoticon: String, langCode: [String], offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(552))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(560))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, q as NSString)
         tlStoreReference(_tlObject, 48, emoticon as NSString)
@@ -4668,7 +4736,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendBotRequestedPeer(flags: Int32, peer: Api.InputPeer, msgId: Int32?, webappReqId: String?, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(553))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(561))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -4682,7 +4750,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendEncrypted(flags: Int32, peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(554))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(562))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 40, randomId)
@@ -4692,7 +4760,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendEncryptedFile(flags: Int32, peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer, file: Api.InputEncryptedFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(555))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(563))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 40, randomId)
@@ -4703,7 +4771,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendEncryptedService(peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(556))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(564))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, randomId)
         tlStoreReference(_tlObject, 40, data.makeData() as NSData)
@@ -4712,7 +4780,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendInlineBotResult(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, randomId: Int64, queryId: Int64, id: String, scheduleDate: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, allowPaidStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(557))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(565))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4730,7 +4798,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendMedia(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, media: Api.InputMedia, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, scheduleRepeatPeriod: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?, allowPaidStars: Int64?, suggestedPost: Api.SuggestedPost?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(558))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(566))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -4753,7 +4821,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendMessage(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, scheduleRepeatPeriod: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?, allowPaidStars: Int64?, suggestedPost: Api.SuggestedPost?, richMessage: Api.InputRichMessage?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(559))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(567))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -4776,7 +4844,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendMultiMedia(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, multiMedia: [Api.InputSingleMedia], scheduleDate: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?, allowPaidStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(560))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(568))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4793,7 +4861,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendPaidReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, count: Int32, randomId: Int64, `private`: Api.PaidReactionPrivacy?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(561))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(569))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 28, msgId)
@@ -4805,7 +4873,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendQuickReplyMessages(peer: Api.InputPeer, shortcutId: Int32, id: [Int32], randomId: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(562))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(570))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, shortcutId)
         tlStoreReference(_tlObject, 40, tlPackInt32(id) as NSData)
@@ -4815,7 +4883,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: [Api.Reaction]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(563))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(571))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, msgId)
@@ -4825,7 +4893,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendScheduledMessages(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(564))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(572))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -4833,7 +4901,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendScreenshotNotification(peer: Api.InputPeer, replyTo: Api.InputReplyTo, randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(565))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(573))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, replyTo.tlObject)
         tlStore(_tlObject, 40, randomId)
@@ -4842,7 +4910,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendVote(peer: Api.InputPeer, msgId: Int32, options: [Buffer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(566))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(574))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, options.map { item in item.makeData() } as NSArray)
@@ -4851,7 +4919,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendWebViewData(bot: Api.InputUser, randomId: Int64, buttonText: String, data: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(567))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(575))
         tlStoreReference(_tlObject, 24, bot.tlObject)
         tlStore(_tlObject, 32, randomId)
         tlStoreReference(_tlObject, 40, buttonText as NSString)
@@ -4861,7 +4929,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func sendWebViewResultMessage(botQueryId: String, result: Api.InputBotInlineResult) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewMessageSent>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(568))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(576))
         tlStoreReference(_tlObject, 24, botQueryId as NSString)
         tlStoreReference(_tlObject, 32, result.tlObject)
         return tlFunction(_tlObject)
@@ -4869,7 +4937,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setBotCallbackAnswer(flags: Int32, queryId: Int64, message: String?, url: String?, cacheTime: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(569))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(577))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, queryId)
         tlStoreReference(_tlObject, 40, message.map { value in value as NSString })
@@ -4880,7 +4948,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setBotGuestChatResult(queryId: Int64, result: Api.InputBotInlineResult) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.InputBotInlineMessageID>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(570))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(578))
         tlStore(_tlObject, 24, queryId)
         tlStoreReference(_tlObject, 32, result.tlObject)
         return tlFunction(_tlObject)
@@ -4888,7 +4956,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setBotPrecheckoutResults(flags: Int32, queryId: Int64, error: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(571))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(579))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, queryId)
         tlStoreReference(_tlObject, 40, error.map { value in value as NSString })
@@ -4897,7 +4965,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setBotShippingResults(flags: Int32, queryId: Int64, error: String?, shippingOptions: [Api.ShippingOption]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(572))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(580))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, queryId)
         tlStoreReference(_tlObject, 40, error.map { value in value as NSString })
@@ -4907,7 +4975,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setChatAvailableReactions(flags: Int32, peer: Api.InputPeer, availableReactions: Api.ChatReactions, reactionsLimit: Int32?, paidEnabled: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(573))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(581))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4920,7 +4988,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setChatTheme(peer: Api.InputPeer, theme: Api.InputChatTheme) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(574))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(582))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, theme.tlObject)
         return tlFunction(_tlObject)
@@ -4928,7 +4996,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setChatWallPaper(flags: Int32, peer: Api.InputPeer, wallpaper: Api.InputWallPaper?, settings: Api.WallPaperSettings?, id: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(575))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(583))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -4941,21 +5009,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setDefaultHistoryTTL(period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(576))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(584))
         tlStore(_tlObject, 24, period)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func setDefaultReaction(reaction: Api.Reaction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(577))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(585))
         tlStoreReference(_tlObject, 24, reaction.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func setEncryptedTyping(peer: Api.InputEncryptedChat, typing: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(578))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(586))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, typing.tlObject)
         return tlFunction(_tlObject)
@@ -4963,7 +5031,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setGameScore(flags: Int32, peer: Api.InputPeer, id: Int32, userId: Api.InputUser, score: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(579))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(587))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -4974,7 +5042,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setHistoryTTL(peer: Api.InputPeer, period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(580))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(588))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, period)
         return tlFunction(_tlObject)
@@ -4982,7 +5050,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setInlineBotResults(flags: Int32, queryId: Int64, results: [Api.InputBotInlineResult], cacheTime: Int32, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, switchWebview: Api.InlineBotWebView?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(581))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(589))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, queryId)
         tlStoreReference(_tlObject, 40, results.map { item in item.tlObject } as NSArray)
@@ -4995,7 +5063,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setInlineGameScore(flags: Int32, id: Api.InputBotInlineMessageID, userId: Api.InputUser, score: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(582))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(590))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -5005,7 +5073,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func setTyping(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, action: Api.SendMessageAction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(583))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(591))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -5017,7 +5085,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func startBot(bot: Api.InputUser, peer: Api.InputPeer, randomId: Int64, startParam: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(584))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(592))
         tlStoreReference(_tlObject, 24, bot.tlObject)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 40, randomId)
@@ -5027,7 +5095,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func startHistoryImport(peer: Api.InputPeer, importId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(585))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(593))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, importId)
         return tlFunction(_tlObject)
@@ -5035,7 +5103,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func summarizeText(flags: Int32, peer: Api.InputPeer, id: Int32, toLang: String?, tone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TextWithEntities>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(586))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(594))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -5046,7 +5114,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleBotInAttachMenu(flags: Int32, bot: Api.InputUser, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(587))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(595))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot.tlObject)
         tlStoreReference(_tlObject, 40, enabled.tlObject)
@@ -5055,14 +5123,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleDialogFilterTags(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(588))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(596))
         tlStoreReference(_tlObject, 24, enabled.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func toggleDialogPin(flags: Int32, peer: Api.InputDialogPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(589))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(597))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5070,7 +5138,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleNoForwards(flags: Int32, peer: Api.InputPeer, enabled: Api.Bool, requestMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(590))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(598))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -5082,7 +5150,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func togglePaidReactionPrivacy(peer: Api.InputPeer, msgId: Int32, `private`: Api.PaidReactionPrivacy) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(591))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(599))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, `private`.tlObject)
@@ -5091,7 +5159,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func togglePeerTranslations(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(592))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(600))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5099,7 +5167,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleSavedDialogPin(flags: Int32, peer: Api.InputDialogPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(593))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(601))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5107,7 +5175,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleStickerSets(flags: Int32, stickersets: [Api.InputStickerSet]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(594))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(602))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, stickersets.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -5115,7 +5183,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleSuggestedPostApproval(flags: Int32, peer: Api.InputPeer, msgId: Int32, scheduleDate: Int32?, rejectComment: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(595))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(603))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5128,7 +5196,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func toggleTodoCompleted(peer: Api.InputPeer, msgId: Int32, completed: [Int32], incompleted: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(596))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(604))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, tlPackInt32(completed) as NSData)
@@ -5138,7 +5206,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func transcribeAudio(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranscribedAudio>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(597))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(605))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -5146,7 +5214,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func translateRichMessage(flags: Int32, peer: Api.InputPeer?, id: [Int32]?, text: [Api.InputRichMessage]?, toLang: String, tone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedRichMessage>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(598))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(606))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
         tlStoreReference(_tlObject, 40, id.map { value in tlPackInt32(value) as NSData })
@@ -5158,7 +5226,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func translateText(flags: Int32, peer: Api.InputPeer?, id: [Int32]?, text: [Api.TextWithEntities]?, toLang: String, tone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedText>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(599))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(607))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer?.tlObject)
         tlStoreReference(_tlObject, 40, id.map { value in tlPackInt32(value) as NSData })
@@ -5170,14 +5238,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func uninstallStickerSet(stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(600))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(608))
         tlStoreReference(_tlObject, 24, stickerset.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func unpinAllMessages(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, savedPeerId: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(601))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(609))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -5189,7 +5257,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(602))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(610))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, id)
         tlStoreReference(_tlObject, 32, filter?.tlObject)
@@ -5198,14 +5266,14 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func updateDialogFiltersOrder(order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(603))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(611))
         tlStoreReference(_tlObject, 24, tlPackInt32(order) as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.messages {
     static func updatePinnedForumTopic(peer: Api.InputPeer, topicId: Int32, pinned: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(604))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(612))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, topicId)
         tlStoreReference(_tlObject, 40, pinned.tlObject)
@@ -5214,7 +5282,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func updatePinnedMessage(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(605))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(613))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -5223,7 +5291,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func updateSavedReactionTag(flags: Int32, reaction: Api.Reaction, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(606))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(614))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, reaction.tlObject)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -5232,7 +5300,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func uploadEncryptedFile(peer: Api.InputEncryptedChat, file: Api.InputEncryptedFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EncryptedFile>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(607))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(615))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, file.tlObject)
         return tlFunction(_tlObject)
@@ -5240,7 +5308,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func uploadImportedMedia(peer: Api.InputPeer, importId: Int64, fileName: String, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(608))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(616))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, importId)
         tlStoreReference(_tlObject, 40, fileName as NSString)
@@ -5250,7 +5318,7 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func uploadMedia(flags: Int32, businessConnectionId: String?, peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(609))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(617))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, businessConnectionId.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5260,21 +5328,21 @@ public extension Api.functions.messages {
 }
 public extension Api.functions.messages {
     static func viewSponsoredMessage(randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(610))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(618))
         tlStoreReference(_tlObject, 24, randomId.makeData() as NSData)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func applyGiftCode(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(611))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(619))
         tlStoreReference(_tlObject, 24, slug as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func assignAppStoreTransaction(receipt: Buffer, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(612))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(620))
         tlStoreReference(_tlObject, 24, receipt.makeData() as NSData)
         tlStoreReference(_tlObject, 32, purpose.tlObject)
         return tlFunction(_tlObject)
@@ -5282,7 +5350,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func assignPlayMarketTransaction(receipt: Api.DataJSON, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(613))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(621))
         tlStoreReference(_tlObject, 24, receipt.tlObject)
         tlStoreReference(_tlObject, 32, purpose.tlObject)
         return tlFunction(_tlObject)
@@ -5290,7 +5358,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func botCancelStarsSubscription(flags: Int32, userId: Api.InputUser, chargeId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(614))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(622))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStoreReference(_tlObject, 40, chargeId as NSString)
@@ -5299,14 +5367,14 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func canPurchaseStore(purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(615))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(623))
         tlStoreReference(_tlObject, 24, purpose.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func changeStarsSubscription(flags: Int32, peer: Api.InputPeer, subscriptionId: String, canceled: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(616))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(624))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, subscriptionId as NSString)
@@ -5316,28 +5384,28 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func checkCanSendGift(giftId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.CheckCanSendGiftResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(617))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(625))
         tlStore(_tlObject, 24, giftId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func checkGiftCode(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.CheckedGiftCode>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(618))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(626))
         tlStoreReference(_tlObject, 24, slug as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func clearSavedInfo(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(619))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(627))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func connectStarRefBot(peer: Api.InputPeer, bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(620))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(628))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, bot.tlObject)
         return tlFunction(_tlObject)
@@ -5345,21 +5413,21 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func convertStarGift(stargift: Api.InputSavedStarGift) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(621))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(629))
         tlStoreReference(_tlObject, 24, stargift.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func craftStarGift(stargift: [Api.InputSavedStarGift]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(622))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(630))
         tlStoreReference(_tlObject, 24, stargift.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func createOnrampSession(flags: Int32, provider: String, cryptoCurrency: String, address: String, paymentMethod: String?, baseCurrency: String?, baseAmount: String?, memo: String?, theme: String?, successReturnUrl: String?, failReturnUrl: String?, cryptoAmount: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OnrampSession>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(623))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(631))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, provider as NSString)
         tlStoreReference(_tlObject, 40, cryptoCurrency as NSString)
@@ -5377,7 +5445,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func createStarGiftCollection(peer: Api.InputPeer, title: String, stargift: [Api.InputSavedStarGift]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StarGiftCollection>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(624))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(632))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, stargift.map { item in item.tlObject } as NSArray)
@@ -5386,7 +5454,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func deleteStarGiftCollection(peer: Api.InputPeer, collectionId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(625))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(633))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, collectionId)
         return tlFunction(_tlObject)
@@ -5394,7 +5462,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func editConnectedStarRefBot(flags: Int32, peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(626))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(634))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, link as NSString)
@@ -5403,14 +5471,14 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func exportInvoice(invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ExportedInvoice>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(627))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(635))
         tlStoreReference(_tlObject, 24, invoiceMedia.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func fulfillStarsSubscription(peer: Api.InputPeer, subscriptionId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(628))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(636))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, subscriptionId as NSString)
         return tlFunction(_tlObject)
@@ -5418,14 +5486,14 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getBankCardData(number: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.BankCardData>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(629))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(637))
         tlStoreReference(_tlObject, 24, number as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getConnectedStarRefBot(peer: Api.InputPeer, bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(630))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(638))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, bot.tlObject)
         return tlFunction(_tlObject)
@@ -5433,7 +5501,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getConnectedStarRefBots(flags: Int32, peer: Api.InputPeer, offsetDate: Int32?, offsetLink: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(631))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(639))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5446,7 +5514,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getCraftStarGifts(giftId: Int64, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SavedStarGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(632))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(640))
         tlStore(_tlObject, 32, giftId)
         tlStoreReference(_tlObject, 40, offset as NSString)
         tlStore(_tlObject, 24, limit)
@@ -5455,13 +5523,13 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getCurrencyRates() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.CurrencyRates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(633))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(641))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getGiveawayInfo(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.GiveawayInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(634))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(642))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -5469,7 +5537,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getOnrampAvailability(flags: Int32, provider: String, cryptoCurrency: String, baseCurrency: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OnrampAvailability>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(635))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(643))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, provider as NSString)
         tlStoreReference(_tlObject, 40, cryptoCurrency as NSString)
@@ -5479,7 +5547,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getOnrampBaseCurrencies(provider: String, cryptoCurrency: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[String]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(636))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(644))
         tlStoreReference(_tlObject, 24, provider as NSString)
         tlStoreReference(_tlObject, 32, cryptoCurrency as NSString)
         return tlFunction(_tlObject)
@@ -5487,7 +5555,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getOnrampLimits(flags: Int32, provider: String, cryptoCurrency: String, baseCurrency: String, paymentMethod: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OnrampLimits>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(637))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(645))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, provider as NSString)
         tlStoreReference(_tlObject, 40, cryptoCurrency as NSString)
@@ -5498,7 +5566,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getOnrampProviders(flags: Int32, cryptoCurrency: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.OnrampProviderInfo]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(638))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(646))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, cryptoCurrency.map { value in value as NSString })
         return tlFunction(_tlObject)
@@ -5506,7 +5574,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getOnrampQuote(flags: Int32, provider: String, cryptoCurrency: String, baseCurrency: String, baseAmount: String?, cryptoAmount: String?, paymentMethod: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OnrampQuote>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(639))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(647))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, provider as NSString)
         tlStoreReference(_tlObject, 40, cryptoCurrency as NSString)
@@ -5519,7 +5587,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getPaymentForm(flags: Int32, invoice: Api.InputInvoice, themeParams: Api.DataJSON?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentForm>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(640))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(648))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, invoice.tlObject)
         tlStoreReference(_tlObject, 40, themeParams?.tlObject)
@@ -5528,7 +5596,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getPaymentReceipt(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentReceipt>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(641))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(649))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
@@ -5536,7 +5604,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getPremiumGiftCodeOptions(flags: Int32, boostPeer: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.PremiumGiftCodeOption]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(642))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(650))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, boostPeer?.tlObject)
         return tlFunction(_tlObject)
@@ -5544,7 +5612,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getResaleStarGifts(flags: Int32, attributesHash: Int64?, giftId: Int64, attributes: [Api.StarGiftAttributeId]?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ResaleStarGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(643))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(651))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = attributesHash { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 0 }
@@ -5558,20 +5626,20 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getSavedInfo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SavedInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(644))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(652))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getSavedStarGift(stargift: [Api.InputSavedStarGift]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SavedStarGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(645))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(653))
         tlStoreReference(_tlObject, 24, stargift.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getSavedStarGifts(flags: Int32, peer: Api.InputPeer, collectionId: Int32?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SavedStarGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(646))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(654))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5584,21 +5652,21 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarGiftActiveAuctions(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftActiveAuctions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(647))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(655))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarGiftAuctionAcquiredGifts(giftId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftAuctionAcquiredGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(648))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(656))
         tlStore(_tlObject, 24, giftId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarGiftAuctionState(auction: Api.InputStarGiftAuction, version: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftAuctionState>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(649))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(657))
         tlStoreReference(_tlObject, 32, auction.tlObject)
         tlStore(_tlObject, 24, version)
         return tlFunction(_tlObject)
@@ -5606,7 +5674,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarGiftCollections(peer: Api.InputPeer, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftCollections>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(650))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(658))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -5614,21 +5682,21 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarGiftUpgradeAttributes(giftId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftUpgradeAttributes>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(651))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(659))
         tlStore(_tlObject, 24, giftId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarGiftUpgradePreview(giftId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftUpgradePreview>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(652))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(660))
         tlStore(_tlObject, 24, giftId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarGiftWithdrawalUrl(stargift: Api.InputSavedStarGift, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGiftWithdrawalUrl>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(653))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(661))
         tlStoreReference(_tlObject, 24, stargift.tlObject)
         tlStoreReference(_tlObject, 32, password.tlObject)
         return tlFunction(_tlObject)
@@ -5636,14 +5704,14 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarGifts(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarGifts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(654))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(662))
         tlStore(_tlObject, 24, hash)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarsGiftOptions(flags: Int32, userId: Api.InputUser?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.StarsGiftOption]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(655))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(663))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, userId?.tlObject)
         return tlFunction(_tlObject)
@@ -5651,20 +5719,20 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsGiveawayOptions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.StarsGiveawayOption]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(656))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(664))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarsRevenueAdsAccountUrl(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueAdsAccountUrl>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(657))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(665))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarsRevenueStats(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(658))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(666))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5672,7 +5740,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsRevenueWithdrawalUrl(flags: Int32, peer: Api.InputPeer, amount: Int64?, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueWithdrawalUrl>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(659))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(667))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -5684,7 +5752,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsStatus(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsStatus>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(660))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(668))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5692,7 +5760,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsSubscriptions(flags: Int32, peer: Api.InputPeer, offset: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsStatus>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(661))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(669))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, offset as NSString)
@@ -5701,13 +5769,13 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsTopupOptions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.StarsTopupOption]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(662))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(670))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getStarsTransactions(flags: Int32, subscriptionId: String?, peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsStatus>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(663))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(671))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, subscriptionId.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5718,7 +5786,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getStarsTransactionsByID(flags: Int32, peer: Api.InputPeer, id: [Api.InputStarsTransaction]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsStatus>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(664))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(672))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, id.map { item in item.tlObject } as NSArray)
@@ -5727,7 +5795,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getSuggestedStarRefBots(flags: Int32, peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SuggestedStarRefBots>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(665))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(673))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, offset as NSString)
@@ -5737,21 +5805,21 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func getUniqueStarGift(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.UniqueStarGift>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(666))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(674))
         tlStoreReference(_tlObject, 24, slug as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func getUniqueStarGiftValueInfo(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.UniqueStarGiftValueInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(667))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(675))
         tlStoreReference(_tlObject, 24, slug as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.payments {
     static func launchPrepaidGiveaway(peer: Api.InputPeer, giveawayId: Int64, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(668))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(676))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, giveawayId)
         tlStoreReference(_tlObject, 40, purpose.tlObject)
@@ -5760,7 +5828,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func refundStarsCharge(userId: Api.InputUser, chargeId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(669))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(677))
         tlStoreReference(_tlObject, 24, userId.tlObject)
         tlStoreReference(_tlObject, 32, chargeId as NSString)
         return tlFunction(_tlObject)
@@ -5768,7 +5836,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func reorderStarGiftCollections(peer: Api.InputPeer, order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(670))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(678))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(order) as NSData)
         return tlFunction(_tlObject)
@@ -5776,7 +5844,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func resolveStarGiftOffer(flags: Int32, offerMsgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(671))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(679))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, offerMsgId)
         return tlFunction(_tlObject)
@@ -5784,7 +5852,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func saveStarGift(flags: Int32, stargift: Api.InputSavedStarGift) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(672))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(680))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, stargift.tlObject)
         return tlFunction(_tlObject)
@@ -5792,7 +5860,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func sendPaymentForm(flags: Int32, formId: Int64, invoice: Api.InputInvoice, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials, tipAmount: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(673))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(681))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, formId)
@@ -5807,7 +5875,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func sendStarGiftOffer(flags: Int32, peer: Api.InputPeer, slug: String, price: Api.StarsAmount, duration: Int32, randomId: Int64, allowPaidStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(674))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(682))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -5822,7 +5890,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func sendStarsForm(formId: Int64, invoice: Api.InputInvoice) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(675))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(683))
         tlStore(_tlObject, 24, formId)
         tlStoreReference(_tlObject, 32, invoice.tlObject)
         return tlFunction(_tlObject)
@@ -5830,7 +5898,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func toggleChatStarGiftNotifications(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(676))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(684))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         return tlFunction(_tlObject)
@@ -5838,7 +5906,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func toggleStarGiftsPinnedToTop(peer: Api.InputPeer, stargift: [Api.InputSavedStarGift]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(677))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(685))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, stargift.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -5846,7 +5914,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func transferStarGift(stargift: Api.InputSavedStarGift, toId: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(678))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(686))
         tlStoreReference(_tlObject, 24, stargift.tlObject)
         tlStoreReference(_tlObject, 32, toId.tlObject)
         return tlFunction(_tlObject)
@@ -5854,7 +5922,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func updateStarGiftCollection(flags: Int32, peer: Api.InputPeer, collectionId: Int32, title: String?, deleteStargift: [Api.InputSavedStarGift]?, addStargift: [Api.InputSavedStarGift]?, order: [Api.InputSavedStarGift]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StarGiftCollection>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(679))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(687))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, collectionId)
@@ -5867,7 +5935,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func updateStarGiftPrice(stargift: Api.InputSavedStarGift, resellAmount: Api.StarsAmount) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(680))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(688))
         tlStoreReference(_tlObject, 24, stargift.tlObject)
         tlStoreReference(_tlObject, 32, resellAmount.tlObject)
         return tlFunction(_tlObject)
@@ -5875,7 +5943,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func upgradeStarGift(flags: Int32, stargift: Api.InputSavedStarGift) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(681))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(689))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, stargift.tlObject)
         return tlFunction(_tlObject)
@@ -5883,7 +5951,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.payments {
     static func validateRequestedInfo(flags: Int32, invoice: Api.InputInvoice, info: Api.PaymentRequestedInfo) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ValidatedRequestedInfo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(682))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(690))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, invoice.tlObject)
         tlStoreReference(_tlObject, 40, info.tlObject)
@@ -5892,7 +5960,7 @@ public extension Api.functions.payments {
 }
 public extension Api.functions.phone {
     static func acceptCall(peer: Api.InputPhoneCall, gB: Buffer, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(683))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(691))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, gB.makeData() as NSData)
         tlStoreReference(_tlObject, 40, `protocol`.tlObject)
@@ -5901,7 +5969,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func checkGroupCall(call: Api.InputGroupCall, sources: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(684))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(692))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(sources) as NSData)
         return tlFunction(_tlObject)
@@ -5909,7 +5977,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func confirmCall(peer: Api.InputPhoneCall, gA: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(685))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(693))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, gA.makeData() as NSData)
         tlStore(_tlObject, 40, keyFingerprint)
@@ -5919,7 +5987,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func createConferenceCall(flags: Int32, randomId: Int32, publicKey: Int256?, block: Buffer?, params: Api.DataJSON?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(686))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(694))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, randomId)
@@ -5932,7 +6000,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func createGroupCall(flags: Int32, peer: Api.InputPeer, randomId: Int32, title: String?, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(687))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(695))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -5945,14 +6013,14 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func declineConferenceCallInvite(msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(688))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(696))
         tlStore(_tlObject, 24, msgId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func deleteConferenceCallParticipants(flags: Int32, call: Api.InputGroupCall, ids: [Int64], block: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(689))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(697))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, tlPackInt64(ids) as NSData)
@@ -5962,7 +6030,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func deleteGroupCallMessages(flags: Int32, call: Api.InputGroupCall, messages: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(690))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(698))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, tlPackInt32(messages) as NSData)
@@ -5971,7 +6039,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func deleteGroupCallParticipantMessages(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(691))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(699))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, participant.tlObject)
@@ -5980,7 +6048,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func discardCall(flags: Int32, peer: Api.InputPhoneCall, duration: Int32, reason: Api.PhoneCallDiscardReason, connectionId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(692))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(700))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, duration)
@@ -5991,14 +6059,14 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func discardGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(693))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(701))
         tlStoreReference(_tlObject, 24, call.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, muted: Api.Bool?, volume: Int32?, raiseHand: Api.Bool?, videoStopped: Api.Bool?, videoPaused: Api.Bool?, presentationPaused: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(694))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(702))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
@@ -6015,7 +6083,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func editGroupCallTitle(call: Api.InputGroupCall, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(695))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(703))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         return tlFunction(_tlObject)
@@ -6023,7 +6091,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func exportGroupCallInvite(flags: Int32, call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.ExportedGroupCallInvite>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(696))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(704))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         return tlFunction(_tlObject)
@@ -6031,13 +6099,13 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func getCallConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DataJSON>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(697))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(705))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func getGroupCall(call: Api.InputGroupCall, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(698))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(706))
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStore(_tlObject, 24, limit)
         return tlFunction(_tlObject)
@@ -6045,7 +6113,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func getGroupCallChainBlocks(call: Api.InputGroupCall, subChainId: Int32, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(699))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(707))
         tlStoreReference(_tlObject, 40, call.tlObject)
         tlStore(_tlObject, 24, subChainId)
         tlStore(_tlObject, 28, offset)
@@ -6055,28 +6123,28 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func getGroupCallJoinAs(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.JoinAsPeers>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(700))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(708))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func getGroupCallStars(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStars>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(701))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(709))
         tlStoreReference(_tlObject, 24, call.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func getGroupCallStreamChannels(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStreamChannels>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(702))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(710))
         tlStoreReference(_tlObject, 24, call.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func getGroupCallStreamRtmpUrl(flags: Int32, peer: Api.InputPeer, revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStreamRtmpUrl>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(703))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(711))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, revoke.tlObject)
@@ -6085,7 +6153,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func getGroupParticipants(call: Api.InputGroupCall, ids: [Api.InputPeer], sources: [Int32], offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupParticipants>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(704))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(712))
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, ids.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 48, tlPackInt32(sources) as NSData)
@@ -6096,7 +6164,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func inviteConferenceCallParticipant(flags: Int32, call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(705))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(713))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, userId.tlObject)
@@ -6105,7 +6173,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func inviteToGroupCall(call: Api.InputGroupCall, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(706))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(714))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, users.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -6113,7 +6181,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func joinGroupCall(flags: Int32, call: Api.InputGroupCall, joinAs: Api.InputPeer, inviteHash: String?, publicKey: Int256?, block: Buffer?, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(707))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(715))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
@@ -6128,7 +6196,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func joinGroupCallPresentation(call: Api.InputGroupCall, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(708))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(716))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, params.tlObject)
         return tlFunction(_tlObject)
@@ -6136,7 +6204,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func leaveGroupCall(call: Api.InputGroupCall, source: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(709))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(717))
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStore(_tlObject, 24, source)
         return tlFunction(_tlObject)
@@ -6144,21 +6212,21 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func leaveGroupCallPresentation(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(710))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(718))
         tlStoreReference(_tlObject, 24, call.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func receivedCall(peer: Api.InputPhoneCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(711))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(719))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func requestCall(flags: Int32, userId: Api.InputUser, randomId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(712))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(720))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStore(_tlObject, 28, randomId)
@@ -6169,7 +6237,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func saveCallDebug(peer: Api.InputPhoneCall, debug: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(713))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(721))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, debug.tlObject)
         return tlFunction(_tlObject)
@@ -6177,7 +6245,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func saveCallLog(peer: Api.InputPhoneCall, file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(714))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(722))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, file.tlObject)
         return tlFunction(_tlObject)
@@ -6185,7 +6253,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func saveDefaultGroupCallJoinAs(peer: Api.InputPeer, joinAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(715))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(723))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, joinAs.tlObject)
         return tlFunction(_tlObject)
@@ -6193,7 +6261,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func saveDefaultSendAs(call: Api.InputGroupCall, sendAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(716))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(724))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, sendAs.tlObject)
         return tlFunction(_tlObject)
@@ -6201,7 +6269,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func sendConferenceCallBroadcast(call: Api.InputGroupCall, block: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(717))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(725))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, block.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -6209,7 +6277,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func sendGroupCallEncryptedMessage(call: Api.InputGroupCall, encryptedMessage: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(718))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(726))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, encryptedMessage.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -6217,7 +6285,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func sendGroupCallMessage(flags: Int32, call: Api.InputGroupCall, randomId: Int64, message: Api.TextWithEntities, allowPaidStars: Int64?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(719))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(727))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
@@ -6231,7 +6299,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func sendSignalingData(peer: Api.InputPhoneCall, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(720))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(728))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, data.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -6239,7 +6307,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func setCallRating(flags: Int32, peer: Api.InputPhoneCall, rating: Int32, comment: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(721))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(729))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, rating)
@@ -6249,14 +6317,14 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func startScheduledGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(722))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(730))
         tlStoreReference(_tlObject, 24, call.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.phone {
     static func toggleGroupCallRecord(flags: Int32, call: Api.InputGroupCall, title: String?, videoPortrait: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(723))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(731))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -6266,7 +6334,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func toggleGroupCallSettings(flags: Int32, call: Api.InputGroupCall, joinMuted: Api.Bool?, messagesEnabled: Api.Bool?, sendPaidMessagesStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(724))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(732))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, call.tlObject)
@@ -6279,7 +6347,7 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.phone {
     static func toggleGroupCallStartSubscription(call: Api.InputGroupCall, subscribed: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(725))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(733))
         tlStoreReference(_tlObject, 24, call.tlObject)
         tlStoreReference(_tlObject, 32, subscribed.tlObject)
         return tlFunction(_tlObject)
@@ -6287,14 +6355,14 @@ public extension Api.functions.phone {
 }
 public extension Api.functions.photos {
     static func deletePhotos(id: [Api.InputPhoto]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(726))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(734))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.photos {
     static func getUserPhotos(userId: Api.InputUser, offset: Int32, maxId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photos>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(727))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(735))
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 40, maxId)
@@ -6304,7 +6372,7 @@ public extension Api.functions.photos {
 }
 public extension Api.functions.photos {
     static func updateProfilePhoto(flags: Int32, bot: Api.InputUser?, id: Api.InputPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(728))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(736))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot?.tlObject)
         tlStoreReference(_tlObject, 40, id.tlObject)
@@ -6313,7 +6381,7 @@ public extension Api.functions.photos {
 }
 public extension Api.functions.photos {
     static func uploadContactProfilePhoto(flags: Int32, userId: Api.InputUser, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(729))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(737))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, userId.tlObject)
@@ -6327,7 +6395,7 @@ public extension Api.functions.photos {
 }
 public extension Api.functions.photos {
     static func uploadProfilePhoto(flags: Int32, bot: Api.InputUser?, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(730))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(738))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot?.tlObject)
@@ -6341,7 +6409,7 @@ public extension Api.functions.photos {
 }
 public extension Api.functions.premium {
     static func applyBoost(flags: Int32, slots: [Int32]?, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.MyBoosts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(731))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(739))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, slots.map { value in tlPackInt32(value) as NSData })
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -6350,7 +6418,7 @@ public extension Api.functions.premium {
 }
 public extension Api.functions.premium {
     static func getBoostsList(flags: Int32, peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.BoostsList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(732))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(740))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, offset as NSString)
@@ -6360,20 +6428,20 @@ public extension Api.functions.premium {
 }
 public extension Api.functions.premium {
     static func getBoostsStatus(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.BoostsStatus>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(733))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(741))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.premium {
     static func getMyBoosts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.MyBoosts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(734))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(742))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.premium {
     static func getUserBoosts(peer: Api.InputPeer, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.BoostsList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(735))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(743))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         return tlFunction(_tlObject)
@@ -6381,7 +6449,7 @@ public extension Api.functions.premium {
 }
 public extension Api.functions.smsjobs {
     static func finishJob(flags: Int32, jobId: String, error: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(736))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(744))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, jobId as NSString)
         tlStoreReference(_tlObject, 40, error.map { value in value as NSString })
@@ -6390,45 +6458,45 @@ public extension Api.functions.smsjobs {
 }
 public extension Api.functions.smsjobs {
     static func getSmsJob(jobId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.SmsJob>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(737))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(745))
         tlStoreReference(_tlObject, 24, jobId as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.smsjobs {
     static func getStatus() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.smsjobs.Status>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(738))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(746))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.smsjobs {
     static func isEligibleToJoin() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.smsjobs.EligibilityToJoin>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(739))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(747))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.smsjobs {
     static func join() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(740))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(748))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.smsjobs {
     static func leave() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(741))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(749))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.smsjobs {
     static func updateSettings(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(742))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(750))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stats {
     static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(743))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(751))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         return tlFunction(_tlObject)
@@ -6436,7 +6504,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getMegagroupStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.MegagroupStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(744))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(752))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         return tlFunction(_tlObject)
@@ -6444,7 +6512,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getMessagePublicForwards(channel: Api.InputChannel, msgId: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.PublicForwards>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(745))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(753))
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStoreReference(_tlObject, 40, offset as NSString)
@@ -6454,7 +6522,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getMessageStats(flags: Int32, channel: Api.InputChannel, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.MessageStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(746))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(754))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, channel.tlObject)
         tlStore(_tlObject, 28, msgId)
@@ -6463,7 +6531,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getPollStats(flags: Int32, peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.PollStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(747))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(755))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, msgId)
@@ -6472,7 +6540,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getStoryPublicForwards(peer: Api.InputPeer, id: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.PublicForwards>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(748))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(756))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         tlStoreReference(_tlObject, 40, offset as NSString)
@@ -6482,7 +6550,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func getStoryStats(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.StoryStats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(749))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(757))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -6491,7 +6559,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stats {
     static func loadAsyncGraph(flags: Int32, token: String, x: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(750))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(758))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, token as NSString)
@@ -6502,7 +6570,7 @@ public extension Api.functions.stats {
 }
 public extension Api.functions.stickers {
     static func addStickerToSet(stickerset: Api.InputStickerSet, sticker: Api.InputStickerSetItem) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(751))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(759))
         tlStoreReference(_tlObject, 24, stickerset.tlObject)
         tlStoreReference(_tlObject, 32, sticker.tlObject)
         return tlFunction(_tlObject)
@@ -6510,7 +6578,7 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func changeSticker(flags: Int32, sticker: Api.InputDocument, emoji: String?, maskCoords: Api.MaskCoords?, keywords: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(752))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(760))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, sticker.tlObject)
         tlStoreReference(_tlObject, 40, emoji.map { value in value as NSString })
@@ -6521,7 +6589,7 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func changeStickerPosition(sticker: Api.InputDocument, position: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(753))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(761))
         tlStoreReference(_tlObject, 32, sticker.tlObject)
         tlStore(_tlObject, 24, position)
         return tlFunction(_tlObject)
@@ -6529,14 +6597,14 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func checkShortName(shortName: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(754))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(762))
         tlStoreReference(_tlObject, 24, shortName as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stickers {
     static func createStickerSet(flags: Int32, userId: Api.InputUser, title: String, shortName: String, thumb: Api.InputDocument?, stickers: [Api.InputStickerSetItem], software: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(755))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(763))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, userId.tlObject)
         tlStoreReference(_tlObject, 40, title as NSString)
@@ -6549,21 +6617,21 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func deleteStickerSet(stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(756))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(764))
         tlStoreReference(_tlObject, 24, stickerset.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stickers {
     static func removeStickerFromSet(sticker: Api.InputDocument) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(757))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(765))
         tlStoreReference(_tlObject, 24, sticker.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stickers {
     static func renameStickerSet(stickerset: Api.InputStickerSet, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(758))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(766))
         tlStoreReference(_tlObject, 24, stickerset.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         return tlFunction(_tlObject)
@@ -6571,7 +6639,7 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func replaceSticker(sticker: Api.InputDocument, newSticker: Api.InputStickerSetItem) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(759))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(767))
         tlStoreReference(_tlObject, 24, sticker.tlObject)
         tlStoreReference(_tlObject, 32, newSticker.tlObject)
         return tlFunction(_tlObject)
@@ -6579,7 +6647,7 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func setStickerSetThumb(flags: Int32, stickerset: Api.InputStickerSet, thumb: Api.InputDocument?, thumbDocumentId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(760))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(768))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, stickerset.tlObject)
@@ -6591,28 +6659,28 @@ public extension Api.functions.stickers {
 }
 public extension Api.functions.stickers {
     static func suggestShortName(title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stickers.SuggestedShortName>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(761))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(769))
         tlStoreReference(_tlObject, 24, title as NSString)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func activateStealthMode(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(762))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(770))
         tlStore(_tlObject, 24, flags)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func canSendStory(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.CanSendStoryCount>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(763))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(771))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func createAlbum(peer: Api.InputPeer, title: String, stories: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StoryAlbum>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(764))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(772))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, tlPackInt32(stories) as NSData)
@@ -6621,7 +6689,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func deleteAlbum(peer: Api.InputPeer, albumId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(765))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(773))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, albumId)
         return tlFunction(_tlObject)
@@ -6629,7 +6697,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func deleteStories(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(766))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(774))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -6637,7 +6705,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func editStory(flags: Int32, peer: Api.InputPeer, id: Int32, media: Api.InputMedia?, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule]?, music: Api.InputDocument?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(767))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(775))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -6652,7 +6720,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func exportStoryLink(peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedStoryLink>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(768))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(776))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         return tlFunction(_tlObject)
@@ -6660,7 +6728,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getAlbumStories(peer: Api.InputPeer, albumId: Int32, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(769))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(777))
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 24, albumId)
         tlStore(_tlObject, 28, offset)
@@ -6670,7 +6738,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getAlbums(peer: Api.InputPeer, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Albums>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(770))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(778))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStore(_tlObject, 32, hash)
         return tlFunction(_tlObject)
@@ -6678,13 +6746,13 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getAllReadPeerStories() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(771))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(779))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func getAllStories(flags: Int32, state: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.AllStories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(772))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(780))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, state.map { value in value as NSString })
         return tlFunction(_tlObject)
@@ -6692,27 +6760,27 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getChatsToSend() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(773))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(781))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func getPeerMaxIDs(id: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.RecentStory]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(774))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(782))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func getPeerStories(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.PeerStories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(775))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(783))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func getPinnedStories(peer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(776))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(784))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, offsetId)
         tlStore(_tlObject, 28, limit)
@@ -6721,7 +6789,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getStoriesArchive(peer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(777))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(785))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, offsetId)
         tlStore(_tlObject, 28, limit)
@@ -6730,7 +6798,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getStoriesByID(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(778))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(786))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -6738,7 +6806,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getStoriesViews(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViews>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(779))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(787))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -6746,7 +6814,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getStoryReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: Api.Reaction?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryReactionsList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(780))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(788))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStore(_tlObject, 28, id)
@@ -6758,7 +6826,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func getStoryViewsList(flags: Int32, peer: Api.InputPeer, q: String?, id: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViewsList>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(781))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(789))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
         tlStoreReference(_tlObject, 48, q.map { value in value as NSString })
@@ -6770,7 +6838,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func incrementStoryViews(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(782))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(790))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -6778,7 +6846,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func readStories(peer: Api.InputPeer, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(783))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(791))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, maxId)
         return tlFunction(_tlObject)
@@ -6786,7 +6854,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func reorderAlbums(peer: Api.InputPeer, order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(784))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(792))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(order) as NSData)
         return tlFunction(_tlObject)
@@ -6794,7 +6862,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func report(peer: Api.InputPeer, id: [Int32], option: Buffer, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReportResult>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(785))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(793))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         tlStoreReference(_tlObject, 40, option.makeData() as NSData)
@@ -6804,7 +6872,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func searchPosts(flags: Int32, hashtag: String?, area: Api.MediaArea?, peer: Api.InputPeer?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.FoundStories>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(786))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(794))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, hashtag.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, area?.tlObject)
@@ -6816,7 +6884,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func sendReaction(flags: Int32, peer: Api.InputPeer, storyId: Int32, reaction: Api.Reaction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(787))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(795))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, storyId)
@@ -6826,7 +6894,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func sendStory(flags: Int32, peer: Api.InputPeer, media: Api.InputMedia, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?, fwdFromId: Api.InputPeer?, fwdFromStory: Int32?, albums: [Int32]?, music: Api.InputDocument?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(788))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(796))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -6847,7 +6915,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func startLive(flags: Int32, peer: Api.InputPeer, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, messagesEnabled: Api.Bool?, sendPaidMessagesStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(789))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(797))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
@@ -6863,14 +6931,14 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func toggleAllStoriesHidden(hidden: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(790))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(798))
         tlStoreReference(_tlObject, 24, hidden.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.stories {
     static func togglePeerStoriesHidden(peer: Api.InputPeer, hidden: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(791))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(799))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, hidden.tlObject)
         return tlFunction(_tlObject)
@@ -6878,7 +6946,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func togglePinned(peer: Api.InputPeer, id: [Int32], pinned: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(792))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(800))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         tlStoreReference(_tlObject, 40, pinned.tlObject)
@@ -6887,7 +6955,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func togglePinnedToTop(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(793))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(801))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, tlPackInt32(id) as NSData)
         return tlFunction(_tlObject)
@@ -6895,7 +6963,7 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.stories {
     static func updateAlbum(flags: Int32, peer: Api.InputPeer, albumId: Int32, title: String?, deleteStories: [Int32]?, addStories: [Int32]?, order: [Int32]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StoryAlbum>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(794))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(802))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, albumId)
@@ -6908,13 +6976,13 @@ public extension Api.functions.stories {
 }
 public extension Api.functions.toncenter {
     static func getStreamingUrl() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.toncenter.StreamingUrl>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(795))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(803))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.toncenter {
     static func performApiRequest(flags: Int32, endpoint: String, query: String?, payload: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.toncenter.ApiResponse>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(796))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(804))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, endpoint as NSString)
         tlStoreReference(_tlObject, 40, query.map { value in value as NSString })
@@ -6924,7 +6992,7 @@ public extension Api.functions.toncenter {
 }
 public extension Api.functions.updates {
     static func getChannelDifference(flags: Int32, channel: Api.InputChannel, filter: Api.ChannelMessagesFilter, pts: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.ChannelDifference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(797))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(805))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, channel.tlObject)
         tlStoreReference(_tlObject, 48, filter.tlObject)
@@ -6935,7 +7003,7 @@ public extension Api.functions.updates {
 }
 public extension Api.functions.updates {
     static func getDifference(flags: Int32, pts: Int32, ptsLimit: Int32?, ptsTotalLimit: Int32?, date: Int32, qts: Int32, qtsLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.Difference>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(798))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(806))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, pts)
@@ -6950,13 +7018,13 @@ public extension Api.functions.updates {
 }
 public extension Api.functions.updates {
     static func getState() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.State>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(799))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(807))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.upload {
     static func getCdnFile(fileToken: Buffer, offset: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.CdnFile>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(800))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(808))
         tlStoreReference(_tlObject, 32, fileToken.makeData() as NSData)
         tlStore(_tlObject, 40, offset)
         tlStore(_tlObject, 24, limit)
@@ -6965,7 +7033,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func getCdnFileHashes(fileToken: Buffer, offset: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(801))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(809))
         tlStoreReference(_tlObject, 24, fileToken.makeData() as NSData)
         tlStore(_tlObject, 32, offset)
         return tlFunction(_tlObject)
@@ -6973,7 +7041,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func getFile(flags: Int32, location: Api.InputFileLocation, offset: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.File>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(802))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(810))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, location.tlObject)
         tlStore(_tlObject, 40, offset)
@@ -6983,7 +7051,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func getFileHashes(location: Api.InputFileLocation, offset: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(803))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(811))
         tlStoreReference(_tlObject, 24, location.tlObject)
         tlStore(_tlObject, 32, offset)
         return tlFunction(_tlObject)
@@ -6991,7 +7059,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func getWebFile(location: Api.InputWebFileLocation, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.WebFile>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(804))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(812))
         tlStoreReference(_tlObject, 32, location.tlObject)
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, limit)
@@ -7000,7 +7068,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func reuploadCdnFile(fileToken: Buffer, requestToken: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(805))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(813))
         tlStoreReference(_tlObject, 24, fileToken.makeData() as NSData)
         tlStoreReference(_tlObject, 32, requestToken.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -7008,7 +7076,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func saveBigFilePart(fileId: Int64, filePart: Int32, fileTotalParts: Int32, bytes: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(806))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(814))
         tlStore(_tlObject, 32, fileId)
         tlStore(_tlObject, 24, filePart)
         tlStore(_tlObject, 28, fileTotalParts)
@@ -7018,7 +7086,7 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.upload {
     static func saveFilePart(fileId: Int64, filePart: Int32, bytes: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(807))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(815))
         tlStore(_tlObject, 32, fileId)
         tlStore(_tlObject, 24, filePart)
         tlStoreReference(_tlObject, 40, bytes.makeData() as NSData)
@@ -7027,21 +7095,21 @@ public extension Api.functions.upload {
 }
 public extension Api.functions.users {
     static func getFullUser(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.UserFull>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(808))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(816))
         tlStoreReference(_tlObject, 24, id.tlObject)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.users {
     static func getRequirementsToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.RequirementToContact]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(809))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(817))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.users {
     static func getSavedMusic(id: Api.InputUser, offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.SavedMusic>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(810))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(818))
         tlStoreReference(_tlObject, 32, id.tlObject)
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, limit)
@@ -7051,7 +7119,7 @@ public extension Api.functions.users {
 }
 public extension Api.functions.users {
     static func getSavedMusicByID(id: Api.InputUser, documents: [Api.InputDocument]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.SavedMusic>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(811))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(819))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, documents.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -7059,14 +7127,14 @@ public extension Api.functions.users {
 }
 public extension Api.functions.users {
     static func getUsers(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.User]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(812))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(820))
         tlStoreReference(_tlObject, 24, id.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.users {
     static func setSecureValueErrors(id: Api.InputUser, errors: [Api.SecureValueError]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(813))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(821))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, errors.map { item in item.tlObject } as NSArray)
         return tlFunction(_tlObject)
@@ -7074,7 +7142,7 @@ public extension Api.functions.users {
 }
 public extension Api.functions.users {
     static func suggestBirthday(id: Api.InputUser, birthday: Api.Birthday) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(814))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(822))
         tlStoreReference(_tlObject, 24, id.tlObject)
         tlStoreReference(_tlObject, 32, birthday.tlObject)
         return tlFunction(_tlObject)
@@ -7082,7 +7150,7 @@ public extension Api.functions.users {
 }
 public extension Api.functions.wallet {
     static func disableBackup(flags: Int32, password: Api.InputCheckPasswordSRP?, newPublicKey: Buffer?, proof: Api.WalletOwnershipProof?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WalletState>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(815))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(823))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, password?.tlObject)
         tlStoreReference(_tlObject, 40, newPublicKey.map { value in value.makeData() as NSData })
@@ -7092,7 +7160,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func enableBackup(flags: Int32, parts: [Buffer], newPublicKey: Buffer?, proof: Api.WalletOwnershipProof?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WalletState>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(816))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(824))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, parts.map { item in item.makeData() } as NSArray)
         tlStoreReference(_tlObject, 40, newPublicKey.map { value in value.makeData() as NSData })
@@ -7102,7 +7170,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func exportSecretPhrase(flags: Int32, password: Api.InputCheckPasswordSRP?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.SecretPhraseParts>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(817))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(825))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, password?.tlObject)
         return tlFunction(_tlObject)
@@ -7110,7 +7178,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func fetchEncryptedSecretPhrasePart(token: String, publicKey: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.EncryptedSecretPhrasePart>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(818))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(826))
         tlStoreReference(_tlObject, 24, token as NSString)
         tlStoreReference(_tlObject, 32, publicKey.makeData() as NSData)
         return tlFunction(_tlObject)
@@ -7118,25 +7186,25 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func getBackupHolderDcs() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.wallet.HolderDc]>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(819))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(827))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getExistingWaltBalance() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.ExistingBalance>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(820))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(828))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getGaslessInfo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(821))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(829))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getNfts(offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.NftItems>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(822))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(830))
         tlStoreReference(_tlObject, 32, offset as NSString)
         tlStore(_tlObject, 24, limit)
         return tlFunction(_tlObject)
@@ -7144,19 +7212,19 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func getProofChallenge() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.ProofChallenge>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(823))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(831))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getState() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WalletState>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(824))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(832))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getTransactions(flags: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Transactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(825))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(833))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, offset as NSString)
         tlStore(_tlObject, 28, limit)
@@ -7165,21 +7233,21 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func getTransactionsByIDs(id: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Transactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(826))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(834))
         tlStoreReference(_tlObject, 24, id as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getTransactionsByMsgHash(msgHash: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Transactions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(827))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(835))
         tlStoreReference(_tlObject, 24, msgHash as NSArray)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func getUserAddresses(flags: Int32, id: [Api.InputUser], addresses: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.UserAddresses>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(828))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(836))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, addresses as NSArray)
@@ -7188,7 +7256,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func replaceWallet(flags: Int32, wallet: Api.InputWalletReplacement, password: Api.InputCheckPasswordSRP?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WalletState>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(829))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(837))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, wallet.tlObject)
         tlStoreReference(_tlObject, 40, password?.tlObject)
@@ -7197,7 +7265,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func sendTransfer(flags: Int32, dataNormal: Buffer, dataGasless: Buffer?, userId: Api.InputUser, randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(830))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(838))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, dataNormal.makeData() as NSData)
         tlStoreReference(_tlObject, 40, dataGasless.map { value in value.makeData() as NSData })
@@ -7208,7 +7276,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectClaimRequest(flags: Int32, sessionId: Int64, msgId: Int32, appRequestId: String, challengeAnswer: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(831))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(839))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStore(_tlObject, 28, msgId)
@@ -7219,7 +7287,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectCloseSession(flags: Int32, sessionId: Int64, body: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(832))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(840))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStoreReference(_tlObject, 40, body.map { value in value.makeData() as NSData })
@@ -7228,7 +7296,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectCreateSession(dappClientId: String, manifestUrl: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TonConnectSession>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(833))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(841))
         tlStoreReference(_tlObject, 24, dappClientId as NSString)
         tlStoreReference(_tlObject, 32, manifestUrl as NSString)
         return tlFunction(_tlObject)
@@ -7236,7 +7304,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectGetPending(flags: Int32, dappClientId: String?, sessionId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectPending>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(834))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(842))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, dappClientId.map { value in value as NSString })
@@ -7247,20 +7315,20 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectGetSessions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectSessions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(835))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(843))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func tonConnectNextEventId(sessionId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TonConnectNextEventId>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(836))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(844))
         tlStore(_tlObject, 24, sessionId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func tonConnectRegisterKey(sessionId: Int64, clientId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectChallenge>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(837))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(845))
         tlStore(_tlObject, 24, sessionId)
         tlStoreReference(_tlObject, 32, clientId as NSString)
         return tlFunction(_tlObject)
@@ -7268,7 +7336,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectSubmitConnectResult(flags: Int32, sessionId: Int64, challengeAnswer: Buffer, body: Buffer, traceId: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(838))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(846))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStoreReference(_tlObject, 40, challengeAnswer.makeData() as NSData)
@@ -7279,7 +7347,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectSubmitResponse(flags: Int32, sessionId: Int64, msgId: Int32, body: Buffer, traceId: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(839))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(847))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStore(_tlObject, 28, msgId)

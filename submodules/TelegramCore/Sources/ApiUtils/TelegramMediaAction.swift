@@ -53,6 +53,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration, isVideo: isVideo))
     case .messageActionEmpty:
         return nil
+    case .messageActionNoPaidMessagesTokenUsed:
+        return nil
     case let .messageActionPaymentSent(messageActionPaymentSentData):
         let (flags, currency, totalAmount, invoiceSlug, subscriptionUntilDate) = (messageActionPaymentSentData.flags, messageActionPaymentSentData.currency, messageActionPaymentSentData.totalAmount, messageActionPaymentSentData.invoiceSlug, messageActionPaymentSentData.subscriptionUntilDate)
         let _ = subscriptionUntilDate

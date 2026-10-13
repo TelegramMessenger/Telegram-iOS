@@ -367,7 +367,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
                     if matchCode != nil {
                         msgFlags |= Int32(1 << 4)
                     }
-                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: msgFlags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: matchCode))
+                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: msgFlags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: matchCode, tonconnectSession: nil))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
@@ -375,7 +375,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
             }
         case let .url(url, _):
             flags |= (1 << 2)
-            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode))
+            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode, tonconnectSession: nil))
             |> map(Optional.init)
     }
     

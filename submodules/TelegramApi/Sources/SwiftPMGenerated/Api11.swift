@@ -47,7 +47,7 @@ public extension Api {
             case .inputMessageID(let _data):
                 return _data.tlObject
             case .inputMessagePinned:
-                return TLObjectSingleton(TLApiConstructorAt(852))
+                return TLObjectSingleton(TLApiConstructorAt(859))
             case .inputMessageReplyTo(let _data):
                 return _data.tlObject
             }
@@ -71,7 +71,7 @@ public extension Api.InputMessage.Cons_inputMessageCallbackQuery {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int32, queryId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1117))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1125))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, queryId)
         self.init(tlObject: _tlObject)
@@ -82,7 +82,7 @@ public extension Api.InputMessage.Cons_inputMessageID {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(id: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1079))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1087))
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
     }
@@ -92,7 +92,7 @@ public extension Api.InputMessage.Cons_inputMessageReplyTo {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(id: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1222))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1230))
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
     }
@@ -154,7 +154,7 @@ public extension Api.InputMessageReadMetric.Cons_inputMessageReadMetric {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int32.self) } }
     }
     init(msgId: Int32, viewId: Int64, timeInViewMs: Int32, activeTimeInViewMs: Int32, heightToViewportRatioPermille: Int32, seenRangeRatioPermille: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(418))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(417))
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 48, viewId)
         tlStore(_tlObject, 28, timeInViewMs)
@@ -214,9 +214,9 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .inputNotifyBroadcasts:
-                return TLObjectSingleton(TLApiConstructorAt(1148))
+                return TLObjectSingleton(TLApiConstructorAt(1156))
             case .inputNotifyChats:
-                return TLObjectSingleton(TLApiConstructorAt(481))
+                return TLObjectSingleton(TLApiConstructorAt(480))
             case .inputNotifyCommunity(let _data):
                 return _data.tlObject
             case .inputNotifyForumTopic(let _data):
@@ -256,7 +256,7 @@ public extension Api.InputNotifyPeer.Cons_inputNotifyForumTopic {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(peer: Api.InputPeer, topMsgId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(591))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(592))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, topMsgId)
         self.init(tlObject: _tlObject)
@@ -267,7 +267,7 @@ public extension Api.InputNotifyPeer.Cons_inputNotifyPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPeer(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(peer: Api.InputPeer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1205))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1213))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -389,7 +389,7 @@ public extension Api.InputPasskeyResponse.Cons_inputPasskeyResponseLogin {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 48) } }
     }
     init(clientData: Api.DataJSON, authenticatorData: Buffer, signature: Buffer, userHandle: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1288))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1298))
         tlStoreReference(_tlObject, 24, clientData.tlObject)
         tlStoreReference(_tlObject, 32, authenticatorData.makeData() as NSData)
         tlStoreReference(_tlObject, 40, signature.makeData() as NSData)
@@ -405,7 +405,7 @@ public extension Api.InputPasskeyResponse.Cons_inputPasskeyResponseRegister {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
     }
     init(clientData: Api.DataJSON, attestationData: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(405))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(404))
         tlStoreReference(_tlObject, 24, clientData.tlObject)
         tlStoreReference(_tlObject, 32, attestationData.makeData() as NSData)
         self.init(tlObject: _tlObject)
@@ -510,7 +510,7 @@ public extension Api.InputPaymentCredentials.Cons_inputPaymentCredentialsGoogleP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.DataJSON(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(paymentToken: Api.DataJSON) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(880))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(887))
         tlStoreReference(_tlObject, 24, paymentToken.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -523,7 +523,7 @@ public extension Api.InputPaymentCredentials.Cons_inputPaymentCredentialsSaved {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
     }
     init(id: String, tmpPassword: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1275))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1284))
         tlStoreReference(_tlObject, 24, id as NSString)
         tlStoreReference(_tlObject, 32, tmpPassword.makeData() as NSData)
         self.init(tlObject: _tlObject)
@@ -600,9 +600,9 @@ public extension Api {
             case .inputPeerChat(let _data):
                 return _data.tlObject
             case .inputPeerEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(810))
+                return TLObjectSingleton(TLApiConstructorAt(817))
             case .inputPeerSelf:
-                return TLObjectSingleton(TLApiConstructorAt(804))
+                return TLObjectSingleton(TLApiConstructorAt(810))
             case .inputPeerUser(let _data):
                 return _data.tlObject
             case .inputPeerUserFromMessage(let _data):
@@ -645,7 +645,7 @@ public extension Api.InputPeer.Cons_inputPeerChannelFromMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(peer: Api.InputPeer, msgId: Int32, channelId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1237))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1245))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 40, channelId)
@@ -670,7 +670,7 @@ public extension Api.InputPeer.Cons_inputPeerUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(userId: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1445))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1457))
         tlStore(_tlObject, 24, userId)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -687,7 +687,7 @@ public extension Api.InputPeer.Cons_inputPeerUserFromMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(peer: Api.InputPeer, msgId: Int32, userId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1088))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1096))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 40, userId)
@@ -757,7 +757,7 @@ public extension Api.InputPeerNotifySettings.Cons_inputPeerNotifySettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 72) ? nil : Api.NotificationSound(tlObject: tlObjectAt(self.tlObject, 72)) } }
     }
     init(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?, storiesMuted: Api.Bool?, storiesHideSender: Api.Bool?, storiesSound: Api.NotificationSound?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1335))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1345))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, showPreviews?.tlObject)
@@ -880,101 +880,5 @@ public extension Api.InputPhoto.Cons_inputPhoto {
         tlStore(_tlObject, 32, accessHash)
         tlStoreReference(_tlObject, 40, fileReference.makeData() as NSData)
         self.init(tlObject: _tlObject)
-    }
-}
-public extension Api {
-    enum InputPrivacyKey: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
-        case inputPrivacyKeyAbout
-        case inputPrivacyKeyAddedByPhone
-        case inputPrivacyKeyBirthday
-        case inputPrivacyKeyChatInvite
-        case inputPrivacyKeyForwards
-        case inputPrivacyKeyNoPaidMessages
-        case inputPrivacyKeyPhoneCall
-        case inputPrivacyKeyPhoneNumber
-        case inputPrivacyKeyPhoneP2P
-        case inputPrivacyKeyProfilePhoto
-        case inputPrivacyKeySavedMusic
-        case inputPrivacyKeyStarGiftsAutoSave
-        case inputPrivacyKeyStatusTimestamp
-        case inputPrivacyKeyVoiceMessages
-
-
-        @usableFromInline init(tlObject object: TLObject) {
-            switch object.tl_caseIndex {
-            case 0:
-                self = .inputPrivacyKeyAbout
-            case 1:
-                self = .inputPrivacyKeyAddedByPhone
-            case 2:
-                self = .inputPrivacyKeyBirthday
-            case 3:
-                self = .inputPrivacyKeyChatInvite
-            case 4:
-                self = .inputPrivacyKeyForwards
-            case 5:
-                self = .inputPrivacyKeyNoPaidMessages
-            case 6:
-                self = .inputPrivacyKeyPhoneCall
-            case 7:
-                self = .inputPrivacyKeyPhoneNumber
-            case 8:
-                self = .inputPrivacyKeyPhoneP2P
-            case 9:
-                self = .inputPrivacyKeyProfilePhoto
-            case 10:
-                self = .inputPrivacyKeySavedMusic
-            case 11:
-                self = .inputPrivacyKeyStarGiftsAutoSave
-            case 12:
-                self = .inputPrivacyKeyStatusTimestamp
-            case 13:
-                self = .inputPrivacyKeyVoiceMessages
-            default:
-                preconditionFailure()
-            }
-        }
-
-        @usableFromInline var tlObject: TLObject {
-            switch self {
-            case .inputPrivacyKeyAbout:
-                return TLObjectSingleton(TLApiConstructorAt(359))
-            case .inputPrivacyKeyAddedByPhone:
-                return TLObjectSingleton(TLApiConstructorAt(1372))
-            case .inputPrivacyKeyBirthday:
-                return TLObjectSingleton(TLApiConstructorAt(1399))
-            case .inputPrivacyKeyChatInvite:
-                return TLObjectSingleton(TLApiConstructorAt(1251))
-            case .inputPrivacyKeyForwards:
-                return TLObjectSingleton(TLApiConstructorAt(1070))
-            case .inputPrivacyKeyNoPaidMessages:
-                return TLObjectSingleton(TLApiConstructorAt(1244))
-            case .inputPrivacyKeyPhoneCall:
-                return TLObjectSingleton(TLApiConstructorAt(1654))
-            case .inputPrivacyKeyPhoneNumber:
-                return TLObjectSingleton(TLApiConstructorAt(27))
-            case .inputPrivacyKeyPhoneP2P:
-                return TLObjectSingleton(TLApiConstructorAt(1428))
-            case .inputPrivacyKeyProfilePhoto:
-                return TLObjectSingleton(TLApiConstructorAt(563))
-            case .inputPrivacyKeySavedMusic:
-                return TLObjectSingleton(TLApiConstructorAt(505))
-            case .inputPrivacyKeyStarGiftsAutoSave:
-                return TLObjectSingleton(TLApiConstructorAt(1470))
-            case .inputPrivacyKeyStatusTimestamp:
-                return TLObjectSingleton(TLApiConstructorAt(514))
-            case .inputPrivacyKeyVoiceMessages:
-                return TLObjectSingleton(TLApiConstructorAt(1132))
-            }
-        }
-
-        public var tlBackingObject: TLObject {
-            return self.tlObject
-        }
-
-        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.InputPrivacyKey] {
-            return tlObjectsAt(object, offset).map { Api.InputPrivacyKey(tlObject: $0) }
-        }
-
     }
 }

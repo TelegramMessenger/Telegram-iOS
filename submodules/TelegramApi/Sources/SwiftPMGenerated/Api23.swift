@@ -44,7 +44,7 @@ public extension Api.RecentStory.Cons_recentStory {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 32, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, maxId: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(716))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(720))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = maxId { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
@@ -130,7 +130,7 @@ public extension Api.ReplyMarkup.Cons_replyInlineMarkup {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.KeyboardInlineButtonRow.tlArray(self.tlObject, 32) } }
     }
     init(flags: Int32, rows: [Api.KeyboardInlineButtonRow]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1155))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1163))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, rows.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
@@ -144,7 +144,7 @@ public extension Api.ReplyMarkup.Cons_replyKeyboardForceReply {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 32) ? nil : tlStringAt(self.tlObject, 32) } }
     }
     init(flags: Int32, placeholder: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(855))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(862))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, placeholder.map { value in value as NSString })
         self.init(tlObject: _tlObject)
@@ -155,7 +155,7 @@ public extension Api.ReplyMarkup.Cons_replyKeyboardHide {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1039))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1047))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -171,7 +171,7 @@ public extension Api.ReplyMarkup.Cons_replyKeyboardMarkup {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : tlStringAt(self.tlObject, 40) } }
     }
     init(flags: Int32, rows: [Api.KeyboardButtonRow], placeholder: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(846))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(853))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, rows.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, placeholder.map { value in value as NSString })
@@ -222,23 +222,23 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .inputReportReasonChildAbuse:
-                return TLObjectSingleton(TLApiConstructorAt(1124))
+                return TLObjectSingleton(TLApiConstructorAt(1132))
             case .inputReportReasonCopyright:
-                return TLObjectSingleton(TLApiConstructorAt(998))
+                return TLObjectSingleton(TLApiConstructorAt(1005))
             case .inputReportReasonFake:
-                return TLObjectSingleton(TLApiConstructorAt(1620))
+                return TLObjectSingleton(TLApiConstructorAt(1633))
             case .inputReportReasonGeoIrrelevant:
-                return TLObjectSingleton(TLApiConstructorAt(1432))
+                return TLObjectSingleton(TLApiConstructorAt(1443))
             case .inputReportReasonIllegalDrugs:
                 return TLObjectSingleton(TLApiConstructorAt(70))
             case .inputReportReasonOther:
-                return TLObjectSingleton(TLApiConstructorAt(1279))
+                return TLObjectSingleton(TLApiConstructorAt(1289))
             case .inputReportReasonPersonalDetails:
-                return TLObjectSingleton(TLApiConstructorAt(1021))
+                return TLObjectSingleton(TLApiConstructorAt(1029))
             case .inputReportReasonPornography:
                 return TLObjectSingleton(TLApiConstructorAt(288))
             case .inputReportReasonSpam:
-                return TLObjectSingleton(TLApiConstructorAt(577))
+                return TLObjectSingleton(TLApiConstructorAt(578))
             case .inputReportReasonViolence:
                 return TLObjectSingleton(TLApiConstructorAt(202))
             }
@@ -293,7 +293,7 @@ public extension Api {
             case .reportResultChooseOption(let _data):
                 return _data.tlObject
             case .reportResultReported:
-                return TLObjectSingleton(TLApiConstructorAt(900))
+                return TLObjectSingleton(TLApiConstructorAt(907))
             }
         }
 
@@ -315,7 +315,7 @@ public extension Api.ReportResult.Cons_reportResultAddComment {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
     }
     init(flags: Int32, option: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(701))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(705))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, option.makeData() as NSData)
         self.init(tlObject: _tlObject)
@@ -329,7 +329,7 @@ public extension Api.ReportResult.Cons_reportResultChooseOption {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.MessageReportOption.tlArray(self.tlObject, 32) } }
     }
     init(title: String, options: [Api.MessageReportOption]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1581))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1594))
         tlStoreReference(_tlObject, 24, title as NSString)
         tlStoreReference(_tlObject, 32, options.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
@@ -444,7 +444,7 @@ public extension Api.RequestPeerType.Cons_requestPeerTypeChat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.ChatAdminRights(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, hasUsername: Api.Bool?, forum: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1332))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1342))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, hasUsername?.tlObject)
         tlStoreReference(_tlObject, 40, forum?.tlObject)
@@ -464,7 +464,7 @@ public extension Api.RequestPeerType.Cons_requestPeerTypeCreateBot {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : tlStringAt(self.tlObject, 40) } }
     }
     init(flags: Int32, suggestedName: String?, suggestedUsername: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(408))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(407))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, suggestedName.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, suggestedUsername.map { value in value as NSString })
@@ -482,7 +482,7 @@ public extension Api.RequestPeerType.Cons_requestPeerTypeUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.Bool(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, bot: Api.Bool?, premium: Api.Bool?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(608))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(609))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, bot?.tlObject)
         tlStoreReference(_tlObject, 40, premium?.tlObject)
@@ -565,7 +565,7 @@ public extension Api.RequestedPeer.Cons_requestedPeerChannel {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.Photo(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, channelId: Int64, title: String?, username: String?, photo: Api.Photo?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(887))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(894))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, channelId)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -588,7 +588,7 @@ public extension Api.RequestedPeer.Cons_requestedPeerChat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.Photo(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, chatId: Int64, title: String?, photo: Api.Photo?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(730))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(734))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, chatId)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -616,7 +616,7 @@ public extension Api.RequestedPeer.Cons_requestedPeerUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.Photo(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, userId: Int64, firstName: String?, lastName: String?, username: String?, photo: Api.Photo?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1397))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1407))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
         tlStoreReference(_tlObject, 40, firstName.map { value in value as NSString })
@@ -659,7 +659,7 @@ public extension Api {
             case .requirementToContactPaidMessages(let _data):
                 return _data.tlObject
             case .requirementToContactPremium:
-                return TLObjectSingleton(TLApiConstructorAt(1496))
+                return TLObjectSingleton(TLApiConstructorAt(1508))
             }
         }
 
@@ -678,7 +678,7 @@ public extension Api.RequirementToContact.Cons_requirementToContactPaidMessages 
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(starsAmount: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1178))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1186))
         tlStore(_tlObject, 24, starsAmount)
         self.init(tlObject: _tlObject)
     }
@@ -731,7 +731,7 @@ public extension Api.RestrictionReason.Cons_restrictionReason {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(platform: String, reason: String, text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1368))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1378))
         tlStoreReference(_tlObject, 24, platform as NSString)
         tlStoreReference(_tlObject, 32, reason as NSString)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -836,7 +836,7 @@ public extension Api.RichMessage.Cons_richMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Document.tlArray(self.tlObject, 48) } }
     }
     init(flags: Int32, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1223))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1231))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, blocks.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, photos.map { item in item.tlObject } as NSArray)

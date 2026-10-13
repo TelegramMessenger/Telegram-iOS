@@ -47,7 +47,7 @@ public extension Api.ShippingOption.Cons_shippingOption {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.LabeledPrice.tlArray(self.tlObject, 40) } }
     }
     init(id: String, title: String, prices: [Api.LabeledPrice]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1186))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1194))
         tlStoreReference(_tlObject, 24, id as NSString)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, prices.map { item in item.tlObject } as NSArray)
@@ -102,7 +102,7 @@ public extension Api.SmsJob.Cons_smsJob {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(jobId: String, phoneNumber: String, text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1505))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1517))
         tlStoreReference(_tlObject, 24, jobId as NSString)
         tlStoreReference(_tlObject, 32, phoneNumber as NSString)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -190,7 +190,7 @@ public extension Api.SponsoredMessage.Cons_sponsoredMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 128, 1) ? tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) : nil } }
     }
     init(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, media: Api.MessageMedia?, color: Api.PeerColor?, buttonText: String, sponsorInfo: String?, additionalInfo: String?, minDisplayDuration: Int32?, maxDisplayDuration: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(805))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(811))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, randomId.makeData() as NSData)
@@ -255,7 +255,7 @@ public extension Api.SponsoredMessageReportOption.Cons_sponsoredMessageReportOpt
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
     }
     init(text: String, option: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(437))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(436))
         tlStoreReference(_tlObject, 24, text as NSString)
         tlStoreReference(_tlObject, 32, option.makeData() as NSData)
         self.init(tlObject: _tlObject)
@@ -315,7 +315,7 @@ public extension Api.SponsoredPeer.Cons_sponsoredPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : tlStringAt(self.tlObject, 56) } }
     }
     init(flags: Int32, randomId: Buffer, peer: Api.Peer, sponsorInfo: String?, additionalInfo: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1314))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1324))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, randomId.makeData() as NSData)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -539,7 +539,7 @@ public extension Api.StarGift.Cons_starGiftUnique {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 184, 3) ? tlBase(self.tlObject).load(fromByteOffset: 44, as: Int32.self) : nil } }
     }
     init(flags: Int32, id: Int64, giftId: Int64, title: String, slug: String, num: Int32, ownerId: Api.Peer?, ownerName: String?, ownerAddress: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32, giftAddress: String?, resellAmount: [Api.StarsAmount]?, releasedBy: Api.Peer?, valueAmount: Int64?, valueCurrency: String?, valueUsdAmount: Int64?, themePeer: Api.Peer?, peerColor: Api.PeerColor?, hostId: Api.Peer?, offerMinStars: Int32?, craftChancePermille: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(848))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(855))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 48, id)
@@ -616,7 +616,7 @@ public extension Api.StarGiftActiveAuctionState.Cons_starGiftActiveAuctionState 
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGiftAuctionUserState(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(gift: Api.StarGift, state: Api.StarGiftAuctionState, userState: Api.StarGiftAuctionUserState) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1381))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1391))
         tlStoreReference(_tlObject, 24, gift.tlObject)
         tlStoreReference(_tlObject, 32, state.tlObject)
         tlStoreReference(_tlObject, 40, userState.tlObject)
@@ -716,7 +716,7 @@ public extension Api.StarGiftAttribute.Cons_starGiftAttributeBackdrop {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGiftAttributeRarity(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(name: String, backdropId: Int32, centerColor: Int32, edgeColor: Int32, patternColor: Int32, textColor: Int32, rarity: Api.StarGiftAttributeRarity) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1027))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1035))
         tlStoreReference(_tlObject, 48, name as NSString)
         tlStore(_tlObject, 24, backdropId)
         tlStore(_tlObject, 28, centerColor)
@@ -741,7 +741,7 @@ public extension Api.StarGiftAttribute.Cons_starGiftAttributeModel {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGiftAttributeRarity(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, name: String, document: Api.Document, rarity: Api.StarGiftAttributeRarity) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(557))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(558))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, name as NSString)
         tlStoreReference(_tlObject, 40, document.tlObject)
@@ -766,7 +766,7 @@ public extension Api.StarGiftAttribute.Cons_starGiftAttributeOriginalDetails {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.TextWithEntities(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, senderId: Api.Peer?, recipientId: Api.Peer, date: Int32, message: Api.TextWithEntities?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1465))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1477))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, senderId?.tlObject)
         tlStoreReference(_tlObject, 40, recipientId.tlObject)
@@ -786,7 +786,7 @@ public extension Api.StarGiftAttribute.Cons_starGiftAttributePattern {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGiftAttributeRarity(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(name: String, document: Api.Document, rarity: Api.StarGiftAttributeRarity) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(508))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(507))
         tlStoreReference(_tlObject, 24, name as NSString)
         tlStoreReference(_tlObject, 32, document.tlObject)
         tlStoreReference(_tlObject, 40, rarity.tlObject)
@@ -918,7 +918,7 @@ public extension Api.StarGiftAttributeId.Cons_starGiftAttributeIdModel {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(documentId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(466))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(465))
         tlStore(_tlObject, 24, documentId)
         self.init(tlObject: _tlObject)
     }
@@ -928,7 +928,7 @@ public extension Api.StarGiftAttributeId.Cons_starGiftAttributeIdPattern {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(documentId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(476))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(475))
         tlStore(_tlObject, 24, documentId)
         self.init(tlObject: _tlObject)
     }
@@ -970,13 +970,13 @@ public extension Api {
             case .starGiftAttributeRarity(let _data):
                 return _data.tlObject
             case .starGiftAttributeRarityEpic:
-                return TLObjectSingleton(TLApiConstructorAt(772))
+                return TLObjectSingleton(TLApiConstructorAt(777))
             case .starGiftAttributeRarityLegendary:
-                return TLObjectSingleton(TLApiConstructorAt(1362))
+                return TLObjectSingleton(TLApiConstructorAt(1372))
             case .starGiftAttributeRarityRare:
-                return TLObjectSingleton(TLApiConstructorAt(1579))
+                return TLObjectSingleton(TLApiConstructorAt(1592))
             case .starGiftAttributeRarityUncommon:
-                return TLObjectSingleton(TLApiConstructorAt(1431))
+                return TLObjectSingleton(TLApiConstructorAt(1442))
             }
         }
 
@@ -1063,7 +1063,7 @@ public extension Api.StarGiftAuctionAcquiredGift.Cons_starGiftAuctionAcquiredGif
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 72, 0) ? tlBase(self.tlObject).load(fromByteOffset: 40, as: Int32.self) : nil } }
     }
     init(flags: Int32, peer: Api.Peer, date: Int32, bidAmount: Int64, round: Int32, pos: Int32, message: Api.TextWithEntities?, giftNum: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(434))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(433))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, peer.tlObject)
@@ -1200,7 +1200,7 @@ public extension Api {
             case .starGiftAuctionStateFinished(let _data):
                 return _data.tlObject
             case .starGiftAuctionStateNotModified:
-                return TLObjectSingleton(TLApiConstructorAt(1683))
+                return TLObjectSingleton(TLApiConstructorAt(1696))
             }
         }
 
@@ -1252,7 +1252,7 @@ public extension Api.StarGiftAuctionState.Cons_starGiftAuctionState {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGiftAuctionRound.tlArray(self.tlObject, 80) } }
     }
     init(version: Int32, startDate: Int32, endDate: Int32, minBidAmount: Int64, bidLevels: [Api.AuctionBidLevel], topBidders: [Int64], nextRoundAt: Int32, lastGiftNum: Int32, giftsLeft: Int32, currentRound: Int32, totalRounds: Int32, rounds: [Api.StarGiftAuctionRound]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(758))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(763))
         tlStore(_tlObject, 24, version)
         tlStore(_tlObject, 28, startDate)
         tlStore(_tlObject, 32, endDate)
@@ -1291,7 +1291,7 @@ public extension Api.StarGiftAuctionState.Cons_starGiftAuctionStateFinished {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : tlStringAt(self.tlObject, 56) } }
     }
     init(flags: Int32, startDate: Int32, endDate: Int32, averagePrice: Int64, listedCount: Int32?, fragmentListedCount: Int32?, fragmentListedUrl: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(963))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(970))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, startDate)
@@ -1421,7 +1421,7 @@ public extension Api.StarGiftBackground.Cons_starGiftBackground {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(centerColor: Int32, edgeColor: Int32, textColor: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1137))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1145))
         tlStore(_tlObject, 24, centerColor)
         tlStore(_tlObject, 28, edgeColor)
         tlStore(_tlObject, 32, textColor)
@@ -1485,7 +1485,7 @@ public extension Api.StarGiftCollection.Cons_starGiftCollection {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 56, as: Int64.self) } }
     }
     init(flags: Int32, collectionId: Int32, title: String, icon: Api.Document?, giftsCount: Int32, hash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1013))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1020))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, collectionId)
         tlStoreReference(_tlObject, 40, title as NSString)
@@ -1540,9 +1540,150 @@ public extension Api.StarGiftUpgradePrice.Cons_starGiftUpgradePrice {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(date: Int32, upgradeStars: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(985))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(992))
         tlStore(_tlObject, 24, date)
         tlStore(_tlObject, 32, upgradeStars)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
+    enum StarRefProgram: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_starRefProgram {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case starRefProgram(Cons_starRefProgram)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .starRefProgram(Cons_starRefProgram(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .starRefProgram(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.StarRefProgram] {
+            return tlObjectsAt(object, offset).map { Api.StarRefProgram(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.StarRefProgram.Cons_starRefProgram {
+    @_alwaysEmitIntoClient var flags: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    @_alwaysEmitIntoClient var botId: Int64 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
+    }
+    @_alwaysEmitIntoClient var commissionPermille: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
+    }
+    @_alwaysEmitIntoClient var durationMonths: Int32? {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 56, 0) ? tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) : nil } }
+    }
+    @_alwaysEmitIntoClient var endDate: Int32? {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 56, 1) ? tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) : nil } }
+    }
+    @_alwaysEmitIntoClient var dailyRevenuePerUser: Api.StarsAmount? {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.StarsAmount(tlObject: tlObjectAt(self.tlObject, 48)) } }
+    }
+    init(flags: Int32, botId: Int64, commissionPermille: Int32, durationMonths: Int32?, endDate: Int32?, dailyRevenuePerUser: Api.StarsAmount?) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1452))
+        var _tlPresent: UInt64 = 0
+        tlStore(_tlObject, 24, flags)
+        tlStore(_tlObject, 40, botId)
+        tlStore(_tlObject, 28, commissionPermille)
+        if let _tlValue = durationMonths { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 0 }
+        if let _tlValue = endDate { tlStore(_tlObject, 36, _tlValue); _tlPresent |= 1 << 1 }
+        tlStoreReference(_tlObject, 48, dailyRevenuePerUser?.tlObject)
+        tlStore(_tlObject, 56, _tlPresent)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
+    enum StarsAmount: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_starsAmount {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        @frozen public struct Cons_starsTonAmount {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case starsAmount(Cons_starsAmount)
+        case starsTonAmount(Cons_starsTonAmount)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .starsAmount(Cons_starsAmount(tlObject: object))
+            case 1:
+                self = .starsTonAmount(Cons_starsTonAmount(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .starsAmount(let _data):
+                return _data.tlObject
+            case .starsTonAmount(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.StarsAmount] {
+            return tlObjectsAt(object, offset).map { Api.StarsAmount(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.StarsAmount.Cons_starsAmount {
+    @_alwaysEmitIntoClient var amount: Int64 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
+    }
+    @_alwaysEmitIntoClient var nanos: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    init(amount: Int64, nanos: Int32) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1237))
+        tlStore(_tlObject, 32, amount)
+        tlStore(_tlObject, 24, nanos)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api.StarsAmount.Cons_starsTonAmount {
+    @_alwaysEmitIntoClient var amount: Int64 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
+    }
+    init(amount: Int64) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(744))
+        tlStore(_tlObject, 24, amount)
         self.init(tlObject: _tlObject)
     }
 }

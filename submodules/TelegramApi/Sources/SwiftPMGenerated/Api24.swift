@@ -323,7 +323,7 @@ public extension Api {
             case .textEmail(let _data):
                 return _data.tlObject
             case .textEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(1434))
+                return TLObjectSingleton(TLApiConstructorAt(1445))
             case .textFixed(let _data):
                 return _data.tlObject
             case .textHashtag(let _data):
@@ -390,7 +390,7 @@ public extension Api.RichText.Cons_textAutoEmail {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1310))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1320))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -410,7 +410,7 @@ public extension Api.RichText.Cons_textAutoUrl {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1115))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1123))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -420,7 +420,7 @@ public extension Api.RichText.Cons_textBankCard {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1211))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1219))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -430,7 +430,7 @@ public extension Api.RichText.Cons_textBold {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(658))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(660))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -459,7 +459,7 @@ public extension Api.RichText.Cons_textButton {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.RichButtonStyle(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, text: Api.RichText, type: Api.InlineButtonType, style: Api.RichButtonStyle?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1135))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1143))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text.tlObject)
         tlStoreReference(_tlObject, 40, type.tlObject)
@@ -472,7 +472,7 @@ public extension Api.RichText.Cons_textCashtag {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(788))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(794))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -482,7 +482,7 @@ public extension Api.RichText.Cons_textConcat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText.tlArray(self.tlObject, 24) } }
     }
     init(texts: [Api.RichText]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(807))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(813))
         tlStoreReference(_tlObject, 24, texts.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -495,7 +495,7 @@ public extension Api.RichText.Cons_textCustomEmoji {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(documentId: Int64, alt: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1053))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1061))
         tlStore(_tlObject, 24, documentId)
         tlStoreReference(_tlObject, 32, alt as NSString)
         self.init(tlObject: _tlObject)
@@ -512,7 +512,7 @@ public extension Api.RichText.Cons_textDate {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(flags: Int32, text: Api.RichText, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1075))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1083))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text.tlObject)
         tlStore(_tlObject, 28, date)
@@ -527,7 +527,7 @@ public extension Api.RichText.Cons_textDiff {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(text: Api.RichText, oldText: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(958))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(965))
         tlStoreReference(_tlObject, 24, text.tlObject)
         tlStoreReference(_tlObject, 32, oldText.tlObject)
         self.init(tlObject: _tlObject)
@@ -541,7 +541,7 @@ public extension Api.RichText.Cons_textEmail {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(text: Api.RichText, email: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1451))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1463))
         tlStoreReference(_tlObject, 24, text.tlObject)
         tlStoreReference(_tlObject, 32, email as NSString)
         self.init(tlObject: _tlObject)
@@ -552,7 +552,7 @@ public extension Api.RichText.Cons_textFixed {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(687))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(690))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -590,7 +590,7 @@ public extension Api.RichText.Cons_textItalic {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1414))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1424))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -610,7 +610,7 @@ public extension Api.RichText.Cons_textMath {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(source: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1012))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1019))
         tlStoreReference(_tlObject, 24, source as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -620,7 +620,7 @@ public extension Api.RichText.Cons_textMention {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1354))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1364))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -658,7 +658,7 @@ public extension Api.RichText.Cons_textPlain {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(736))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(740))
         tlStoreReference(_tlObject, 24, text as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -668,7 +668,7 @@ public extension Api.RichText.Cons_textSpoiler {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(494))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(493))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -678,7 +678,7 @@ public extension Api.RichText.Cons_textStrike {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1003))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1010))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -688,7 +688,7 @@ public extension Api.RichText.Cons_textSubscript {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1556))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1569))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -698,7 +698,7 @@ public extension Api.RichText.Cons_textSuperscript {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1321))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1331))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -718,7 +718,7 @@ public extension Api.RichText.Cons_textUnderline {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1276))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1285))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -874,7 +874,7 @@ public extension Api.SavedDialog.Cons_monoForumDialog {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.DraftMessage(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadReactionsCount: Int32, draft: Api.DraftMessage?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(639))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(641))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, peer.tlObject)
         tlStore(_tlObject, 28, topMessage)
@@ -897,7 +897,7 @@ public extension Api.SavedDialog.Cons_savedDialog {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(flags: Int32, peer: Api.Peer, topMessage: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1242))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1250))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 28, topMessage)
@@ -955,7 +955,7 @@ public extension Api.SavedReactionTag.Cons_savedReactionTag {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(flags: Int32, reaction: Api.Reaction, title: String?, count: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1343))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1353))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, reaction.tlObject)
         tlStoreReference(_tlObject, 40, title.map { value in value as NSString })
@@ -1056,7 +1056,7 @@ public extension Api.SavedStarGift.Cons_savedStarGift {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 136, 10) ? tlBase(self.tlObject).load(fromByteOffset: 52, as: Int32.self) : nil } }
     }
     init(flags: Int32, fromId: Api.Peer?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, savedId: Int64?, convertStars: Int64?, upgradeStars: Int64?, canExportAt: Int32?, transferStars: Int64?, canTransferAt: Int32?, canResellAt: Int32?, collectionId: [Int32]?, prepaidUpgradeHash: String?, dropOriginalDetailsStars: Int64?, giftNum: Int32?, canCraftAt: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(430))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(429))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 56, fromId?.tlObject)
@@ -1134,7 +1134,7 @@ public extension Api.SearchPostsFlood.Cons_searchPostsFlood {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(flags: Int32, totalDaily: Int32, remains: Int32, waitTill: Int32?, starsAmount: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(400))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(399))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, totalDaily)
@@ -1196,7 +1196,7 @@ public extension Api.SearchResultsCalendarPeriod.Cons_searchResultsCalendarPerio
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) } }
     }
     init(date: Int32, minMsgId: Int32, maxMsgId: Int32, count: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1329))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1339))
         tlStore(_tlObject, 24, date)
         tlStore(_tlObject, 28, minMsgId)
         tlStore(_tlObject, 32, maxMsgId)
@@ -1252,7 +1252,7 @@ public extension Api.SearchResultsPosition.Cons_searchResultPosition {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(msgId: Int32, date: Int32, offset: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(812))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(819))
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 28, date)
         tlStore(_tlObject, 32, offset)
@@ -1362,7 +1362,7 @@ public extension Api.SecureData.Cons_secureData {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 40) } }
     }
     init(data: Buffer, dataHash: Buffer, secret: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(882))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(889))
         tlStoreReference(_tlObject, 24, data.makeData() as NSData)
         tlStoreReference(_tlObject, 32, dataHash.makeData() as NSData)
         tlStoreReference(_tlObject, 40, secret.makeData() as NSData)
@@ -1397,7 +1397,7 @@ public extension Api {
             case .secureFile(let _data):
                 return _data.tlObject
             case .secureFileEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(638))
+                return TLObjectSingleton(TLApiConstructorAt(640))
             }
         }
 
@@ -1434,7 +1434,7 @@ public extension Api.SecureFile.Cons_secureFile {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 64) } }
     }
     init(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, date: Int32, fileHash: Buffer, secret: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(797))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(803))
         tlStore(_tlObject, 32, id)
         tlStore(_tlObject, 40, accessHash)
         tlStore(_tlObject, 48, size)
@@ -1503,7 +1503,7 @@ public extension Api.SecurePasswordKdfAlgo.Cons_securePasswordKdfAlgoPBKDF2HMACS
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 24) } }
     }
     init(salt: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1231))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1239))
         tlStoreReference(_tlObject, 24, salt.makeData() as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -1513,7 +1513,7 @@ public extension Api.SecurePasswordKdfAlgo.Cons_securePasswordKdfAlgoSHA512 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 24) } }
     }
     init(salt: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(851))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(858))
         tlStoreReference(_tlObject, 24, salt.makeData() as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -1581,8 +1581,80 @@ public extension Api.SecurePlainData.Cons_securePlainPhone {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(phone: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(799))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(805))
         tlStoreReference(_tlObject, 24, phone as NSString)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
+    enum SecureRequiredType: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_secureRequiredType {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        @frozen public struct Cons_secureRequiredTypeOneOf {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case secureRequiredType(Cons_secureRequiredType)
+        case secureRequiredTypeOneOf(Cons_secureRequiredTypeOneOf)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .secureRequiredType(Cons_secureRequiredType(tlObject: object))
+            case 1:
+                self = .secureRequiredTypeOneOf(Cons_secureRequiredTypeOneOf(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .secureRequiredType(let _data):
+                return _data.tlObject
+            case .secureRequiredTypeOneOf(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.SecureRequiredType] {
+            return tlObjectsAt(object, offset).map { Api.SecureRequiredType(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.SecureRequiredType.Cons_secureRequiredType {
+    @_alwaysEmitIntoClient var flags: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    @_alwaysEmitIntoClient var type: Api.SecureValueType {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.SecureValueType(tlObject: tlObjectAt(self.tlObject, 32)) } }
+    }
+    init(flags: Int32, type: Api.SecureValueType) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(835))
+        tlStore(_tlObject, 24, flags)
+        tlStoreReference(_tlObject, 32, type.tlObject)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api.SecureRequiredType.Cons_secureRequiredTypeOneOf {
+    @_alwaysEmitIntoClient var types: [Api.SecureRequiredType] {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.SecureRequiredType.tlArray(self.tlObject, 24) } }
+    }
+    init(types: [Api.SecureRequiredType]) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(17))
+        tlStoreReference(_tlObject, 24, types.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
 }

@@ -856,6 +856,10 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
         guard case let .exportedMessageLink(d) = value as! Api.ExportedMessageLink else { preconditionFailure() }
         return [("link", d.link as Any?), ("html", d.html as Any?)]
     },
+    "ExportedNoPaidMessagesToken.exportedNoPaidMessagesToken": { value in
+        guard case let .exportedNoPaidMessagesToken(d) = value as! Api.ExportedNoPaidMessagesToken else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("token", d.token as Any?), ("url", d.url as Any?)]
+    },
     "ExportedStoryLink.exportedStoryLink": { value in
         guard case let .exportedStoryLink(d) = value as! Api.ExportedStoryLink else { preconditionFailure() }
         return [("link", d.link as Any?)]
@@ -863,6 +867,14 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     "FactCheck.factCheck": { value in
         guard case let .factCheck(d) = value as! Api.FactCheck else { preconditionFailure() }
         return [("flags", d.flags as Any?), ("country", d.country as Any?), ("text", d.text as Any?), ("hash", d.hash as Any?)]
+    },
+    "FeedItem.feedItemMessage": { value in
+        guard case let .feedItemMessage(d) = value as! Api.FeedItem else { preconditionFailure() }
+        return [("message", d.message as Any?)]
+    },
+    "FeedPosition.feedPosition": { value in
+        guard case let .feedPosition(d) = value as! Api.FeedPosition else { preconditionFailure() }
+        return [("date", d.date as Any?), ("peer", d.peer as Any?), ("id", d.id as Any?)]
     },
     "FileHash.fileHash": { value in
         guard case let .fileHash(d) = value as! Api.FileHash else { preconditionFailure() }
@@ -1647,6 +1659,10 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     "InputThemeSettings.inputThemeSettings": { value in
         guard case let .inputThemeSettings(d) = value as! Api.InputThemeSettings else { preconditionFailure() }
         return [("flags", d.flags as Any?), ("baseTheme", d.baseTheme as Any?), ("accentColor", d.accentColor as Any?), ("outboxAccentColor", d.outboxAccentColor as Any?), ("messageColors", d.messageColors as Any?), ("wallpaper", d.wallpaper as Any?), ("wallpaperSettings", d.wallpaperSettings as Any?)]
+    },
+    "InputTonConnectOauthSession.inputTonConnectOauthSession": { value in
+        guard case let .inputTonConnectOauthSession(d) = value as! Api.InputTonConnectOauthSession else { preconditionFailure() }
+        return [("sessionId", d.sessionId as Any?), ("challengeAnswer", d.challengeAnswer as Any?), ("body", d.body as Any?), ("proof", d.proof as Any?)]
     },
     "InputUser.inputUser": { value in
         guard case let .inputUser(d) = value as! Api.InputUser else { preconditionFailure() }
@@ -4000,6 +4016,10 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
         guard case let .updateReadChannelOutbox(d) = value as! Api.Update else { preconditionFailure() }
         return [("channelId", d.channelId as Any?), ("maxId", d.maxId as Any?)]
     },
+    "Update.updateReadFeed": { value in
+        guard case let .updateReadFeed(d) = value as! Api.Update else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("filterId", d.filterId as Any?), ("maxPosition", d.maxPosition as Any?), ("unreadCount", d.unreadCount as Any?), ("unreadMutedCount", d.unreadMutedCount as Any?)]
+    },
     "Update.updateReadHistoryInbox": { value in
         guard case let .updateReadHistoryInbox(d) = value as! Api.Update else { preconditionFailure() }
         return [("flags", d.flags as Any?), ("folderId", d.folderId as Any?), ("peer", d.peer as Any?), ("topMsgId", d.topMsgId as Any?), ("maxId", d.maxId as Any?), ("stillUnreadCount", d.stillUnreadCount as Any?), ("pts", d.pts as Any?), ("ptsCount", d.ptsCount as Any?)]
@@ -4178,7 +4198,7 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     },
     "UrlAuthResult.urlAuthResultRequest": { value in
         guard case let .urlAuthResultRequest(d) = value as! Api.UrlAuthResult else { preconditionFailure() }
-        return [("flags", d.flags as Any?), ("bot", d.bot as Any?), ("domain", d.domain as Any?), ("browser", d.browser as Any?), ("platform", d.platform as Any?), ("ip", d.ip as Any?), ("region", d.region as Any?), ("matchCodes", d.matchCodes as Any?), ("userIdHint", d.userIdHint as Any?), ("verifiedAppName", d.verifiedAppName as Any?)]
+        return [("flags", d.flags as Any?), ("bot", d.bot as Any?), ("domain", d.domain as Any?), ("browser", d.browser as Any?), ("platform", d.platform as Any?), ("ip", d.ip as Any?), ("region", d.region as Any?), ("matchCodes", d.matchCodes as Any?), ("userIdHint", d.userIdHint as Any?), ("verifiedAppName", d.verifiedAppName as Any?), ("tcSessionId", d.tcSessionId as Any?), ("tcClientId", d.tcClientId as Any?)]
     },
     "User.user": { value in
         guard case let .user(d) = value as! Api.User else { preconditionFailure() }
@@ -4679,6 +4699,22 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     "ephemeral.WelcomeMessages.welcomeMessages": { value in
         guard case let .welcomeMessages(d) = value as! Api.ephemeral.WelcomeMessages else { preconditionFailure() }
         return [("hash", d.hash as Any?), ("messages", d.messages as Any?)]
+    },
+    "feed.FeedMessages.feedMessages": { value in
+        guard case let .feedMessages(d) = value as! Api.feed.FeedMessages else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("maxPosition", d.maxPosition as Any?), ("minPosition", d.minPosition as Any?), ("readMaxPosition", d.readMaxPosition as Any?), ("messages", d.messages as Any?), ("chats", d.chats as Any?), ("users", d.users as Any?)]
+    },
+    "feed.ForYouFeed.forYouFeed": { value in
+        guard case let .forYouFeed(d) = value as! Api.feed.ForYouFeed else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("items", d.items as Any?), ("chats", d.chats as Any?), ("users", d.users as Any?)]
+    },
+    "feed.InterestCategories.interestCategories": { value in
+        guard case let .interestCategories(d) = value as! Api.feed.InterestCategories else { preconditionFailure() }
+        return [("categories", d.categories as Any?), ("selected", d.selected as Any?)]
+    },
+    "feed.InterestCategory.interestCategory": { value in
+        guard case let .interestCategory(d) = value as! Api.feed.InterestCategory else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("id", d.id as Any?), ("title", d.title as Any?), ("emoji", d.emoji as Any?), ("emojiDocumentId", d.emojiDocumentId as Any?)]
     },
     "fragment.CollectibleInfo.collectibleInfo": { value in
         guard case let .collectibleInfo(d) = value as! Api.fragment.CollectibleInfo else { preconditionFailure() }

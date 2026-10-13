@@ -1,5 +1,64 @@
 import TelegramApiObjC
 public extension Api {
+    enum OnrampSession: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_onrampSession {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case onrampSession(Cons_onrampSession)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .onrampSession(Cons_onrampSession(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .onrampSession(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.OnrampSession] {
+            return tlObjectsAt(object, offset).map { Api.OnrampSession(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.OnrampSession.Cons_onrampSession {
+    @_alwaysEmitIntoClient var provider: String {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
+    }
+    @_alwaysEmitIntoClient var sessionId: String {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
+    }
+    @_alwaysEmitIntoClient var url: String {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 48) } }
+    }
+    @_alwaysEmitIntoClient var expiresDate: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    init(provider: String, sessionId: String, url: String, expiresDate: Int32) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1386))
+        tlStoreReference(_tlObject, 32, provider as NSString)
+        tlStoreReference(_tlObject, 40, sessionId as NSString)
+        tlStoreReference(_tlObject, 48, url as NSString)
+        tlStore(_tlObject, 24, expiresDate)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
     enum OutboxReadDate: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
         @frozen public struct Cons_outboxReadDate {
             @usableFromInline let tlObject: TLObject
@@ -103,7 +162,7 @@ public extension Api.Page.Cons_page {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 64, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document], views: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(970))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(977))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, url as NSString)
@@ -508,7 +567,7 @@ public extension Api {
             case .pageBlockDetails(let _data):
                 return _data.tlObject
             case .pageBlockDivider:
-                return TLObjectSingleton(TLApiConstructorAt(1422))
+                return TLObjectSingleton(TLApiConstructorAt(1433))
             case .pageBlockDocument(let _data):
                 return _data.tlObject
             case .pageBlockEmbed(let _data):
@@ -597,7 +656,7 @@ public extension Api.PageBlock.Cons_inputPageBlockMap {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(geo: Api.InputGeoPoint, zoom: Int32, w: Int32, h: Int32, caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(566))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(567))
         tlStoreReference(_tlObject, 40, geo.tlObject)
         tlStore(_tlObject, 24, zoom)
         tlStore(_tlObject, 28, w)
@@ -611,7 +670,7 @@ public extension Api.PageBlock.Cons_pageBlockAnchor {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(name: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1360))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1370))
         tlStoreReference(_tlObject, 24, name as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -624,7 +683,7 @@ public extension Api.PageBlock.Cons_pageBlockAudio {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(audioId: Int64, caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(816))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(823))
         tlStore(_tlObject, 24, audioId)
         tlStoreReference(_tlObject, 32, caption.tlObject)
         self.init(tlObject: _tlObject)
@@ -638,7 +697,7 @@ public extension Api.PageBlock.Cons_pageBlockAuthorDate {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(author: Api.RichText, publishedDate: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1219))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1227))
         tlStoreReference(_tlObject, 32, author.tlObject)
         tlStore(_tlObject, 24, publishedDate)
         self.init(tlObject: _tlObject)
@@ -655,7 +714,7 @@ public extension Api.PageBlock.Cons_pageBlockBlockquote {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, text: Api.RichText, caption: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(657))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(659))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text.tlObject)
         tlStoreReference(_tlObject, 40, caption.tlObject)
@@ -684,7 +743,7 @@ public extension Api.PageBlock.Cons_pageBlockButtonRow {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageButton.tlArray(self.tlObject, 32) } }
     }
     init(flags: Int32, buttons: [Api.PageButton]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(694))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(698))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, buttons.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
@@ -695,7 +754,7 @@ public extension Api.PageBlock.Cons_pageBlockChannel {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Chat(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(channel: Api.Chat) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1571))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1584))
         tlStoreReference(_tlObject, 24, channel.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -708,7 +767,7 @@ public extension Api.PageBlock.Cons_pageBlockCollage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(items: [Api.PageBlock], caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(649))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(651))
         tlStoreReference(_tlObject, 24, items.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 32, caption.tlObject)
         self.init(tlObject: _tlObject)
@@ -735,7 +794,7 @@ public extension Api.PageBlock.Cons_pageBlockDetails {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, blocks: [Api.PageBlock], title: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(752))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(757))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, blocks.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, title.tlObject)
@@ -779,7 +838,7 @@ public extension Api.PageBlock.Cons_pageBlockEmbed {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, url: String?, html: String?, posterPhotoId: Int64?, w: Int32?, h: Int32?, caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1086))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1094))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, url.map { value in value as NSString })
@@ -815,7 +874,7 @@ public extension Api.PageBlock.Cons_pageBlockEmbedPost {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 72)) } }
     }
     init(url: String, webpageId: Int64, authorPhotoId: Int64, author: String, date: Int32, blocks: [Api.PageBlock], caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1596))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1609))
         tlStoreReference(_tlObject, 32, url as NSString)
         tlStore(_tlObject, 40, webpageId)
         tlStore(_tlObject, 48, authorPhotoId)
@@ -831,7 +890,7 @@ public extension Api.PageBlock.Cons_pageBlockFooter {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(464))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(463))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -841,7 +900,7 @@ public extension Api.PageBlock.Cons_pageBlockHeader {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1265))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1274))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -851,7 +910,7 @@ public extension Api.PageBlock.Cons_pageBlockHeading1 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1224))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1232))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -871,7 +930,7 @@ public extension Api.PageBlock.Cons_pageBlockHeading3 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(660))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(662))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -881,7 +940,7 @@ public extension Api.PageBlock.Cons_pageBlockHeading4 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1180))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1188))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -891,7 +950,7 @@ public extension Api.PageBlock.Cons_pageBlockHeading5 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1430))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1441))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -901,7 +960,7 @@ public extension Api.PageBlock.Cons_pageBlockHeading6 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(661))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(663))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -921,7 +980,7 @@ public extension Api.PageBlock.Cons_pageBlockList {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageListItem.tlArray(self.tlObject, 24) } }
     }
     init(items: [Api.PageListItem]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1491))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1503))
         tlStoreReference(_tlObject, 24, items.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -943,7 +1002,7 @@ public extension Api.PageBlock.Cons_pageBlockMap {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(geo: Api.GeoPoint, zoom: Int32, w: Int32, h: Int32, caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1065))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1073))
         tlStoreReference(_tlObject, 40, geo.tlObject)
         tlStore(_tlObject, 24, zoom)
         tlStore(_tlObject, 28, w)
@@ -957,7 +1016,7 @@ public extension Api.PageBlock.Cons_pageBlockMath {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(source: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(578))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(579))
         tlStoreReference(_tlObject, 24, source as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -991,7 +1050,7 @@ public extension Api.PageBlock.Cons_pageBlockParagraph {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(454))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(453))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1032,7 +1091,7 @@ public extension Api.PageBlock.Cons_pageBlockPreformatted {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(text: Api.RichText, language: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1270))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1279))
         tlStoreReference(_tlObject, 24, text.tlObject)
         tlStoreReference(_tlObject, 32, language as NSString)
         self.init(tlObject: _tlObject)
@@ -1046,7 +1105,7 @@ public extension Api.PageBlock.Cons_pageBlockPullquote {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(text: Api.RichText, caption: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(512))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(511))
         tlStoreReference(_tlObject, 24, text.tlObject)
         tlStoreReference(_tlObject, 32, caption.tlObject)
         self.init(tlObject: _tlObject)
@@ -1085,7 +1144,7 @@ public extension Api.PageBlock.Cons_pageBlockSubheader {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1584))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1597))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1095,7 +1154,7 @@ public extension Api.PageBlock.Cons_pageBlockSubtitle {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(912))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(919))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1111,7 +1170,7 @@ public extension Api.PageBlock.Cons_pageBlockTable {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageTableRow.tlArray(self.tlObject, 40) } }
     }
     init(flags: Int32, title: Api.RichText, rows: [Api.PageTableRow]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1260))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1269))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title.tlObject)
         tlStoreReference(_tlObject, 40, rows.map { item in item.tlObject } as NSArray)
@@ -1133,7 +1192,7 @@ public extension Api.PageBlock.Cons_pageBlockTitle {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichText(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(text: Api.RichText) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(713))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(717))
         tlStoreReference(_tlObject, 24, text.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1149,7 +1208,7 @@ public extension Api.PageBlock.Cons_pageBlockVideo {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PageCaption(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, videoId: Int64, caption: Api.PageCaption) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(794))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(800))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, videoId)
         tlStoreReference(_tlObject, 40, caption.tlObject)
