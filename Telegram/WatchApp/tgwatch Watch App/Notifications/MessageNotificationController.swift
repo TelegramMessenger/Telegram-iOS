@@ -47,35 +47,65 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     /// With a custom interface the system asks this controller for the text responses of an
     /// input action (the iPhone app's Reply) before showing the input, and offers none of its
     /// own (`super` returns none). Without an answer it logs "got nil text suggestions" and
-    /// never opens the input. The old watch app's reply presets, in the input's language.
+    /// never opens the input. The old watch app's reply presets, in the app's language.
     override func suggestionsForResponseToAction(withIdentifier identifier: String, for notification: UNNotification, inputLanguage: String) -> [String] {
-        ReplyPresets.suggestions(forInputLanguage: inputLanguage)
+        ReplyPresets.suggestions()
     }
 
     /// Also called again while the long look is visible, when another notification of the
     /// thread arrives.
+    ///
+    /// The thread and its thumbnails are gathered before this returns: the system sizes the long
+    /// look, and places the actions (Reply) under it, from the content drawn first, and content
+    /// that grows later cannot be scrolled to the end (Reply became unreachable).
     override func didReceive(_ notification: UNNotification) {
         let received = MessageNotificationEntry(notification)
         let threadIdentifier = notification.request.content.threadIdentifier
         latestEntryId = received.id
-        model.entries = MessageNotificationEntry.merging([received], into: model.entries)
-
-        loadThumbnails(for: [notification])
-        collectVoiceMessages(from: [notification])
 
         // Preview privacy is the system's: watchOS does not expose the preview setting to apps,
         // and with notification privacy on it shows only a summary until the user taps, before
         // this interface is created. The content drawn here is what the iPhone app's extension
         // delivered, which already applies the app lock and preview settings.
+        if let delivered = Self.deliveredNotifications(timeout: Self.deliveredWaitTimeout) {
+            let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, $0) } + [notification]
+            show(thread, latest: received)
+            return
+        }
+        // The system did not answer in time: show this notification, add the thread when it does.
+        show([notification], latest: received)
         UNUserNotificationCenter.current().getDeliveredNotifications { [weak self] delivered in
             let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, $0) }
             DispatchQueue.main.async {
                 guard let self, self.latestEntryId == received.id else { return }
-                self.model.entries = MessageNotificationEntry.merging(thread.map(MessageNotificationEntry.init) + [received], into: self.model.entries)
-                self.loadThumbnails(for: thread)
-                self.collectVoiceMessages(from: thread)
+                self.show(thread, latest: received)
             }
         }
+    }
+
+    /// Long enough for the system to list the delivered notifications, short enough not to
+    /// delay the long look noticeably if it does not.
+    static let deliveredWaitTimeout: TimeInterval = 1
+
+    /// The delivered notifications, or nil if the system did not answer within `timeout`. The
+    /// completion runs on a queue of the notification center, not the main queue.
+    private static func deliveredNotifications(timeout: TimeInterval) -> [UNNotification]? {
+        let semaphore = DispatchSemaphore(value: 0)
+        let result = Atomic<[UNNotification]?>(nil)
+        UNUserNotificationCenter.current().getDeliveredNotifications { delivered in
+            result.value = delivered
+            semaphore.signal()
+        }
+        guard semaphore.wait(timeout: .now() + timeout) == .success else { return nil }
+        return result.value
+    }
+
+    private func show(_ notifications: [UNNotification], latest: MessageNotificationEntry) {
+        model.entries = MessageNotificationEntry.merging(notifications.map(MessageNotificationEntry.init) + [latest], into: model.entries)
+        let shown = Set(model.entries.map(\.id))
+        let listed = notifications.filter { shown.contains($0.request.identifier) }
+        loadThumbnails(for: listed)
+        collectVoiceMessages(from: listed)
     }
 
     /// Voice messages reach the notification as an "audio" attachment, already converted to AAC
@@ -89,23 +119,30 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     }
 
     /// Photos, video thumbnails and stickers reach the notification as an "image" attachment
-    /// (`NotificationService.swift`). Decoded off the main thread, downscaled to the content width.
+    /// (`NotificationService.swift`). Decoded here, before the long look is first drawn (see
+    /// `didReceive`), straight to the content width: at most `maxCount` small thumbnails.
     private func loadThumbnails(for notifications: [UNNotification]) {
-        let missing = notifications.filter { model.thumbnails[$0.request.identifier] == nil }
-        guard !missing.isEmpty else { return }
         let maxPixelWidth = contentFrame.width * WKInterfaceDevice.current().screenScale
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var loaded: [String: UIImage] = [:]
-            for notification in missing {
-                if let image = MessageNotificationThumbnail.image(for: notification, maxPixelWidth: maxPixelWidth) {
-                    loaded[notification.request.identifier] = image
-                }
-            }
-            guard !loaded.isEmpty else { return }
-            DispatchQueue.main.async {
-                self?.model.thumbnails.merge(loaded) { current, _ in current }
+        for notification in notifications where model.thumbnails[notification.request.identifier] == nil {
+            if let image = MessageNotificationThumbnail.image(for: notification, maxPixelWidth: maxPixelWidth) {
+                model.thumbnails[notification.request.identifier] = image
             }
         }
+    }
+}
+
+/// A value written on one queue and read on another after a semaphore.
+private final class Atomic<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+
+    init(_ value: Value) {
+        stored = value
+    }
+
+    var value: Value {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }
 

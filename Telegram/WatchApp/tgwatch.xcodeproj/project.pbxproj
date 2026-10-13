@@ -113,6 +113,7 @@
 		EE2D34F61EAF165651914325 /* FolderPillBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45F5EE457DA36FD2FCDF6562 /* FolderPillBar.swift */; };
 		EF499261BE49A6B1C7B3B1F4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1131A5FC4707D20BFB5E95B /* ContentView.swift */; };
 		F44AC47D6D4816D1709F0460 /* ChatHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 182DA99AD90B93DE2FB37A41 /* ChatHistoryStore.swift */; };
+		F45A42FD03D4CD0CE3979705 /* NotificationReplySender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7845038D6DE0F803D4DE8FFA /* NotificationReplySender.swift */; };
 		F5596A4EF4D2055B10B4A183 /* DocumentBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBE08BBB88597B10CDF0142 /* DocumentBubbleView.swift */; };
 		F7096697A6319D8AE9047C1E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D50662DC1777F2BEE53A0129 /* Assets.xcassets */; };
 		F7D46529A75FEBA7AEE058A8 /* AudioVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAFC996C8EF743C7C598389 /* AudioVisual.swift */; };
@@ -183,6 +184,7 @@
 		7108EAF6A69D8D59376A8914 /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
 		72755AB1D5DB932DDC3CE2D3 /* SampleStickers */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SampleStickers; path = Assets/SampleStickers; sourceTree = SOURCE_ROOT; };
 		7584BF25A84BAD24AB992A79 /* ReplyBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyBar.swift; sourceTree = "<group>"; };
+		7845038D6DE0F803D4DE8FFA /* NotificationReplySender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationReplySender.swift; sourceTree = "<group>"; };
 		7889969AFF462911B9828843 /* MessageRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRowView.swift; sourceTree = "<group>"; };
 		78DB439A3F9A5EA35ECDFB86 /* PhotoViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoViewerView.swift; sourceTree = "<group>"; };
 		7B0F1DD19A57CC68887E4F98 /* ChatListKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListKey.swift; sourceTree = "<group>"; };
@@ -268,6 +270,7 @@
 			children = (
 				0AFE847A23C2A62520BE0D81 /* MessageNotificationController.swift */,
 				ADBF04694436B78360905E9B /* NotificationChatRouter.swift */,
+				7845038D6DE0F803D4DE8FFA /* NotificationReplySender.swift */,
 				3DC68BC010E0F7E7D6200CA4 /* ReplyPresets.swift */,
 			);
 			path = Notifications;
@@ -611,6 +614,7 @@
 				6AA9F0DA20077AB00256E225 /* MessageRowView.swift in Sources */,
 				06031F19E55E96E43173C712 /* MessageWindow.swift in Sources */,
 				A8A3CC4F3567CAC3C5B4CFC2 /* NotificationChatRouter.swift in Sources */,
+				F45A42FD03D4CD0CE3979705 /* NotificationReplySender.swift in Sources */,
 				B60D32384AEF65DF99757144 /* PasswordEntryView.swift in Sources */,
 				A121DA7622C910B267D69B6E /* PhotoBubbleView.swift in Sources */,
 				E037E3EA9827C286D724E0C0 /* PhotoViewerView.swift in Sources */,

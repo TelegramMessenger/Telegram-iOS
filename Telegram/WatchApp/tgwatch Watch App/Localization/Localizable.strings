@@ -321,3 +321,13 @@
 "Watch.Voice.MicrophoneFailed" = "Couldn't start microphone";
 "Watch.Voice.SaveFailed" = "Couldn't save recording";
 "Watch.Voice.TapToRecord" = "Tap to record";
+
+/* Reply presets offered by notification Reply (ReplyPresets.swift); existing iOS keys. */
+"Watch.Suggestion.OK" = "OK";
+"Watch.Suggestion.Thanks" = "Thanks!";
+"Watch.Suggestion.WhatsUp" = "What's up?";
+"Watch.Suggestion.TalkLater" = "Talk later?";
+"Watch.Suggestion.CantTalk" = "Can't talk now...";
+"Watch.Suggestion.HoldOn" = "Hold on a sec...";
+"Watch.Suggestion.BRB" = "BRB";
+"Watch.Suggestion.OnMyWay" = "I'm on my way.";

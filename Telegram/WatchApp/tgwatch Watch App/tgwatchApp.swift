@@ -33,6 +33,7 @@ struct TgwatchApp: App {
         )
         if !isUnderXCTest {
             mgr.bootstrap()
+            NotificationReplySender.shared.accountManager = mgr
         }
         _manager = State(initialValue: mgr)
     }

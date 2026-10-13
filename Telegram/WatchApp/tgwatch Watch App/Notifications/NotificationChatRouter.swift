@@ -53,17 +53,30 @@ final class NotificationChatRouter {
     }
 }
 
-/// Receives the response when a notification's interface opens the app
-/// (`performNotificationDefaultAction()`), and routes it to its chat. Other actions are left
-/// alone: Reply on a notification the iPhone app mirrored is handled by the iPhone app.
+/// Receives the responses to the app's notification interfaces: opening the app
+/// (`performNotificationDefaultAction()`) routes to the chat, and Reply is sent by the app
+/// (`NotificationReplySender`).
 final class TgwatchAppDelegate: NSObject, WKApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching() {
         UNUserNotificationCenter.current().delegate = self
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        // The iPhone app registers Reply under this identifier (`AppDelegate.swift`).
+        if response.actionIdentifier == "reply",
+           let text = (response as? UNTextInputNotificationResponse)?.userText,
+           !text.isEmpty {
+            // The completion handler keeps the app running until the reply is sent.
+            nonisolated(unsafe) let userInfo = userInfo
+            Task { @MainActor in
+                _ = await NotificationReplySender.shared.send(text, userInfo: userInfo)
+                completionHandler()
+            }
+            return
+        }
         if response.actionIdentifier == UNNotificationDefaultActionIdentifier,
-           let chatId = NotificationChatRouter.chatId(fromUserInfo: response.notification.request.content.userInfo) {
+           let chatId = NotificationChatRouter.chatId(fromUserInfo: userInfo) {
             Task { @MainActor in
                 NotificationChatRouter.shared.request(chatId: chatId)
             }
