@@ -169,6 +169,23 @@ public final class NewsFeedPostComponent: Component {
             self.timeTimer?.invalidate()
         }
 
+        /// Where the last layout put the avatar, the channel name and each line of the text, in the row's own
+        /// coordinates: the loading skeleton is measured from them.
+        public var avatarFrame: CGRect {
+            return self.avatar.view?.frame ?? CGRect()
+        }
+
+        public var titleFrame: CGRect {
+            return self.title.view?.frame ?? CGRect()
+        }
+
+        public var textLineFrames: [CGRect] {
+            guard let textView = self.text.view as? MultilineTextWithEntitiesComponent.View, let layout = textView.textNode.cachedLayout else {
+                return []
+            }
+            return layout.linesRects().map { textView.textNode.view.convert($0, to: self) }
+        }
+
         @objc private func tapped() {
             self.component?.action()
         }

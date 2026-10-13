@@ -48,6 +48,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
+    private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsFeedSkeletonRowLayout)?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
 
@@ -335,8 +336,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     // MARK: Lists
 
+    /// A post row measured at the rows' width, for the skeletons; measured again when the width or the
+    /// presentation changes.
+    private func skeletonRowLayout() -> NewsFeedSkeletonRowLayout {
+        let width = max(1.0, (self.validLayout?.layout.size.width ?? 0.0) - self.listInsets.left - self.listInsets.right)
+        let presentationData = self.presentationData
+        if let cache = self.skeletonRowLayoutCache, cache.width == width, cache.theme === presentationData.theme, cache.strings === presentationData.strings {
+            return cache.layout
+        }
+        let layout = newsFeedSkeletonRowLayout(context: self.context, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, width: width)
+        self.skeletonRowLayoutCache = (width, presentationData.theme, presentationData.strings, layout)
+        return layout
+    }
+
     private func itemEnvironment() -> NewsFeedItemEnvironment {
-        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, openPost: { [weak self] peer, messageId in
+        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
         })
     }
@@ -350,17 +364,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let (layout, _) = self.validLayout else {
             return
         }
-        let forYouItems = self.forYou.items(environment: self.itemEnvironment())
+        let environment = self.itemEnvironment()
+        let forYouRows = self.forYou.items(environment: environment)
+        self.forYouList.setShowsSkeleton(forYouRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         self.forYouList.setRefreshing(self.forYou.state?.isRefreshing ?? false)
-        self.forYouList.update(size: layout.size, insets: self.listInsets, items: forYouItems, scrollTo: nil, anchorMode: .automatic, transition: transition)
-        self.recheckForYouEdgeIfGrown(count: forYouItems.count)
+        self.forYouList.update(size: layout.size, insets: self.listInsets, items: forYouRows.items, scrollTo: nil, anchorMode: .automatic, transition: transition)
+        self.recheckForYouEdgeIfGrown(count: forYouRows.items.count)
     }
 
     private func updateAddedList(transition: CoreListTransition) {
         guard let (layout, _) = self.validLayout else {
             return
         }
-        self.addedRows = self.added.rows(environment: self.itemEnvironment())
+        let environment = self.itemEnvironment()
+        self.addedRows = self.added.rows(environment: environment)
+        self.addedList.setShowsSkeleton(self.addedRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         var scrollTo: CoreListScrollTarget?
         let hasPosts = !self.addedRows.positions.isEmpty
         if self.pendingAddedReposition, hasPosts {

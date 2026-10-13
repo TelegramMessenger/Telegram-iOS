@@ -37,6 +37,8 @@ func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], No
 struct NewsFeedItemEnvironment {
     let context: AccountContext
     let presentationData: PresentationData
+    /// Measured from a post row at the list's width; the load-more placeholder is drawn from it.
+    let skeletonRowLayout: NewsFeedSkeletonRowLayout
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
 }
 
@@ -75,9 +77,9 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
     )))
 }
 
-func newsPlaceholderItems(count: Int, theme: PresentationTheme, identityPrefix: String) -> [CoreListComponentItem] {
+func newsPlaceholderItems(count: Int, theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout, identityPrefix: String) -> [CoreListComponentItem] {
     return (0 ..< count).map { index in
-        CoreListComponentItem(identity: AnyHashable("\(identityPrefix)-placeholder-\(index)"), component: AnyComponent(NewsPlaceholderRowComponent(theme: theme)))
+        CoreListComponentItem(identity: AnyHashable("\(identityPrefix)-placeholder-\(index)"), component: AnyComponent(NewsPlaceholderRowComponent(theme: theme, rowLayout: rowLayout)))
     }
 }
 

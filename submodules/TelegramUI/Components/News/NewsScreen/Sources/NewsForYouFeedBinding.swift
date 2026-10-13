@@ -103,11 +103,12 @@ final class NewsForYouFeedBinding {
         timer.start()
     }
 
-    func items(environment: NewsFeedItemEnvironment) -> [CoreListComponentItem] {
+    /// The rows, or none while the first load is under way (`isLoading`): the list's skeleton stands in then.
+    func items(environment: NewsFeedItemEnvironment) -> (items: [CoreListComponentItem], isLoading: Bool) {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
         guard let state = self.state else {
-            return newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "foryou")
+            return ([], true)
         }
         let available = Set(self.messages.keys)
         var result: [CoreListComponentItem] = []
@@ -141,7 +142,7 @@ final class NewsForYouFeedBinding {
         // Without posts, `result` holds only the interests block, which stays above the status row.
         switch newsForYouListStatus(hasPosts: hasPosts, didLoadSnapshot: state.didLoadSnapshot, isLoadingMore: state.isLoadingMore, isExhausted: state.isExhausted, hasError: state.hasError) {
         case .placeholders:
-            return newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "foryou")
+            return ([], true)
         case .error:
             result.append(newsStatusItem(theme: theme, text: presentationData.strings.News_Error_Text, actionTitle: presentationData.strings.News_Error_Retry, action: { [weak self] in
                 self?.feed.loadMore()
@@ -151,7 +152,7 @@ final class NewsForYouFeedBinding {
                 self?.feed.refresh()
             }))
         case .loadingMore:
-            result.append(contentsOf: newsPlaceholderItems(count: 1, theme: theme, identityPrefix: "foryou-more"))
+            result.append(contentsOf: newsPlaceholderItems(count: 1, theme: theme, rowLayout: environment.skeletonRowLayout, identityPrefix: "foryou-more"))
         case .loadMoreFailed:
             result.append(newsStatusItem(theme: theme, text: presentationData.strings.News_Error_Text, actionTitle: presentationData.strings.News_Error_Retry, action: { [weak self] in
                 self?.feed.loadMore()
@@ -159,6 +160,6 @@ final class NewsForYouFeedBinding {
         case .none:
             break
         }
-        return result
+        return (result, false)
     }
 }

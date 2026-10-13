@@ -1,8 +1,10 @@
 import Foundation
 import UIKit
 import Display
+import TelegramPresentationData
 import CoreList
 import CoreListComponentHost
+import NewsFeedComponents
 
 /// One feed list: a `CoreVirtualListView` of component rows, plus the offset reporting, edge loading and
 /// pull-to-refresh the screen needs.
@@ -24,6 +26,9 @@ final class NewsFeedListView: UIView {
     // Main-thread physics for now, rather than the render-server keyframe flights the chat uses.
     let coreList = CoreVirtualListView(forEmbedding: CGRect(), deceleration: .stepped)
     private let refreshIndicator = UIActivityIndicatorView(style: .medium)
+    private let skeletonView = NewsFeedSkeletonView()
+    private var showsSkeleton = false
+    private var skeletonParameters: (theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout)?
     private(set) var items: [CoreListComponentItem] = []
     private(set) var insets = UIEdgeInsets()
     private var isRefreshing = false
@@ -44,6 +49,9 @@ final class NewsFeedListView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.addSubview(self.coreList)
+        // Over the rows, under the pull-to-refresh indicator.
+        self.skeletonView.isHidden = true
+        self.addSubview(self.skeletonView)
         self.refreshIndicator.hidesWhenStopped = false
         self.refreshIndicator.alpha = 0.0
         self.addSubview(self.refreshIndicator)
@@ -61,6 +69,7 @@ final class NewsFeedListView: UIView {
             self.onScrollOffsetChanged?(self.scrollOffset(settled: false), .immediate)
             self.onVisibleRowsChanged?()
             self.updateRefreshIndicator()
+            self.layoutSkeleton()
         }
         self.coreList.didEndDragging = { [weak self] in
             guard let self else {
@@ -94,9 +103,48 @@ final class NewsFeedListView: UIView {
         // A programmatic pass fires no scroll callback: report the settled offset.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
         self.layoutRefreshIndicator()
+        self.layoutSkeleton()
         if scrollTo != nil {
             self.onProgrammaticScroll?()
         }
+    }
+
+    /// Until the list's first content arrives a skeleton stands in for it, moving with the list's offset (an
+    /// overscroll while there are no rows); when it arrives, the list fades in and the skeleton out.
+    func setShowsSkeleton(_ value: Bool, theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout) {
+        self.skeletonParameters = (theme, rowLayout)
+        if value {
+            if !self.showsSkeleton {
+                self.showsSkeleton = true
+                self.skeletonView.layer.removeAllAnimations()
+                self.skeletonView.alpha = 1.0
+                self.skeletonView.isHidden = false
+            }
+            self.layoutSkeleton()
+        } else if self.showsSkeleton {
+            self.showsSkeleton = false
+            let duration: Double = 0.25
+            self.coreList.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.skeletonView.alpha = 0.0
+            self.skeletonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self] _ in
+                guard let self, !self.showsSkeleton else {
+                    return
+                }
+                self.skeletonView.isHidden = true
+            })
+        }
+    }
+
+    private func layoutSkeleton() {
+        guard !self.skeletonView.isHidden, let (theme, rowLayout) = self.skeletonParameters else {
+            return
+        }
+        // Rows start at the content inset; the skeleton moves with the first row, or with the overscroll while
+        // there is none.
+        let offset = self.scrollOffset(settled: false).knownValue ?? self.coreList.overscrollDistance
+        let size = CGSize(width: max(1.0, self.bounds.width - self.insets.left - self.insets.right), height: max(1.0, self.bounds.height))
+        self.skeletonView.frame = CGRect(origin: CGPoint(x: self.insets.left, y: self.insets.top - offset), size: size)
+        self.skeletonView.update(size: size, theme: theme, rowLayout: rowLayout)
     }
 
     func scrollOffset(settled: Bool) -> ScrollOffset {
