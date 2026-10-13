@@ -27,7 +27,9 @@ final class NewsSegmentNode: ASDisplayNode {
     }
 
     /// `action` also fires for the already selected tab; the screen scrolls that list to the top.
-    func update(context: AccountContext, width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, selectedIndex: Int, liftWhileSwitching: Bool, action: @escaping (Int) -> Void, transition: ComponentTransition) {
+    /// `tabSwitchFraction` is a swipe between the lists in progress, as a signed fraction of the width (negative
+    /// towards the next tab): the selection follows it, as Peer Info's does.
+    func update(context: AccountContext, width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, selectedIndex: Int, tabSwitchFraction: CGFloat, isSwitchingByDragging: Bool, liftWhileSwitching: Bool, action: @escaping (Int) -> Void, transition: ComponentTransition) {
         let titles = [strings.News_Segment_ForYou, strings.News_Segment_Added]
         let tabsSize = self.tabs.update(
             transition: transition,
@@ -66,6 +68,14 @@ final class NewsSegmentNode: ASDisplayNode {
                 tabsView.setOverlayContainerView(overlayContainerView: self.view)
             }
             transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(), size: frame.size))
+        }
+        self.updateTabSwitchFraction(tabSwitchFraction, isDragging: isSwitchingByDragging, transition: transition)
+    }
+
+    /// Mid-swipe, without laying the tabs out again.
+    func updateTabSwitchFraction(_ fraction: CGFloat, isDragging: Bool, transition: ComponentTransition) {
+        if let tabsView = self.tabs.view as? HorizontalTabsComponent.View {
+            tabsView.updateTabSwitchFraction(fraction: fraction, isDragging: isDragging, transition: transition)
         }
     }
 }

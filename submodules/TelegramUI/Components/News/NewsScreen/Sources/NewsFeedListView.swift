@@ -12,6 +12,13 @@ final class NewsFeedListView: UIView {
         case known(CGFloat)
         /// The first row is not loaded.
         case unknown
+
+        var knownValue: CGFloat? {
+            if case let .known(value) = self {
+                return value
+            }
+            return nil
+        }
     }
 
     // Main-thread physics for now, rather than the render-server keyframe flights the chat uses.

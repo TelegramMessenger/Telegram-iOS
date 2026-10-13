@@ -78,6 +78,38 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(resolved[0].messageIds, [album.messageIds[1]])
     }
 
+    // MARK: swiping between the tabs
+
+    func testPagerFlickGoesItsOwnWay() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -20.0, velocity: -300.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: 20.0, velocity: 300.0, width: 400.0), 0)
+        // A flick back cancels a long drag.
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -300.0, velocity: 300.0, width: 400.0), 0)
+    }
+
+    // Peer Info's version of this rule sends a slow release past half the width back the way it came.
+    func testPagerSlowReleaseGoesOnPastHalfTheWidth() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -250.0, velocity: 0.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: 250.0, velocity: 0.0, width: 400.0), 0)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -150.0, velocity: 0.0, width: 400.0), 0)
+    }
+
+    func testPagerStaysWithinThePages() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: -20.0, velocity: -300.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: 20.0, velocity: 300.0, width: 400.0), 0)
+    }
+
+    // Each list keeps its own position, so mid-swipe the header is between the two lists' folds.
+    func testPagerHeaderBlendsTheTwoFolds() {
+        XCTAssertEqual(newsPagerHeaderOffset(current: 0.0, next: 300.0, progress: 0.5, foldHeight: 54.0), 27.0)
+        XCTAssertEqual(newsPagerHeaderOffset(current: 10.0, next: 300.0, progress: 0.0, foldHeight: 54.0), 10.0)
+        XCTAssertEqual(newsPagerHeaderOffset(current: 10.0, next: 300.0, progress: 1.0, foldHeight: 54.0), 54.0)
+    }
+
+    func testPagerHeaderIgnoresOverscrollAndCountsAnUnloadedTopAsFolded() {
+        XCTAssertEqual(newsPagerHeaderOffset(current: -40.0, next: nil, progress: 0.5, foldHeight: 54.0), 27.0)
+    }
+
     // MARK: post text
 
     // A block quote lays the text out in blocks, and the 3-line limit does not hold across them: the row ran on
