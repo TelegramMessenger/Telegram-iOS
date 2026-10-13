@@ -103,7 +103,7 @@ func renderInstantPagePreviewIcons(_ text: NSAttributedString, font: UIFont, tex
     return missing.isEmpty ? result : clipInstantPagePreview(result)
 }
 
-private func previewEnvironment(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat? = nil, media: [EngineMedia.Id: EngineMedia]) -> InstantPagePreviewEnvironment {
+private func previewEnvironment(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat? = nil, media: @escaping (EngineMedia.Id) -> EngineMedia?) -> InstantPagePreviewEnvironment {
     let formatDate: ((Int32, MessageTextEntityType.DateTimeFormat) -> String)? = dateTimeFormat.map { dateTimeFormat in
         return { timestamp, format in
             stringForEntityFormattedDate(timestamp: timestamp, format: format, strings: strings, dateTimeFormat: dateTimeFormat)
@@ -130,7 +130,7 @@ private func previewEnvironment(strings: PresentationStrings, dateTimeFormat: Pr
 
 extension RichText {
     public func previewAttributedText(strings: PresentationStrings) -> NSAttributedString {
-        return buildInstantPagePreview(blocks: [.paragraph(self)], environment: previewEnvironment(strings: strings, media: [:]))
+        return buildInstantPagePreview(blocks: [.paragraph(self)], environment: previewEnvironment(strings: strings, media: { _ in nil }))
     }
 
     public func previewText(strings: PresentationStrings) -> String {
@@ -140,7 +140,7 @@ extension RichText {
 
 extension InstantPageListItem {
     public func previewAttributedText(strings: PresentationStrings, media: [EngineMedia.Id: EngineMedia]) -> NSAttributedString {
-        return buildInstantPagePreview(blocks: [.list(items: [self], ordered: false)], environment: previewEnvironment(strings: strings, media: media))
+        return buildInstantPagePreview(blocks: [.list(items: [self], ordered: false)], environment: previewEnvironment(strings: strings, media: { media[$0] }))
     }
 
     public func previewText(strings: PresentationStrings, media: [EngineMedia.Id: EngineMedia]) -> String {
@@ -150,7 +150,7 @@ extension InstantPageListItem {
 
 extension InstantPageBlock {
     public func previewAttributedText(strings: PresentationStrings, media: [EngineMedia.Id: EngineMedia]) -> NSAttributedString {
-        return buildInstantPagePreview(blocks: [self], environment: previewEnvironment(strings: strings, media: media))
+        return buildInstantPagePreview(blocks: [self], environment: previewEnvironment(strings: strings, media: { media[$0] }))
     }
 
     public func previewText(strings: PresentationStrings, media: [EngineMedia.Id: EngineMedia]) -> String {
@@ -159,9 +159,12 @@ extension InstantPageBlock {
 }
 
 extension InstantPage {
-    public func previewAttributedText(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat? = nil, associatedMedia: [EngineMedia.Id: EngineMedia] = [:]) -> NSAttributedString {
-        let media = associatedMedia.merging(self.media, uniquingKeysWith: { _, pageMedia in pageMedia })
-        return buildInstantPagePreview(blocks: self.blocks, environment: previewEnvironment(strings: strings, dateTimeFormat: dateTimeFormat, media: media))
+    /// `associatedMedia` looks up the message's associated media; the page's own media wins over it.
+    public func previewAttributedText(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat? = nil, associatedMedia: @escaping (EngineMedia.Id) -> EngineMedia? = { _ in nil }) -> NSAttributedString {
+        let pageMedia = self.media
+        return buildInstantPagePreview(blocks: self.blocks, environment: previewEnvironment(strings: strings, dateTimeFormat: dateTimeFormat, media: { id in
+            return pageMedia[id] ?? associatedMedia(id)
+        }))
     }
 
     public func previewText(strings: PresentationStrings) -> String {

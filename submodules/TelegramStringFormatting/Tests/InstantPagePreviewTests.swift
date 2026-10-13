@@ -23,7 +23,7 @@ final class InstantPagePreviewTests: XCTestCase {
             case let .photos(count): return "\(count) Photos"
             case let .videos(count): return "\(count) Videos"
             }
-        }, formatDate: { _, _ in "FORMATTED" }, media: media.mapValues(EngineMedia.init)))
+        }, formatDate: { _, _ in "FORMATTED" }, media: { id in media[id].map(EngineMedia.init) }))
     }
 
     private func caption(_ text: RichText = .empty) -> InstantPageCaption {

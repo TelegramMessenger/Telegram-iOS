@@ -295,7 +295,7 @@ public func messageContentKind(contentSettings: ContentSettings, message: Engine
     }
     for attribute in message.attributes {
         if let attribute = attribute as? RichTextMessageAttribute {
-            return .text(attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia.mapValues(EngineMedia.init)))
+            return .text(attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: { message.associatedMedia[$0].map(EngineMedia.init) }))
         }
     }
     return .text(messageTextWithAttributes(message: message))

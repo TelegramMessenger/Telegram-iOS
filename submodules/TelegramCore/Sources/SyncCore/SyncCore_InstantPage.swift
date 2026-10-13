@@ -1623,12 +1623,9 @@ public final class InstantPage: PostboxCoding, Equatable {
     public let rtl: Bool
     public let url: String
     public let views: Int32?
-    
-    /// The page's media by id. Built from the stored media on every read, so read it once
-    /// outside a loop.
-    public var media: [EngineMedia.Id: EngineMedia] {
-        return self.rawMedia.mapValues(EngineMedia.init)
-    }
+    /// The page's media by id, wrapped once when the page is made. A page is read from several threads, so
+    /// this is a stored constant rather than a lazy property. `rawMedia` stays the coded form.
+    public let media: [EngineMedia.Id: EngineMedia]
     
     public convenience init(blocks: [InstantPageBlock], media: [EngineMedia.Id: EngineMedia], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
         self.init(blocks: blocks, rawMedia: media.mapValues { $0._asMedia() }, isComplete: isComplete, rtl: rtl, url: url, views: views)
@@ -1637,6 +1634,7 @@ public final class InstantPage: PostboxCoding, Equatable {
     init(blocks: [InstantPageBlock], rawMedia: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
         self.blocks = blocks
         self.rawMedia = rawMedia
+        self.media = rawMedia.mapValues(EngineMedia.init)
         self.isComplete = isComplete
         self.rtl = rtl
         self.url = url
@@ -1646,6 +1644,7 @@ public final class InstantPage: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.blocks = decoder.decodeObjectArrayWithDecoderForKey("b")
         self.rawMedia = MediaDictionary(decoder: decoder).dict
+        self.media = self.rawMedia.mapValues(EngineMedia.init)
         self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
         self.rtl = decoder.decodeInt32ForKey("r", orElse: 0) != 0
         self.url = decoder.decodeStringForKey("url", orElse: "")
@@ -1721,6 +1720,7 @@ public final class InstantPage: PostboxCoding, Equatable {
             }
         }
         self.rawMedia = media
+        self.media = media.mapValues(EngineMedia.init)
         
         self.isComplete = flatBuffersObject.isComplete
         self.rtl = flatBuffersObject.rtl

@@ -6,10 +6,12 @@ import TextFormat
 struct InstantPagePreviewEnvironment {
     let label: (InstantPagePreviewLabel) -> String
     let formatDate: ((Int32, MessageTextEntityType.DateTimeFormat) -> String)?
-    let media: [EngineMedia.Id: EngineMedia]
+    /// A lookup rather than a dictionary: the preview reads a few ids, so the message's associated media is
+    /// wrapped only when one of them is asked for.
+    let media: (EngineMedia.Id) -> EngineMedia?
 
     func file(_ id: EngineMedia.Id) -> TelegramMediaFile? {
-        if case let .file(file) = self.media[id] {
+        if case let .file(file) = self.media(id) {
             return file
         } else {
             return nil
