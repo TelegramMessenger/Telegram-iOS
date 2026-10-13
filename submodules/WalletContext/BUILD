@@ -29,7 +29,7 @@ swift_library(
     name = "WalletCardStickersTestsLib",
     testonly = True,
     srcs = ["Tests/WalletCardStickersTests.swift"],
-    deps = [":WalletContext", "//submodules/TelegramCore", "//submodules/Postbox"],
+    deps = [":WalletContext", "//submodules/TelegramCore"],
 )
 
 ios_test_runner(

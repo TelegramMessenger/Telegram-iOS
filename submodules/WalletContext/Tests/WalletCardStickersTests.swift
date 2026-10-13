@@ -1,6 +1,5 @@
 import XCTest
 import TelegramCore
-import Postbox
 @testable import WalletContext
 
 final class WalletCardStickersTests: XCTestCase {
@@ -247,9 +246,9 @@ final class WalletCardStickersTests: XCTestCase {
         let card = WalletCard(address: "wallet", balance: 0, stickers: [])
         let cached = CachedUserData().withUpdatedWalletCard(card).withUpdatedAbout("About")
         XCTAssertEqual(cached.walletCard, card)
-        let encoder = PostboxEncoder()
+        let encoder = EnginePostboxEncoder()
         cached.encode(encoder)
-        let restored = CachedUserData(decoder: PostboxDecoder(buffer: MemoryBuffer(data: encoder.makeData())))
+        let restored = CachedUserData(decoder: EnginePostboxDecoder(buffer: EngineMemoryBuffer(data: encoder.makeData())))
         XCTAssertEqual(restored.walletCard, card)
         XCTAssertNil(CachedUserData().walletCard)
     }

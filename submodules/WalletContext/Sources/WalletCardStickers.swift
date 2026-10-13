@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 
 @available(macOS 10.15, *)
 public extension WalletContext {
@@ -80,9 +79,9 @@ public extension WalletContext.CardSticker {
         for attribute in unique?.attributes ?? [] {
             switch attribute {
             case let .model(_, file, _, _):
-                let encoder = PostboxEncoder(); encoder.encodeRootObject(file); model = encoder.makeData()
+                let encoder = EnginePostboxEncoder(); encoder.encodeRootObject(file); model = encoder.makeData()
             case let .pattern(_, file, _):
-                let encoder = PostboxEncoder(); encoder.encodeRootObject(file); pattern = encoder.makeData()
+                let encoder = EnginePostboxEncoder(); encoder.encodeRootObject(file); pattern = encoder.makeData()
             default: break
             }
         }
