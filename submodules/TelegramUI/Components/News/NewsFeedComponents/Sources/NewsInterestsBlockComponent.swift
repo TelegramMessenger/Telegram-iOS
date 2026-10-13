@@ -91,7 +91,7 @@ public final class NewsInterestChipComponent: Component {
 
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.category.title, font: Font.regular(17.0), textColor: textColor)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.category.title, font: Font.medium(13.0), textColor: textColor)))),
                 environment: {},
                 containerSize: CGSize(width: max(1.0, availableSize.width - x - horizontalInset), height: height)
             )
