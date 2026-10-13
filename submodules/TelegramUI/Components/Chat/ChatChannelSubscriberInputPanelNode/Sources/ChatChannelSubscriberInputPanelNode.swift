@@ -20,6 +20,8 @@ import ComponentDisplayAdapters
 import GlassControls
 import BundleIconComponent
 import MultilineTextComponent
+import ContextUI
+import NewsFeedSupport
 
 private enum SubscriberAction: Equatable, Hashable {
     case join
@@ -33,6 +35,8 @@ private enum SubscriberAction: Equatable, Hashable {
     case openChannel
     case openGroup
     case openChat
+    case addToNews
+    case addedToNews
 }
 
 private func titleAndColorForAction(_ action: SubscriberAction, theme: PresentationTheme, strings: PresentationStrings) -> (String, UIColor) {
@@ -59,10 +63,14 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
             return (strings.SavedMessages_OpenGroup, theme.chat.inputPanel.panelControlAccentColor)
         case .openChat:
             return (strings.SavedMessages_OpenChat, theme.chat.inputPanel.panelControlAccentColor)
+        case .addToNews:
+            return (strings.Channel_AddToNews, theme.chat.inputPanel.panelControlAccentColor)
+        case .addedToNews:
+            return (strings.Channel_AddedToNews, theme.chat.inputPanel.panelControlAccentColor)
     }
 }
 
-private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceState: ChatPresentationInterfaceState, isJoining: Bool, isMuted: Bool) -> SubscriberAction? {
+private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceState: ChatPresentationInterfaceState, isJoining: Bool, isAddingToNews: Bool, isMuted: Bool) -> SubscriberAction? {
     if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == context.account.peerId {
         if let peer = interfaceState.savedMessagesTopicPeer {
             if case let .channel(channel) = peer {
@@ -101,6 +109,28 @@ private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceS
         }
     } else {
         if case let .channel(channel) = peer {
+            let participation: NewsChannelParticipation
+            switch channel.participationStatus {
+            case .member:
+                participation = .member
+            case .left:
+                participation = .left
+            case .kicked:
+                participation = .kicked
+            }
+            var isBroadcast = false
+            if case .broadcast = channel.info {
+                isBroadcast = true
+            }
+            // Before the participation switch: a News-only channel may read as left.
+            switch newsChannelBarAction(isBroadcast: isBroadcast, isInNews: channel.flags.contains(.isInNews), participation: participation, featureEnabled: isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }), isAddingToNews: isAddingToNews) {
+            case .addToNews:
+                return .addToNews
+            case .addedToNews:
+                return .addedToNews
+            case .existing:
+                break
+            }
             if case .broadcast = channel.info, isJoining {
                 if isMuted {
                     return .unmuteNotifications
@@ -144,6 +174,21 @@ private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceS
 
 private let badgeFont = Font.regular(14.0)
 
+private final class ChannelNewsContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        // The bar is at the bottom: open the menu above it.
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
+    }
+}
+
 public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let panelContainer = UIView()
     private let panel = ComponentView<Empty>()
@@ -170,6 +215,8 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let actionDisposable = MetaDisposable()
     private let badgeDisposable = MetaDisposable()
     private var isJoining: Bool = false
+    private var isAddingToNews: Bool = false
+    private let newsActionDisposable = MetaDisposable()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
@@ -183,6 +230,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     deinit {
         self.actionDisposable.dispose()
+        self.newsActionDisposable.dispose()
         self.badgeDisposable.dispose()
     }
     
@@ -205,6 +253,47 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.openMonoforum()
     }
     
+    private func relayoutPanel() {
+        if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, isSecondary, metrics, deviceMetrics) = self.layoutData, let presentationInterfaceState = self.presentationInterfaceState {
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, deviceMetrics: deviceMetrics, force: true)
+        }
+    }
+
+    private func openJoinWebView(_ webView: JoinChatWebView, context: AccountContext, peer: EnginePeer) {
+        if let controller = self.interfaceInteraction?.getNavigationController()?.viewControllers.last as? ViewController {
+            context.sharedContext.openJoinChatWebView(context: context, parentController: controller, updatedPresentationData: nil, webView: webView, chatTitle: peer.compactDisplayTitle)
+        }
+    }
+
+    private func presentJoinError(_ error: JoinChannelError, context: AccountContext) {
+        guard let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
+            return
+        }
+        let text: String
+        switch error {
+        case .inviteRequestSent:
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationInterfaceState.strings.Group_RequestToJoinSent, text: presentationInterfaceState.strings.Group_RequestToJoinSentDescriptionGroup ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
+            return
+        case .tooMuchJoined:
+            self.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context, intent: .join, completed: { [weak self] value in
+                if value {
+                    self?.buttonPressed()
+                }
+            }))
+            return
+        case .tooMuchUsers:
+            text = presentationInterfaceState.strings.Conversation_UsersTooMuchError
+        case .generic:
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
+            } else {
+                text = presentationInterfaceState.strings.Group_ErrorAccessDenied
+            }
+        }
+        self.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
+    }
+
     @objc private func buttonPressed() {
         guard let context = self.context, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
             return
@@ -232,37 +321,10 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 case .joined:
                     didJoin = true
                 case let .webView(webView):
-                    if let controller = strongSelf.interfaceInteraction?.getNavigationController()?.viewControllers.last as? ViewController {
-                        context.sharedContext.openJoinChatWebView(context: context, parentController: controller, updatedPresentationData: nil, webView: webView, chatTitle: EnginePeer(peer).compactDisplayTitle)
-                    }
+                    strongSelf.openJoinWebView(webView, context: context, peer: EnginePeer(peer))
                 }
             }, error: { [weak self] error in
-                guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
-                    return
-                }
-                let text: String
-                switch error {
-                case .inviteRequestSent:
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationInterfaceState.strings.Group_RequestToJoinSent, text: presentationInterfaceState.strings.Group_RequestToJoinSentDescriptionGroup ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
-                    return
-                case .tooMuchJoined:
-                    strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context, intent: .join, completed: { value in
-                        if value {
-                            self?.buttonPressed()
-                        }
-                    }))
-                    return
-                case .tooMuchUsers:
-                    text = presentationInterfaceState.strings.Conversation_UsersTooMuchError
-                case .generic:
-                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                        text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
-                    } else {
-                        text = presentationInterfaceState.strings.Group_ErrorAccessDenied
-                    }
-                }
-                strongSelf.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
+                self?.presentJoinError(error, context: context)
             }, completed: { [weak self] in
                 guard let self else {
                     return
@@ -292,6 +354,37 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     }
                 }
             }))
+        case .addToNews:
+            self.isAddingToNews = true
+            self.relayoutPanel()
+            self.newsActionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peer.id, hash: nil, forNews: true)
+            |> afterDisposed { [weak self] in
+                Queue.mainQueue().async {
+                    // No relayout here: the channel's `updateChannel` (in_news set) relayouts the bar, so
+                    // clearing the flag does not flash "Add to News" in between.
+                    self?.isAddingToNews = false
+                }
+            }).startStrict(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                if case let .webView(webView) = result {
+                    // Not added yet: the bot's web view decides. Show the bar as it really is.
+                    self.isAddingToNews = false
+                    self.relayoutPanel()
+                    self.openJoinWebView(webView, context: context, peer: EnginePeer(peer))
+                }
+            }, error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                self.isAddingToNews = false
+                self.relayoutPanel()
+                // The same outcomes as Join: a request-sent toast, the old-channels screen, or an alert.
+                self.presentJoinError(error, context: context)
+            }))
+        case .addedToNews:
+            self.openNewsMenu()
         case .kicked:
             break
         case .muteNotifications, .unmuteNotifications:
@@ -307,6 +400,34 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
+    private func openNewsMenu() {
+        guard let context = self.context, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController(), let peer = self.presentationInterfaceState?.renderedPeer?.peer, let sourceView = (self.panel.view as? GlassControlPanelComponent.View)?.centerItemView?.itemView(id: AnyHashable(0)) else {
+            return
+        }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let peerId = peer.id
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_AddToChats, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToChats"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] _, f in
+            f(.default)
+            guard let self else {
+                return
+            }
+            // A plain join on a News-only channel adds it to Chats (it stays muted).
+            self.newsActionDisposable.set(context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peerId, hash: nil).startStrict())
+        })))
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_RemoveFromNews, textColor: .destructive, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+        }, action: { _, f in
+            f(.default)
+            // Leaving: a News-only channel has no chat-list entry to lose, so there is no confirmation.
+            let _ = context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false).startStandalone()
+        })))
+        let contextController = makeContextController(presentationData: presentationData, source: .reference(ChannelNewsContextReferenceContentSource(controller: chatController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        interfaceInteraction.presentController(contextController, nil)
+    }
+
     override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, transition: transition, interfaceState: interfaceState, metrics: metrics, deviceMetrics: deviceMetrics, force: false)
     }
@@ -416,13 +537,13 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.presentationInterfaceState = interfaceState
         
         var centerAction: (title: String, isAccent: Bool)?
-        if let context = self.context, let peer = interfaceState.renderedPeer?.peer, let action = actionForPeer(context: context, peer: EnginePeer(peer), interfaceState: interfaceState, isJoining: self.isJoining, isMuted: interfaceState.peerIsMuted) {
+        if let context = self.context, let peer = interfaceState.renderedPeer?.peer, let action = actionForPeer(context: context, peer: EnginePeer(peer), interfaceState: interfaceState, isJoining: self.isJoining, isAddingToNews: self.isAddingToNews, isMuted: interfaceState.peerIsMuted) {
             self.action = action
             let (title, _) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
             
             var isAccent = false
             switch self.action {
-            case .join, .joinGroup, .applyToJoin:
+            case .join, .joinGroup, .applyToJoin, .addToNews:
                 isAccent = true
             default:
                 break
@@ -483,14 +604,18 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         var centerPanelItem: GlassControlPanelComponent.Item?
         if let centerAction {
+            var centerItems: [GlassControlGroupComponent.Item] = [
+                GlassControlGroupComponent.Item(id: 0, content: .text(centerAction.title), action: { [weak self] in
+                    self?.buttonPressed()
+                })
+            ]
+            if case .addedToNews = self.action {
+                centerItems.append(GlassControlGroupComponent.Item(id: 1, content: .icon("Item List/DownArrow"), action: { [weak self] in
+                    self?.buttonPressed()
+                }))
+            }
             centerPanelItem = GlassControlPanelComponent.Item(
-                items: [GlassControlGroupComponent.Item(
-                    id: 0,
-                    content: .text(centerAction.title),
-                    action: { [weak self] in
-                        self?.buttonPressed()
-                    }
-                )],
+                items: centerItems,
                 background: centerAction.isAccent ? .activeTint(inset: true) : .panel,
                 keepWide: true,
                 minWidth: centerAction.isAccent ? 166.0 : nil,
