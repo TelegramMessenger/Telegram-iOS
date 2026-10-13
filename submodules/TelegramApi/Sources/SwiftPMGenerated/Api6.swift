@@ -44,7 +44,7 @@ public extension Api.DialogFilterSuggested.Cons_dialogFilterSuggested {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(filter: Api.DialogFilter, description: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(767))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(769))
         tlStoreReference(_tlObject, 24, filter.tlObject)
         tlStoreReference(_tlObject, 32, description as NSString)
         self.init(tlObject: _tlObject)
@@ -114,7 +114,7 @@ public extension Api.DialogPeer.Cons_dialogPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Peer(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(peer: Api.Peer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1507))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1509))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -124,7 +124,7 @@ public extension Api.DialogPeer.Cons_dialogPeerCommunity {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(communityId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(300))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(301))
         tlStore(_tlObject, 24, communityId)
         self.init(tlObject: _tlObject)
     }
@@ -181,7 +181,7 @@ public extension Api.DisallowedGiftsSettings.Cons_disallowedGiftsSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(727))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(729))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -269,7 +269,7 @@ public extension Api.Document.Cons_document {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.DocumentAttribute.tlArray(self.tlObject, 96) } }
     }
     init(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int64, thumbs: [Api.PhotoSize]?, videoThumbs: [Api.VideoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(916))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(918))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 40, id)
         tlStore(_tlObject, 48, accessHash)
@@ -368,7 +368,7 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .documentAttributeAnimated:
-                return TLObjectSingleton(TLApiConstructorAt(110))
+                return TLObjectSingleton(TLApiConstructorAt(109))
             case .documentAttributeAudio(let _data):
                 return _data.tlObject
             case .documentAttributeCustomEmoji(let _data):
@@ -376,7 +376,7 @@ public extension Api {
             case .documentAttributeFilename(let _data):
                 return _data.tlObject
             case .documentAttributeHasStickers:
-                return TLObjectSingleton(TLApiConstructorAt(972))
+                return TLObjectSingleton(TLApiConstructorAt(974))
             case .documentAttributeImageSize(let _data):
                 return _data.tlObject
             case .documentAttributeSticker(let _data):
@@ -413,7 +413,7 @@ public extension Api.DocumentAttribute.Cons_documentAttributeAudio {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : tlBufferAt(self.tlObject, 48) } }
     }
     init(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(974))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(976))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, duration)
         tlStoreReference(_tlObject, 32, title.map { value in value as NSString })
@@ -433,7 +433,7 @@ public extension Api.DocumentAttribute.Cons_documentAttributeCustomEmoji {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputStickerSet(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, alt: String, stickerset: Api.InputStickerSet) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1688))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1691))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, alt as NSString)
         tlStoreReference(_tlObject, 40, stickerset.tlObject)
@@ -445,7 +445,7 @@ public extension Api.DocumentAttribute.Cons_documentAttributeFilename {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(fileName: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(133))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(132))
         tlStoreReference(_tlObject, 24, fileName as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -458,7 +458,7 @@ public extension Api.DocumentAttribute.Cons_documentAttributeImageSize {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(w: Int32, h: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(689))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(691))
         tlStore(_tlObject, 24, w)
         tlStore(_tlObject, 28, h)
         self.init(tlObject: _tlObject)
@@ -478,7 +478,7 @@ public extension Api.DocumentAttribute.Cons_documentAttributeSticker {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.MaskCoords(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(631))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(633))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, alt as NSString)
         tlStoreReference(_tlObject, 40, stickerset.tlObject)
@@ -599,7 +599,7 @@ public extension Api.DraftMessage.Cons_draftMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : Api.RichMessage(tlObject: tlObjectAt(self.tlObject, 80)) } }
     }
     init(flags: Int32, replyTo: Api.InputReplyTo?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, date: Int32, effect: Int64?, suggestedPost: Api.SuggestedPost?, richMessage: Api.RichMessage?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(618))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(620))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, replyTo?.tlObject)
@@ -694,7 +694,7 @@ public extension Api.EmailVerification.Cons_emailVerificationApple {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(token: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(967))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(969))
         tlStoreReference(_tlObject, 24, token as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -704,7 +704,7 @@ public extension Api.EmailVerification.Cons_emailVerificationCode {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(code: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(930))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(932))
         tlStoreReference(_tlObject, 24, code as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -714,7 +714,7 @@ public extension Api.EmailVerification.Cons_emailVerificationGoogle {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(token: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1437))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1439))
         tlStoreReference(_tlObject, 24, token as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -752,7 +752,7 @@ public extension Api {
             case .emailVerifyPurposeLoginSetup(let _data):
                 return _data.tlObject
             case .emailVerifyPurposePassport:
-                return TLObjectSingleton(TLApiConstructorAt(1240))
+                return TLObjectSingleton(TLApiConstructorAt(1242))
             }
         }
 
@@ -850,7 +850,7 @@ public extension Api.EmojiGroup.Cons_emojiGroup {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringsAt(self.tlObject, 40) } }
     }
     init(title: String, iconEmojiId: Int64, emoticons: [String]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(789))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(791))
         tlStoreReference(_tlObject, 24, title as NSString)
         tlStore(_tlObject, 32, iconEmojiId)
         tlStoreReference(_tlObject, 40, emoticons as NSArray)
@@ -868,7 +868,7 @@ public extension Api.EmojiGroup.Cons_emojiGroupGreeting {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringsAt(self.tlObject, 40) } }
     }
     init(title: String, iconEmojiId: Int64, emoticons: [String]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(826))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(828))
         tlStoreReference(_tlObject, 24, title as NSString)
         tlStore(_tlObject, 32, iconEmojiId)
         tlStoreReference(_tlObject, 40, emoticons as NSArray)
@@ -883,7 +883,7 @@ public extension Api.EmojiGroup.Cons_emojiGroupPremium {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(title: String, iconEmojiId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(60))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(59))
         tlStoreReference(_tlObject, 24, title as NSString)
         tlStore(_tlObject, 32, iconEmojiId)
         self.init(tlObject: _tlObject)
@@ -945,7 +945,7 @@ public extension Api.EmojiKeyword.Cons_emojiKeyword {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringsAt(self.tlObject, 32) } }
     }
     init(keyword: String, emoticons: [String]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1402))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1404))
         tlStoreReference(_tlObject, 24, keyword as NSString)
         tlStoreReference(_tlObject, 32, emoticons as NSArray)
         self.init(tlObject: _tlObject)
@@ -1016,7 +1016,7 @@ public extension Api.EmojiKeywordsDifference.Cons_emojiKeywordsDifference {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.EmojiKeyword.tlArray(self.tlObject, 40) } }
     }
     init(langCode: String, fromVersion: Int32, version: Int32, keywords: [Api.EmojiKeyword]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(594))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(596))
         tlStoreReference(_tlObject, 32, langCode as NSString)
         tlStore(_tlObject, 24, fromVersion)
         tlStore(_tlObject, 28, version)
@@ -1066,7 +1066,7 @@ public extension Api.EmojiLanguage.Cons_emojiLanguage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(langCode: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1171))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1173))
         tlStoreReference(_tlObject, 24, langCode as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -1121,7 +1121,7 @@ public extension Api.EmojiList.Cons_emojiList {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 32) } }
     }
     init(hash: Int64, documentId: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(784))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(786))
         tlStore(_tlObject, 24, hash)
         tlStoreReference(_tlObject, 32, tlPackInt64(documentId) as NSData)
         self.init(tlObject: _tlObject)
@@ -1202,7 +1202,7 @@ public extension Api.EmojiStatus.Cons_emojiStatus {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 40, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, documentId: Int64, until: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1524))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1526))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, documentId)
@@ -1246,7 +1246,7 @@ public extension Api.EmojiStatus.Cons_emojiStatusCollectible {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 88, 0) ? tlBase(self.tlObject).load(fromByteOffset: 44, as: Int32.self) : nil } }
     }
     init(flags: Int32, collectibleId: Int64, documentId: Int64, title: String, slug: String, patternDocumentId: Int64, centerColor: Int32, edgeColor: Int32, patternColor: Int32, textColor: Int32, until: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(723))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(725))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 48, collectibleId)
@@ -1274,7 +1274,7 @@ public extension Api.EmojiStatus.Cons_inputEmojiStatusCollectible {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 40, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, collectibleId: Int64, until: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(51))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(50))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, collectibleId)
@@ -1325,7 +1325,7 @@ public extension Api.EmojiURL.Cons_emojiURL {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(url: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1081))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1083))
         tlStoreReference(_tlObject, 24, url as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -1434,7 +1434,7 @@ public extension Api.EncryptedChat.Cons_encryptedChat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 64, as: Int64.self) } }
     }
     init(id: Int32, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gAOrB: Buffer, keyFingerprint: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(622))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(624))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         tlStore(_tlObject, 28, date)
@@ -1464,7 +1464,7 @@ public extension Api.EncryptedChat.Cons_encryptedChatEmpty {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(id: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1118))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1120))
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
     }
@@ -1526,7 +1526,7 @@ public extension Api.EncryptedChat.Cons_encryptedChatWaiting {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 48, as: Int64.self) } }
     }
     init(id: Int32, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(658))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(660))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         tlStore(_tlObject, 28, date)

@@ -7275,8 +7275,15 @@ public extension Api.functions.wallet {
     }
 }
 public extension Api.functions.wallet {
-    static func tonConnectClaimRequest(flags: Int32, sessionId: Int64, msgId: Int32, appRequestId: String, challengeAnswer: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+    static func setCardStickers(stickers: [Api.InputWalletCardSticker]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Card>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(839))
+        tlStoreReference(_tlObject, 24, stickers.map { item in item.tlObject } as NSArray)
+        return tlFunction(_tlObject)
+    }
+}
+public extension Api.functions.wallet {
+    static func tonConnectClaimRequest(flags: Int32, sessionId: Int64, msgId: Int32, appRequestId: String, challengeAnswer: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(840))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStore(_tlObject, 28, msgId)
@@ -7287,7 +7294,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectCloseSession(flags: Int32, sessionId: Int64, body: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(840))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(841))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStoreReference(_tlObject, 40, body.map { value in value.makeData() as NSData })
@@ -7296,7 +7303,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectCreateSession(dappClientId: String, manifestUrl: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TonConnectSession>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(841))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(842))
         tlStoreReference(_tlObject, 24, dappClientId as NSString)
         tlStoreReference(_tlObject, 32, manifestUrl as NSString)
         return tlFunction(_tlObject)
@@ -7304,7 +7311,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectGetPending(flags: Int32, dappClientId: String?, sessionId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectPending>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(842))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(843))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, dappClientId.map { value in value as NSString })
@@ -7315,20 +7322,20 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectGetSessions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectSessions>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(843))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(844))
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func tonConnectNextEventId(sessionId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TonConnectNextEventId>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(844))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(845))
         tlStore(_tlObject, 24, sessionId)
         return tlFunction(_tlObject)
     }
 }
 public extension Api.functions.wallet {
     static func tonConnectRegisterKey(sessionId: Int64, clientId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.TonConnectChallenge>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(845))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(846))
         tlStore(_tlObject, 24, sessionId)
         tlStoreReference(_tlObject, 32, clientId as NSString)
         return tlFunction(_tlObject)
@@ -7336,7 +7343,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectSubmitConnectResult(flags: Int32, sessionId: Int64, challengeAnswer: Buffer, body: Buffer, traceId: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(846))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(847))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStoreReference(_tlObject, 40, challengeAnswer.makeData() as NSData)
@@ -7347,7 +7354,7 @@ public extension Api.functions.wallet {
 }
 public extension Api.functions.wallet {
     static func tonConnectSubmitResponse(flags: Int32, sessionId: Int64, msgId: Int32, body: Buffer, traceId: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(847))
+        let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(848))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, sessionId)
         tlStore(_tlObject, 28, msgId)

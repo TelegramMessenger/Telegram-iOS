@@ -1,215 +1,5 @@
 import TelegramApiObjC
 public extension Api {
-    enum WebPage: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
-        @frozen public struct Cons_webPage {
-            @usableFromInline let tlObject: TLObject
-            init(tlObject: TLObject) {
-                self.tlObject = tlObject
-            }
-        }
-        @frozen public struct Cons_webPageEmpty {
-            @usableFromInline let tlObject: TLObject
-            init(tlObject: TLObject) {
-                self.tlObject = tlObject
-            }
-        }
-        @frozen public struct Cons_webPageNotModified {
-            @usableFromInline let tlObject: TLObject
-            init(tlObject: TLObject) {
-                self.tlObject = tlObject
-            }
-        }
-        @frozen public struct Cons_webPagePending {
-            @usableFromInline let tlObject: TLObject
-            init(tlObject: TLObject) {
-                self.tlObject = tlObject
-            }
-        }
-        case webPage(Cons_webPage)
-        case webPageEmpty(Cons_webPageEmpty)
-        case webPageNotModified(Cons_webPageNotModified)
-        case webPagePending(Cons_webPagePending)
-
-
-        @usableFromInline init(tlObject object: TLObject) {
-            switch object.tl_caseIndex {
-            case 0:
-                self = .webPage(Cons_webPage(tlObject: object))
-            case 1:
-                self = .webPageEmpty(Cons_webPageEmpty(tlObject: object))
-            case 2:
-                self = .webPageNotModified(Cons_webPageNotModified(tlObject: object))
-            case 3:
-                self = .webPagePending(Cons_webPagePending(tlObject: object))
-            default:
-                preconditionFailure()
-            }
-        }
-
-        @usableFromInline var tlObject: TLObject {
-            switch self {
-            case .webPage(let _data):
-                return _data.tlObject
-            case .webPageEmpty(let _data):
-                return _data.tlObject
-            case .webPageNotModified(let _data):
-                return _data.tlObject
-            case .webPagePending(let _data):
-                return _data.tlObject
-            }
-        }
-
-        public var tlBackingObject: TLObject {
-            return self.tlObject
-        }
-
-        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.WebPage] {
-            return tlObjectsAt(object, offset).map { Api.WebPage(tlObject: $0) }
-        }
-
-    }
-}
-public extension Api.WebPage.Cons_webPage {
-    @_alwaysEmitIntoClient var flags: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
-    }
-    @_alwaysEmitIntoClient var id: Int64 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 48, as: Int64.self) } }
-    }
-    @_alwaysEmitIntoClient var url: String {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 56) } }
-    }
-    @_alwaysEmitIntoClient var displayUrl: String {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 64) } }
-    }
-    @_alwaysEmitIntoClient var hash: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
-    }
-    @_alwaysEmitIntoClient var type: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 72) ? nil : tlStringAt(self.tlObject, 72) } }
-    }
-    @_alwaysEmitIntoClient var siteName: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : tlStringAt(self.tlObject, 80) } }
-    }
-    @_alwaysEmitIntoClient var title: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 88) ? nil : tlStringAt(self.tlObject, 88) } }
-    }
-    @_alwaysEmitIntoClient var description: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 96) ? nil : tlStringAt(self.tlObject, 96) } }
-    }
-    @_alwaysEmitIntoClient var photo: Api.Photo? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 104) ? nil : Api.Photo(tlObject: tlObjectAt(self.tlObject, 104)) } }
-    }
-    @_alwaysEmitIntoClient var embedUrl: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 112) ? nil : tlStringAt(self.tlObject, 112) } }
-    }
-    @_alwaysEmitIntoClient var embedType: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 120) ? nil : tlStringAt(self.tlObject, 120) } }
-    }
-    @_alwaysEmitIntoClient var embedWidth: Int32? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 160, 0) ? tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) : nil } }
-    }
-    @_alwaysEmitIntoClient var embedHeight: Int32? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 160, 1) ? tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) : nil } }
-    }
-    @_alwaysEmitIntoClient var duration: Int32? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 160, 2) ? tlBase(self.tlObject).load(fromByteOffset: 40, as: Int32.self) : nil } }
-    }
-    @_alwaysEmitIntoClient var author: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 128) ? nil : tlStringAt(self.tlObject, 128) } }
-    }
-    @_alwaysEmitIntoClient var document: Api.Document? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 136) ? nil : Api.Document(tlObject: tlObjectAt(self.tlObject, 136)) } }
-    }
-    @_alwaysEmitIntoClient var cachedPage: Api.Page? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 144) ? nil : Api.Page(tlObject: tlObjectAt(self.tlObject, 144)) } }
-    }
-    @_alwaysEmitIntoClient var attributes: [Api.WebPageAttribute]? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 152) ? nil : Api.WebPageAttribute.tlArray(self.tlObject, 152) } }
-    }
-    init(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?, attributes: [Api.WebPageAttribute]?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1530))
-        var _tlPresent: UInt64 = 0
-        tlStore(_tlObject, 24, flags)
-        tlStore(_tlObject, 48, id)
-        tlStoreReference(_tlObject, 56, url as NSString)
-        tlStoreReference(_tlObject, 64, displayUrl as NSString)
-        tlStore(_tlObject, 28, hash)
-        tlStoreReference(_tlObject, 72, type.map { value in value as NSString })
-        tlStoreReference(_tlObject, 80, siteName.map { value in value as NSString })
-        tlStoreReference(_tlObject, 88, title.map { value in value as NSString })
-        tlStoreReference(_tlObject, 96, description.map { value in value as NSString })
-        tlStoreReference(_tlObject, 104, photo?.tlObject)
-        tlStoreReference(_tlObject, 112, embedUrl.map { value in value as NSString })
-        tlStoreReference(_tlObject, 120, embedType.map { value in value as NSString })
-        if let _tlValue = embedWidth { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 0 }
-        if let _tlValue = embedHeight { tlStore(_tlObject, 36, _tlValue); _tlPresent |= 1 << 1 }
-        if let _tlValue = duration { tlStore(_tlObject, 40, _tlValue); _tlPresent |= 1 << 2 }
-        tlStoreReference(_tlObject, 128, author.map { value in value as NSString })
-        tlStoreReference(_tlObject, 136, document?.tlObject)
-        tlStoreReference(_tlObject, 144, cachedPage?.tlObject)
-        tlStoreReference(_tlObject, 152, attributes.map { value in value.map { item in item.tlObject } as NSArray })
-        tlStore(_tlObject, 160, _tlPresent)
-        self.init(tlObject: _tlObject)
-    }
-}
-public extension Api.WebPage.Cons_webPageEmpty {
-    @_alwaysEmitIntoClient var flags: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
-    }
-    @_alwaysEmitIntoClient var id: Int64 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
-    }
-    @_alwaysEmitIntoClient var url: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : tlStringAt(self.tlObject, 40) } }
-    }
-    init(flags: Int32, id: Int64, url: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(229))
-        tlStore(_tlObject, 24, flags)
-        tlStore(_tlObject, 32, id)
-        tlStoreReference(_tlObject, 40, url.map { value in value as NSString })
-        self.init(tlObject: _tlObject)
-    }
-}
-public extension Api.WebPage.Cons_webPageNotModified {
-    @_alwaysEmitIntoClient var flags: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
-    }
-    @_alwaysEmitIntoClient var cachedPageViews: Int32? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 32, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
-    }
-    init(flags: Int32, cachedPageViews: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(735))
-        var _tlPresent: UInt64 = 0
-        tlStore(_tlObject, 24, flags)
-        if let _tlValue = cachedPageViews { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
-        tlStore(_tlObject, 32, _tlPresent)
-        self.init(tlObject: _tlObject)
-    }
-}
-public extension Api.WebPage.Cons_webPagePending {
-    @_alwaysEmitIntoClient var flags: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
-    }
-    @_alwaysEmitIntoClient var id: Int64 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
-    }
-    @_alwaysEmitIntoClient var url: String? {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : tlStringAt(self.tlObject, 40) } }
-    }
-    @_alwaysEmitIntoClient var date: Int32 {
-        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
-    }
-    init(flags: Int32, id: Int64, url: String?, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1151))
-        tlStore(_tlObject, 24, flags)
-        tlStore(_tlObject, 32, id)
-        tlStoreReference(_tlObject, 40, url.map { value in value as NSString })
-        tlStore(_tlObject, 28, date)
-        self.init(tlObject: _tlObject)
-    }
-}
-public extension Api {
     indirect enum WebPageAttribute: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
         @frozen public struct Cons_webPageAttributeAiComposeTone {
             @usableFromInline let tlObject: TLObject
@@ -317,7 +107,7 @@ public extension Api.WebPageAttribute.Cons_webPageAttributeAiComposeTone {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int64.self) } }
     }
     init(emojiId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(769))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(771))
         tlStore(_tlObject, 24, emojiId)
         self.init(tlObject: _tlObject)
     }
@@ -341,7 +131,7 @@ public extension Api.WebPageAttribute.Cons_webPageAttributeStarGiftCollection {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Document.tlArray(self.tlObject, 24) } }
     }
     init(icons: [Api.Document]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(319))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(320))
         tlStoreReference(_tlObject, 24, icons.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -405,7 +195,7 @@ public extension Api.WebPageAttribute.Cons_webPageAttributeUniqueStarGift {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.StarGift(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(gift: Api.StarGift) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1373))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1375))
         tlStoreReference(_tlObject, 24, gift.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -455,7 +245,7 @@ public extension Api.WebViewMessageSent.Cons_webViewMessageSent {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 32) ? nil : Api.InputBotInlineMessageID(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(flags: Int32, msgId: Api.InputBotInlineMessageID?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(81))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(80))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, msgId?.tlObject)
         self.init(tlObject: _tlObject)
@@ -575,7 +365,7 @@ public extension Api.account.AuthorizationForm.Cons_authorizationForm {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : tlStringAt(self.tlObject, 64) } }
     }
     init(flags: Int32, requiredTypes: [Api.SecureRequiredType], values: [Api.SecureValue], errors: [Api.SecureValueError], users: [Api.User], privacyPolicyUrl: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1128))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1130))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, requiredTypes.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, values.map { item in item.tlObject } as NSArray)
@@ -684,7 +474,7 @@ public extension Api.account.AutoDownloadSettings.Cons_autoDownloadSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.AutoDownloadSettings(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(low: Api.AutoDownloadSettings, medium: Api.AutoDownloadSettings, high: Api.AutoDownloadSettings) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(638))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(640))
         tlStoreReference(_tlObject, 24, low.tlObject)
         tlStoreReference(_tlObject, 32, medium.tlObject)
         tlStoreReference(_tlObject, 40, high.tlObject)
@@ -806,7 +596,7 @@ public extension Api.account.BusinessChatLinks.Cons_businessChatLinks {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.User.tlArray(self.tlObject, 40) } }
     }
     init(links: [Api.BusinessChatLink], chats: [Api.Chat], users: [Api.User]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1560))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1562))
         tlStoreReference(_tlObject, 24, links.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 32, chats.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, users.map { item in item.tlObject } as NSArray)
@@ -841,7 +631,7 @@ public extension Api.account {
             case .chatThemes(let _data):
                 return _data.tlObject
             case .chatThemesNotModified:
-                return TLObjectSingleton(TLApiConstructorAt(1470))
+                return TLObjectSingleton(TLApiConstructorAt(1472))
             }
         }
 
@@ -875,7 +665,7 @@ public extension Api.account.ChatThemes.Cons_chatThemes {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : tlStringAt(self.tlObject, 64) } }
     }
     init(flags: Int32, hash: Int64, themes: [Api.ChatTheme], chats: [Api.Chat], users: [Api.User], nextOffset: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1261))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1263))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, hash)
         tlStoreReference(_tlObject, 40, themes.map { item in item.tlObject } as NSArray)
@@ -978,7 +768,7 @@ public extension Api.account.ContentSettings.Cons_contentSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(572))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(573))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -1049,7 +839,7 @@ public extension Api.account.EmailVerified.Cons_emailVerifiedLogin {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.auth.SentCode(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(email: String, sentCode: Api.auth.SentCode) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1485))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1487))
         tlStoreReference(_tlObject, 24, email as NSString)
         tlStoreReference(_tlObject, 32, sentCode.tlObject)
         self.init(tlObject: _tlObject)
@@ -1083,7 +873,7 @@ public extension Api.account {
             case .emojiStatuses(let _data):
                 return _data.tlObject
             case .emojiStatusesNotModified:
-                return TLObjectSingleton(TLApiConstructorAt(1380))
+                return TLObjectSingleton(TLApiConstructorAt(1382))
             }
         }
 
@@ -1105,7 +895,7 @@ public extension Api.account.EmojiStatuses.Cons_emojiStatuses {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.EmojiStatus.tlArray(self.tlObject, 32) } }
     }
     init(hash: Int64, statuses: [Api.EmojiStatus]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(928))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(930))
         tlStore(_tlObject, 24, hash)
         tlStoreReference(_tlObject, 32, statuses.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
@@ -1200,7 +990,7 @@ public extension Api.account.PasskeyRegistrationOptions.Cons_passkeyRegistration
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.DataJSON(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(options: Api.DataJSON) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1481))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1483))
         tlStoreReference(_tlObject, 24, options.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1247,7 +1037,7 @@ public extension Api.account.Passkeys.Cons_passkeys {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Passkey.tlArray(self.tlObject, 24) } }
     }
     init(passkeys: [Api.Passkey]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1650))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1653))
         tlStoreReference(_tlObject, 24, passkeys.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -1324,7 +1114,7 @@ public extension Api.account.Password.Cons_password {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 96) ? nil : tlStringAt(self.tlObject, 96) } }
     }
     init(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?, loginEmailPattern: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(951))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(953))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, currentAlgo?.tlObject)
@@ -1398,7 +1188,7 @@ public extension Api.account.PasswordInputSettings.Cons_passwordInputSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.SecureSecretSettings(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1295))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1297))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, newAlgo?.tlObject)
         tlStoreReference(_tlObject, 40, newPasswordHash.map { value in value.makeData() as NSData })
@@ -1456,7 +1246,7 @@ public extension Api.account.PasswordSettings.Cons_passwordSettings {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.SecureSecretSettings(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, email: String?, secureSettings: Api.SecureSecretSettings?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(999))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1001))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, email.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, secureSettings?.tlObject)
@@ -1555,7 +1345,7 @@ public extension Api.account {
             case .resetPasswordFailedWait(let _data):
                 return _data.tlObject
             case .resetPasswordOk:
-                return TLObjectSingleton(TLApiConstructorAt(1535))
+                return TLObjectSingleton(TLApiConstructorAt(1537))
             case .resetPasswordRequestedWait(let _data):
                 return _data.tlObject
             }
@@ -1576,7 +1366,7 @@ public extension Api.account.ResetPasswordResult.Cons_resetPasswordFailedWait {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(retryDate: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1494))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1496))
         tlStore(_tlObject, 24, retryDate)
         self.init(tlObject: _tlObject)
     }
@@ -1586,7 +1376,7 @@ public extension Api.account.ResetPasswordResult.Cons_resetPasswordRequestedWait
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(untilDate: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1542))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1544))
         tlStore(_tlObject, 24, untilDate)
         self.init(tlObject: _tlObject)
     }
@@ -1648,7 +1438,7 @@ public extension Api.account.ResolvedBusinessChatLinks.Cons_resolvedBusinessChat
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.User.tlArray(self.tlObject, 64) } }
     }
     init(flags: Int32, peer: Api.Peer, message: String, entities: [Api.MessageEntity]?, chats: [Api.Chat], users: [Api.User]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(994))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(996))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStoreReference(_tlObject, 40, message as NSString)
@@ -1705,7 +1495,7 @@ public extension Api.account.SavedMusicIds.Cons_savedMusicIds {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(ids: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(987))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(989))
         tlStoreReference(_tlObject, 24, tlPackInt64(ids) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -1736,7 +1526,7 @@ public extension Api.account {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .savedRingtone:
-                return TLObjectSingleton(TLApiConstructorAt(1204))
+                return TLObjectSingleton(TLApiConstructorAt(1206))
             case .savedRingtoneConverted(let _data):
                 return _data.tlObject
             }
@@ -1790,7 +1580,7 @@ public extension Api.account {
             case .savedRingtones(let _data):
                 return _data.tlObject
             case .savedRingtonesNotModified:
-                return TLObjectSingleton(TLApiConstructorAt(1680))
+                return TLObjectSingleton(TLApiConstructorAt(1683))
             }
         }
 
@@ -1812,9 +1602,60 @@ public extension Api.account.SavedRingtones.Cons_savedRingtones {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Document.tlArray(self.tlObject, 32) } }
     }
     init(hash: Int64, ringtones: [Api.Document]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1290))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1292))
         tlStore(_tlObject, 24, hash)
         tlStoreReference(_tlObject, 32, ringtones.map { item in item.tlObject } as NSArray)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api.account {
+    enum SentEmailCode: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_sentEmailCode {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case sentEmailCode(Cons_sentEmailCode)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .sentEmailCode(Cons_sentEmailCode(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .sentEmailCode(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.account.SentEmailCode] {
+            return tlObjectsAt(object, offset).map { Api.account.SentEmailCode(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.account.SentEmailCode.Cons_sentEmailCode {
+    @_alwaysEmitIntoClient var emailPattern: String {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
+    }
+    @_alwaysEmitIntoClient var length: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    init(emailPattern: String, length: Int32) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(831))
+        tlStoreReference(_tlObject, 32, emailPattern as NSString)
+        tlStore(_tlObject, 24, length)
         self.init(tlObject: _tlObject)
     }
 }

@@ -337,7 +337,7 @@ public extension Api.MessageEntity.Cons_messageEntityBankCard {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(755))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(757))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -354,7 +354,7 @@ public extension Api.MessageEntity.Cons_messageEntityBlockquote {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(flags: Int32, offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1604))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1606))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, offset)
         tlStore(_tlObject, 32, length)
@@ -369,7 +369,7 @@ public extension Api.MessageEntity.Cons_messageEntityBold {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1247))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1249))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -383,7 +383,7 @@ public extension Api.MessageEntity.Cons_messageEntityBotCommand {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(696))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(698))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -428,7 +428,7 @@ public extension Api.MessageEntity.Cons_messageEntityCustomEmoji {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(offset: Int32, length: Int32, documentId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1334))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1336))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         tlStore(_tlObject, 32, documentId)
@@ -457,7 +457,7 @@ public extension Api.MessageEntity.Cons_messageEntityDiffInsert {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(722))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(724))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -474,7 +474,7 @@ public extension Api.MessageEntity.Cons_messageEntityDiffReplace {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(offset: Int32, length: Int32, oldText: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1325))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1327))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         tlStoreReference(_tlObject, 32, oldText as NSString)
@@ -489,7 +489,7 @@ public extension Api.MessageEntity.Cons_messageEntityEmail {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(645))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(647))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -509,7 +509,7 @@ public extension Api.MessageEntity.Cons_messageEntityFormattedDate {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) } }
     }
     init(flags: Int32, offset: Int32, length: Int32, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(922))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(924))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, offset)
         tlStore(_tlObject, 32, length)
@@ -525,7 +525,7 @@ public extension Api.MessageEntity.Cons_messageEntityHashtag {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(707))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(709))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -539,7 +539,7 @@ public extension Api.MessageEntity.Cons_messageEntityItalic {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(834))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(836))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -553,7 +553,7 @@ public extension Api.MessageEntity.Cons_messageEntityMention {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1660))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1663))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -570,7 +570,7 @@ public extension Api.MessageEntity.Cons_messageEntityMentionName {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(offset: Int32, length: Int32, userId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1448))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1450))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         tlStore(_tlObject, 32, userId)
@@ -585,7 +585,7 @@ public extension Api.MessageEntity.Cons_messageEntityPhone {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1004))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1006))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -602,7 +602,7 @@ public extension Api.MessageEntity.Cons_messageEntityPre {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(offset: Int32, length: Int32, language: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(736))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(738))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         tlStoreReference(_tlObject, 32, language as NSString)
@@ -617,7 +617,7 @@ public extension Api.MessageEntity.Cons_messageEntitySpoiler {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(321))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(322))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -631,7 +631,7 @@ public extension Api.MessageEntity.Cons_messageEntityStrike {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1268))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1270))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -648,7 +648,7 @@ public extension Api.MessageEntity.Cons_messageEntityTextUrl {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(offset: Int32, length: Int32, url: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(761))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(763))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         tlStoreReference(_tlObject, 32, url as NSString)
@@ -663,7 +663,7 @@ public extension Api.MessageEntity.Cons_messageEntityTonAddress {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1693))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1696))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -677,7 +677,7 @@ public extension Api.MessageEntity.Cons_messageEntityUnderline {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1011))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1013))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -691,7 +691,7 @@ public extension Api.MessageEntity.Cons_messageEntityUnknown {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1234))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1236))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)
@@ -705,7 +705,7 @@ public extension Api.MessageEntity.Cons_messageEntityUrl {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(offset: Int32, length: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(703))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(705))
         tlStore(_tlObject, 24, offset)
         tlStore(_tlObject, 28, length)
         self.init(tlObject: _tlObject)

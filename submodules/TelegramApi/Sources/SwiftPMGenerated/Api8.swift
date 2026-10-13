@@ -109,9 +109,9 @@ public extension Api {
             case .inlineButtonTypeCopy(let _data):
                 return _data.tlObject
             case .inlineButtonTypeDisabled:
-                return TLObjectSingleton(TLApiConstructorAt(1071))
+                return TLObjectSingleton(TLApiConstructorAt(1073))
             case .inlineButtonTypeGame:
-                return TLObjectSingleton(TLApiConstructorAt(595))
+                return TLObjectSingleton(TLApiConstructorAt(597))
             case .inlineButtonTypeSwitchInline(let _data):
                 return _data.tlObject
             case .inlineButtonTypeUrl(let _data):
@@ -158,7 +158,7 @@ public extension Api.InlineButtonType.Cons_inlineButtonTypeCopy {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(copyText: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1173))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1175))
         tlStoreReference(_tlObject, 24, copyText as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -174,7 +174,7 @@ public extension Api.InlineButtonType.Cons_inlineButtonTypeSwitchInline {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.InlineQueryPeerType.tlArray(self.tlObject, 40) } }
     }
     init(flags: Int32, query: String, peerTypes: [Api.InlineQueryPeerType]?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(939))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(941))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, query as NSString)
         tlStoreReference(_tlObject, 40, peerTypes.map { value in value.map { item in item.tlObject } as NSArray })
@@ -186,7 +186,7 @@ public extension Api.InlineButtonType.Cons_inlineButtonTypeUrl {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(url: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1562))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1564))
         tlStoreReference(_tlObject, 24, url as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -205,7 +205,7 @@ public extension Api.InlineButtonType.Cons_inlineButtonTypeUrlAuth {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(flags: Int32, fwdText: String?, url: String, buttonId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1273))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1275))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, fwdText.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, url as NSString)
@@ -247,7 +247,7 @@ public extension Api.InlineButtonType.Cons_inputInlineButtonTypeUrlAuth {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.InputUser(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, fwdText: String?, url: String, bot: Api.InputUser?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(984))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(986))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, fwdText.map { value in value as NSString })
         tlStoreReference(_tlObject, 40, url as NSString)
@@ -297,17 +297,17 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .inlineQueryPeerTypeBotPM:
-                return TLObjectSingleton(TLApiConstructorAt(93))
+                return TLObjectSingleton(TLApiConstructorAt(92))
             case .inlineQueryPeerTypeBroadcast:
-                return TLObjectSingleton(TLApiConstructorAt(632))
+                return TLObjectSingleton(TLApiConstructorAt(634))
             case .inlineQueryPeerTypeChat:
-                return TLObjectSingleton(TLApiConstructorAt(1414))
+                return TLObjectSingleton(TLApiConstructorAt(1416))
             case .inlineQueryPeerTypeMegagroup:
-                return TLObjectSingleton(TLApiConstructorAt(606))
+                return TLObjectSingleton(TLApiConstructorAt(608))
             case .inlineQueryPeerTypePM:
-                return TLObjectSingleton(TLApiConstructorAt(843))
+                return TLObjectSingleton(TLApiConstructorAt(845))
             case .inlineQueryPeerTypeSameBotPM:
-                return TLObjectSingleton(TLApiConstructorAt(306))
+                return TLObjectSingleton(TLApiConstructorAt(307))
             }
         }
 
@@ -409,7 +409,7 @@ public extension Api.InputAiComposeTone.Cons_inputAiComposeToneID {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(52))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(51))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -420,7 +420,7 @@ public extension Api.InputAiComposeTone.Cons_inputAiComposeToneSingleUse {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(customPrompt: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(90))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(89))
         tlStoreReference(_tlObject, 24, customPrompt as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -550,7 +550,7 @@ public extension Api.InputBotApp.Cons_inputBotAppID {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1102))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1104))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -564,7 +564,7 @@ public extension Api.InputBotApp.Cons_inputBotAppShortName {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(botId: Api.InputUser, shortName: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(925))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(927))
         tlStoreReference(_tlObject, 24, botId.tlObject)
         tlStoreReference(_tlObject, 32, shortName as NSString)
         self.init(tlObject: _tlObject)
@@ -723,7 +723,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageMediaAuto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(326))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(327))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -751,7 +751,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageMediaContac
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1088))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1090))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, phoneNumber as NSString)
         tlStoreReference(_tlObject, 40, firstName as NSString)
@@ -781,7 +781,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageMediaGeo {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(966))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(968))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, geoPoint.tlObject)
@@ -822,7 +822,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageMediaInvoic
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 88) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 88)) } }
     }
     init(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1416))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1418))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, description as NSString)
@@ -890,7 +890,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageMediaWebPag
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, message: String, entities: [Api.MessageEntity]?, url: String, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1257))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1259))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -910,7 +910,7 @@ public extension Api.InputBotInlineMessage.Cons_inputBotInlineMessageRichMessage
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputRichMessage(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, replyMarkup: Api.ReplyMarkup?, richMessage: Api.InputRichMessage) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1176))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1178))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, replyMarkup?.tlObject)
         tlStoreReference(_tlObject, 40, richMessage.tlObject)
@@ -998,7 +998,7 @@ public extension Api.InputBotInlineMessageID.Cons_inputBotInlineMessageID {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(dcId: Int32, id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(877))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(879))
         tlStore(_tlObject, 24, dcId)
         tlStore(_tlObject, 32, id)
         tlStore(_tlObject, 40, accessHash)
@@ -1019,7 +1019,7 @@ public extension Api.InputBotInlineMessageID.Cons_inputBotInlineMessageID64 {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(dcId: Int32, ownerId: Int64, id: Int32, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1202))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1204))
         tlStore(_tlObject, 24, dcId)
         tlStore(_tlObject, 32, ownerId)
         tlStore(_tlObject, 28, id)
@@ -1126,7 +1126,7 @@ public extension Api.InputBotInlineResult.Cons_inputBotInlineResult {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputBotInlineMessage(tlObject: tlObjectAt(self.tlObject, 88)) } }
     }
     init(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumb: Api.InputWebDocument?, content: Api.InputWebDocument?, sendMessage: Api.InputBotInlineMessage) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(873))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(875))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id as NSString)
         tlStoreReference(_tlObject, 40, type as NSString)
@@ -1162,7 +1162,7 @@ public extension Api.InputBotInlineResult.Cons_inputBotInlineResultDocument {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputBotInlineMessage(tlObject: tlObjectAt(self.tlObject, 72)) } }
     }
     init(flags: Int32, id: String, type: String, title: String?, description: String?, document: Api.InputDocument, sendMessage: Api.InputBotInlineMessage) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1711))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1714))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, id as NSString)
         tlStoreReference(_tlObject, 40, type as NSString)
@@ -1205,7 +1205,7 @@ public extension Api.InputBotInlineResult.Cons_inputBotInlineResultPhoto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputBotInlineMessage(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(id: String, type: String, photo: Api.InputPhoto, sendMessage: Api.InputBotInlineMessage) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1100))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1102))
         tlStoreReference(_tlObject, 24, id as NSString)
         tlStoreReference(_tlObject, 32, type as NSString)
         tlStoreReference(_tlObject, 40, photo.tlObject)
@@ -1264,11 +1264,66 @@ public extension Api.InputBusinessAwayMessage.Cons_inputBusinessAwayMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputBusinessRecipients(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, recipients: Api.InputBusinessRecipients) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(840))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(842))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, shortcutId)
         tlStoreReference(_tlObject, 32, schedule.tlObject)
         tlStoreReference(_tlObject, 40, recipients.tlObject)
+        self.init(tlObject: _tlObject)
+    }
+}
+public extension Api {
+    enum InputBusinessBotRecipients: TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {
+        @frozen public struct Cons_inputBusinessBotRecipients {
+            @usableFromInline let tlObject: TLObject
+            init(tlObject: TLObject) {
+                self.tlObject = tlObject
+            }
+        }
+        case inputBusinessBotRecipients(Cons_inputBusinessBotRecipients)
+
+
+        @usableFromInline init(tlObject object: TLObject) {
+            switch object.tl_caseIndex {
+            case 0:
+                self = .inputBusinessBotRecipients(Cons_inputBusinessBotRecipients(tlObject: object))
+            default:
+                preconditionFailure()
+            }
+        }
+
+        @usableFromInline var tlObject: TLObject {
+            switch self {
+            case .inputBusinessBotRecipients(let _data):
+                return _data.tlObject
+            }
+        }
+
+        public var tlBackingObject: TLObject {
+            return self.tlObject
+        }
+
+        @usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [Api.InputBusinessBotRecipients] {
+            return tlObjectsAt(object, offset).map { Api.InputBusinessBotRecipients(tlObject: $0) }
+        }
+
+    }
+}
+public extension Api.InputBusinessBotRecipients.Cons_inputBusinessBotRecipients {
+    @_alwaysEmitIntoClient var flags: Int32 {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
+    }
+    @_alwaysEmitIntoClient var users: [Api.InputUser]? {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 32) ? nil : Api.InputUser.tlArray(self.tlObject, 32) } }
+    }
+    @_alwaysEmitIntoClient var excludeUsers: [Api.InputUser]? {
+        @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.InputUser.tlArray(self.tlObject, 40) } }
+    }
+    init(flags: Int32, users: [Api.InputUser]?, excludeUsers: [Api.InputUser]?) {
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1318))
+        tlStore(_tlObject, 24, flags)
+        tlStoreReference(_tlObject, 32, users.map { value in value.map { item in item.tlObject } as NSArray })
+        tlStoreReference(_tlObject, 40, excludeUsers.map { value in value.map { item in item.tlObject } as NSArray })
         self.init(tlObject: _tlObject)
     }
 }

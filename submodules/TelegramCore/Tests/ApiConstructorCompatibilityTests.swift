@@ -48,7 +48,7 @@ final class ApiConstructorCompatibilityTests: XCTestCase {
     }
 
     func testUserFullParsesWithAndWithoutTheGramAddressLayout() {
-        let current = parsedUserFull(self.userFullBytes(constructor: 114026053, flags2: 0, gramAddress: nil))
+        let current = parsedUserFull(self.userFullBytes(constructor: 1532300998, flags2: 0, gramAddress: nil))
         XCTAssertEqual(current?.id, 777)
         XCTAssertEqual(current?.commonChatsCount, 5)
 

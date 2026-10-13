@@ -44,7 +44,7 @@ public extension Api.CdnPublicKey.Cons_cdnPublicKey {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(dcId: Int32, publicKey: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1337))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1339))
         tlStore(_tlObject, 24, dcId)
         tlStoreReference(_tlObject, 32, publicKey as NSString)
         self.init(tlObject: _tlObject)
@@ -639,7 +639,7 @@ public extension Api {
             case .channelAdminLogEventActionParticipantJoinByRequest(let _data):
                 return _data.tlObject
             case .channelAdminLogEventActionParticipantLeave:
-                return TLObjectSingleton(TLApiConstructorAt(1647))
+                return TLObjectSingleton(TLApiConstructorAt(1650))
             case .channelAdminLogEventActionParticipantMute(let _data):
                 return _data.tlObject
             case .channelAdminLogEventActionParticipantSubExtend(let _data):
@@ -717,7 +717,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChatReactions(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevValue: Api.ChatReactions, newValue: Api.ChatReactions) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1264))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1266))
         tlStoreReference(_tlObject, 24, prevValue.tlObject)
         tlStoreReference(_tlObject, 32, newValue.tlObject)
         self.init(tlObject: _tlObject)
@@ -759,7 +759,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(prevValue: Int32, newValue: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(701))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(703))
         tlStore(_tlObject, 24, prevValue)
         tlStore(_tlObject, 28, newValue)
         self.init(tlObject: _tlObject)
@@ -787,7 +787,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChannelLocation(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(95))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(94))
         tlStoreReference(_tlObject, 24, prevValue.tlObject)
         tlStoreReference(_tlObject, 32, newValue.tlObject)
         self.init(tlObject: _tlObject)
@@ -829,7 +829,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.PeerColor(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevValue: Api.PeerColor, newValue: Api.PeerColor) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(605))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(607))
         tlStoreReference(_tlObject, 24, prevValue.tlObject)
         tlStoreReference(_tlObject, 32, newValue.tlObject)
         self.init(tlObject: _tlObject)
@@ -843,7 +843,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputStickerSet(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1155))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1157))
         tlStoreReference(_tlObject, 24, prevStickerset.tlObject)
         tlStoreReference(_tlObject, 32, newStickerset.tlObject)
         self.init(tlObject: _tlObject)
@@ -857,7 +857,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(prevValue: String, newValue: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1520))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1522))
         tlStoreReference(_tlObject, 24, prevValue as NSString)
         tlStoreReference(_tlObject, 32, newValue as NSString)
         self.init(tlObject: _tlObject)
@@ -871,7 +871,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(prevValue: String, newValue: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(679))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(681))
         tlStoreReference(_tlObject, 24, prevValue as NSString)
         tlStoreReference(_tlObject, 32, newValue as NSString)
         self.init(tlObject: _tlObject)
@@ -885,7 +885,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringsAt(self.tlObject, 32) } }
     }
     init(prevValue: [String], newValue: [String]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1590))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1592))
         tlStoreReference(_tlObject, 24, prevValue as NSArray)
         tlStoreReference(_tlObject, 32, newValue as NSArray)
         self.init(tlObject: _tlObject)
@@ -899,7 +899,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.WallPaper(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevValue: Api.WallPaper, newValue: Api.WallPaper) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(315))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(316))
         tlStoreReference(_tlObject, 24, prevValue.tlObject)
         tlStoreReference(_tlObject, 32, newValue.tlObject)
         self.init(tlObject: _tlObject)
@@ -910,7 +910,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionC
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ForumTopic(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(topic: Api.ForumTopic) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(576))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(577))
         tlStoreReference(_tlObject, 24, topic.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -944,7 +944,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionD
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ForumTopic(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(topic: Api.ForumTopic) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1134))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1136))
         tlStoreReference(_tlObject, 24, topic.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -954,7 +954,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionD
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputGroupCall(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(call: Api.InputGroupCall) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1440))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1442))
         tlStoreReference(_tlObject, 24, call.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -967,7 +967,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionE
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Message(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevMessage: Api.Message, newMessage: Api.Message) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(716))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(718))
         tlStoreReference(_tlObject, 24, prevMessage.tlObject)
         tlStoreReference(_tlObject, 32, newMessage.tlObject)
         self.init(tlObject: _tlObject)
@@ -981,7 +981,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionE
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ForumTopic(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevTopic: Api.ForumTopic, newTopic: Api.ForumTopic) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1591))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1593))
         tlStoreReference(_tlObject, 24, prevTopic.tlObject)
         tlStoreReference(_tlObject, 32, newTopic.tlObject)
         self.init(tlObject: _tlObject)
@@ -992,7 +992,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionE
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ExportedChatInvite(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(invite: Api.ExportedChatInvite) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(587))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(588))
         tlStoreReference(_tlObject, 24, invite.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1005,7 +1005,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionE
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ExportedChatInvite(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1534))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1536))
         tlStoreReference(_tlObject, 24, prevInvite.tlObject)
         tlStoreReference(_tlObject, 32, newInvite.tlObject)
         self.init(tlObject: _tlObject)
@@ -1032,7 +1032,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(userId: Int64, prevRank: String, newRank: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(574))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(575))
         tlStore(_tlObject, 24, userId)
         tlStoreReference(_tlObject, 32, prevRank as NSString)
         tlStoreReference(_tlObject, 40, newRank as NSString)
@@ -1044,7 +1044,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChannelParticipant(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(participant: Api.ChannelParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1491))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1493))
         tlStoreReference(_tlObject, 24, participant.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1057,7 +1057,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ExportedChatInvite(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(flags: Int32, invite: Api.ExportedChatInvite) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1699))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1702))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, invite.tlObject)
         self.init(tlObject: _tlObject)
@@ -1071,7 +1071,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(invite: Api.ExportedChatInvite, approvedBy: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1142))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1144))
         tlStoreReference(_tlObject, 24, invite.tlObject)
         tlStore(_tlObject, 32, approvedBy)
         self.init(tlObject: _tlObject)
@@ -1082,7 +1082,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.GroupCallParticipant(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(participant: Api.GroupCallParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1652))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1655))
         tlStoreReference(_tlObject, 24, participant.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1095,7 +1095,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChannelParticipant(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(643))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(645))
         tlStoreReference(_tlObject, 24, prevParticipant.tlObject)
         tlStoreReference(_tlObject, 32, newParticipant.tlObject)
         self.init(tlObject: _tlObject)
@@ -1109,7 +1109,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChannelParticipant(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1400))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1402))
         tlStoreReference(_tlObject, 24, prevParticipant.tlObject)
         tlStoreReference(_tlObject, 32, newParticipant.tlObject)
         self.init(tlObject: _tlObject)
@@ -1123,7 +1123,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ChannelParticipant(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1519))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1521))
         tlStoreReference(_tlObject, 24, prevParticipant.tlObject)
         tlStoreReference(_tlObject, 32, newParticipant.tlObject)
         self.init(tlObject: _tlObject)
@@ -1134,7 +1134,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.GroupCallParticipant(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(participant: Api.GroupCallParticipant) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1514))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1516))
         tlStoreReference(_tlObject, 24, participant.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1160,7 +1160,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionP
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.ForumTopic(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, prevTopic: Api.ForumTopic?, newTopic: Api.ForumTopic?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(599))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(601))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, prevTopic?.tlObject)
         tlStoreReference(_tlObject, 40, newTopic?.tlObject)
@@ -1192,7 +1192,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionS
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Message(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(message: Api.Message) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(914))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(916))
         tlStoreReference(_tlObject, 24, message.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1202,7 +1202,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionT
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(newValue: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(646))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(648))
         tlStoreReference(_tlObject, 24, newValue.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1212,7 +1212,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionT
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(newValue: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1318))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1320))
         tlStoreReference(_tlObject, 24, newValue.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1252,7 +1252,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionT
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(newValue: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1351))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1353))
         tlStoreReference(_tlObject, 24, newValue.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1262,7 +1262,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionT
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(newValue: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(610))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(612))
         tlStoreReference(_tlObject, 24, newValue.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1272,7 +1272,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionT
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Bool(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(newValue: Api.Bool) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(616))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(618))
         tlStoreReference(_tlObject, 24, newValue.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1306,7 +1306,7 @@ public extension Api.ChannelAdminLogEventAction.Cons_channelAdminLogEventActionU
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Message(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(message: Api.Message) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1541))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(1543))
         tlStoreReference(_tlObject, 24, message.tlObject)
         self.init(tlObject: _tlObject)
     }

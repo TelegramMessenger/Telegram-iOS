@@ -256,6 +256,7 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.InputTonConnectOauthSession(tlObject: $0) },
     { Api.InputUser(tlObject: $0) },
     { Api.InputWallPaper(tlObject: $0) },
+    { Api.InputWalletCardSticker(tlObject: $0) },
     { Api.InputWalletReplacement(tlObject: $0) },
     { Api.InputWebDocument(tlObject: $0) },
     { Api.InputWebFileLocation(tlObject: $0) },
@@ -702,6 +703,8 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.users.SavedMusic(tlObject: $0) },
     { Api.users.UserFull(tlObject: $0) },
     { Api.users.Users(tlObject: $0) },
+    { Api.wallet.Card(tlObject: $0) },
+    { Api.wallet.CardSticker(tlObject: $0) },
     { Api.wallet.EncryptedSecretPhrasePart(tlObject: $0) },
     { Api.wallet.ExistingBalance(tlObject: $0) },
     { Api.wallet.HolderDc(tlObject: $0) },
@@ -717,13 +720,13 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.wallet.UserAddresses(tlObject: $0) },
 ]
 
-let tlSwiftSchemaHash: UInt64 = 0xf38f5bc41fbafe75
+let tlSwiftSchemaHash: UInt64 = 0x9b2b00fa2b0c618
 
 /// Accessor offsets are compiled into clients (`@_alwaysEmitIntoClient`). This check is too:
 /// a client left over from another generation (an incremental non-Bazel build) carries the
 /// old literal and traps here instead of reading fields at stale offsets.
 @_alwaysEmitIntoClient public func tlVerifyClientLayout() {
-    if tlSchemaHashForClients() != 0xf38f5bc41fbafe75 {
+    if tlSchemaHashForClients() != 0x9b2b00fa2b0c618 {
         preconditionFailure("TelegramApi was regenerated; rebuild its clients (stale inlined field offsets)")
     }
 }

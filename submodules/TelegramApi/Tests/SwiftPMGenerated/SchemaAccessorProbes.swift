@@ -1684,6 +1684,10 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
         guard case let .inputWallPaperSlug(d) = value as! Api.InputWallPaper else { preconditionFailure() }
         return [("slug", d.slug as Any?)]
     },
+    "InputWalletCardSticker.inputWalletCardSticker": { value in
+        guard case let .inputWalletCardSticker(d) = value as! Api.InputWalletCardSticker else { preconditionFailure() }
+        return [("coordinates", d.coordinates as Any?), ("nftAddress", d.nftAddress as Any?)]
+    },
     "InputWalletReplacement.inputWalletImported": { value in
         guard case let .inputWalletImported(d) = value as! Api.InputWalletReplacement else { preconditionFailure() }
         return [("flags", d.flags as Any?), ("publicKey", d.publicKey as Any?), ("anchorPublicKey", d.anchorPublicKey as Any?), ("proof", d.proof as Any?)]
@@ -4210,7 +4214,7 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     },
     "UserFull.userFull": { value in
         guard case let .userFull(d) = value as! Api.UserFull else { preconditionFailure() }
-        return [("flags", d.flags as Any?), ("flags2", d.flags2 as Any?), ("id", d.id as Any?), ("about", d.about as Any?), ("settings", d.settings as Any?), ("personalPhoto", d.personalPhoto as Any?), ("profilePhoto", d.profilePhoto as Any?), ("fallbackPhoto", d.fallbackPhoto as Any?), ("notifySettings", d.notifySettings as Any?), ("botInfo", d.botInfo as Any?), ("pinnedMsgId", d.pinnedMsgId as Any?), ("commonChatsCount", d.commonChatsCount as Any?), ("folderId", d.folderId as Any?), ("ttlPeriod", d.ttlPeriod as Any?), ("theme", d.theme as Any?), ("privateForwardName", d.privateForwardName as Any?), ("botGroupAdminRights", d.botGroupAdminRights as Any?), ("botBroadcastAdminRights", d.botBroadcastAdminRights as Any?), ("wallpaper", d.wallpaper as Any?), ("stories", d.stories as Any?), ("businessWorkHours", d.businessWorkHours as Any?), ("businessLocation", d.businessLocation as Any?), ("businessGreetingMessage", d.businessGreetingMessage as Any?), ("businessAwayMessage", d.businessAwayMessage as Any?), ("businessIntro", d.businessIntro as Any?), ("birthday", d.birthday as Any?), ("personalChannelId", d.personalChannelId as Any?), ("personalChannelMessage", d.personalChannelMessage as Any?), ("stargiftsCount", d.stargiftsCount as Any?), ("starrefProgram", d.starrefProgram as Any?), ("botVerification", d.botVerification as Any?), ("sendPaidMessagesStars", d.sendPaidMessagesStars as Any?), ("disallowedGifts", d.disallowedGifts as Any?), ("starsRating", d.starsRating as Any?), ("starsMyPendingRating", d.starsMyPendingRating as Any?), ("starsMyPendingRatingDate", d.starsMyPendingRatingDate as Any?), ("mainTab", d.mainTab as Any?), ("savedMusic", d.savedMusic as Any?), ("note", d.note as Any?), ("botManagerId", d.botManagerId as Any?)]
+        return [("flags", d.flags as Any?), ("flags2", d.flags2 as Any?), ("id", d.id as Any?), ("about", d.about as Any?), ("settings", d.settings as Any?), ("personalPhoto", d.personalPhoto as Any?), ("profilePhoto", d.profilePhoto as Any?), ("fallbackPhoto", d.fallbackPhoto as Any?), ("notifySettings", d.notifySettings as Any?), ("botInfo", d.botInfo as Any?), ("pinnedMsgId", d.pinnedMsgId as Any?), ("commonChatsCount", d.commonChatsCount as Any?), ("folderId", d.folderId as Any?), ("ttlPeriod", d.ttlPeriod as Any?), ("theme", d.theme as Any?), ("privateForwardName", d.privateForwardName as Any?), ("botGroupAdminRights", d.botGroupAdminRights as Any?), ("botBroadcastAdminRights", d.botBroadcastAdminRights as Any?), ("wallpaper", d.wallpaper as Any?), ("stories", d.stories as Any?), ("businessWorkHours", d.businessWorkHours as Any?), ("businessLocation", d.businessLocation as Any?), ("businessGreetingMessage", d.businessGreetingMessage as Any?), ("businessAwayMessage", d.businessAwayMessage as Any?), ("businessIntro", d.businessIntro as Any?), ("birthday", d.birthday as Any?), ("personalChannelId", d.personalChannelId as Any?), ("personalChannelMessage", d.personalChannelMessage as Any?), ("stargiftsCount", d.stargiftsCount as Any?), ("starrefProgram", d.starrefProgram as Any?), ("botVerification", d.botVerification as Any?), ("sendPaidMessagesStars", d.sendPaidMessagesStars as Any?), ("disallowedGifts", d.disallowedGifts as Any?), ("starsRating", d.starsRating as Any?), ("starsMyPendingRating", d.starsMyPendingRating as Any?), ("starsMyPendingRatingDate", d.starsMyPendingRatingDate as Any?), ("mainTab", d.mainTab as Any?), ("savedMusic", d.savedMusic as Any?), ("note", d.note as Any?), ("botManagerId", d.botManagerId as Any?), ("walletCard", d.walletCard as Any?)]
     },
     "UserProfilePhoto.userProfilePhoto": { value in
         guard case let .userProfilePhoto(d) = value as! Api.UserProfilePhoto else { preconditionFailure() }
@@ -5480,6 +5484,14 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
         guard case let .usersSlice(d) = value as! Api.users.Users else { preconditionFailure() }
         return [("count", d.count as Any?), ("users", d.users as Any?)]
     },
+    "wallet.Card.card": { value in
+        guard case let .card(d) = value as! Api.wallet.Card else { preconditionFailure() }
+        return [("flags", d.flags as Any?), ("stickers", d.stickers as Any?), ("address", d.address as Any?), ("balance", d.balance as Any?)]
+    },
+    "wallet.CardSticker.cardSticker": { value in
+        guard case let .cardSticker(d) = value as! Api.wallet.CardSticker else { preconditionFailure() }
+        return [("coordinates", d.coordinates as Any?), ("nft", d.nft as Any?)]
+    },
     "wallet.EncryptedSecretPhrasePart.encryptedSecretPhrasePart": { value in
         guard case let .encryptedSecretPhrasePart(d) = value as! Api.wallet.EncryptedSecretPhrasePart else { preconditionFailure() }
         return [("data", d.data as Any?)]
@@ -5498,7 +5510,7 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     },
     "wallet.NftItem.nftItem": { value in
         guard case let .nftItem(d) = value as! Api.wallet.NftItem else { preconditionFailure() }
-        return [("flags", d.flags as Any?), ("collectionAddress", d.collectionAddress as Any?), ("address", d.address as Any?), ("ownerAddress", d.ownerAddress as Any?), ("index", d.index as Any?), ("name", d.name as Any?), ("description", d.description as Any?), ("image", d.image as Any?), ("imageSmall", d.imageSmall as Any?), ("contentUrl", d.contentUrl as Any?), ("lottie", d.lottie as Any?), ("attributes", d.attributes as Any?), ("extra", d.extra as Any?)]
+        return [("flags", d.flags as Any?), ("collectionAddress", d.collectionAddress as Any?), ("address", d.address as Any?), ("ownerAddress", d.ownerAddress as Any?), ("index", d.index as Any?), ("name", d.name as Any?), ("description", d.description as Any?), ("image", d.image as Any?), ("imageSmall", d.imageSmall as Any?), ("contentUrl", d.contentUrl as Any?), ("lottie", d.lottie as Any?), ("attributes", d.attributes as Any?), ("extra", d.extra as Any?), ("gift", d.gift as Any?)]
     },
     "wallet.NftItems.nftItems": { value in
         guard case let .nftItems(d) = value as! Api.wallet.NftItems else { preconditionFailure() }
