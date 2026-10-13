@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -200,7 +199,7 @@ enum PeerInfoSettingsSection {
 enum PeerInfoReportType {
     case `default`
     case user
-    case reaction(MessageId)
+    case reaction(EngineMessage.Id)
 }
 
 enum TopicsLimitedReason {
@@ -212,7 +211,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     weak var controller: PeerInfoScreenImpl?
     
     let context: AccountContext
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
     let isOpenedFromChat: Bool
     let videoCallsEnabled: Bool
     let callMessages: [EngineMessage]
@@ -233,7 +232,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private(set) var presentationData: PresentationData
     
-    let cachedDataPromise = Promise<CachedPeerData?>()
+    let cachedDataPromise = Promise<EngineCachedPeerData?>()
     
     let scrollNode: ASScrollNode
     let edgeEffectView: EdgeEffectView
@@ -290,8 +289,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         personalChannels: nil
     )
     var forceIsContactPromise = ValuePromise<Bool>(false)
-    let reactionSourceMessageId: MessageId?
-    let sourceMessageId: MessageId?
+    let reactionSourceMessageId: EngineMessage.Id?
+    let sourceMessageId: EngineMessage.Id?
     var canDeleteReaction = false
     var dataDisposable: Disposable?
     private let peerGramBalanceDisposable = MetaDisposable()
@@ -362,15 +361,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     init(
         controller: PeerInfoScreenImpl,
         context: AccountContext,
-        peerId: PeerId,
+        peerId: EnginePeer.Id,
         avatarInitiallyExpanded: Bool,
         isOpenedFromChat: Bool,
-        reactionSourceMessageId: MessageId?,
-        sourceMessageId: MessageId?,
+        reactionSourceMessageId: EngineMessage.Id?,
+        sourceMessageId: EngineMessage.Id?,
         callMessages: [EngineMessage],
         isSettings: Bool,
         isMyProfile: Bool,
-        hintGroupInCommon: PeerId?,
+        hintGroupInCommon: EnginePeer.Id?,
         requestsContext: PeerInvitationImportersContext?,
         profileGiftsContext: ProfileGiftsContext?,
         starsContext: StarsContext?,
@@ -1069,14 +1068,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController else {
                 return
             }
-            var foundGalleryMessage: Message?
+            var foundGalleryMessage: EngineMessage?
             if let searchContentNode = strongSelf.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
                 if let galleryMessage = searchContentNode.messageForGallery(message.id) {
                     strongSelf.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [galleryMessage])
-                    foundGalleryMessage = galleryMessage._asMessage()
+                    foundGalleryMessage = galleryMessage
                 }
             }
-            if foundGalleryMessage == nil, let galleryMessage = strongSelf.paneContainerNode.findLoadedMessage(id: message.id)?._asMessage() {
+            if foundGalleryMessage == nil, let galleryMessage = strongSelf.paneContainerNode.findLoadedMessage(id: message.id) {
                 foundGalleryMessage = galleryMessage
             }
             
@@ -1247,7 +1246,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let strongSelf = self else {
                 return
             }
-            var hiddenMedia: [MessageId: [Media]] = [:]
+            var hiddenMedia: [EngineMessage.Id: [EngineRawMedia]] = [:]
             for id in ids {
                 if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
                     hiddenMedia[messageId] = [media]
@@ -2152,12 +2151,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let animationRenderer = context.animationRenderer
                 
                 strongSelf.emojiStatusSelectionController?.dismiss()
-                var selectedItems = Set<MediaId>()
+                var selectedItems = Set<EngineMedia.Id>()
                 var currentSelectedFileId: Int64?
                 var topStatusTitle = strongSelf.presentationData.strings.PeerStatusSetup_NoTimerTitle
                 if let peer = strongSelf.data?.peer {
                     if let emojiStatus = peer.emojiStatus {
-                        selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+                        selectedItems.insert(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
                         currentSelectedFileId = emojiStatus.fileId
                         
                         if let timestamp = emojiStatus.expirationDate {
@@ -2901,7 +2900,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    func openPeer(peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer) {
+    func openPeer(peerId: EnginePeer.Id, navigation: ChatControllerInteractionNavigateToPeer) {
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
@@ -3065,7 +3064,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     context: self.context,
                     chatLocation: .peer(id: peerId),
                     type: .music,
-                    initialMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: initialId),
+                    initialMessageId: EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Local, id: initialId),
                     initialOrder: .regular,
                     playlistLocation: playlistLocation,
                     parentNavigationController: self.controller?.navigationController as? NavigationController
@@ -3231,7 +3230,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         })
     }
     
-    func openClearHistory(contextController: ContextControllerProtocol, clearPeerHistory: ClearPeerHistory, peer: Peer, chatPeer: EnginePeer) {
+    func openClearHistory(contextController: ContextControllerProtocol, clearPeerHistory: ClearPeerHistory, chatPeer: EnginePeer) {
         var subItems: [ContextMenuItem] = []
         
         subItems.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
@@ -4240,7 +4239,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled, displayForumAsTabs: false)
                 })
                 |> map(Optional.init)
-                |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
+                |> `catch` { [weak self] error -> Signal<EnginePeer.Id?, NoError> in
                     switch error {
                     case .tooManyChannels:
                         Queue.mainQueue().async {
@@ -4251,7 +4250,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     return .single(nil)
                 }
-                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                |> mapToSignal { upgradedPeerId -> Signal<EnginePeer.Id?, NoError> in
                     guard let upgradedPeerId = upgradedPeerId else {
                         return .single(nil)
                     }
@@ -4365,9 +4364,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPeer: { _ in
         }, showAll: false)
         
-        let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peer._asPeer(), text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+        let message = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [.geo(map)], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
         
-        let controller = LocationViewController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, subject: EngineMessage(message), params: controllerParams)
+        let controller = LocationViewController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, subject: message, params: controllerParams)
         self.controller?.push(controller)
     }
         
@@ -5139,7 +5138,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.deactivateSearch()
             })
         } else {
-            var tagMask: MessageTags = .file
+            var tagMask: EngineMessage.Tags = .file
             if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                 switch currentPaneKey {
                 case .links:
@@ -6423,15 +6422,15 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     let context: AccountContext
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    public let peerId: PeerId
+    public let peerId: EnginePeer.Id
     private let avatarInitiallyExpanded: Bool
     private let isOpenedFromChat: Bool
-    private let reactionSourceMessageId: MessageId?
-    private let sourceMessageId: MessageId?
+    private let reactionSourceMessageId: EngineMessage.Id?
+    private let sourceMessageId: EngineMessage.Id?
     private let callMessages: [EngineMessage]
     let isSettings: Bool
     let isMyProfile: Bool
-    private let hintGroupInCommon: PeerId?
+    private let hintGroupInCommon: EnginePeer.Id?
     private weak var requestsContext: PeerInvitationImportersContext?
     private weak var profileGiftsContext: ProfileGiftsContext?
     let starsContext: StarsContext?
@@ -6449,7 +6448,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     private(set) var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let cachedDataPromise = Promise<CachedPeerData?>()
+    private let cachedDataPromise = Promise<EngineCachedPeerData?>()
     
     private let accountsAndPeers = Promise<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)])>()
     private var accountsAndPeersValue: ((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)])?
@@ -6511,15 +6510,15 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-        peerId: PeerId,
+        peerId: EnginePeer.Id,
         avatarInitiallyExpanded: Bool,
         isOpenedFromChat: Bool,
-        reactionSourceMessageId: MessageId?,
-        sourceMessageId: MessageId? = nil,
+        reactionSourceMessageId: EngineMessage.Id?,
+        sourceMessageId: EngineMessage.Id? = nil,
         callMessages: [EngineMessage],
         isSettings: Bool = false,
         isMyProfile: Bool = false,
-        hintGroupInCommon: PeerId? = nil,
+        hintGroupInCommon: EnginePeer.Id? = nil,
         requestsContext: PeerInvitationImportersContext? = nil,
         profileGiftsContext: ProfileGiftsContext? = nil,
         forumTopicThread: ChatReplyThreadMessage? = nil,
@@ -7012,7 +7011,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         })
     }
     
-    static func openPeer(context: AccountContext, peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
+    static func openPeer(context: AccountContext, peerId: EnginePeer.Id, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue).startStandalone(next: { peer in
             guard let peer else {
@@ -7530,7 +7529,7 @@ struct ClearPeerHistory {
     var canClearForMyself: ClearType? = nil
     var canClearForEveryone: ClearType? = nil
     
-    init(context: AccountContext, peer: Peer, chatPeer: EnginePeer, cachedData: CachedPeerData?) {
+    init(context: AccountContext, peer: EnginePeer, chatPeer: EnginePeer, cachedData: EngineCachedPeerData?) {
         if peer.id == context.account.peerId {
             canClearCache = false
             canClearForMyself = .savedMessages

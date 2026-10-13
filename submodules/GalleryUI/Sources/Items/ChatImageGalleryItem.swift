@@ -911,12 +911,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 
                 /*if largestSize.width > 2600 || largestSize.height > 2600 {
-                    self.dataDisposable.set((self.context.account.postbox.mediaBox.resourceData(fileReference.media.resource)
+                    self.dataDisposable.set((self.context.engine.resources.data(resource: EngineMediaResource(fileReference.media.resource))
                     |> deliverOnMainQueue).start(next: { [weak self] data in
                         guard let strongSelf = self else {
                             return
                         }
-                        if !data.complete {
+                        if !data.isComplete {
                             return
                         }
                         strongSelf.updateImageFromFile(path: data.path)
@@ -1213,7 +1213,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.engine.resources.cancelInteractiveResourceFetch(id: EngineMediaResource.Id(resource.resource.id))
                     case .Remote:
-                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .image, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                    self.fetchDisposable.set(self.context.engine.resources.fetch(reference: resource, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .image, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

@@ -14,6 +14,7 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
+        "//submodules/Postbox:Postbox",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ContextUI:ContextUI",
         "//submodules/ChatInterfaceState:ChatInterfaceState",

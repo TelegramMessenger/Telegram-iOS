@@ -16,7 +16,6 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Display",
         "//submodules/TelegramCore",
-        "//submodules/Postbox",
         "//submodules/AccountContext",
         "//submodules/ChatListUI",
         "//submodules/MergeLists",

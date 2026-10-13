@@ -5,7 +5,6 @@ import Display
 import ComponentFlow
 import ComponentDisplayAdapters
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import Markdown
 import TextFormat

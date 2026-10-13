@@ -8,6 +8,7 @@ public typealias EngineAdaptedPostboxEncoder = AdaptedPostboxEncoder
 public typealias EngineItemCollectionId = ItemCollectionId
 public typealias EngineStoryId = StoryId
 public typealias EngineFetchResourceSourceType = FetchResourceSourceType
+public typealias EngineMediaBoxFetchPriority = MediaBoxFetchPriority
 public typealias EngineFetchResourceError = FetchResourceError
 public typealias EngineCodableEntry = CodableEntry
 public typealias EngineNoticeEntryKey = NoticeEntryKey

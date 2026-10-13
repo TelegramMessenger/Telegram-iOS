@@ -21,7 +21,7 @@ public func instantPage(from content: ChatInputContent) -> InstantPage {
     // `Media` from this dict, so the round-trip preserves the exact `Media` instance (identity), not a copy.
     var media: [MediaId: Media] = [:]
     let blocks = instantPageBlocks(from: content, collectingMediaInto: &media)
-    return InstantPage(blocks: blocks, media: media, isComplete: true, rtl: false, url: "", views: nil)
+    return InstantPage(blocks: blocks, rawMedia: media, isComplete: true, rtl: false, url: "", views: nil)
 }
 
 func instantPageBlocks(from content: ChatInputContent, collectingMediaInto media: inout [MediaId: Media]) -> [InstantPageBlock] {
@@ -247,7 +247,7 @@ private func authorRuns(fromCaption rt: RichText, italic: Bool = false) -> [Chat
 // MARK: - Reverse: InstantPage -> ChatInputContent
 
 public func chatInputContent(fromInstantPage page: InstantPage) -> ChatInputContent {
-    return ChatInputContent(blocks: chatInputBlocks(fromInstantPageBlocks: page.blocks, media: page.media))
+    return ChatInputContent(blocks: chatInputBlocks(fromInstantPageBlocks: page.blocks, media: page.rawMedia))
 }
 
 /// Recover a media block's natural size (aspect) from the resolved `Media`. The InstantPage image/video block

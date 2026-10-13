@@ -145,22 +145,22 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             return fetchCachedBlurredWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        return TelegramEngine(account: account).resources.data(resource: EngineMediaResource(resource), waitUntilFetchStatus: false)
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if data.complete, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+            if data.isComplete, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                 return fetchCachedAlbumArtworkRepresentation(resource: resource, data: fileData, representation: representation)
                 |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                     return .complete()
                 }
             } else if let size = resource.size {
-                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, 256 * 1024))
+                return TelegramEngine(account: account).resources.rangeData(resource: EngineMediaResource(resource), size: size, range: 0 ..< min(size, 256 * 1024))
                 |> mapToSignal { result -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                     let (data, _) = result
                     return fetchCachedAlbumArtworkRepresentation(resource: resource, data: data, representation: representation)
                     |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                         switch error {
                             case let .moreDataNeeded(targetSize):
-                                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, Int64(targetSize)))
+                                return TelegramEngine(account: account).resources.rangeData(resource: EngineMediaResource(resource), size: size, range: 0 ..< min(size, Int64(targetSize)))
                                 |> mapToSignal { result ->
                                     Signal<CachedMediaResourceRepresentationResult, NoError> in
                                     let (data, _) = result
@@ -267,7 +267,7 @@ private func fetchPassImageRepresentation(resourceData: MediaResourceData, repre
 
 private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int64) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let size = resource.size {
-        return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
+        return TelegramEngine(account: account).resources.rangeData(resource: EngineMediaResource(resource), size: size, range: 0 ..< min(size, chunkSize))
         |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: false)
                 |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -475,7 +475,7 @@ private func fetchCachedVideoFirstFrameRepresentation(resource: MediaResource, r
 }
 
 private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), complete: true)
+    return TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(resource), representation: CachedVideoFirstFrameRepresentation(), complete: true)
     |> mapToSignal { firstFrame -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return Signal({ subscriber in
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrame.path), options: [.mappedIfSafe]) {

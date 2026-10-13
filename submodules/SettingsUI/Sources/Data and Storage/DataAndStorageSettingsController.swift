@@ -692,8 +692,8 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         var storage: Int64
     }
     let usageSignal: Signal<UsageData, NoError> = combineLatest(
-        context.account.postbox.mediaBox.storageBox.totalSize(),
-        context.account.postbox.mediaBox.cacheStorageBox.totalSize(),
+        context.engine.resources.storageTotalSize(),
+        context.engine.resources.cacheStorageTotalSize(),
         accountNetworkUsageStats(account: context.account, reset: [])
     )
     |> map { disk1, disk2, networkStats -> UsageData in

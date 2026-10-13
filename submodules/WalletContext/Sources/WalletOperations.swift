@@ -2,7 +2,6 @@ import PasscodeCore
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import WalletEngineFFI
 
 @available(macOS 10.15, *)

@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import Postbox
 import RichTextEditorCore
 
 /// Serialize a RichTextEditor `Document` into a `ComposedRichMessage`.
@@ -8,7 +7,7 @@ import RichTextEditorCore
 /// `forSendPreview`: when set, a blockquote forces the rich (InstantPage) path even though it is otherwise
 /// entity-expressible. The attachment-menu rich editor opts in so a quote is sent as a rich message and renders
 /// through InstantPage; the default keeps quotes on the entity path (the composer / edit / send-options gates).
-public func composeRichMessage(from document: Document, media: [String: Media] = [:], forSendPreview: Bool = false) -> ComposedRichMessage {
+public func composeRichMessage(from document: Document, media: [String: EngineMedia] = [:], forSendPreview: Bool = false) -> ComposedRichMessage {
     let blocks = trimmedTrailingEmpty(normalizedBlocks(document.blocks, media: media))
     if blocks.isEmpty {
         return .empty
@@ -26,7 +25,7 @@ public func composeRichMessage(from document: Document, media: [String: Media] =
 
 /// Pass paragraphs/tables through. Keep a media block whose `mediaID` resolves (it becomes an image/video
 /// block downstream); for an UNresolvable media block, fall back to its caption as a body paragraph.
-func normalizedBlocks(_ blocks: [Block], media: [String: Media]) -> [Block] {
+func normalizedBlocks(_ blocks: [Block], media: [String: EngineMedia]) -> [Block] {
     var out: [Block] = []
     for block in blocks {
         switch block {

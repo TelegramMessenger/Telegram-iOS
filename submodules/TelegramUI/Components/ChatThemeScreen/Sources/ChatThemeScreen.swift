@@ -1343,14 +1343,14 @@ private final class ChatThemeSheetContentComponent: Component {
                     let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())
                     if !FileManager.default.fileExists(atPath: path) {
                         let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                            let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
+                            let accountResource = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(file.file.resource), representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
                             
-                            let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file), reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                            let fetchedFullSize = TelegramEngine(account: account).resources.fetch(reference: .media(media: .standalone(media: file.file), resource: file.file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file))
                             let fetchedFullSizeDisposable = fetchedFullSize.start()
                             let fullSizeDisposable = accountResource.start(next: { next in
-                                subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                                subscriber.putNext((next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.isComplete))
                                 
-                                if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
+                                if next.isComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                                     accountManager.mediaBox.storeCachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                                 }
                             }, error: subscriber.putError, completed: subscriber.putCompletion)

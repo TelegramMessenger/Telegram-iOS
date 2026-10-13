@@ -3760,7 +3760,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             interaction.openUrl(url)
         }, openInstantPage: { [weak self] message, data in
             if let self, let navigationController = self.navigationController {
-                if let controller = self.context.sharedContext.makeInstantPageController(context: self.context, message: message, sourcePeerType: .channel) {
+                if let controller = self.context.sharedContext.makeInstantPageController(context: self.context, message: EngineMessage(message), sourcePeerType: .channel) {
                     navigationController.pushViewController(controller)
                 }
             }

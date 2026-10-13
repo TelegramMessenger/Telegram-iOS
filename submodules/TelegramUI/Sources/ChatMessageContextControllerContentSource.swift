@@ -231,7 +231,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
             if (isIncoming || "".isEmpty) {
                 let messageItem = self.context.sharedContext.makeChatMessagePreviewItem(
                     context: self.context,
-                    messages: [self.message._asMessage()],
+                    messages: [self.message],
                     theme: self.presentationData.theme,
                     strings: self.presentationData.strings,
                     wallpaper: self.presentationData.chatWallpaper,

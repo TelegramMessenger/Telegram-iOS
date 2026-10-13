@@ -1069,7 +1069,7 @@ extension ChatControllerImpl {
                         })
                         return true
                     case .richText:
-                        let buildRichTextContent: (ChatControllerImpl, RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool) -> (text: String, attributes: [EngineMessage.Attribute])? = { strongSelf, document, media, emojiFiles, sendWithoutFormatting in
+                        let buildRichTextContent: (ChatControllerImpl, RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> (text: String, attributes: [EngineMessage.Attribute])? = { strongSelf, document, media, emojiFiles, sendWithoutFormatting in
                             let text: String
                             let attributes: [EngineMessage.Attribute]
                             if sendWithoutFormatting {
@@ -1133,7 +1133,7 @@ extension ChatControllerImpl {
                         }
                         let controller = RichTextAttachmentScreen(
                             context: context,
-                            mode: .standalone(savedDraft: richTextDraft?.document, media: richTextDraft?.media ?? [:], emojiFiles: richTextDraft?.emojiFiles ?? [:]),
+                            mode: .standalone(savedDraft: richTextDraft?.document, media: (richTextDraft?.media ?? [:]).mapValues(EngineMedia.init), emojiFiles: richTextDraft?.emojiFiles ?? [:]),
                             sendMessage: { [weak self] document, media, emojiFiles, sendWithoutFormatting in
                                 guard let strongSelf = self else {
                                     return
@@ -1155,7 +1155,7 @@ extension ChatControllerImpl {
                                 guard let self else {
                                     return
                                 }
-                                let draft = RichTextDraft(document: document, media: media, emojiFiles: emojiFiles)
+                                let draft = RichTextDraft(document: document, media: media.mapValues { $0._asMedia() }, emojiFiles: emojiFiles)
                                 richTextDraft = draft
                                 if let richTextDraftKey {
                                     let _ = self.context.engine.itemCache.put(collectionId: Namespaces.CachedItemCollection.richTextComposerDrafts, id: richTextDraftKey, item: draft).start()

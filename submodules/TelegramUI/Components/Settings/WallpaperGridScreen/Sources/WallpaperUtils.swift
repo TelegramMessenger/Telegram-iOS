@@ -119,7 +119,7 @@ public func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperG
                 
                 if let resource = resource {
                     let _ = accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
-                    let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
+                    let _ = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(resource), representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                 }
                 
                 let _ = (updatePresentationThemeSettingsInteractively(accountManager: accountManager, { current in
@@ -152,7 +152,7 @@ public func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperG
             
             if mode.contains(.blur) {
                 let representation = CachedBlurredWallpaperRepresentation()
-                let _ = context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start()
+                let _ = context.engine.resources.cachedRepresentation(resource: EngineMediaResource(resource), representation: representation, complete: true, fetch: true).start()
                 let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start(completed: {
                     apply()
                 })

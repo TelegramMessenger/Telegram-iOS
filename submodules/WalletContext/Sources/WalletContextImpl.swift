@@ -2,7 +2,6 @@ import PasscodeCore
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import WalletEngineFFI
 
 let walletFiatRatesRefreshInterval: TimeInterval = 15 * 60

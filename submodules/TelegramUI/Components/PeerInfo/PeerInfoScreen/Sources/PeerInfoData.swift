@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -30,7 +29,7 @@ enum AvatarUploadProgress {
 
 final class PeerInfoState {
     let isEditing: Bool
-    let selectedMessageIds: Set<MessageId>?
+    let selectedMessageIds: Set<EngineMessage.Id>?
     let selectedStoryIds: Set<Int32>?
     let paneIsReordering: Bool
     let updatingAvatar: PeerInfoUpdatingAvatar?
@@ -44,7 +43,7 @@ final class PeerInfoState {
     
     init(
         isEditing: Bool,
-        selectedMessageIds: Set<MessageId>?,
+        selectedMessageIds: Set<EngineMessage.Id>?,
         selectedStoryIds: Set<Int32>?,
         paneIsReordering: Bool,
         updatingAvatar: PeerInfoUpdatingAvatar?,
@@ -87,7 +86,7 @@ final class PeerInfoState {
         )
     }
     
-    func withSelectedMessageIds(_ selectedMessageIds: Set<MessageId>?) -> PeerInfoState {
+    func withSelectedMessageIds(_ selectedMessageIds: Set<EngineMessage.Id>?) -> PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: selectedMessageIds,
@@ -352,10 +351,10 @@ final class PeerInfoPersonalChannelData: Equatable {
     let peer: EngineRenderedPeer
     let subscriberCount: Int?
     let topMessages: [EngineMessage]
-    let storyStats: PeerStoryStats?
+    let storyStats: EnginePeerStoryStats?
     let isLoading: Bool
     
-    init(peer: EngineRenderedPeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: PeerStoryStats?, isLoading: Bool) {
+    init(peer: EngineRenderedPeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: EnginePeerStoryStats?, isLoading: Bool) {
         self.peer = peer
         self.subscriberCount = subscriberCount
         self.topMessages = topMessages
@@ -412,7 +411,7 @@ final class PeerInfoScreenData {
     let peer: EnginePeer?
     let chatPeer: EnginePeer?
     let savedMessagesPeer: EnginePeer?
-    let cachedData: CachedPeerData?
+    let cachedData: EngineCachedPeerData?
     let firstWelcomeMessageText: String?
     let status: PeerInfoStatusData?
     let peerNotificationSettings: TelegramPeerNotificationSettings?
@@ -474,7 +473,7 @@ final class PeerInfoScreenData {
         peer: EnginePeer?,
         chatPeer: EnginePeer?,
         savedMessagesPeer: EnginePeer?,
-        cachedData: CachedPeerData?,
+        cachedData: EngineCachedPeerData?,
         firstWelcomeMessageText: String?,
         status: PeerInfoStatusData?,
         peerNotificationSettings: TelegramPeerNotificationSettings?,
@@ -581,12 +580,12 @@ private enum PeerInfoScreenInputUserKind {
 private enum PeerInfoScreenInputData: Equatable {
     case none
     case settings
-    case user(userId: PeerId, secretChatId: PeerId?, kind: PeerInfoScreenInputUserKind)
+    case user(userId: EnginePeer.Id, secretChatId: EnginePeer.Id?, kind: PeerInfoScreenInputUserKind)
     case channel
-    case group(groupId: PeerId)
+    case group(groupId: EnginePeer.Id)
 }
 
-public func hasAvailablePeerInfoMediaPanes(context: AccountContext, peerId: PeerId) -> Signal<Bool, NoError> {
+public func hasAvailablePeerInfoMediaPanes(context: AccountContext, peerId: EnginePeer.Id) -> Signal<Bool, NoError> {
     let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
     let mediaPanes = peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: .peer(id: peerId), isMyProfile: false, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: nil)
     |> map { panes -> Bool in
@@ -611,10 +610,10 @@ public func hasAvailablePeerInfoMediaPanes(context: AccountContext, peerId: Peer
     }
 }
 
-private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, isMyProfile: Bool, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> Signal<[PeerInfoPaneKey]?, NoError> {
+private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: EnginePeer.Id, chatLocation: ChatLocation, isMyProfile: Bool, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> Signal<[PeerInfoPaneKey]?, NoError> {
     let (_, chatLocation, chatLocationContextHolder) = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
     
-    var tags: [(MessageTags, PeerInfoPaneKey)] = []
+    var tags: [(EngineMessage.Tags, PeerInfoPaneKey)] = []
     
     if !isMyProfile {
         tags = [
@@ -736,7 +735,7 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: EnginePeer
     }
 }
 
-public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Never, NoError> {
+public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Never, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: false)
     |> mapToSignal { inputData -> Signal<Never, NoError> in
         switch inputData {
@@ -912,7 +911,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     }
     |> distinctUntilChanged
     
-    let botsKey = ValueBoxKey(length: 8)
+    let botsKey = EngineDataBuffer(length: 8)
     botsKey.setInt64(0, value: 0)
     
     let bots = context.engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.attachMenuBots, id: botsKey))
@@ -1116,7 +1115,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     }
 }
 
-private func peerInfoFirstWelcomeMessageText(context: AccountContext, peerId: PeerId) -> Signal<String?, NoError> {
+private func peerInfoFirstWelcomeMessageText(context: AccountContext, peerId: EnginePeer.Id) -> Signal<String?, NoError> {
     return context.account.viewTracker.welcomeMessagesViewForLocation(peerId: peerId)
     |> map { view, _, _ -> String? in
         return view.entries.first?.message.text
@@ -1126,12 +1125,12 @@ private func peerInfoFirstWelcomeMessageText(context: AccountContext, peerId: Pe
 
 func peerInfoScreenData(
     context: AccountContext,
-    peerId: PeerId,
+    peerId: EnginePeer.Id,
     strings: PresentationStrings,
     dateTimeFormat: PresentationDateTimeFormat,
     isSettings: Bool,
     isMyProfile: Bool,
-    hintGroupInCommon: PeerId?,
+    hintGroupInCommon: EnginePeer.Id?,
     existingRequestsContext: PeerInvitationImportersContext?,
     existingProfileGiftsContext: ProfileGiftsContext?,
     existingProfileGiftsCollectionsContext: ProfileGiftsCollectionsContext?,
@@ -1366,7 +1365,7 @@ func peerInfoScreenData(
             
             let savedMessagesPeer: Signal<EnginePeer?, NoError>
             if peerId == context.account.peerId, case let .replyThread(replyThreadMessage) = chatLocation {
-                savedMessagesPeer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(replyThreadMessage.threadId)))
+                savedMessagesPeer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: EnginePeer.Id(replyThreadMessage.threadId)))
             } else {
                 savedMessagesPeer = .single(nil)
             }
@@ -1374,7 +1373,7 @@ func peerInfoScreenData(
             let hasSavedMessages: Signal<Bool, NoError>
             let hasSavedMessagesChats: Signal<Bool, NoError>
             if case .peer = chatLocation {
-                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: MessageTags()))
+                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: EngineMessage.Tags()))
                 |> map { count -> Bool in
                     if let count, count != 0 {
                         return true
@@ -1565,7 +1564,7 @@ func peerInfoScreenData(
                 walletBalance = .single(nil)
             }
 
-            let forcedLinkedCommunityId = Atomic<PeerId?>(value: nil)
+            let forcedLinkedCommunityId = Atomic<EnginePeer.Id?>(value: nil)
             
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
@@ -1820,7 +1819,7 @@ func peerInfoScreenData(
             let hasSavedMessages: Signal<Bool, NoError>
             let hasSavedMessagesChats: Signal<Bool, NoError>
             if case .peer = chatLocation {
-                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: MessageTags()))
+                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: EngineMessage.Tags()))
                 |> map { count -> Bool in
                     if let count, count != 0 {
                         return true
@@ -1893,7 +1892,7 @@ func peerInfoScreenData(
                 peerInfoFirstWelcomeMessageText(context: context, peerId: peerId)
             )
             
-            let forcedLinkedCommunityId = Atomic<PeerId?>(value: nil)
+            let forcedLinkedCommunityId = Atomic<EnginePeer.Id?>(value: nil)
             let didRefreshWelcomeMessages = Atomic<Bool>(value: false)
             
             return combineLatest(
@@ -2221,7 +2220,7 @@ func peerInfoScreenData(
             let hasSavedMessages: Signal<Bool, NoError>
             let hasSavedMessagesChats: Signal<Bool, NoError>
             if case .peer = chatLocation {
-                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: MessageTags()))
+                hasSavedMessages = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: context.account.peerId, threadId: peerId.toInt64(), tag: EngineMessage.Tags()))
                 |> map { count -> Bool in
                     if let count, count != 0 {
                         return true
@@ -2273,7 +2272,7 @@ func peerInfoScreenData(
             )
             
             let isPremiumRequiredForStoryPosting: Signal<Bool, NoError> = isPremiumRequiredForStoryPosting(context: context)
-            let forcedLinkedCommunityId = Atomic<PeerId?>(value: nil)
+            let forcedLinkedCommunityId = Atomic<EnginePeer.Id?>(value: nil)
             let didRefreshWelcomeMessages = Atomic<Bool>(value: false)
             
             return combineLatest(queue: .mainQueue(),
@@ -2536,7 +2535,7 @@ struct PeerInfoMemberActions: OptionSet {
     static let editRank = PeerInfoMemberActions(rawValue: 1 << 3)
 }
 
-func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: EnginePeer?, member: PeerInfoMember) -> PeerInfoMemberActions {
+func availableActionsForMemberOfPeer(accountPeerId: EnginePeer.Id, peer: EnginePeer?, member: PeerInfoMember) -> PeerInfoMemberActions {
     var result: PeerInfoMemberActions = []
 
     if peer == nil {
@@ -2669,7 +2668,7 @@ func peerInfoHeaderActionButtons(peer: EnginePeer?, isSecretChat: Bool, isContac
     return result
 }
 
-func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if case let .user(user) = peer {
         if !isOpenedFromChat {
@@ -2807,7 +2806,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: CachedPeerData?, isOpe
     return result
 }
 
-func peerInfoCanEdit(peer: EnginePeer?, chatLocation: ChatLocation, threadData: MessageHistoryThreadData?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
+func peerInfoCanEdit(peer: EnginePeer?, chatLocation: ChatLocation, threadData: MessageHistoryThreadData?, cachedData: EngineCachedPeerData?, isContact: Bool?) -> Bool {
     if case let .user(user) = peer {
         if user.isDeleted {
             return false

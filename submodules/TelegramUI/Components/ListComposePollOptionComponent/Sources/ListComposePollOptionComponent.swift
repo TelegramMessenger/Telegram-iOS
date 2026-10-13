@@ -1028,7 +1028,7 @@ public final class ListComposePollOptionComponent: Component {
                         if updateMedia {
                             imageNode.setSignal(chatMessagePhoto(postbox: component.context.account.postbox, userLocation: .other, photoReference: .webPage(webPage: WebpageReference(webpage), media: image)))
                             if let representation = smallestImageRepresentation(image.representations) {
-                                let _ = fetchedMediaResource(mediaBox: component.context.account.postbox.mediaBox, userLocation: .other, userContentType: .image, reference: .media(media: .webPage(webPage: WebpageReference(webpage), media: image), resource: representation.resource)).startStandalone()
+                                let _ = component.context.engine.resources.fetch(reference: .media(media: .webPage(webPage: WebpageReference(webpage), media: image), resource: representation.resource), userLocation: .other, userContentType: .image).startStandalone()
                             }
                         }
                         webpageIconTintColor = .white

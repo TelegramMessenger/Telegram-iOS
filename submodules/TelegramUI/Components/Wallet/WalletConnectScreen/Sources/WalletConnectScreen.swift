@@ -90,11 +90,11 @@ public final class WalletConnectAppIconComponent: Component {
 
                 if let icon = component.icon, icon.size > 0, icon.size <= 2 * 1024 * 1024,
                    icon.mimeType.lowercased().hasPrefix("image/") {
-                    let mediaBox = component.context.account.postbox.mediaBox
+                    let resources = component.context.engine.resources
                     let resource = WebFileReferenceMediaResource(url: icon.url, size: Int64(icon.size), accessHash: icon.accessHash)
-                    self.dataDisposable.set((mediaBox.resourceData(resource)
+                    self.dataDisposable.set((resources.data(resource: EngineMediaResource(resource))
                     |> map { data -> UIImage? in
-                        guard data.complete, data.size <= 2 * 1024 * 1024 else { return nil }
+                        guard data.isComplete, data.availableSize <= 2 * 1024 * 1024 else { return nil }
                         return UIImage(contentsOfFile: data.path)
                     }
                     |> deliverOnMainQueue).start(next: { [weak self, weak context = component.context] image in
@@ -102,8 +102,8 @@ public final class WalletConnectAppIconComponent: Component {
                         self.imageView.image = image
                         self.fallbackLabel.isHidden = true
                     }))
-                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: mediaBox, userLocation: .other,
-                        userContentType: .image, reference: .standalone(resource: resource), statsCategory: .image).start())
+                    self.fetchDisposable.set(resources.fetch(reference: .standalone(resource: resource), userLocation: .other,
+                        userContentType: .image, statsCategory: .image).start())
                 }
             }
             return size

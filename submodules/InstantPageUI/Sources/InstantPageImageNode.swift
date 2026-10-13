@@ -159,7 +159,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
                 self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
                 self.contentBlurredSignal = chatSecretPhoto(account: context.account, userLocation: sourceLocation.userLocation, photoReference: imageReference, ignoreFullSize: true)
 
-                let autoDownload = autoDownloadImage?(image) ?? shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image)
+                let autoDownload = autoDownloadImage?(image) ?? shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: .image(image))
                 if !interactive || autoDownload {
                     self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
                 }
@@ -191,7 +191,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
             } else {
                 let fileReference = fileReferenceForMedia?(file) ?? FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
                 if file.mimeType.hasPrefix("image/") {
-                    let autoDownload = autoDownloadFile?(file) ?? shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file)
+                    let autoDownload = autoDownloadFile?(file) ?? shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: .file(file))
                     if !interactive || autoDownload {
                         _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference).start()
                     }

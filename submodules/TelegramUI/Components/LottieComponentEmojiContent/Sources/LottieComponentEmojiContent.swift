@@ -36,15 +36,15 @@ public extension LottieComponent {
         
         override public func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
             let fileId = self.fileId
-            let mediaBox = self.context.account.postbox.mediaBox
+            let resources = self.context.engine.resources
             return (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
             |> mapToSignal { files -> Signal<Data?, NoError> in
                 guard let file = files[fileId] else {
                     return .single(nil)
                 }
                 return Signal { subscriber in
-                    let dataDisposable = (mediaBox.resourceData(file.resource)
-                    |> filter { data in return data.complete }).start(next: { data in
+                    let dataDisposable = (resources.data(resource: EngineMediaResource(file.resource))
+                    |> filter { data in return data.isComplete }).start(next: { data in
                         if let contents = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                             let result = TGGUnzipData(contents, 2 * 1024 * 1024) ?? contents
                             subscriber.putNext(result)
@@ -53,7 +53,7 @@ public extension LottieComponent {
                             subscriber.putNext(nil)
                         }
                     })
-                    let fetchDisposable = mediaBox.fetchedResource(file.resource, parameters: nil).start()
+                    let fetchDisposable = resources.fetchedResource(resource: EngineMediaResource(file.resource)).start()
                     
                     return ActionDisposable {
                         dataDisposable.dispose()

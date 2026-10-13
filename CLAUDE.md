@@ -1236,9 +1236,18 @@ See the log for per-wave detail; the current wave count and the list of still-op
 3. No new engine wrapper **structs** unless the wave's spec explicitly allows — only typealiases and thin forwarding methods.
 4. **Discovery first:** before adding any new engine wrapper/typealias, grep `submodules/TelegramCore/Sources/TelegramEngine/` for existing equivalents. Record the search result in the commit message.
 5. **Abandonment protocol:** if a module can only be refactored by violating rule 2 or by editing a module outside the current wave's list, mark the task Abandoned with a recorded reason. Do NOT substitute a new module mid-wave.
-6. Full project build per module. No unit tests exist in this project.
+6. Full project build per wave (`Make.py build --continueOnError`). When a wave touches a module that has an `ios_unit_test` target, run it too (`Make.py test --target <label>`).
 7. **TelegramCore never imports UIKit/Display.** `TelegramCore` is shared with the Telegram-Mac codebase; its Bazel `deps` and source files must not reference UIKit, Display, or any Apple-UI framework. UIKit-needing helpers (image scaling, rendering, etc.) stay in consumer-side submodules.
 8. **Never substitute Postbox protocols (`Media`, `Peer`, `Message`) with `Any` / `AnyObject`** in code that previously used them. Type erasure throws away the domain semantics that the next reader expects. Use the matching engine wrapper (`EngineMedia`, `EnginePeer`, `EngineMessage`) — extending it as needed (e.g. add a missing case-init or convenience). If neither typealias nor wrapper covers the use site, restore the original Postbox import + type for now and flag the case for a future facade. Existing `Any`/`AnyObject` parameters predating the refactor are not in scope for this rule.
+9. **Functionality must not change.** Converting between types is allowed (wrap/unwrap, typealias swaps, retyping to a wrapper); behaviour is not. A green build is not proof: review the diff for equality and identity (`EngineMessage` is a class with field-wise `==`; two wrappers of one message are not `===`), hashing, overload resolution after an import is dropped, signal emission (optional vs `.never()`), default arguments and lifetimes. Record how equivalence was checked in the wave's log entry.
+10. **TelegramCore's public API changes in place**, model types included: no additive accessor, init or overload is kept beside the raw one, and nothing is kept for Telegram-Mac (it follows the same refactor). Persisted encodings (PostboxCoding, FlatBuffers) stay byte-identical; keeping raw storage internal behind a retyped public surface is the default shape for model types.
+11. Every wave appends its outcome to `docs/superpowers/postbox-refactor-log.md` in its own commit.
+12. **The guard only shrinks.** `build-system/Make/PostboxImportCheck.py` runs before every `Make.py build`/`test` and fails when an in-scope Swift file imports Postbox without being listed in `submodules/Postbox/AllowedImporters.txt`, or a listed file no longer does. Bazel `visibility` on `//submodules/Postbox:Postbox` (`clients`, `test_clients` in its BUILD) fails a dep from any other package. A wave that frees files or packages removes them from both lists in the same commit; adding to either is a deliberate exception, made in review. The same check guards `.postbox` access:
+    - An in-scope file whose code contains `.postbox` must be listed in `submodules/Postbox/AllowedPostboxAccess.txt`, and every listed file must still use it. Comments and strings don't count; code inside string interpolation does.
+    - A wave that removes a file's last `.postbox` use deletes its line in the same commit.
+    - `python3 build-system/Make/PostboxImportCheck.py --report` prints the access measures each wave records.
+
+    Tests: `python3 -m unittest discover -s build-system/Make/tests`.
 
 ### Engine typealias cheat sheet (existing aliases)
 
@@ -1281,6 +1290,22 @@ MediaResourceDataFetchResult → EngineMediaResourceDataFetchResult (added 2026-
 MediaResourceDataFetchError → EngineMediaResourceDataFetchError (added 2026-05-04 wave 266)
 MediaResourceStatus → EngineMediaResourceStatus     (added 2026-05-04 wave 272)
 ```
+
+The list above is not exhaustive: `grep -rh 'public typealias Engine' submodules/TelegramCore/Sources` lists every alias. Prefer non-`EngineRaw*` ones.
+
+### Engine wrapper cheat sheet
+
+Postbox types that have an engine wrapper. Prefer these to `EngineRaw*` aliases; the full table, with unwrap methods, is in the log's "Engine wrapper inventory". Not all of them are value types: `EngineMessage`, `EngineRenderedPeer` and `EngineMediaResource` are classes, so two wrappers of one raw object are not `===` (rule 9).
+
+```
+Peer → EnginePeer (_asPeer())             RenderedPeer → EngineRenderedPeer
+Message → EngineMessage (_asMessage())     Media → EngineMedia (_asMedia())
+MediaResource → EngineMediaResource (_asResource()); .Id, .ResourceData, .FetchStatus for its id/data/status
+PeerPresence → EnginePeer.Presence         CombinedPeerReadState → EnginePeerReadCounters
+ChatListTotalUnreadState → EngineTotalReadCounters   PeerGroupId → EngineChatList.Group
+```
+
+`EngineMedia.init(_:)` has a `preconditionFailure()` for any `Media` class outside its cases. Each TelegramCore media class has a case. An app-side pseudo-media class must conform to `EngineCustomMedia`, and wraps as `.custom`; today that is the three link-preview placeholders in `WallpaperPreviewMedia`. `build-system/Make/PostboxImportCheck.py` enforces this on every `Make.py build`/`test`. It fails on any in-scope class, struct, enum, protocol or extension whose inheritance list names `Media` (or `EngineRawMedia`) anywhere without also naming `EngineCustomMedia`. A grep had missed `: EngineRawMedia` conformers, and that gap let waves 455 and 458 trap on wallpaper, theme and gift link previews.
 
 **Free-function thin forwarders in TelegramCore** (rule 3 allows):
 - `engineFileSize(_ path:, useTotalFileAllocatedSize: Bool = false)` — forwards to Postbox's `fileSize(...)` (added 2026-05-04 wave 268)

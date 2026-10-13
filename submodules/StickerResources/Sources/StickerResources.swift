@@ -523,7 +523,7 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
     let info = info._parse()
     if let thumbnail = info.thumbnail {
         let signal = Signal<Bool, NoError> { subscriber in
-            let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
+            let fetched = TelegramEngine(account: account).resources.fetch(reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource), userLocation: .other, userContentType: .sticker).start()
             let dataDisposable: Disposable
             if thumbnail.typeHint != .generic {
                 dataDisposable = chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: thumbnail.resource, isVideo: thumbnail.typeHint == .video, width: 80, height: 80, synchronousLoad: false).start(next: { data in
@@ -535,8 +535,8 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
                     }
                 })
             } else {
-                dataDisposable = account.postbox.mediaBox.resourceData(thumbnail.resource, option: .incremental(waitUntilFetchStatus: false)).start(next: { data in
-                    if data.complete {
+                dataDisposable = TelegramEngine(account: account).resources.data(resource: EngineMediaResource(thumbnail.resource), waitUntilFetchStatus: false, incremental: true).start(next: { data in
+                    if data.isComplete {
                         subscriber.putNext(true)
                         subscriber.putCompletion()
                     } else {
@@ -556,8 +556,8 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
         if item.file.isAnimatedSticker {
             let signal = Signal<Bool, NoError> { subscriber in
                 let itemFile = item.file._parse()
-                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: FileMediaReference.standalone(media: itemFile).resourceReference(itemFile.resource)).start()
-                let data = account.postbox.mediaBox.resourceData(itemFile.resource).start()
+                let fetched = TelegramEngine(account: account).resources.fetch(reference: FileMediaReference.standalone(media: itemFile).resourceReference(itemFile.resource), userLocation: .other, userContentType: .sticker).start()
+                let data = TelegramEngine(account: account).resources.data(resource: EngineMediaResource(itemFile.resource)).start()
                 let dimensions = itemFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: itemFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                     let hasContent = next._0 != nil || next._1 != nil
@@ -576,7 +576,7 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
         } else {
             let signal = Signal<Bool, NoError> { subscriber in
                 let itemFile = item.file._parse()
-                let data = account.postbox.mediaBox.resourceData(itemFile.resource).start()
+                let data = TelegramEngine(account: account).resources.data(resource: EngineMediaResource(itemFile.resource)).start()
                 let dimensions = itemFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: itemFile, small: true, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                     let hasContent = next._0 != nil || next._1 != nil

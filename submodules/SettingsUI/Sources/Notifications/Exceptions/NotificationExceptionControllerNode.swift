@@ -19,7 +19,6 @@ import ChatListUI
 import ItemListPeerActionItem
 import TelegramStringFormatting
 import NotificationPeerExceptionController
-import Postbox
 
 private final class NotificationExceptionState : Equatable {
     let mode: NotificationExceptionMode
@@ -568,17 +567,17 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
         }
         
-        let updatePeerStoriesMuted: (PeerId, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+        let updatePeerStoriesMuted: (EnginePeer.Id, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
             peerId, mute in
             return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
         }
         
-        let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+        let updatePeerStoriesHideSender: (EnginePeer.Id, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
             peerId, hideSender in
             return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
         }
         
-        let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+        let updatePeerStorySound: (EnginePeer.Id, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
             return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
         
@@ -1056,7 +1055,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         |> distinctUntilChanged
         
         let searchSignal = stateQuery
-        |> mapToSignal { query -> Signal<(PresentationData, NotificationSoundList?, (NotificationExceptionState, String?), PreferencesEntry?, [EngineRenderedPeer]), NoError> in
+        |> mapToSignal { query -> Signal<(PresentationData, NotificationSoundList?, (NotificationExceptionState, String?), EnginePreferencesEntry?, [EngineRenderedPeer]), NoError> in
             var contactsSignal: Signal<[EngineRenderedPeer], NoError> = .single([])
             if let query = query {
                 contactsSignal = context.account.postbox.searchPeers(query: query)

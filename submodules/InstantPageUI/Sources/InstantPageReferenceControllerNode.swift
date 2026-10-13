@@ -203,7 +203,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
             
             var media: [EngineMedia.Id: EngineMedia] = [:]
             if let instantPage = self.webPage.instantPage  {
-                media = instantPage.media.mapValues(EngineMedia.init)
+                media = instantPage.media
             }
             
             let sideInset: CGFloat = 16.0

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -1049,7 +1048,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     private var mediaStatusDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
 
-    private var iconDisposables: [MediaId: Disposable] = [:]
+    private var iconDisposables: [EngineMedia.Id: Disposable] = [:]
     private var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     private var playlistLocation: SharedMediaPlaylistLocation?
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
@@ -1838,7 +1837,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings)?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
 
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
-                    return PreferencesEntry(settings.withUpdatedVoicePlaybackRate(rate))
+                    return EnginePreferencesEntry(settings.withUpdatedVoicePlaybackRate(rate))
                 })
                 return rate
             }
@@ -2162,12 +2161,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                         if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(bot.peer) {
                             if case .placeholder = name {
                                 let account = self.context.account
-                                let path = account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                                let path = TelegramEngine(account: account).resources.cachedRepresentationCompletePath(id: EngineMediaResource.Id(file.resource.id), representation: CachedPreparedSvgRepresentation())
                                 if !FileManager.default.fileExists(atPath: path) {
                                     let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                                        let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                        let accountResource = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(file.resource), representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
 
-                                        let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file), reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                        let fetchedFullSize = TelegramEngine(account: account).resources.fetch(reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file))
                                         let fetchedFullSizeDisposable = fetchedFullSize.start()
                                         let fullSizeDisposable = accountResource.start()
 
@@ -2540,7 +2539,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             self.updateChatPresentationInterfaceState(update: false, transition: .immediate, { state in
                 var selectedMessages: [EngineMessage.Id] = []
                 for i in 0 ..< selectionCount {
-                    selectedMessages.append(EngineMessage.Id(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: Int32(i)))
+                    selectedMessages.append(EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: Namespaces.Message.Local, id: Int32(i)))
                 }
                 return state.updatedInterfaceState { state in
                     return state.withUpdatedForwardMessageIds(selectedMessages)

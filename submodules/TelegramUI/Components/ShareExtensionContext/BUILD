@@ -15,7 +15,6 @@ swift_library(
         "//submodules/TelegramCore",
         "//submodules/PasscodeCore",
         "//submodules/SSignalKit/SwiftSignalKit",
-        "//submodules/Postbox",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/AccountContext",

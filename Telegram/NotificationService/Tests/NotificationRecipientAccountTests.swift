@@ -53,15 +53,15 @@ final class NotificationRecipientAccountTests: XCTestCase {
     }
 
     func testTheUsernameNamesTheAccount() {
-        XCTAssertEqual(notificationRecipientAccountName(accountPeer: self.user(firstName: "Peter", username: "peter")), "peter")
+        XCTAssertEqual(notificationRecipientAccountName(accountPeer: .user(self.user(firstName: "Peter", username: "peter"))), "peter")
     }
 
     func testAnAccountWithoutAUsernameIsNamedByItsName() {
-        XCTAssertEqual(notificationRecipientAccountName(accountPeer: self.user(firstName: "Peter", username: nil)), "Peter")
+        XCTAssertEqual(notificationRecipientAccountName(accountPeer: .user(self.user(firstName: "Peter", username: nil))), "Peter")
     }
 
     func testAnEmptyUsernameFallsBackToTheName() {
-        XCTAssertEqual(notificationRecipientAccountName(accountPeer: self.user(firstName: "Peter", username: "")), "Peter")
+        XCTAssertEqual(notificationRecipientAccountName(accountPeer: .user(self.user(firstName: "Peter", username: ""))), "Peter")
     }
 
     func testAnAccountWhosePeerIsUnknownIsNotNamed() {
@@ -69,7 +69,7 @@ final class NotificationRecipientAccountTests: XCTestCase {
     }
 
     func testAnAccountWithNoNameAtAllIsNotNamed() {
-        XCTAssertNil(notificationRecipientAccountName(accountPeer: self.user(firstName: nil, username: nil)))
+        XCTAssertNil(notificationRecipientAccountName(accountPeer: .user(self.user(firstName: nil, username: nil))))
     }
 
     // MARK: - Where the name goes

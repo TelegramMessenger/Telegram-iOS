@@ -18,7 +18,6 @@ swift_library(
         "//submodules/CheckNode:CheckNode",
         "//submodules/Display:Display",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TextFormat:TextFormat",

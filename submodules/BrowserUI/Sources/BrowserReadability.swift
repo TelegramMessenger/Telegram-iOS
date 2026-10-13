@@ -204,7 +204,7 @@ private func parseJson(_ input: [String: Any], url: String) -> TelegramMediaWebp
                 attributes: [],
                 instantPage: InstantPage(
                     blocks: blocks,
-                    media: media,
+                    media: media.mapValues(EngineMedia.init),
                     isComplete: true,
                     rtl: false,
                     url: url,

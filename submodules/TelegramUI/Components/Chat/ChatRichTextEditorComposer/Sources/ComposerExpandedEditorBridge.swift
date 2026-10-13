@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import RichTextEditorCore
 
@@ -12,13 +11,13 @@ import RichTextEditorCore
 /// object-identity fallback for an id-less medium. Shared by the composer node's media store
 /// (`RichTextEditorChatInputNode.registerMediaValue`), the `documentMediaAndEmoji(fromChatInputContent:)`
 /// expand seed, and `RichTextAttachmentScreen.attachedMedia`, so a medium keyed one way resolves the other.
-public func composerMediaKey(_ media: Media) -> String {
+public func composerMediaKey(_ media: EngineMedia) -> String {
     if let id = media.id {
         return "\(id.namespace):\(id.id)"
     } else {
         // No stable media id (rare): fall back to an object-identity key so the same value still
         // round-trips within a single set/get cycle.
-        return "anon:\(ObjectIdentifier(media as AnyObject).hashValue)"
+        return "anon:\(ObjectIdentifier(media._asMedia() as AnyObject).hashValue)"
     }
 }
 
@@ -28,8 +27,8 @@ public func composerMediaKey(_ media: Media) -> String {
 /// only (it has no `TelegramMediaFile` slot), so the files ride alongside in `emojiFiles`; the article editor
 /// seeds its emoji store from that map so the emoji render and their files survive back out. The inverse is
 /// `chatInputContent(fromDocument:media:emojiFiles:)`.
-public func documentMediaAndEmoji(fromChatInputContent content: ChatInputContent) -> (document: Document, media: [String: Media], emojiFiles: [Int64: TelegramMediaFile]) {
-    var media: [String: Media] = [:]
+public func documentMediaAndEmoji(fromChatInputContent content: ChatInputContent) -> (document: Document, media: [String: EngineMedia], emojiFiles: [Int64: TelegramMediaFile]) {
+    var media: [String: EngineMedia] = [:]
     var emojiFiles: [Int64: TelegramMediaFile] = [:]
     let doc = document(
         fromChatInputContent: content,
@@ -48,8 +47,8 @@ public func documentMediaAndEmoji(fromChatInputContent content: ChatInputContent
     return (document: doc, media: media, emojiFiles: emojiFiles)
 }
 
-public func documentMediaAndEmojiAsync(engine: TelegramEngine, fromChatInputContent content: ChatInputContent) async -> (document: Document, media: [String: Media], emojiFiles: [Int64: TelegramMediaFile]) {
-    var media: [String: Media] = [:]
+public func documentMediaAndEmojiAsync(engine: TelegramEngine, fromChatInputContent content: ChatInputContent) async -> (document: Document, media: [String: EngineMedia], emojiFiles: [Int64: TelegramMediaFile]) {
+    var media: [String: EngineMedia] = [:]
     var emojiFiles: [Int64: TelegramMediaFile] = [:]
     var emojiFileIds = Set<Int64>()
     let doc = document(
@@ -83,7 +82,7 @@ public func documentMediaAndEmojiAsync(engine: TelegramEngine, fromChatInputCont
 /// emoji, since its native node caches/renders by the file carried on the run. A non-numeric emoji id (should
 /// not occur from this path) degrades the run to plain text; a missing file falls back to `nil` (the run still
 /// round-trips structurally, but won't render until decoration re-derives the file).
-public func chatInputContent(fromDocument document: Document, media: [String: Media], emojiFiles: [Int64: TelegramMediaFile]) -> ChatInputContent {
+public func chatInputContent(fromDocument document: Document, media: [String: EngineMedia], emojiFiles: [Int64: TelegramMediaFile]) -> ChatInputContent {
     return chatInputContent(
         fromDocument: document,
         resolveEmoji: { emojiRef in

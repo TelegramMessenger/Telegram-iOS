@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import RichTextEditorCore
 import TextFormat
@@ -37,7 +36,7 @@ import RichTextEditorMessageConversion
 public func chatInputContent(
     fromDocument document: Document,
     resolveEmoji: (EmojiRef) -> (fileId: Int64, file: TelegramMediaFile?)?,
-    resolveMedia: (String) -> Media?
+    resolveMedia: (String) -> EngineMedia?
 ) -> ChatInputContent {
     var blocks: [ChatInputBlock] = []
     for block in document.blocks {
@@ -62,7 +61,7 @@ public func chatInputContent(
             let resolvedItems: [ChatInputMediaItem] = media.items.compactMap { item in
                 guard let resolved = resolveMedia(item.mediaID) else { return nil }
                 return ChatInputMediaItem(
-                    media: resolved,
+                    media: resolved._asMedia(),
                     kind: chatInputMediaKind(fromKind: item.kind),
                     naturalSize: ChatInputSize(width: item.naturalSize.width, height: item.naturalSize.height),
                     isSpoiler: item.isSpoiler)
@@ -332,7 +331,7 @@ private func chatInputInlineAttributes(
 public func document(
     fromChatInputContent content: ChatInputContent,
     registerEmoji: (Int64, TelegramMediaFile?) -> EmojiRef,
-    registerMedia: (Media) -> String
+    registerMedia: (EngineMedia) -> String
 ) -> Document {
     var blocks: [Block] = []
     for block in content.blocks {
@@ -345,7 +344,7 @@ public func document(
 private func documentBlocks(
     fromChatInputBlock block: ChatInputBlock,
     registerEmoji: (Int64, TelegramMediaFile?) -> EmojiRef,
-    registerMedia: (Media) -> String
+    registerMedia: (EngineMedia) -> String
 ) -> [Block] {
     switch block {
     case let .paragraph(paragraph):
@@ -371,7 +370,7 @@ private func documentBlocks(
             id: BlockID.generate(),
             items: media.items.map { item in
                 MediaItem(
-                    mediaID: registerMedia(item.media),
+                    mediaID: registerMedia(EngineMedia(item.media)),
                     kind: mediaKind(fromChatInputKind: item.kind),
                     naturalSize: Size2D(width: item.naturalSize.width, height: item.naturalSize.height),
                     isSpoiler: item.isSpoiler)

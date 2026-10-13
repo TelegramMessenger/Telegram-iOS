@@ -15,7 +15,6 @@ swift_library(
         "//submodules/Crc32",
         "//submodules/Display",
         "//submodules/TelegramCore",
-        "//submodules/Postbox",
         "//submodules/TextFormat",
         "//submodules/UrlEscaping",
         "//submodules/SSignalKit/SwiftSignalKit",

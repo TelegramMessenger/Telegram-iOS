@@ -918,7 +918,7 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         // stale instant-page audio/image file reference can revalidate.
                         for attribute in message.attributes {
                             if let attribute = attribute as? RichTextMessageAttribute {
-                                for (_, pageMedia) in attribute.instantPage.media {
+                                for (_, pageMedia) in attribute.instantPage.rawMedia {
                                     if let updatedResource = findUpdatedMediaResource(media: pageMedia, previousMedia: previousMedia, resource: resource) {
                                         return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                                     }

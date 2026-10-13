@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 import AvatarNode
@@ -45,7 +44,7 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
     public final class HeaderData {
         public enum Contents {
             case peer(EnginePeer)
-            case thread(id: Int64, info: Message.AssociatedThreadInfo)
+            case thread(id: Int64, info: EngineMessage.AssociatedThreadInfo)
         }
         
         public let contents: Contents
@@ -881,23 +880,24 @@ private func avatarHeaderSize() -> CGFloat {
 
 public final class ChatMessageAvatarHeader: ListViewItemHeader {
     public struct Id: Hashable {
-        public var peerId: PeerId
+        public var peerId: EnginePeer.Id
         public var timestampId: Int32
     }
 
     public let id: ListViewItemNode.HeaderId
     public let stackingId: ListViewItemNode.HeaderId? = nil
-    public let peerId: PeerId
-    public let peer: Peer?
+    public let peerId: EnginePeer.Id
+    public let peer: EnginePeer?
     public let messageReference: MessageReference?
     public let adMessageId: EngineMessage.Id?
     public let effectiveTimestamp: Int32
     public let presentationData: ChatPresentationData
     public let context: AccountContext
     public let controllerInteraction: ChatControllerInteraction?
-    public let storyStats: PeerStoryStats?
+    public let storyStats: EnginePeerStoryStats?
 
-    public init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: PeerStoryStats?) {
+    public init(timestamp: Int32, peerId: EnginePeer.Id, peer: EnginePeer?, messageReference: MessageReference?, message: EngineMessage, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: EnginePeerStoryStats?) {
+        let message = message._asMessage()
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -964,11 +964,11 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction?
-    private var storyStats: PeerStoryStats?
+    private var storyStats: EnginePeerStoryStats?
     
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let messageReference: MessageReference?
-    private var peer: Peer?
+    private var peer: EnginePeer?
     private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
@@ -995,7 +995,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
     }
     
-    public init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
+    public init(peerId: EnginePeer.Id, peer: EnginePeer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: EnginePeerStoryStats?, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -1030,10 +1030,10 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
 
         self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self, let peer = strongSelf.peer else {
+            guard let strongSelf = self, let peer = strongSelf.peer?._asPeer() else {
                 return
             }
-            var messageId: MessageId?
+            var messageId: EngineMessage.Id?
             if let messageReference = messageReference, case let .message(_, _, id, _, _, _, _) = messageReference.content {
                 messageId = id
             }
@@ -1053,18 +1053,20 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarNode.setCustomLetters(letters, icon: !letters.isEmpty ? nil : .phone)
     }
     
-    public func updatePeer(peer: Peer) {
-        if let previousPeer = self.peer, previousPeer.nameColor != peer.nameColor || previousPeer.smallProfileImage != peer.smallProfileImage || previousPeer.displayLetters != peer.displayLetters {
-            self.peer = peer
+    public func updatePeer(peer enginePeer: EnginePeer) {
+        let peer = enginePeer._asPeer()
+        if let previousPeer = self.peer?._asPeer(), previousPeer.nameColor != peer.nameColor || previousPeer.smallProfileImage != peer.smallProfileImage || previousPeer.displayLetters != peer.displayLetters {
+            self.peer = enginePeer
             if peer.smallProfileImage != nil {
-                self.avatarNode.setPeerV2(context: self.context, theme: self.presentationData.theme.theme, peer: EnginePeer(peer), authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
+                self.avatarNode.setPeerV2(context: self.context, theme: self.presentationData.theme.theme, peer: enginePeer, authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
             } else {
-                self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme.theme, peer: EnginePeer(peer), authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
+                self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme.theme, peer: enginePeer, authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
             }
         }
     }
 
-    public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+    public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer enginePeer: EnginePeer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+        let peer = enginePeer._asPeer()
         if let messageReference = self.messageReference, let id = messageReference.id {
             self.containerNode.isGestureEnabled = !id.peerId.isVerificationCodes
         } else {
@@ -1076,9 +1078,9 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
             overrideImage = .deletedIcon
         }
         if peer.smallProfileImage != nil {
-            self.avatarNode.setPeerV2(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
+            self.avatarNode.setPeerV2(context: context, theme: theme, peer: enginePeer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
         } else {
-            self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
+            self.avatarNode.setPeer(context: context, theme: theme, peer: enginePeer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
         }
         
         if peer.isPremium && context.sharedContext.energyUsageSettings.autoplayVideo {
@@ -1119,7 +1121,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
                             strongSelf.avatarNode.contentNode.addSubnode(videoNode)
                             strongSelf.avatarVideoNode = videoNode
                         }
-                        videoNode.update(peer: EnginePeer(peer), photo: photo, size: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
+                        videoNode.update(peer: enginePeer, photo: photo, size: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
                         
                         if strongSelf.hierarchyTrackingLayer == nil {
                             let hierarchyTrackingLayer = HierarchyTrackingLayer()
@@ -1165,7 +1167,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
     }
     
-    public func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
+    public func updateStoryStats(storyStats: EnginePeerStoryStats?, theme: PresentationTheme, force: Bool) {
         /*if storyStats != nil {
             var backgroundContent: WallpaperBubbleBackgroundNode?
             if let current = self.backgroundContent {
@@ -1296,7 +1298,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         if case .ended = recognizer.state {
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction?.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, self, self.avatarNode.frame)
-            } else if let peer = self.peer {
+            } else if let peer = self.peer?._asPeer() {
                 if peer.id.isVerificationCodes {
                     self.controllerInteraction?.playShakeAnimation()
                 } else if let adMessageId = self.adMessageId {

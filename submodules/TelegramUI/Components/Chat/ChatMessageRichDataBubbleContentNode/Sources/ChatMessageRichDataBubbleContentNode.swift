@@ -452,10 +452,10 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 self?.item?.controllerInteraction.navigationController()
             },
             shouldAutoDownloadImage: { image in
-                return shouldDownloadMediaAutomatically(settings: autoDownloadSettings, peerType: autoDownloadPeerType, networkType: autoDownloadNetworkType, authorPeerId: messageAuthorPeerId, contactsPeerIds: autoDownloadContactsPeerIds, media: image)
+                return shouldDownloadMediaAutomatically(settings: autoDownloadSettings, peerType: autoDownloadPeerType, networkType: autoDownloadNetworkType, authorPeerId: messageAuthorPeerId, contactsPeerIds: autoDownloadContactsPeerIds, media: .image(image))
             },
             shouldAutoDownloadFile: { file in
-                return shouldDownloadMediaAutomatically(settings: autoDownloadSettings, peerType: autoDownloadPeerType, networkType: autoDownloadNetworkType, authorPeerId: messageAuthorPeerId, contactsPeerIds: autoDownloadContactsPeerIds, media: file)
+                return shouldDownloadMediaAutomatically(settings: autoDownloadSettings, peerType: autoDownloadPeerType, networkType: autoDownloadNetworkType, authorPeerId: messageAuthorPeerId, contactsPeerIds: autoDownloadContactsPeerIds, media: .file(file))
             },
             shouldAutoplayVideo: { file in
                 let enabled = file.isAnimated ? policyContext.sharedContext.energyUsageSettings.autoplayGif : policyContext.sharedContext.energyUsageSettings.autoplayVideo

@@ -28,7 +28,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
             callbacks.append((success.frame, successCallback))
         }
         
-        if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
+        if let _ = TelegramEngine(account: account).resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id)) {
             if immediate {
                 return .single(ManagedAnimationItem(source: .resource(account, EngineMediaResource(file.resource)), frames: .still(.end), duration: 0))
             } else {

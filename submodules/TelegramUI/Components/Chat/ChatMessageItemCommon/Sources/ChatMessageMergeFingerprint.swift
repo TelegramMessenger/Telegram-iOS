@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 
 private func mediaMergeableStyle(_ media: EngineRawMedia) -> ChatMessageMerge {

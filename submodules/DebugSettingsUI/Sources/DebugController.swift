@@ -1245,7 +1245,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 
-                context.account.postbox.mediaBox.storageBox.reset()
+                context.engine.resources.resetStorageIndex()
             })
         case .reindexCache:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Reindex Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {

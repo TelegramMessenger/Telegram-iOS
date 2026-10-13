@@ -192,7 +192,7 @@ func messageContentToUpload(accountPeerId: PeerId, network: Network, postbox: Po
         return .signal(mediaResult, .media)
     } else if peerId.namespace != Namespaces.Peer.SecretChat,
               let richAttribute = attributes.first(where: { $0 is RichTextMessageAttribute }) as? RichTextMessageAttribute,
-              !richAttribute.instantPage.media.isEmpty {
+              !richAttribute.instantPage.rawMedia.isEmpty {
         return .signal(richMessageContentToUpload(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: forceReupload, peerId: peerId, instantPage: richAttribute.instantPage), .media)
     } else {
         return .signal(.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .text(text), reuploadInfo: nil, cacheReferenceKey: nil))), .text)
@@ -554,7 +554,7 @@ func richMessageContentToUpload(
     instantPage: InstantPage
 ) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     // Stable order so progress + arrays are deterministic.
-    let entries: [(MediaId, Media)] = instantPage.media.sorted(by: { lhs, rhs in
+    let entries: [(MediaId, Media)] = instantPage.rawMedia.sorted(by: { lhs, rhs in
         if lhs.key.namespace != rhs.key.namespace {
             return lhs.key.namespace < rhs.key.namespace
         }
@@ -663,7 +663,7 @@ func uploadedRichMessage(
     guard let richText else {
         return .single(nil)
     }
-    if peerId.namespace == Namespaces.Peer.SecretChat || richText.instantPage.media.isEmpty {
+    if peerId.namespace == Namespaces.Peer.SecretChat || richText.instantPage.rawMedia.isEmpty {
         return .single(richText.apiInputRichMessage())
     }
     return richMessageContentToUpload(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: forceReupload, peerId: peerId, instantPage: richText.instantPage)

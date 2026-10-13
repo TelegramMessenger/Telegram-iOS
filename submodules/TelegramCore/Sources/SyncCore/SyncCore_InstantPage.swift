@@ -1618,15 +1618,25 @@ private final class MediaDictionary: PostboxCoding {
 
 public final class InstantPage: PostboxCoding, Equatable {
     public let blocks: [InstantPageBlock]
-    public let media: [MediaId: Media]
+    let rawMedia: [MediaId: Media]
     public let isComplete: Bool
     public let rtl: Bool
     public let url: String
     public let views: Int32?
     
-    public init(blocks: [InstantPageBlock], media: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
+    /// The page's media by id. Built from the stored media on every read, so read it once
+    /// outside a loop.
+    public var media: [EngineMedia.Id: EngineMedia] {
+        return self.rawMedia.mapValues(EngineMedia.init)
+    }
+    
+    public convenience init(blocks: [InstantPageBlock], media: [EngineMedia.Id: EngineMedia], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
+        self.init(blocks: blocks, rawMedia: media.mapValues { $0._asMedia() }, isComplete: isComplete, rtl: rtl, url: url, views: views)
+    }
+    
+    init(blocks: [InstantPageBlock], rawMedia: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
         self.blocks = blocks
-        self.media = media
+        self.rawMedia = rawMedia
         self.isComplete = isComplete
         self.rtl = rtl
         self.url = url
@@ -1635,7 +1645,7 @@ public final class InstantPage: PostboxCoding, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.blocks = decoder.decodeObjectArrayWithDecoderForKey("b")
-        self.media = MediaDictionary(decoder: decoder).dict
+        self.rawMedia = MediaDictionary(decoder: decoder).dict
         self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
         self.rtl = decoder.decodeInt32ForKey("r", orElse: 0) != 0
         self.url = decoder.decodeStringForKey("url", orElse: "")
@@ -1655,7 +1665,7 @@ public final class InstantPage: PostboxCoding, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.blocks, forKey: "b")
-        MediaDictionary(dict: self.media).encode(encoder)
+        MediaDictionary(dict: self.rawMedia).encode(encoder)
         encoder.encodeInt32(self.isComplete ? 1 : 0, forKey: "c")
         encoder.encodeInt32(self.rtl ? 1 : 0, forKey: "r")
         encoder.encodeString(self.url, forKey: "url")
@@ -1670,11 +1680,11 @@ public final class InstantPage: PostboxCoding, Equatable {
         if lhs.blocks != rhs.blocks {
             return false
         }
-        if lhs.media.count != rhs.media.count {
+        if lhs.rawMedia.count != rhs.rawMedia.count {
             return false
         } else {
-            for (lhsKey, lhsValue) in lhs.media {
-                if let media = rhs.media[lhsKey] {
+            for (lhsKey, lhsValue) in lhs.rawMedia {
+                if let media = rhs.rawMedia[lhsKey] {
                     if !lhsValue.isEqual(to: media) {
                         return false
                     }
@@ -1710,7 +1720,7 @@ public final class InstantPage: PostboxCoding, Equatable {
                 media[id] = parsedMedia
             }
         }
-        self.media = media
+        self.rawMedia = media
         
         self.isComplete = flatBuffersObject.isComplete
         self.rtl = flatBuffersObject.rtl
@@ -1725,7 +1735,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         let blocksOffset = builder.createVector(ofOffsets: blocksOffsets, len: blocksOffsets.count)
         
         var mediaOffsets: [Offset] = []
-        for (_, media) in self.media.sorted(by: { $0.key < $1.key }) {
+        for (_, media) in self.rawMedia.sorted(by: { $0.key < $1.key }) {
             if let offset = TelegramMedia_serialize(media: media, flatBuffersBuilder: &builder) {
                 mediaOffsets.append(offset)
             }
@@ -1847,12 +1857,12 @@ private extension InstantPageBlock {
 
 public extension InstantPage {
     func allMedia() -> [Media] {
-        if self.media.isEmpty {
+        if self.rawMedia.isEmpty {
             return []
         }
         var result: [Media] = []
         for block in self.blocks {
-            result.append(contentsOf: block.allMedia(mediaDict: self.media))
+            result.append(contentsOf: block.allMedia(mediaDict: self.rawMedia))
         }
         return result
     }
@@ -1906,7 +1916,7 @@ public extension InstantPage.Accessor {
             self.accessor = accessor
             
             if let wrappedInstantPage = accessor._wrappedInstantPage {
-                self.wrappedInstantPageIterator = wrappedInstantPage.media.makeIterator()
+                self.wrappedInstantPageIterator = wrappedInstantPage.rawMedia.makeIterator()
             } else {
                 self.wrappedInstantPageIterator = nil
             }

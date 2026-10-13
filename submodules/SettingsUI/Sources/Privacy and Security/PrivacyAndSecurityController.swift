@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -573,7 +572,7 @@ private final class PrivacyAndSecurityContextReferenceContentSource: ContextRefe
     }
 }
 
-private func countForSelectivePeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> Int {
+private func countForSelectivePeers(_ peers: [EnginePeer.Id: SelectivePrivacyPeer]) -> Int {
     var result = 0
     for (_, peer) in peers {
         result += peer.userCount

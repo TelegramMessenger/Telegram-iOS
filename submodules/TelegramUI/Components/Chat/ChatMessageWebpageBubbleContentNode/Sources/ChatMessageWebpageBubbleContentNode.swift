@@ -264,7 +264,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 
                 if let file = webpage.file, (file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif) || (!file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayVideo) {
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
-                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file) {
+                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: .file(file)) {
                         automaticDownload = .full
                     }
                     if case .full = automaticDownload {

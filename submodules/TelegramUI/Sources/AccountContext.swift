@@ -4,7 +4,6 @@ import LocalAuthentication
 import Foundation
 import SwiftSignalKit
 import UIKit
-import Postbox
 import TelegramCore
 import Display
 import DeviceAccess
@@ -48,7 +47,7 @@ private final class DeviceSpecificContactImportContext {
 private final class DeviceSpecificContactImportContexts {
     private let queue: Queue
     
-    private var contexts: [PeerId: DeviceSpecificContactImportContext] = [:]
+    private var contexts: [EnginePeer.Id: DeviceSpecificContactImportContext] = [:]
     
     init(queue: Queue) {
         self.queue = queue
@@ -58,8 +57,8 @@ private final class DeviceSpecificContactImportContexts {
         assert(self.queue.isCurrent())
     }
     
-    func update(account: Account, deviceContactDataManager: DeviceContactDataManager, references: [PeerId: DeviceContactBasicDataWithReference]) {
-        var validIds = Set<PeerId>()
+    func update(account: Account, deviceContactDataManager: DeviceContactDataManager, references: [EnginePeer.Id: DeviceContactBasicDataWithReference]) {
+        var validIds = Set<EnginePeer.Id>()
         for (peerId, reference) in references {
             validIds.insert(peerId)
             
@@ -105,7 +104,7 @@ private final class DeviceSpecificContactImportContexts {
             }
         }
         
-        var removeIds: [PeerId] = []
+        var removeIds: [EnginePeer.Id] = []
         for peerId in self.contexts.keys {
             if !validIds.contains(peerId) {
                 removeIds.append(peerId)
@@ -386,8 +385,8 @@ public final class AccountContextImpl: AccountContext {
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         
         let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
-        self.animationCache = DCTAnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
+        self.animationCache = DCTAnimationCacheImpl(basePath: self.engine.resources.mediaBasePath + "/animation-cache", allocateTempFile: {
+            return EngineTempBox.shared.tempFile(fileName: "file").path
         }, updateStorageStats: { path, size in
             if let pathData = path.data(using: .utf8) {
                 cacheStorageBox.update(id: pathData, size: size)
@@ -454,7 +453,7 @@ public final class AccountContextImpl: AccountContext {
             if let url = data["ios_update_url"] as? String, !url.isEmpty {
                 let _ = (sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.updateSettings, { _ in
-                        return PreferencesEntry(UpdateSettings(url: url))
+                        return EnginePreferencesEntry(UpdateSettings(url: url))
                     })
                 }).start()
             }
@@ -731,7 +730,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput {
+    public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> EngineChatLocationInput {
         switch location {
         case let .peer(peerId):
             return .peer(peerId: peerId, threadId: nil)
@@ -747,16 +746,16 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError> {
+    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<EngineMessage.Id?, NoError> {
         switch location {
         case .peer:
             return .single(nil)
         case let .replyThread(data):
             if data.isForumPost, let peerId = location.peerId {
                 return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.ThreadInfo(peerId: data.peerId, threadId: data.threadId))
-                |> map { threadData -> MessageId? in
+                |> map { threadData -> EngineMessage.Id? in
                     if let threadData {
-                        return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadData.maxOutgoingReadId)
+                        return EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadData.maxOutgoingReadId)
                     } else {
                         return nil
                     }
@@ -797,7 +796,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex) {
+    public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: EngineMessage.Index) {
         switch location {
         case .peer:
             let _ = self.engine.messages.applyMaxReadIndexInteractively(index: messageIndex).start()
@@ -809,11 +808,11 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func scheduleGroupCall(peerId: PeerId, parentController: ViewController) {
+    public func scheduleGroupCall(peerId: EnginePeer.Id, parentController: ViewController) {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true, parentController: parentController)
     }
     
-    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
+    public func joinGroupCall(peerId: EnginePeer.Id, invite: String?, requestJoinAsPeerId: ((@escaping (EnginePeer.Id?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
         let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentCallType) = callResult {
             if case let .peer(currentPeerId) = currentCallType, currentPeerId == peerId {
@@ -1012,7 +1011,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void) {
+    public func requestCall(peerId: EnginePeer.Id, isVideo: Bool, completion: @escaping () -> Void) {
         guard let callResult = self.sharedContext.callManager?.requestCall(context: self, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false) else {
             return
         }

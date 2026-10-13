@@ -20,7 +20,7 @@ private func makeSourcedForwardInfo(author: Peer?, source: Peer, authorSignature
 }
 
 /// Stand-in for the presentation layer's peer-name rendering, which this module cannot reach.
-private func displayTitle(_ peer: Peer) -> String {
+private func displayTitle(_ peer: EnginePeer) -> String {
     return "title(\(peer.id))"
 }
 
@@ -66,7 +66,7 @@ final class ChatMessageForwardInfoDisplayTests: XCTestCase {
         let admin = makeUser(id: 5)
         let result = self.resolve(makeSourcedForwardInfo(author: admin, source: channel, authorSignature: nil), messageId: self.messageA)
         XCTAssertEqual(result.source?.id, channel.id)
-        XCTAssertEqual(result.authorSignature, displayTitle(admin))
+        XCTAssertEqual(result.authorSignature, displayTitle(EnginePeer(admin)))
     }
 
     func testChannelSourceAuthoredByItselfHasNoSignature() {
@@ -80,7 +80,7 @@ final class ChatMessageForwardInfoDisplayTests: XCTestCase {
     /// this same message keeps the sender it already displayed.
     func testUnresolvedAuthorKeepsWhatThisMessageLastShowed() {
         let user = makeUser(id: 5)
-        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: user, authorSignature: nil)
+        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: EnginePeer(user), authorSignature: nil)
         let result = self.resolve(
             makeForwardInfo(author: nil, authorSignature: nil, date: 900, isImported: false),
             messageId: self.messageA,
@@ -99,7 +99,7 @@ final class ChatMessageForwardInfoDisplayTests: XCTestCase {
     /// message's sender. An anonymous forward has a nil author, which is what the cache keys on.
     func testReusedNodeDoesNotInheritAnotherMessagesSender() {
         let previousChannel = makeBroadcastChannel(id: 7, messagesShouldHaveProfiles: false)
-        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: previousChannel, authorSignature: "John")
+        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: EnginePeer(previousChannel), authorSignature: "John")
         let result = self.resolve(
             makeForwardInfo(author: nil, authorSignature: "Ghost", date: 900, isImported: false),
             messageId: self.messageB,
@@ -111,7 +111,7 @@ final class ChatMessageForwardInfoDisplayTests: XCTestCase {
 
     func testReusedNodeDoesNotInheritAnotherMessagesSenderWhenItHasNoNameOfItsOwn() {
         let previousChannel = makeBroadcastChannel(id: 7, messagesShouldHaveProfiles: false)
-        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: previousChannel, authorSignature: "John")
+        let applied = ChatMessageAppliedForwardInfo(messageId: self.messageA, source: EnginePeer(previousChannel), authorSignature: "John")
         let result = self.resolve(
             makeForwardInfo(author: nil, authorSignature: nil, date: 900, isImported: false),
             messageId: self.messageB,

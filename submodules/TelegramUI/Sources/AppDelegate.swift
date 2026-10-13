@@ -2957,7 +2957,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.walletTonConnectNotificationDisposable.set(signal.start(next: { [weak self] context, message in
             guard let self else { return }
             let isWalletAvailable = WalletConfiguration.with(appConfiguration: context.context.currentAppConfiguration.with { $0 }).isAvailable
-            if isWalletAvailable, let message, let request = walletTonConnectRequestRoute(message: message._asMessage(), accountPeerId: context.context.account.peerId) {
+            if isWalletAvailable, let message, let request = walletTonConnectRequestRoute(message: message, accountPeerId: context.context.account.peerId) {
                 context.context.walletContext?.openTonConnectRequest(sessionId: request.sessionId, messageId: request.messageId)
             } else {
                 context.openChatWithPeerId(peerId: route.messageId.peerId, threadId: nil, messageId: route.messageId,

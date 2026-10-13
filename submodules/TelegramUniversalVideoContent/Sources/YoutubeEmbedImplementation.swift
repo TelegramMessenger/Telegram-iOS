@@ -453,7 +453,7 @@ public class YoutubeEmbedStoryboardMediaResource: TelegramMediaResource {
     }
 }
 
-public final class YoutubeEmbedStoryboardMediaResourceRepresentation: EngineRawCachedMediaResourceRepresentation {
+public final class YoutubeEmbedStoryboardMediaResourceRepresentation: EngineMediaResourceRepresentation {
     public let keepDuration: EngineCachedMediaRepresentationKeepDuration = .shortLived
 
     public var uniqueId: String {
@@ -495,9 +495,9 @@ public func fetchYoutubeEmbedStoryboardResource(resource: YoutubeEmbedStoryboard
 
 private func youtubeEmbedStoryboardData(account: Account, resource: YoutubeEmbedStoryboardMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
-        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: YoutubeEmbedStoryboardMediaResourceRepresentation(), complete: true).start(next: { next in
-            if next.size != 0 {
-                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+        let dataDisposable = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(resource), representation: YoutubeEmbedStoryboardMediaResourceRepresentation(), complete: true).start(next: { next in
+            if next.availableSize != 0 {
+                subscriber.putNext(next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         

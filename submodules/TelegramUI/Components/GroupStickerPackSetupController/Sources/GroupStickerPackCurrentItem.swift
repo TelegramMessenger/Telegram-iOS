@@ -326,7 +326,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: file, small: false)
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: stickerPackFileReference(file).resourceReference(file.resource))
+                    updatedFetchSignal = TelegramEngine(account: item.account).resources.fetch(reference: stickerPackFileReference(file).resourceReference(file.resource), userLocation: .other, userContentType: .sticker)
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

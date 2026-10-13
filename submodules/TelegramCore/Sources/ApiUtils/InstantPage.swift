@@ -496,6 +496,6 @@ extension InstantPage {
                 media[id] = file
             }
         }
-        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: isComplete, rtl: rtl, url: url, views: views)
+        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), rawMedia: media, isComplete: isComplete, rtl: rtl, url: url, views: views)
     }
 }

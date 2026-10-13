@@ -343,7 +343,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.engine.resources.cancelInteractiveResourceFetch(id: EngineMediaResource.Id(resource.resource.id))
                     case .Remote:
-                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .file, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                    self.fetchDisposable.set(self.context.engine.resources.fetch(reference: resource, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .file, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

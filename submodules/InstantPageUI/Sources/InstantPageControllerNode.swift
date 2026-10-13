@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
@@ -68,8 +67,8 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     var currentWebEmbedHeights: [Int : CGFloat] = [:]
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
-    private var resolvedExternalMediaDimensions: [MediaId: PixelDimensions] = [:]
-    private var pendingResolvedExternalMediaDimensions = Set<MediaId>()
+    private var resolvedExternalMediaDimensions: [EngineMedia.Id: PixelDimensions] = [:]
+    private var pendingResolvedExternalMediaDimensions = Set<EngineMedia.Id>()
     
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
@@ -1039,7 +1038,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     private func configureExternalMediaDimensionsUpdates(for itemNode: InstantPageNode) {
-        let update: (MediaId, PixelDimensions) -> Void = { [weak self] mediaId, dimensions in
+        let update: (EngineMedia.Id, PixelDimensions) -> Void = { [weak self] mediaId, dimensions in
             self?.updateExternalMediaDimensions(mediaId, dimensions)
         }
         if let itemNode = itemNode as? InstantPageExternalMediaDimensionsNode {
@@ -1050,7 +1049,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    private func updateExternalMediaDimensions(_ mediaId: MediaId, _ dimensions: PixelDimensions) {
+    private func updateExternalMediaDimensions(_ mediaId: EngineMedia.Id, _ dimensions: PixelDimensions) {
         if self.resolvedExternalMediaDimensions[mediaId] == dimensions {
             return
         }
@@ -1073,7 +1072,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let detailsStateMaps = self.captureExpandedDetailsStateMaps()
         let viewportTop = self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentInset.top
-        var oldFrames: [MediaId: CGRect] = [:]
+        var oldFrames: [EngineMedia.Id: CGRect] = [:]
         for mediaId in mediaIds {
             if let frame = self.effectiveFrameForMedia(mediaId, detailsStateMaps: detailsStateMaps) {
                 oldFrames[mediaId] = frame
@@ -1082,7 +1081,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.updateLayout()
         
-        var newFrames: [MediaId: CGRect] = [:]
+        var newFrames: [EngineMedia.Id: CGRect] = [:]
         for mediaId in mediaIds {
             if let frame = self.effectiveFrameForMedia(mediaId, detailsStateMaps: detailsStateMaps) {
                 newFrames[mediaId] = frame
@@ -1108,7 +1107,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    private func compensatedViewportTop(oldFrames: [MediaId: CGRect], newFrames: [MediaId: CGRect], viewportTop: CGFloat) -> CGFloat? {
+    private func compensatedViewportTop(oldFrames: [EngineMedia.Id: CGRect], newFrames: [EngineMedia.Id: CGRect], viewportTop: CGFloat) -> CGFloat? {
         var pairedFrames: [(old: CGRect, new: CGRect)] = []
         for (mediaId, oldFrame) in oldFrames {
             if let newFrame = newFrames[mediaId] {
@@ -1170,14 +1169,14 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return path.map(String.init).joined(separator: ".")
     }
     
-    private func effectiveFrameForMedia(_ mediaId: MediaId, detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
+    private func effectiveFrameForMedia(_ mediaId: EngineMedia.Id, detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
         guard let currentLayout = self.currentLayout else {
             return nil
         }
         return self.effectiveFrameForMedia(mediaId, items: currentLayout.items, origin: .zero, expandedDetails: self.currentExpandedDetails, path: [], detailsStateMaps: detailsStateMaps)
     }
     
-    private func effectiveFrameForMedia(_ mediaId: MediaId, items: [InstantPageItem], origin: CGPoint, expandedDetails: [Int: Bool]?, path: [Int], detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
+    private func effectiveFrameForMedia(_ mediaId: EngineMedia.Id, items: [InstantPageItem], origin: CGPoint, expandedDetails: [Int: Bool]?, path: [Int], detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
         var collapseOffset: CGFloat = 0.0
         var detailsIndex = -1
         
@@ -1229,7 +1228,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return contentHeight
     }
     
-    private func itemContainsMedia(_ item: InstantPageItem, mediaId: MediaId) -> Bool {
+    private func itemContainsMedia(_ item: InstantPageItem, mediaId: EngineMedia.Id) -> Bool {
         for media in item.medias {
             if media.media.id == mediaId {
                 return true
@@ -1249,8 +1248,9 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var instantPageUpdated = false
         var effectiveInstantPage = instantPage
         if let instantPage {
-            var media = instantPage.media
-            for (mediaId, currentMedia) in instantPage.media {
+            let currentMediaById = instantPage.media
+            var media = currentMediaById
+            for (mediaId, currentMedia) in currentMediaById {
                 if let updatedMedia = self.updatedMediaIfNeeded(currentMedia) {
                     media[mediaId] = updatedMedia
                     instantPageUpdated = true
@@ -1309,12 +1309,13 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return (TelegramMediaWebpage(webpageId: webPage.webpageId, content: .Loaded(effectiveContent)), effectiveInstantPage)
     }
     
-    private func updatedMediaIfNeeded(_ media: Media) -> Media? {
-        if let image = media as? TelegramMediaImage {
-            return self.updatedImageIfNeeded(image)
-        } else if let file = media as? TelegramMediaFile {
-            return self.updatedFileIfNeeded(file)
-        } else {
+    private func updatedMediaIfNeeded(_ media: EngineMedia) -> EngineMedia? {
+        switch media {
+        case let .image(image):
+            return self.updatedImageIfNeeded(image).flatMap(EngineMedia.image)
+        case let .file(file):
+            return self.updatedFileIfNeeded(file).flatMap(EngineMedia.file)
+        default:
             return nil
         }
     }
@@ -1423,12 +1424,12 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = makeContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, case let .image(image) = media.media {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                let media = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = copyToPasteboard(context: strongSelf.context, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, case let .image(image) = media.media {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                let media = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = saveToCameraRoll(context: strongSelf.context, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in

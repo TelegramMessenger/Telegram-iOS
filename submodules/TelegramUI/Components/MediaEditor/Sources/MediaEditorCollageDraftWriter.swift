@@ -4,7 +4,6 @@ import Photos
 import ImageIO
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 
 public enum MediaEditorCollageDraftSaveError: Error, Equatable {
     case cancelled
@@ -249,8 +248,8 @@ public final class MediaEditorCollageDraftSaveOperation {
             let audioPath = try self.copyAuxiliaryFile(self.audioPath, name: "audio")
             let draft = self.makeDraft(self.directory + "/" + baseName, collage, additionalVideoPath, audioPath)
             // Validate with the same codec used by the draft list and story source cache.
-            let metadata = try AdaptedPostboxEncoder().encode(draft)
-            _ = try AdaptedPostboxDecoder().decode(MediaEditorDraft.self, from: metadata)
+            let metadata = try EngineAdaptedPostboxEncoder().encode(draft)
+            _ = try EngineAdaptedPostboxDecoder().decode(MediaEditorDraft.self, from: metadata)
             self.lock.lock()
             guard self.state == .preparing else {
                 self.lock.unlock()

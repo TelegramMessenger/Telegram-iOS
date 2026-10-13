@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -31,7 +30,7 @@ private func serviceMessageArgumentRange(index: Int, value: String, in stringWit
     })
 }
 
-private func addServiceMessageTextEntities(_ entities: [MessageTextEntity], to attributedString: NSMutableAttributedString, text: String, range: NSRange, associatedMedia: [MediaId: Media]) {
+private func addServiceMessageTextEntities(_ entities: [MessageTextEntity], to attributedString: NSMutableAttributedString, text: String, range: NSRange, message: EngineMessage) {
     let textLength = min((text as NSString).length, range.length)
 
     for entity in entities {
@@ -49,7 +48,7 @@ private func addServiceMessageTextEntities(_ entities: [MessageTextEntity], to a
         case .Spoiler:
             attributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: entityRange)
         case let .CustomEmoji(_, fileId):
-            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: entityRange)
+            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: entityRange)
         default:
             break
         }
@@ -87,17 +86,17 @@ public func plainServiceMessageString(strings: PresentationStrings, nameDisplayO
     }
 }
 
-private func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
-    var peers: [Peer] = []
+private func peerDisplayTitles(_ peerIds: [EnginePeer.Id], _ message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
+    var peers: [EnginePeer] = []
     for id in peerIds {
-        if let peer = dict[id] {
-            peers.append(peer)
+        if let peer = message.peers[id] {
+            peers.append(EnginePeer(peer))
         }
     }
     return peerDisplayTitles(peers, strings: strings, nameDisplayOrder: nameDisplayOrder)
 }
 
-private func peerDisplayTitles(_ peers: [Peer], strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
+private func peerDisplayTitles(_ peers: [EnginePeer], strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
     if peers.count == 0 {
         return ""
     } else {
@@ -109,7 +108,7 @@ private func peerDisplayTitles(_ peers: [Peer], strings: PresentationStrings, na
             } else {
                 string.append(", ")
             }
-            string.append(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+            string.append(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
         }
         return string
     }
@@ -196,9 +195,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultTitleString: PresentationStrings.FormattedString
                     if peerIds.count == 1 {
                         attributePeerIds.append((1, peerIds.first))
-                        resultTitleString = strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
+                        resultTitleString = strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     } else {
-                        resultTitleString = strings.Notification_InvitedMultiple(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
+                        resultTitleString = strings.Notification_InvitedMultiple(authorName, peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     }
                     
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
@@ -215,7 +214,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     if peerIds.count == 1 {
                         attributePeerIds.append((1, peerIds.first))
                     }
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                 }
             case let .photoUpdated(image):
                 if authorName.isEmpty || isChannel {
@@ -380,7 +379,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             case let .CustomEmoji(_, fileId):
                                 let index = ranges.count
                                 ranges.append((ranges.count, NSRange(location: location, length: length)))
-                                attributes[index] = customEmojiAttributes(primaryTextColor: primaryTextColor, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile))
+                                attributes[index] = customEmojiAttributes(primaryTextColor: primaryTextColor, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile))
                             default:
                                 break
                             }
@@ -801,10 +800,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         resultTitleString = strings.Notification_VoiceChatInvitationForYou(authorName)
                     } else {
                         attributePeerIds.append((1, peerIds.first))
-                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
+                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     }
                 } else {
-                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
+                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder))
                 }
                 
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
@@ -1064,10 +1063,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if peerIds.count == 1 {
                     attributePeerIds.append((0, peerIds.first))
                     attributePeerIds.append((1, message.id.peerId))
-                    resultTitleString = strings.Notification_RequestedPeer(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                    resultTitleString = strings.Notification_RequestedPeer(peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
                 } else {
                     attributePeerIds.append((1, message.id.peerId))
-                    resultTitleString = strings.Notification_RequestedPeerMultiple(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                    resultTitleString = strings.Notification_RequestedPeerMultiple(peerDisplayTitles(peerIds, message, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
                 }
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case let .setChatWallpaper(_, forBoth):
@@ -1437,7 +1436,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     isOutgoing = true
                     messagePeer = EnginePeer(messagePeerValue)
                 } else if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, peer.isMonoForum {
-                    if let author = message.author, let threadId = message.threadId, let threadPeer = message.peers[PeerId(threadId)], author.id != threadPeer.id {
+                    if let author = message.author, let threadId = message.threadId, let threadPeer = message.peers[EnginePeer.Id(threadId)], author.id != threadPeer.id {
                         if case .channel = author {
                             var isUser = true
                             if let peer = message.peers[message.id.peerId] as? TelegramChannel {
@@ -1876,7 +1875,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let stringWithRanges = resultString._tuple
                     let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes]))
                     if let optionRange = serviceMessageArgumentRange(index: 0, value: optionText, in: stringWithRanges) {
-                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, message: message)
                     }
                     attributedString = resultAttributedString
                 } else {
@@ -1892,7 +1891,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let stringWithRanges = resultString._tuple
                     let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: attributes))
                     if let optionRange = serviceMessageArgumentRange(index: 1, value: optionText, in: stringWithRanges) {
-                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, message: message)
                     }
                     attributedString = resultAttributedString
                 }
@@ -1914,7 +1913,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let stringWithRanges = resultString._tuple
                     let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes]))
                     if let optionRange = serviceMessageArgumentRange(index: 0, value: optionText, in: stringWithRanges) {
-                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, message: message)
                     }
                     attributedString = resultAttributedString
                 } else {
@@ -1930,7 +1929,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let stringWithRanges = resultString._tuple
                     let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: attributes))
                     if let optionRange = serviceMessageArgumentRange(index: 1, value: optionText, in: stringWithRanges) {
-                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, message: message)
                     }
                     attributedString = resultAttributedString
                 }

@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import RichTextEditorCore
 
@@ -28,7 +27,7 @@ public func buttonAction(from action: ReplyMarkupButtonAction) -> ButtonAction {
         // `ReplyMarkupButtonAction` is deliberately WIDER than the page-button schema: the last five
         // come only from `Api.ButtonType` and cannot occur on a page button. They are handled anyway
         // because the type admits them.
-        let encoder = PostboxEncoder()
+        let encoder = EnginePostboxEncoder()
         action.encode(encoder)
         return .unsupported(kind: unsupportedActionKind, payload: encoder.makeData().base64EncodedString())
     }
@@ -48,7 +47,7 @@ public func replyMarkupButtonAction(from action: ButtonAction) -> ReplyMarkupBut
         guard kind == unsupportedActionKind, let data = Data(base64Encoded: payload), !data.isEmpty else {
             return .disabled
         }
-        return ReplyMarkupButtonAction(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data)))
+        return ReplyMarkupButtonAction(decoder: EnginePostboxDecoder(buffer: EngineMemoryBuffer(data: data)))
     }
 }
 

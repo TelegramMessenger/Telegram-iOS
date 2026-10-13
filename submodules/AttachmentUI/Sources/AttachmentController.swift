@@ -1795,10 +1795,10 @@ public class AttachmentController: ViewController, MinimizableController {
                 for (name, file) in bot.icons {
                     if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer) {
                         if case .placeholder = name {
-                            let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                            let path = context.engine.resources.cachedRepresentationCompletePath(id: EngineMediaResource.Id(file.resource.id), representation: CachedPreparedSvgRepresentation())
                             if !FileManager.default.fileExists(atPath: path) {
                                 let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                                    let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                    let accountResource = context.engine.resources.cachedRepresentation(resource: EngineMediaResource(file.resource), representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
 
                                     let fetchedFullSize = context.engine.resources.fetch(reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file))
                                     let fetchedFullSizeDisposable = fetchedFullSize.start()

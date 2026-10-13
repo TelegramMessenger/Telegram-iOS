@@ -1,13 +1,20 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TextFormat
 
 struct InstantPagePreviewEnvironment {
     let label: (InstantPagePreviewLabel) -> String
     let formatDate: ((Int32, MessageTextEntityType.DateTimeFormat) -> String)?
-    let media: [MediaId: Media]
+    let media: [EngineMedia.Id: EngineMedia]
+
+    func file(_ id: EngineMedia.Id) -> TelegramMediaFile? {
+        if case let .file(file) = self.media[id] {
+            return file
+        } else {
+            return nil
+        }
+    }
 }
 
 enum InstantPagePreviewLabel {
@@ -137,7 +144,7 @@ private final class InstantPagePreviewBuilder {
             }
             return self.attribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Date), date, text)
         case let .textCustomEmoji(fileId, alt):
-            let file = self.environment.media[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile
+            let file = self.environment.file(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId))
             let text = self.text(alt.isEmpty ? (file == nil ? "�" : "\u{fffc}") : alt)
             let emoji = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: file)
             let result = self.attribute(instantPagePreviewCustomEmoji, emoji, text)
@@ -231,9 +238,9 @@ private final class InstantPagePreviewBuilder {
             let captionText = self.caption(caption, depth: next)
             return Fragment(text: self.join([self.label(isPhoto ? .photo : .video), captionText]), photos: isPhoto ? 1 : 0, videos: isPhoto ? 0 : 1, mediaOnly: captionText.length == 0)
         case let .audio(id, caption):
-            text = self.join([self.label((self.environment.media[id] as? TelegramMediaFile)?.isVoice == true ? .voice : .music), self.caption(caption, depth: next)])
+            text = self.join([self.label(self.environment.file(id)?.isVoice == true ? .voice : .music), self.caption(caption, depth: next)])
         case let .document(id, caption):
-            let name = (self.environment.media[id] as? TelegramMediaFile)?.fileName
+            let name = self.environment.file(id)?.fileName
             text = self.join([name.flatMap { $0.isEmpty ? nil : self.text($0) } ?? self.label(.file), self.caption(caption, depth: next)])
         case let .map(_, _, _, _, caption): text = self.join([self.label(.location), self.caption(caption, depth: next)])
         case let .webEmbed(url, _, _, caption, _, _, _):

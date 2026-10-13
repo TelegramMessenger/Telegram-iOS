@@ -14,7 +14,6 @@ swift_library(
         "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
-        "//submodules/Postbox",
         "//submodules/TelegramCore",
     	"//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",

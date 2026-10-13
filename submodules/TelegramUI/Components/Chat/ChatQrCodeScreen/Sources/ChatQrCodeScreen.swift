@@ -4,7 +4,6 @@ import AVFoundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -577,7 +576,7 @@ public final class ChatQrCodeScreenImpl: ViewController, ChatQrCodeScreen {
     
     public enum Subject {
         case peer(peer: EnginePeer, threadId: Int64?, temporary: Bool)
-        case messages([Message])
+        case messages([EngineMessage])
         
         public var fileName: String {
             switch self {
@@ -1070,14 +1069,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
                         let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())
                         if !FileManager.default.fileExists(atPath: path) {
                             let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                                let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
+                                let accountResource = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(file.file.resource), representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
                                 
-                                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file), reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                                let fetchedFullSize = TelegramEngine(account: account).resources.fetch(reference: .media(media: .standalone(media: file.file), resource: file.file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file))
                                 let fetchedFullSizeDisposable = fetchedFullSize.start()
                                 let fullSizeDisposable = accountResource.start(next: { next in
-                                    subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                                    subscriber.putNext((next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.isComplete))
                                     
-                                    if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
+                                    if next.isComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                                         accountManager.mediaBox.storeCachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                                     }
                                 }, error: subscriber.putError, completed: subscriber.putCompletion)
@@ -2191,7 +2190,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
 
 private class MessageContentNode: ASDisplayNode, ContentNode {
     private let context: AccountContext
-    private let messages: [Message]
+    private let messages: [EngineMessage]
     private let isStatic: Bool
     
     private var mediaFrame: CGRect?
@@ -2243,7 +2242,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         }
     }
     
-    init(context: AccountContext, messages: [Message], isStatic: Bool = false) {
+    init(context: AccountContext, messages: [EngineMessage], isStatic: Bool = false) {
         self.context = context
         self.messages = messages
         self.isStatic = isStatic
@@ -2480,7 +2479,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                     mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
                     
                     if !wasInitialized {
-                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
+                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message._asMessage()), media: image), synchronousLoad: true, highQuality: true))
                         let imageLayout = self.imageNode.asyncLayout()
                         
                         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: mediaSize, boundingSize: mediaSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .black, custom: nil)
@@ -2503,7 +2502,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                                 videoSnapshotView.frame = mediaFrame
                             }
                         } else {
-                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
+                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message._asMessage()), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
                             let videoNode = UniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status
@@ -2578,7 +2577,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             
             let attributedText: NSAttributedString
             if let entities = entities {
-                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false, message: message)
+                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false, message: message._asMessage())
             } else if !message.text.isEmpty {
                 attributedText = NSAttributedString(string: message.text, font: textFont, textColor: messageTheme.primaryTextColor)
             } else {

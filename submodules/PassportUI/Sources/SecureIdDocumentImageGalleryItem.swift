@@ -131,7 +131,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
                 return value.1
             })
             self.zoomableContent = (displaySize, self.imageNode)
-            self.fetchDisposable.set(context.account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
+            self.fetchDisposable.set(context.engine.resources.fetchedResource(resource: EngineMediaResource(resource)).start())
         }
         self.contextAndMedia = (context, secureIdContext, resource)
     }

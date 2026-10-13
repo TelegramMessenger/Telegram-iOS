@@ -4,7 +4,6 @@ import Intents
 import TelegramPresentationData
 import TelegramUIPreferences
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import Display
 import LegacyComponents
@@ -292,7 +291,7 @@ final class AuthorizedApplicationContext {
 
         let engine = context.engine
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
-        |> mapToSignal { messageList -> Signal<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)], NoError> in
+        |> mapToSignal { messageList in
             return engine.data.get(EngineDataMap(
                 messageList.compactMap { item -> TelegramEngine.EngineData.Item.Messages.ChatListIndex? in
                     if let message = item.0.first {
@@ -302,7 +301,7 @@ final class AuthorizedApplicationContext {
                     }
                 }
             ))
-            |> map { chatListIndexMap -> [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] in
+            |> map { chatListIndexMap in
                 return messageList.filter { item in
                     guard let message = item.0.first else {
                         return false
@@ -852,7 +851,7 @@ final class AuthorizedApplicationContext {
         self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
     }
     
-    func startCall(peerId: PeerId, isVideo: Bool) {
+    func startCall(peerId: EnginePeer.Id, isVideo: Bool) {
         guard let appLockContext = self.context.sharedContext.appLockContext as? AppLockContextImpl else {
             return
         }
@@ -869,7 +868,7 @@ final class AuthorizedApplicationContext {
         }))
     }
     
-    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?, openAppIfAny: Bool = false, alwaysKeepMessageId: Bool = false) {
+    func openChatWithPeerId(peerId: EnginePeer.Id, threadId: Int64?, messageId: EngineMessage.Id? = nil, activateInput: Bool = false, storyId: EngineStoryId?, openAppIfAny: Bool = false, alwaysKeepMessageId: Bool = false) {
         if let storyId {
             var controllers = self.rootController.viewControllers
             controllers = controllers.filter { c in
@@ -882,7 +881,7 @@ final class AuthorizedApplicationContext {
             
             self.rootController.chatListController?.openStoriesFromNotification(peerId: storyId.peerId, storyId: storyId.id)
         } else {
-            var visiblePeerId: PeerId?
+            var visiblePeerId: EnginePeer.Id?
             if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
                 visiblePeerId = peerId
             }

@@ -252,7 +252,7 @@ public func actualizedWebpage(account: Account, webpage: TelegramMediaWebpage) -
                                 file: content.file,
                                 story: content.story,
                                 attributes: content.attributes,
-                                instantPage: (content.instantPage?._parse()).flatMap({ InstantPage(blocks: $0.blocks, media: $0.media, isComplete: $0.isComplete, rtl: $0.rtl, url: $0.url, views: views) })
+                                instantPage: (content.instantPage?._parse()).flatMap({ InstantPage(blocks: $0.blocks, rawMedia: $0.rawMedia, isComplete: $0.isComplete, rtl: $0.rtl, url: $0.url, views: views) })
                             ))
                             let updatedWebpage = TelegramMediaWebpage(webpageId: webpage.webpageId, content: updatedContent)
                             updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)

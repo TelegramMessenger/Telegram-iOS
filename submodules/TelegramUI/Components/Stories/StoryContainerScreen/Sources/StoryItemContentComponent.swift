@@ -930,11 +930,10 @@ final class StoryItemContentComponent: Component {
                 case let .file(file):
                     self.priorityDisposable = component.context.engine.resources.pushPriorityDownload(resourceId: file.resource.id.stringRepresentation)
                     
-                    fetchSignal = fetchedMediaResource(
-                        mediaBox: component.context.account.postbox.mediaBox,
+                    fetchSignal = component.context.engine.resources.fetch(
+                        reference: FileMediaReference.story(peer: peerReference, id: component.item.id, media: file).resourceReference(file.resource),
                         userLocation: .other,
-                        userContentType: .story,
-                        reference: FileMediaReference.story(peer: peerReference, id: component.item.id, media: file).resourceReference(file.resource)
+                        userContentType: .story
                     )
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in

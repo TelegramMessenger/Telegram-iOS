@@ -526,7 +526,7 @@ public func layoutInstantPageV2(
         return InstantPageV2Layout(contentSize: .zero, items: [], detailsIndices: [])
     }
 
-    var media = instantPage.media.mapValues(EngineMedia.init)
+    var media = instantPage.media
     if let image = loadedContent.image, let id = image.id {
         media[id] = .image(image)
     }

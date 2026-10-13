@@ -1,6 +1,6 @@
 import Foundation
 import Intents
-import Postbox
+import TelegramCore
 
 /// What an `INSearchForMessagesIntent` is asking for.
 ///
@@ -14,7 +14,7 @@ enum MessageSearchScope: Equatable {
     /// Only the messages the named delivered notifications stand for.
     case notifications([String])
     /// The messages Siri already knows by identifier (a "repeat", or a follow-up).
-    case messages([MessageId])
+    case messages([EngineMessage.Id])
     /// Every unread message, minus those behind the named notifications.
     case unread(excludingNotifications: [String])
 }
@@ -23,7 +23,7 @@ func messageSearchScope(notificationIdentifiers: [String]?, notificationIdentifi
     // Message identifiers are the ones this extension handed to Siri, so they name the exact
     // messages and need no lookup; they win over a notification link that may be missing.
     if let identifiers {
-        let messageIds = identifiers.compactMap(MessageId.init(string:))
+        let messageIds = identifiers.compactMap(EngineMessage.Id.init(string:))
         if !messageIds.isEmpty {
             return .messages(messageIds)
         }

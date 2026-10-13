@@ -1,9 +1,9 @@
-import Postbox
 import TelegramCore
 import Foundation
 
-func walletTonConnectRequestRoute(message: Message, accountPeerId: PeerId) -> WalletTonConnectRequestMessage? {
-    let servicePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000))
+func walletTonConnectRequestRoute(message: EngineMessage, accountPeerId: EnginePeer.Id) -> WalletTonConnectRequestMessage? {
+    let message = message._asMessage()
+    let servicePeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(777000))
     guard message.id.namespace == Namespaces.Message.Cloud,
           message.id.peerId == servicePeerId,
           message.author?.id == servicePeerId,

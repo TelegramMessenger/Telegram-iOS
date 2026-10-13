@@ -58,23 +58,23 @@ final class WalletRemoteLottieContent: LottieComponent.Content {
     }
 
     override func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
-        let mediaBox = self.context.account.postbox.mediaBox
+        let resources = self.context.engine.resources
         let resource = self.file.resource
         return Signal<Data, NoError> { subscriber in
-            let dataDisposable = (mediaBox.resourceData(resource)
+            let dataDisposable = (resources.data(resource: EngineMediaResource(resource))
             |> deliverOn(Queue.concurrentDefaultQueue())).start(next: { resourceData in
-                guard resourceData.size <= Int64(walletCollectibleLottieMaximumSize) else {
+                guard resourceData.availableSize <= Int64(walletCollectibleLottieMaximumSize) else {
                     subscriber.putCompletion()
                     return
                 }
-                guard resourceData.complete else { return }
+                guard resourceData.isComplete else { return }
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: .mappedIfSafe),
                    let decoded = walletCollectibleLottieData(data) {
                     subscriber.putNext(decoded)
                 }
                 subscriber.putCompletion()
             })
-            let fetchDisposable = mediaBox.fetchedResource(resource, parameters: nil).start(error: { _ in
+            let fetchDisposable = resources.fetchedResource(resource: EngineMediaResource(resource)).start(error: { _ in
                 subscriber.putCompletion()
             })
             return ActionDisposable {

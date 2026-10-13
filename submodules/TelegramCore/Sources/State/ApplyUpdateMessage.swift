@@ -161,7 +161,7 @@ func applyMediaResourceChanges(from: [InstantPageBlock], fromMedia: [MediaId: Me
 }
 
 func applyMediaResourceChanges(from: RichTextMessageAttribute, to: RichTextMessageAttribute, postbox: Postbox, force: Bool, skipPreviews: Bool = false) {
-    applyMediaResourceChanges(from: from.instantPage.blocks, fromMedia: from.instantPage.media, to: to.instantPage.blocks, toMedia: to.instantPage.media, postbox: postbox, force: force, skipPreviews: skipPreviews)
+    applyMediaResourceChanges(from: from.instantPage.blocks, fromMedia: from.instantPage.rawMedia, to: to.instantPage.blocks, toMedia: to.instantPage.rawMedia, postbox: postbox, force: force, skipPreviews: skipPreviews)
 }
 
 func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, cacheReferenceKey: CachedSentMediaReferenceKey?, result: Api.Updates, accountPeerId: PeerId, pendingMessageEvent: @escaping (PeerPendingMessageDelivered) -> Void) -> Signal<Void, NoError> {

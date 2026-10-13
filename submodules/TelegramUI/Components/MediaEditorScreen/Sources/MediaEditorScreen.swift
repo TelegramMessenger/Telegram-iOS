@@ -9,7 +9,6 @@ import ViewControllerComponent
 import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
-import Postbox
 import TelegramCore
 import MultilineTextComponent
 import DrawingUI
@@ -3908,24 +3907,24 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 controller.stickerSelectedEmoji = emoji
             case .message, .gift:
                 var isGift = false
-                let messages: Signal<[Message], NoError>
+                let messages: Signal<[EngineMessage], NoError>
                 if case let .message(messageIds) = subject {
                     messages = self.context.engine.data.get(
                         EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
                     )
                     |> map { result in
-                        var messages: [Message] = []
+                        var messages: [EngineMessage] = []
                         for id in messageIds {
                             if let maybeMessage = result[id], let message = maybeMessage {
-                                messages.append(message._asMessage())
+                                messages.append(message)
                             }
                         }
                         return messages
                     }
                 } else if case let .gift(gift) = subject {
                     isGift = true
-                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, isPrepaidUpgrade: false, peerId: nil, senderId: nil, savedId: nil, resaleAmount: nil, canTransferDate: nil, canResaleDate: nil, dropOriginalDetailsStars: nil, assigned: false, fromOffer: false, canCraftAt: nil, isCrafted: false, text: nil, entities: nil, nameHidden: false))]
-                    let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                    let media: [EngineMedia] = [.action(TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, isPrepaidUpgrade: false, peerId: nil, senderId: nil, savedId: nil, resaleAmount: nil, canTransferDate: nil, canResaleDate: nil, dropOriginalDetailsStars: nil, assigned: false, fromOffer: false, canCraftAt: nil, isCrafted: false, text: nil, entities: nil, nameHidden: false)))]
+                    let message = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     messages = .single([message])
                 } else {
                     fatalError()
@@ -3974,7 +3973,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         guard let self else {
                             return
                         }
-                        let renderer = DrawingMessageRenderer(context: self.context, messages: messages.map(EngineMessage.init), parentView: self.view, isGift: isGift, wallpaperDayColor: wallpaperColors.0, wallpaperNightColor: wallpaperColors.1)
+                        let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view, isGift: isGift, wallpaperDayColor: wallpaperColors.0, wallpaperNightColor: wallpaperColors.1)
                         renderer.render(completion: { result in
                             if isDraft, let existingEntityView = self.entitiesView.getView(where: { entityView in
                                 if let stickerEntityView = entityView as? DrawingStickerEntityView {
@@ -6877,7 +6876,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         case collage(MediaEditorCollage)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
-        case message([MessageId])
+        case message([EngineMessage.Id])
         case gift(StarGift.UniqueGift)
         case sticker(TelegramMediaFile, [String])
         case multiple([Subject])
@@ -8575,7 +8574,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         })
     }
         
-    private func performSave(toStickerResource: MediaResource? = nil, collagePrepared: Bool = false) {
+    private func performSave(toStickerResource: TelegramMediaResource? = nil, collagePrepared: Bool = false) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
@@ -9553,7 +9552,7 @@ private func stickerFile(resource: TelegramMediaResource, thumbnailResource: Tel
         previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
     }
     
-    return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: isVideo ? "video/webm" : "image/webp", size: size, attributes: fileAttributes, alternativeRepresentations: [])
+    return TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: isVideo ? "video/webm" : "image/webp", size: size, attributes: fileAttributes, alternativeRepresentations: [])
 }
 
 private struct MediaEditorConfiguration {

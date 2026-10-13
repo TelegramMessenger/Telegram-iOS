@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AccountContext
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import PresentationDataUtils
@@ -1187,14 +1186,14 @@ final class ComposePollScreenComponent: Component {
                         self.state?.updated(transition: .easeInOut(duration: 0.2))
                     })))
                     
-                    let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [media.media.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                    let message = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [EngineMedia(media.media.media)], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     
                     let source: ContextContentSource
                     
                     if let _ = media.media.media as? TelegramMediaMap {
                         let controller = LocationViewController(
                             context: component.context,
-                            subject: EngineMessage(message),
+                            subject: message,
                             isPreview: true,
                             params: LocationViewParams(
                                 sendLiveLocation: { _ in },
@@ -1205,7 +1204,7 @@ final class ComposePollScreenComponent: Component {
                         )
                         source = .controller(ComposePollContextControllerContentSource(controller: controller, sourceView: nil, sourceRect: .zero))
                     } else {
-                        let gallery = component.context.sharedContext.makeGalleryController(context: component.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, isPreview: true)
+                        let gallery = component.context.sharedContext.makeGalleryController(context: component.context, source: .standaloneMessage(message._asMessage(), nil), streamSingleVideo: true, isPreview: true)
                         source = .controller(ComposePollContextControllerContentSource(controller: gallery, sourceView: nil, sourceRect: .zero))
                     }
                     

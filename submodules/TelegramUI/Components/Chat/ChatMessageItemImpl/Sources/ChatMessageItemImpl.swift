@@ -268,7 +268,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                         }
                     }
                     
-                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)
+                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: EnginePeer(effectiveAuthor), messageReference: MessageReference(message), message: EngineMessage(message), presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)
                 }
             }
         }

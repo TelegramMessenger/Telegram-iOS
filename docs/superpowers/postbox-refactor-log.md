@@ -82,6 +82,33 @@ Any hit in a public-surface position (field type, init param type, enum payload 
 
 ---
 
+## Engine wrapper inventory (2026-10-12)
+
+The sanctioned mid-refactor representations of Postbox types, preferred over `EngineRaw*` aliases. Regenerate with `grep -rn 'func _as[A-Z]' submodules/TelegramCore/Sources`.
+
+| Raw Postbox / TelegramCore type | Wrapper | Unwrap |
+|---|---|---|
+| `Peer` | `EnginePeer` | `_asPeer()` |
+| `RenderedPeer` | `EngineRenderedPeer` | (`.peer`, `.peers`, `.chatMainPeer` are `EnginePeer`) |
+| `Message` | `EngineMessage` | `_asMessage()` |
+| `Media` | `EngineMedia` | `_asMedia()` |
+| `MediaResource` | `EngineMediaResource` | `_asResource()` |
+| `MediaResourceId` | `EngineMediaResource.Id` | `MediaResourceId(id.stringRepresentation)` |
+| `MediaResourceData` | `EngineMediaResource.ResourceData` | — |
+| `MediaResourceStatus` | `EngineMediaResource.FetchStatus` | `_asStatus()` |
+| `PeerPresence` / `TelegramUserPresence` | `EnginePeer.Presence` | `_asPresence()` |
+| `CombinedPeerReadState` | `EnginePeerReadCounters` | `_asReadCounters()` |
+| `ChatListTotalUnreadState` | `EngineTotalReadCounters` | `_asCounters()` |
+| `PeerGroupId` | `EngineChatList.Group` | `_asGroup()` |
+| `ChatListRelativePosition` | `EngineChatList.RelativePosition` | `_asPosition()` |
+| `PeerIndexNameRepresentation` | `EnginePeer.IndexName` | `_asIndexName()` |
+| `TelegramPeerNotificationSettings` (+ `PeerMuteState`, `PeerMessageSound`, `PeerNotificationDisplayPreviews`) | `EnginePeer.NotificationSettings` (+ `.MuteState`, `.MessageSound`, `.DisplayPreviews`) | `_asNotificationSettings()`, … |
+| `GlobalNotificationSettingsSet` (+ `MessageNotificationSettings`, `PeerReactionNotificationSettings`) | `EngineGlobalNotificationSettings` (+ `.CategorySettings`, `.ReactionSettings`) | `_asGlobalNotificationSettings()`, … |
+| `ChannelParticipant` / `GroupParticipant` | `EngineChannelParticipant` / `EngineLegacyGroupParticipant` | `_asParticipant()` |
+| `LimitsConfiguration` | `EngineConfiguration.Limits` | `_asLimits()` |
+
+`EngineMessage` is a class whose `==` compares field by field; `EnginePeer.==` compares through the concrete peer's `==`. Code that compared raw values (`===`, `stableId`, `isEqual(to:)`) keeps that comparison when retyped. `EngineMedia.init(_:)` ends in `preconditionFailure()` for a `Media` class outside its cases. All 19 TelegramCore media classes have a case. App-side pseudo-media classes conform to `EngineCustomMedia` and wrap as `.custom`. That protocol was added after the 2026-10-12 review, because an earlier version of this sentence missed three app-side `: EngineRawMedia` conformers; see "Post-review fix" after wave 463.
+
 ## Wave 1 outcome (2026-04-16)
 
 4 modules done: `ChatInterfaceState`, `ChatSendMessageActionUI`, `ContactListUI`, `DrawingUI`.
@@ -1946,7 +1973,1020 @@ Per-pattern breakdown:
 
 ---
 
+## Phase 2026-10: guard, hygiene, regression rollback (waves 438+)
+
+The phase's spec and plans were working documents and were not kept on master; their decisions, and each wave's equivalence argument, are recorded in the entries below and in CLAUDE.md's refactor rules. Waves 106–437 are recorded in commits `1b85d8ccb0` and the squashes `86d1456552`, `69bfc65da7`, `ea0f6a685c`, `e918b353ec`, `bf01b4c858`, `4107263747`, `b8ee5493d9`.
+
+Baseline at `8de02bc574` (outside TelegramCore/Postbox): 188 Swift files import Postbox (146 source, 42 test), up from 119 at `b8ee5493d9`; 87 BUILD files declare the dep. The regression came from code written while nothing stopped new imports, and partly from TelegramCore's own public surface: `InstantPage.media: [MediaId: Media]` forces the rich-text composer, converter and preview builders to name raw `Media`.
+
+### Wave 438 (W1): hygiene (2026-10-12)
+
+- **21 orphan deps removed.** These library rules declared `//submodules/Postbox` while no source in their package mentions Postbox: ChatListSearchRecentPeersNode, HashtagSearchUI, ListMessageItem, PeerInfoUI, PlatformRestrictionMatching, AttachmentFileController, ChatHistoryEntry, ChatInlineSearchResultsListComponent, ChatMessageInteractiveFileNode, ForumCreateTopicScreen, GiftSetupScreen, GroupStickerPackSetupController, RankChatPreviewItem, AutomaticBusinessMessageSetupScreen, BusinessIntroSetupScreen, PeerNameColorScreen, QuickReactionSetupController, ThemeAccentColorScreen, WallpaperGalleryScreen, WallpaperGridScreen, PeerListItemComponent. (ComposerHarness's two library rules are not orphans: their sources live under `Tests/`, which the scan counts as test sources.)
+- **9 undeclared imports declared.** These library rules had sources importing Postbox through rules_swift's transitive search path without declaring the dep: ChatPresentationInterfaceState, TelegramCallsUI, TelegramStringFormatting, ChatMessageItemCommon, ChatRichTextEditorComposer, ComposePollScreen, RichTextAttachmentScreen, RichTextEditorMessageConversion, WalletContext. Later waves remove these again as their files migrate.
+- **3 unused imports dropped**, all of which held: `StorageUsageExceptionsScreen.swift`, `ChatMessageMergeFingerprint.swift`, `ShareScreen.swift`. The ShareScreen package is now Postbox-free, and its dep is removed.
+- **Counts:** in-scope source files importing Postbox went from 146 to 143. BUILD files declaring the dep (any rule) went from 87 to 70: −21 orphans, −1 ShareScreen, +5 new files. Four of the nine declarations landed in BUILD files that already carried the dep on a test rule.
+- **Docs:** CLAUDE.md rule 6 corrected (tests exist), rules 9–11 added (no behaviour change, in-place TelegramCore API changes, a log entry per wave), plus a wrapper cheat sheet. This log gained the "Engine wrapper inventory".
+- **Equivalence:** the diff contains only BUILD dep lines and three deleted `import Postbox` lines, from files that name no Postbox symbol, so no overload can resolve differently. A full `debug_sim_arm64` build is green (499 actions).
+
+### Wave 439 (W2): the guard (2026-10-12)
+
+Two commits: `build: add PostboxImportCheck` (the script plus 23 unit tests in `build-system/Make/tests/`), then this wave's wiring.
+
+- **`submodules/Postbox/AllowedImporters.txt`:** 143 files, generated from the post-438 tree. `build-system/Make/PostboxImportCheck.py` runs at the top of `Make.py build` and `Make.py test`.
+- **Bazel visibility:** `//submodules/Postbox:Postbox` is now visible to `:clients` (67 packages, TelegramCore included) and `:test_clients` (4: ComposerHarness, TextFormat, EditableTokenListNode, PeerInfoPaneNode) instead of `//visibility:public`. Before the change, the 70 packages declaring the dep were diffed against the two groups: identical.
+- **Check:** 0.27 s on a warm checkout. `git ls-files` and the filesystem walk (used in the CI VM, which has no `.git`) both find the same 143 importers.
+- **Negative checks**, each reverted:
+  - (a) an unlisted `import Postbox` fails, naming file and line;
+  - (b) the same import under a `Tests/` directory passes;
+  - (c) listing a file that doesn't import Postbox fails as stale, naming the allowlist line;
+  - (d) a Postbox dep added to the freed RankChatPreviewItem package fails Bazel analysis with "target '//submodules/Postbox:Postbox' is not visible". It was the only visibility error in the graph.
+- **Mutation check of the unit tests:** 8/8 mutants killed (stale check, directory pruning, attribute forms, test exemption, whitespace path splitting, non-ASCII output, sort check, `Postbox` prefix over-match).
+- **Not run:** `Make.py generateProject`, because it ends by opening Xcode. The structural check above covers its graph.
+- **Known gap:** nothing flags a package that keeps declaring the dep after its last importer leaves. That is how the 21 orphans built up during waves 358–437. The next phase decides whether the script should flag orphan declarations too.
+- **Equivalence:** no app behaviour change; build tooling and visibility only. Full build green.
+
+### Wave 440: typealias-only files (2026-10-12)
+
+The 14 "class T" files: their only Postbox names had a non-`EngineRaw*` engine alias.
+
+- **Files that dropped `import Postbox`, all 14, none kept:**
+  - `Telegram/SiriIntents/MessageSearchScope.swift`. It gained `import TelegramCore`, since it had imported only Postbox, for `MessageId`.
+  - `Telegram/WidgetKitWidget/TodayViewController.swift`
+  - `AttachmentUI/AttachmentPanel.swift`
+  - `SettingsUI/.../NotificationExceptionControllerNode.swift`
+  - `SettingsUI/.../PrivacyAndSecurityController.swift`
+  - `CommunityEditScreen.swift`
+  - `MediaEditorCollageDraftWriter.swift`
+  - `PeerInfoData.swift`
+  - `ButtonActionCodec.swift`
+  - `ShareExtensionContext.swift`
+  - TelegramUI's `AccountContext.swift`
+  - `EphemeralBotCommandResolution.swift`
+  - `OpenResolvedUrl.swift`
+  - `WalletTonConnect.swift`
+- **Swaps:**
+  - `PeerId` -> `EnginePeer.Id`, `MessageId` -> `EngineMessage.Id`, `MessageIndex` -> `EngineMessage.Index`, `MessageTags` -> `EngineMessage.Tags`, `MediaId` -> `EngineMedia.Id`
+  - `PreferencesEntry`, `TempBox`, `TempBoxFile`, `ValueBoxEncryptionParameters`, `CachedPeerData`, `ChatLocationInput`, `StoryId`, `PeerStoryStats`, `PostboxEncoder`/`Decoder`, `AdaptedPostboxEncoder`/`Decoder` and `MemoryBuffer` -> their `Engine*` aliases
+  - `ValueBoxKey` -> `EngineDataBuffer`
+- **Inventory false positives:** `Logger` is TelegramCore's top-level class (Postbox's is nested in `StorageBox`), and `Entry`/`Item`/`Component`/`Content` are nested names.
+- **Freed:**
+  - Packages AttachmentUI, SettingsUI, CommunityEditScreen and ShareExtensionContext, whose BUILD deps were removed and which left `clients`.
+  - `//Telegram:WidgetExtensionLib`'s dep, since `Telegram/WidgetKitWidget` has no other importer. `//Telegram` stays in `clients`.
+- **Counts:** `AllowedImporters.txt` 143 -> 129; `clients` 67 -> 63.
+- **Equivalence:** typealias identity only, so values, overloads and dispatch are unchanged. A script mapped each added Swift line's aliases back to their Postbox names and compared it with the removed line: 91 of 91 lines are pure swaps. The only other Swift changes are the 14 deleted imports and the one added `import TelegramCore`.
+- **Verification:** full build green (519 actions). `IntentsExtensionTests`, `SettingsUITests` and `RichTextEditorMessageConversionTests` passed.
+
+### Wave 441: `InstantPage.media` is `[EngineMedia.Id: EngineMedia]` (2026-10-12)
+
+`InstantPage`'s public surface forced its consumers (the rich-text composer and converter, the preview builders, the Instant View and browser renderers) to name raw `Media`. It now speaks `EngineMedia`, changed in place with no compatibility overload.
+
+- **TelegramCore shape:**
+  - The stored property is now `let rawMedia: [MediaId: Media]` (internal), behind `public var media: [EngineMedia.Id: EngineMedia]`, computed with `rawMedia.mapValues(EngineMedia.init)`.
+  - The designated init became `init(blocks:rawMedia:...)` (internal). The public `convenience init(blocks:media:[EngineMedia.Id: EngineMedia]...)` converts with `_asMedia()`.
+  - PostboxCoding, FlatBuffers, `==`, `allMedia()` and `Accessor.MediaIterator` keep working on `rawMedia`, so the stored encodings and equality are byte- and result-identical.
+  - 13 TelegramCore sites were renamed `media` -> `rawMedia`. They were found by building with no public `media` at all, twice, because one closure in `WebpagePreview` had masked its errors. Among them was `ApiUtils/InstantPage.swift:499`, which the planning grep had missed.
+- **Consumers:**
+  - InstantPageUI's two layouts and the reference controller lost a now-redundant `mapValues(EngineMedia.init)`.
+  - The `updatedMediaIfNeeded` loops in `InstantPageControllerNode` and `BrowserInstantPageContent` unwrap at the raw-typed helper and wrap its result.
+  - `GalleryData.instantPageBlockMedia` now takes `[EngineMedia.Id: EngineMedia]`; the tapped media unwraps with `_asMedia()`. `instantPageGalleryMedia` reads `page.media` once, above its `for block in page.blocks` loop. The final review caught it rebuilding the computed dictionary on every block; fixed in a follow-up commit.
+  - `BrowserMarkdown` and `BrowserReadability` wrap their builder dictionaries.
+  - `InstantPagePreviewText` unwraps for its merge.
+  - `InstantPageBuilder` unwraps nested pages and wraps at construction. Retyping its `[String: Media]` API is a later wave.
+  - Constructions passing `media: [:]` (tests, formula and button editors, the thinking bubble) compile unchanged.
+- **Precondition:** `EngineMedia.init(_:)` traps on a `Media` class outside its cases, and the computed property now runs it on reads that stayed raw before. All 19 TelegramCore media classes are covered. `TelegramMediaWebFile` is non-final and has no subclasses. The only other conformer is a Postbox test fixture, and no protocol refines `Media`.
+- **Equivalence:** every consumer change passes the same objects through. `EngineMedia.init` stores its argument, `_asMedia()` returns it, and `mapValues` keeps keys and layout. Every read of a page's `media` outside TelegramCore was listed and checked. Library modules build with `-warnings-as-errors`, so an always-failing `as?` on a wrapper could not compile silently.
+- **Files freed:** none. These consumers still name other Postbox types. The wave removes the TelegramCore surface that forced them to, and the allowlist stays at 129.
+- **Verification:**
+  - Full build green.
+  - Passed: `TelegramStringFormattingTests`, `InstantPageUITests`, `RichTextEditorMessageConversionTests`, `ChatListUITests`, `TextFormatTests` and `ChatRichTextEditorComposerTests`.
+  - `TelegramCoreTests`: 258 of 263 pass, including `InstantPageCustomEmojiTests`. The 5 failures are all in `ApiConstructorCompatibilityTests` (`userFull`/`walletUserAddress` layouts), and the runner ends with `tests exited with '11'`.
+  - **Both reproduced at the base `8de02bc574`**, where the same 263 tests ran: the same 5 failures at the same lines (56, 57, 60, 61, 71) and the same exit 11. So the failure is pre-existing and independent of this phase. The test predates the TL engine rewrite `52a7bbfe55`, which looks like where `userFull`/`walletUserAddress` lost their second layout.
+
+### Wave 442: single-site retypes (2026-10-12)
+
+These were the easiest targets left after wave 441. The classifier, re-run with string literals stripped, found one file it had misfiled: `CommunityViewScreen`, whose "Media" was the image name `"Media Editor/Adjustments"`.
+
+- **`NotificationRecipientAccount.swift`:** `notificationRecipientAccountName(accountPeer:)` takes `EnginePeer?`.
+  - Its caller in `NotificationService.swift` wraps with `.flatMap(EnginePeer.init)`, and the tests pass `.user(...)`.
+  - `EnginePeer.addressName` and `.debugDisplayTitle` forward to the raw peer, so behaviour is identical.
+  - `EnginePeer.init(_:)` covers all five `Peer` classes (`preconditionFailure` otherwise; the only other conformer is a Postbox test fixture).
+- **`WallpaperUploadManager.swift`:** the private `TelegramWallpaper.mainResource` and `areMediaResourcesEqual` are typed `TelegramMediaResource?`, the subtype CLAUDE.md prefers. The values were already `TelegramMediaResource`, `isEqual(to:)` dispatches identically, and `mediaBox.cachedResourceRepresentation` still receives the same object.
+- **`CommunityViewScreen.swift`:** `[EnginePeer.Id: CachedPeerData]` became `[EnginePeer.Id: EngineCachedPeerData]` at 10 sites, a typealias swap. The CommunityViewScreen package is now Postbox-free; its dep is removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 129 -> 126; `clients` 63 -> 62.
+- **Verification:** full build green (33 actions); `NotificationServiceTests` passed. The diff is three dropped imports, one wrapper-retyped function with a wrapping caller and wrapped test fixtures, two narrowed private signatures, and ten alias swaps.
+
+### Wave 443: the Instant View cluster (2026-10-12)
+
+Four files were blocked only by alias names and one wrapper site each: `InstantPageControllerNode.swift`, `InstantPageMediaOpen.swift`, `BrowserInstantPageContent.swift` and `ComposePollScreen.swift`.
+
+- **Alias swaps:** `MediaId` -> `EngineMedia.Id` (13 + 13), `PeerId` -> `EnginePeer.Id`, and `MessageId` -> `EngineMessage.Id`, done with a whole-token script that skips strings and comments and never touches compound names. The alias checker shows 24 of 24 swapped lines are pure.
+- **`updatedMediaIfNeeded` (both nodes):** now `(EngineMedia) -> EngineMedia?`, a `switch` on `.image`/`.file`. It used to take raw `Media` and test with `as? TelegramMediaImage` / `as? TelegramMediaFile`. Both classes are final and disjoint, and `EngineMedia.init` maps exactly those casts, so the same branch runs; the result is the `.image(...)`/`.file(...)` the caller used to build. Wave 441's `_asMedia()`/`EngineMedia(...)` in the two update loops is gone.
+- **Three throwaway `Message(...)` builders** (the location preview in the two Instant View controllers, and the poll-attachment preview) became `EngineMessage(stableId:...)`. That initializer rebuilds `peers`/`associatedMessages` through dictionaries, but all three pass empty ones, so the result is the same empty `SimpleDictionary`. `author` (`.user(peer)`) and `media` (`.geo(map)`, `EngineMedia(attached)`) wrap the same objects. `LocationViewController` takes the engine message directly; the gallery's `.standaloneMessage` takes `message._asMessage()`, the object the old code wrapped.
+- **Freed:** packages InstantPageUI, BrowserUI and ComposePollScreen; their deps were removed and they left `clients`.
+- **Counts:** `AllowedImporters.txt` 126 -> 122; `clients` 62 -> 59.
+- **Verification:** full build green (100 actions, then 2 after a whitespace-only touch-up); `InstantPageUITests` passed. BrowserUI and ComposePollScreen have no test target.
+
+### Wave 444: preview builders and two chat-node locals (2026-10-12)
+
+- **`ChatMessageInteractiveInstantVideoNode.swift`:**
+  - The reply local is `EngineMessage?`, wrapped where it is read from `associatedMessages` and unwrapped for `ChatMessageReplyInfoNode.Arguments(message: EngineRawMessage?)`.
+  - The forward-source local is `EnginePeer?`. It is wrapped at assignment, which moved the existing `flatMap(EnginePeer.init)` from its one reader to its one writer, and unwrapped for `ChatMessageAppliedForwardInfo(source: Peer?)`.
+  - `StoryId` -> `EngineStoryId`.
+- **`MediaPickerSelectedListNode.swift`:** the two "messages preview" builders use `EngineMessage(stableId:...)` with `peers: [peerId: .user(peer)]`. That is one entry, so no order exists to lose. The author and peer are the same `TelegramUser` object, and the media is `.action(...)`. `makeChatMessagePreviewItem` gets `_asMessage()`.
+- **`ChatSendAudioMessageContextPreview.swift`:**
+  - The contact and voice preview builders use `EngineMessage(...)`, with empty peer maps.
+  - `ChatSendGroupMediaMessageContextPreview.messages` is `[EngineMessage]`, wrapping the same `withUpdatedTimestamp(0)` copies. Its one reader unwraps once per message, so `ChatMessageBubbleContentItem` receives identical objects.
+  - `MediaId` -> `EngineMedia.Id`.
+- **Freed:** packages MediaPickerUI, ChatSendAudioMessageContextPreview and ChatMessageInteractiveInstantVideoNode; their deps were removed and they left `clients`.
+- **Counts:** `AllowedImporters.txt` 122 -> 119; `clients` 59 -> 56.
+- **Verification:** full build green (100 actions). None of the three packages has a test target.
+
+### Wave 445: PeerInfoMembers and EditAccessoryPanelNode (2026-10-12)
+
+This is file-level progress; both packages still have other importers.
+
+- **`PeerInfoMembers.swift`:**
+  - `PeerInfoMember.legacyGroupMember` carries `EngineRenderedPeer` instead of `RenderedPeer`, built with `EngineRenderedPeer(peer: EnginePeer(peer))`, and the `peer` accessor no longer wraps.
+  - `PeerId` and `PeerStoryStats` were swapped for their aliases.
+  - **Equality is unchanged, which matters because `PeerInfoMember` is `Equatable` and drives list diffing.** `RenderedPeer.==` compares peers by `Peer.isEqual`, and `EngineRenderedPeer.==` by `EnginePeer.==`. Every peer class's `isEqual` is `self == other` (checked for all five classes), and `EnginePeer.==` matches on the same `==`. Both initializers build the same one-entry map with no associated media, so order cannot differ.
+- **`EditAccessoryPanelNode.swift`:**
+  - The stored message and the `updateMessage` parameter are `EngineMessage?`, wrapped where `postbox.messageAtId` delivers.
+  - `updateMessage` unwraps once into a local named `message`, so its raw-API body runs on the same object.
+  - `MessageId` was swapped for its alias.
+- **Counts:** `AllowedImporters.txt` 119 -> 117.
+- **Verification:** full build green (24 actions, then a rebuild after a whitespace-only touch-up). Neither package has a test target.
+
+### Wave 446: ShareSearchContainerNode and ApplicationContext (2026-10-12)
+
+File-level progress.
+
+- **`ShareSearchContainerNode.swift`:** the local search results are wrapped at the source (`postbox.searchPeers(...) |> map { $0.map(EngineRenderedPeer.init) }`) instead of where entries are built.
+  - The premium filter's `as? TelegramUser` became a `.user` case match. `EnginePeer.init` maps exactly `TelegramUser` to `.user`, so the same users match.
+  - Entry building lost its `EnginePeer(...)` and `EngineRenderedPeer(...)` wraps, since the values already are those.
+  - The array is the same, mapped element-wise, so order and filtering are unchanged.
+- **`ApplicationContext.swift`:**
+  - Two closure return-type annotations that spelled TelegramCore's `notificationMessages` element type (`[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)]`) were removed. Swift infers the identical type.
+  - `PeerId`, `MessageId` and `StoryId` were swapped for their aliases.
+- **Counts:** `AllowedImporters.txt` 117 -> 115.
+- **Verification:** full build green (147 actions). ShareController and TelegramUI have no test target.
+
+### Wave 447: the rich-message preview builder (2026-10-12)
+
+These two files were part of the May–October regression: `TelegramStringFormatting/Sources/InstantPagePreviewBuilder.swift` and `InstantPagePreviewText.swift`.
+
+- **`InstantPagePreviewEnvironment.media`:** now `[EngineMedia.Id: EngineMedia]`. Its three `as? TelegramMediaFile` lookups go through a new `file(_:)` helper matching `.file`. `TelegramMediaFile` is final and `EngineMedia.init` maps exactly it to `.file`, so the same files are found.
+- **Six public preview signatures** take `[EngineMedia.Id: EngineMedia]`. `InstantPage.previewAttributedText(associatedMedia:)` merges with `self.media` directly, with the same `uniquingKeysWith` rule, the same keys and the same objects.
+- **The four callers** wrap `message.associatedMedia` with `.mapValues(EngineMedia.init)`: MessageContentKind, ChatListItemStrings, ForwardAccessoryPanelNode and ChatInputMessageAccessoryPanel. The Postbox-importing test (exempt) converts its fixture the same way.
+- **Counts:** `AllowedImporters.txt` 115 -> 113. TelegramStringFormatting stays in `clients`, because `ServiceMessageStrings.swift` still imports Postbox.
+- **Verification:** full build green (501 actions); `TelegramStringFormattingTests` and `ChatListUITests` passed.
+
+### Wave 448: WalletContext and ShareWithPeersScreen (2026-10-12)
+
+- **`WalletOperations.swift` and `WalletContextImpl.swift`:** both imported Postbox and named nothing from it. The classifier had flagged `Transaction`, which is WalletContext's own nested type (`typealias Transaction = WalletContext.Transaction`). The imports were dropped, and the build confirms they were unused.
+- **`ShareWithPeersScreen.swift`:** the folder-preview `selectedMedia` local is `EngineMedia?` (`.image`/`.file`, chosen by the same `as?` tests), unwrapped for `DirectMediaImageCache.getImage(media:)`, which receives the same object.
+- **Freed:** packages WalletContext (whose dep wave 438 had declared) and ShareWithPeersScreen; their deps were removed and they left `clients`.
+- **Counts:** `AllowedImporters.txt` 113 -> 110; `clients` 56 -> 54.
+- **Verification:** full build green (498 actions). Neither package has a test target.
+
+### Wave 449: two regression files in TelegramUI (2026-10-12)
+
+- **`TelegramUI/Sources/WalletTonConnect.swift`:**
+  - `walletTonConnectRequestRoute` takes `EngineMessage` and unwraps once, leaving its body unchanged. `AppDelegate` drops the `._asMessage()` it had added, and `ChatController` wraps.
+  - `PeerId` was swapped at its two real uses. The `MessageId` names in `WalletTonConnectNotificationQueue` are that struct's own generic parameter, so they were deliberately left alone. A whole-token swap would have broken them.
+- **`ChatRecentActionsFilterController.swift`:**
+  - The public `channelRecentActionsFilterController(peer:)`, which has no callers in the repository, and its private entries helper take `EnginePeer`. The helper's `as? TelegramChannel` became a `.channel` match.
+  - `PeerId` was swapped for its alias (10 sites).
+- **Counts:** `AllowedImporters.txt` 110 -> 108.
+- **Verification:** full build green (24 actions). No test covers either function.
+
+### Wave 450: the rich-message conversion package (2026-10-12)
+
+This is the first half of the composer cluster, the core of the May–October regression.
+
+- **`composeRichMessage(media:)`, `normalizedBlocks(media:)` and `buildInstantPage(media:)`** take `[String: EngineMedia]`. `pageMedia` is `[EngineMedia.Id: EngineMedia]` and goes straight into `InstantPage(media:)`. Nested pages no longer round-trip through `_asMedia()`.
+  - `EngineMedia.id` equals the raw `.id` for every case: `.todo` and `.liveStream` return nil, as their raw classes do.
+  - The location branch's `as? TelegramMediaMap` became `case let .geo(map)`. The first build caught the always-failing cast through `-warnings-as-errors`, which is exactly the safety net these retypes rely on.
+- **The one external caller passing media** (`ChatControllerOpenAttachmentMenu.swift:1104`) wraps its dictionary with `.mapValues(EngineMedia.init)`. Wave 451 retypes that dictionary at its source.
+- **Freed:** the RichTextEditorMessageConversion library; its dep was removed. The package moved from `clients` to `test_clients`, because `ButtonActionCodecTests` still imports Postbox.
+- **Counts:** `AllowedImporters.txt` 108 -> 106.
+- **Verification:** full build green (152 actions, after the cast fix); `RichTextEditorMessageConversionTests` passed.
+
+### Wave 451: the composer bridges (2026-10-12)
+
+This is the rest of the composer cluster: the media currency of the composer-to-article-editor handoff went from `[String: Media]` to `[String: EngineMedia]`.
+
+- **Shape:** TelegramCore's `ChatInputMediaItem.media` stays raw. `DocumentChatInputContentBridge` converts exactly where it meets it (`ChatInputMediaItem(media: resolved._asMedia(), …)` in, `registerMedia(EngineMedia(item.media))` out). Everything above speaks `EngineMedia`:
+  - `composerMediaKey`, `documentMediaAndEmoji(Async)` and `chatInputContent(fromDocument:media:)`;
+  - the bridge's `resolveMedia`/`registerMedia` closures;
+  - `RichTextEditorChatInputNode.mediaByID`;
+  - `RichTextAttachmentScreen`'s public send, schedule and sync closures, `Subject` payloads, `attachedMedia` and `currentMedia`.
+
+  The TextFormat and harness tests that build `ChatInputMedia` are untouched.
+- **Identity:** `composerMediaKey`'s fallback for an id-less medium is `ObjectIdentifier(media._asMedia() as AnyObject)`, the same object as before. Using the wrapper enum there would have boxed a fresh object each time and changed the key.
+- **Pick and preupload:**
+  - The attachment pick path stores `.image`/`.file`/`.geo` of the same objects.
+  - `preuploadPrimaryResource` is `(EngineMedia) -> TelegramMediaResource?` and returns the resources its `as?` tests found.
+  - A preupload completion stores the cloud `EngineMedia` it already had, instead of unwrapping and rewrapping it.
+- **Wraps removed:** the input node's media-view provider and media-control bridge, and `RichTextAttachmentScreen`'s preupload list and media-view resolution, had wrapped with `EngineMedia(...)`. They read the dictionary directly now, and wave 450's `.mapValues(EngineMedia.init)` in `ChatControllerOpenAttachmentMenu` is gone.
+- **Persistence unchanged:** `ChatControllerOpenAttachmentMenu`'s `RichTextDraft` is persisted with Postbox coding, so it keeps raw storage. It converts when a draft is saved (`mapValues { $0._asMedia() }`) and when it is reopened (`mapValues(EngineMedia.init)`), so the stored bytes are unchanged. That file keeps importing Postbox for its decoder.
+- **Freed:**
+  - The ChatRichTextEditorComposer library: its dep was removed and the package moved to `test_clients`.
+  - The RichTextAttachmentScreen package: its dep was removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 106 -> 102; `clients` 53 -> 51.
+- **Verification:**
+  - Full build green, after three compile-driven passes that each named a remaining boundary.
+  - `ChatRichTextEditorComposerTests` and `RichTextEditorMessageConversionTests` passed.
+  - The tests that call the bridge pass `[:]`, `nil` and `_ in`, which infer the new types.
+
+### Wave 452: three local class-W files (2026-10-12)
+
+Each wrapper retype stays inside its own file.
+
+- **`ChatControllerLoadDisplayNode`** (TelegramUI):
+  - typealias swaps (`PeerId`, `MessageId`, `MediaId`, `MessageIndex`, `MessageAttribute`);
+  - the hidden-media local is now `[EngineMessage.Id: [EngineRawMedia]]`.
+
+  That local exists only to be assigned to `ChatControllerInteraction.hiddenMedia`, which is declared with exactly that type, as `PeerInfoGifPaneNode` and `ChatListSearchMediaNode` declare the same local. Wrapping each medium in `EngineMedia` and unwrapping it on assignment would be a wrap/unwrap pair with no boundary, which is the case the EngineRaw-alias guidance allows.
+  - One `MessageAttribute` token was missed by the swap script (its string-literal splitter lost parity on an interpolated string). It was fixed by hand. Every other swap count matched the classifier's hit lines exactly, so nothing extra was swapped.
+- **`ChatQrCodeScreen`**: `Subject.messages([Message])` and `MessageContentNode.messages` are now `[EngineMessage]`.
+  - The case is never constructed outside the file; the only external construction is `.peer`, in `SharedAccountContext`.
+  - Member reads return the same values; `media` and `peers` are still raw-typed on `EngineMessage`.
+  - `MessageReference(_:)` (×2) and `stringWithAppliedEntities(message:)`, which takes `EngineRawMessage?`, get `message._asMessage()`. That is the held object, so identity is unchanged.
+  - It was the package's only importer: the dep was removed and the package left `clients`.
+- **`ChatSearchResultsContollerNode`** (TelegramUI): `ChatListSearchEntry.message` is now `(EngineMessage, EngineRenderedPeer, EnginePeerReadCounters?, …)`. The three conversions `item(...)` made when building `ChatListItem` now happen where the entry is built: `EngineMessage(message)`, `EngineRenderedPeer(peer)` and `EnginePeerReadCounters(state:isMuted: false)`. Entry `==` is unchanged:
+  - `id` and `stableVersion` read through to the raw message.
+  - `EngineRenderedPeer ==` is `RenderedPeer ==` field for field: `peerId`, the peers through `EnginePeer ==` (each peer class's `isEqual` is its `==`), and `areMediaDictionariesEqual`.
+  - `EnginePeerReadCounters` synthesizes `==` over `(state, isMuted)` with `isMuted` always false, so it reduces to the old `CombinedPeerReadState?` comparison.
+  - `RenderedPeer(message:)` became `EngineRenderedPeer(message:)`, which wraps that very initializer. `RenderedPeer(peer:)` became `EngineRenderedPeer(peer: EnginePeer(…))`: the same `peerId`, one peer and empty `associatedMedia`.
+- **Counts:** `AllowedImporters.txt` 102 -> 99; `clients` 51 -> 50.
+- **Verification:** full build green on the first pass. None of the three has a test target.
+- **Log correction:**
+  - The `clients` counts in the entries for waves 439–451 were recounted from each commit's `submodules/Postbox/BUILD` and corrected in place.
+  - Wave 439 installed the group with 67 packages, not 68, and every later entry had carried that off-by-one.
+  - Wave 451 went 53 -> 51, because it removed two packages from `clients`.
+  - The `AllowedImporters.txt` counts were already right.
+
+### Wave 453: forward-info display and service-message strings (2026-10-12)
+
+Two libraries whose last Postbox importer was a single class-W file.
+
+- **`ChatMessageItemCommon`'s forward-info resolver:**
+  - `ChatMessageAppliedForwardInfo.source` and the resolver's `peerDisplayTitle` closure are now `EnginePeer`.
+  - The resolver wraps where it reads the raw forward info. The `author.id != forwardSource.id` test stays on the raw peers.
+  - A cached `previouslyApplied.source` is returned as stored.
+  - The five item-node callers lost their wraps:
+    - each `{ EnginePeer(peer).displayTitle(…) }` became `{ peer.displayTitle(…) }`, since the wrap moved into the resolver;
+    - every `forwardSource.flatMap(EnginePeer.init)` went, as did InteractiveInstantVideo's `.flatMap(EnginePeer.init)` / `?._asPeer()` round trip;
+    - the Sticker and InstantVideoItem nodes' `EngineRawPeer?` locals became `EnginePeer?`.
+  - The bubble's story-forward path wraps the raw peer it reads from `firstMessage.peers`.
+- **`ServiceMessageStrings`:** the two private helpers take the `EngineMessage` every caller already held, in place of its `peers` / `associatedMedia`.
+  - The lookups read the same dictionaries.
+  - The peer-title overload now gets `[EnginePeer]`, built where the old one wrapped each peer at render time.
+  - Plus two typealias swaps.
+- **Tests:** `ChatMessageForwardInfoDisplayTests` changed in five lines:
+  - its stand-in title function takes `EnginePeer`;
+  - three applied-info fixtures wrap their peers;
+  - one expected title is computed from `EnginePeer(admin)`.
+- **Freed:** both libraries; their deps were removed. The packages moved from `clients` to `test_clients`, because their tests import Postbox.
+- **Counts:** `AllowedImporters.txt` 99 -> 97; `clients` 50 -> 48.
+- **Verification:** full build green on the first pass; `ChatMessageItemCommonTests` and `TelegramStringFormattingTests` (see the commit).
+
+### Wave 454: reaction selection and the Stars transaction screen (2026-10-12)
+
+Two packages whose only importer was one class-W file.
+
+- **`ReactionContextNode`:** `animateReactionSelection(customEffectResource:)` (both overloads) and its `additionalAnimationResource` local are now `TelegramMediaResource?`, CLAUDE.md's preferred subtype.
+  - No caller outside the file passes the parameter: all twelve rely on the `nil` default, and the internal overload only forwards its own argument.
+  - The local is assigned only `TelegramMediaFile.resource` or that parameter.
+  - Its one consumer, `AnimatedStickerResourceSource(account:resource:)`, takes `MediaResource`; the upcast hands over the same object.
+  - Typealias swaps: `MediaId`, and `ItemCollectionId` (including `groupId.base as? EngineItemCollectionId`, the same cast through an identity alias).
+- **`StarsTransactionScreen`:**
+  - The three `openMedia` closure types (component, sheet component, `openMediaImpl`) are now `[EngineRawMedia]` / `(EngineRawMedia) -> …`. That media flows from a raw source into raw sinks: `StarsImageComponent.action` (already `EngineRawMedia`), `TelegramMediaPaidContent.extendedMedia` and the gallery's transition arguments. Wrapping it would be a wrap/unwrap pair with no boundary, the case the EngineRaw-alias guidance allows. The types are identical, so no call site changed.
+  - The throwaway gallery message uses the memberwise `EngineMessage` init, with `media: [.paidContent(…)]` and empty `peers` / `associatedMessages`, and is passed as `message._asMessage()`. The init builds the same `Message`: the same media object, empty `SimpleDictionary`s, no author.
+  - Plus one `MessageId` swap.
+- **Freed:** both packages; their deps were removed and they left `clients`. Neither has a test target.
+- **Counts:** `AllowedImporters.txt` 97 -> 95; `clients` 48 -> 46.
+- **Verification:** full build green on the first pass.
+
+### Wave 455: the auto-download predicates take EngineMedia (2026-10-12)
+
+`TelegramUIPreferences`' only importer was `MediaAutoDownloadSettings.swift`.
+
+- **Shape:** `shouldDownloadMediaAutomatically(…, media: EngineMedia?, …)`, `shouldPredownloadMedia(…, media: EngineMedia)` and the private `categoryAndSizeForMedia` take the wrapper.
+  - The type tests became case matches: `.image` / `.webFile` for the `is` pair, `case let .file(file)` for the `as?`, and `default: nil` for the rest.
+  - The sticker and voice tests became `if case let .file(file)? = media`.
+  - `media?.id?.namespace` now reads `EngineMedia.id`.
+  - The short-circuit order (`isAd`, network, sticker) is unchanged.
+- **Equivalence of the case match:**
+  - `TelegramMediaImage` and `TelegramMediaFile` are final.
+  - `TelegramMediaWebFile` is not final, but nothing subclasses it.
+  - `EngineMedia.init` dispatches by ordered `as` casts over unrelated classes, so a wrapped value is in exactly the case its class tested true for.
+- **Call sites:** 32 of the 33, in 11 files, wrap their argument; the 33rd passes `nil`. Each argument's binding was checked first:
+  - 26 values statically `TelegramMediaFile` / `TelegramMediaImage` (bound by `if let … as?`, `case let .file`, the renderer's typed `shouldAutoDownload*` closures or `PrefetchItem.animatedEmojiSticker`) take `.file(x)` / `.image(x)`;
+  - `selectedFile!` takes `.file(selectedFile!)`;
+  - the optional `selectedFile` takes `.flatMap(EngineMedia.file)`, keeping nil as nil;
+  - the unwrapped `EngineRawMedia` `contentMediaValue` takes `EngineMedia(…)`.
+
+  A script made the edits only on lines containing the call, asserting exactly one replacement per line, and the diff shows exactly 32 changed caller lines.
+- **Also:** two typealias swaps each of `PeerId` and `PreferencesEntry`. Two blank-line indents the Edit tool stripped were restored.
+- **Freed:** the TelegramUIPreferences package; its dep was removed and it left `clients`. It has no test target.
+- **Counts:** `AllowedImporters.txt` 95 -> 94; `clients` 46 -> 45.
+- **Verification:** full build green on the first pass.
+- **Correction (post-review):** the `ChatMessageAttachedContentNode` call site wraps `contentMediaValue`, which can be one of three app-side link-preview pseudo-media classes. `EngineMedia.init` trapped on them, where the old raw predicate returned `isAd`. Fixed by `EngineCustomMedia` / `.custom`; see "Post-review fix" after wave 463.
+
+### Wave 456: the animated-sticker and poll bubble packages (2026-10-12)
+
+Two chat bubble packages whose only importer was one class-W file.
+
+- **The convention these follow:**
+  - The bubble content contract is already engine-typed with raw aliases: `ChatMessageBubbleContentNode.transitionNode(messageId: EngineMessage.Id, media: EngineRawMedia, …)` and `updateHiddenMedia(_: [EngineRawMedia]?)`, overridden with exactly those types by the bubble nodes freed earlier.
+  - `ChatMessageReplyInfoNode.Arguments.message` is `EngineRawMessage?`.
+  - Values flowing between those contracts and the item's raw message or media take the contract's own types: wrapping them would be wrap/unwrap pairs with no boundary.
+- **`ChatMessagePollBubbleContentNode`:**
+  - the two overrides take the base class's types;
+  - the option node's `message`, `currentMedia`, `transitionNode(media:)`, `optionNodeForMedia` and the option layout closures take `EngineRawMessage` / `EngineRawMedia`;
+  - plus `PeerId` / `MessageId` swaps.
+
+  Every swap count matched the classifier's hit lines exactly (5, 4, 3, 1).
+- **`ChatMessageAnimatedStickerItemNode`:**
+  - `replyMessage` takes the `EngineRawMessage?` of the reply arguments it feeds.
+  - `playEffectAnimation(resource:)` takes `TelegramMediaResource`. Its only callers are its own node's two sites, passing `file._parse().resource` and a video thumbnail's `resource`, and the body hands the resource to `AnimatedStickerResourceSource`, which takes `MediaResource`. `ChatMessageItemView`'s private method of the same name is unrelated.
+  - Plus `StoryId`, `MemoryBuffer` and `MediaId` swaps.
+- **Freed:** both packages; their deps were removed and they left `clients`.
+- **Counts:** `AllowedImporters.txt` 94 -> 92; `clients` 45 -> 43.
+- **Verification:** full build green on the first pass. Neither package has a test target.
+
+### Phase 2026-10 exit inventory (after wave 456)
+
+This is the state the spec's "Phase exit" asks for, and the input to the next phase's spec. It was measured on the committed tree at wave 456 (`ba5e4fdd5d`).
+
+**Totals.**
+
+| | baseline `8de02bc574` | after wave 456 |
+|---|---|---|
+| In-scope source files importing Postbox (`AllowedImporters.txt`) | 146 | 92 |
+| Packages in `clients` | 67 (at the guard's install, wave 439) | 43 |
+| Packages in `test_clients` | 4 | 8 |
+
+**Update after wave 463.** The six signature files and the two no-decision files left the allowlist in waves 457–463. Totals are now 84 importers, 39 `clients` and 8 `test_clients`.
+
+Class W is down to six files:
+- the five heavy ones listed below;
+- `ChatControllerOpenAttachmentMenu`, which is raw by design.
+
+Classes R (9) and H (69) are unchanged.
+
+**By class** (the heuristic classifier from the spec; each wave re-inventories its own files):
+
+| Class | Files |
+|---|---|
+| T | 0 |
+| W | 14 |
+| R | 9 |
+| H | 69 |
+
+**The 28 May–October regression files.** 24 are clean. The other four stay, each for a recorded reason:
+- `MediaEditor/Sources/MediaEditorDraft.swift` and `MediaEditorScreen/Sources/StorySource.swift`: class H, blocked by `OrderedItemListEntry`, which has no engine equivalent (next phase).
+- `Telegram/SiriIntents/SiriSendMessageTarget.swift`: class H, blocked by `Transaction`; it runs a Postbox transaction directly (next phase).
+- `TelegramUI/Sources/ChatControllerOpenAttachmentMenu.swift`: kept by design (wave 451). The persisted `RichTextDraft` is Postbox-coded and keeps its raw `[String: Media]` storage, so the file keeps `PostboxDecoder` / `PostboxEncoder` and the raw `Media` they code.
+
+**Remaining class W (14), triaged for the next decision:**
+- *Wrapper-local; no decision needed:*
+  - `TelegramCallsUI/PresentationCallManager.swift`: `Peer` lives in private signal tuples that round-trip through `_asPeer()` / `EnginePeer(…)`. The package stays in `clients` (`PresentationGroupCall` is class R).
+  - `ChatMessageItemImpl/ChatMessageDateHeader.swift`: needs a new `EngineMessage.AssociatedThreadInfo` typealias (rule 3 allows it; rule 4's discovery grep found none). Its `Peer` field has two external constructors (`ChatMessageItemImpl`, `SharedAccountContext`).
+- *Needs the EngineRaw-or-defer decision.* Each has a public or cross-module signature whose wrapper retype would cascade:
+  - `ChatMessageInteractiveMediaNode/ChatMessageInteractiveMediaNode.swift`: the public `asyncLayout` message and media parameters, called by the bubble nodes;
+  - `PeerInfoVisualMediaPaneNode/PeerInfoVisualMediaPaneNode.swift`: its sibling copies in `PeerInfoGifPaneNode` and `ChatListSearchMediaNode` already use `EngineRawMessage` / `EngineRawMedia`;
+  - `TelegramUI/Sources/OpenChatMessage.swift`, `TelegramUI/Sources/SharedAccountContext.swift`, `PeerInfoScreen/PeerInfoScreen.swift` and `MediaEditorScreen/MediaEditorScreen.swift`.
+- *Heavy regardless:*
+  - `ChatRecentActionsController/ChatRecentActionsHistoryTransition.swift` (177 hit lines; wave 71's analysis found 75 bridge sites);
+  - `GalleryUI/Items/UniversalVideoGalleryItem.swift`;
+  - `GalleryUI/Items/ChatAnimationGalleryItem.swift` and `ChatImageGalleryItem.swift`: `MediaResource` would likely become `TelegramMediaResource`, but check `setupStatus`'s callers. GalleryUI stays in `clients` regardless, because `GalleryController` is class R.
+  - `TelegramUI/Sources/InChatPrefetchManager.swift`.
+- *Raw by design:* `ChatControllerOpenAttachmentMenu.swift`.
+
+**Blocking tokens across the 78 class R and H files** (number of files naming each):
+
+| Files | Class | Token |
+|---|---|---|
+| 45 | H | `Postbox` (a `postbox: Postbox` parameter or stored handle; rule 2 forbids an alias) |
+| 12 | H | `MediaBox` |
+| 10 | R | `PostboxViewKey` |
+| 7 | R | `MessageHistoryView` |
+| 6 | H | `MediaBoxFetchPriority` |
+| 6 | R | `PeerView` |
+| 5 | H | `ChatListEntrySummaryComponents` |
+| 4 | R | `OrderedItemListView`, `CachedPeerDataView` |
+| 3 | H | `MediaResourceFetchParameters`, `MediaResourceStorageLocation`, `Transaction`, `ChatListFilterPredicate` |
+| 3 | R | `MessageHistoryEntry`, `MutableMessageHistoryEntryAttributes` |
+| 2 | H | `ChatListView`, `PeerIndexNameRepresentation`, `PendingMessageActionType`, `ChatListEntryMessageTagSummaryComponent`, `ChatListEntryPendingMessageActionsSummaryComponent`, `ChatListEntryMessageTagSummaryKey`, `PeerPresencesView`, `CombinedView`, `OrderedItemListEntry`, `StoryStatesView`, `PeerNotificationSettings`, `AdditionalMessageHistoryViewData`, `MediaBoxFileContextV2Impl` |
+| 2 | R | `MessageHistoryThreadIndexView`, `ChatInterfaceStateView`, `MessageHistorySavedMessagesIndexView`, `ItemCollectionItem`, `BasicPeerView`, `CachedMediaResourceRepresentation` |
+| 1 | H | `setValueBoxStrictErrorHandling`, `stringIndexTokens`, `matchStringIndexTokens`, `ChatListMessageTagSummaryResultComponent`, `ChatListMessageTagActionsSummaryResultComponent`, `ChatListMessageTagSummaryResultCalculation`, `arePeersEqual`, `MessageView`, `ItemCollectionInfoView`, `StoryView`, `StoryItemsView`, `TypingDraftsView`, `PeerAndThreadId`, `HistoryView`, `MessageHistoryViewOrderStatistics`, `MultiplePeersView`, `PeerStoryStatsView` |
+| 1 | R | `CombinedReadStateView`, `ItemCollectionInfo`, `MediaResourceDataFetchCopyLocalItem` |
+
+**Class R and H files with their blocking tokens.**
+
+Class R (9):
+- `FeaturedStickersScreen/FeaturedStickersScreen.swift`: `ItemCollectionInfo ItemCollectionItem`
+- `GalleryUI/GalleryController.swift`: `MessageHistoryEntry MessageHistoryView MutableMessageHistoryEntryAttributes`
+- `PremiumUI/PremiumIntroScreen.swift`: `OrderedItemListView PostboxViewKey`
+- `StatisticsUI/ChannelStatsController.swift`: `MessageHistoryView`
+- `TelegramCallsUI/PresentationGroupCall.swift`: `PeerView`
+- `EntityKeyboard/EmojiPagerContentSignals.swift`: `OrderedItemListView`
+- `StickerPickerScreen/StickerPickerScreen.swift`: `OrderedItemListView PostboxViewKey`
+- `TelegramUI/Sources/ChatController.swift`: `PeerView`
+- `TelegramUI/Sources/ChatHistoryEntriesForView.swift`: `MessageHistoryView`
+
+Class H (69), by area:
+- **Media pipeline (`Postbox` handle / `MediaBox`):**
+  - MediaPlayer: `ChunkMediaPlayer`, `ChunkMediaPlayerV2`, `FFMpegFileReader`, `FFMpegMediaFrameSource`, `FFMpegMediaFrameSourceContext`, `MediaPlayer`, `MediaPlayerFramePreview`, `TimeBasedVideoPreload`, `UniversalSoftwareVideoSource`.
+  - TelegramUniversalVideoContent: `NativeVideoContent`, `PlatformVideoContent`, `SystemVideoContent`, `WebEmbedVideoContent`, and `HLSVideoContent` / `HLSVideoJSNativeContentNode`, which also name `MediaBoxFileContextV2Impl`, `MediaResourceFetchParameters` and `MediaResourceStorageLocation`.
+  - `AccountContext/UniversalVideoNode`, `AccountContext/FetchMediaUtils` (`MediaBoxFetchPriority`), `FetchManagerImpl` (`MediaBoxFetchPriority`), `FetchVideoMediaResource` (`MediaBoxFetchPriority`, `MediaResourceDataFetchCopyLocalItem`), `PhotoResources` (`MediaBox`, `MediaBoxFetchPriority`), `StickerResources` (`MediaBox`, `CachedMediaResourceRepresentation`, `ItemCollectionItem`), `DirectMediaImageCache` (`MediaBox`).
+  - TelegramUI: `FetchCachedRepresentations` (`CachedMediaResourceRepresentation`), `StoreDownloadedMedia`, `TransformOutgoingMessageMedia`, `DocumentPreviewController`.
+- **Avatars, stickers and emoji (`Postbox` handle):** `AvatarNode`, `PeerAvatar`, `TelegramAnimatedStickerNode`, `EmojiStatusComponent`, `EmojiTextAttachmentView`, `EntityKeyboard/InlineFileIconLayer`, `ChatEntityKeyboardInputNode` (`ItemCollectionInfoView`, `OrderedItemListView`, `PostboxViewKey`), `LegacyPaintStickersContext`.
+- **Media editor:** `MediaEditorComposer`, `MediaEditorComposerEntity`, `MediaEditorVideoExport` (all `Postbox`), `MediaEditorDraft`, `StorySource` (`OrderedItemListEntry`).
+- **Presentation data:** `ChatControllerBackgroundNode`, `MakePresentationTheme`, `PresentationData` (`MediaBox`); `ChatMessageBubbleItemNode` (`MediaBox`).
+- **Chat list (views and summary components):** `ChatListController`, `ChatListSearchListPaneNode`, `ChatListNodeLocation` (15 tokens, from `ChatListView` / `PostboxViewKey` / the summary components), and `ShareController` / `ShareControllerNode` (the same family, plus `Postbox`).
+- **Chat history:** `ChatHistoryListNode`, `ChatHistoryViewForLocation`, `ChatControllerNode`, `ChatControllerContentData`, `CreateGroupController` (`MultiplePeersView`), `ChatPresentationInterfaceState` (`arePeersEqual`), `SecretMediaPreviewController` (`MessageView`, history-entry types).
+- **Stories:** `StoryChatContent` (`StoryView`, `StoryItemsView`, `StoryStatesView`, `PeerPresencesView`, `CombinedView`, `Transaction`, …).
+- **Extensions and app:**
+  - `Telegram/NotificationService/NotificationService.swift`: `MediaBox`, the fetch parameters, `Postbox`, `setValueBoxStrictErrorHandling`.
+  - SiriIntents: `IntentContacts` (`Postbox`, `Transaction`), `IntentHandler` (`MediaBox`), `IntentMessages` (`ChatListView`, `MessageHistoryView`, `Postbox`), `SiriSendMessageTarget` (`Transaction`).
+  - `TelegramUI/Sources/AppDelegate.swift` (`Postbox`).
+- **Other `Postbox` handles:** `PassportUI` (`LegacySecureIdAttachmentMenu`, `SecureIdLocalResource`), `ShareItems`, `TelegramPermissionsUI/PermissionSplitTest`, `TelegramAccountAuxiliaryMethods`, and `TemporaryCachedPeerDataManager` (`ChannelMemberCategoryListContext`, which also names `PeerStoryStatsView` / `PostboxViewKey`, and `PeerChannelMemberCategoriesContextsManager`).
+
+**`.postbox` access outside TelegramCore and Postbox, non-test, comments stripped.** This is the next phase's metric. Measured with four spellings; the spec's baseline of 257 files used a spelling that was not recorded, so these are not a delta against it:
+
+| Spelling | Files | Sites |
+|---|---|---|
+| `account.postbox` (any use, including passing the handle on) | 224 | 573 |
+| `.postbox.<member>` | 142 | 392 |
+| `account.postbox.<member>` | 124 | 306 |
+| any `postbox` identifier | 268 | 1591 |
+
+Of the 142 files with a `.postbox.<member>` access, 95 do not import Postbox.
+
+By member (`.postbox.<member>`, 392 sites):
+
+| Sites | Member |
+|---|---|
+| 234 | `mediaBox` |
+| 49 | `transaction` |
+| 29 | `peerView` |
+| 23 | `combinedView` |
+| 11 | `itemCollectionsView` |
+| 8 | `aroundMessageHistoryViewForLocation` |
+| 8 | `messagesAtIds` |
+| 7 | `messageAtId` |
+| 4 | `clearCaches` |
+| 3 | `tailChatListView`, `searchPeers`, `messageView`, `multiplePeersView` |
+| 2 | `setCanBeginTransactions` |
+| 1 | `seedConfiguration`, `optimizeStorage`, `addHiddenChatIds`, `unsentMessageIdsView`, `searchContacts` |
+
+By `.postbox.mediaBox.<member>`:
+
+| Sites | Member |
+|---|---|
+| 60 | `resourceData` |
+| 23 | `cachedResourceRepresentation` |
+| 20 | `storeResourceData` |
+| 19 | `completedResourcePath` |
+| 6 | `cancelInteractiveResourceFetch` |
+| 4 | `cacheStorageBox` |
+| 3 | `cachedRepresentationCompletePath`, `storageBox` |
+| 2 | `moveResourceData`, `internal_resourceDataIsCached`, `fetchedResource`, `storeCachedResourceRepresentation`, `basePath` |
+| 1 | `cachedRepresentationPathForId`, `resourceStatus`, `resourceRangesStatus`, `resourcePath` |
+
+**Known gap:** nothing flags an *orphan* Postbox dep, meaning a package that declares the dep while no source of its own imports it. The visibility group only rejects packages outside the list.
+
+### Continued after the 2026-10-12 decision: the class-W signature files, with wrappers
+
+The exit inventory above handed back one decision: whether the six class-W files with a raw type in a public or cross-module signature take an `EngineRaw*` alias or a real wrapper retype through their callers. The user chose the second ("prefer to do new wrappers").
+
+The waves below therefore type those signatures as `EngineMessage` / `EngineMedia` / `EnginePeer` even where that adds a wrap at the caller and an unwrap at the callee. A new wrapper type is added only where no existing wrapper or non-raw alias fits, and none was needed in this batch.
+
+The `EngineRaw*` sinks from waves 452, 454 and 456 (`ChatControllerInteraction.hiddenMedia`, `updateMessageReaction`, `playMessageEffect`, the bubble `transitionNode` / `updateHiddenMedia` overrides) stay as they are in this batch. A file freed here unwraps at those boundaries.
+
+### Wave 457: `PresentationCallManager` (2026-10-12)
+
+One of the two remaining class-W files that needed no decision: its `Peer` lived only in private signal tuples.
+
+- **The ringing-state tuples** `(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)` carry `EnginePeer` (five spellings: four signal types and `ringingStatesUpdated`'s parameter).
+  - The producer passes the `EnginePeer` it got from `engine.data.get(…Item.Peer.Peer…)` instead of `peer._asPeer()`.
+  - The two `PresentationCallImpl(peer:)` sites pass `firstState.1` instead of `EnginePeer(firstState.1)`. That is the same enum over the same payload, since `EnginePeer(p._asPeer())` re-wraps the peer `p` holds.
+  - `firstState.1.id` reads the same `PeerId`.
+- **The start-call transaction** returns `(EnginePeer?, String?)` from `transaction.getPeer(peerId).flatMap(EnginePeer.init)`.
+  - Its consumer's `peer as? TelegramUser` became `case let .user(peer) = peer`. `EnginePeer.init` maps `TelegramUser` to `.user`, so the two match exactly the same values.
+  - `debugDisplayTitle` is public on `EnginePeer` and returns `_asPeer().debugDisplayTitle`.
+  - The `postbox.transaction` call itself stays. It names no Postbox type (the closure's parameter is inferred), so it is a `.postbox` site for the next phase, not a class-W blocker.
+- **Swaps:** 11 `PeerId` spellings became `EnginePeer.Id`.
+- **Freed:** the file. `TelegramCallsUI` stays in `clients` because `PresentationGroupCall` is class R.
+- **Counts:** `AllowedImporters.txt` 92 -> 91; `clients` 43.
+- **Verification:** full build green on the first pass. `TelegramCallsUITests` passed (16 tests, 0 failures). It covers `SharedCallAudioContext`, not this file, but the package changed.
+
+### Wave 458: `ChatMessageInteractiveMediaNode` (2026-10-12)
+
+The media node's public layout signature carried a raw message and media into the two bubble nodes that host it.
+
+- **The signature.** Both `asyncLayout` forms take `EngineMessage` / `EngineMedia`: the instance form, called by `ChatMessageMediaBubbleContentNode`, and the static `asyncLayout(_:)`, called by `ChatMessageAttachedContentNode`.
+  - The two callers wrap: `EngineMessage(item.message)` with `EngineMedia(selectedMedia!)`, and `EngineMessage(message)` with `EngineMedia(contentMediaValue)`. The force unwrap is unchanged.
+  - The layout closure binds the parameters as `engineMessage` / `engineMedia` and unwraps them once into the `message` / `media` locals the rest of the body already used. The body, including every comparison against the previous layout, therefore runs on the same raw objects as before:
+    - `isSemanticallyEqual(to:)`, the story-entry `!=`, `flags !=`, `id !=`;
+    - every `as?` cast.
+  - The apply step stores the wrappers it received.
+- **The stored `message` / `media`** became `EngineMessage?` / `EngineMedia?`. Every read unwraps with `?._asMessage()` / `?._asMedia()`, which returns the identical object. That includes the 14 + 13 explicit `self.`/`strongSelf.` reads and the snapshot of the previous layout (`currentMessage`, `currentMedia`).
+  - **Four reads used implicit `self`** (`media as? …` in `hitTest`'s sending branch, and three in `updateStatus` outside the scope of its `var media` local). The first build caught all four as always-failing casts under `-warnings-as-errors`. They now unwrap explicitly.
+  - Every other bare `media` / `message` read outside the layout closure was checked to be a local. That includes two `media?.id == mediaId` comparisons that would have compiled silently against `EngineMedia`.
+- **`selectStoryMedia`** returns `EngineMedia?` (a private helper whose return type must be named). Its six callers unwrap. A story item's media is an image or a file, both covered by `EngineMedia.init`.
+- **The closures.** `updateMessageReaction` / `playMessageEffect` take `EngineMessage`.
+  - The node's one invocation passes the stored wrapper.
+  - The four setters in the two bubble nodes forward `message._asMessage()` to `ChatControllerInteraction`'s `EngineRawMessage` sinks, which stay as they are in this batch.
+  - `updateMessageReaction` is set but never invoked by the node.
+- **Swaps:** 21 `MediaResourceStatus` spellings became `EngineMediaResourceStatus`, and 3 `MediaId` became `EngineMedia.Id`.
+- **Cost:** one `EngineMessage` allocation per layout pass from the bubble callers, beside the layout work itself.
+- **Freed:** `ChatMessageInteractiveMediaNode`; its dep was removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 91 -> 90; `clients` 43 -> 42.
+- **Verification:** full build green on the second pass, after fixing the four implicit reads. The package has no test target.
+- **Correction (post-review):** the layout call in `ChatMessageAttachedContentNode` wraps `contentMediaValue`, which can be an app-side `WallpaperPreviewMedia`, `UniqueGiftPreviewMedia` or `GiftAuctionPreviewMedia`. `EngineMedia` had no case for those, so `EngineMedia.init` trapped on wallpaper, theme, NFT-gift and gift-auction link previews. The "Review Focus 3" check missed them because it grepped only `: Media`. Fixed by `EngineCustomMedia` / `.custom`; see "Post-review fix" after wave 463.
+
+### Wave 459: `PeerInfoVisualMediaPaneNode` (2026-10-12)
+
+The shared-media grid pane. Its sibling copies in `PeerInfoGifPaneNode` and `ChatListSearchMediaNode` had taken `EngineRawMessage` / `EngineRawMedia`. This one takes the wrappers, per the decision above.
+
+- **The grid item.** `VisualMediaItem.message` is an `EngineMessage`. The list mapping wraps the raw history entry once.
+  - Reads that only need `id`, `stableId`, `index` or `timestamp` read them through the wrapper, which forwards each to the same `Message`.
+  - Reads that hand the message to a raw API unwrap with `_asMessage()`: `ListMessageItem(message:)`, `isSensitiveContent`, the cell renderer's `let message = …`, and `ChatControllerInteraction.openMessage` / `openMessageContextActions`.
+  - `messageAtPoint` and `findLoadedMessage(id:)` used to wrap a fresh `EngineMessage` per call and now return the stored one. It is the same `Message` underneath, and `EngineMessage ==` compares fields.
+- **The item interaction** (private): `openMessage` / `openMessageContextActions` take `EngineMessage`, and its closures unwrap into the raw sinks. Neither closure is invoked anywhere.
+- **Hidden media.** `hiddenMedia` is `[EngineMessage.Id: [EngineMedia]]`, and the gallery-hidden-ids handler wraps each media once. The values are never read; the two uses test key presence.
+- **The cell's media.** `selectedMedia` is `EngineMedia?`, assigned `.image(image)`, `.image(cover)` or `.file(file)`.
+  - It is unwrapped by the `if let` that feeds `DirectMediaImageCache`. Every later cast is inside that binding, so it sees the same raw object as before.
+  - `videoCover` is `TelegramMediaImage?`.
+- **The two shimmer fake messages** use the memberwise `EngineMessage` initializer: `media: [.file(fakeFile)]`, empty `peers` / `associatedMessages`. The result is the same `Message` graph, as in wave 454. `ListMessageItem` gets `_asMessage()`.
+- **The stored-state key** is built with `EngineDataBuffer(length:)` (an alias of `ValueBoxKey`), so it holds the same bytes.
+- **Swaps:** 8 `MessageTags`, 8 `MessageId`, 10 `PeerId` and 2 `MediaId` spellings became their engine aliases.
+- **First build:** one error. `findLoadedMessage(id:)` returned `EngineMessage(item.message)`, which no longer type-checks, and now returns `item.message`.
+- **Freed:** `PeerInfoVisualMediaPaneNode`; its dep was removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 90 -> 89; `clients` 42 -> 41.
+- **Verification:** full build green on the second pass. The package has no test target.
+
+### Wave 460: `PeerInfoScreen` (2026-10-12)
+
+The profile screen's last raw spellings, none of them in a cross-module signature once read closely.
+
+- **The Instant View gallery message.** `foundGalleryMessage` is `EngineMessage?`.
+  - Both lookups already return `EngineMessage` (`messageForGallery`, `findLoadedMessage`), so their `_asMessage()` calls went. `ensureMessagesAreLocallyAvailable` was already fed the wrapper.
+  - `makeInstantPageController` (still `EngineRawMessage` in the `SharedAccountContext` protocol until wave 462) gets `_asMessage()`. That is the same object it got before.
+- **Hidden gallery media.** The handler builds `[EngineMessage.Id: [EngineMedia]]` and assigns `hiddenMedia.mapValues { $0.map { $0._asMedia() } }` to `ChatControllerInteraction.hiddenMedia`, which stays `[EngineMessage.Id: [EngineRawMedia]]` in this batch.
+  - The dictionary that lands there holds the same media objects under the same keys.
+  - It runs only when the hidden-id set changes.
+- **Clear history.**
+  - `openClearHistory`'s raw `peer` parameter was never read (its body uses `chatPeer` only), so it was removed with its three arguments in `PeerInfoScreenPerformButtonAction`.
+  - `ClearPeerHistory.init` takes `peer: EnginePeer` (it reads only `peer.id`) and `cachedData: EngineCachedPeerData?`. Its three callers wrap the user, channel or group they already had.
+- **The location screen's synthesized message** uses the memberwise `EngineMessage` initializer: `author: peer` (the `EnginePeer` it unwrapped before) and `media: [.geo(map)]`. It is handed to `LocationViewController(subject:)` directly instead of being wrapped after construction.
+- **Swaps:** 1 `MessageTags`, 10 `MessageId`, 11 `PeerId`, 2 `MediaId` and 2 `CachedPeerData` spellings became engine aliases (`EngineCachedPeerData` is an existing alias, not a raw one).
+- **Freed:** `PeerInfoScreen`; its dep was removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 89 -> 88; `clients` 41 -> 40.
+- **Verification:** full build green on the first pass. The package has no test target.
+
+### Wave 461: `ChatMessageDateHeader` and `makeChatMessageAvatarHeaderItem` (2026-10-12)
+
+The chat's avatar header. Its item and node held a raw `Peer`, and the item took a raw `Message`; one `SharedAccountContext` factory passes both through.
+
+- **New alias (rule 3 allows typealiases; rule 4's discovery grep found none):** `EngineMessage.AssociatedThreadInfo = Message.AssociatedThreadInfo`, beside `EngineMessage`'s other nested aliases. The date header's `.thread(id:info:)` case uses it.
+- **The header item.** `ChatMessageAvatarHeader.peer` is `EnginePeer?`. Its init takes `peer: EnginePeer?` and `message: EngineMessage`, and unwraps the message once into a local. Its body reads the same raw fields: `adAttribute`, `id`, `timestamp`, `forwardInfo`.
+- **The header node.** `peer` is stored as `EnginePeer?`. `updatePeer(peer:)` and `setPeer(…peer:…)` take `EnginePeer` (external label unchanged, internal name `enginePeer`) and unwrap it into a raw `peer` local.
+  - Their bodies therefore compare and read exactly as before: `nameColor`, `smallProfileImage`, `displayLetters`, `isDeleted`, `isPremium`, `largeProfileImage`, `id`.
+  - The previous peer is unwrapped too.
+  - The `EnginePeer(peer)` re-wraps inside those two methods now pass the `enginePeer` they received, which wraps the same payload.
+  - The two other reads of the stored peer unwrap: the context-menu gesture, into `openPeerContextMenu`'s `EngineRawPeer`, and the tap handler, into its `as? TelegramChannel` test.
+  - Every bare `peer` in the node class was listed, and each was confirmed to be a local of `updatePeer` / `setPeer`.
+- **The protocol.** `SharedAccountContext.makeChatMessageAvatarHeaderItem` takes `peer: EnginePeer, message: EngineMessage` (was `EngineRawPeer` / `EngineRawMessage`).
+  - `SharedAccountContextImpl` passes both straight to the header.
+  - `DrawingMessageRenderer`, its only caller, drops its `_asPeer()` / `_asMessage()`.
+  - `ChatMessageItemImpl` wraps the effective author and the message when it builds the header: two small allocations per item that has an avatar header.
+- **The harness stub.** The composer harness's generated `HarnessSharedAccountContext` stub was regenerated with its tool. Run against HEAD's protocol, the tool first reproduced the committed stub exactly, except for the source path in the header comment. The change is the one member's signature.
+- **Swaps:** 5 `PeerId`, 1 `MessageId` and 5 `PeerStoryStats` spellings became their engine aliases.
+- **Freed:** `ChatMessageItemImpl`; its dep was removed and it left `clients`.
+- **Counts:** `AllowedImporters.txt` 88 -> 87; `clients` 40 -> 39.
+- **Verification:**
+  - Full build green on the first pass.
+  - `//Tests/ComposerHarness:ComposerHarness` built separately, because the app build does not compile it.
+  - The package has no test target.
+
+### Wave 462: `OpenChatMessage` and the rest of `SharedAccountContext` (2026-10-12)
+
+Three `SharedAccountContext` members still carried a raw message or peer: two of their protocol requirements were `EngineRawMessage` / `EngineRawPeer`, and the TelegramUI implementations were spelled `Message` / `Peer`.
+
+- **`makeInstantPageController(context:message:sourcePeerType:)` and `openChatWallpaper(context:message:present:)`** take `EngineMessage`. So do `makeInstantPageControllerImpl`, `openChatWallpaperImpl` and `openChatTheme`, which are TelegramUI-internal.
+  - `makeInstantPageControllerImpl` passes the message straight to `instantPageAndAnchor(message:)`, which already took the wrapper.
+  - The wallpaper and theme functions unwrap once into a local, because their bodies hand the raw message to `WallpaperListSource` and read `message.media`.
+- **Their callers:**
+  - **ChatController's three handlers** (`openInstantPage`, `openWallpaper`, `openTheme`) bound `messageInCurrentHistoryView(id)?._asMessage()` only to feed these calls. They now bind the `EngineMessage` itself.
+  - **The other sites wrap a raw message:** ChatController's `openUrl` (`Message?` parameter), ChatRecentActions (×2) and the chat-list search pane.
+  - **PeerInfoScreen** drops its `_asMessage()` from wave 460.
+- **`makeChatMessagePreviewItem`** takes `messages: [EngineMessage]`, `tapMessage: ((EngineMessage) -> Void)?` and `accountPeer: EnginePeer?`.
+  - The implementation unwraps the messages once into the local it already used.
+  - It wraps the raw message `ChatControllerInteraction` hands its two tap closures.
+  - It passes `accountPeer` through where it used to `flatMap(EnginePeer.init)` it.
+- **The 26 preview call sites in 16 files** were rewritten inside each call's own parenthesis-balanced extent, by a script that refuses any argument shape it does not know:
+  - 6 had unwrapped an `EngineMessage` with `_asMessage()` or `map { $0._asMessage() }`, and now pass it directly;
+  - 18 wrap a raw message;
+  - 2 wrap an inline `EngineRawMessage(...)` constructor;
+  - 2 non-nil `accountPeer` arguments wrap with `flatMap(EnginePeer.init)`.
+
+  The only two non-nil `tapMessage` closures ignore their argument.
+- **Swaps in `SharedAccountContext.swift`:**
+
+  | Raw spelling | Engine spelling | Count |
+  |---|---|---|
+  | `PeerId` | `EnginePeer.Id` | 19 |
+  | `MessageId` | `EngineMessage.Id` | 10 |
+  | `MessageIndex` | `EngineMessage.Index` | 2 |
+  | `HistoryViewInputTag` | `EngineHistoryViewInputTag` | 2 |
+  | `ValueBoxEncryptionParameters` | `EngineValueBoxEncryptionParameters` | 1 |
+  | `CachedMediaResourceRepresentationResult` | `EngineCachedMediaResourceRepresentationResult` | 1 |
+
+  Plus one `MessageId` in `OpenChatMessage.swift`.
+- **The harness stub** was regenerated; it changed in exactly the three members' signatures.
+- **Freed:** `OpenChatMessage.swift` and `SharedAccountContext.swift`. TelegramUI stays in `clients` (it has class R and H files).
+- **Counts:** `AllowedImporters.txt` 87 -> 85; `clients` 39.
+- **Follow-up, not done here:** none of the preview callers imports Postbox. The ones that build a fake message do it through the `EngineRawMessage` alias: BubbleSettings, TextSize, the theme previews, WallpaperGalleryItem, ForwardPrivacyChatPreviewItem, ReactionChatPreviewItem, ChatGiftPreviewItem and the other preview items. Moving them to the memberwise `EngineMessage` initializer would retire those aliases, as an `EngineRaw`-reduction wave.
+- **Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` built separately.
+
+### Wave 463: `MediaEditorScreen` (2026-10-12)
+
+The story editor's message/gift preview and its sticker-save path.
+
+- **The preview's message list** is a `Signal<[EngineMessage], NoError>`.
+  - The message-subject branch appends the `EngineMessage`s that `engine.data.get` returns, instead of unwrapping them.
+  - The gift branch builds its synthesized message with the memberwise `EngineMessage` initializer: `media: [.action(TelegramMediaAction(…starGiftUnique…))]`, empty `peers` / `associatedMessages`. That is the same `Message` graph as before (the wave 454 pattern).
+  - The consumer's `messages.first?.media.first(where:)` reads `EngineMessage.media`, which is the same raw `[Media]`.
+  - `DrawingMessageRenderer(messages:)` takes the list as is, where it used to re-wrap every element.
+- **`performSave(toStickerResource:)`** takes `TelegramMediaResource?`.
+  - Its one non-nil caller passes `file.resource` of a `TelegramMediaFile`.
+  - The body reads only `toStickerResource != nil` and `toStickerResource.id` (into `EngineMediaResource.Id`).
+- **Swaps:** 1 `MessageId` and 1 `MediaId` spelling became their engine aliases.
+- **Freed:** `MediaEditorScreen.swift`. The package stays in `clients`, because `StorySource.swift` is class H (`OrderedItemListEntry`).
+- **Counts:** `AllowedImporters.txt` 85 -> 84; `clients` 39.
+- **Verification:** full build green on the first pass. The package has no test target.
+
+### Post-review fix: `EngineCustomMedia` (2026-10-12)
+
+A fresh reviewer over waves 451–463 found one **critical** defect.
+
+- **The defect.** `ChatMessageAttachedContentNode` wraps its content media with `EngineMedia(contentMediaValue)` twice: for the auto-download predicate (wave 455) and for the media node's layout (wave 458).
+  - That value can be one of three app-side pseudo-media classes: `WallpaperPreviewMedia`, `UniqueGiftPreviewMedia` or `GiftAuctionPreviewMedia`.
+  - `ChatMessageWebpageBubbleContentNode` builds them for `telegram_background`, `telegram_theme`, `telegram_nft` and `telegram_auction` link previews, and the attached-content node forces them onto the non-inline branch.
+  - They conformed to `EngineRawMedia`, and `EngineMedia` had no case for them. So `EngineMedia.init` reached `preconditionFailure()`, which traps in release too, as soon as such a bubble was laid out.
+  - The check that should have caught it (`grep -rn ': Media\b'`, in CLAUDE.md and in this log) cannot see a `: EngineRawMedia` conformance.
+- **The fix, choosing a wrapper over reverting to `EngineRawMedia`, per the user's "prefer new wrappers":**
+  - TelegramCore declares `public protocol EngineCustomMedia: Media`.
+  - `EngineMedia` gains `case custom(EngineCustomMedia)`. `init` maps an `EngineCustomMedia` to it before the trapping default, so any other unknown class still traps. `id` returns the payload's id, and `_asMedia()` returns the payload object.
+  - The three preview classes now conform to `EngineCustomMedia` instead of `EngineRawMedia`.
+  - **`==`:** the existential payload ends Equatable synthesis, so `EngineMedia.==` is hand-written. It applies the synthesized rule to every existing case: same case, payloads compared with `==`. `.custom` compares with `isEqual(to:)`, a relation that never existed before because these values could not be wrapped.
+- **Why this restores the old behaviour exactly at both sites:**
+  - **The predicate:** `.custom` falls into `categoryAndSizeForMedia`'s `default: return nil`, so for these previews the result is `isAd` again, as the raw path computed it before wave 455.
+  - **The media node:** its layout closure unwraps with `_asMedia()`, which returns the original object. The node's existing `WallpaperPreviewMedia` / `UniqueGiftPreviewMedia` / `GiftAuctionPreviewMedia` branches see it unchanged.
+  - **The reviewer's minor trap surfaces close too:** the gallery-hidden-ids wraps (459/460) and the media bubble's `EngineMedia(selectedMedia!)` (458) can no longer trap on these classes.
+- **No other exhaustive `switch` over `EngineMedia`** exists outside `Media.swift`, in sources or tests, so nothing else changed. No test target references a signature changed in waves 451–463, which closes the reviewer's "declined to judge" item on test compilation.
+- **Docs:** CLAUDE.md's `EngineMedia` note and this log's wrapper-inventory sentence now name `EngineCustomMedia`, and give a grep that covers all three conformance spellings. Waves 455 and 458 carry correction pointers.
+- **Ruling: no failing test first.** A `preconditionFailure` cannot be caught in an XCTest, and neither package has a test target. Equivalence is shown in the diff above. Cost if wrong: a small wave instead puts `EngineRawMedia` back at the media node and adds a call-site guard at the predicate.
+- **Verification:** full build green.
+
+### Phase: `.postbox` access and MediaBox calls
+
+- **Spec and plan:** working documents, not kept on master. Their decisions follow, and the waves record the rest.
+- **Decisions taken with the user:**
+  - MediaBox calls first;
+  - a second shrink-only file list for `.postbox` access;
+  - one MediaBox member family per wave;
+  - UI-specific types stay out of TelegramCore (`EngineCustomMedia` stays; representations get an engine protocol);
+  - a call whose result must feed raw-typed code is deferred and recorded, not converted.
+
+### Wave P1: the `.postbox` access guard (2026-10-12)
+
+- **The check.** `build-system/Make/PostboxImportCheck.py` checks a second list, `submodules/Postbox/AllowedPostboxAccess.txt`, in the same run as the import list.
+  - It has the same scope rules, and the same messages for duplicate, unsorted, out-of-scope, stale and missing entries.
+  - An unlisted user of `.postbox` fails with `<path>:<line>: uses .postbox, …`.
+  - Make.py's existing call (`PostboxImportCheck.run`) picks it up with no change.
+- **Detection.** `strip_comments_and_strings` blanks `//` comments, nested `/* */` comments and string literals, triple-quoted ones included, while keeping newlines. It keeps the code inside string interpolation, so `"\(account.postbox.mediaBox.basePath)/x"` counts as access and a `.postbox` mention in a comment or log string does not.
+- **`--report`** prints the measures every wave records:
+  - importers;
+  - files on the access list;
+  - handle sites (`.postbox` with no member called);
+  - `.postbox.mediaBox` sites, by member;
+  - MediaBox-only files.
+- **Tests:** 23 → 36 in `build-system/Make/tests` (detection, scope, list rules, both lists in one pass, report).
+  - A mutation run on a scratch copy checked that each key test catches its fault: interpolation treated as a string, line comments kept, strings kept, block comments not nested, stale access entries ignored, handle sites miscounted.
+  - It showed that the plan's nested-comment case did not catch a non-nesting stripper, because the `.postbox` sat before the inner `*/`. The case was changed to `/* outer /* inner */ account.postbox, still comment */`.
+- **The list** starts with every in-scope file that uses `.postbox`: 252 files.
+- **CLAUDE.md** rule 12 now covers it.
+- **Baseline, from `--report` at `537d203ebb`:**
+  - 84 importers;
+  - 252 access files;
+  - 379 handle sites;
+  - 229 `.postbox.mediaBox` sites in 31 MediaBox-only files.
+
+  The spec's baseline (253 / 382 / 234) came from a script that stripped only line comments, so it counted a handful of sites inside block comments, such as `ReactionImageComponent.swift:82` and `FetchCachedRepresentations.swift:118`.
+
+  | Sites | `mediaBox.` member |
+  |---|---|
+  | 81 | `(handle)` |
+  | 57 | `resourceData` |
+  | 23 | `cachedResourceRepresentation` |
+  | 20 | `storeResourceData` |
+  | 19 | `completedResourcePath` |
+  | 6 | `cancelInteractiveResourceFetch` |
+  | 4 | `cacheStorageBox` |
+  | 3 each | `cachedRepresentationCompletePath`, `storageBox` |
+  | 2 each | `basePath`, `fetchedResource`, `internal_resourceDataIsCached`, `moveResourceData`, `storeCachedResourceRepresentation` |
+  | 1 each | `cachedRepresentationPathForId`, `resourcePath`, `resourceStatus` |
+
+- **Verification:** guard tests 36/36; `PostboxImportCheck` clean on the tree; full build green, with the extended check running first.
+
+### Wave P2: `EngineMediaResourceRepresentation` (2026-10-12)
+
+- **The protocol.** TelegramCore declares `public protocol EngineMediaResourceRepresentation: CachedMediaResourceRepresentation`, next to `EngineMediaResource`. It has the same shape as `EngineCustomMedia: Media`: TelegramCore stores and serves representations but never enumerates their kinds, which stay app-side.
+- **The adopters.** The 15 representation classes conform to it instead of `EngineRawCachedMediaResourceRepresentation`:
+  - 14 in `MediaResources/Sources/CachedResourceRepresentations.swift`;
+  - `YoutubeEmbedStoryboardMediaResourceRepresentation`.
+
+  No raw conformance remains (the grep over all conformance spellings is empty).
+- **Equivalence.** Only the declared conformance changed. The instances reaching MediaBox are the same, and so are their `uniqueId`, `keepDuration` and `isEqual(to:)`. The generators and the construction sites are untouched.
+- **What is left.** Each class's `isEqual(to:)` still names the raw protocol through `EngineRawCachedMediaResourceRepresentation`, because it is the Postbox requirement. That is recorded for the `EngineRaw`-sink work.
+- **Verification:** full build green; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Wave P3: `resourceData` (2026-10-12)
+
+**New facade:** `engine.resources.rangeData(resource:size:range:)`, which forwards `mediaBox.resourceData(_:size:in:)` and returns `Signal<(Data, Bool), NoError>`. Its callers pass no `mode` or flags, so MediaBox's own defaults apply as before.
+
+**Rewrites:**
+- **Engine.** `account.postbox.mediaBox.resourceData(r, …)` becomes `TelegramEngine(account: account).resources.data(resource: EngineMediaResource(r), …)`. Where a context is at hand, it is `context.engine.resources`.
+- **Options** map onto the facade exactly as its own body maps them back:
+  - `.complete(waitUntilFetchStatus: w)` → `waitUntilFetchStatus: w`;
+  - `.incremental(waitUntilFetchStatus: w)` → `waitUntilFetchStatus: w, incremental: true`;
+  - PhotoResources' `!progressive ? .complete(…false) : .incremental(…false)` → `waitUntilFetchStatus: false, incremental: progressive`.
+- **`pathExtension` and `attemptSynchronously`** pass through unchanged.
+- **Consumers** rename `.complete` → `.isComplete` and `.size` → `.availableSize`, on exactly the lines that read the returned value. `path` is unchanged.
+- **Comparisons.** None of the converted sites compared `MediaResourceData` values (no `==` or `distinctUntilChanged`), so no explicit comparison was needed.
+
+**Sites.** Of the 49 Account-rooted `resourceData` calls, 33 were converted, 14 deferred, 1 moved to P5 and 1 skipped.
+
+| Decision | Sites |
+|---|---|
+| Converted (33) | `WalletCollectibleImageComponent.swift:16`; `WallpaperResources.swift`: 98, 113, 123, 964, 1185, 1208, 1847; `FetchCachedRepresentations.swift`: 147, and the range reads 155, 162, 232; `PhotoResources.swift`: 278, 302, 319, 355, 372, 416, 1083, 2068, 2097, 2293, 2729, 2754, 2770, 2780, 2929; `StickerResources.swift`: 538, 560, 579; `DirectMediaImageCache.swift`: 276 (range read), 281; `ChatImageGalleryItem.swift:914` |
+| Deferred (14) | `WallpaperResources.swift`: 32, 54, 58. They return or merge into a raw `EngineRawMediaResourceData` signal that is `combineLatest`'d with `accountManager.mediaBox` and returned as-is. |
+| | `FetchCachedRepresentations.swift`: 44, 52, 131, 139, 181, 190, 200, 211, 219, 234. The data is handed to generator helpers whose parameter is `resourceData: MediaResourceData`. |
+| | `PhotoResources.swift:3252`, which feeds `decryptedResourceData(data:)`. |
+| Moved to P5 | `WallpaperResources.swift:402`. It is one half of a ternary whose other half is a `cachedResourceRepresentation`, so both halves must change type together. |
+| Skipped | `ReactionImageComponent.swift:82`, which is inside `/* */`. |
+
+**Equivalence.**
+- Each facade body is the MediaBox call with the same arguments. `data(resource:)` calls `resourceData(_ resource:…)`, which MediaBox itself forwards to the id form.
+- `TelegramEngine(account:)` only stores the account, so `resources` reaches the same `account.postbox.mediaBox`.
+- `ResourceData` copies `path`, `size` and `complete` from the `MediaResourceData` it wraps. There is one extra small allocation per emission on these paths (image and sticker loading), and no behaviour change.
+
+**Freed:** `WalletCollectibleImageComponent.swift` left the access list. No file stopped importing Postbox, since the deferred and other uses remain.
+
+**Report after the wave:** access files 252 → 251; `.postbox.mediaBox` sites 229 → 197; `mediaBox.resourceData` 57 → 25. The 25 are the 15 Account-rooted sites left (14 deferred, plus line 402 for P5) and 10 on non-Account receivers (`self.postbox`, `resource.postbox`, emoji-layer contexts).
+
+**Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Wave P4: store, completed path, move, cancel (2026-10-12)
+
+**New facade:** `engine.resources.moveResourceData(id:fromTempPath:)`, beside the existing `toTempPath:` form.
+
+**The 22 Account-rooted calls, all converted.** Every receiver is a bare `account`, so the engine is `TelegramEngine(account: account).resources`.
+
+| Calls | Files | Rewrite |
+|---|---|---|
+| 13 `storeResourceData` | LegacyMediaPickers ×5, VideoChatScreenParticipantContextMenu ×2, CommunityEditScreen, PeerInfoScreenAvatarSetup ×4, CreatePeerAvatarSetup | `storeResourceData(id: EngineMediaResource.Id(x.id), data:, synchronous:)`; `synchronous:` only where the site passed it, and both defaults are `false` |
+| 5 `completedResourcePath` | ManagedAnimationNode, NotificationSoundSelection, ManagedDiceAnimationNode, PrefetchManager, WallpaperResources:1477 | `completedResourcePath(id: EngineMediaResource.Id(r.id), pathExtension:)`. ManagedAnimationNode's `resource._asResource()` becomes `resource.id`, which is the same id. |
+| 2 `moveResourceData` | LegacyMediaPickers:912 (`fromTempPath:`), WallpaperUploadManager:98 (`from:to:`) | `moveResourceData(id:fromTempPath:)`, `moveResourceData(from:to:)` |
+| 2 `cancelInteractiveResourceFetch` | PhotoResources: 2055, 2064 | `cancelInteractiveResourceFetch(id: EngineMediaResource.Id(r.id))` |
+
+`FetchCachedRepresentations.swift:118` (`resourceRangesStatus`) sits inside `/* */` and was skipped.
+
+**Equivalence.**
+- MediaBox's resource-taking overloads (`completedResourcePath(_:)`, `cancelInteractiveResourceFetch(_:)`) forward to their id forms with `resource.id`.
+- The facades call those id forms with `MediaResourceId(id.stringRepresentation)`. `MediaResourceId` is a single-string struct, so the round trip is exact.
+- None of these calls returns a data value, so no consumer changed.
+
+**Freed:** `LegacyMediaPickers.swift` and `ManagedAnimationNode.swift` left the access list.
+
+**Report after the wave:** access files 251 → 249; `.postbox.mediaBox` sites 197 → 175.
+
+**Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Wave P5: cached representations (2026-10-12)
+
+**New facades** on `engine.resources`. Each takes `EngineMediaResourceRepresentation` from wave P2, and its defaults are copied from `MediaBox.swift`:
+- `cachedRepresentation(resource:representation:pathExtension:complete:fetch:attemptSynchronously:)`, returning `ResourceData`;
+- `cachedRepresentationCompletePath(id:representation:)`;
+- `storeCachedRepresentation(resource:representation:data:)`;
+- `cachedRepresentationPath(id:representationId:keepDuration:)`.
+
+**Sites.**
+
+| Decision | Sites |
+|---|---|
+| Converted (26 sites, 27 calls counting the 402 `resourceData` half) | `AttachmentController.swift`: 1798, 1801 |
+| | `AttachmentPanel.swift`: 2164, 2167 |
+| | `PhotoResources.swift`: 392, 393, 1069, 1070, 2667. In `svgIconImageFile` the local `Signal` annotation became `Signal<EngineMediaResource.ResourceData, NoError>`, and its bundled placeholder is built as `ResourceData(path:availableSize:isComplete:)` instead of `MediaResourceData(path:offset: 0, size:complete:)`. The only consumer reads `path` and `complete`. |
+| | `ChatQrCodeScreen.swift:1072`, `ChatThemeScreen.swift:1346` |
+| | `WallpaperUtils.swift`: 122, 155 |
+| | `StoryChatContent.swift`: 1877, 2111 |
+| | `StoryItemImageView.swift`: 145, 166. `fullSize` is `combineLatest`'d with a preview signal that was already `ResourceData`. |
+| | `FetchCachedRepresentations.swift:440` (reads only `path`) |
+| | `WallpaperUploadManager.swift`: 111, 136 |
+| | `YoutubeEmbedImplementation.swift:498` |
+| | `WallpaperResources.swift`: 130, and 402 with both halves of its ternary (the `resourceData` half carried over from P3) |
+| | `LegacyInstantVideoController.swift:229`, `VideoMessageCameraScreen.swift:2070` |
+| | `DirectMediaImageCache.swift:257` |
+| Deferred (3) | `WallpaperResources.swift`: 25, 38, 47. They are part of the same raw `maybeFullSize: Signal<EngineRawMediaResourceData, NoError>` pipeline as P3's deferred 32 / 54 / 58, which merges `accountManager.mediaBox` signals and returns raw data. |
+
+**Consumers.** Renames `.complete` → `.isComplete` and `.size` → `.availableSize`, on the lines that read each converted value:
+- PhotoResources: 398, 435, 1075, 1101, 2681;
+- ChatQrCodeScreen: 1077, 1079;
+- ChatThemeScreen: 1351, 1353;
+- StoryItemImageView: 178;
+- Youtube: 499, 500;
+- WallpaperResources: 132, 414, 423, 425.
+
+WallpaperResources:402's `combineLatest(sharedResource, accountResource)` now pairs a raw shared value with an engine account value, and each is read through its own field names.
+
+**Equivalence.**
+- Each facade forwards to the same MediaBox call with the same arguments and defaults. The representation objects are the same instances.
+- `cachedRepresentationCompletePath` and `cachedRepresentationPath` return the same `String`.
+- No converted site compared data values.
+
+**Freed** from the access list: AttachmentController, LegacyInstantVideoController, WallpaperUtils, VideoMessageCameraScreen, WallpaperUploadManager and YoutubeEmbedImplementation.
+
+**Process note.** The edit script stopped once on a wrong rename line number (2680 instead of 2681). It had already written the two AttachmentUI files, which were checked by diff and kept; the rest ran after the fix.
+
+**Report after the wave:** access files 249 → 243; `.postbox.mediaBox` sites 175 → 148.
+
+**Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Wave P6: `fetchedMediaResource(mediaBox:)` → `engine.resources.fetch` (2026-10-12)
+
+**Facade.** `engine.resources.fetch(reference:userLocation:userContentType:…)` replaces the three-argument form with two overloads that mirror `fetchedMediaResource`'s two (`FetchedMediaResource.swift:28` and `:73`).
+- The first takes `range: (Range<Int64>, EngineMediaBoxFetchPriority)? = nil`. The second takes `ranges: […]?` with no default.
+- Both take `statsCategory: MediaResourceStatsCategory = .generic`, and `reportResultStatus`, `preferBackgroundReferenceRevalidation` and `continueInBackground`, all `= false`. These defaults are the same as `fetchedMediaResource`'s.
+- Existing three-argument callers resolve to the first overload with every default, which is the call they made before. The `ranges:` overload has no default, so no call is ambiguous.
+
+**New alias:** `EngineMediaBoxFetchPriority = MediaBoxFetchPriority`, a plain alias (not `EngineRaw`), so the `.default` / `.elevated` / `.maximum` literals at call sites are unchanged.
+
+**The 47 calls, all converted.** Every Account-rooted `fetchedMediaResource(mediaBox: X.postbox.mediaBox, …)` call became `<engine>.resources.fetch(reference:userLocation:userContentType:…)`.
+- **Engine by receiver:**
+  - 26 bare `account`, 2 `item.account` and 1 `self.account` use `TelegramEngine(account:)`;
+  - 13 `context.account`, 3 `self.context.account` and 2 `component.context.account` use `….engine`.
+- **Arguments.** A script dropped the `mediaBox:` argument and moved `reference:` to the front. It kept every other argument and its formatting, and refused any trailing argument outside the facade's six.
+- **Shapes.** 23 calls pass only the four required arguments. The rest pass `statsCategory`, `range` or `ranges`, and the reporting flags.
+- **Result type.** `Signal<FetchResourceSourceType, FetchResourceError>` is unchanged, so no consumer changed and nothing needed deferring.
+
+**Equivalence.**
+- The facade calls `fetchedMediaResource` with `self.account.postbox.mediaBox` and every argument passed through, so it is the same call.
+- Moving `reference:` first changes the order in which arguments are evaluated. Every argument at these sites is a side-effect-free expression (a reference, a location, a content type, a literal), so the results are unchanged.
+
+**Freed** from the access list: FetchMediaUtils, AttachmentPanel, BotCheckoutHeaderItem, BatchVideoRenderingContext, GroupStickerPackCurrentItem and StoryItemImageView. FetchMediaUtils still imports Postbox for its own handle-taking functions.
+
+**Report after the wave:** access files 243 → 237; `.postbox.mediaBox` sites 148 → 101; `mediaBox.(handle)` 81 → 34 (the remaining 34 are handles passed to app-side functions, or the files' own handles).
+
+
+**Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Wave P7: the stragglers (2026-10-12)
+
+**New facades** on `engine.resources`:
+- `fetchedResource(resource:)`, which forwards `mediaBox.fetchedResource(_:parameters: nil)` with MediaBox's own `implNext: false`;
+- `storageTotalSize()` and `cacheStorageTotalSize()`;
+- `resetStorageIndex()`, for `storageBox.reset()`;
+- `mediaBasePath`;
+- `resourcePath(resource:)`.
+
+`storageBox`, `cacheStorageBox` and `basePath` are stored `let`s on `MediaBox`, so each facade reaches the same object the site reached before.
+
+**Converted:**
+- **`fetchedResource`:** `SecureIdDocumentImageGalleryItem.swift:134` and `PhotoResources.swift:3251`.
+- **Storage boxes:**
+  - `ChatListNode.swift:2017`, both totals;
+  - `DataAndStorageSettingsController.swift:695–696`, both totals;
+  - `DebugController.swift:1261`, the reset.
+- **`basePath`:** `AccountContext.swift:388` reads `self.engine.resources.mediaBasePath`, which is assigned at line 321, before this read.
+- **`resourcePath`:** `SpotlightContacts.swift:223`.
+- **Local aliases.** In each file, `let mediaBox = <context>.account.postbox.mediaBox` became `let resources = <context>.engine.resources`, and each use was rewritten with the P3 / P4 / P6 recipes. The files and uses:
+  - `LottieComponentEmojiContent.swift:39`: `resourceData` and `fetchedResource`;
+  - `LottieComponentResourceContent.swift:52`: `completedResourcePath`, `resourceData` and `fetchedResource`;
+  - `WalletCollectibleHeaderComponent.swift:61`: `resourceData` (`.size` → `.availableSize`, `.complete` → `.isComplete`) and `fetchedResource`;
+  - `WalletConnectScreen.swift:93`: `resourceData` and `fetchedMediaResource(mediaBox: mediaBox, …)` → `resources.fetch(reference:…)`.
+
+  These closures now capture the `Resources` object, which holds the `Account`, where they captured the `MediaBox` before. The capture lasts only while the load signal is subscribed, and the component's `AccountContext` holds the same account throughout.
+
+**Deferred:** `AccountContext.swift:387`. Its `cacheStorageBox` is captured by `DCTAnimationCacheImpl`'s long-lived `updateStorageStats` closure. Routing it through `engine.resources` would make that closure retain the whole `Account` instead of only the `StorageBox`, which is a lifetime change. It is left for the handle sub-project, and the planned `updateCacheStorageEntry` facade was not added, because it would have no caller.
+
+**Every Account-rooted MediaBox use left after P3–P7.** Each is deferred (with its reason) or out of scope by the spec:
+
+| Sites | Why left |
+|---|---|
+| `WallpaperResources.swift`: 25, 32, 38, 47, 54, 58 | The raw `maybeFullSize: Signal<EngineRawMediaResourceData, NoError>` pipeline, merged with `accountManager.mediaBox` and returned raw. |
+| `FetchCachedRepresentations.swift`: 44, 52, 131, 139, 181, 190, 200, 211, 219, 234 | Data handed to generator helpers whose parameter is `resourceData: MediaResourceData`. |
+| `PhotoResources.swift:3252` | Feeds `decryptedResourceData(data:)`, which takes `MediaResourceData`. |
+| `AccountContext.swift:387` | The lifetime change described above. |
+| 18 `mediaBox` handle passes to app-side functions: `chatServiceBackgroundColor` ×7, `chatControllerBackgroundImage(Signal)` ×3, `UniversalSoftwareVideoSource` ×3, `chatMessageAnimationData` ×2, `storeImage`, `update` (bubble), `resource` (FetchCachedRepresentations) | Out of scope: these are app-side `mediaBox:` parameters, belonging to the handle sub-project. |
+| `ReactionImageComponent.swift:82`, `FetchCachedRepresentations.swift:118` | Inside `/* */`. |
+
+**Exit criteria.**
+- No Account-rooted MediaBox call or `fetchedMediaResource(mediaBox:)` pass remains outside this table.
+- 21 of the 31 MediaBox-only files at the phase baseline left the access list.
+
+  The other ten each still have a deferred or out-of-scope site:
+  - DirectMediaImageCache, WallpaperResources, ThemeAccentColorController(Node), TextSizeSelectionController, ThemePreviewControllerNode, ManagedDiceAnimationNode, ChatMessageBubbleItemNode and PeerInfoVisualMediaPaneNode, all through app-side `mediaBox:` parameters or a deferral;
+  - ChunkMediaPlayerDirectFetchSourceImpl, through its own `resource.postbox` handle.
+- Equivalence is recorded per wave above.
+
+**Report after the wave:** importers 84; access files 237 → 231; `.postbox.mediaBox` sites 101 → 88; MediaBox-only files 10.
+
+**Phase totals, P1–P7:**
+- access files 252 → 231;
+- `.postbox.mediaBox` sites 229 → 88;
+- `mediaBox.(handle)` 81 → 30 (Account-rooted passes to app-side functions and the files' own handles);
+- importers unchanged at 84. Every converted file still has other Postbox uses, or kept its import for handle types.
+
+**Verification:** full build green on the first pass; `//Tests/ComposerHarness:ComposerHarness` green.
+
+### Pre-merge review fixes (2026-10-12)
+
+A fresh reviewer went over the whole branch (`8de02bc574..59bc9bd5de`) before merging and found nothing critical. Its one important item was that no release build had run. A `release_arm64` build then succeeded (8,178 actions, no undefined symbols), so the computed framework export lists cover every new public TelegramCore symbol. The user asked for all four of its minor items to be fixed:
+
+1. **The guard cost 6.6 s per `Make.py build`/`test`; it is now 0.58 s.**
+   - `strip_comments_and_strings` stepped through 17 MB of Swift one Python iteration per character, about 4 MB/s.
+   - It now jumps between the places its state can change (comment, string and interpolation markers) with compiled regexes. The text between two stops is copied or blanked in one slice.
+   - A test strips ~10 MB in under a second. It failed before the rewrite at 2.2 s.
+   - A differential run over all 5,954 Swift files under `submodules/`, `Telegram/` and `Tests/` (111 MB) gave byte-identical output from the old and new strippers, and stripping took 0.61 s instead of 26.4 s.
+2. **A guard against `EngineMedia` traps.**
+   - `PostboxImportCheck.py` now also fails on any in-scope class, struct, enum, protocol or extension whose inheritance list names `Media`, `Postbox.Media` or `EngineRawMedia`, anywhere in the list, without naming `EngineCustomMedia`. That replaces the CLAUDE.md grep, which saw `Media` only as the first inherited type and was the gap behind the wave 455/458 trap.
+   - The check is parsed from comment- and string-stripped code. Generic constraints (`<T: Media>`) and `where` clauses do not count.
+   - The tree passes it: the only app-side media types are the three `EngineCustomMedia` previews.
+   - `check()` now reads each file once for all three scans (`scan_tree`), so the guard takes 0.86 s with the new check.
+   - CLAUDE.md's wrapper note no longer calls the wrappers value types: `EngineMessage`, `EngineRenderedPeer` and `EngineMediaResource` are classes.
+   - Guard tests 37 → 44.
+3. **The MediaBox-access spec's exit criteria are amended** to match the deferral rule the user approved with the plan. Every in-scope call is now required to be converted or recorded as deferred, with the reason in the log, rather than "none remains". The spec carries a dated note.
+4. **Two small leftovers.**
+   - **One `InstantPage.media` snapshot per layout pass.** `InstantPageControllerNode` and `BrowserInstantPageContent` used to build the computed dictionary twice: once for the mutable copy and once to iterate. Each now builds it once into `currentMediaById` and iterates that.
+     - The getter is `rawMedia.mapValues(EngineMedia.init)`, so both old reads iterated in `rawMedia`'s order, and the single snapshot visits the same pairs in the same order.
+     - Each key is updated independently, so the result is the same as before, with one dictionary build saved per pass.
+   - **PeerInfoScreen's hidden media has no wrap round-trip.**
+     - Since wave 460 the handler wrapped each media in `EngineMedia` and then unwrapped every value back with `mapValues { $0.map { $0._asMedia() } }` for `ChatControllerInteraction.hiddenMedia`.
+     - The local now has that destination's own type, `[EngineMessage.Id: [EngineRawMedia]]`, its only consumer. That restores the pre-460 code with engine alias spellings, the same pattern wave 452 used in `ChatControllerLoadDisplayNode`.
+     - The same objects land in the same keys, with one `EngineMedia.init` call site fewer.
+
+**Verification:** guard tests 44/44; the guard is clean on the tree; full `debug_sim_arm64` build green; `InstantPageUITests` 191/191. A `release_arm64` build had already passed before these fixes.
+
+
+### Where to pick up (at the squash onto master, 2026-10-12)
+
+**Measures** (`python3 build-system/Make/PostboxImportCheck.py --report`):
+- 84 in-scope files import Postbox;
+- 231 files use `.postbox` (on `AllowedPostboxAccess.txt`);
+- 88 `.postbox.mediaBox` sites;
+- 379 handle sites, where `.postbox` is passed on with no member called.
+
+The guard also fails on any app-side `Media` conformance without `EngineCustomMedia`.
+
+**How the work ran, and what to keep doing:**
+- Each sub-project is brainstormed into a spec, then a plan, then waves. The user approves the spec and the plan.
+- One pattern per wave (one member family, one cluster). Inventory first, and check every facade default against its source.
+- Behaviour must not change (rule 9). A call whose result must feed raw-typed code, or whose conversion changes a lifetime, is deferred and logged, not forced.
+- Prefer real engine wrappers over `EngineRaw*` aliases, adding a new wrapper or protocol when none fits (user, 2026-10-12). UI-specific types stay out of TelegramCore: an engine protocol, adopted app-side, is the pattern (`EngineCustomMedia`, `EngineMediaResourceRepresentation`).
+- Check the implicit-`self` reads of a retyped stored property (wave 458).
+- A `SharedAccountContext` change needs the composer harness stub regenerated (`Tests/ComposerHarness/Tools/generate_harness_stubs.py`) and the harness built separately. Any TelegramCore API change needs the harness built.
+- Run a fresh reviewer over each batch, and a `release_arm64` build before shipping.
+
+**Open sub-projects:**
+1. **Handles.** The `postbox: Postbox` and `mediaBox: MediaBox` handles held or taken by the media pipeline: about 45 files hold a `Postbox` handle and 12 a `MediaBox` (see the phase 2026-10 exit inventory). That includes:
+   - the app-side functions that take `mediaBox:`: `chatServiceBackgroundColor`, `chatControllerBackgroundImage(Signal)`, `chatMessageAnimationData`, `UniversalSoftwareVideoSource`, `DirectMediaImageCache.storeImage`, the bubble's `update`;
+   - FetchCachedRepresentations' generator inputs;
+   - NotificationService.
+
+   Every MediaBox site deferred in waves P3–P7 belongs here; wave P7 lists them.
+2. **Views.** `peerView` (29 sites), `combinedView` (23), `itemCollectionsView` (11), the history views and `PostboxViewKey`. These are most of the class-R files. Do not split a multi-key `combinedView` into parallel subscriptions.
+3. **`transaction` blocks** (49 sites).
+4. **The remaining `.postbox` members:** `messagesAtIds`, `messageAtId`, `searchPeers`, `clearCaches`, `aroundMessageHistoryViewForLocation` and the others.
+5. **The `EngineRaw*` sinks:**
+   - `ChatControllerInteraction`'s `hiddenMedia`, `updateMessageReaction`, `playMessageEffect` and `openPeerContextMenu`;
+   - the bubble `transitionNode` / `updateHiddenMedia`;
+   - `ListMessageItem.message`;
+   - the preview callers that build fake messages with `EngineRawMessage(...)` instead of the memberwise `EngineMessage` initializer;
+   - the representation classes' raw `isEqual(to:)`.
+6. **The heavy class-W files:** ChatRecentActionsHistoryTransition, UniversalVideoGalleryItem, ChatAnimationGalleryItem, ChatImageGalleryItem and InChatPrefetchManager. ChatControllerOpenAttachmentMenu stays raw by design (`RichTextDraft`).
+
+**Known guard gaps:** the comment/string stripper does not model raw strings (`#"…"#`, `\#(…)`) or regex literals. A raw-string interpolation of `.postbox` could slip past it.
+
 ## Modules currently free of `import Postbox` (running tally)
+
+**Stale since wave 105.** From wave 439 on, the authoritative state is `submodules/Postbox/AllowedImporters.txt` (files) and the `clients` / `test_clients` package groups in `submodules/Postbox/BUILD` (packages); each wave entry records the counts.
 
 Consumer modules that no longer import Postbox, across all waves and standalone commits:
 

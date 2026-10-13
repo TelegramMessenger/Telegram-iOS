@@ -31,17 +31,17 @@ public enum ChatMessageGalleryControllerData {
     case story(Signal<StoryContainerScreen, NoError>)
 }
 
-private func instantPageBlockMedia(pageId: EngineMedia.Id, block: InstantPageBlock, media: [EngineMedia.Id: EngineRawMedia], counter: inout Int) -> [InstantPageGalleryEntry] {
+private func instantPageBlockMedia(pageId: EngineMedia.Id, block: InstantPageBlock, media: [EngineMedia.Id: EngineMedia], counter: inout Int) -> [InstantPageGalleryEntry] {
     switch block {
         case let .image(id, caption, _, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
         case let .video(id, caption, _, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
@@ -68,9 +68,10 @@ public func instantPageGalleryMedia(webpageId: EngineMedia.Id, page: InstantPage
     var counter: Int = 0
     
     let page = page._parse()
-    
+    let media = page.media
+
     for block in page.blocks {
-        result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: page.media, counter: &counter))
+        result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: media, counter: &counter))
     }
     
     var found = false
@@ -176,7 +177,7 @@ public func chatMessageGalleryControllerData(
             if let instantPage = content.instantPage {
                 if case let .instantPageMedia(tappedMediaId) = mediaSubject {
                     let parsedPage = instantPage._parse()
-                    if let tappedMedia = parsedPage.media[tappedMediaId] {
+                    if let tappedMedia = parsedPage.media[tappedMediaId]?._asMedia() {
                         let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: tappedMedia)
                         if !medias.isEmpty {
                             instantPageMedia = (webpage, medias)

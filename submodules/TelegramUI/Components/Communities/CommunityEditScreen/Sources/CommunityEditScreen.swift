@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AVFoundation
 import Display
-import Postbox
 import AccountContext
 import TelegramCore
 import SwiftSignalKit
@@ -190,7 +189,7 @@ private enum CommunityCreateAvatarSetup {
                     case .completed:
                         if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: .mappedIfSafe) {
                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                            account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                            TelegramEngine(account: account).resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data, synchronous: true)
                             subscriber.putNext(resource)
                             subscriber.putCompletion()
                         }
@@ -687,7 +686,7 @@ private final class CommunityEditScreenComponent: Component {
         private var community: TelegramCommunity?
         private var cachedData: CachedCommunityData?
         private var linkedPeers: [EnginePeer.Id: EnginePeer] = [:]
-        private var linkedPeerCachedData: [EnginePeer.Id: CachedPeerData] = [:]
+        private var linkedPeerCachedData: [EnginePeer.Id: EngineCachedPeerData] = [:]
         private var currentLinkedPeerIds: [EnginePeer.Id] = []
         private var draftLinkedPeers: [DraftLinkedPeer] = []
         private var createdCommunityId: EnginePeer.Id?
@@ -917,7 +916,7 @@ private final class CommunityEditScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+                var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
                 for id in ids {
                     if let maybeCachedData = cachedDataById[id], let cachedData = maybeCachedData {
                         cachedPeerData[id] = cachedData
@@ -1990,7 +1989,7 @@ private final class CommunityEditScreenComponent: Component {
                 avatarPeer = EnginePeer(community)
             } else if self.isCreateMode {
                 avatarPeer = EnginePeer(TelegramCommunity(
-                    id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)),
+                    id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)),
                     accessHash: nil,
                     title: self.trimmedTitle,
                     photo: self.pendingAvatar.flatMap { [$0.previewRepresentation] } ?? [],

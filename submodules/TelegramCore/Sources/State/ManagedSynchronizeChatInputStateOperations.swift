@@ -165,7 +165,7 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
 
     var draftMedia: [Media] = []
     if case let .instantPage(page) = inputState?.content {
-        for (_, media) in page.media where isPreuploadableMedia(media) {
+        for (_, media) in page.rawMedia where isPreuploadableMedia(media) {
             draftMedia.append(media)
         }
     }

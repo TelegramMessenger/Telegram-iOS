@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
@@ -1059,7 +1058,7 @@ extension ChatControllerImpl {
                 let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: effectiveSilentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone)
                 
                 var forwardedMessages: [[EnqueueMessage]] = []
-                var forwardSourcePeerIds = Set<PeerId>()
+                var forwardSourcePeerIds = Set<EnginePeer.Id>()
                 for message in transformedMessages {
                     if case let .forward(source, _, _, _, _) = message {
                         forwardSourcePeerIds.insert(source.peerId)
@@ -1079,7 +1078,7 @@ extension ChatControllerImpl {
                 
                 let _ = (strongSelf.shouldDivertMessagesToScheduled(messages: transformedMessages)
                 |> deliverOnMainQueue).start(next: { shouldDivert in
-                    let signal: Signal<[MessageId?], NoError>
+                    let signal: Signal<[EngineMessage.Id?], NoError>
                     var shouldOpenScheduledMessages = false
                     if forwardSourcePeerIds.count > 1 {
                         var forwardedMessages = forwardedMessages
@@ -1097,13 +1096,13 @@ extension ChatControllerImpl {
                             shouldOpenScheduledMessages = true
                         }
                         
-                        var signals: [Signal<[MessageId?], NoError>] = []
+                        var signals: [Signal<[EngineMessage.Id?], NoError>] = []
                         for messagesGroup in forwardedMessages {
                             signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
                         }
                         signal = combineLatest(signals)
                         |> map { results in
-                            var ids: [MessageId?] = []
+                            var ids: [EngineMessage.Id?] = []
                             for result in results {
                                 ids.append(contentsOf: result)
                             }
@@ -1531,7 +1530,7 @@ extension ChatControllerImpl {
                                                     }
                                                 }
                                             case let .custom(fileId):
-                                                if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                                if let itemFile = item.message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
                                                     let itemFile = TelegramMediaFile.Accessor(itemFile)
                                                     reactionItem = ReactionItem(
                                                         reaction: ReactionItem.Reaction(rawValue: updatedReaction),
@@ -2256,7 +2255,7 @@ extension ChatControllerImpl {
                     entitiesAttribute = TextEntitiesMessageAttribute(entities: entities)
                 }
                 
-                var inlineStickers: [MediaId: TelegramMediaFile] = [:]
+                var inlineStickers: [EngineMedia.Id: TelegramMediaFile] = [:]
                 var firstLockedPremiumEmoji: TelegramMediaFile?
                 text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
@@ -2454,7 +2453,7 @@ extension ChatControllerImpl {
             }
         }, navigateMessageSearch: { [weak self] action in
             if let strongSelf = self {
-                var navigateIndex: MessageIndex?
+                var navigateIndex: EngineMessage.Index?
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                     if let data = current.search, let resultsState = data.resultsState {
                         if let currentId = resultsState.currentId, let index = resultsState.messageIndices.firstIndex(where: { $0.id == currentId }) {
@@ -2589,7 +2588,7 @@ extension ChatControllerImpl {
                                 })
                             }
                         }, nil)
-                        var attributes: [MessageAttribute] = []
+                        var attributes: [EngineMessage.Attribute] = []
                         let entities = generateTextEntities(messageText, enabledTypes: .all)
                         if !entities.isEmpty {
                             attributes.append(TextEntitiesMessageAttribute(entities: entities))
@@ -2624,7 +2623,7 @@ extension ChatControllerImpl {
                                 }
                             }, nil)
 
-                            var attributes: [MessageAttribute] = [
+                            var attributes: [EngineMessage.Attribute] = [
                                 EphemeralOutgoingMessageAttribute(botPeerId: resolved.botPeerId, randomId: 0, state: .sending)
                             ]
                             if !resolved.entities.isEmpty {
@@ -2672,7 +2671,7 @@ extension ChatControllerImpl {
             var messages: [EnqueueMessage] = []
             do {
                 let message = shortcut.topMessage
-                var attributes: [MessageAttribute] = []
+                var attributes: [EngineMessage.Attribute] = []
                 let entities = generateTextEntities(message.text, enabledTypes: .all)
                 if !entities.isEmpty {
                     attributes.append(TextEntitiesMessageAttribute(entities: entities))
@@ -3734,7 +3733,7 @@ extension ChatControllerImpl {
             }
             
             var signal = strongSelf.context.engine.messages.requestMessageSelectPollOption(messageId: id, opaqueIdentifiers: [])
-            let disposables: DisposableDict<MessageId>
+            let disposables: DisposableDict<EngineMessage.Id>
             if let current = strongSelf.selectMessagePollOptionDisposables {
                 disposables = current
             } else {
@@ -3815,7 +3814,7 @@ extension ChatControllerImpl {
                     guard let strongSelf = self else {
                         return
                     }
-                    let disposables: DisposableDict<MessageId>
+                    let disposables: DisposableDict<EngineMessage.Id>
                     if let current = strongSelf.selectMessagePollOptionDisposables {
                         disposables = current
                     } else {
@@ -4225,7 +4224,7 @@ extension ChatControllerImpl {
             let insets = layout.insets(options: .input)
             let bottomInset = max(insets.bottom, cleanInsets.bottom) + 54.0
             
-            let defaultMyPeerId: PeerId
+            let defaultMyPeerId: EnginePeer.Id
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
                 defaultMyPeerId = channel.id
             } else if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveProfiles) {
@@ -4896,7 +4895,7 @@ extension ChatControllerImpl {
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.addTarget(self)
         self.galleryHiddenMesageAndMediaDisposable.set(self.context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                var messageIdAndMedia: [MessageId: [Media]] = [:]
+                var messageIdAndMedia: [EngineMessage.Id: [EngineRawMedia]] = [:]
                 
                 for id in ids {
                     if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
@@ -5158,7 +5157,7 @@ extension ChatControllerImpl {
                 }
                 
                 let engine = self.context.engine
-                let previousPeerCache = Atomic<[PeerId: EnginePeer]>(value: [:])
+                let previousPeerCache = Atomic<[EnginePeer.Id: EnginePeer]>(value: [:])
 
                 let activitySpace: PeerActivitySpace?
                 switch self.chatLocation {
@@ -5194,7 +5193,7 @@ extension ChatControllerImpl {
                             ))
                             |> map { peerMap -> [(EnginePeer, PeerInputActivity)] in
                                 var result: [(EnginePeer, PeerInputActivity)] = []
-                                var peerCache: [PeerId: EnginePeer] = [:]
+                                var peerCache: [EnginePeer.Id: EnginePeer] = [:]
                                 for (peerId, activity) in activities {
                                     if let maybePeer = peerMap[peerId], let peer = maybePeer {
                                         result.append((peer, activity))

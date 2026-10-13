@@ -4,7 +4,6 @@ import Display
 import TelegramCore
 import PasscodeCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -112,7 +111,7 @@ private final class ShareControllerAccountContextExtension: ShareControllerAccou
         self.engineData = TelegramEngine.EngineData(accountPeerId: stateManager.accountPeerId, postbox: stateManager.postbox)
         let cacheStorageBox = stateManager.postbox.mediaBox.cacheStorageBox
         self.animationCache = DCTAnimationCacheImpl(basePath: stateManager.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
+            return EngineTempBox.shared.tempFile(fileName: "file").path
         }, updateStorageStats: { path, size in
             if let pathData = path.data(using: .utf8) {
                 cacheStorageBox.update(id: pathData, size: size)
@@ -262,7 +261,7 @@ public class ShareRootControllerImpl {
             let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
             performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
             
-            TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
+            EngineTempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
             
             let logsPath = rootPath + "/logs/share-logs"
             let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -349,7 +348,7 @@ public class ShareRootControllerImpl {
             let presentationData = initialPresentationDataAndSettings!.presentationData
             presentationDataPromise.set(.single(presentationData))
             
-            var immediatePeerId: PeerId?
+            var immediatePeerId: EnginePeer.Id?
             #if DEBUG
             // Xcode crashes
             immediatePeerId = nil
@@ -358,7 +357,7 @@ public class ShareRootControllerImpl {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let peerId = Int64(string) {
-                        immediatePeerId = PeerId(peerId)
+                        immediatePeerId = EnginePeer.Id(peerId)
                     }
                 }
             }
@@ -373,7 +372,7 @@ public class ShareRootControllerImpl {
                 Logger.shared.logToConsole = loggingSettings.logToConsole
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
+                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, EnginePeer.Id?) in
                     let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
@@ -451,10 +450,10 @@ public class ShareRootControllerImpl {
                         accountManager: accountManager,
                         networkArguments: networkArguments,
                         id: record.id,
-                        encryptionParameters: ValueBoxEncryptionParameters(
+                        encryptionParameters: EngineValueBoxEncryptionParameters(
                             forceEncryptionIfNoSet: false,
-                            key: ValueBoxEncryptionParameters.Key(data: initializationData.encryptionParameters.0)!,
-                            salt: ValueBoxEncryptionParameters.Salt(data: initializationData.encryptionParameters.1)!
+                            key: EngineValueBoxEncryptionParameters.Key(data: initializationData.encryptionParameters.0)!,
+                            salt: EngineValueBoxEncryptionParameters.Salt(data: initializationData.encryptionParameters.1)!
                         ),
                         rootPath: rootPath,
                         auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(uploadInBackground: nil)
@@ -558,7 +557,7 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PeerId: Int64], [PeerId: StarsAmount], [PreparedShareItemContent], ShareControllerAccountContext, Bool, String) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, threadIds, requireStars, contents, account, silently, additionalText in
+                        let sentItems: ([EnginePeer.Id], [EnginePeer.Id: Int64], [EnginePeer.Id: StarsAmount], [PreparedShareItemContent], ShareControllerAccountContext, Bool, String) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, threadIds, requireStars, contents, account, silently, additionalText in
                             let sentItems = sentShareItems(accountPeerId: account.accountPeerId, postbox: account.stateManager.postbox, network: account.stateManager.network, stateManager: account.stateManager, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(uploadInBackground: nil), to: peerIds, threadIds: threadIds, requireStars: requireStars, items: contents, silently: silently, additionalText: additionalText)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
@@ -746,7 +745,7 @@ public class ShareRootControllerImpl {
                                         var archivePathValue: String?
                                         let _ = archivePathValue
                                         var otherEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)] = []
-                                        var mainFile: TempBoxFile?
+                                        var mainFile: EngineTempBoxFile?
                                         
                                         let appConfiguration = context.appConfiguration
                                         
@@ -805,7 +804,7 @@ public class ShareRootControllerImpl {
                                                     if entryPath.isEmpty {
                                                         continue
                                                     }
-                                                    let tempFile = TempBox.shared.tempFile(fileName: entryPath)
+                                                    let tempFile = EngineTempBox.shared.tempFile(fileName: entryPath)
                                                     if entryPath == mainFileName {
                                                         if SSZipArchive.extractFileFromArchive(atPath: archivePath, filePath: entry.path, toPath: tempFile.path) {
                                                             mainFile = tempFile
@@ -866,7 +865,7 @@ public class ShareRootControllerImpl {
                                                 return
                                             }
                                             
-                                            let tempFile = TempBox.shared.tempFile(fileName: "History.txt")
+                                            let tempFile = EngineTempBox.shared.tempFile(fileName: "History.txt")
                                             if let _ = try? FileManager.default.copyItem(atPath: url.path, toPath: tempFile.path) {
                                                 mainFile = tempFile
                                             } else {
@@ -990,7 +989,7 @@ private func attemptChatImport(
     navigationController: NavigationController,
     archivePathValue: String?,
     mainFileHeader: String,
-    mainFile: TempBoxFile,
+    mainFile: EngineTempBoxFile,
     otherEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)],
     beginShare: @escaping () -> Void
 ) {
@@ -1029,7 +1028,7 @@ private func attemptChatImport(
                 
                 controller.navigationPresentation = .default
                 
-                let beginWithPeer: (PeerId) -> Void = { peerId in
+                let beginWithPeer: (EnginePeer.Id) -> Void = { peerId in
                     navigationController.view.endEditing(true)
                     navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                         //inForeground.set(false)
@@ -1138,9 +1137,9 @@ private func attemptChatImport(
                         resolvedGroupTitle = "Group"
                     }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                        var signal: Signal<PeerId?, NoError> = _internal_createSupergroup(postbox: context.account.stateManager.postbox, network: context.account.stateManager.network, stateManager: context.account.stateManager, title: resolvedGroupTitle, description: nil, username: nil, isForum: false, isForHistoryImport: true)
+                        var signal: Signal<EnginePeer.Id?, NoError> = _internal_createSupergroup(postbox: context.account.stateManager.postbox, network: context.account.stateManager.network, stateManager: context.account.stateManager, title: resolvedGroupTitle, description: nil, username: nil, isForum: false, isForHistoryImport: true)
                         |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
+                        |> `catch` { _ -> Signal<EnginePeer.Id?, NoError> in
                             return .single(nil)
                         }
                         
@@ -1194,7 +1193,7 @@ private func attemptChatImport(
                 
                 controller.navigationPresentation = .default
                 
-                let beginWithPeer: (PeerId) -> Void = { peerId in
+                let beginWithPeer: (EnginePeer.Id) -> Void = { peerId in
                     navigationController.view.endEditing(true)
                     navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                         //inForeground.set(false)
@@ -1374,9 +1373,9 @@ private func attemptChatImport(
                         resolvedGroupTitle = "Group"
                     }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                        var signal: Signal<PeerId?, NoError> = _internal_createSupergroup(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, title: resolvedGroupTitle, description: nil, username: nil, isForum: false, isForHistoryImport: true)
+                        var signal: Signal<EnginePeer.Id?, NoError> = _internal_createSupergroup(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, title: resolvedGroupTitle, description: nil, username: nil, isForum: false, isForHistoryImport: true)
                         |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
+                        |> `catch` { _ -> Signal<EnginePeer.Id?, NoError> in
                             return .single(nil)
                         }
                         

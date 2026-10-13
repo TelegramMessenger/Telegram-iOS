@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import AccountContext
 import TelegramCore
 import SwiftSignalKit
@@ -629,7 +628,7 @@ private func communityChatCanRemovePeer(community: TelegramCommunity?, peer: Eng
     return communityChatPeerIsCreatedByAccount(peer)
 }
 
-private func communityCachedMemberCounts(_ data: [EnginePeer.Id: CachedPeerData]) -> [EnginePeer.Id: Int32] {
+private func communityCachedMemberCounts(_ data: [EnginePeer.Id: EngineCachedPeerData]) -> [EnginePeer.Id: Int32] {
     var result: [EnginePeer.Id: Int32] = [:]
     for (peerId, cachedData) in data {
         if let cachedData = cachedData as? CachedChannelData, let count = cachedData.participantsSummary.memberCount {
@@ -906,10 +905,10 @@ private final class CommunityViewContentComponent: Component {
     let community: TelegramCommunity?
     let cachedData: CachedCommunityData?
     let peers: [EnginePeer.Id: EnginePeer]
-    let cachedPeerData: [EnginePeer.Id: CachedPeerData]
+    let cachedPeerData: [EnginePeer.Id: EngineCachedPeerData]
     let previews: [EnginePeer.Id: CommunityChatPreviewData]
     let pendingRequests: CommunityPeerLinkRequests?
-    let pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData]
+    let pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData]
     let pendingRequestInFlightPeerId: EnginePeer.Id?
     let pendingRequestInFlightApprove: Bool?
     let joinedPeerIds: Set<EnginePeer.Id>
@@ -928,10 +927,10 @@ private final class CommunityViewContentComponent: Component {
         community: TelegramCommunity?,
         cachedData: CachedCommunityData?,
         peers: [EnginePeer.Id: EnginePeer],
-        cachedPeerData: [EnginePeer.Id: CachedPeerData],
+        cachedPeerData: [EnginePeer.Id: EngineCachedPeerData],
         previews: [EnginePeer.Id: CommunityChatPreviewData],
         pendingRequests: CommunityPeerLinkRequests?,
-        pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData],
+        pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData],
         pendingRequestInFlightPeerId: EnginePeer.Id?,
         pendingRequestInFlightApprove: Bool?,
         joinedPeerIds: Set<EnginePeer.Id>,
@@ -1290,7 +1289,7 @@ private final class CommunityViewContentComponent: Component {
             return nil
         }
 
-        private func memberCount(peerId: EnginePeer.Id, cachedPeerData: [EnginePeer.Id: CachedPeerData]) -> Int32? {
+        private func memberCount(peerId: EnginePeer.Id, cachedPeerData: [EnginePeer.Id: EngineCachedPeerData]) -> Int32? {
             guard let cachedData = cachedPeerData[peerId] else {
                 return nil
             }
@@ -1894,11 +1893,11 @@ private final class CommunityViewScreenComponent: Component {
         private var community: TelegramCommunity?
         private var cachedData: CachedCommunityData?
         private var peers: [EnginePeer.Id: EnginePeer] = [:]
-        private var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+        private var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
         private var previews: [EnginePeer.Id: CommunityChatPreviewData] = [:]
         private var pendingRequests: CommunityPeerLinkRequests?
         private var pendingRequestsContext: CommunityPeerLinkRequestsContext?
-        private var pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+        private var pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
         private var pendingRequestActions: [EnginePeer.Id: PendingCommunityViewRequestAction] = [:]
         private weak var currentRequestUndoOverlayController: UndoOverlayController?
         private var joinedPeerIds = Set<EnginePeer.Id>()
@@ -2128,7 +2127,7 @@ private final class CommunityViewScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+                var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
                 for id in ids {
                     if let maybeCachedData = cachedDataById[id], let cachedData = maybeCachedData {
                         cachedPeerData[id] = cachedData
@@ -2180,7 +2179,7 @@ private final class CommunityViewScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+                var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
                 for id in ids {
                     if let maybeCachedData = cachedDataById[id], let cachedData = maybeCachedData {
                         cachedPeerData[id] = cachedData

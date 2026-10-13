@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import AppBundle
-import Postbox
 import SwiftSignalKit
 import TextFormat
 import TelegramCore
@@ -95,7 +94,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// from each `setInputContent` push and read back by `resolveMedia` in `currentInputContent`, so a medium
     /// the chat layer sets round-trips through the structural model. A medium the editor never received via this
     /// path (no entry) resolves to nil and its block is dropped — see `resolveMedia` below.
-    private var mediaByID: [String: Media] = [:]
+    private var mediaByID: [String: EngineMedia] = [:]
 
     /// Typing-activity bookkeeping. The editor's `onChange` funnels THREE kinds of event into one payload-free
     /// call — a genuine text edit, a caret/selection move, and a programmatic `document` swap (draft restore /
@@ -407,7 +406,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             guard let self, let factory = self.mediaItemViewFactory else { return nil }
             let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)] = items.compactMap { item in
                 guard let media = self.mediaByID[item.mediaID] else { return nil }
-                return (EngineMedia(media), item.naturalSize, item.isSpoiler, item.kind)
+                return (media, item.naturalSize, item.isSpoiler, item.kind)
             }
             guard !resolved.isEmpty else { return nil }
             return factory(resolved, existing)
@@ -419,7 +418,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         self.editorView.onRequestMediaControl = { [weak self] request in
             guard let self, let media = self.mediaByID[request.mediaID] else { return }
             self.onRequestMediaControl?(MediaControlContext(
-                media: EngineMedia(media),
+                media: media,
                 control: request.control,
                 sourceView: request.view,
                 sourceRect: request.sourceRect,
@@ -748,7 +747,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// Direct-bridge `resolveMedia`: map the editor's opaque `mediaID` back to the concrete `Media` the node
     /// cached when it last received it (`registerMediaValue`). Nil ⇒ the media block is dropped on read-back
     /// (an unresolved medium has no `ChatInputMedia` representation).
-    private func resolveMediaID(_ mediaID: String) -> Media? {
+    private func resolveMediaID(_ mediaID: String) -> EngineMedia? {
         return self.mediaByID[mediaID]
     }
 
@@ -757,7 +756,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// the editor. The editor stores only this opaque key (it never holds a `Media`); the node's media-view
     /// provider (registered in `didLoad`) resolves the key back through `mediaByID` to render the block. The
     /// key also round-trips `currentInputContent → setInputContent` consistently, which an id-derived key does.
-    private func registerMediaValue(_ media: Media) -> String {
+    private func registerMediaValue(_ media: EngineMedia) -> String {
         let mediaID = composerMediaKey(media)
         self.mediaByID[mediaID] = media
         return mediaID

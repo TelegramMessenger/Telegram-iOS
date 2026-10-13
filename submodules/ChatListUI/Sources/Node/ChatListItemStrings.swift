@@ -105,7 +105,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         messageText = ""
         for message in messages {
             if let richText = message.richText {
-                let preview = richText.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia)
+                let preview = richText.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia.mapValues(EngineMedia.init))
                 if !preview.string.isEmpty {
                     messageText = preview.string
                     richTextPreview = preview

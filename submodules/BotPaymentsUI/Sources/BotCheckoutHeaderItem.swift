@@ -192,7 +192,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     default:
                         break
                     }
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: .standalone(resource: photo.resource))
+                    updatedFetchSignal = TelegramEngine(account: item.account).resources.fetch(reference: .standalone(resource: photo.resource), userLocation: userLocation, userContentType: .image)
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in
                         return .complete()

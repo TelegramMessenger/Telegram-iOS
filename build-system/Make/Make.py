@@ -16,6 +16,7 @@ from BuildConfiguration import CodesigningSource, GitCodesigningSource, Director
 import RemoteBuild
 import TartBuild
 import GenerateProfiles
+import PostboxImportCheck
 
 
 class ResolvedCodesigningData:
@@ -604,6 +605,9 @@ def resolve_watch_provisioning_profile(arguments, base_path):
 
 
 def build(bazel, arguments):
+    if PostboxImportCheck.run(os.getcwd()) != 0:
+        sys.exit(1)
+
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -686,6 +690,9 @@ def build(bazel, arguments):
 
 
 def test(bazel, arguments):
+    if PostboxImportCheck.run(os.getcwd()) != 0:
+        sys.exit(1)
+
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,

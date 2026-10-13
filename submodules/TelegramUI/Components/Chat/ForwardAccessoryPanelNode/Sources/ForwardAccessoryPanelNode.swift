@@ -26,7 +26,7 @@ import AlertComponent
 func textStringForForwardedMessage(_ message: EngineRawMessage, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> (text: NSAttributedString, entities: [MessageTextEntity], isMedia: Bool) {
     for attribute in message.attributes {
         if let attribute = attribute as? RichTextMessageAttribute {
-            return (attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia), [], false)
+            return (attribute.instantPage.previewAttributedText(strings: strings, dateTimeFormat: dateTimeFormat, associatedMedia: message.associatedMedia.mapValues(EngineMedia.init)), [], false)
         }
     }
     for media in message.media {

@@ -13,6 +13,7 @@ public final class EngineMessage: Equatable {
     public typealias GlobalTags = GlobalMessageTags
     public typealias LocalTags = LocalMessageTags
     public typealias ForwardInfo = MessageForwardInfo
+    public typealias AssociatedThreadInfo = Message.AssociatedThreadInfo
     public typealias CustomTag = MemoryBuffer
     
     public enum InputTag: Hashable {

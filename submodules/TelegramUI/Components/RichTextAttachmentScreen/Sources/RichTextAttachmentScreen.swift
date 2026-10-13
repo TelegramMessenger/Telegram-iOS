@@ -19,7 +19,6 @@ import RichTextButtonIcons
 import RichTextEditorMediaView
 import InstantPageUI
 import ContextUI
-import Postbox
 import TelegramCore
 import CheckNode
 import GlassControls
@@ -243,13 +242,13 @@ private final class RichTextSendButtonComponent: Component {
 
 public final class RichTextAttachmentScreenSendContextActions {
     public let peerId: EnginePeer.Id
-    public let send: (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
-    public let schedule: (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    public let send: (RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    public let schedule: (RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
 
     public init(
         peerId: EnginePeer.Id,
-        send: @escaping (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
-        schedule: @escaping (RichTextAttachmentScreen.Document, [String: Media], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
+        send: @escaping (RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool, ChatSendMessageActionSheetController.SendParameters?) -> Void
     ) {
         self.peerId = peerId
         self.send = send
@@ -261,8 +260,8 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
     public typealias Document = RichTextEditorCoreDocument
     
     public enum Mode {
-        case standalone(savedDraft: Document?, media: [String: Media], emojiFiles: [Int64: TelegramMediaFile])
-        case edit(initialDocument: Document?, media: [String: Media], emojiFiles: [Int64: TelegramMediaFile])
+        case standalone(savedDraft: Document?, media: [String: EngineMedia], emojiFiles: [Int64: TelegramMediaFile])
+        case edit(initialDocument: Document?, media: [String: EngineMedia], emojiFiles: [Int64: TelegramMediaFile])
     }
     
     public enum RichTextAttachment {
@@ -315,15 +314,15 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
     }
 
     private let context: AccountContext
-    private let sendMessage: (Document, [String: Media], [Int64: TelegramMediaFile], Bool) -> Void
-    private let syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)?
+    private let sendMessage: (Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> Void
+    private let syncContent: ((Document, [String: EngineMedia], [Int64: TelegramMediaFile]) -> Void)?
     private let sendContextActions: RichTextAttachmentScreenSendContextActions?
 
     public convenience init(
         context: AccountContext,
         mode: Mode,
-        sendMessage: @escaping (Document, [String: Media], [Int64: TelegramMediaFile]) -> Void,
-        syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)? = nil,
+        sendMessage: @escaping (Document, [String: EngineMedia], [Int64: TelegramMediaFile]) -> Void,
+        syncContent: ((Document, [String: EngineMedia], [Int64: TelegramMediaFile]) -> Void)? = nil,
         sendContextActions: RichTextAttachmentScreenSendContextActions? = nil,
         preuploadPeerId: EnginePeer.Id? = nil,
         presentAttachmentMenu: ((_ request: RichTextAttachmentScreen.MediaRequest, @escaping ([RichTextAttachmentScreen.RichTextAttachment]) -> Void) -> Void)?,
@@ -346,8 +345,8 @@ public class RichTextAttachmentScreen: ViewControllerComponentContainer, Attachm
     public init(
         context: AccountContext,
         mode: Mode,
-        sendMessage: @escaping (Document, [String: Media], [Int64: TelegramMediaFile], Bool) -> Void,
-        syncContent: ((Document, [String: Media], [Int64: TelegramMediaFile]) -> Void)? = nil,
+        sendMessage: @escaping (Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> Void,
+        syncContent: ((Document, [String: EngineMedia], [Int64: TelegramMediaFile]) -> Void)? = nil,
         sendContextActions: RichTextAttachmentScreenSendContextActions? = nil,
         /// Peer whose chat this content will be sent to. Media attached here pre-uploads against it;
         /// nil disables pre-upload (no peer to run `messages.uploadMedia` against).
@@ -636,7 +635,7 @@ final class RichTextAttachmentScreenComponent: Component {
         }
 
         /// Picked media keyed by the opaque `mediaID` handed to the editor. Read by `donePressed`.
-        private var attachedMedia: [String: Media] = [:]
+        private var attachedMedia: [String: EngineMedia] = [:]
 
         /// Held for as long as this screen is open. Reconciled from the LIVE document, so removing a
         /// medium (or undoing its insertion) releases its need and the upload is grace-cancelled.
@@ -692,7 +691,7 @@ final class RichTextAttachmentScreenComponent: Component {
                     continue
                 }
                 live.insert(id)
-                media.append(EngineMedia(value))
+                media.append(value)
             }
 
             let needs: MediaPreuploadNeeds
@@ -734,21 +733,20 @@ final class RichTextAttachmentScreenComponent: Component {
                 // same state itself. This observer exists ONLY for the promotion write-back below.
                 return
             case let .done(cloudMedia):
-                let raw = cloudMedia._asMedia()
                 guard let key = self.attachedMedia.first(where: { $0.value.id == id })?.key,
                       let localMedia = self.attachedMedia[key] else {
                     return
                 }
                 // Let the already-downloaded local bytes serve the cloud resource, so the promoted
                 // medium does not flash a placeholder.
-                if let localResource = preuploadPrimaryResource(localMedia), let cloudResource = preuploadPrimaryResource(raw) {
+                if let localResource = preuploadPrimaryResource(localMedia), let cloudResource = preuploadPrimaryResource(cloudMedia) {
                     component.context.engine.resources.moveResourceData(
                         from: EngineMediaResource.Id(localResource.id),
                         to: EngineMediaResource.Id(cloudResource.id),
                         synchronous: true
                     )
                 }
-                self.attachedMedia[key] = raw
+                self.attachedMedia[key] = cloudMedia
             case .failed, .none:
                 return
             }
@@ -762,7 +760,7 @@ final class RichTextAttachmentScreenComponent: Component {
         }
 
         /// The picked media map, keyed by the editor's `mediaID`. Read by the controller's `donePressed`.
-        var currentMedia: [String: Media] {
+        var currentMedia: [String: EngineMedia] {
             return self.attachedMedia
         }
 
@@ -849,32 +847,32 @@ final class RichTextAttachmentScreenComponent: Component {
                 }
                 var results: [(mediaID: String, naturalSize: CGSize, kind: MediaKind, caption: [TextRun])] = []
                 for attachment in attachments {
-                    let media: Media
+                    let media: EngineMedia
                     let kind: MediaKind
                     let naturalSize: CGSize
                     switch attachment {
                     case let .image(imageReference):
                         let image = imageReference.media
-                        media = image
+                        media = .image(image)
                         kind = .image
                         naturalSize = image.representations.last?.dimensions.cgSize ?? CGSize(width: 1, height: 1)
                     case let .file(fileReference):
                         let file = fileReference.media
                         if file.isVideo {
-                            media = file
+                            media = .file(file)
                             kind = .video
                             naturalSize = file.dimensions?.cgSize ?? CGSize(width: 1, height: 1)
                         } else if file.isMusic || file.isVoice {
                             // Audio (music from the Audio picker; voice only via edit round-trips). The block is a
                             // fixed-height row, so naturalSize is ignored by MediaBlockBox — pass a 1x1 placeholder.
-                            media = file
+                            media = .file(file)
                             kind = .audio
                             naturalSize = CGSize(width: 1.0, height: 1.0)
                         } else {
                             // Everything else from the Files tab is a document row — including an image-mime
                             // file, matching that tab's "send as file" meaning. Also a fixed-height row, so
                             // naturalSize is ignored by MediaBlockBox; pass the same 1x1 placeholder as audio.
-                            media = file
+                            media = .file(file)
                             kind = .document
                             naturalSize = CGSize(width: 1.0, height: 1.0)
                         }
@@ -883,7 +881,7 @@ final class RichTextAttachmentScreenComponent: Component {
                         // seeds the caption (a raw dropped pin has no venue -> empty caption). Self-contained, since
                         // the shared `media.id` path below can't key an id-less medium.
                         let mediaID = "map:\(map.latitude):\(map.longitude)"
-                        self.attachedMedia[mediaID] = map
+                        self.attachedMedia[mediaID] = .geo(map)
                         let caption: [TextRun] = map.venue?.title.isEmpty == false ? [TextRun(text: map.venue!.title)] : []
                         results.append((mediaID, CGSize(width: 600.0, height: 300.0), .location, caption))
                         continue
@@ -1644,7 +1642,7 @@ final class RichTextAttachmentScreenComponent: Component {
                 // current document when expanding); an empty document when none is provided.
                 
                 var initialContents: Document?
-                var initialMedia: [String: Media] = [:]
+                var initialMedia: [String: EngineMedia] = [:]
                 var initialEmojiFiles: [Int64: TelegramMediaFile] = [:]
                 switch component.mode {
                 case let .edit(documentValue, mediaValue, emojiFilesValue):
@@ -1842,7 +1840,7 @@ final class RichTextAttachmentScreenComponent: Component {
                     )
                     let resolved: [(media: EngineMedia, naturalSize: CGSize, isSpoiler: Bool, kind: MediaKind)] = items.compactMap { item in
                         guard let media = self.attachedMedia[item.mediaID] else { return nil }
-                        return (EngineMedia(media), item.naturalSize, item.isSpoiler, item.kind)
+                        return (media, item.naturalSize, item.isSpoiler, item.kind)
                     }
                     guard !resolved.isEmpty else { return nil }
                     // In-place update: reuse the existing container (surviving photo/video cells keep their bound
@@ -2448,12 +2446,13 @@ private final class RichTextActionContextReferenceSource: ContextReferenceConten
 
 /// The resource carrying a medium's main bytes — the one whose data is worth moving when a local
 /// medium is promoted to its cloud twin.
-private func preuploadPrimaryResource(_ media: Media) -> MediaResource? {
-    if let image = media as? TelegramMediaImage {
+private func preuploadPrimaryResource(_ media: EngineMedia) -> TelegramMediaResource? {
+    switch media {
+    case let .image(image):
         return largestImageRepresentation(image.representations)?.resource
-    }
-    if let file = media as? TelegramMediaFile {
+    case let .file(file):
         return file.resource
+    default:
+        return nil
     }
-    return nil
 }
