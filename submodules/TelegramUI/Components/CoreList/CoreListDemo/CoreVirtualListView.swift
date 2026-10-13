@@ -177,6 +177,15 @@ public enum CoreListBlockOrigin: Hashable {
     case afterBlock
 }
 
+/// How an embedded list plays a flick or an edge bounce after release — the embedding seam onto
+/// `PhysicsScrollEngine.decelerationMode`, which stays module-internal.
+public enum CoreListDeceleration: Hashable {
+    /// Integrated on the main thread once per frame.
+    case stepped
+    /// Baked once and played by the render server as a `CAKeyframeAnimation` (the default).
+    case keyframe
+}
+
 public final class CoreVirtualListView: UIView {
     struct Window {
         struct Item {
@@ -913,9 +922,14 @@ public final class CoreVirtualListView: UIView {
     // Uses a distinct argument label so it does not collide with the all-defaulted
     // internal designated initializer, and keeps the ScrollEngine/Scheduler types
     // module-internal.
-    public convenience init(forEmbedding frame: CGRect) {
+    public convenience init(forEmbedding frame: CGRect, deceleration: CoreListDeceleration = .keyframe) {
         let engine = PhysicsScrollEngine()
-        engine.decelerationMode = .keyframe
+        switch deceleration {
+        case .stepped:
+            engine.decelerationMode = .stepped
+        case .keyframe:
+            engine.decelerationMode = .keyframe
+        }
         self.init(frame: frame, engine: engine, animationController: ListAnimationController(), scheduler: MainQueueScheduler())
     }
 

@@ -297,6 +297,9 @@ edge transitions (above); `willBeginDragging` / `didEndDragging` fire on interac
 interval a host needs to reproduce `ListViewImpl.isTracking`); `shouldStopScrolling` forwards to
 `ScrollEngine.shouldStopScrollingOnRelease` so a host can decline the momentum of a release it has
 already spent elsewhere (above).
+`init(forEmbedding:deceleration:)` picks how the `PhysicsScrollEngine` an embedding host gets plays a
+flick: `.keyframe` (the default, a render-server flight) or `.stepped` (main-thread physics); the engine
+type stays internal.
 `loadedItemViews` is a **non-copying** `Sequence` over the settled window's item views in ascending
 index order — it walks `activeWindow.items` in place (a COW snapshot; no array built, no element
 copied, safe to mutate the list mid-iteration), the iterator-based analogue of
