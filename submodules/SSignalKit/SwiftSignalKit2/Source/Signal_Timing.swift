@@ -63,26 +63,27 @@ public func suspendAwareDelay<T, E>(_ timeout: Double, granularity: Double = 4.0
                 if timeout <= granularity * 1.1 {
                     startFinalTimer()
                 } else {
-                    var invalidateImpl: (() -> Void)?
-                    let timer = Timer(timeout: granularity, repeat: true, completion: { timer in
-                        let currentTimestamp = CFAbsoluteTimeGetCurrent()
-                        if beginTimestamp + timeout - granularity * 1.1 <= currentTimestamp {
-                            timer.invalidate()
-                            startFinalTimer()
-                        }
-                    }, queue: queue)
-                    
-                    invalidateImpl = {
-                        queue.async {
-                            timer.invalidate()
-                        }
-                    }
-                    
-                    timerDisposable.set(ActionDisposable {
-                        invalidateImpl?()
+                    let timer = DispatchSource.makeTimerSource(queue: queue.queue)
+                    timer.setEventHandler(handler: {
+                        timer.cancel()
+                        runDisposable.set(signal.start(next: { next in
+                            subscriber.putNext(next)
+                        }, error: { error in
+                            subscriber.putError(error)
+                        }, completed: {
+                            subscriber.putCompletion()
+                        }))
                     })
-                    
-                    timer.start()
+                    let remaining = max(0.0, beginTimestamp + timeout - CFAbsoluteTimeGetCurrent())
+                    timer.schedule(wallDeadline: .now() + remaining, leeway: .nanoseconds(Int(granularity * 1_000_000_000.0)))
+
+                    timerDisposable.set(ActionDisposable {
+                        queue.async {
+                            timer.cancel()
+                        }
+                    })
+
+                    timer.resume()
                 }
             }
             return ActionDisposable {

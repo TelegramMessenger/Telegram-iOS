@@ -2377,7 +2377,7 @@ inputWalletCardSticker#57df45a7 coordinates:MediaAreaCoordinates nft_address:str
 
 wallet.cardSticker#f3010cba coordinates:MediaAreaCoordinates nft:wallet.NftItem = wallet.CardSticker;
 
-wallet.card#2f20daf1 flags:# stickers:flags.0?Vector<wallet.CardSticker> address:string balance:long = wallet.Card;
+wallet.card#8ed043b1 flags:# stickers:flags.0?Vector<wallet.CardSticker> bg_nft_item:flags.1?wallet.NftItem address:string balance:long = wallet.Card;
 
 ---functions---
 
@@ -3261,7 +3261,7 @@ wallet.tonConnectSubmitResponse#fac67d3c flags:# session_id:long msg_id:int body
 wallet.tonConnectNextEventId#775d7244 session_id:long = TonConnectNextEventId;
 wallet.tonConnectCloseSession#d63f61ce flags:# session_id:long body:flags.0?bytes = Bool;
 wallet.tonConnectGetSessions#a7ffb56e = wallet.TonConnectSessions;
-wallet.setCardStickers#e5226d2d stickers:Vector<InputWalletCardSticker> = wallet.Card;
+wallet.setCardStickers#68509ac flags:# stickers:Vector<InputWalletCardSticker> bg_nft_address:flags.0?string = wallet.Card;
 
 feed.getFeed#7e76d7d3 flags:# offset_to_max_read:flags.3?true filter_id:int offset_position:flags.0?FeedPosition add_offset:int limit:int max_position:flags.1?FeedPosition min_position:flags.2?FeedPosition hash:long = feed.FeedMessages;
 feed.readFeed#b436c1ff filter_id:int max_position:FeedPosition = Updates;

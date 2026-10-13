@@ -217,7 +217,7 @@ public extension Api.InputBusinessRecipients.Cons_inputBusinessRecipients {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 32) ? nil : Api.InputUser.tlArray(self.tlObject, 32) } }
     }
     init(flags: Int32, users: [Api.InputUser]?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(712))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(711))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, users.map { value in value.map { item in item.tlObject } as NSArray })
         self.init(tlObject: _tlObject)
@@ -301,7 +301,7 @@ public extension Api.InputChannel.Cons_inputChannelFromMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(peer: Api.InputPeer, msgId: Int32, channelId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(592))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(591))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, msgId)
         tlStore(_tlObject, 40, channelId)
@@ -366,7 +366,7 @@ public extension Api.InputChatPhoto.Cons_inputChatPhoto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPhoto(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(id: Api.InputPhoto) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(883))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(882))
         tlStoreReference(_tlObject, 24, id.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -436,7 +436,7 @@ public extension Api {
             case .inputChatTheme(let _data):
                 return _data.tlObject
             case .inputChatThemeEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(843))
+                return TLObjectSingleton(TLApiConstructorAt(842))
             case .inputChatThemeUniqueGift(let _data):
                 return _data.tlObject
             }
@@ -467,7 +467,7 @@ public extension Api.InputChatTheme.Cons_inputChatThemeUniqueGift {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(slug: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(871))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(870))
         tlStoreReference(_tlObject, 24, slug as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -624,7 +624,7 @@ public extension Api.InputClientProxy.Cons_inputClientProxy {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(address: String, port: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(752))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(751))
         tlStoreReference(_tlObject, 32, address as NSString)
         tlStore(_tlObject, 24, port)
         self.init(tlObject: _tlObject)
@@ -755,7 +755,7 @@ public extension Api.InputContact.Cons_inputPhoneContact {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : Api.TextWithEntities(tlObject: tlObjectAt(self.tlObject, 64)) } }
     }
     init(flags: Int32, clientId: Int64, phone: String, firstName: String, lastName: String, note: Api.TextWithEntities?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(680))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(679))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, clientId)
         tlStoreReference(_tlObject, 40, phone as NSString)
@@ -839,7 +839,7 @@ public extension Api.InputDialogPeer.Cons_inputDialogPeerCommunity {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputChannel(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(community: Api.InputChannel) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(678))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(677))
         tlStoreReference(_tlObject, 24, community.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -849,7 +849,7 @@ public extension Api.InputDialogPeer.Cons_inputDialogPeerFolder {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(folderId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(644))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(643))
         tlStore(_tlObject, 24, folderId)
         self.init(tlObject: _tlObject)
     }
@@ -882,7 +882,7 @@ public extension Api {
             case .inputDocument(let _data):
                 return _data.tlObject
             case .inputDocumentEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(735))
+                return TLObjectSingleton(TLApiConstructorAt(734))
             }
         }
 
@@ -1037,7 +1037,7 @@ public extension Api.InputEncryptedFile.Cons_inputEncryptedFile {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(586))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(585))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -1075,7 +1075,7 @@ public extension Api.InputEncryptedFile.Cons_inputEncryptedFileUploaded {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(646))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(645))
         tlStore(_tlObject, 32, id)
         tlStore(_tlObject, 24, parts)
         tlStoreReference(_tlObject, 40, md5Checksum as NSString)
@@ -1187,7 +1187,7 @@ public extension Api.InputFile.Cons_inputFileStoryDocument {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputDocument(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(id: Api.InputDocument) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(632))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(631))
         tlStoreReference(_tlObject, 24, id.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1423,7 +1423,7 @@ public extension Api.InputFileLocation.Cons_inputPeerPhotoFileLocation {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 40, as: Int64.self) } }
     }
     init(flags: Int32, peer: Api.InputPeer, photoId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(353))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(352))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 40, photoId)
@@ -1444,7 +1444,7 @@ public extension Api.InputFileLocation.Cons_inputPhotoFileLocation {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 48) } }
     }
     init(id: Int64, accessHash: Int64, fileReference: Buffer, thumbSize: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(416))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(415))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         tlStoreReference(_tlObject, 40, fileReference.makeData() as NSData)

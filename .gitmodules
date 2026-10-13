@@ -37,4 +37,4 @@ url=../tgcalls.git
 	url = https://github.com/dkaraush/tlottie.git
 [submodule "third-party/mtproto-engine"]
 	path = third-party/mtproto-engine
-	url = https://github.com/macosswift/mtproto-engine.git
+	url = https://github.com/TelegramMessenger/mtproto-engine.git

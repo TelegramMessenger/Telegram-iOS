@@ -16,6 +16,24 @@ public extension TelegramEngine {
             return _internal_getWalletState(account: self.account)
         }
 
+        public func card() -> Signal<WalletCard?, NoError> {
+            let key = PostboxViewKey.cachedPeerData(peerId: self.account.peerId)
+            return self.account.postbox.combinedView(keys: [key])
+            |> map { view in
+                ((view.views[key] as? CachedPeerDataView)?.cachedPeerData as? CachedUserData)?.walletCard
+            }
+            |> distinctUntilChanged
+        }
+
+        public func refreshCard() -> Signal<Bool, NoError> {
+            return _internal_fetchAndUpdateCachedPeerData(accountPeerId: self.account.peerId,
+                peerId: self.account.peerId, network: self.account.network, postbox: self.account.postbox)
+        }
+
+        public func setCardStickers(_ stickers: [WalletCard.InputSticker], backgroundNftAddress: String? = nil) -> Signal<WalletCard, WalletCardUpdateError> {
+            return _internal_setWalletCardStickers(account: self.account, stickers: stickers, backgroundNftAddress: backgroundNftAddress)
+        }
+
         public func getNfts(offset: String, limit: Int32 = 20) -> Signal<WalletNfts, WalletGetNftsError> {
             return _internal_getWalletNfts(account: self.account, offset: offset, limit: limit)
         }

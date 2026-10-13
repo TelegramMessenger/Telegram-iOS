@@ -116,6 +116,350 @@ public final class WalletCardComponent: Component {
         private let shadowView = UIView()
         private let backgroundView = WalletCardBackgroundView()
         private let foregroundView = UIControl()
+        private let stickerContainer = UIView()
+        private var stickerViews: [String: WalletCardStickerView] = [:]
+        private var stickerMaskKey = ""
+        private var stickerPlacements: [WalletContext.CardSticker] = []
+        public var stickerSurface: UIView { self.foregroundView }
+        public var stickerInteractionLocked = false {
+            didSet {
+                self.panGestureRecognizer.isEnabled = !self.stickerInteractionLocked
+            }
+        }
+
+        public func stickerPointIsInteractive(_ point: CGPoint) -> Bool {
+            if let qr = self.qrButton.view,
+               qr.hitTest(qr.convert(point, from: self.foregroundView), with: nil) != nil {
+                return false
+            }
+            let diamondPoint = self.diamondClipView.convert(point, from: self.foregroundView)
+            // The clipping container covers the entire card. Its hit test passes
+            // through empty space and uses the diamond's actual interactive shape.
+            return self.diamondClipView.hitTest(diamondPoint, with: nil) == nil
+        }
+
+        private var giftStyle: WalletContext.CardGiftStyle?
+        private var giftAccentColor = UIColor(rgb: 0x6ddcff)
+        private var giftAddressColor = UIColor(rgb: 0x055ac4, alpha: 0.8)
+        private let giftPatternLayer = CALayer()
+        private var giftPatternSymbols: [CALayer] = []
+        private var giftPatternImage: UIImage?
+        private var giftPatternColor: Int32?
+        private var styleWaveHit = false
+        private var oldGiftPatternLayer: CALayer?
+        public func setGiftStyle(from: WalletContext.CardGiftStyle?, to: WalletContext.CardGiftStyle?, origin: CGPoint, progress: Double, pattern: UIImage? = nil) {
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            defer { CATransaction.commit() }
+            let changed = self.giftStyle != to
+            self.giftStyle = to
+            if changed {
+                self.styleWaveHit = false
+                self.oldGiftPatternLayer?.removeFromSuperlayer(); self.oldGiftPatternLayer = nil
+                if from != nil, to != nil {
+                    let holder = CALayer()
+                    holder.frame = self.foregroundView.bounds
+                    for source in self.giftPatternSymbols {
+                        let layer = CALayer(); layer.contents = source.contents; layer.bounds = source.bounds
+                        layer.position = source.position; layer.opacity = source.opacity; holder.addSublayer(layer)
+                    }
+                    self.foregroundView.layer.insertSublayer(holder, at: 0)
+                    self.oldGiftPatternLayer = holder
+                }
+            }
+            let size = self.foregroundView.bounds.size
+            let frame = WalletCardStyleTransition(fraction: progress, removing: to == nil)
+            let radius = frame.radius(origin: origin, size: size)
+            if progress < 1, to != nil, !self.styleWaveHit {
+                let gem = self.primaryBalanceContainerView.convert(self.gramIconContentFrame.center, to: self.foregroundView)
+                if radius >= hypot(gem.x - origin.x, gem.y - origin.y) {
+                    self.styleWaveHit = true
+                    if !UIAccessibility.isReduceMotionEnabled {
+                        let distance = max(1, hypot(gem.x - origin.x, gem.y - origin.y))
+                        let ux = (gem.x - origin.x) / distance, uy = (gem.y - origin.y) / distance
+                        self.styleGemH.velocity += ux * 14
+                        self.styleGemV.velocity += uy * 14
+                        (self.gramDiamond.view as? InteractiveDiamondComponent.View)?.spin(ux >= 0 ? 4.6 : -4.6, decay: 0.7)
+                    }
+                }
+            }
+            self.backgroundView.updateGiftStyle(WalletCardStyleUniforms(from: from, to: to, origin: origin,
+                radius: radius, progress: frame.progress, fade: to == nil || progress >= 1))
+            let accent = Self.mixStyleColor(from.map { WalletCardTint($0).accent } ?? UIColor(rgb: 0x6ddcff),
+                to.map { WalletCardTint($0).accent } ?? UIColor(rgb: 0x6ddcff), frame.textMix)
+            let address = Self.mixStyleColor(from.map { WalletCardTint($0).address.withAlphaComponent(0.8) } ?? UIColor(rgb: 0x055ac4, alpha: 0.8),
+                to.map { WalletCardTint($0).address.withAlphaComponent(0.8) } ?? UIColor(rgb: 0x055ac4, alpha: 0.8), frame.textMix)
+            let textChanged = self.giftAccentColor != accent || self.giftAddressColor != address
+            self.giftAccentColor = accent; self.giftAddressColor = address
+            if textChanged, let component = self.component {
+                _ = self.update(component: component, availableSize: self.currentSize, state: EmptyComponentState(),
+                    environment: .value, transition: .immediate)
+            }
+            if self.giftPatternLayer.superlayer == nil {
+                self.foregroundView.layer.insertSublayer(self.giftPatternLayer, at: 0)
+                self.giftPatternLayer.masksToBounds = true
+                for _ in 0..<30 { let layer = CALayer(); self.giftPatternLayer.addSublayer(layer); self.giftPatternSymbols.append(layer) }
+            }
+            let style = to ?? from
+            if self.giftPatternImage !== pattern || self.giftPatternColor != style?.patternColor {
+                self.giftPatternImage = pattern; self.giftPatternColor = style?.patternColor
+                let image = pattern.flatMap { image in style.map { generateTintedImage(image: image, color: UIColor(rgb: UInt32(bitPattern: $0.patternColor))) } } ?? nil
+                for layer in self.giftPatternSymbols { layer.contents = image?.cgImage }
+            }
+            self.giftPatternLayer.frame = self.foregroundView.bounds
+            self.giftPatternLayer.cornerRadius = 20 * size.width / 370
+            self.giftPatternLayer.mask = self.makeGiftPatternMask()
+            self.giftPatternLayer.isHidden = style == nil
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let t = frame.patternTime
+            let fly = progress >= 1 || to == nil ? 1 : 1 + 2.2 * pow(t - 1, 3) + 1.2 * pow(t - 1, 2)
+            for (index, item) in WalletGiftPattern.items(center: center, width: size.width).enumerated() {
+                let layer = self.giftPatternSymbols[index]
+                layer.bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
+                layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * fly, y: origin.y + (item.center.y - origin.y) * fly)
+                let alpha = WalletGiftPattern.alpha(at: item.center, center: center, height: size.height)
+                layer.opacity = Float(alpha * (to == nil ? 1 - frame.progress : min(1, t * 2)))
+            }
+            if let old = self.oldGiftPatternLayer {
+                old.mask = self.makeGiftPatternMask()
+                    for (index, item) in WalletGiftPattern.items(center: center, width: size.width).enumerated() {
+                    old.sublayers?[index].position = item.center
+                    old.sublayers?[index].bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
+                    old.sublayers?[index].opacity = hypot(item.center.x - origin.x, item.center.y - origin.y) < radius
+                        ? 0 : Float(WalletGiftPattern.alpha(at: item.center, center: center, height: size.height))
+                }
+                if progress >= 1 { old.removeFromSuperlayer(); self.oldGiftPatternLayer = nil }
+            }
+        }
+
+        private static func mixStyleColor(_ a: UIColor, _ b: UIColor, _ t: CGFloat) -> UIColor {
+            if t <= 0.0005 { return a }
+            if t >= 0.9995 { return b }
+            var ar: CGFloat = 0, ag: CGFloat = 0, ab: CGFloat = 0, aa: CGFloat = 0
+            var br: CGFloat = 0, bg: CGFloat = 0, bb: CGFloat = 0, ba: CGFloat = 0
+            a.getRed(&ar, green: &ag, blue: &ab, alpha: &aa)
+            b.getRed(&br, green: &bg, blue: &bb, alpha: &ba)
+            return UIColor(red: ar + (br-ar)*t, green: ag + (bg-ag)*t, blue: ab + (bb-ab)*t, alpha: aa + (ba-aa)*t)
+        }
+
+        private func makeGiftPatternMask() -> CALayer {
+            let mask = CAShapeLayer(); mask.fillRule = .evenOdd
+            let bounds = self.foregroundView.bounds
+            let path = UIBezierPath(roundedRect: bounds, cornerRadius: 20 * bounds.width / 370)
+            if let qr = self.qrButton.view {
+                path.append(UIBezierPath(roundedRect: qr.convert(qr.bounds, to: self.foregroundView).insetBy(dx: -2, dy: -2), cornerRadius: 10 * bounds.width / 370))
+            }
+            mask.frame = bounds; mask.path = path.cgPath
+            return mask
+        }
+
+        public struct StickerLive {
+            public let angle: CGFloat
+            public let press: CGFloat
+            public let grow: CGFloat
+            public let image: UIImage?
+            public init(angle: CGFloat, press: CGFloat, grow: CGFloat, image: UIImage?) {
+                self.angle = angle; self.press = press; self.grow = grow; self.image = image
+            }
+        }
+        private var liveStickers: [String: StickerLive] = [:]
+        private var smoothedStickerShine: Double = 0
+        public func setStickerLive(_ values: [String: StickerLive]) {
+            self.liveStickers = values
+            self.layoutCardStickers()
+        }
+        public var stickerObstacles: [CGRect] {
+            let views = [self.integralBalance.view, self.fractionalBalance.view, self.secondaryBalance.view,
+                         self.name.view, self.address.view, self.qrButton.view]
+            var result = views.compactMap { view -> CGRect? in
+                guard let view, !view.isHidden else { return nil }
+                return view.convert(view.bounds, to: self.foregroundView).insetBy(dx: -3, dy: -3)
+            }
+            result.append(self.primaryBalanceContainerView.convert(self.gramIconContentFrame, to: self.foregroundView).insetBy(dx: -3, dy: -3))
+            return result
+        }
+        private func animateStickerGemImpulse(strength: CGFloat) {
+            guard let diamond = self.gramDiamond.view else { return }
+            let spring = CASpringAnimation(keyPath: "transform.rotation.z")
+            spring.fromValue = -strength; spring.toValue = 0; spring.damping = 8; spring.stiffness = 150; spring.duration = 0.65
+            spring.isAdditive = true
+            diamond.layer.add(spring, forKey: "stickerImpact")
+        }
+
+        private let styleGemH = WalletStickerSpring(0, 140, 0.3)
+        private let styleGemV = WalletStickerSpring(0, 140, 0.3)
+        private let stickerKickH = WalletStickerSpring(0, 170, 0.42)
+        private let stickerKickV = WalletStickerSpring(0, 170, 0.42)
+        private let stickerSquash = WalletStickerSpring(1, 420, 0.38)
+        private var stickerYaw: Double { self.currentCardY + Double(self.stickerKickH.value) * .pi / 18 }
+
+        public func stickerImpact(at point: CGPoint, thrown: Bool) {
+            guard !UIAccessibility.isReduceMotionEnabled else { return }
+            let push: CGFloat = thrown ? 3.4 : 1.4
+            self.stickerKickH.velocity += (point.x / max(1, self.currentSize.width) - 0.5) * 2 * push
+            self.stickerKickV.velocity += (point.y / max(1, self.currentSize.height) - 0.5) * 2 * push
+            self.stickerSquash.stiffness = thrown ? 420 : 260
+            self.stickerSquash.damping = thrown ? 0.38 : 0.85
+            self.stickerSquash.velocity -= thrown ? 0.75 : 0.28
+            self.animateStickerGemImpulse(strength: thrown ? 0.2 : 0.08)
+            if thrown { self.stickerSparks(at: point) }
+        }
+
+        /// Driven by the sticker coordinator's shared animation clock, including while tilt is locked.
+        public func stepStickerImpact(_ dt: CGFloat) -> Bool {
+            var active = false
+            for spring in [self.stickerKickH, self.stickerKickV, self.stickerSquash, self.styleGemH, self.styleGemV] {
+                spring.step(min(dt, 1 / 30))
+                if spring.resting(0.00002) { spring.set(spring.target) } else { active = true }
+            }
+            self.renderCurrentFrame()
+            return active
+        }
+
+        public func resetStickerImpact() {
+            self.stickerKickH.set(0); self.stickerKickV.set(0); self.stickerSquash.set(1)
+            self.styleGemH.set(0); self.styleGemV.set(0)
+            self.renderCurrentFrame()
+        }
+
+    private func stickerSparks(at point: CGPoint) {
+        let k = self.currentSize.width / 361
+        let c = point
+        for n in 0..<14 {
+            let a = CGFloat(n) / 14 * 2 * .pi + CGFloat.random(in: 0..<0.35)
+            let speed = (265 + CGFloat.random(in: 0..<180)) * k
+            let size = (0.8 + CGFloat.random(in: 0..<1.1)) * k
+            let life = 0.7 + Double.random(in: 0..<0.35)
+            let spin = Double.random(in: 0..<(2 * .pi))
+            let star = CAShapeLayer()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            star.fillColor = UIColor.white.cgColor
+            star.path = Self.sparkPath(size)
+            star.position = c
+            star.opacity = 0
+            self.foregroundView.layer.addSublayer(star)
+            CATransaction.commit()
+            let steps = 12
+            var points: [NSValue] = [], opacities: [NSNumber] = [], scales: [NSNumber] = [], times: [NSNumber] = []
+            for s in 0...steps {
+                let u = Double(s) / Double(steps)
+                let d = speed / 2.4 * CGFloat(1 - exp(-2.4 * u * life))
+                points.append(NSValue(cgPoint: CGPoint(x: c.x + cos(a) * d, y: c.y + sin(a) * d)))
+                let pop = u < 0.1 ? u / 0.1 : pow(1 - (u - 0.1) / 0.9, 2)
+                opacities.append(NSNumber(value: 130.0 / 255 * pop))
+                scales.append(NSNumber(value: 0.6 + 0.4 * pop))
+                times.append(NSNumber(value: u))
+            }
+            let move = CAKeyframeAnimation(keyPath: "position")
+            move.values = points
+            move.keyTimes = times
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = opacities
+            fade.keyTimes = times
+            let grow = CAKeyframeAnimation(keyPath: "transform.scale")
+            grow.values = scales
+            grow.keyTimes = times
+            let turn = CABasicAnimation(keyPath: "transform.rotation.z")
+            turn.fromValue = spin
+            turn.toValue = spin + .pi / 2 * life
+            let group = CAAnimationGroup()
+            group.animations = [move, fade, grow, turn]
+            group.duration = life
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { star.removeFromSuperlayer() }
+            star.add(group, forKey: "spark")
+            CATransaction.commit()
+        }
+    }
+
+    private static func sparkPath(_ r: CGFloat) -> CGPath {
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: 0, y: -r * 2))
+        p.addLine(to: CGPoint(x: r * 0.35, y: -r * 0.35))
+        p.addLine(to: CGPoint(x: r * 2, y: 0))
+        p.addLine(to: CGPoint(x: r * 0.35, y: r * 0.35))
+        p.addLine(to: CGPoint(x: 0, y: r * 2))
+        p.addLine(to: CGPoint(x: -r * 0.35, y: r * 0.35))
+        p.addLine(to: CGPoint(x: -r * 2, y: 0))
+        p.addLine(to: CGPoint(x: -r * 0.35, y: -r * 0.35))
+        p.closeSubpath()
+        return p
+    }
+
+        public func setCardStickers(_ stickers: [WalletContext.CardSticker], images: [String: UIImage], hidden: Set<String>) {
+            self.stickerPlacements = stickers
+            let valid = Set(stickers.map { $0.gift.address })
+            for id in Array(self.stickerViews.keys) where !valid.contains(id) {
+                self.stickerViews.removeValue(forKey: id)?.removeFromSuperview()
+            }
+            for sticker in stickers {
+                let id = sticker.gift.address
+                let view = self.stickerViews[id] ?? WalletCardStickerView(frame: .zero)
+                self.stickerViews[id] = view
+                view.image = images[id]
+                view.isHidden = hidden.contains(id)
+                self.stickerContainer.addSubview(view)
+            }
+            self.layoutCardStickers()
+        }
+
+        private func layoutCardStickers() {
+            guard !self.stickerPlacements.isEmpty else {
+                self.stickerContainer.layer.mask = nil
+                self.stickerMaskKey = ""
+                return
+            }
+            let size = self.foregroundView.bounds.size
+            self.stickerContainer.frame = CGRect(origin: .zero, size: size)
+            let key = "\(size)-\(self.component?.balance ?? 0)-\(self.component?.name ?? "")-\(self.component?.address ?? "")-\(String(describing: self.component?.fiatRate))-\(String(describing: self.component?.fiatCurrency))-\(self.primaryBalanceBaseFrame)-\(self.secondaryBalanceBaseFrame)-\(self.stickerPlacements.isEmpty)"
+            if self.stickerMaskKey != key, size.width > 0, size.height > 0 {
+                self.stickerMaskKey = key
+                let scale = size.width / 370
+                let format = UIGraphicsImageRendererFormat()
+                format.scale = UIScreen.main.scale
+                let maskImage = UIGraphicsImageRenderer(size: size, format: format).image { renderer in
+                    UIColor.white.setFill()
+                    UIBezierPath(roundedRect: self.stickerContainer.bounds, cornerRadius: 20 * scale).fill()
+                    if let qrView = self.qrButton.view {
+                        UIBezierPath(roundedRect: qrView.frame, cornerRadius: 8 * scale).fill(with: .clear, alpha: 1)
+                    }
+                    guard !self.stickerPlacements.isEmpty else { return }
+                    let views = [self.integralBalance.view, self.fractionalBalance.view, self.secondaryBalance.view, self.name.view, self.address.view]
+                    // Keep card labels legible by masking stickers beneath them.
+                    for case let view? in views where !view.isHidden {
+                        let origin = view.convert(CGPoint.zero, to: self.foregroundView)
+                        let x = view.convert(CGPoint(x: 1, y: 0), to: self.foregroundView)
+                        let y = view.convert(CGPoint(x: 0, y: 1), to: self.foregroundView)
+                        let c = renderer.cgContext
+                        c.saveGState()
+                        c.setBlendMode(.destinationOut)
+                        c.concatenate(CGAffineTransform(a: x.x - origin.x, b: x.y - origin.y,
+                            c: y.x - origin.x, d: y.y - origin.y, tx: origin.x, ty: origin.y))
+                        c.setShadow(offset: .zero, blur: 4.8 * scale, color: UIColor.black.cgColor)
+                        view.layer.render(in: c)
+                        view.layer.render(in: c)
+                        c.restoreGState()
+                    }
+                }
+                let mask = self.stickerContainer.layer.mask ?? CALayer()
+                mask.frame = self.stickerContainer.bounds
+                mask.contents = maskImage.cgImage
+                self.stickerContainer.layer.mask = mask
+            }
+            for sticker in self.stickerPlacements {
+                guard let view = self.stickerViews[sticker.gift.address] else { continue }
+                let live = self.liveStickers[sticker.gift.address]
+                let side = size.width * CGFloat(sticker.renderedWidthFraction) * (live?.grow ?? 1)
+                view.bounds = CGRect(x: 0, y: 0, width: side, height: side * CGFloat(sticker.aspectRatio ?? 1))
+                view.center = CGPoint(x: CGFloat(sticker.x) * size.width + self.currentCardY * 5,
+                    y: CGFloat(sticker.y) * size.height - self.currentCardX * 5)
+                let angle = live?.angle ?? CGFloat(sticker.angle)
+                view.transform = CGAffineTransform(rotationAngle: angle)
+                if let image = live?.image { view.image = image }
+                view.update(press: live?.press ?? 0, angle: angle, shine: 0.5 + CGFloat(sin(self.smoothedStickerShine)) * 0.35)
+            }
+        }
+
         private let scrollShadingLayer = CAGradientLayer()
         private let balanceTransitionView = WalletCardContentView()
         private weak var balanceTransitionContainer: UIView?
@@ -222,6 +566,8 @@ public final class WalletCardComponent: Component {
             self.foregroundView.layer.allowsEdgeAntialiasing = true
             self.foregroundView.addTarget(self, action: #selector(self.cardPressed), for: .touchUpInside)
             self.addSubview(self.foregroundView)
+            self.stickerContainer.isUserInteractionEnabled = false
+            self.foregroundView.addSubview(self.stickerContainer)
 
             self.scrollShadingLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
             self.scrollShadingLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
@@ -431,7 +777,7 @@ public final class WalletCardComponent: Component {
             }
 
             let mainColor = UIColor.white
-            let secondaryColor = UIColor(rgb: 0x6ddcff)
+            let secondaryColor = self.giftAccentColor
             let qrSize = self.qrButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
@@ -778,7 +1124,7 @@ public final class WalletCardComponent: Component {
                     text: .plain(NSAttributedString(
                         string: addressText.uppercased(),
                         font: Font.monospace(11.0 * scale),
-                        textColor: UIColor(rgb: 0x055ac4, alpha: 0.8)
+                        textColor: self.giftAddressColor
                     )),
                     maximumNumberOfLines: 2,
                     lineSpacing: -0.05 * scale
@@ -866,6 +1212,7 @@ public final class WalletCardComponent: Component {
         }
 
         private func displayLinkDidFire(_ frameDuration: CGFloat) {
+            guard !self.stickerInteractionLocked else { return }
             let deltaTime = min(max(Double(frameDuration), 0.0), 1.0 / 30.0)
             guard deltaTime > 0.0 else {
                 return
@@ -1388,7 +1735,7 @@ public final class WalletCardComponent: Component {
             perspectiveTransform.m34 = -1.0 / 650.0
             perspectiveTransform = CATransform3DTranslate(
                 perspectiveTransform,
-                CGFloat(-self.currentCardY * 3.0),
+                CGFloat(-self.stickerYaw * 3.0),
                 CGFloat(self.currentCardX * 2.5),
                 0.0
             )
@@ -1407,14 +1754,14 @@ public final class WalletCardComponent: Component {
             )
             perspectiveTransform = CATransform3DRotate(
                 perspectiveTransform,
-                CGFloat(self.currentCardY),
+                CGFloat(self.stickerYaw),
                 0.0,
                 1.0,
                 0.0
             )
             perspectiveTransform = CATransform3DRotate(
                 perspectiveTransform,
-                CGFloat(self.currentCardY * 0.05),
+                CGFloat(self.stickerYaw * 0.05),
                 0.0,
                 0.0,
                 1.0
@@ -1424,15 +1771,17 @@ public final class WalletCardComponent: Component {
         }
 
         private func renderCurrentFrame(notifyBalanceGeometry: Bool = true) {
+            self.smoothedStickerShine = Double(self.currentCardY) * 4 + Double(self.currentCardX) * 2
+            self.layoutCardStickers()
             guard self.currentSize.width > 0.0, self.currentSize.height > 0.0 else {
                 return
             }
 
             let maxPitch = max(Self.maxPitch, Self.maxOverscrollPitch)
-            let cardPitch = Self.clamp(self.currentCardX + self.overscrollPitch, maxPitch)
+            let cardPitch = Self.clamp(self.currentCardX + self.overscrollPitch - Double(self.stickerKickV.value) * .pi / 18, maxPitch)
             let overscrollFraction = -self.overscrollPitch / Self.maxOverscrollPitch
             let overscrollScale = 1.0 + (Self.maxOverscrollScale - 1.0) * overscrollFraction
-            var perspectiveTransform = self.makePerspectiveTransform(pitch: cardPitch, scale: self.currentScale * overscrollScale)
+            var perspectiveTransform = self.makePerspectiveTransform(pitch: cardPitch, scale: self.currentScale * overscrollScale * Double(self.stickerSquash.value))
             if self.overscrollPitch != 0.0 {
                 func projectedBottomY(_ transform: CATransform3D) -> CGFloat {
                     let y = self.currentSize.height * 0.5
@@ -1449,7 +1798,7 @@ public final class WalletCardComponent: Component {
                 )
             }
 
-            let edgeShift = self.edgeShift(pitch: cardPitch, yaw: self.currentCardY)
+            let edgeShift = self.edgeShift(pitch: cardPitch, yaw: self.stickerYaw)
             let bounds = CGRect(origin: .zero, size: self.currentSize)
             let anchorX = self.currentSize.width * 0.5
             var reachX: CGFloat = 0.0
@@ -1500,8 +1849,8 @@ public final class WalletCardComponent: Component {
                 )
                 let followsCardTilt = CATransform3DIsIdentity(self.scrollTransform)
                 diamond.updateWalletTilt(
-                    pitch: followsCardTilt ? CGFloat(cardPitch) : 0.0,
-                    roll: followsCardTilt ? CGFloat(self.currentCardY) : 0.0,
+                    pitch: (followsCardTilt ? CGFloat(cardPitch) : 0.0) - self.styleGemV.value * 0.22 / 2.8,
+                    roll: (followsCardTilt ? CGFloat(self.currentCardY) : 0.0) + self.styleGemH.value * 0.33 / 2.6,
                     scale: 1.0 + 0.16 * CGFloat(tilt),
                     leftInset: diamondCenter.x - 14.0 * scale * self.primaryBalanceScale,
                     starCanvasSize: CGSize(
@@ -1518,7 +1867,7 @@ public final class WalletCardComponent: Component {
                 time: self.elapsedTime,
                 reflectionRotation: self.reflectionRotation.value,
                 highlightTiltX: Self.clamp(self.currentCardX + self.overscrollPitch + scrollHighlightPitch, maxPitch + 0.03),
-                highlightTiltY: self.currentCardY,
+                highlightTiltY: self.stickerYaw,
                 surfaceTiltX: Self.clamp(self.currentDepthX + self.overscrollPitch, maxPitch + 0.03),
                 surfaceTiltY: self.currentDepthY,
                 quad: projectedQuad,

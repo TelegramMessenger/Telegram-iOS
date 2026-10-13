@@ -5486,7 +5486,7 @@ let schemaAccessorProbes: [String: (Any) -> [(String, Any?)]] = [
     },
     "wallet.Card.card": { value in
         guard case let .card(d) = value as! Api.wallet.Card else { preconditionFailure() }
-        return [("flags", d.flags as Any?), ("stickers", d.stickers as Any?), ("address", d.address as Any?), ("balance", d.balance as Any?)]
+        return [("flags", d.flags as Any?), ("stickers", d.stickers as Any?), ("bgNftItem", d.bgNftItem as Any?), ("address", d.address as Any?), ("balance", d.balance as Any?)]
     },
     "wallet.CardSticker.cardSticker": { value in
         guard case let .cardSticker(d) = value as! Api.wallet.CardSticker else { preconditionFailure() }

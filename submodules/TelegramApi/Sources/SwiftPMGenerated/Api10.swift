@@ -182,7 +182,7 @@ public extension Api.InputGeoPoint.Cons_inputGeoPoint {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 48, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, lat: Double, long: Double, accuracyRadius: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(461))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(460))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, lat)
@@ -270,7 +270,7 @@ public extension Api.InputGroupCall.Cons_inputGroupCallInviteMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(msgId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(899))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(898))
         tlStore(_tlObject, 24, msgId)
         self.init(tlObject: _tlObject)
     }
@@ -495,7 +495,7 @@ public extension Api.InputInvoice.Cons_inputInvoiceChatInviteSubscription {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(hash: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(338))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(337))
         tlStoreReference(_tlObject, 24, hash as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -519,7 +519,7 @@ public extension Api.InputInvoice.Cons_inputInvoicePremiumAuthCode {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputStorePaymentPurpose(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(purpose: Api.InputStorePaymentPurpose) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(405))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(404))
         tlStoreReference(_tlObject, 24, purpose.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -672,7 +672,7 @@ public extension Api.InputInvoice.Cons_inputInvoiceStarGiftTransfer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPeer(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(stargift: Api.InputSavedStarGift, toId: Api.InputPeer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(478))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(477))
         tlStoreReference(_tlObject, 24, stargift.tlObject)
         tlStoreReference(_tlObject, 32, toId.tlObject)
         self.init(tlObject: _tlObject)
@@ -686,7 +686,7 @@ public extension Api.InputInvoice.Cons_inputInvoiceStarGiftUpgrade {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputSavedStarGift(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(flags: Int32, stargift: Api.InputSavedStarGift) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(501))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(500))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, stargift.tlObject)
         self.init(tlObject: _tlObject)
@@ -697,7 +697,7 @@ public extension Api.InputInvoice.Cons_inputInvoiceStars {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputStorePaymentPurpose(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(purpose: Api.InputStorePaymentPurpose) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(655))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(654))
         tlStoreReference(_tlObject, 24, purpose.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -1023,7 +1023,7 @@ public extension Api.InputMedia.Cons_inputMediaDocumentExternal {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 56, 1) ? tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) : nil } }
     }
     init(flags: Int32, url: String, ttlSeconds: Int32?, videoCover: Api.InputPhoto?, videoTimestamp: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(772))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(771))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, url as NSString)
@@ -1114,7 +1114,7 @@ public extension Api.InputMedia.Cons_inputMediaInvoice {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 96) ? nil : Api.InputMedia(tlObject: tlObjectAt(self.tlObject, 96)) } }
     }
     init(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String?, providerData: Api.DataJSON, startParam: String?, extendedMedia: Api.InputMedia?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(418))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(417))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, description as NSString)
@@ -1217,7 +1217,7 @@ public extension Api.InputMedia.Cons_inputMediaPoll {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 72) ? nil : Api.InputMedia(tlObject: tlObjectAt(self.tlObject, 72)) } }
     }
     init(flags: Int32, poll: Api.Poll, correctAnswers: [Int32]?, attachedMedia: Api.InputMedia?, solution: String?, solutionEntities: [Api.MessageEntity]?, solutionMedia: Api.InputMedia?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(873))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(872))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, poll.tlObject)
         tlStoreReference(_tlObject, 40, correctAnswers.map { value in tlPackInt32(value) as NSData })
@@ -1254,7 +1254,7 @@ public extension Api.InputMedia.Cons_inputMediaStory {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(peer: Api.InputPeer, id: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(884))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(883))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
@@ -1331,7 +1331,7 @@ public extension Api.InputMedia.Cons_inputMediaUploadedPhoto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.InputDocument(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, file: Api.InputFile, stickers: [Api.InputDocument]?, ttlSeconds: Int32?, video: Api.InputDocument?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(811))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(810))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, file.tlObject)

@@ -720,13 +720,13 @@ let tlTypeRegistry: [(TLObject) -> Any] = [
     { Api.wallet.UserAddresses(tlObject: $0) },
 ]
 
-let tlSwiftSchemaHash: UInt64 = 0x9b2b00fa2b0c618
+let tlSwiftSchemaHash: UInt64 = 0x29db9b9e35e6c714
 
 /// Accessor offsets are compiled into clients (`@_alwaysEmitIntoClient`). This check is too:
 /// a client left over from another generation (an incremental non-Bazel build) carries the
 /// old literal and traps here instead of reading fields at stale offsets.
 @_alwaysEmitIntoClient public func tlVerifyClientLayout() {
-    if tlSchemaHashForClients() != 0x9b2b00fa2b0c618 {
+    if tlSchemaHashForClients() != 0x29db9b9e35e6c714 {
         preconditionFailure("TelegramApi was regenerated; rebuild its clients (stale inlined field offsets)")
     }
 }

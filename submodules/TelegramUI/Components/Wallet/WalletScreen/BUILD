@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
 swift_library(
     name = "WalletScreen",
@@ -10,6 +12,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/LottieBinding",
+        "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
         "//submodules/AccountContext",
@@ -29,6 +33,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/Gifts/InfoParagraphComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/HorizontalTabsComponent",
         "//submodules/TelegramUI/Components/TextFieldComponent",
@@ -41,6 +46,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Wallet/WalletCardComponent",
         "//submodules/TelegramUI/Components/Premium/PremiumDiamondComponent",
         "//submodules/WalletContext",
+        "//submodules/TelegramUI/Components/Wallet/WalletGiftStickerMediaComponent",
         "//submodules/PasscodeCore",
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/Wallet/WalletPeerSelectionScreen",
@@ -53,4 +59,18 @@ swift_library(
     visibility = [
         "//visibility:public",
     ],
+)
+
+swift_library(
+    name = "WalletStickerPlacementTestsLib",
+    testonly = True,
+    srcs = ["Sources/WalletStickerPlacement.swift", "//submodules/TelegramUI/Components/Wallet/WalletGiftStickerMediaComponent:Sources/WalletGiftStickerCutout.swift", "Tests/WalletStickerPlacementTests.swift", "//submodules/TelegramUI/Components/Wallet/WalletCardComponent:Sources/WalletStickerAnimation.swift"],
+    deps = ["//submodules/WalletContext"],
+)
+ios_test_runner(name = "WalletStickerPlacementTestRunner", device_type = "iPhone 17", os_version = "26.5")
+ios_unit_test(
+    name = "WalletStickerPlacementTests",
+    minimum_os_version = "15.0",
+    runner = ":WalletStickerPlacementTestRunner",
+    deps = [":WalletStickerPlacementTestsLib"],
 )

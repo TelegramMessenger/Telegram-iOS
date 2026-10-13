@@ -116,7 +116,7 @@ public extension Api {
             case .jsonBool(let _data):
                 return _data.tlObject
             case .jsonNull:
-                return TLObjectSingleton(TLApiConstructorAt(410))
+                return TLObjectSingleton(TLApiConstructorAt(409))
             case .jsonNumber(let _data):
                 return _data.tlObject
             case .jsonObject(let _data):
@@ -299,7 +299,7 @@ public extension Api.KeyboardButton.Cons_keyboardButton {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ButtonType(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, style: Api.KeyboardButtonStyle?, text: String, type: Api.ButtonType) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(302))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(301))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, style?.tlObject)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -349,7 +349,7 @@ public extension Api.KeyboardButtonRow.Cons_keyboardButtonRow {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.KeyboardButton.tlArray(self.tlObject, 24) } }
     }
     init(buttons: [Api.KeyboardButton]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(768))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(767))
         tlStoreReference(_tlObject, 24, buttons.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -399,7 +399,7 @@ public extension Api.KeyboardButtonStyle.Cons_keyboardButtonStyle {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 40, 0) ? tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) : nil } }
     }
     init(flags: Int32, icon: Int64?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(517))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(516))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = icon { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 0 }
@@ -811,7 +811,7 @@ public extension Api.LangPackString.Cons_langPackStringPluralized {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 80) } }
     }
     init(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(694))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(693))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, key as NSString)
         tlStoreReference(_tlObject, 40, zeroValue.map { value in value as NSString })
@@ -1054,7 +1054,7 @@ public extension Api.MediaArea.Cons_mediaAreaChannelPost {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(coordinates: Api.MediaAreaCoordinates, channelId: Int64, msgId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(764))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(763))
         tlStoreReference(_tlObject, 32, coordinates.tlObject)
         tlStore(_tlObject, 40, channelId)
         tlStore(_tlObject, 24, msgId)
@@ -1091,7 +1091,7 @@ public extension Api.MediaArea.Cons_mediaAreaStarGift {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(coordinates: Api.MediaAreaCoordinates, slug: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(568))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(567))
         tlStoreReference(_tlObject, 24, coordinates.tlObject)
         tlStoreReference(_tlObject, 32, slug as NSString)
         self.init(tlObject: _tlObject)
@@ -1123,7 +1123,7 @@ public extension Api.MediaArea.Cons_mediaAreaUrl {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(coordinates: Api.MediaAreaCoordinates, url: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(355))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(354))
         tlStoreReference(_tlObject, 24, coordinates.tlObject)
         tlStoreReference(_tlObject, 32, url as NSString)
         self.init(tlObject: _tlObject)
@@ -1177,7 +1177,7 @@ public extension Api.MediaArea.Cons_mediaAreaWeather {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(coordinates: Api.MediaAreaCoordinates, emoji: String, temperatureC: Double, color: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(473))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(472))
         tlStoreReference(_tlObject, 32, coordinates.tlObject)
         tlStoreReference(_tlObject, 40, emoji as NSString)
         tlStore(_tlObject, 48, temperatureC)
@@ -1427,7 +1427,7 @@ public extension Api.Message.Cons_message {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 256) ? nil : Api.RichMessage(tlObject: tlObjectAt(self.tlObject, 256)) } }
     }
     init(flags: Int32, flags2: Int32, id: Int32, fromId: Api.Peer?, fromBoostsApplied: Int32?, fromRank: String?, peerId: Api.Peer, savedPeerId: Api.Peer?, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, viaBusinessBotId: Int64?, guestchatViaFrom: Api.Peer?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, reactions: Api.MessageReactions?, restrictionReason: [Api.RestrictionReason]?, ttlPeriod: Int32?, quickReplyShortcutId: Int32?, effect: Int64?, factcheck: Api.FactCheck?, reportDeliveryUntilDate: Int32?, paidMessageStars: Int64?, suggestedPost: Api.SuggestedPost?, scheduleRepeatPeriod: Int32?, summaryFromLanguage: String?, richMessage: Api.RichMessage?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(755))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(754))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, flags2)
@@ -1519,7 +1519,7 @@ public extension Api.Message.Cons_messageService {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 88, 0) ? tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) : nil } }
     }
     init(flags: Int32, id: Int32, fromId: Api.Peer?, peerId: Api.Peer, savedPeerId: Api.Peer?, replyTo: Api.MessageReplyHeader?, date: Int32, action: Api.MessageAction, reactions: Api.MessageReactions?, ttlPeriod: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(789))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(788))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, id)

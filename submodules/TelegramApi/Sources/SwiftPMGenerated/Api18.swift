@@ -158,7 +158,7 @@ public extension Api.MessageReportOption.Cons_messageReportOption {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 32) } }
     }
     init(text: String, option: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(780))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(779))
         tlStoreReference(_tlObject, 24, text as NSString)
         tlStoreReference(_tlObject, 32, option.makeData() as NSData)
         self.init(tlObject: _tlObject)
@@ -215,7 +215,7 @@ public extension Api.MessageViews.Cons_messageViews {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.MessageReplies(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(448))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(447))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = views { tlStore(_tlObject, 28, _tlValue); _tlPresent |= 1 << 0 }
@@ -299,25 +299,25 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .inputMessagesFilterChatPhotos:
-                return TLObjectSingleton(TLApiConstructorAt(372))
+                return TLObjectSingleton(TLApiConstructorAt(371))
             case .inputMessagesFilterContacts:
                 return TLObjectSingleton(TLApiConstructorAt(1475))
             case .inputMessagesFilterDocument:
                 return TLObjectSingleton(TLApiConstructorAt(1033))
             case .inputMessagesFilterEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(574))
+                return TLObjectSingleton(TLApiConstructorAt(573))
             case .inputMessagesFilterGeo:
                 return TLObjectSingleton(TLApiConstructorAt(1523))
             case .inputMessagesFilterGif:
                 return TLObjectSingleton(TLApiConstructorAt(1712))
             case .inputMessagesFilterMusic:
-                return TLObjectSingleton(TLApiConstructorAt(357))
+                return TLObjectSingleton(TLApiConstructorAt(356))
             case .inputMessagesFilterMyMentions:
                 return TLObjectSingleton(TLApiConstructorAt(1294))
             case .inputMessagesFilterPhoneCalls(let _data):
                 return _data.tlObject
             case .inputMessagesFilterPhotoVideo:
-                return TLObjectSingleton(TLApiConstructorAt(563))
+                return TLObjectSingleton(TLApiConstructorAt(562))
             case .inputMessagesFilterPhotos:
                 return TLObjectSingleton(TLApiConstructorAt(961))
             case .inputMessagesFilterPinned:
@@ -327,13 +327,13 @@ public extension Api {
             case .inputMessagesFilterRoundVideo:
                 return TLObjectSingleton(TLApiConstructorAt(1191))
             case .inputMessagesFilterRoundVoice:
-                return TLObjectSingleton(TLApiConstructorAt(788))
+                return TLObjectSingleton(TLApiConstructorAt(787))
             case .inputMessagesFilterUrl:
-                return TLObjectSingleton(TLApiConstructorAt(817))
+                return TLObjectSingleton(TLApiConstructorAt(816))
             case .inputMessagesFilterVideo:
                 return TLObjectSingleton(TLApiConstructorAt(1043))
             case .inputMessagesFilterVoice:
-                return TLObjectSingleton(TLApiConstructorAt(528))
+                return TLObjectSingleton(TLApiConstructorAt(527))
             }
         }
 
@@ -352,7 +352,7 @@ public extension Api.MessagesFilter.Cons_inputMessagesFilterPhoneCalls {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(827))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(826))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -402,7 +402,7 @@ public extension Api.MissingInvitee.Cons_missingInvitee {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(flags: Int32, userId: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(626))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(625))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
         self.init(tlObject: _tlObject)
@@ -525,7 +525,7 @@ public extension Api.NearestDc.Cons_nearestDc {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(country: String, thisDc: Int32, nearestDc: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(911))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(910))
         tlStoreReference(_tlObject, 32, country as NSString)
         tlStore(_tlObject, 24, thisDc)
         tlStore(_tlObject, 28, nearestDc)
@@ -574,7 +574,7 @@ public extension Api {
             case .notificationSoundLocal(let _data):
                 return _data.tlObject
             case .notificationSoundNone:
-                return TLObjectSingleton(TLApiConstructorAt(708))
+                return TLObjectSingleton(TLApiConstructorAt(707))
             case .notificationSoundRingtone(let _data):
                 return _data.tlObject
             }
@@ -598,7 +598,7 @@ public extension Api.NotificationSound.Cons_notificationSoundLocal {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(title: String, data: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(840))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(839))
         tlStoreReference(_tlObject, 24, title as NSString)
         tlStoreReference(_tlObject, 32, data as NSString)
         self.init(tlObject: _tlObject)
@@ -838,7 +838,7 @@ public extension Api.OnrampLimits.Cons_onrampLimits {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 64) } }
     }
     init(baseCurrency: String, baseMinAmount: String, baseMaxAmount: String, cryptoMinAmount: String, cryptoMaxAmount: String, paymentMethod: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(797))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(796))
         tlStoreReference(_tlObject, 24, baseCurrency as NSString)
         tlStoreReference(_tlObject, 32, baseMinAmount as NSString)
         tlStoreReference(_tlObject, 40, baseMaxAmount as NSString)
@@ -1030,7 +1030,7 @@ public extension Api.OnrampQuote.Cons_onrampQuote {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(baseCurrency: String, baseAmount: String, cryptoCurrency: String, cryptoAmount: String, cryptoPrice: String, feeAmount: String, extraFeeAmount: String, networkFeeAmount: String, totalAmount: String, paymentMethod: String, expiresDate: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(790))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(789))
         tlStoreReference(_tlObject, 32, baseCurrency as NSString)
         tlStoreReference(_tlObject, 40, baseAmount as NSString)
         tlStoreReference(_tlObject, 48, cryptoCurrency as NSString)

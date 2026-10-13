@@ -10,38 +10,43 @@ import ViewControllerComponent
 import ButtonComponent
 import WalletContext
 import WalletCardComponent
+import WalletGiftStickerMediaComponent
 
 private final class PeerWalletOverlayComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
     let context: AccountContext
     let peer: EnginePeer
-    let balance: Int64?
+    let card: WalletCard?
     let sendMoney: (PeerWalletScreen) -> Void
 
-    init(context: AccountContext, peer: EnginePeer, balance: Int64?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    init(context: AccountContext, peer: EnginePeer, card: WalletCard?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
         self.context = context
         self.peer = peer
-        self.balance = balance
+        self.card = card
         self.sendMoney = sendMoney
     }
 
     static func ==(lhs: PeerWalletOverlayComponent, rhs: PeerWalletOverlayComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.balance == rhs.balance
+        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.card == rhs.card
     }
 
     final class State: ComponentState {
         var peer: EnginePeer
-        var balance: Int64?
-        var address: String?
+        private(set) var card: WalletCard?
+        var balance: Int64? { self.card?.balance }
+        var address: String? { self.card?.address }
+        var stickers: [WalletContext.CardSticker] = []
+        var stickerMedia: [String: WalletGiftStickerMedia] = [:]
         var fiatCurrency: WalletContext.FiatCurrency = .usd
         var fiatRate: WalletContext.FiatRate?
         private let disposables = DisposableSet()
 
-        init(context: AccountContext, peer: EnginePeer, balance: Int64?) {
+        init(context: AccountContext, peer: EnginePeer, card: WalletCard?) {
             self.peer = peer
-            self.balance = balance
+            self.card = nil
             super.init()
+            self.updateCard(card, context: context)
 
             self.disposables.add((context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id),
@@ -53,14 +58,8 @@ private final class PeerWalletOverlayComponent: Component {
                     self.peer = peer
                 }
                 if let cachedData = cachedData as? CachedUserData {
-                    self.balance = cachedData.gramBalance
+                    self.updateCard(cachedData.walletCard, context: context)
                 }
-                self.updated(transition: .immediate)
-            }))
-            self.disposables.add((context.engine.wallet.getUserAddresses(userIds: [peer.id], force: false)
-            |> deliverOnMainQueue).start(next: { [weak self] addresses in
-                guard let self else { return }
-                self.address = addresses.first(where: { $0.userId == peer.id })?.address
                 self.updated(transition: .immediate)
             }))
             if let walletContext = context.walletContext {
@@ -76,13 +75,36 @@ private final class PeerWalletOverlayComponent: Component {
             }
         }
 
+        private func updateCard(_ card: WalletCard?, context: AccountContext) {
+            guard self.card != card else { return }
+            let previous = self.card
+            self.card = card
+            self.stickers = (card?.stickers ?? []).compactMap {
+                WalletContext.CardSticker(serverSticker: $0, backgroundNftAddress: card?.backgroundNft?.address)
+            }
+            let ids = Set(self.stickers.map { $0.gift.address })
+            for id in Array(self.stickerMedia.keys) where !ids.contains(id) { self.stickerMedia.removeValue(forKey: id) }
+            for sticker in self.stickers {
+                let id = sticker.gift.address
+                let unchanged = previous?.stickers.contains(where: { $0.nft == sticker.gift.nft }) == true
+                if self.stickerMedia[id] != nil && unchanged { continue }
+                let media = WalletGiftStickerMedia(context: context, gift: sticker.gift, modelFile: sticker.modelFile,
+                    style: sticker.giftStyle)
+                self.stickerMedia[id] = media
+                media.updated = { [weak self, weak media] in
+                    guard let self, self.stickerMedia[id] === media else { return }
+                    self.updated(transition: .immediate)
+                }
+            }
+        }
+
         deinit {
             self.disposables.dispose()
         }
     }
 
     func makeState() -> State {
-        return State(context: self.context, peer: self.peer, balance: self.balance)
+        return State(context: self.context, peer: self.peer, card: self.card)
     }
 
     final class View: UIView {
@@ -196,6 +218,13 @@ private final class PeerWalletOverlayComponent: Component {
                 transition.setFrame(view: cardView, frame: CGRect(x: centerX - cardSize.width * 0.5, y: cardCenterY - cardSize.height * 0.5, width: cardSize.width, height: cardSize.height))
             }
 
+            if let cardView = self.card.view as? WalletCardComponent.View {
+                cardView.setCardStickers(state.stickers, images: state.stickerMedia.compactMapValues { $0.first?.image }, hidden: [])
+                let source = state.stickers.last(where: { $0.style != nil })
+                cardView.setGiftStyle(from: source?.style, to: source?.style, origin: .zero, progress: 1,
+                    pattern: source.flatMap { state.stickerMedia[$0.gift.address]?.patternImage })
+            }
+
             let buttonSize = self.sendButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -211,7 +240,7 @@ private final class PeerWalletOverlayComponent: Component {
                         font: Font.semibold(17.0),
                         color: environment.theme.list.itemCheckColors.foregroundColor
                     ))),
-                    isEnabled: component.context.walletContext != nil,
+                    isEnabled: component.context.walletContext != nil && state.card != nil,
                     action: {
                         guard let controller = controller() as? PeerWalletScreen else { return }
                         component.sendMoney(controller)
@@ -244,11 +273,11 @@ public final class PeerWalletScreen: ViewControllerComponentContainer {
     private var didAnimateIn = false
     private weak var sourceView: UIView?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, balance: Int64?, sourceView: UIView? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, card: WalletCard?, sourceView: UIView? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
         self.sourceView = sourceView
         super.init(
             context: context,
-            component: PeerWalletOverlayComponent(context: context, peer: peer, balance: balance, sendMoney: sendMoney),
+            component: PeerWalletOverlayComponent(context: context, peer: peer, card: card, sendMoney: sendMoney),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
             theme: .default,

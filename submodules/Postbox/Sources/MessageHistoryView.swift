@@ -1207,8 +1207,9 @@ final class MutableMessageHistoryView: MutablePostboxView {
         //TODO:optimize refresh
         var peerStoryStats: [PeerId: PeerStoryStats] = [:]
         if case let .loaded(state) = self.sampledState {
+            var fetchedAuthorIds = Set<PeerId>()
             for entry in state.entries {
-                if let author = entry.message.author {
+                if let author = entry.message.author, fetchedAuthorIds.insert(author.id).inserted {
                     if let value = fetchPeerStoryStats(postbox: postbox, peerId: author.id) {
                         peerStoryStats[author.id] = value
                     }

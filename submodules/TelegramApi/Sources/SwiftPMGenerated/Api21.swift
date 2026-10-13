@@ -38,11 +38,11 @@ public extension Api {
             case .phoneCallDiscardReasonDisconnect:
                 return TLObjectSingleton(TLApiConstructorAt(1477))
             case .phoneCallDiscardReasonHangup:
-                return TLObjectSingleton(TLApiConstructorAt(570))
+                return TLObjectSingleton(TLApiConstructorAt(569))
             case .phoneCallDiscardReasonMigrateConferenceCall(let _data):
                 return _data.tlObject
             case .phoneCallDiscardReasonMissed:
-                return TLObjectSingleton(TLApiConstructorAt(856))
+                return TLObjectSingleton(TLApiConstructorAt(855))
             }
         }
 
@@ -226,7 +226,7 @@ public extension Api.PhoneConnection.Cons_phoneConnectionWebrtc {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 64) } }
     }
     init(flags: Int32, id: Int64, ip: String, ipv6: String, port: Int32, username: String, password: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(636))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(635))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, id)
         tlStoreReference(_tlObject, 40, ip as NSString)
@@ -475,7 +475,7 @@ public extension Api.PhotoSize.Cons_photoSize {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(type: String, w: Int32, h: Int32, size: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(754))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(753))
         tlStoreReference(_tlObject, 40, type as NSString)
         tlStore(_tlObject, 24, w)
         tlStore(_tlObject, 28, h)
@@ -692,7 +692,7 @@ public extension Api.PollAnswer.Cons_pollAnswer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 64, 0) ? tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) : nil } }
     }
     init(flags: Int32, text: Api.TextWithEntities, option: Buffer, media: Api.MessageMedia?, addedBy: Api.Peer?, date: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(486))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(485))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, text.tlObject)
@@ -755,7 +755,7 @@ public extension Api.PollAnswerVoters.Cons_pollAnswerVoters {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.Peer.tlArray(self.tlObject, 40) } }
     }
     init(flags: Int32, option: Buffer, voters: Int32?, recentVoters: [Api.Peer]?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(347))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(346))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, option.makeData() as NSData)
@@ -883,7 +883,7 @@ public extension Api.PopularContact.Cons_popularContact {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(clientId: Int64, importers: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(598))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(597))
         tlStore(_tlObject, 32, clientId)
         tlStore(_tlObject, 24, importers)
         self.init(tlObject: _tlObject)
@@ -1040,7 +1040,7 @@ public extension Api.PostInteractionCounters.Cons_postInteractionCountersStory {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) } }
     }
     init(storyId: Int32, views: Int32, forwards: Int32, reactions: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(886))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(885))
         tlStore(_tlObject, 24, storyId)
         tlStore(_tlObject, 28, views)
         tlStore(_tlObject, 32, forwards)
@@ -1181,7 +1181,7 @@ public extension Api.PremiumSubscriptionOption.Cons_premiumSubscriptionOption {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : tlStringAt(self.tlObject, 64) } }
     }
     init(flags: Int32, transaction: String?, months: Int32, currency: String, amount: Int64, botUrl: String, storeProduct: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(610))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(609))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, transaction.map { value in value as NSString })
         tlStore(_tlObject, 28, months)
@@ -1346,21 +1346,21 @@ public extension Api {
             case .privacyKeyAbout:
                 return TLObjectSingleton(TLApiConstructorAt(1077))
             case .privacyKeyAddedByPhone:
-                return TLObjectSingleton(TLApiConstructorAt(435))
+                return TLObjectSingleton(TLApiConstructorAt(434))
             case .privacyKeyBirthday:
                 return TLObjectSingleton(TLApiConstructorAt(217))
             case .privacyKeyChatInvite:
-                return TLObjectSingleton(TLApiConstructorAt(518))
+                return TLObjectSingleton(TLApiConstructorAt(517))
             case .privacyKeyForwards:
-                return TLObjectSingleton(TLApiConstructorAt(677))
+                return TLObjectSingleton(TLApiConstructorAt(676))
             case .privacyKeyNoPaidMessages:
                 return TLObjectSingleton(TLApiConstructorAt(150))
             case .privacyKeyPhoneCall:
-                return TLObjectSingleton(TLApiConstructorAt(391))
+                return TLObjectSingleton(TLApiConstructorAt(390))
             case .privacyKeyPhoneNumber:
                 return TLObjectSingleton(TLApiConstructorAt(1386))
             case .privacyKeyPhoneP2P:
-                return TLObjectSingleton(TLApiConstructorAt(365))
+                return TLObjectSingleton(TLApiConstructorAt(364))
             case .privacyKeyProfilePhoto:
                 return TLObjectSingleton(TLApiConstructorAt(962))
             case .privacyKeySavedMusic:

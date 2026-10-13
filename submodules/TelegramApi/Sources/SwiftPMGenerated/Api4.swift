@@ -301,7 +301,7 @@ public extension Api.ChannelParticipant.Cons_channelParticipantAdmin {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 64) ? nil : tlStringAt(self.tlObject, 64) } }
     }
     init(flags: Int32, userId: Int64, inviterId: Int64?, promotedBy: Int64, date: Int32, adminRights: Api.ChatAdminRights, rank: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(337))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(336))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
@@ -358,7 +358,7 @@ public extension Api.ChannelParticipant.Cons_channelParticipantCreator {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : tlStringAt(self.tlObject, 48) } }
     }
     init(flags: Int32, userId: Int64, adminRights: Api.ChatAdminRights, rank: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(304))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(303))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
         tlStoreReference(_tlObject, 40, adminRights.tlObject)
@@ -831,7 +831,7 @@ public extension Api.Chat.Cons_chat {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : Api.ChatBannedRights(tlObject: tlObjectAt(self.tlObject, 80)) } }
     }
     init(flags: Int32, id: Int64, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(428))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(427))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 40, id)
         tlStoreReference(_tlObject, 48, title as NSString)
@@ -863,7 +863,7 @@ public extension Api.Chat.Cons_chatForbidden {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 32) } }
     }
     init(id: Int64, title: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(652))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(651))
         tlStore(_tlObject, 24, id)
         tlStoreReference(_tlObject, 32, title as NSString)
         self.init(tlObject: _tlObject)
@@ -898,7 +898,7 @@ public extension Api.Chat.Cons_community {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : Api.ChatBannedRights(tlObject: tlObjectAt(self.tlObject, 80)) } }
     }
     init(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, photo: Api.ChatPhoto, date: Int32, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(654))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(653))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, flags2)
@@ -979,7 +979,7 @@ public extension Api.ChatAdminRights.Cons_chatAdminRights {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(614))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(613))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }

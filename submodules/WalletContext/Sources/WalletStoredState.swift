@@ -210,6 +210,9 @@ struct WalletStoredState: Codable, Equatable, Sendable {
         var selectedFiatCurrency: WalletContext.FiatCurrency
         var transactions: [WalletStoredTransaction]
         var collectibles: [WalletContext.Collectible]
+        var cardStickersByWallet: [String: [WalletContext.CardSticker]]?
+        var cardStickerDirtyWallets: Set<String>?
+        var serverCardsByWallet: [String: WalletCard]?
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -230,6 +233,9 @@ struct WalletStoredState: Codable, Equatable, Sendable {
     var selectedFiatCurrency: WalletContext.FiatCurrency = .usd
     var transactions: [WalletStoredTransaction] = []
     var collectibles: [WalletContext.Collectible] = []
+    var cardStickersByWallet: [String: [WalletContext.CardSticker]] = [:]
+    var cardStickerDirtyWallets: Set<String> = []
+    var serverCardsByWallet: [String: WalletCard] = [:]
 
     init() {
     }
@@ -249,6 +255,9 @@ struct WalletStoredState: Codable, Equatable, Sendable {
         self.selectedFiatCurrency = payload.selectedFiatCurrency
         self.transactions = payload.transactions
         self.collectibles = payload.collectibles
+        self.cardStickersByWallet = (payload.cardStickersByWallet ?? [:]).mapValues(WalletContext.CardSticker.validated)
+        self.cardStickerDirtyWallets = payload.cardStickerDirtyWallets ?? Set(self.cardStickersByWallet.filter { !$0.value.isEmpty }.keys)
+        self.serverCardsByWallet = payload.serverCardsByWallet ?? [:]
     }
 
     func encode(to encoder: Encoder) throws {
@@ -264,7 +273,10 @@ struct WalletStoredState: Codable, Equatable, Sendable {
             fiatRatesUpdatedAt: self.fiatRatesUpdatedAt,
             selectedFiatCurrency: self.selectedFiatCurrency,
             transactions: self.transactions,
-            collectibles: self.collectibles
+            collectibles: self.collectibles,
+            cardStickersByWallet: self.cardStickersByWallet,
+            cardStickerDirtyWallets: self.cardStickerDirtyWallets,
+            serverCardsByWallet: self.serverCardsByWallet
         )
         try container.encode(try JSONEncoder().encode(payload), forKey: .payload)
     }

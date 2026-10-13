@@ -67,6 +67,18 @@ actor WalletContextImpl {
     var transferMinAmount = WalletConfiguration.defaultValue.transferMinAmount
     var transferGaslessMinAmount = WalletConfiguration.defaultValue.transferGaslessMinAmount
     
+    var cardStickersByWallet: [String: [WalletContext.CardSticker]] = [:]
+    var cardStickerDirtyWallets: Set<String> = []
+    var serverCardsByWallet: [String: WalletCard] = [:]
+    var latestCardRevision: UInt64 = 0
+    var latestServerCard: WalletCard?
+    var cardStickerSavingAddress: String?
+    var cardStickerSaveError: WalletCardUpdateError?
+    var cardRefreshAgain = false
+    var cardRefreshTask: Task<Void, Never>?
+    var cardStickerSaveSchedule = WalletCardStickerSaveSchedule()
+    var cardStickerSaveTask: Task<Void, Never>?
+    var cardStickerSaveRevision: UInt64 = 0
     var storedState = WalletStoredState()
     var serverWalletState: TelegramCore.WalletState?
     var isChangingWalletLocally = false
@@ -210,6 +222,8 @@ actor WalletContextImpl {
         self.output.transferBackgroundTasks.shutdown()
         self.discardPendingTransferRegistrations()
         self.isShutdown = true
+        self.cardRefreshTask?.cancel(); self.cardRefreshTask = nil
+        self.cardStickerSaveTask?.cancel(); self.cardStickerSaveTask = nil
         self.resetTonConnect()
         self.authorization.invalidate()
         self.preparedAuthorizations.removeAll()
@@ -336,7 +350,13 @@ actor WalletContextImpl {
         let newBalanceRequests = demand.balanceRequests.subtracting(self.screenDemand.balanceRequests)
         self.pendingBalanceRequests.formUnion(newBalanceRequests)
         self.pendingBalanceRequests.formIntersection(demand.balanceRequests)
+        let previousWalletCount = self.walletScreenCount
         self.screenDemand = demand
+        if previousWalletCount > 0 && self.walletScreenCount == 0 {
+            self.scheduleCardStickerSave(immediate: true)
+        } else if previousWalletCount == 0 && self.walletScreenCount > 0 && self.cardStickerSaveSchedule.pending == nil {
+            self.scheduleCardStickerSave(immediate: false)
+        }
         self.pendingScreenSynchronizationScope.formUnion(openedScope)
         self.pendingScreenSynchronizationScope.formIntersection(self.visibleScreenSynchronizationScope)
         if openedScope.contains(.transactions) || hasNewGaslessInfoRequests {
@@ -382,6 +402,9 @@ actor WalletContextImpl {
             return
         }
         self.storedState = storedState
+        self.cardStickersByWallet = storedState.cardStickersByWallet
+        self.cardStickerDirtyWallets = storedState.cardStickerDirtyWallets
+        self.serverCardsByWallet = storedState.serverCardsByWallet
         self.balanceLastSuccessfulAt = storedState.balanceUpdatedAt
         self.fiatLastSuccessfulAt = storedState.fiatRatesUpdatedAt
         cachedTransactions = mergeTransactions(
@@ -389,6 +412,7 @@ actor WalletContextImpl {
         )
         let restoredState = State(
             phase: .restoring,
+            walletAddress: storedState.walletAddress,
             balance: storedState.balance.map { .value($0, updatedAt: storedState.balanceUpdatedAt ?? 0) } ?? .idle,
             transactions: TransactionsState(
                 items: Array(cachedTransactions.prefix(walletTransactionFetchLimit)),
@@ -408,7 +432,9 @@ actor WalletContextImpl {
             fiat: FiatState(
                 selectedCurrency: storedState.selectedFiatCurrency,
                 rates: storedState.fiatRates.map { .value($0, updatedAt: storedState.fiatRatesUpdatedAt ?? 0) } ?? .idle
-            )
+            ),
+            cardStickers: storedState.walletAddress.flatMap { storedState.cardStickersByWallet[$0] } ?? [],
+            cardStickerChangesPending: storedState.walletAddress.map { self.cardStickerDirtyWallets.contains($0) } ?? false
         )
         if self.pendingInitialServerWalletState != nil {
             self.currentState = restoredState
@@ -1176,6 +1202,24 @@ actor WalletContextImpl {
         } else {
             walletAddress = nil
         }
+        if case let .wallet(info) = phase, var stickers = self.cardStickersByWallet[info.address], !stickers.isEmpty {
+            let awaitingConfirmation = Set(self.currentState.transactions.items.filter { $0.status == .pending }.map(\.presentationId))
+            let sent = Set(transactions.items.compactMap { transaction -> String? in
+                guard transaction.status == .completed, transaction.direction == .outgoing,
+                      awaitingConfirmation.contains(transaction.presentationId), let gift = transaction.collectible else { return nil }
+                return walletCollectibleAddressKey(gift.address)
+            })
+            stickers.removeAll { sent.contains(walletCollectibleAddressKey($0.gift.address)) }
+            self.cardStickersByWallet[info.address] = stickers
+        }
+        let cardAddress: String?
+        switch phase {
+        case let .wallet(info): cardAddress = info.address
+        case .restoring: cardAddress = walletAddress
+        default: cardAddress = nil
+        }
+        if self.currentState.walletAddress != walletAddress { self.cardStickerSaveError = nil }
+        self.mergeLatestServerCard(address: cardAddress)
         let value = State(
             phase: phase,
             walletAddress: walletAddress,
@@ -1185,7 +1229,19 @@ actor WalletContextImpl {
             pendingTransfers: pendingTransfers,
             activeOperation: activeOperation,
             fiat: fiat ?? self.currentState.fiat,
-            gaslessInfo: gaslessInfo ?? self.currentState.gaslessInfo
+            gaslessInfo: gaslessInfo ?? self.currentState.gaslessInfo,
+            cardStickers: {
+                let address: String?
+                switch phase {
+                case let .wallet(info): address = info.address
+                case .restoring: address = walletAddress
+                default: address = nil
+                }
+                return address.flatMap { self.cardStickersByWallet[$0] } ?? []
+            }(),
+            cardStickerChangesPending: cardAddress.map { self.cardStickerDirtyWallets.contains($0) } ?? false,
+            isSavingCardStickers: cardAddress != nil && self.cardStickerSavingAddress == cardAddress,
+            cardStickerSaveError: self.cardStickerSaveError
         )
         for transaction in value.transactions.items where transaction.status == .completed || transaction.status == .failed {
             if transaction.presentationId.hasPrefix("pending:") {
@@ -1206,7 +1262,10 @@ actor WalletContextImpl {
             }
             return
         }
+        let wasWalletReady: Bool
+        if case .wallet = self.currentState.phase { wasWalletReady = true } else { wasWalletReady = false }
         self.currentState = value
+        if !wasWalletReady, self.walletScreenCount > 0 { self.scheduleCardStickerSave(immediate: false) }
         self.updateTonConnectWallet()
         self.updatePendingTransferExpirationSchedule(for: pendingTransfers)
         self.publishPresentationState()
@@ -1422,8 +1481,11 @@ actor WalletContextImpl {
         return true
     }
 
-    private func persistStoredState(_ state: State) {
+    func persistStoredState(_ state: State) {
         var storedState = WalletStoredState()
+        storedState.cardStickersByWallet = self.cardStickersByWallet
+        storedState.cardStickerDirtyWallets = self.cardStickerDirtyWallets
+        storedState.serverCardsByWallet = self.serverCardsByWallet
         storedState.tonConnectRequests = self.storedState.tonConnectRequests
         storedState.walletAddress = {
             if case .failed = state.phase { return self.storedState.walletAddress }

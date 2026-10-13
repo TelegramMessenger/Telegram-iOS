@@ -35,8 +35,8 @@ public final class WalletCollectibleMediaView: UIView {
         }
     }
 
-    public func update(context: AccountContext, theme: PresentationTheme, image: WalletNftFile?, lottie: WalletNftFile?, size: CGSize, transition: ComponentTransition) {
-        let cornerRadius = size.width * 0.2
+    public func update(context: AccountContext, theme: PresentationTheme, image: WalletNftFile?, lottie: WalletNftFile?, size: CGSize, cornerRadius: CGFloat? = nil, transition: ComponentTransition) {
+        let cornerRadius = cornerRadius ?? size.width * 0.2
         self.layer.cornerRadius = cornerRadius
         let _ = self.image.update(
             transition: transition,

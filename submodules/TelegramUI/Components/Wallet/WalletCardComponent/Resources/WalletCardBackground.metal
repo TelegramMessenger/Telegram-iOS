@@ -98,6 +98,86 @@ static inline float3 walletCardLinearToSrgb(float3 value) {
     return select(encoded, linear, value <= float3(0.0031308));
 }
 
+struct WalletCardStyle {
+    float4 from0;   // старый цвет: оттенок, насыщенность, предел, темнота
+    float4 from1;   // яркость края и середины фона, насыщенность тёмного, сдвиг яркости
+    float4 to0;     // новый цвет — так же
+    float4 to1;
+    float4 wave;    // середина волны в пунктах карты, радиус, блик гребня
+    float4 mode;    // x — старый не синий, y — новый не синий, z — растворение (< 0 — волна), w — яркость тёмной синей
+    float4 stock;   // x — яркость светлой синей
+};
+
+static inline float3 walletSrgbToLinear(float3 c) {
+    c = clamp(c, 0.0, 1.0);
+    return select(pow((c + 0.055) / 1.055, float3(2.4)), c / 12.92, c <= float3(0.04045));
+}
+
+static inline float3 walletOklab(float3 srgb) {
+    float3 lin = walletSrgbToLinear(srgb);
+    float3 lms = float3(dot(lin, float3(0.4122214708, 0.5363325363, 0.0514459929)),
+                        dot(lin, float3(0.2119034982, 0.6806995451, 0.1073969566)),
+                        dot(lin, float3(0.0883024619, 0.2817188376, 0.6299787005)));
+    lms = sign(lms) * pow(abs(lms), float3(1.0 / 3.0));
+    return float3(dot(lms, float3(0.2104542553, 0.7936177850, -0.0040720468)),
+                  dot(lms, float3(1.9779984951, -2.4285922050, 0.4505937099)),
+                  dot(lms, float3(0.0259040371, 0.7827717662, -0.8086757660)));
+}
+
+static inline float3 walletOklchLinear(float l, float c, float h) {
+    float a = c * cos(h), b = c * sin(h);
+    float3 lms = float3(l + 0.3963377774 * a + 0.2158037573 * b,
+                        l - 0.1055613458 * a - 0.0638541728 * b,
+                        l - 0.0894841775 * a - 1.2914855480 * b);
+    lms = lms * lms * lms;
+    return float3(dot(lms, float3(4.0767416621, -3.3077115913, 0.2309699292)),
+                  dot(lms, float3(-1.2684380046, 2.6097574011, -0.3413193965)),
+                  dot(lms, float3(-0.0041960863, -0.7034186147, 1.7076147010)));
+}
+
+static inline float3 walletTint(float3 srgb, float4 p0, float4 p1, float stockDark, float stockLight) {
+    float3 lab = walletOklab(srgb);
+    float L = lab.x, C = length(lab.yz);
+    float pos = clamp((L - stockDark) / max(stockLight - stockDark, 0.001), -2.0, 3.0);
+    float own = p1.x - 0.02 + pos * (p1.y - p1.x);
+    float l = clamp(L + (own - L) * p0.w + p1.w, 0.05, 0.97);
+    float c = min(C * p0.y, p0.z * C / 0.173) * (1.0 - p0.w) + p1.z * p0.w;
+    float3 lin = walletOklchLinear(l, c, p0.x);
+    // Вне охвата — сбавляю насыщенность: яркость и оттенок те же.
+    for (int i = 0; i < 12 && (any(lin < -0.001) || any(lin > 1.001)); i++) {
+        c *= 0.85;
+        lin = walletOklchLinear(l, c, p0.x);
+    }
+    return walletCardLinearToSrgb(clamp(lin, 0.0, 1.0));
+}
+
+// Цвет точки карты `p` (пункты от угла) в стиле этого кадра.
+static inline float3 walletStyled(float3 srgb, float2 p, constant WalletCardStyle &s, bool material = false) {
+    if (s.mode.x < 0.5 && s.mode.y < 0.5) return srgb;
+    float inside;
+    float dist = distance(p, s.wave.xy);
+    if (s.mode.z >= 0.0) {
+        inside = s.mode.z;
+    } else {
+        // Мягкий край волны — без резкой кромки.
+        inside = 1.0 - smoothstep(s.wave.z - 18.0, s.wave.z, dist);
+    }
+    // The reference calibrates the blue material before tinting, but not the QR ring.
+    float3 tintInput = material ? clamp(srgb * float3(1.05933, 0.912212, 0.968627), 0.0, 1.0) : srgb;
+    float3 a = srgb, b = srgb;
+    if (inside < 0.999 && s.mode.x > 0.5) a = walletTint(tintInput, s.from0, s.from1, s.mode.w, s.stock.x);
+    if (inside > 0.001 && s.mode.y > 0.5) b = walletTint(tintInput, s.to0, s.to1, s.mode.w, s.stock.x);
+    float3 color = mix(a, b, inside);
+    // Гребень волны — тонкая светлая кромка, гаснет, пока волна доходит до краёв.
+    if (s.mode.z < 0.0 && s.wave.w > 0.001) {
+        const float width = 9.0;
+        float rim = dist < s.wave.z ? smoothstep(s.wave.z - width, s.wave.z, dist)
+                                    : 1.0 - smoothstep(s.wave.z, s.wave.z + width * 0.5, dist);
+        color = mix(color, float3(1.0), 0.32 * s.wave.w * rim);
+    }
+    return color;
+}
+
 static inline float3 walletCardApplySaturation(float3 value) {
     const float luminance = dot(value, float3(0.2126, 0.7152, 0.0722));
     return clamp(mix(float3(luminance), value, 1.6), float3(0.0), float3(1.0));
@@ -105,7 +185,8 @@ static inline float3 walletCardApplySaturation(float3 value) {
 
 // Premultiplied chip and socket, in the reference's 50 x 38 point coordinates.
 static inline float4 walletCardQRChip(float2 cp, float2 surface, float time,
-                                     texture2d<float> noiseMap, texture2d<float> qrMap) {
+                                     texture2d<float> noiseMap, texture2d<float> qrMap,
+                                     float2 stylePoint, constant WalletCardStyle &style) {
     constexpr sampler cardSampler(filter::linear, address::clamp_to_edge);
     constexpr sampler noiseSampler(filter::linear, address::repeat);
     const float2 center = float2(293.5, 101.0);
@@ -151,6 +232,7 @@ static inline float4 walletCardQRChip(float2 cp, float2 surface, float time,
 
     float ringMask = smoothstep(-1.0 - aa, -1.0 + aa, d);
     float3 ring = float3(0.047, 0.451, 0.835) * (0.92 + 0.16 * dot(n, light));
+    ring = walletStyled(ring, stylePoint, style);
     float3 chip = mix(clamp(metal, 0.0, 1.0), ring, ringMask);
     float cover = 1.0 - smoothstep(-aa, aa, d);
     return float4(chip * cover, cover + socket * (1.0 - cover));
@@ -208,6 +290,7 @@ fragment float4 walletCardBackgroundFragment(
     constant WalletCardShaderUniforms &uniforms [[buffer(0)]],
     constant WalletCardLens &lens [[buffer(1)]],
     constant float2 *hull [[buffer(2)]],
+    constant WalletCardStyle &style [[buffer(3)]],
     texture2d<float> starsMap [[texture(0)]],
     texture2d<float> noiseMap [[texture(1)]],
     texture2d<float> qrMap [[texture(2)]]
@@ -241,6 +324,7 @@ fragment float4 walletCardBackgroundFragment(
         edge += float3(0.30, 0.62, 1.0) * step(0.88, t) * (0.18 + 0.40 * diffuse);
         float3 edgeColor = clamp(walletCardApplySaturation(walletCardLinearToSrgb(edge))
             * float3(1.05933, 0.912212, 0.968627), 0.0, 1.0);
+        edgeColor = walletStyled(edgeColor, p + cardHalf, style, true);
         return float4(edgeColor * cover, cover);
     }
     float2 uv = walletCardLensPoint(input.uv * float2(safeWidth, safeHeight), lens, hull)
@@ -422,6 +506,7 @@ fragment float4 walletCardBackgroundFragment(
     float3 outputColor = walletCardApplySaturation(
         walletCardLinearToSrgb(gradient + spark)
     );
+    outputColor = walletStyled(outputColor, input.uv * float2(safeWidth, safeHeight), style, true);
     if (uniforms.qrEffects.x > 0.0 && all(uniforms.qrRect.zw > 0.0)) {
         float2 position = uv * float2(safeWidth, safeHeight);
         float2 chipScale = uniforms.qrRect.zw / float2(50.0, 38.0);
@@ -438,12 +523,12 @@ fragment float4 walletCardBackgroundFragment(
                 for (int y = -1; y <= 1; y++) {
                     for (int x = -1; x <= 1; x++) {
                         float2 offset = float2(x, y) * (blur * 1.41421356) / chipScale;
-                        chip += walletCardQRChip(cp + offset, surface, uniforms.time, noiseMap, qrMap)
+                        chip += walletCardQRChip(cp + offset, surface, uniforms.time, noiseMap, qrMap, input.uv * float2(safeWidth, safeHeight), style)
                             * weights[x + 1] * weights[y + 1];
                     }
                 }
             } else {
-                chip = walletCardQRChip(cp, surface, uniforms.time, noiseMap, qrMap);
+                chip = walletCardQRChip(cp, surface, uniforms.time, noiseMap, qrMap, input.uv * float2(safeWidth, safeHeight), style);
             }
             chip *= uniforms.qrEffects.x;
             outputColor = outputColor * (1.0 - chip.a) + chip.rgb;

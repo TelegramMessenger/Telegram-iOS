@@ -88,6 +88,7 @@ public final class WalletContext {
     private let environmentDisposable = MetaDisposable()
     private let walletConfigurationDisposable = MetaDisposable()
     private let walletStateUpdatesDisposable = MetaDisposable()
+    private let walletCardDisposable = MetaDisposable()
     private let tonConnectUpdatesDisposable = MetaDisposable()
     private var tonConnectUpdatesTask: Task<Void, Never>?
     private let walletTransferUpdatesDisposable = MetaDisposable()
@@ -96,6 +97,7 @@ public final class WalletContext {
     private let operationTaskRegistry: WalletOperationTaskRegistry
     private let environmentRevision = Atomic<UInt64>(value: 0)
     private let walletConfigurationRevision = Atomic<UInt64>(value: 0)
+    private let walletCardRevision = Atomic<UInt64>(value: 0)
     private let walletStateRevision = Atomic<UInt64>(value: 0)
     private let subscriberDemand = Atomic<WalletSubscriberDemand>(value: WalletSubscriberDemand())
     private let walletScreenDemand = Atomic<WalletScreenDemand>(value: WalletScreenDemand())
@@ -149,6 +151,7 @@ public final class WalletContext {
     }
 
     public func beginWalletScreenUpdates() -> Disposable {
+        Task { await self.impl.refreshCard() }
         return self.beginScreenUpdates(collectiblesOnly: false)
     }
 
@@ -268,6 +271,12 @@ public final class WalletContext {
             }
         }))
 
+        self.walletCardDisposable.set(engine.wallet.card().start(next: { [weak self] card in
+            guard let self else { return }
+            let revision = self.walletCardRevision.modify { $0 &+ 1 }
+            Task { await impl.receiveServerCard(card, revision: revision) }
+        }))
+
         self.walletStateUpdatesDisposable.set(engine.wallet.stateUpdates().start(next: { [weak self] value in
             guard let self else { return }
             let revision = self.walletStateRevision.modify { value in
@@ -367,6 +376,7 @@ public final class WalletContext {
         self.environmentDisposable.dispose()
         self.walletConfigurationDisposable.dispose()
         self.walletStateUpdatesDisposable.dispose()
+        self.walletCardDisposable.dispose()
         self.walletTransferUpdatesDisposable.dispose()
         self.walletTransferUpdatesTask?.cancel()
         self.tonConnectUpdatesDisposable.dispose()

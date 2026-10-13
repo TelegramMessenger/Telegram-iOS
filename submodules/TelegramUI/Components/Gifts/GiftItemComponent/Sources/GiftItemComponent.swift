@@ -1257,7 +1257,7 @@ public final class GiftItemComponent: Component {
                     }
                     
                     var ribbonOffset: CGPoint = CGPoint(x: 2.0, y: -2.0)
-                    if case .grid = component.mode {
+                    if case .grid = component.mode, component.cornerRadius == nil {
                         ribbonOffset = .zero
                     }
                     

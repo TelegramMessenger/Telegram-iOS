@@ -2234,6 +2234,7 @@ extension WalletContextImpl {
                 guard self.runtimeObservationId == observationId,
                       self.currentState.collectibles.acceptsPage(pageId) else { throw CancellationError() }
                 self.replaceCollectibles(try self.currentState.collectibles.applying(page, offset: pageId.offset, refresh: false))
+                self.reconcileCardStickers(self.currentState.collectibles)
             } catch {
                 guard self.isCurrentPaginationOperation(operationId, generation: generation),
                       self.runtimeObservationId == observationId,

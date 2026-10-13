@@ -515,6 +515,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedMainProfileTab(mappedMainProfileTab)
                                             .withUpdatedSavedMusic(mappedSavedMusic)
                                             .withUpdatedNote(mappedNote)
+                                            .withUpdatedWalletCard(userFullData.walletCard.map(WalletCard.init(apiCard:)))
                                             .withUpdatedBotManagerId(botManagerId.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
                                 }
                             })
