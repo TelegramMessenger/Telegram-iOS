@@ -75,15 +75,15 @@ public extension Api {
             case .inputPrivacyValueAllowAll:
                 return TLObjectSingleton(TLApiConstructorAt(158))
             case .inputPrivacyValueAllowBots:
-                return TLObjectSingleton(TLApiConstructorAt(587))
+                return TLObjectSingleton(TLApiConstructorAt(586))
             case .inputPrivacyValueAllowChatParticipants(let _data):
                 return _data.tlObject
             case .inputPrivacyValueAllowCloseFriends:
-                return TLObjectSingleton(TLApiConstructorAt(299))
+                return TLObjectSingleton(TLApiConstructorAt(298))
             case .inputPrivacyValueAllowContacts:
                 return TLObjectSingleton(TLApiConstructorAt(83))
             case .inputPrivacyValueAllowPremium:
-                return TLObjectSingleton(TLApiConstructorAt(775))
+                return TLObjectSingleton(TLApiConstructorAt(774))
             case .inputPrivacyValueAllowUsers(let _data):
                 return _data.tlObject
             case .inputPrivacyValueDisallowAll:
@@ -114,7 +114,7 @@ public extension Api.InputPrivacyRule.Cons_inputPrivacyValueAllowChatParticipant
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlInt64sAt(self.tlObject, 24) } }
     }
     init(chats: [Int64]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(848))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(847))
         tlStoreReference(_tlObject, 24, tlPackInt64(chats) as NSData)
         self.init(tlObject: _tlObject)
     }
@@ -292,7 +292,7 @@ public extension Api.InputReplyTo.Cons_inputReplyToEphemeralMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(id: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(422))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(421))
         tlStore(_tlObject, 24, id)
         self.init(tlObject: _tlObject)
     }
@@ -329,7 +329,7 @@ public extension Api.InputReplyTo.Cons_inputReplyToMessage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : tlBufferAt(self.tlObject, 80) } }
     }
     init(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, monoforumPeerId: Api.InputPeer?, todoItemId: Int32?, pollOption: Buffer?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(379))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(378))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, replyToMsgId)
@@ -350,7 +350,7 @@ public extension Api.InputReplyTo.Cons_inputReplyToMonoForum {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPeer(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(monoforumPeerId: Api.InputPeer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(676))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(675))
         tlStoreReference(_tlObject, 24, monoforumPeerId.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -363,7 +363,7 @@ public extension Api.InputReplyTo.Cons_inputReplyToStory {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(peer: Api.InputPeer, storyId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(578))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(577))
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 24, storyId)
         self.init(tlObject: _tlObject)
@@ -425,7 +425,7 @@ public extension Api.InputRichFile.Cons_inputRichFileDocument {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputDocument(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(id: String, document: Api.InputDocument) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(844))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(843))
         tlStoreReference(_tlObject, 24, id as NSString)
         tlStoreReference(_tlObject, 32, document.tlObject)
         self.init(tlObject: _tlObject)
@@ -654,7 +654,7 @@ public extension Api.InputSavedStarGift.Cons_inputSavedStarGiftUser {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(msgId: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(672))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(671))
         tlStore(_tlObject, 24, msgId)
         self.init(tlObject: _tlObject)
     }
@@ -715,7 +715,7 @@ public extension Api.InputSecureFile.Cons_inputSecureFile {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int64.self) } }
     }
     init(id: Int64, accessHash: Int64) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(544))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(543))
         tlStore(_tlObject, 24, id)
         tlStore(_tlObject, 32, accessHash)
         self.init(tlObject: _tlObject)
@@ -738,7 +738,7 @@ public extension Api.InputSecureFile.Cons_inputSecureFileUploaded {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBufferAt(self.tlObject, 56) } }
     }
     init(id: Int64, parts: Int32, md5Checksum: String, fileHash: Buffer, secret: Buffer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(324))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(323))
         tlStore(_tlObject, 32, id)
         tlStore(_tlObject, 24, parts)
         tlStoreReference(_tlObject, 40, md5Checksum as NSString)
@@ -952,7 +952,7 @@ public extension Api.InputStarGiftAuction.Cons_inputStarGiftAuctionSlug {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(slug: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(792))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(791))
         tlStoreReference(_tlObject, 24, slug as NSString)
         self.init(tlObject: _tlObject)
     }

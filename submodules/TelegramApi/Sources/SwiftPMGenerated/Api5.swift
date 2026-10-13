@@ -575,7 +575,7 @@ public extension Api.ChatInvite.Cons_chatInvite {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 88) ? nil : Api.BotVerification(tlObject: tlObjectAt(self.tlObject, 88)) } }
     }
     init(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32, subscriptionPricing: Api.StarsSubscriptionPricing?, subscriptionFormId: Int64?, botVerification: Api.BotVerification?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(595))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(594))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 40, title as NSString)
@@ -596,7 +596,7 @@ public extension Api.ChatInvite.Cons_chatInviteAlready {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Chat(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(chat: Api.Chat) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(589))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(588))
         tlStoreReference(_tlObject, 24, chat.tlObject)
         self.init(tlObject: _tlObject)
     }
@@ -609,7 +609,7 @@ public extension Api.ChatInvite.Cons_chatInvitePeek {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(chat: Api.Chat, expires: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(621))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(620))
         tlStoreReference(_tlObject, 32, chat.tlObject)
         tlStore(_tlObject, 24, expires)
         self.init(tlObject: _tlObject)
@@ -669,7 +669,7 @@ public extension Api.ChatInviteImporter.Cons_chatInviteImporter {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 56, 0) ? tlBase(self.tlObject).load(fromByteOffset: 48, as: Int64.self) : nil } }
     }
     init(flags: Int32, userId: Int64, date: Int32, about: String?, approvedBy: Int64?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(900))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(899))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
@@ -803,7 +803,7 @@ public extension Api.ChatParticipant.Cons_chatParticipant {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : tlStringAt(self.tlObject, 48) } }
     }
     init(flags: Int32, userId: Int64, inviterId: Int64, date: Int32, rank: String?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(361))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(360))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, userId)
         tlStore(_tlObject, 40, inviterId)
@@ -915,7 +915,7 @@ public extension Api.ChatParticipants.Cons_chatParticipants {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(chatId: Int64, participants: [Api.ChatParticipant], version: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(389))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(388))
         tlStore(_tlObject, 32, chatId)
         tlStoreReference(_tlObject, 40, participants.map { item in item.tlObject } as NSArray)
         tlStore(_tlObject, 24, version)
@@ -933,7 +933,7 @@ public extension Api.ChatParticipants.Cons_chatParticipantsForbidden {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 40) ? nil : Api.ChatParticipant(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, chatId: Int64, selfParticipant: Api.ChatParticipant?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(868))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(867))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, chatId)
         tlStoreReference(_tlObject, 40, selfParticipant?.tlObject)
@@ -968,7 +968,7 @@ public extension Api {
             case .chatPhoto(let _data):
                 return _data.tlObject
             case .chatPhotoEmpty:
-                return TLObjectSingleton(TLApiConstructorAt(358))
+                return TLObjectSingleton(TLApiConstructorAt(357))
             }
         }
 
@@ -1062,7 +1062,7 @@ public extension Api.ChatReactions.Cons_chatReactionsAll {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(flags: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(538))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(537))
         tlStore(_tlObject, 24, flags)
         self.init(tlObject: _tlObject)
     }
@@ -1072,7 +1072,7 @@ public extension Api.ChatReactions.Cons_chatReactionsSome {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Reaction.tlArray(self.tlObject, 24) } }
     }
     init(reactions: [Api.Reaction]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(656))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(655))
         tlStoreReference(_tlObject, 24, reactions.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
@@ -1143,7 +1143,7 @@ public extension Api.ChatTheme.Cons_chatThemeUniqueGift {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.ThemeSettings.tlArray(self.tlObject, 32) } }
     }
     init(gift: Api.StarGift, themeSettings: [Api.ThemeSettings]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(334))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(333))
         tlStoreReference(_tlObject, 24, gift.tlObject)
         tlStoreReference(_tlObject, 32, themeSettings.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
@@ -1256,7 +1256,7 @@ public extension Api.CommunityPeer.Cons_communityPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.Peer(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, visible: Api.Bool?, peer: Api.Peer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(756))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(755))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, visible?.tlObject)
         tlStoreReference(_tlObject, 40, peer.tlObject)
@@ -1314,7 +1314,7 @@ public extension Api.CommunityPeerRequest.Cons_communityPeerRequest {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(flags: Int32, peer: Api.Peer, requestedBy: Int64, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(798))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(797))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, peer.tlObject)
         tlStore(_tlObject, 40, requestedBy)
@@ -1887,7 +1887,7 @@ public extension Api.CurrencyRate.Cons_currencyRate {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Double.self) } }
     }
     init(currency: String, rate: Double) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(309))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(308))
         tlStoreReference(_tlObject, 24, currency as NSString)
         tlStore(_tlObject, 32, rate)
         self.init(tlObject: _tlObject)
@@ -1935,7 +1935,7 @@ public extension Api.DataJSON.Cons_dataJSON {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 24) } }
     }
     init(data: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(810))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(809))
         tlStoreReference(_tlObject, 24, data as NSString)
         self.init(tlObject: _tlObject)
     }
@@ -2045,7 +2045,7 @@ public extension Api.DefaultHistoryTTL.Cons_defaultHistoryTTL {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(period: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(441))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(440))
         tlStore(_tlObject, 24, period)
         self.init(tlObject: _tlObject)
     }
@@ -2217,7 +2217,7 @@ public extension Api.Dialog.Cons_dialogFolder {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 44, as: Int32.self) } }
     }
     init(flags: Int32, folder: Api.Folder, peer: Api.Peer, topMessage: Int32, unreadMutedPeersCount: Int32, unreadUnmutedPeersCount: Int32, unreadMutedMessagesCount: Int32, unreadUnmutedMessagesCount: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(726))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(725))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, folder.tlObject)
         tlStoreReference(_tlObject, 56, peer.tlObject)
@@ -2268,7 +2268,7 @@ public extension Api {
             case .dialogFilterChatlist(let _data):
                 return _data.tlObject
             case .dialogFilterDefault:
-                return TLObjectSingleton(TLApiConstructorAt(345))
+                return TLObjectSingleton(TLApiConstructorAt(344))
             }
         }
 

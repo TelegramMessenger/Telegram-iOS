@@ -2584,7 +2584,7 @@ func fx_users_Users() -> Api.users.Users {
 }
 
 func fx_wallet_Card() -> Api.wallet.Card {
-    return Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: 0, stickers: nil, address: "", balance: Int64(1100048629387)))
+    return Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: 0, stickers: nil, bgNftItem: nil, address: "", balance: Int64(1099670628253)))
 }
 
 func fx_wallet_CardSticker() -> Api.wallet.CardSticker {
@@ -5791,8 +5791,8 @@ func schemaConstructorFixtures15() -> [SchemaConstructorFixture] {
     f.append(SchemaConstructorFixture(name: "users.Users.users#empty", make: { Api.users.Users.users(Api.users.Users.Cons_users(users: [])) }))
     f.append(SchemaConstructorFixture(name: "users.Users.usersSlice#full", make: { Api.users.Users.usersSlice(Api.users.Users.Cons_usersSlice(count: Int32(884), users: [fx_User(), fx_User()])) }))
     f.append(SchemaConstructorFixture(name: "users.Users.usersSlice#empty", make: { Api.users.Users.usersSlice(Api.users.Users.Cons_usersSlice(count: Int32(884), users: [])) }))
-    f.append(SchemaConstructorFixture(name: "wallet.Card.card#full", make: { Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: Int32(bitPattern: UInt32(1)), stickers: [fx_wallet_CardSticker(), fx_wallet_CardSticker()], address: String(repeating: "aü🙂", count: 100) + "b", balance: Int64(1100048629387))) }))
-    f.append(SchemaConstructorFixture(name: "wallet.Card.card#empty", make: { Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: 0, stickers: nil, address: "", balance: Int64(1100048629387))) }))
+    f.append(SchemaConstructorFixture(name: "wallet.Card.card#full", make: { Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: Int32(bitPattern: UInt32(3)), stickers: [fx_wallet_CardSticker(), fx_wallet_CardSticker()], bgNftItem: fx_wallet_NftItem(), address: String(repeating: "aü🙂", count: 100) + "b", balance: Int64(1099670628253))) }))
+    f.append(SchemaConstructorFixture(name: "wallet.Card.card#empty", make: { Api.wallet.Card.card(Api.wallet.Card.Cons_card(flags: 0, stickers: nil, bgNftItem: nil, address: "", balance: Int64(1099670628253))) }))
     f.append(SchemaConstructorFixture(name: "wallet.CardSticker.cardSticker#full", make: { Api.wallet.CardSticker.cardSticker(Api.wallet.CardSticker.Cons_cardSticker(coordinates: fx_MediaAreaCoordinates(), nft: fx_wallet_NftItem())) }))
     f.append(SchemaConstructorFixture(name: "wallet.CardSticker.cardSticker#empty", make: { Api.wallet.CardSticker.cardSticker(Api.wallet.CardSticker.Cons_cardSticker(coordinates: fx_MediaAreaCoordinates(), nft: fx_wallet_NftItem())) }))
     f.append(SchemaConstructorFixture(name: "wallet.EncryptedSecretPhrasePart.encryptedSecretPhrasePart#full", make: { Api.wallet.EncryptedSecretPhrasePart.encryptedSecretPhrasePart(Api.wallet.EncryptedSecretPhrasePart.Cons_encryptedSecretPhrasePart(data: Buffer(data: Data((0 ..< 301).map { UInt8(truncatingIfNeeded: $0) })))) }))
@@ -12600,11 +12600,11 @@ func schemaFunctionFixtures8() -> [SchemaFunctionFixture] {
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_Updates().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "wallet.setCardStickers#full", make: {
-        let call = Api.functions.wallet.setCardStickers(stickers: [fx_InputWalletCardSticker(), fx_InputWalletCardSticker()])
+        let call = Api.functions.wallet.setCardStickers(flags: Int32(bitPattern: UInt32(1)), stickers: [fx_InputWalletCardSticker(), fx_InputWalletCardSticker()], bgNftAddress: String(repeating: "aü🙂", count: 100) + "b")
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_wallet_Card().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "wallet.setCardStickers#empty", make: {
-        let call = Api.functions.wallet.setCardStickers(stickers: [])
+        let call = Api.functions.wallet.setCardStickers(flags: 0, stickers: [], bgNftAddress: nil)
         return (call.0, call.1, { call.2.parse($0) })
     }, resultBytes: { let b = Buffer(); fx_wallet_Card().serialize(b, true); return b }))
     f.append(SchemaFunctionFixture(name: "wallet.tonConnectClaimRequest#full", make: {

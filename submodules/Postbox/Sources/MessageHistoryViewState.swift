@@ -1684,17 +1684,21 @@ final class HistoryViewLoadedState {
                     for (id, associatedMessage) in message.associatedMessages {
                         var peers = associatedMessage.peers
                         var author = associatedMessage.author
+                        var associatedRebuild = false
                         for (peerId, _) in associatedMessage.peers {
                             if let updatedPeer = updatedPeers[peerId] {
                                 peers[peerId] = updatedPeer
-                                rebuild = true
+                                associatedRebuild = true
                             }
                         }
                         if let authorValue = author, let updatedAuthor = updatedPeers[authorValue.id] {
                             author = updatedAuthor
+                            associatedRebuild = true
+                        }
+                        if associatedRebuild {
+                            associatedMessages[id] = associatedMessage.withUpdatedPeers(peers).withUpdatedAuthor(author)
                             rebuild = true
                         }
-                        associatedMessages[id] = associatedMessage.withUpdatedPeers(peers).withUpdatedAuthor(author)
                     }
                     
                     if rebuild {

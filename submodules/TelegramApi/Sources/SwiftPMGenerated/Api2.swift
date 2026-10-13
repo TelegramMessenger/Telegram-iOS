@@ -68,7 +68,7 @@ public extension Api.BotInfo.Cons_botInfo {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 96) ? nil : Api.BotVerifierSettings(tlObject: tlObjectAt(self.tlObject, 96)) } }
     }
     init(flags: Int32, userId: Int64?, description: String?, descriptionPhoto: Api.Photo?, descriptionDocument: Api.Document?, commands: [Api.BotCommand]?, menuButton: Api.BotMenuButton?, privacyPolicyUrl: String?, appSettings: Api.BotAppSettings?, verifierSettings: Api.BotVerifierSettings?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(502))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(501))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         if let _tlValue = userId { tlStore(_tlObject, 32, _tlValue); _tlPresent |= 1 << 0 }
@@ -212,7 +212,7 @@ public extension Api.BotInlineMessage.Cons_botInlineMessageMediaAuto {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(758))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(757))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -305,7 +305,7 @@ public extension Api.BotInlineMessage.Cons_botInlineMessageMediaInvoice {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 72) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 72)) } }
     }
     init(flags: Int32, title: String, description: String, photo: Api.WebDocument?, currency: String, totalAmount: Int64, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(340))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(339))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, description as NSString)
@@ -342,7 +342,7 @@ public extension Api.BotInlineMessage.Cons_botInlineMessageMediaVenue {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 80) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 80)) } }
     }
     init(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(888))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(887))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, geo.tlObject)
         tlStoreReference(_tlObject, 40, title as NSString)
@@ -371,7 +371,7 @@ public extension Api.BotInlineMessage.Cons_botInlineMessageMediaWebPage {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 56) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 56)) } }
     }
     init(flags: Int32, message: String, entities: [Api.MessageEntity]?, url: String, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(826))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(825))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -412,7 +412,7 @@ public extension Api.BotInlineMessage.Cons_botInlineMessageText {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.ReplyMarkup(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(902))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(901))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, message as NSString)
         tlStoreReference(_tlObject, 40, entities.map { value in value.map { item in item.tlObject } as NSArray })
@@ -579,9 +579,9 @@ public extension Api {
             case .botMenuButton(let _data):
                 return _data.tlObject
             case .botMenuButtonCommands:
-                return TLObjectSingleton(TLApiConstructorAt(432))
+                return TLObjectSingleton(TLApiConstructorAt(431))
             case .botMenuButtonDefault:
-                return TLObjectSingleton(TLApiConstructorAt(751))
+                return TLObjectSingleton(TLApiConstructorAt(750))
             }
         }
 
@@ -1169,7 +1169,7 @@ public extension Api.BusinessIntro.Cons_businessIntro {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsNull(self.tlObject, 48) ? nil : Api.Document(tlObject: tlObjectAt(self.tlObject, 48)) } }
     }
     init(flags: Int32, title: String, description: String, sticker: Api.Document?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(585))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(584))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, title as NSString)
         tlStoreReference(_tlObject, 40, description as NSString)
@@ -1382,7 +1382,7 @@ public extension Api.BusinessWorkHours.Cons_businessWorkHours {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.BusinessWeeklyOpen.tlArray(self.tlObject, 40) } }
     }
     init(flags: Int32, timezoneId: String, weeklyOpen: [Api.BusinessWeeklyOpen]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(904))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(903))
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 32, timezoneId as NSString)
         tlStoreReference(_tlObject, 40, weeklyOpen.map { item in item.tlObject } as NSArray)
@@ -1488,7 +1488,7 @@ public extension Api.ButtonType.Cons_buttonTypeRequestPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(flags: Int32, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(512))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(511))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, buttonId)
         tlStoreReference(_tlObject, 40, peerType.tlObject)
@@ -1534,7 +1534,7 @@ public extension Api.ButtonType.Cons_inputButtonTypeRequestPeer {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 32, as: Int32.self) } }
     }
     init(flags: Int32, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(415))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(414))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, buttonId)
         tlStoreReference(_tlObject, 40, peerType.tlObject)
@@ -1584,7 +1584,7 @@ public extension Api.CdnConfig.Cons_cdnConfig {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.CdnPublicKey.tlArray(self.tlObject, 24) } }
     }
     init(publicKeys: [Api.CdnPublicKey]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(566))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(565))
         tlStoreReference(_tlObject, 24, publicKeys.map { item in item.tlObject } as NSArray)
         self.init(tlObject: _tlObject)
     }
