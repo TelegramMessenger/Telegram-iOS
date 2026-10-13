@@ -170,8 +170,9 @@ final class NewsScreenNode: ASDisplayNode {
         self.foregroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] inForeground in
-            if inForeground {
-                self?.added.feed.revalidate()
+            // Only while News is on screen; didAppear revalidates when the user comes back to it.
+            if inForeground, let self, self.isScreenVisible {
+                self.added.feed.revalidate()
             }
         })
     }
