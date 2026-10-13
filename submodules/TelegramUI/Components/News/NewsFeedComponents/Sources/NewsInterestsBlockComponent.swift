@@ -51,7 +51,7 @@ public final class NewsInterestChipComponent: Component {
         func update(component: NewsInterestChipComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             let theme = component.theme
-            let height: CGFloat = 34.0
+            let height: CGFloat = 28.0
             let horizontalInset: CGFloat = 12.0
             let emojiSize: CGFloat = 20.0
             let emojiSpacing: CGFloat = 6.0
@@ -161,12 +161,12 @@ public final class NewsInterestsBlockComponent: Component {
             let theme = component.theme
             // NewsFeedPostComponent's metrics, so the block reads as one of the feed's rows.
             let sideInset: CGFloat = 16.0
-            let topInset: CGFloat = 9.0
+            let topInset: CGFloat = 10.0
             let bottomInset: CGFloat = 10.0
             let iconSize: CGFloat = 16.0
             let iconSpacing: CGFloat = 6.0
-            let contentSpacing: CGFloat = 4.0
-            let chipSpacing: CGFloat = 8.0
+            let contentSpacing: CGFloat = 11.0
+            let chipSpacing: CGFloat = 6.0
 
             let titleX = sideInset + iconSize + iconSpacing
             let titleSize = self.titleView.update(

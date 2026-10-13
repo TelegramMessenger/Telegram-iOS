@@ -156,8 +156,10 @@ public final class NewsFeedPostComponent: Component {
             let theme = component.theme
 
             let sideInset: CGFloat = 16.0
-            let topInset: CGFloat = 9.0
+            let topInset: CGFloat = 10.0
             let bottomInset: CGFloat = 10.0
+            let thumbnailTopInset: CGFloat = 8.0
+            let thumbnailBottomInset: CGFloat = 8.0
             let avatarSize: CGFloat = 16.0
             let thumbnailSize: CGFloat = 82.0
             let thumbnailSpacing: CGFloat = 12.0
@@ -249,7 +251,8 @@ public final class NewsFeedPostComponent: Component {
                     animationRenderer: component.context.animationRenderer,
                     placeholderColor: theme.list.mediaPlaceholderColor,
                     text: .plain(newsPostText(component: component)),
-                    maximumNumberOfLines: 3
+                    maximumNumberOfLines: 3,
+                    lineSpacing: 0.12
                 )),
                 environment: {},
                 containerSize: CGSize(width: max(1.0, contentWidth), height: 1000.0)
@@ -262,9 +265,9 @@ public final class NewsFeedPostComponent: Component {
                 transition.setFrame(view: textView, frame: textFrame)
             }
 
-            var contentBottom = textFrame.maxY
+            var contentBottom = textFrame.maxY + bottomInset
             if let (message, media) = thumbnail {
-                let thumbnailFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - thumbnailSize, y: topInset), size: CGSize(width: thumbnailSize, height: thumbnailSize))
+                let thumbnailFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - thumbnailSize, y: thumbnailTopInset), size: CGSize(width: thumbnailSize, height: thumbnailSize))
                 self.thumbnailView.isHidden = false
                 transition.setFrame(view: self.thumbnailView, frame: thumbnailFrame)
                 var dimensions = thumbnailFrame.size
@@ -290,13 +293,13 @@ public final class NewsFeedPostComponent: Component {
                 let makeLayout = self.thumbnailView.asyncLayout()
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: 10.0), imageSize: dimensions.aspectFilled(thumbnailFrame.size), boundingSize: thumbnailFrame.size, intrinsicInsets: UIEdgeInsets()))
                 apply()
-                contentBottom = max(contentBottom, thumbnailFrame.maxY)
+                contentBottom = max(contentBottom, thumbnailFrame.maxY + thumbnailBottomInset)
             } else {
                 self.thumbnailView.isHidden = true
                 self.thumbnailMediaId = nil
             }
 
-            let height = contentBottom + bottomInset
+            let height = contentBottom
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(x: sideInset, y: height - UIScreenPixel, width: availableSize.width - sideInset * 2.0, height: UIScreenPixel))
             return CGSize(width: availableSize.width, height: height)
