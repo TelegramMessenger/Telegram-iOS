@@ -5126,14 +5126,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             switch state {
             case let .loading(progress):
+                guard let progress else {
+                    return
+                }
                 let text = self.presentationData.strings.Story_Editor_DownloadingMedia
                 if let tooltip = self.sourceLoadingTooltip {
-                    tooltip.content = .progress(text, progress ?? 0.0)
+                    tooltip.content = .progress(text, progress)
                 } else {
-                    let tooltip = SaveProgressScreen(context: self.context, content: .progress(text, progress ?? 0.0))
+                    let tooltip = SaveProgressScreen(context: self.context, content: .progress(text, progress))
                     tooltip.cancelled = { [weak self] in
-                        // Only stops reporting; the fetch is harmless and the editor fills in if
-                        // it does finish.
                         self?.sourceLoadingTooltip = nil
                     }
                     controller.present(tooltip, in: .window(.root))
