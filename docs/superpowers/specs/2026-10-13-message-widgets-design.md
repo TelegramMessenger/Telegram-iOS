@@ -1,6 +1,8 @@
 # Message widgets: HTML widgets in chat bubbles
 
-Date: 2026-10-13. Status: design approved in brainstorming, awaiting spec review.
+Date: 2026-10-13. Status: approved, then amended with the implementation plan
+(`docs/superpowers/plans/2026-10-13-message-widgets.md`, "Deviations from the spec"). The
+amendments are written into the sections below.
 
 ## Goal
 
@@ -76,7 +78,7 @@ derived from widget-sandbox and rewritten for the main thread:
 | Module | Target | Contents | Derived from |
 |---|---|---|---|
 | `MessageWidgetCore` | `objc_library` (C++) | ops → shadow tree → litehtml document; the container with no network access; the layout walker; hit testing; a C API for Swift | `apps/renderer-litehtml/src` (`renderer.cpp`, `apple/coregraphics.cpp`, `include/twidget_litehtml.h`) |
-| `MessageWidget` | `swift_library` | the engine and validator glue on the main thread, `CpuBudget`, the native layer tree, the `MessageWidgetInstance` facade | `packages/ios/Sources/WidgetSandbox` (`SandboxEngine`, `TrustedValidator`, `QuickJS`, `CpuBudget`) |
+| `MessageWidget` | `swift_library` | the engine and validator glue on the main thread, `CpuBudget`, the native layer tree, the `MessageWidgetInstance` facade, and `MessageWidgetRegistry` (a bubble's runtimes, unit-tested here) | `packages/ios/Sources/WidgetSandbox` (`SandboxEngine`, `TrustedValidator`, `QuickJS`, `CpuBudget`) |
 
 `MessageWidget/PROVENANCE.md` records the widget-sandbox commit each file was
 taken from and how it was changed.
@@ -84,8 +86,16 @@ taken from and how it was changed.
 Not taken over: `RendererWebView`, `RendererEnvironment`, the renderer bundle,
 `Pools`, `JSThread`, `WidgetHost`.
 
-**Dependencies.** InstantPageUI depends on `MessageWidget`. TelegramCore is
-unchanged: the block is the existing `.preformatted(text, language:)`.
+**Dependencies.** InstantPageUI does not depend on `MessageWidget`. It declares
+`InstantPageV2WidgetHost`, and `ChatMessageRichDataBubbleContentNode` (which
+depends on `MessageWidget`) implements it with an adapter over
+`MessageWidgetRegistry`. TelegramCore is unchanged: the block is the existing
+`.preformatted(text, language:)`.
+
+**Test fixtures.** Byte-identical copies of examples 01–05 and 10 are committed
+under `submodules/TelegramUI/Components/MessageWidget/Fixtures/` as test inputs,
+together with their boot ops (`*.ops.json`). The docs examples themselves stay
+uncommitted.
 
 **Gate.** Widgets render only when both of these hold:
 - `ExperimentalUISettings.messageWidgets` is on (a Debug Settings toggle);
@@ -212,53 +222,56 @@ The height is litehtml's document height, clamped to 24–900 pt; content beyond
 The validator remains a second line of defence: allowlists, the CSS
 sanitizer, the URL policy and size limits.
 
-**The layout walker.** Walk the laid-out render tree from
-`document::root_render()`. For each render item, call
-`src_el()->draw(hdc, x, y, clip, ri)` with the render item as the opaque
-`hdc`. Every drawing callback (`draw_solid_fill`, the gradients,
-`draw_borders`, `draw_image`, `draw_list_marker`, `draw_text`) then arrives
-attributed to its element. This needs no fork: `element::draw` is a public
-virtual, and `hdc` is passed through unchanged. The walker emits a
-`WidgetLayoutNode` tree:
-- **key:** (node id, fragment index), because one element can have several
-  render items or inline fragments;
-- **frame:** relative to the parent (`render_item::pos()` plus borders and paddings);
-- **clipping:** from `overflow: hidden` together with border radii (radii via `calc_percents`);
-- background layers, borders and list markers;
-- `opacity`, `transform` and `box-shadow` from the fork's computed style;
-- **text runs:** words merged per element and per line, each carrying the
-  CoreText font used to measure it, its colour and its baseline;
-- **children in z-order:** positioned descendants and `z-index` are collected
-  by scanning `is_positioned()`, because litehtml's list is protected.
+**Attributing drawing to elements.** litehtml's drawing callbacks don't say
+which element they draw. The fork changes the 8 places litehtml enters an
+element's `draw` (`document.cpp:570`, five in `render_item.cpp`, two in
+`render_table.cpp`) to pass the render item being drawn as the opaque `hdc`.
+Every drawing callback (`draw_solid_fill`, the gradients, `draw_borders`,
+`draw_image`, `draw_list_marker`, `draw_text`) is reached only through those
+sites, so each one now knows its render item. The container records it under
+the nearest element with a node id. litehtml's own `document::draw` pass
+records it, which keeps litehtml's paint order, positioning and table handling.
 
-Anonymous boxes and `::before`/`::after` belong to the nearest ancestor with a
-node id. `text-transform` is reapplied from the parent's style when reading
-text, because `el_text`'s transformed text is protected.
+**Layout nodes.** After each rebuild, the core walks the DOM and emits one
+`mwc_layout_node` per element with a node id that has a render item. The key is
+the node id: an inline element that wraps across lines is one node, whose
+fragments all draw in its layer. Each node carries:
+- **frame:** the border box, in document coordinates;
+- **clipping:** `overflow` not visible, together with border radii (radii via `calc_percents`);
+- `opacity`, `transform` and `box-shadow`, parsed by the core from the fork's raw tokens;
+- `z-index` for positioned elements;
+- its parent, the nearest ancestor that is a node.
+
+Anonymous boxes, `::before`/`::after` and text belong to the nearest ancestor
+with a node id, so an element's text draws in that element's layer.
 
 **The native tree in `MessageWidget`:**
-- One `CALayer` per node: a background colour or gradient sublayer, borders
-  (a `CAShapeLayer` when radii or widths differ), corner radius plus
-  `masksToBounds` for clipping, shadow, opacity, and the transform as an affine
-  `CATransform3D`.
+- One `CALayer` per node. It draws its element's own commands (backgrounds,
+  gradients, borders, list markers, images, text) through the core's
+  CoreGraphics painter (`mwc_draw_node`), translated to the layer's origin.
+- Clipping (corner radius plus `masksToBounds`, or a mask for unequal radii),
+  shadow, opacity, transform (an affine transform around the box centre) and
+  z-order are layer properties.
 - Text is drawn with the same CTFont used for measurement, so drawn widths
   match laid-out widths.
-- Updates diff the new tree against the old by key: layers are reused and
+- Updates diff the new tree against the old by node id: layers are reused and
   updated, missing ones are removed.
-- Implicit animations are disabled (`CATransaction.setDisableActions`), so
-  transitions jump to their final state.
+- Implicit animations are disabled, so transitions jump to their final state.
 - Hit testing stays in C++; layers never hit-test.
 
-**Fork changes in `third-party/litehtml` for 01–05.** Each one adds a
-`string_id`, a case in `style::add_property`, and a computed field in `css_properties`:
+**Fork changes in `third-party/litehtml` for 01–05.** Besides the draw token above, each
+property adds a `string_id`, a case in `style::add_property`, and a computed field in
+`css_properties`. The three paint-only properties are stored as raw token lists, and the core
+parses them:
 
 | Property | Kind | Examples | Extra work |
 |---|---|---|---|
 | `gap`, `row-gap`, `column-gap` (flex) | layout | 02–05 | `render_flex.cpp` `get_lines` (wrapping), `flex_line.cpp` `init` (free space minus (n−1)·gap) and `calculate_items_position`, row gap in the cross axis |
 | `letter-spacing` | text width | 02, 05 | carried into `font_description` and the CoreText font (kerning) |
 | `font-variant-numeric: tabular-nums` | text width | 05 | carried into `font_description`; a CoreText font feature |
-| `opacity` | paint only | 04 | none beyond parsing; the walker reads it |
-| `transform` (2D: translate, rotate, scale, matrix) | paint only | 03 | none beyond parsing; the walker reads it |
-| `box-shadow` | paint only | 01 | none beyond parsing; the walker reads it |
+| `opacity` | paint only | 04 | stored as tokens; parsed by the core |
+| `transform` (2D: translate, rotate, scale, skew, matrix) | paint only | 03 | stored as tokens; parsed by the core |
+| `box-shadow` (first outer shadow) | paint only | 01 | stored as tokens; parsed by the core |
 
 Buttons draw as boxes from the core's existing user-agent CSS; 01–05 style
 their own.
@@ -296,8 +309,8 @@ size for (path, source, width) and later provides the instance's view.
   thread (`ListViewImpl` without `useMainQueueTransactions`). With nil the block
   draws as a code block.
 
-The node keeps `widgetInstances: [WidgetKey: MessageWidgetInstance]`, keyed by
-the block's path plus a hash of its source. A measure pass creates and boots
+The node owns a `MessageWidgetRegistry` (in `MessageWidget`), which keys each
+`MessageWidgetInstance` by the block's path plus its source. A measure pass creates and boots
 the instance it needs. This is a deliberate side effect in an otherwise pure
 measure closure, allowed only because that closure is on the main thread. An
 instance whose layout is never applied stays in the registry, so nothing leaks.
@@ -308,7 +321,9 @@ instance whose layout is never applied stays in the registry, so nothing leaks.
 - the node is deallocated.
 
 Editing the source gives a new key, and the widget starts fresh. The old
-instance is destroyed when the crossfade ends. When some other part of the
+instance is destroyed at the end of the layout pass that stopped using it. Its
+view keeps its last drawn frame, so the outgoing page view still shows it during
+the crossfade. When some other part of the
 message triggers a crossfade, the live widget view moves into the new page
 view, and the outgoing page view shows a static snapshot for the fade.
 
@@ -330,7 +345,7 @@ view, and the outgoing page view shows a static snapshot for the fade.
 instance's native root view.
 - `update(item:)` is idempotent, because V2 calls it on every apply: attach the
   view if it isn't attached, then set its frame.
-- `instantPageUpdateIsVisible` maps to `setVisible`.
+- Visibility is driven per bubble: the node's `visibility` maps to the registry's `setVisible`.
 
 ## 5. Touches and the bridge
 
@@ -369,7 +384,8 @@ because this renderer has no default actions to cancel.
   - Inherited side effects: it collapses the input and clears a pending reply.
   - **Tap gate:** allowed only during a task started by a real tap (the
     `pointerup`/`click` task and its microtasks), at most once per tap.
-    Otherwise it is refused, with a diagnostic, and returns `false`.
+    Otherwise it is dropped, with a diagnostic. The vendored shim's bridge call
+    has no return value to make `false`.
   - Text is capped at the message length limit (`UserLimitsConfiguration.maxMessageLength`).
   - The call is delivered after the task ends.
 - **`openLink(url)`**, and a tap on `<a href>`, go through
