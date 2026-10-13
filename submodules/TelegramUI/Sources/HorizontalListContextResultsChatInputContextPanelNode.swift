@@ -115,9 +115,6 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.isOpaque = false
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
-        self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).string
-        }
         
         self.buttonTitleNode = ImmediateTextNode()
         self.buttonTitleNode.maximumNumberOfLines = 1
@@ -414,6 +411,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return interfaceState.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         let defaultListHeight: CGFloat = 105.0
         let sideInset: CGFloat = 8.0
         let innerInset: CGFloat = 4.0

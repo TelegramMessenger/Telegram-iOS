@@ -236,15 +236,24 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 emptyColor: nil,
                 synchronousLoad: false
             )
+            self.contentTitleAccountNode.isAccessibilityElement = true
+            self.contentTitleAccountNode.accessibilityLabel = strings.Shortcut_SwitchAccount
+            self.contentTitleAccountNode.accessibilityValue = info.peer.compactDisplayTitle
+            self.contentTitleAccountNode.accessibilityTraits = [.button]
         } else {
             self.contentTitleAccountNode.isHidden = true
+            self.contentTitleAccountNode.isAccessibilityElement = false
         }
         
         self.searchButtonNode = HighlightableButtonNode()
         self.searchButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/SearchIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
+        self.searchButtonNode.accessibilityLabel = strings.Common_Search
+        self.searchButtonNode.accessibilityTraits = [.button]
         
         self.shareButtonNode = HighlightableButtonNode()
         self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
+        self.shareButtonNode.accessibilityLabel = strings.ShareMenu_ShareTo
+        self.shareButtonNode.accessibilityTraits = [.button]
                  
         self.shareReferenceNode = ContextReferenceContentNode()
         self.shareContainerNode = ContextControllerSourceNode()
@@ -272,6 +281,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         
         super.init()
+
+        self.contentTitleNode.accessibilityTraits = [.header]
         
         self.addSubnode(self.contentGridNode)
         self.addSubnode(self.headerNode)
@@ -352,17 +363,55 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private func dequeueTransition() {
         if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
+
+            var focusedPeerId: EnginePeer.Id?
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.view.accessibilityElementIsFocused() {
+                    focusedPeerId = itemNode.peerId
+                }
+            }
             
             var itemTransition: ContainedViewLayoutTransition = .immediate
             if transition.animated {
                 itemTransition = .animated(duration: 0.3, curve: .spring)
             }
-            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+                guard let self, let focusedPeerId else {
+                    return
+                }
+                self.contentGridNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == focusedPeerId, !itemNode.view.accessibilityElementIsFocused() {
+                        UIAccessibility.post(notification: .layoutChanged, argument: itemNode.view)
+                    }
+                }
+            })
         }
     }
     
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
+    }
+
+    func accessibilityFocusTarget(peerId: EnginePeer.Id? = nil) -> Any? {
+        if let peerId {
+            var result: Any?
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                    result = itemNode.view
+                }
+            }
+            if let result {
+                return result
+            }
+        }
+        if self.segmentedValues != nil {
+            return self.segmentedNode.view
+        }
+        return self.contentGridNode.view
+    }
+
+    var accessibilitySearchFocusTarget: Any {
+        return self.searchButtonNode.view
     }
     
     func setDidBeginDragging(_ f: (() -> Void)?) {
@@ -419,6 +468,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
         
     func prepareForAnimateIn() {
+        self.accessibilityElementsHidden = true
         self.searchButtonNode.alpha = 0.0
         self.shareButtonNode.alpha = 0.0
         self.contentTitleNode.alpha = 0.0
@@ -427,6 +477,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     func animateIn(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.accessibilityElementsHidden = false
         self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         self.searchButtonNode.alpha = 1.0
@@ -499,6 +550,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     func animateOut(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.accessibilityElementsHidden = true
         self.headerNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         self.searchButtonNode.alpha = 0.0

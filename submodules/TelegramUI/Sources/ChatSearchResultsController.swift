@@ -43,6 +43,7 @@ final class ChatSearchResultsController: ViewController {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationData.theme, presentationStrings: presentationData.strings), transition: .immediate)
+                strongSelf.navigationItem.rightBarButtonItem?.accessibilityLabel = presentationData.strings.Common_Done
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -51,7 +52,9 @@ final class ChatSearchResultsController: ViewController {
         
         self.title = searchQuery
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(donePressed))
+        let doneButtonItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(donePressed))
+        doneButtonItem.accessibilityLabel = self.presentationData.strings.Common_Done
+        self.navigationItem.rightBarButtonItem = doneButtonItem
     }
     
     required init(coder aDecoder: NSCoder) {

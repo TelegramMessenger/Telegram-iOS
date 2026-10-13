@@ -7,15 +7,44 @@ public protocol AccessibilityFocusableNode {
 }
 
 public final class AccessibilityAreaNode: ASDisplayNode {
-    public var activate: (() -> Bool)?
-    public var increment: (() -> Void)?
-    public var decrement: (() -> Void)?
+    public var activate: (() -> Bool)? {
+        didSet {
+            self.updateRespondsToUserInteraction()
+        }
+    }
+    public var increment: (() -> Void)? {
+        didSet {
+            self.updateRespondsToUserInteraction()
+        }
+    }
+    public var decrement: (() -> Void)? {
+        didSet {
+            self.updateRespondsToUserInteraction()
+        }
+    }
     public var focused: (() -> Void)?
     
     override public init() {
         super.init()
         
         self.isAccessibilityElement = true
+    }
+
+    override public func didLoad() {
+        super.didLoad()
+
+        self.updateRespondsToUserInteraction()
+    }
+
+    private func updateRespondsToUserInteraction() {
+        if self.isNodeLoaded {
+            self.view.accessibilityRespondsToUserInteraction = self.activate != nil
+                || self.increment != nil
+                || self.decrement != nil
+                || self.accessibilityTraits.contains(.button)
+                || self.accessibilityTraits.contains(.link)
+                || self.accessibilityTraits.contains(.adjustable)
+        }
     }
     
     override public func accessibilityActivate() -> Bool {

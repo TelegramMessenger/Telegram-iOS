@@ -14,6 +14,15 @@ import BundleIconComponent
 import PlainButtonComponent
 import AccountContext
 
+private final class PeerInfoBusinessHoursAccessibilityAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 func businessHoursTextToCopy(businessHours: TelegramBusinessHours, presentationData: PresentationData, displayLocalTimezone: Bool) -> String {
     var text = ""
     
@@ -297,6 +306,15 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         self.item = item
         self.presentationData = presentationData
         self.theme = presentationData.theme
+        self.activateArea.accessibilityTraits = [.button]
+        self.activateArea.activate = { [weak self] in
+            guard let self else {
+                return false
+            }
+            self.isExpanded = !self.isExpanded
+            self.item?.requestLayout(true)
+            return true
+        }
         
         self.containerNode.isGestureEnabled = item.contextAction != nil
                 
@@ -445,6 +463,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         }
         
         var timezoneSwitchButtonSize: CGSize?
+        var accessibilityTimezoneSwitchTitle: String?
         if hasTimezoneDependentEntries {
             let timezoneSwitchButton: ComponentView<Empty>
             if let current = self.timezoneSwitchButton {
@@ -459,6 +478,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             } else {
                 timezoneSwitchTitle = presentationData.strings.PeerInfo_BusinessHours_TimezoneSwitchBusiness
             }
+            accessibilityTimezoneSwitchTitle = timezoneSwitchTitle
             timezoneSwitchButtonSize = timezoneSwitchButton.update(
                 transition: .immediate,
                 component: AnyComponent(PlainButtonComponent(
@@ -651,6 +671,23 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
         self.activateArea.accessibilityLabel = item.label
+        self.activateArea.accessibilityValue = businessHoursTextToCopy(businessHours: item.businessHours, presentationData: presentationData, displayLocalTimezone: self.displayLocalTimezone)
+        if let accessibilityTimezoneSwitchTitle {
+            self.activateArea.accessibilityCustomActions = [
+                PeerInfoBusinessHoursAccessibilityAction(name: accessibilityTimezoneSwitchTitle, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayLocalTimezone = !self.displayLocalTimezone
+                    if !self.isExpanded {
+                        self.isExpanded = true
+                    }
+                    self.item?.requestLayout(true)
+                })
+            ]
+        } else {
+            self.activateArea.accessibilityCustomActions = nil
+        }
         
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
@@ -670,6 +707,14 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         self.contextSourceNode.contentRect = extractedRect
         
         return height
+    }
+
+    @objc private func performAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? PeerInfoBusinessHoursAccessibilityAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     private func updateTouchesAtPoint(_ point: CGPoint?) {

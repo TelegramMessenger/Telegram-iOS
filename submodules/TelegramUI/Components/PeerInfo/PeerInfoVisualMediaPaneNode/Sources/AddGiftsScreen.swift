@@ -184,6 +184,7 @@ final class AddGiftsScreenComponent: Component {
                 if buttonPanelView.superview == nil {
                     self.addSubview(buttonPanelView)
                 }
+                buttonPanelView.accessibilityElementsHidden = giftsListView.selectedItems.isEmpty
                 transition.setFrame(view: buttonPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
             }
             
@@ -266,7 +267,9 @@ public final class AddGiftsScreen: ViewControllerComponentContainer {
         }
         self.filterButton.addTarget(self, action: #selector(self.filterPressed), forControlEvents: .touchUpInside)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(self.cancelPressed))
+        let closeButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(self.cancelPressed))
+        closeButtonItem.accessibilityLabel = presentationData.strings.Common_Close
+        self.navigationItem.leftBarButtonItem = closeButtonItem
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.filterButton)
     }
     
@@ -425,6 +428,10 @@ private final class FilterHeaderButton: HighlightableButtonNode {
         self.containerNode.animateScale = false
 
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = presentationData.strings.Common_More
+        self.accessibilityTraits = [.button]
 
         self.containerNode.addSubnode(self.referenceNode)
         self.addSubnode(self.containerNode)

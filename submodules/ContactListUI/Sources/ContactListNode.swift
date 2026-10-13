@@ -913,7 +913,7 @@ private func preparedContactListNodeTransition(context: AccountContext, presenta
         scrollToItem = ListViewScrollToItem(index: 0, position: .top(-50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
     }
     
-    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, hasOptions: hasOptions, scrollToItem: scrollToItem, animation: animation)
+    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, hasOptions: hasOptions, scrollToItem: scrollToItem, animation: animation, entries: toEntries)
 }
 
 private struct ContactsListNodeTransition {
@@ -926,6 +926,14 @@ private struct ContactsListNodeTransition {
     let hasOptions: Bool
     let scrollToItem: ListViewScrollToItem?
     let animation: ContactListAnimation
+    let entries: [ContactListNodeEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 public enum ContactListPresentation {
@@ -1023,6 +1031,7 @@ public final class ContactListNode: ASDisplayNode {
     private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
+    private var displayedEntries: [ContactListNodeEntry] = []
     private var validLayout: (ContainerViewLayout, UIEdgeInsets, CGFloat)?
     
     private var _ready = ValuePromise<Bool>()
@@ -2302,8 +2311,30 @@ public final class ContactListNode: ASDisplayNode {
                     self.indexNode.isUserInteractionEnabled = !transition.indexSections.isEmpty
                 }
                 
+                var focusedEntryId: ContactListNodeEntryId?
+                if UIAccessibility.isVoiceOverRunning {
+                    for itemNode in self.listNode.visibleItemNodes() {
+                        guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                            continue
+                        }
+                        if accessibilityElementIsFocused(in: itemNode.view) {
+                            focusedEntryId = self.displayedEntries[index].stableId
+                            break
+                        }
+                    }
+                }
+
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: transition.scrollToItem, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {
+                        strongSelf.displayedEntries = transition.entries
+                        if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                            for itemNode in strongSelf.listNode.visibleItemNodes() {
+                                if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                                    UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                                    break
+                                }
+                            }
+                        }
                         if !strongSelf.didSetReady {
                             strongSelf.didSetReady = true
                             strongSelf._ready.set(true)

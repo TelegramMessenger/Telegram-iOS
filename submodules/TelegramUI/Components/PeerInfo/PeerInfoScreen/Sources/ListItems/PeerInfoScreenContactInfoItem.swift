@@ -8,6 +8,15 @@ import AppBundle
 import TelegramStringFormatting
 import ContextUI
 
+private final class PeerInfoContactAccessibilityAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 final class PeerInfoScreenContactInfoItem: PeerInfoScreenItem {
     let id: AnyHashable
     let username: String
@@ -244,6 +253,34 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
         
         self.item = item
         self.theme = presentationData.theme
+
+        var accessibilityActions: [UIAccessibilityCustomAction] = []
+        if let usernameAction = item.usernameAction, !item.username.isEmpty {
+            accessibilityActions.append(PeerInfoContactAccessibilityAction(name: item.username, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                guard let self else {
+                    return
+                }
+                usernameAction(self.contextSourceNode)
+            }))
+        }
+        if let phoneAction = item.phoneAction, !item.phoneNumber.isEmpty {
+            accessibilityActions.append(PeerInfoContactAccessibilityAction(name: item.phoneNumber, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                guard let self else {
+                    return
+                }
+                phoneAction(self.contextSourceNode)
+            }))
+        }
+        self.activateArea.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
+        self.activateArea.accessibilityTraits = accessibilityActions.isEmpty ? [.staticText] : [.button]
+        if let primaryAction = accessibilityActions.first as? PeerInfoContactAccessibilityAction {
+            self.activateArea.activate = {
+                primaryAction.perform()
+                return true
+            }
+        } else {
+            self.activateArea.activate = nil
+        }
         
 //        if let action = item.action {
 //            self.selectionNode.pressed = { [weak self] in
@@ -324,8 +361,15 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
         self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
-        self.activateArea.accessibilityLabel = item.username
-        self.activateArea.accessibilityValue = item.phoneNumber
+        self.activateArea.accessibilityLabel = item.username.isEmpty ? item.phoneNumber : item.username
+        var accessibilityValues: [String] = []
+        if !item.username.isEmpty && !item.phoneNumber.isEmpty {
+            accessibilityValues.append(item.phoneNumber)
+        }
+        if let additionalText = item.additionalText, !additionalText.isEmpty {
+            accessibilityValues.append(additionalText)
+        }
+        self.activateArea.accessibilityValue = accessibilityValues.isEmpty ? nil : accessibilityValues.joined(separator: ". ")
         
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
@@ -346,6 +390,14 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
         self.contextSourceNode.contentRect = extractedRect
         
         return height
+    }
+
+    @objc private func performAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? PeerInfoContactAccessibilityAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     private func updateTouchesAtPoint(_ point: CGPoint?) {

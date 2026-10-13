@@ -101,6 +101,14 @@ private struct ChatHistorySearchContainerTransition {
     let updates: [ListViewUpdateItem]
     let query: String
     let displayingResults: Bool
+    let entries: [ChatHistorySearchEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 private func chatHistorySearchContainerPreparedTransition(from fromEntries: [ChatHistorySearchEntry], to toEntries: [ChatHistorySearchEntry], query: String, displayingResults: Bool, context: AccountContext, peerId: EnginePeer.Id, interaction: ChatControllerInteraction) -> ChatHistorySearchContainerTransition {
@@ -110,7 +118,7 @@ private func chatHistorySearchContainerPreparedTransition(from fromEntries: [Cha
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peerId: peerId, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peerId: peerId, interaction: interaction), directionHint: nil) }
     
-    return ChatHistorySearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, displayingResults: displayingResults)
+    return ChatHistorySearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, displayingResults: displayingResults, entries: toEntries)
 }
 
 public final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
@@ -125,6 +133,7 @@ public final class ChatHistorySearchContainerNode: SearchDisplayControllerConten
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     private var currentEntries: [ChatHistorySearchEntry]?
+    private var displayedEntries: [ChatHistorySearchEntry] = []
     public var currentMessages: [EngineMessage.Id: EngineRawMessage]?
     
     private var currentQuery: String?
@@ -322,8 +331,29 @@ public final class ChatHistorySearchContainerNode: SearchDisplayControllerConten
             }
             
             let displayingResults = transition.displayingResults
+            var focusedMessageId: EngineMessage.Id?
+            if UIAccessibility.isVoiceOverRunning {
+                for itemNode in self.listNode.visibleItemNodes() {
+                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                        continue
+                    }
+                    if accessibilityElementIsFocused(in: itemNode.view), case let .messageId(messageId) = self.displayedEntries[index].stableId {
+                        focusedMessageId = messageId
+                        break
+                    }
+                }
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self {
+                    strongSelf.displayedEntries = transition.entries
+                    if let focusedMessageId, let index = transition.entries.firstIndex(where: { $0.stableId == .messageId(focusedMessageId) }) {
+                        for itemNode in strongSelf.listNode.visibleItemNodes() {
+                            if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                                UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                                break
+                            }
+                        }
+                    }
                     if displayingResults != !strongSelf.listNode.isHidden || strongSelf.currentQuery != transition.query {
                         strongSelf.currentQuery = transition.query
                         

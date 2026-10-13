@@ -90,6 +90,10 @@ final class ContextControllerNode: ViewControllerTracingNode, ASScrollViewDelega
         }
         return sourceContainer.overlayWantsToBeBelowKeyboard
     }
+
+    var accessibilityInitialFocusTarget: Any {
+        return firstAccessibilityElement(in: self.actionsContainerNode.view) ?? self.dismissAccessibilityArea.view
+    }
     
     init(
         controller: ContextControllerImpl,
@@ -1866,6 +1870,7 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
     
     private var animatedDidAppear = false
     private var wasDismissed = false
+    private weak var previousAccessibilityFocus: AnyObject?
     private var dismissOnInputClose: (result: ContextMenuActionResult, completion: (() -> Void)?)?
     private var dismissToReactionOnInputClose: (value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: (() -> Void)?)?
     
@@ -2002,6 +2007,7 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
         })
         self.controllerNode.dismissedForCancel = self.dismissedForCancel
         self.displayNodeDidLoad()
+        self.view.accessibilityViewIsModal = true
         
         self._ready.set(combineLatest(queue: .mainQueue(), self.controllerNode.itemsReady.get(), self.controllerNode.contentReady.get())
         |> map { values in
@@ -2038,6 +2044,15 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
         if !self.wasDismissed && !self.animatedDidAppear {
             self.animatedDidAppear = true
             self.controllerNode.animateIn()
+            UIAccessibility.post(notification: .screenChanged, argument: self.controllerNode.accessibilityInitialFocusTarget)
+        }
+    }
+
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if self.previousAccessibilityFocus == nil {
+            self.previousAccessibilityFocus = UIAccessibility.focusedElement(using: .notificationVoiceOver) as AnyObject?
         }
     }
 
@@ -2103,8 +2118,10 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
             self.wasDismissed = true
             
             self.controllerNode.animateOut(result: result, completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                completion?()
+                self?.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+                    self?.restoreAccessibilityFocus()
+                    completion?()
+                })
             })
             self.dismissed?()
         }
@@ -2123,7 +2140,9 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
     }
     
     public func dismissNow() {
-        self.presentingViewController?.dismiss(animated: false, completion: nil)
+        self.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+            self?.restoreAccessibilityFocus()
+        })
         self.dismissed?()
     }
     
@@ -2141,11 +2160,29 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
         if !self.wasDismissed {
             self.wasDismissed = true
             self.controllerNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, reducedCurve: reducedCurve, onHit: onHit, completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                completion?()
+                self?.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+                    self?.restoreAccessibilityFocus()
+                    completion?()
+                })
             })
             self.dismissed?()
         }
+    }
+
+    override public func accessibilityPerformEscape() -> Bool {
+        guard !self.wasDismissed else {
+            return false
+        }
+        self.dismissWithoutContent()
+        return true
+    }
+
+    private func restoreAccessibilityFocus() {
+        guard let previousAccessibilityFocus = self.previousAccessibilityFocus else {
+            return
+        }
+        self.previousAccessibilityFocus = nil
+        UIAccessibility.post(notification: .layoutChanged, argument: previousAccessibilityFocus)
     }
     
     public func animateDismissalIfNeeded() {

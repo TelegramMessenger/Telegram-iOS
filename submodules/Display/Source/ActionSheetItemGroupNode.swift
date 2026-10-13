@@ -40,8 +40,11 @@ final class ActionSheetItemGroupNode: ASDisplayNode, ASScrollViewDelegate {
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         self.clippingNode.cornerRadius = 16.0
+        if UIAccessibility.isReduceTransparencyEnabled {
+            self.clippingNode.backgroundColor = self.theme.itemBackgroundColor.withAlphaComponent(1.0)
+        }
         
-        self.backgroundEffectView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.backgroundType == .light ? .light : .dark))
+        self.backgroundEffectView = UIVisualEffectView(effect: UIAccessibility.isReduceTransparencyEnabled ? nil : UIBlurEffect(style: self.theme.backgroundType == .light ? .light : .dark))
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true

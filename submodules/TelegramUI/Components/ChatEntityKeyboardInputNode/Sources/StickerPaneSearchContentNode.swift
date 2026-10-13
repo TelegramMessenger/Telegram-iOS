@@ -255,6 +255,7 @@ private struct StickerPaneSearchGridTransition {
     let scrollToItem: GridNodeScrollToItem?
     let animated: Bool
     let crossfade: Bool
+    let accessibilityIdentifiers: [String]
 }
 
 private struct StickerPaneSearchStickerState {
@@ -277,7 +278,13 @@ private func preparedChatMediaInputGridEntryTransition(context: AccountContext, 
 
     let firstIndexInSectionOffset = 0
 
-    return StickerPaneSearchGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, animated: animated, crossfade: crossfade)
+    let accessibilityIdentifiers = toEntries.map { entry -> String in
+        switch entry {
+        case let .sticker(_, code, stickerItem, _):
+            return "sticker.\(stickerItem.file.fileId.id).\(code ?? "")"
+        }
+    }
+    return StickerPaneSearchGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, animated: animated, crossfade: crossfade, accessibilityIdentifiers: accessibilityIdentifiers)
 }
 
 final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
@@ -1064,7 +1071,26 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             }
             
             let itemTransition: ContainedViewLayoutTransition = .immediate
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
+            var focusedAccessibilityIdentifier: String?
+            if UIAccessibility.isVoiceOverRunning {
+                self.gridNode.forEachItemNode { itemNode in
+                    if itemNode.view.accessibilityElementIsFocused() {
+                        focusedAccessibilityIdentifier = itemNode.accessibilityIdentifier
+                    }
+                }
+            }
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let focusedAccessibilityIdentifier, transition.accessibilityIdentifiers.contains(focusedAccessibilityIdentifier) {
+                    self.gridNode.forEachItemNode { itemNode in
+                        if itemNode.accessibilityIdentifier == focusedAccessibilityIdentifier, !itemNode.view.accessibilityElementIsFocused() {
+                            UIAccessibility.post(notification: .layoutChanged, argument: itemNode.view)
+                        }
+                    }
+                }
+            })
         }
     }
 

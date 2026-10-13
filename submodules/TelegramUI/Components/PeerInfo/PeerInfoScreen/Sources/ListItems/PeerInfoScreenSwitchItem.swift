@@ -86,7 +86,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return false
             }
-            let value = !strongSelf.switchNode.isOn
+            let value = item.isLocked ? strongSelf.switchNode.isOn : !strongSelf.switchNode.isOn
             item.toggled?(value)
             return true
         }
@@ -163,7 +163,8 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         self.activateArea.accessibilityLabel = item.text
         self.activateArea.accessibilityValue = item.value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
-        self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_SwitchHint
+        self.activateArea.accessibilityHint = item.isLocked ? nil : presentationData.strings.VoiceOver_Common_SwitchHint
+        self.activateArea.accessibilityTraits = [.button]
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: .greatestFiniteMagnitude))
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: textSize)

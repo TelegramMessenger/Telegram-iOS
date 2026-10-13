@@ -9,6 +9,15 @@ import AccountContext
 import TelegramCore
 import ItemListUI
 
+private final class PeerInfoMemberAccessibilityAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 enum PeerInfoScreenMemberItemAction {
     case open
     case promote
@@ -58,6 +67,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
     private let maskNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
+    private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenMemberItem?
     private var itemNode: ItemListPeerItemNode?
@@ -72,6 +82,8 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
+
+        self.activateArea = AccessibilityAreaNode()
         
         super.init()
         
@@ -81,6 +93,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        self.addSubnode(self.activateArea)
     }
     
     override func didLoad() {
@@ -258,6 +271,42 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         }
         
         itemNode.visibility = .visible(1.0, .infinite)
+        itemNode.isAccessibilityElement = false
+
+        self.activateArea.accessibilityLabel = itemNode.accessibilityLabel
+        self.activateArea.accessibilityValue = itemNode.accessibilityValue
+        if let action = item.action {
+            self.activateArea.accessibilityTraits = [.button]
+            self.activateArea.activate = {
+                action(.open)
+                return true
+            }
+        } else {
+            self.activateArea.accessibilityTraits = [.staticText]
+            self.activateArea.activate = nil
+        }
+
+        var accessibilityActions: [UIAccessibilityCustomAction] = []
+        if let memberAction = item.action, actions.contains(.promote), case .channel = item.enclosingPeer {
+            accessibilityActions.append(PeerInfoMemberAccessibilityAction(name: presentationData.strings.GroupInfo_ActionPromote, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: {
+                memberAction(.promote)
+            }))
+        }
+        if let memberAction = item.action, actions.contains(.restrict), case .channel = item.enclosingPeer {
+            accessibilityActions.append(PeerInfoMemberAccessibilityAction(name: presentationData.strings.GroupInfo_ActionRestrict, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: {
+                memberAction(.restrict)
+            }))
+        }
+        if let memberAction = item.action, actions.contains(.restrict) {
+            accessibilityActions.append(PeerInfoMemberAccessibilityAction(name: presentationData.strings.Common_Delete, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: {
+                memberAction(.remove)
+            }))
+        } else if let memberAction = item.action, actions.contains(.logout) {
+            accessibilityActions.append(PeerInfoMemberAccessibilityAction(name: presentationData.strings.Settings_Context_Logout, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: {
+                memberAction(.remove)
+            }))
+        }
+        self.activateArea.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
         
         let height = itemNode.contentSize.height
         
@@ -279,6 +328,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)
         transition.updateFrame(node: self.selectionNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -highlightNodeOffset), size: CGSize(width: width, height: height + highlightNodeOffset)))
+        self.activateArea.frame = CGRect(origin: .zero, size: CGSize(width: width, height: height))
         
         var separatorInset: CGFloat = sideInset
         if bottomItem != nil {
@@ -291,6 +341,14 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
         return height
+    }
+
+    @objc private func performAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? PeerInfoMemberAccessibilityAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     private func updateTouchesAtPoint(_ point: CGPoint?) {

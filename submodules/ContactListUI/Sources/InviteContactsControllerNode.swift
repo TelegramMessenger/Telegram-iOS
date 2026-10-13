@@ -207,7 +207,7 @@ private func preparedInviteContactsTransition(context: AccountContext, presentat
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return InviteContactsTransition(deletions: deletions, insertions: insertions, updates: updates, sortedContacts: sortedContacts, isLoading: isLoading, firstTime: firstTime, crossfade: crossfade)
+    return InviteContactsTransition(deletions: deletions, insertions: insertions, updates: updates, sortedContacts: sortedContacts, isLoading: isLoading, firstTime: firstTime, crossfade: crossfade, entries: toEntries)
 }
 
 private struct InviteContactsTransition {
@@ -218,6 +218,14 @@ private struct InviteContactsTransition {
     let isLoading: Bool
     let firstTime: Bool
     let crossfade: Bool
+    let entries: [InviteContactsEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 final class InviteContactsControllerNode: ASDisplayNode {
@@ -258,6 +266,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     private let selectionStatePromise = Promise<InviteContactsGroupSelectionState>(InviteContactsGroupSelectionState())
     
     private var queuedTransitions: [InviteContactsTransition] = []
+    private var displayedEntries: [InviteContactsEntry] = []
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -559,8 +568,29 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 } else if transition.crossfade {
                     options.insert(.AnimateCrossfade)
                 }
+                var focusedEntryId: InviteContactsEntryId?
+                if UIAccessibility.isVoiceOverRunning {
+                    for itemNode in self.listNode.visibleItemNodes() {
+                        guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                            continue
+                        }
+                        if accessibilityElementIsFocused(in: itemNode.view) {
+                            focusedEntryId = self.displayedEntries[index].stableId
+                            break
+                        }
+                    }
+                }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {
+                        strongSelf.displayedEntries = transition.entries
+                        if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                            for itemNode in strongSelf.listNode.visibleItemNodes() {
+                                if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                                    UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                                    break
+                                }
+                            }
+                        }
                         strongSelf.readyValue = true
                         
                         if transition.isLoading, strongSelf.activityIndicator == nil {

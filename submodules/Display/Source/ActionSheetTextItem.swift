@@ -78,8 +78,9 @@ public class ActionSheetTextNode: ActionSheetItemNode {
             fontSize = 15.0
         }
         
-        let defaultFont = Font.regular(floor(self.theme.baseFontSize * fontSize / 17.0))
-        let boldFont = Font.semibold(floor(self.theme.baseFontSize * fontSize / 17.0))
+        let scaledFontSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: floor(self.theme.baseFontSize * fontSize / 17.0))
+        let defaultFont = Font.regular(scaledFontSize)
+        let boldFont = Font.semibold(scaledFontSize)
         
         if item.parseMarkdown {
             let body = MarkdownAttributeSet(font: defaultFont, textColor: self.theme.secondaryTextColor)

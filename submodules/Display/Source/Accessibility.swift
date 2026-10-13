@@ -20,6 +20,32 @@ public func addAccessibilityChildren(of node: ASDisplayNode, container: Any, to 
     }
 }
 
+public func firstAccessibilityElement(in view: UIView) -> Any? {
+    guard !view.isHidden, view.alpha > 0.01, !view.accessibilityElementsHidden else {
+        return nil
+    }
+    if view.isAccessibilityElement {
+        return view
+    }
+    if let accessibilityElements = view.accessibilityElements {
+        for element in accessibilityElements {
+            if let elementView = element as? UIView {
+                if let result = firstAccessibilityElement(in: elementView) {
+                    return result
+                }
+            } else {
+                return element
+            }
+        }
+    }
+    for subview in view.subviews {
+        if let result = firstAccessibilityElement(in: subview) {
+            return result
+        }
+    }
+    return nil
+}
+
 public func smartInvertColorsEnabled() -> Bool {
     if #available(iOSApplicationExtension 11.0, iOS 11.0, *), UIAccessibility.isInvertColorsEnabled {
         return true
