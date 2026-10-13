@@ -129,7 +129,8 @@ final class NewsForYouFeedBinding {
                 result.append(CoreListComponentItem(identity: AnyHashable("interests"), component: AnyComponent(NewsInterestsBlockComponent(
                     context: environment.context,
                     theme: theme,
-                    title: "📰 " + presentationData.strings.News_Interests_Title,
+                    icon: "📰",
+                    title: presentationData.strings.News_Interests_Title,
                     categories: interests.categories,
                     selectedIds: self.selectedInterestIds,
                     toggle: { [weak self] id in

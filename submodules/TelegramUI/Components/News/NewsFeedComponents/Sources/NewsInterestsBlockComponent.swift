@@ -117,18 +117,21 @@ public final class NewsInterestChipComponent: Component {
     }
 }
 
-/// The "What are you interested in?" block: a header line and wrapping category chips.
+/// The "What are you interested in?" block: a header laid out like a post row's (the icon in the avatar's slot,
+/// the title in the channel name's font, the same insets), then wrapping category chips where a post's text goes.
 public final class NewsInterestsBlockComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
+    public let icon: String
     public let title: String
     public let categories: [EngineInterestCategory]
     public let selectedIds: Set<Int32>
     public let toggle: (Int32) -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, title: String, categories: [EngineInterestCategory], selectedIds: Set<Int32>, toggle: @escaping (Int32) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, icon: String, title: String, categories: [EngineInterestCategory], selectedIds: Set<Int32>, toggle: @escaping (Int32) -> Void) {
         self.context = context
         self.theme = theme
+        self.icon = icon
         self.title = title
         self.categories = categories
         self.selectedIds = selectedIds
@@ -136,10 +139,11 @@ public final class NewsInterestsBlockComponent: Component {
     }
 
     public static func ==(lhs: NewsInterestsBlockComponent, rhs: NewsInterestsBlockComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.theme === rhs.theme && lhs.title == rhs.title && lhs.categories == rhs.categories && lhs.selectedIds == rhs.selectedIds
+        return lhs.context === rhs.context && lhs.theme === rhs.theme && lhs.icon == rhs.icon && lhs.title == rhs.title && lhs.categories == rhs.categories && lhs.selectedIds == rhs.selectedIds
     }
 
     public final class View: UIView {
+        private let iconView = ComponentView<Empty>()
         private let titleView = ComponentView<Empty>()
         private var chipViews: [Int32: ComponentView<Empty>] = [:]
         private let separatorLayer = SimpleLayer()
@@ -155,19 +159,26 @@ public final class NewsInterestsBlockComponent: Component {
 
         func update(component: NewsInterestsBlockComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let theme = component.theme
+            // NewsFeedPostComponent's metrics, so the block reads as one of the feed's rows.
             let sideInset: CGFloat = 16.0
+            let topInset: CGFloat = 9.0
+            let bottomInset: CGFloat = 10.0
+            let iconSize: CGFloat = 16.0
+            let iconSpacing: CGFloat = 6.0
+            let contentSpacing: CGFloat = 4.0
             let chipSpacing: CGFloat = 8.0
 
+            let titleX = sideInset + iconSize + iconSpacing
             let titleSize = self.titleView.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)),
-                    maximumNumberOfLines: 2
+                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(15.0), textColor: theme.list.itemPrimaryTextColor)),
+                    maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: max(1.0, availableSize.width - titleX - sideInset), height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: titleX, y: topInset), size: titleSize)
             if let view = self.titleView.view {
                 if view.superview == nil {
                     self.addSubview(view)
@@ -175,8 +186,22 @@ public final class NewsInterestsBlockComponent: Component {
                 transition.setFrame(view: view, frame: titleFrame)
             }
 
+            let iconTextSize = self.iconView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.icon, font: Font.regular(14.0), textColor: theme.list.itemPrimaryTextColor)))),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let view = self.iconView.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                // Centred in the avatar's slot, on the title, as a post's avatar is.
+                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((iconSize - iconTextSize.width) * 0.5), y: floorToScreenPixels(titleFrame.midY - iconTextSize.height * 0.5)), size: iconTextSize))
+            }
+
             var x = sideInset
-            var y = titleFrame.maxY + 12.0
+            var y = titleFrame.maxY + contentSpacing
             var rowHeight: CGFloat = 0.0
             var validIds = Set<Int32>()
             for category in component.categories {
@@ -216,7 +241,7 @@ public final class NewsInterestsBlockComponent: Component {
                 self.chipViews.removeValue(forKey: id)
             }
 
-            let height = y + rowHeight + 16.0
+            let height = y + rowHeight + bottomInset
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(x: sideInset, y: height - UIScreenPixel, width: availableSize.width - sideInset * 2.0, height: UIScreenPixel))
             return CGSize(width: availableSize.width, height: height)
