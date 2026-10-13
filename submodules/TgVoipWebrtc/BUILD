@@ -488,6 +488,11 @@ cc_library(
         # shipped build it would be a remote-code-execution surface. See the
         # security note in v2wasm/CallCoreHost.cpp.
         "-DTGCALLS_ALLOW_EXTERNAL_WASM_CORE=1",
+        # CLI/dev only: lets a custom parameter re-enable behaviour the engines
+        # deliberately removed (network_reference_immediate_capture_renegotiation),
+        # so the harness can reproduce field failures. NEVER add this to the
+        # objc_library: customParameters come from the server.
+        "-DTGCALLS_ALLOW_TEST_KNOBS=1",
         "-std=c++17",
         "-w",
     ] + select({

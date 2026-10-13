@@ -218,8 +218,8 @@ Also ported 2026-10-11 from `InstanceV2ReferenceImpl`'s June–September fixes: 
 terminal (caller-only `RestartIce`, 5 s throttle), Failed comes from a 20 s watchdog armed at start,
 Reconnecting is debounced 2 s, a baseline network record is emitted at start, `onTransceiverRemoved`
 finds the transceiver by receiver, and it reads `network_reflector_resolve_remote_candidate_ip` and
-`network_use_mtproto`. Deliberately not ported: `network_reference_use_addtrack` (tgcalls `CLAUDE.md`
-"Do not implement") and `network_reference_allow_hostname_ice_servers` (`SocketAddress::IsComplete()`
+`network_use_mtproto`. Deliberately not ported: 11.0.0's `AddTrack` transceivers (`network_reference_use_addtrack`,
+default on there since 2026-10-12; tgcalls `CLAUDE.md` "Do not implement" for CompatImpl) and `network_reference_allow_hostname_ice_servers` (`SocketAddress::IsComplete()`
 is already true for a hostname with a port, so the gate it lifts never dropped a hostname).
 
 Key files:
