@@ -127,12 +127,40 @@ final class GiftPagerComponent: Component {
         public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
             if !decelerate {
                 self.isSwiping = false
+                self.scheduleInactiveItemsCleanup()
             }
         }
         
         public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             self.isSwiping = false
+            self.scheduleInactiveItemsCleanup()
         }
+        
+        private func scheduleInactiveItemsCleanup() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + self.swipeInactiveThreshold + 0.05, execute: { [weak self] in
+                guard let self, let component = self.component, let environment = self.environment, !self.isUpdating, !self.isSwiping else {
+                    return
+                }
+                guard CACurrentMediaTime() - self.lastScrollTime >= self.swipeInactiveThreshold else {
+                    return
+                }
+                let _ = self.update(component: component, availableSize: self.bounds.size, environment: environment, transition: .immediate)
+            })
+        }
+        
+        var centeredItemView: ComponentHostView<EnvironmentType>? {
+            guard let component = self.component, !component.items.isEmpty else {
+                return nil
+            }
+            let pageWidth = self.bounds.width + component.itemSpacing * 2.0
+            guard pageWidth > 0.0 else {
+                return nil
+            }
+            let index = max(0, min(component.items.count - 1, Int(round(self.scrollView.contentOffset.x / pageWidth))))
+            return self.itemViews[component.items[index].id]
+        }
+        
+        private var currentItemWidth: CGFloat?
         
         private var ignoreContentOffsetChange = false
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -174,6 +202,14 @@ final class GiftPagerComponent: Component {
             let firstTime = self.itemViews.isEmpty || countDecreased
             
             let itemWidth = availableSize.width
+            
+            var preservedPageIndex: Int?
+            if !firstTime, let currentItemWidth = self.currentItemWidth, currentItemWidth != itemWidth, currentItemWidth > 0.0 {
+                let pageIndex = Int(round(self.scrollView.contentOffset.x / (currentItemWidth + component.itemSpacing * 2.0)))
+                preservedPageIndex = max(0, min(component.items.count - 1, pageIndex))
+            }
+            self.currentItemWidth = itemWidth
+            
             let totalWidth = itemWidth * CGFloat(component.items.count) + component.itemSpacing * 2.0 * CGFloat(max(0, component.items.count))
                     
             let contentSize = CGSize(width: totalWidth, height: availableSize.height)
@@ -183,6 +219,10 @@ final class GiftPagerComponent: Component {
             let scrollFrame = CGRect(origin: CGPoint(x: -component.itemSpacing / 2.0, y: 0.0), size: CGSize(width: availableSize.width + component.itemSpacing * 2.0, height: availableSize.height))
             if self.scrollView.frame != scrollFrame {
                 self.scrollView.frame = scrollFrame
+            }
+            
+            if let preservedPageIndex {
+                self.scrollView.contentOffset = CGPoint(x: CGFloat(preservedPageIndex) * (itemWidth + component.itemSpacing * 2.0), y: 0.0)
             }
             
             if firstTime {

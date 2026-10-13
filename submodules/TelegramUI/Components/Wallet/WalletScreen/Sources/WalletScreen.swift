@@ -3879,13 +3879,13 @@ private final class WalletScreenComponent: Component {
                 if canStyle || styled {
                     items.append(.action(ContextMenuActionItem(
                         text: styled ? strings.Wallet_Sticker_RemoveColor : strings.Wallet_Sticker_ApplyColor,
-                        icon: { theme in generateTintedImage(image: UIImage(systemName: "paintpalette"), color: theme.contextMenu.primaryColor) },
+                        icon: { theme in generateTintedImage(image: UIImage(bundleImageName: styled ? "Media Editor/Erase" : "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) },
                         action: { _, dismiss in dismiss(.default); styleAction() }
                     )))
                 }
                 items.append(.action(ContextMenuActionItem(
                     text: onCard ? strings.Wallet_Sticker_RemoveFromCard : strings.Wallet_Sticker_AddToCard,
-                    icon: { theme in generateTintedImage(image: UIImage(systemName: onCard ? "creditcard.trianglebadge.exclamationmark" : "creditcard"), color: theme.contextMenu.primaryColor) },
+                    icon: { theme in generateTintedImage(image: onCard ? UIImage(bundleImageName: "Chat/Context Menu/Clear") : UIImage(systemName: "creditcard"), color: theme.contextMenu.primaryColor) },
                     action: { _, dismiss in dismiss(.default); placementAction() }
                 )))
                 // ContextUI adds 7 pt; add 10 pt in the enlarged cell's coordinates

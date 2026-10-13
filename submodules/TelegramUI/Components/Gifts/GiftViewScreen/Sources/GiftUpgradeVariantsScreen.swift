@@ -309,8 +309,34 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
         }
         
+        private var previewModels: [StarGift.UniqueGift.Attribute] {
+            return self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
+        }
+        
+        private var previewModel: StarGift.UniqueGift.Attribute? {
+            let previewModels = self.previewModels
+            guard !previewModels.isEmpty else {
+                return nil
+            }
+            return previewModels[self.previewModelIndex % previewModels.count]
+        }
+        
+        private var previewBackdrop: StarGift.UniqueGift.Attribute? {
+            guard !self.previewBackdrops.isEmpty else {
+                return nil
+            }
+            return self.previewBackdrops[self.previewBackdropIndex % self.previewBackdrops.count]
+        }
+        
+        private var previewSymbol: StarGift.UniqueGift.Attribute? {
+            guard !self.previewSymbols.isEmpty else {
+                return nil
+            }
+            return self.previewSymbols[self.previewSymbolIndex % self.previewSymbols.count]
+        }
+        
         private func previewTimerTick() {
-            let previewModels = self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
+            let previewModels = self.previewModels
             guard !previewModels.isEmpty else { return }
             self.previewModelIndex = (self.previewModelIndex + 1) % previewModels.count
             
@@ -367,9 +393,8 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     effectiveGifts.append([model])
                 }
             case .backdrops:
-                let previewModels = self.displayCraftableModels ? self.previewCraftableModels : previewPrimaryModels
-                let selectedModel = self.selectedModel ?? previewModels[self.previewModelIndex]
-                let selectedSymbol = self.selectedSymbol ?? self.previewSymbols[self.previewSymbolIndex]
+                let selectedModel = self.selectedModel ?? self.previewModel
+                let selectedSymbol = self.selectedSymbol ?? self.previewSymbol
                 let backdrops = Array(attributes.filter({ attribute in
                     if case .backdrop = attribute {
                         return true
@@ -378,14 +403,10 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     }
                 }))
                 for backdrop in backdrops {
-                    effectiveGifts.append([
-                        selectedModel,
-                        backdrop,
-                        selectedSymbol
-                    ])
+                    effectiveGifts.append([selectedModel, backdrop, selectedSymbol].compactMap { $0 })
                 }
             case .symbols:
-                let selectedBackdrop = self.selectedBackdrop ?? self.previewBackdrops[self.previewBackdropIndex]
+                let selectedBackdrop = self.selectedBackdrop ?? self.previewBackdrop
                 let symbols = Array(attributes.filter({ attribute in
                     if case .pattern = attribute {
                         return true
@@ -394,10 +415,7 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     }
                 }))
                 for symbol in symbols {
-                    effectiveGifts.append([
-                        selectedBackdrop,
-                        symbol
-                    ])
+                    effectiveGifts.append([selectedBackdrop, symbol].compactMap { $0 })
                 }
             }
             self.effectiveGifts = effectiveGifts
@@ -760,21 +778,24 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             var badgeColor: UIColor = .white.withAlphaComponent(0.4)
             
             var attributes: [StarGift.UniqueGift.Attribute] = []
-            let previewModels = self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
-            if !previewModels.isEmpty {
+            if let previewModel = self.previewModel {
                 if self.isPlaying {
-                    attributes.append(previewModels[self.previewModelIndex])
-                    attributes.append(self.previewBackdrops[self.previewBackdropIndex])
-                    attributes.append(self.previewSymbols[self.previewSymbolIndex])
+                    attributes.append(previewModel)
+                    if let previewBackdrop = self.previewBackdrop {
+                        attributes.append(previewBackdrop)
+                    }
+                    if let previewSymbol = self.previewSymbol {
+                        attributes.append(previewSymbol)
+                    }
                 } else {
                     if self.selectedModel == nil {
-                        self.selectedModel = previewModels[self.previewModelIndex]
+                        self.selectedModel = previewModel
                     }
                     if self.selectedBackdrop == nil {
-                        self.selectedBackdrop = self.previewBackdrops[self.previewBackdropIndex]
+                        self.selectedBackdrop = self.previewBackdrop
                     }
                     if self.selectedSymbol == nil {
-                        self.selectedSymbol = self.previewSymbols[self.previewSymbolIndex]
+                        self.selectedSymbol = self.previewSymbol
                     }
                     if let model = self.selectedModel {
                         attributes.append(model)
@@ -1051,6 +1072,7 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     tapAction: { [weak self] attributes, _ in
                         if let self, let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                             self.displayCraftableModels = !self.displayCraftableModels
+                            self.previewModelIndex = 0
                             self.isPlaying = false
                             
                             self.updateEffectiveGifts(attributes: component.attributes)

@@ -1187,6 +1187,7 @@ private final class GiftAuctionBidScreenComponent: Component {
         
         private var giftAuctionAcquiredGifts: [GiftAuctionAcquiredGift]?
         private let giftAuctionAcquiredGiftsDisposable = MetaDisposable()
+        private var didHandleFinishedAuction = false
         
         private let actionButton = ComponentView<Empty>()
                 
@@ -2108,8 +2109,9 @@ private final class GiftAuctionBidScreenComponent: Component {
                         }
                     }
                     
-                    if case .finished = auctionState?.auctionState, let controller = self.environment?.controller() {
+                    if case .finished = auctionState?.auctionState, !self.didHandleFinishedAuction, let controller = self.environment?.controller() {
                         if let navigationController = controller.navigationController as? NavigationController {
+                            self.didHandleFinishedAuction = true
                             controller.dismiss()
                             let auctionController = context.sharedContext.makeGiftAuctionViewScreen(context: context, auctionContext: auctionContext, peerId: nil, completion: { _, _ in })
                             navigationController.pushViewController(auctionController)

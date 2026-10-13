@@ -389,6 +389,7 @@ private final class GiftMessageScreenComponent: Component {
                 return
             }
             if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View, !inputPanelView.canDeactivateInput() {
+                inputPanelView.animateError()
                 return
             }
             self.isCommitted = true

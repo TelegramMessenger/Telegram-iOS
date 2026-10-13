@@ -143,22 +143,34 @@ public func confirmGiftWithdrawalController(
         effectiveUpdatedPresentationData = (presentationData, context.sharedContext.presentationData)
     }
     
+    let requestDisposable = MetaDisposable()
+    var isInProgress = false
+    
     var dismissImpl: (() -> Void)?
     let alertController = AlertScreen(
         configuration: AlertScreen.Configuration(allowInputInset: true),
         content: content,
         actions: [
-            .init(title: strings.Common_Cancel),
+            .init(title: strings.Common_Cancel, action: {
+                requestDisposable.dispose()
+            }),
             .init(title: strings.Gift_Withdraw_EnterPassword_Done, type: .default, action: {
                 applyImpl?()
             }, autoDismiss: false, isEnabled: doneIsEnabled, progress: doneInProgressPromise.get())
         ],
         updatedPresentationData: effectiveUpdatedPresentationData
     )
+    alertController.dismissed = { _ in
+        requestDisposable.dispose()
+    }
     applyImpl = {
+        guard !isInProgress, !inputState.value.isEmpty else {
+            return
+        }
+        isInProgress = true
         doneInProgressPromise.set(true)
 
-        let _ = (context.engine.payments.requestStarGiftWithdrawalUrl(reference: reference, password: inputState.value)
+        requestDisposable.set((context.engine.payments.requestStarGiftWithdrawalUrl(reference: reference, password: inputState.value)
         |> deliverOnMainQueue).start(next: { url in
             dismissImpl?()
             completion(url)
@@ -172,13 +184,14 @@ public func confirmGiftWithdrawalController(
             default:
                 errorTextAndActions = (strings.Login_UnknownError, [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})])
             }
+            isInProgress = false
             doneInProgressPromise.set(false)
 
             if let (text, actions) = errorTextAndActions {
                 dismissImpl?()
                 present(textAlertController(context: context, title: nil, text: text, actions: actions), nil)
             }
-        })
+        }))
     }
     dismissImpl = { [weak alertController] in
         alertController?.dismiss(completion: nil)
