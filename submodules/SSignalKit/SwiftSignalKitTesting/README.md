@@ -78,6 +78,7 @@ configurations). v2 mirrors legacy's code shape, so `ReleaseOrderTests` and the 
 | A `weak` reference to the disposable returned by `start()` | dies when the caller releases it | lives while the source still holds the subscriber (it is the subscriber's state). Not observable without a weak reference |
 | `DisposableDict.set(nil, forKey:)` | disposes the previous entry but keeps it, so later `set(nil)`/`dispose()` dispose it again and it stays retained | removes the entry |
 | `DisposableSet.removeLast()` on an empty set | crash | no-op |
+| `suspendAwareDelay` longer than 1.1 × granularity | wakes every `granularity` seconds to compare the wall clock, then arms an exact final timer | one wall-clock (`DispatchWallTime`) deadline with `granularity` as leeway: it still fires after system sleep, without the periodic wakeups. `Stress/IdleWakeupTests` measures it: 50 pending hour-long delays add about 10 wakeups/s on legacy and none on v2 |
 | `Multicast.get` | never disposes the upstream subscription | disposes it when its last subscriber leaves |
 | `feedbackLoop` | retain cycle: every subscription leaks its subscriber and loop state | cycle broken on dispose and termination |
 | `runOn(Queue)` cancellation flag | unsynchronized `var` shared across threads (TSan race) | lock-protected flag |
