@@ -308,7 +308,7 @@ final class GiftOptionsScreenComponent: Component {
                     mainController = controller
                 }
                 if case let .generic(gift) = gift {
-                    if let lockedUntilDate = gift.lockedUntilDate, currentTime < lockedUntilDate {
+                    if !skipDateCheck, let lockedUntilDate = gift.lockedUntilDate, currentTime < lockedUntilDate {
                         self.loadingGiftId = gift.id
                         Queue.mainQueue().after(0.25) {
                             if self.loadingGiftId != nil {

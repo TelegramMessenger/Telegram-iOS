@@ -922,6 +922,10 @@ public final class GiftStoreContentComponent: Component {
                     let previousItems = self.starGiftsState?.gifts
                     self.starGiftsState = state
                     
+                    if case .loading = state.dataState, case let .ready(_, nextOffset) = previousDataState, nextOffset != nil {
+                        self.showLoading = false
+                    }
+                    
                     var transition: ComponentTransition = .immediate
                     if let previousFilterAttributes, previousFilterAttributes != state.filterAttributes {
                         transition = .easeInOut(duration: 0.25)
@@ -1007,7 +1011,7 @@ public final class GiftStoreContentComponent: Component {
                 iconName: sortingIcon,
                 title: sortingTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.sort)
                         self.openSortContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1049,7 +1053,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(modelCount),
                 title: modelTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.model)
                         self.openModelContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1061,7 +1065,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(backdropCount),
                 title: backdropTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.backdrop)
                         self.openBackdropContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1073,7 +1077,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(symbolCount),
                 title: symbolTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.symbol)
                         self.openSymbolContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1272,8 +1276,8 @@ final class GiftStoreScreenComponent: Component {
             }
             let tonBalance = tonContext.currentState?.balance.value ?? 0
             if tonBalance == 0 {
-                let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
-                controller.push(controller)
+                let starsController = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
+                controller.push(starsController)
                 return
             }
             

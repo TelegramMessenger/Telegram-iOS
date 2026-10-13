@@ -4444,6 +4444,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                 var tableItems: [TableComponent.Item] = []
                 
                 var isWearing = state.pendingWear
+                if !isWearing, !state.pendingTakeOff, isChannelGift, let uniqueGift, let emojiStatus = state.peerMap[wearOwnerPeerId]?.emojiStatus, case let .starGift(id, _, _, _, _, _, _, _, _) = emojiStatus.content, id == uniqueGift.id {
+                    isWearing = true
+                }
                 
                 if !soldOut {
                     if let uniqueGift {
@@ -4482,7 +4485,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         }
                                     } else {
                                         animationContent = .premium(color: tableLinkColor)
-                                        state.pendingTakeOff = false
                                     }
                                     
                                     ownerComponent = AnyComponent(
@@ -6994,7 +6996,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     public func dismissAnimated() {
         self.dismissAllTooltips()
 
-        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+        let sheetTag = SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()
+        if let pagerView = self.node.hostView.componentView as? GiftPagerComponent.View, let view = pagerView.centeredItemView?.findTaggedView(tag: sheetTag) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        } else if let view = self.node.hostView.findTaggedView(tag: sheetTag) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }
         
