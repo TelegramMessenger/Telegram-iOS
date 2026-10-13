@@ -121,6 +121,25 @@ func advancedFeedReadPosition(current: EngineFeedPosition?, candidate: EngineFee
     return candidate
 }
 
+enum AddedFeedRevalidation: Equatable {
+    case none
+    /// The window is empty, so there is no top entry to page newer from: load the first page again.
+    case reloadInitial
+    case loadNewer
+}
+
+/// What `AddedFeedContext.revalidate()` does (the screen appears, the app comes to the foreground). Nothing while
+/// the first page is loading; when newer posts are already known the pill offers them.
+func addedFeedRevalidation(hasEntries: Bool, isLoadingInitial: Bool, hasNewer: Bool) -> AddedFeedRevalidation {
+    if isLoadingInitial {
+        return .none
+    }
+    if !hasEntries {
+        return .reloadInitial
+    }
+    return hasNewer ? .none : .loadNewer
+}
+
 private func mergingForYouBatch(into list: [EngineForYouItem], batch: [EngineForYouItem], atTop: Bool) -> [EngineForYouItem] {
     var kept = list
     var knownIds = Set<MessageId>()

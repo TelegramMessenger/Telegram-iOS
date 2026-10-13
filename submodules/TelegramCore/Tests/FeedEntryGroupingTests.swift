@@ -98,6 +98,22 @@ final class FeedEntryGroupingTests: XCTestCase {
         XCTAssertEqual(forYouPostCount(forYouItems(from: [.interests, .message(self.message(self.channelA, 1, date: 1))])), 1)
     }
 
+    // An Added feed that loaded empty used to stay empty: the newer probe needs a top entry to page from.
+    func testRevalidatingAnEmptyAddedFeedReloadsIt() {
+        XCTAssertEqual(addedFeedRevalidation(hasEntries: false, isLoadingInitial: false, hasNewer: false), .reloadInitial)
+    }
+
+    func testRevalidatingAnAddedFeedProbesForNewerPosts() {
+        XCTAssertEqual(addedFeedRevalidation(hasEntries: true, isLoadingInitial: false, hasNewer: false), .loadNewer)
+        // The pill already offers them.
+        XCTAssertEqual(addedFeedRevalidation(hasEntries: true, isLoadingInitial: false, hasNewer: true), .none)
+    }
+
+    func testRevalidatingDuringTheFirstLoadDoesNothing() {
+        XCTAssertEqual(addedFeedRevalidation(hasEntries: false, isLoadingInitial: true, hasNewer: false), .none)
+        XCTAssertEqual(addedFeedRevalidation(hasEntries: true, isLoadingInitial: true, hasNewer: false), .none)
+    }
+
     func testSnapshotKeepsTheTopItems() {
         let list = forYouItems(from: (1 ... 310).map { .message(self.message(self.channelA, Int32($0), date: Int32($0))) })
         let snapshot = forYouSnapshotItems(list, maxItems: 300)

@@ -271,8 +271,16 @@ private final class AddedFeedContextImpl {
     }
 
     func revalidate() {
-        self.refreshNewestKnown()
-        if !self.state.hasNewer {
+        switch addedFeedRevalidation(hasEntries: !self.state.entries.isEmpty, isLoadingInitial: self.state.isLoadingInitial, hasNewer: self.state.hasNewer) {
+        case .none:
+            if !self.state.isLoadingInitial {
+                self.refreshNewestKnown()
+            }
+        case .reloadInitial:
+            // Probes for the newest itself.
+            self.loadInitial()
+        case .loadNewer:
+            self.refreshNewestKnown()
             self.loadNewer(force: true)
         }
     }
