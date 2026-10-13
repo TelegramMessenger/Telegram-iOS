@@ -144,9 +144,15 @@ final class NewsFeedSupportTests: XCTestCase {
 
     // MARK: channel bar
 
-    func testNewsOnlyChannelThatReadsAsLeftShowsAddedToNews() {
+    func testLightJoinedChannelShowsAddedToNews() {
         XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .left, featureEnabled: true, isAddingToNews: false), .addedToNews)
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .member, featureEnabled: true, isAddingToNews: false), .addedToNews)
+    }
+
+    // A joined channel keeps Mute/Unmute even when it is in News, so Remove from News, which leaves the
+    // channel, is never offered to it.
+    func testJoinedChannelInNewsKeepsTheExistingBar() {
+        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .member, featureEnabled: true, isAddingToNews: false), .existing)
+        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .member, featureEnabled: true, isAddingToNews: true), .existing)
     }
 
     func testAddedToNewsStaysWithTheFeatureOff() {

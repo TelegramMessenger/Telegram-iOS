@@ -12,12 +12,10 @@ func isPeerHiddenByCollapsedCommunity(transaction: Transaction, peerId: PeerId, 
     return false
 }
 
+/// Membership decides, not `in_news`. A joined channel appears everywhere, in News or not. A channel marked
+/// `in_news` without being joined is a light join (joinChannel for_news): it is followed in News and, like any
+/// channel the user is not a member of, stays out of Chats.
 func channelShouldBeExcludedFromChatList(_ channel: TelegramChannel, isHiddenByCollapsedCommunity: () -> Bool) -> Bool {
-    if channel.flags.contains(.isInNews) {
-        // A News-only subscription (joinChannel for_news): followed in the News feed, never shown in Chats,
-        // whether the server reports it as joined or as left.
-        return true
-    }
     switch channel.participationStatus {
     case .member:
         return isHiddenByCollapsedCommunity()

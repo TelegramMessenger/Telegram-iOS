@@ -122,7 +122,7 @@ private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceS
             if case .broadcast = channel.info {
                 isBroadcast = true
             }
-            // Before the participation switch: a News-only channel may read as left.
+            // Before the participation switch below: a light join (in_news, not joined) shows the News states.
             switch newsChannelBarAction(isBroadcast: isBroadcast, isInNews: channel.flags.contains(.isInNews), participation: participation, featureEnabled: isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }), isAddingToNews: isAddingToNews) {
             case .addToNews:
                 return .addToNews
@@ -419,9 +419,14 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_RemoveFromNews, textColor: .destructive, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-        }, action: { _, f in
+        }, action: { [weak self] _, f in
             f(.default)
-            // Leaving: a News-only channel has no chat-list entry to lose, so there is no confirmation.
+            // Leaving is right only for a light join. A channel joined since the menu opened (Add to Chats on
+            // another device, say) keeps its membership; its bar is Mute/Unmute again.
+            if let channel = self?.presentationInterfaceState?.renderedPeer?.peer as? TelegramChannel, case .member = channel.participationStatus {
+                return
+            }
+            // A light-joined channel has no chat-list entry to lose, so there is no confirmation.
             let _ = context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false).startStandalone()
         })))
         let contextController = makeContextController(presentationData: presentationData, source: .reference(ChannelNewsContextReferenceContentSource(controller: chatController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)

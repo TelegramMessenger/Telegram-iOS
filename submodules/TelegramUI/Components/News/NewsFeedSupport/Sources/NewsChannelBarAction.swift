@@ -13,18 +13,18 @@ public enum NewsChannelBarAction: Equatable {
     case existing
 }
 
-/// The News states of a channel chat's bottom bar. A News-only channel may read as a member or as a channel
-/// the user left (the backend may stop reporting it as joined), so `isInNews` is checked before participation.
-/// The Added-to-News state does not depend on `featureEnabled`, so a News-only channel can always be moved
-/// or removed.
+/// The News states of a channel chat's bottom bar. Membership comes first: a joined channel appears everywhere
+/// and keeps its existing bar even when it is in News, so Remove from News, which leaves the channel, is only
+/// offered to a light join (`in_news` without membership). The Added-to-News state does not depend on
+/// `featureEnabled`, so a light-joined channel can always be moved or removed.
 public func newsChannelBarAction(isBroadcast: Bool, isInNews: Bool, participation: NewsChannelParticipation, featureEnabled: Bool, isAddingToNews: Bool) -> NewsChannelBarAction {
-    guard isBroadcast, participation != .kicked else {
+    guard isBroadcast, participation == .left else {
         return .existing
     }
     if isAddingToNews || isInNews {
         return .addedToNews
     }
-    if participation == .left && featureEnabled {
+    if featureEnabled {
         return .addToNews
     }
     return .existing
