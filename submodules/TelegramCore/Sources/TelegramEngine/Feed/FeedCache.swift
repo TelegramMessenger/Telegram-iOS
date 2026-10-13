@@ -1,26 +1,38 @@
 import Foundation
 import Postbox
 
-private func feedFilterCacheKey(filterId: Int32) -> ValueBoxKey {
-    let key = ValueBoxKey(length: 4)
-    key.setInt32(0, value: filterId)
-    return key
+/// The kinds of entry in the feed's one cache collection (`Namespaces.CachedItemCollection.feed`): the first
+/// byte of every key.
+private enum FeedCacheKind: UInt8 {
+    case addedFeed = 0
+    case forYouFeed = 1
+    case interestCategories = 2
+    case readState = 3
+}
+
+private func feedCacheEntryId(_ kind: FeedCacheKind, filterId: Int32? = nil) -> ItemCacheEntryId {
+    let key = ValueBoxKey(length: filterId == nil ? 1 : 5)
+    key.setUInt8(0, value: kind.rawValue)
+    if let filterId {
+        key.setInt32(1, value: filterId)
+    }
+    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.feed, key: key)
 }
 
 func addedFeedCacheEntryId(filterId: Int32) -> ItemCacheEntryId {
-    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAddedFeed, key: feedFilterCacheKey(filterId: filterId))
+    return feedCacheEntryId(.addedFeed, filterId: filterId)
 }
 
 func feedReadStateEntryId(filterId: Int32) -> ItemCacheEntryId {
-    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.feedReadState, key: feedFilterCacheKey(filterId: filterId))
+    return feedCacheEntryId(.readState, filterId: filterId)
 }
 
 func forYouFeedCacheEntryId() -> ItemCacheEntryId {
-    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedForYouFeed, key: ValueBoxKey(length: 0))
+    return feedCacheEntryId(.forYouFeed)
 }
 
 func feedInterestCategoriesEntryId() -> ItemCacheEntryId {
-    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedFeedInterestCategories, key: ValueBoxKey(length: 0))
+    return feedCacheEntryId(.interestCategories)
 }
 
 struct CachedAddedFeed: Codable, Equatable {
