@@ -4647,51 +4647,17 @@ func replayFinalState(
             case let .EditMessage(id, message):
                 var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
                 transaction.updateMessage(id, update: { previousMessage in
-                    var updatedFlags = message.flags
-                    var updatedLocalTags = message.localTags
-                    var updatedAttributes = message.attributes
-                    if previousMessage.localTags.contains(.OutgoingLiveLocation) {
-                        updatedLocalTags.insert(.OutgoingLiveLocation)
-                    }
-                    if previousMessage.flags.contains(.Incoming) {
-                        updatedFlags.insert(.Incoming)
-                    } else {
-                        updatedFlags.remove(.Incoming)
-                    }
-                    
                     let peers: [PeerId:Peer] = previousMessage.peers.reduce([:], { current, value in
                         var current = current
                         current[value.0] = value.1
                         return current
                     })
                     
-                    if previousMessage.text == message.text {
-                        let previousEntities = previousMessage.textEntitiesAttribute?.entities ?? []
-                        let updatedEntities = (message.attributes.first(where: { $0 is TextEntitiesMessageAttribute }) as? TextEntitiesMessageAttribute)?.entities ?? []
-                        if previousEntities == updatedEntities, let translation = previousMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute {
-                            if message.attributes.firstIndex(where: { $0 is TranslationMessageAttribute }) == nil {
-                                updatedAttributes.append(translation)
-                            }
-                        }
-                    }
-                    
-                    if let previousFactCheckAttribute = previousMessage.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute, let updatedFactCheckAttribute = message.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute {
-                        if case .Pending = updatedFactCheckAttribute.content, updatedFactCheckAttribute.hash == previousFactCheckAttribute.hash {
-                            updatedAttributes.removeAll(where: { $0 is FactCheckMessageAttribute })
-                            updatedAttributes.append(previousFactCheckAttribute)
-                        }
-                    }
-                    
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
                     
-                    var updatedMedia = message.media
-                    if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
-                        updatedMedia = previousMessage.media
-                    }
-                    
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))
+                    return .update(mergedServerMessageUpdate(previous: previousMessage, updated: message))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)
