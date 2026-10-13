@@ -17,7 +17,7 @@ public enum JoinChannelResult {
     case webView(JoinChatWebView)
 }
 
-func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
+func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
     |> castError(JoinChannelError.self)
@@ -26,7 +26,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
         if let hash = hash {
             request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
         } else if let inputChannel = apiInputChannel(peer) {
-            request = account.network.request(Api.functions.channels.joinChannel(flags: 0, channel: inputChannel))
+            request = account.network.request(Api.functions.channels.joinChannel(flags: forNews ? (1 << 0) : 0, channel: inputChannel))
         } else {
             request = .fail(.init())
         }
@@ -63,6 +63,11 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
             }
 
             account.stateManager.addUpdates(updates)
+            if forNews {
+                // A News-only subscription may not be reported as membership, so the participant fetch below
+                // could fail a join that succeeded. The applied updates carry the channel's new state.
+                return .single(.joined(nil))
+            }
             if hash == nil {
                 let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()
             }

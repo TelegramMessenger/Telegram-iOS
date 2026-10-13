@@ -12,6 +12,20 @@ func isPeerHiddenByCollapsedCommunity(transaction: Transaction, peerId: PeerId, 
     return false
 }
 
+func channelShouldBeExcludedFromChatList(_ channel: TelegramChannel, isHiddenByCollapsedCommunity: () -> Bool) -> Bool {
+    if channel.flags.contains(.isInNews) {
+        // A News-only subscription (joinChannel for_news): followed in the News feed, never shown in Chats,
+        // whether the server reports it as joined or as left.
+        return true
+    }
+    switch channel.participationStatus {
+    case .member:
+        return isHiddenByCollapsedCommunity()
+    default:
+        return true
+    }
+}
+
 func shouldExcludePeerFromChatList(transaction: Transaction, peerId: PeerId, peer: Peer? = nil) -> Bool {
     guard let peer = peer ?? transaction.getPeer(peerId) else {
         return false
@@ -28,12 +42,9 @@ func shouldExcludePeerFromChatList(transaction: Transaction, peerId: PeerId, pee
             return true
         }
     } else if let channel = peer as? TelegramChannel {
-        switch channel.participationStatus {
-        case .member:
+        return channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: {
             return isPeerHiddenByCollapsedCommunity(transaction: transaction, peerId: peerId, peer: channel)
-        default:
-            return true
-        }
+        })
     } else if let community = peer as? TelegramCommunity {
         return community.participationStatus != .member || community.collapsedInDialogs != true
     } else {

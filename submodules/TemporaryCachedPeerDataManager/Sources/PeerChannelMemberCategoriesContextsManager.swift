@@ -473,8 +473,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func join(engine: TelegramEngine, peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
-        return engine.peers.joinChannel(peerId: peerId, hash: hash)
+    public func join(engine: TelegramEngine, peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
+        return engine.peers.joinChannel(peerId: peerId, hash: hash, forNews: forNews)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let self {

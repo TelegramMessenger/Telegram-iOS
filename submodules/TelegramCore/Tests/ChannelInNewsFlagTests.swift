@@ -33,6 +33,26 @@ final class ChannelInNewsFlagTests: XCTestCase {
         XCTAssertTrue(decoded.flags.contains(.isInNews))
     }
 
+    // News-only channels are followed in the News feed and must stay out of Chats, whether the server
+    // reports them as joined or as left.
+    func testNewsOnlyChannelIsExcludedFromTheChatList() {
+        guard let channel = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 1 << 21)) as? TelegramChannel else {
+            XCTFail("not a channel")
+            return
+        }
+        XCTAssertEqual(channel.participationStatus, .member)
+        XCTAssertTrue(channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: { false }))
+    }
+
+    func testJoinedChannelStaysInTheChatList() {
+        guard let channel = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 0)) as? TelegramChannel else {
+            XCTFail("not a channel")
+            return
+        }
+        XCTAssertFalse(channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: { false }))
+        XCTAssertTrue(channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: { true }))
+    }
+
     // `in_news` is per-user state that a min constructor does not carry: a min update keeps the stored value.
     func testMinUpdateKeepsStoredFlag() {
         guard let stored = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 1 << 21)) as? TelegramChannel else {

@@ -588,8 +588,8 @@ public extension TelegramEngine {
             return _internal_updateGroupSpecificEmojiset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
         }
 
-        public func joinChannel(peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
-            return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash)
+        public func joinChannel(peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
+            return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash, forNews: forNews)
         }
 
         public func removePeerMember(peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {

@@ -166,6 +166,10 @@ public struct Namespaces {
         public static let cachedExistingWaltBalance: Int8 = 57
         public static let notificationRequestMessageIds: Int8 = 58
         public static let cachedWalletUserAddresses: Int8 = 59
+        public static let cachedAddedFeed: Int8 = 60
+        public static let cachedForYouFeed: Int8 = 61
+        public static let cachedFeedInterestCategories: Int8 = 62
+        public static let feedReadState: Int8 = 63
     }
     
     public struct UnorderedItemList {
