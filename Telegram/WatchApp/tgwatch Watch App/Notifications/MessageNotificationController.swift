@@ -112,8 +112,12 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     /// by the iPhone app (`NotificationService.swift`), which `AVPlayer` plays as is.
     private func collectVoiceMessages(from notifications: [UNNotification]) {
         for notification in notifications {
-            if let attachment = notification.request.content.attachments.first(where: { $0.identifier == "audio" }) {
-                model.voiceMessages[notification.request.identifier] = attachment.url
+            let id = notification.request.identifier
+            if model.voiceMessages[id] == nil, let attachment = notification.request.content.attachments.first(where: { $0.identifier == "audio" }) {
+                model.voiceMessages[id] = attachment.url
+                let info = MessageNotificationVoicePlayer.info(of: attachment.url)
+                model.voiceDurations[id] = info?.duration
+                model.voiceWaveforms[id] = info?.waveform
             }
         }
     }
@@ -122,7 +126,8 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     /// (`NotificationService.swift`). Decoded here, before the long look is first drawn (see
     /// `didReceive`), straight to the content width: at most `maxCount` small thumbnails.
     private func loadThumbnails(for notifications: [UNNotification]) {
-        let maxPixelWidth = contentFrame.width * WKInterfaceDevice.current().screenScale
+        // `contentFrame` can still be empty here, before the first layout.
+        let maxPixelWidth = WKInterfaceDevice.current().screenBounds.width * WKInterfaceDevice.current().screenScale
         for notification in notifications where model.thumbnails[notification.request.identifier] == nil {
             if let image = MessageNotificationThumbnail.image(for: notification, maxPixelWidth: maxPixelWidth) {
                 model.thumbnails[notification.request.identifier] = image
@@ -182,6 +187,9 @@ final class MessageNotificationModel {
     var thumbnails: [String: UIImage] = [:]
     /// The voice message attachment's file, by notification identifier.
     var voiceMessages: [String: URL] = [:]
+    /// Their length in seconds and waveform, read when they are listed.
+    var voiceDurations: [String: Double] = [:]
+    var voiceWaveforms: [String: [Float]] = [:]
     @ObservationIgnored let voice = MessageNotificationVoicePlayer()
     @ObservationIgnored var openChat: () -> Void = {}
 
@@ -239,6 +247,47 @@ final class MessageNotificationVoicePlayer {
             stop()
             failedId = id
         }
+    }
+
+    nonisolated static let waveformSamples = 32
+
+    /// The length and waveform of an audio file, nil if it cannot be read. A notification has
+    /// no waveform of its own (a chat message carries one), so it is computed: the peak level
+    /// of each of `waveformSamples` slices, scaled to the loudest.
+    nonisolated static func info(of url: URL) -> (duration: Double, waveform: [Float])? {
+        let isScoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if isScoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        guard let file = try? AVAudioFile(forReading: url),
+              file.length > 0,
+              file.processingFormat.sampleRate > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
+            return nil
+        }
+        let duration = Double(file.length) / file.processingFormat.sampleRate
+        guard (try? file.read(into: buffer)) != nil, let channel = buffer.floatChannelData?[0] else {
+            return (duration, [])
+        }
+        let frames = Int(buffer.frameLength)
+        let sliceLength = max(1, frames / waveformSamples)
+        var peaks: [Float] = []
+        peaks.reserveCapacity(waveformSamples)
+        for slice in 0..<waveformSamples {
+            let start = slice * sliceLength
+            let end = min(frames, start + sliceLength)
+            var peak: Float = 0
+            if start < end {
+                for frame in start..<end {
+                    peak = max(peak, abs(channel[frame]))
+                }
+            }
+            peaks.append(peak)
+        }
+        let loudest = peaks.max() ?? 0
+        return (duration, loudest > 0 ? peaks.map { $0 / loudest } : [])
     }
 
     func stop() {
@@ -335,6 +384,8 @@ struct MessageNotificationView: View {
                     entry: entry,
                     thumbnail: model.thumbnails[entry.id],
                     voiceMessage: model.voiceMessages[entry.id],
+                    voiceDuration: model.voiceDurations[entry.id],
+                    voiceWaveform: model.voiceWaveforms[entry.id] ?? [],
                     voice: model.voice,
                     showsTitle: index == 0 || newestFirst[index - 1].title != entry.title,
                     openChat: model.openChat
@@ -350,6 +401,8 @@ private struct MessageNotificationEntryView: View {
     let entry: MessageNotificationEntry
     let thumbnail: UIImage?
     let voiceMessage: URL?
+    let voiceDuration: Double?
+    let voiceWaveform: [Float]
     let voice: MessageNotificationVoicePlayer
     /// The title (the chat, or the sender of a private chat) is shown when it changes, not on
     /// every message of a run.
@@ -371,7 +424,7 @@ private struct MessageNotificationEntryView: View {
                     }
                 )
             if let voiceMessage {
-                MessageNotificationVoiceButton(id: entry.id, url: voiceMessage, voice: voice)
+                MessageNotificationVoiceButton(id: entry.id, url: voiceMessage, duration: voiceDuration, waveform: voiceWaveform, voice: voice)
             }
             Text(entry.date, style: .time)
                 .font(.caption2)
@@ -394,11 +447,7 @@ private struct MessageNotificationEntryView: View {
                     .lineLimit(2)
             }
             if let thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: 120, alignment: .leading)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                MessageNotificationThumbnailView(image: thumbnail)
             }
             if !entry.body.isEmpty {
                 Text(entry.body)
@@ -412,29 +461,65 @@ private struct MessageNotificationEntryView: View {
     }
 }
 
+/// A thumbnail with a height fixed from its aspect ratio: the system measures the long look's
+/// content to size it (and place Reply after it), and an image sized only at layout time
+/// measured short, so the list could not be scrolled to its end.
+private struct MessageNotificationThumbnailView: View {
+    static let maxHeight: CGFloat = 120
+
+    let image: UIImage
+
+    var body: some View {
+        let width = WKInterfaceDevice.current().screenBounds.width
+        let aspect = image.size.width > 0 ? image.size.height / image.size.width : 1
+        let height = min(Self.maxHeight, (width * aspect).rounded())
+        Image(uiImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(height: height)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// A full-width bar: play/pause, the waveform (as in chats) filled as it plays, and the length
+/// (the position while playing).
 private struct MessageNotificationVoiceButton: View {
+    static let height: CGFloat = 36
+
     let id: String
     let url: URL
+    let duration: Double?
+    let waveform: [Float]
     let voice: MessageNotificationVoicePlayer
 
     var body: some View {
         let isActive = voice.playingId == id
         let isPlaying = isActive && !voice.isPaused
+        let failed = voice.failedId == id
+        let progress = isActive && (duration ?? 0) > 0 ? min(1, voice.elapsed / (duration ?? 1)) : 0
+        let shownSeconds = isActive ? voice.elapsed : (duration ?? 0)
         Button {
             voice.toggle(id: id, url: url)
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: voice.failedId == id ? "exclamationmark.circle" : (isPlaying ? "pause.fill" : "play.fill"))
-                Image(systemName: "waveform")
-                    .foregroundStyle(.secondary)
-                if isActive {
-                    Text(Duration.seconds(Int(voice.elapsed)), format: .time(pattern: .minuteSecond))
+            HStack(spacing: 8) {
+                Image(systemName: failed ? "exclamationmark.circle.fill" : (isPlaying ? "pause.circle.fill" : "play.circle.fill"))
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                WaveformBarsView(amplitudes: waveform, progress: progress, isOutgoing: false)
+                if isActive || duration != nil {
+                    Text(Duration.seconds(Int(shownSeconds.rounded(.down))), format: .time(pattern: .minuteSecond))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .fixedSize()
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height)
+            .background(Capsule().fill(Color.white.opacity(0.12)))
+            .contentShape(Capsule())
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("messageNotification.voice")
     }
 }
