@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
+import HierarchyTrackingLayer
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
@@ -70,8 +72,13 @@ private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedStrin
     return NSAttributedString(string: summary.string, font: font, textColor: isMediaLabel ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
 }
 
+/// The time a post row shows now.
+private func newsPostTimeText(component: NewsFeedPostComponent) -> String {
+    return newsTimeText(newsCompactTime(timestamp: component.timestamp, now: Int32(Date().timeIntervalSince1970)), strings: component.strings, dateTimeFormat: component.dateTimeFormat)
+}
+
 /// A post row: avatar, channel name, verified badge, compact time, up to three lines of text, and an
-/// optional thumbnail on the right. Tapping opens the post.
+/// optional thumbnail on the right. Tapping opens the post. The time keeps itself current while on screen.
 public final class NewsFeedPostComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
@@ -81,10 +88,11 @@ public final class NewsFeedPostComponent: Component {
     public let peer: EnginePeer
     /// Ascending ids; an album has several.
     public let messages: [EngineMessage]
-    public let timeText: String
+    /// The newest message's: the post's age is shown from it.
+    public let timestamp: Int32
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timeText: String, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -92,7 +100,7 @@ public final class NewsFeedPostComponent: Component {
         self.nameDisplayOrder = nameDisplayOrder
         self.peer = peer
         self.messages = messages
-        self.timeText = timeText
+        self.timestamp = timestamp
         self.action = action
     }
 
@@ -118,7 +126,7 @@ public final class NewsFeedPostComponent: Component {
         if lhs.messages != rhs.messages {
             return false
         }
-        if lhs.timeText != rhs.timeText {
+        if lhs.timestamp != rhs.timestamp {
             return false
         }
         return true
@@ -132,14 +140,24 @@ public final class NewsFeedPostComponent: Component {
         private let text = ComponentView<Empty>()
         private let thumbnailView = TransformImageView()
         private let separatorLayer = SimpleLayer()
+        /// In a window and the app in the foreground: only then does the time need checking.
+        private let hierarchyTrackingLayer = HierarchyTrackingLayer()
 
         private var component: NewsFeedPostComponent?
+        private weak var state: EmptyComponentState?
         private var thumbnailMediaId: EngineMedia.Id?
+        /// The time as last laid out.
+        private var renderedTimeText: String?
+        private var timeTimer: SwiftSignalKit.Timer?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
             self.addSubview(self.thumbnailView)
             self.layer.addSublayer(self.separatorLayer)
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] _ in
+                self?.updateTimeTimer()
+            }
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
         }
 
@@ -147,13 +165,44 @@ public final class NewsFeedPostComponent: Component {
             preconditionFailure()
         }
 
+        deinit {
+            self.timeTimer?.invalidate()
+        }
+
         @objc private func tapped() {
             self.component?.action()
         }
 
-        func update(component: NewsFeedPostComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+        /// While on screen, every 0.5 s: when the time reads differently now, the row asks to be updated.
+        private func updateTimeTimer() {
+            if self.hierarchyTrackingLayer.isInHierarchy && self.component != nil {
+                if self.timeTimer == nil {
+                    let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if newsPostTimeText(component: component) != self.renderedTimeText {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }, queue: Queue.mainQueue())
+                    self.timeTimer = timer
+                    timer.start()
+                }
+            } else {
+                self.timeTimer?.invalidate()
+                self.timeTimer = nil
+            }
+        }
+
+        func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.state = state
             let theme = component.theme
+            let timeText = newsPostTimeText(component: component)
+            self.renderedTimeText = timeText
+            defer {
+                self.updateTimeTimer()
+            }
 
             let sideInset: CGFloat = 16.0
             let topInset: CGFloat = 10.0
@@ -169,7 +218,7 @@ public final class NewsFeedPostComponent: Component {
 
             let timeSize = self.time.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.timeText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: timeText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
@@ -311,6 +360,6 @@ public final class NewsFeedPostComponent: Component {
     }
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+        return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
     }
 }

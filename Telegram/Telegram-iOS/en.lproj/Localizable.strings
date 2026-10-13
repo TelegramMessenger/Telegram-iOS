@@ -17115,6 +17115,7 @@ Error: %8$@";
 "Notification.GramTransfer.UnknownUser" = "UNKNOWN USER";
 
 "Chat.ViewStyle" = "VIEW STYLE";
+"News.Time.Now" = "now";
 "News.Time.Seconds" = "%@s";
 "News.Time.Minutes" = "%@m";
 "News.Time.Hours" = "%@h";

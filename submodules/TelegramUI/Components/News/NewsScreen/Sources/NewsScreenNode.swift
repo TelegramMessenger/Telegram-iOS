@@ -48,8 +48,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
-    private var now: Int32 = Int32(Date().timeIntervalSince1970)
-    private var timeTimer: SwiftSignalKit.Timer?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
 
@@ -163,7 +161,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     deinit {
-        self.timeTimer?.invalidate()
         self.foregroundDisposable?.dispose()
     }
 
@@ -252,25 +249,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     func didAppear() {
         self.isScreenVisible = true
         self.added.feed.revalidate()
-        // The compact times ("6m") refresh while the screen is visible only.
-        self.timeTimer?.invalidate()
-        let timer = SwiftSignalKit.Timer(timeout: 30.0, repeat: true, completion: { [weak self] in
-            guard let self else {
-                return
-            }
-            self.now = Int32(Date().timeIntervalSince1970)
-            self.updateLists(transition: .immediate)
-        }, queue: Queue.mainQueue())
-        self.timeTimer = timer
-        timer.start()
-        self.now = Int32(Date().timeIntervalSince1970)
-        self.updateLists(transition: .immediate)
     }
 
     func didDisappear() {
         self.isScreenVisible = false
-        self.timeTimer?.invalidate()
-        self.timeTimer = nil
     }
 
     func scrollToTop() {
@@ -354,7 +336,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     // MARK: Lists
 
     private func itemEnvironment() -> NewsFeedItemEnvironment {
-        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, now: self.now, openPost: { [weak self] peer, messageId in
+        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
         })
     }

@@ -1,7 +1,9 @@
 import Foundation
 
-/// A post's age as the feed shows it: "30s", "6m", "1h", "3d", then a date.
+/// A post's age as the feed shows it: "now", "30s", "6m", "1h", "3d", then a date.
 public enum NewsCompactTime: Equatable {
+    /// Under a second, or a timestamp ahead of the clock.
+    case now
     case seconds(Int32)
     case minutes(Int32)
     case hours(Int32)
@@ -12,6 +14,9 @@ public enum NewsCompactTime: Equatable {
 
 public func newsCompactTime(timestamp: Int32, now: Int32) -> NewsCompactTime {
     let delta = max(0, now - timestamp)
+    if delta == 0 {
+        return .now
+    }
     if delta < 60 {
         return .seconds(delta)
     }

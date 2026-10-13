@@ -37,7 +37,6 @@ func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], No
 struct NewsFeedItemEnvironment {
     let context: AccountContext
     let presentationData: PresentationData
-    let now: Int32
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
 }
 
@@ -59,7 +58,6 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         newest = message
     }
     let presentationData = environment.presentationData
-    let timeText = newsTimeText(newsCompactTime(timestamp: newest.timestamp, now: environment.now), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
     let openPost = environment.openPost
     let messageId = first.id
     return CoreListComponentItem(identity: newsPostIdentity(entry), component: AnyComponent(NewsFeedPostComponent(
@@ -70,7 +68,7 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         nameDisplayOrder: presentationData.nameDisplayOrder,
         peer: peer,
         messages: resolved,
-        timeText: timeText,
+        timestamp: newest.timestamp,
         action: {
             openPost(peer, messageId)
         }

@@ -13,6 +13,8 @@ final class NewsFeedSupportTests: XCTestCase {
     // MARK: compact time
 
     func testCompactTimeThresholds() {
+        XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000), .now)
+        XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1001), .seconds(1))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1030), .seconds(30))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000 + 6 * 60), .minutes(6))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000 + 60 * 60), .hours(1))
@@ -21,7 +23,7 @@ final class NewsFeedSupportTests: XCTestCase {
     }
 
     func testCompactTimeClampsAFutureTimestamp() {
-        XCTAssertEqual(newsCompactTime(timestamp: 2000, now: 1000), .seconds(0))
+        XCTAssertEqual(newsCompactTime(timestamp: 2000, now: 1000), .now)
     }
 
     // MARK: rows
