@@ -50,6 +50,7 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem * _Nonnull item, UITabBa
 
 @property (nonatomic, strong) NSString * _Nullable animationName;
 @property (nonatomic, assign) CGPoint animationOffset;
+@property (nonatomic, assign) CGFloat animationScale;
 @property (nonatomic, assign) bool ringSelection;
 
 @end
