@@ -1,8 +1,11 @@
 import SwiftUI
 import TDShim
+import WatchKit
 
 @main
 struct TgwatchApp: App {
+    /// Routes a tapped notification to its chat (`NotificationChatRouter`).
+    @WKApplicationDelegateAdaptor(TgwatchAppDelegate.self) private var appDelegate
     @State private var manager: AccountManager
     /// True when running inside an XCTest process. Computed once and stored so
     /// both `init()` and `body` can reference the same value without repeating
@@ -53,6 +56,16 @@ struct TgwatchApp: App {
             // Dates and numbers formatted by SwiftUI follow the language pack.
             .environment(\.locale, AppStrings.shared.locale)
         }
+
+        // One scene per category the iPhone app mirrors chat notifications in. Without them
+        // the watch shows only the latest notification of a chat's stack (see
+        // `MessageNotificationController`).
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.privateMessage)
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.privateMediaMessage)
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.groupMessage)
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.groupMediaMessage)
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.channelMessage)
+        WKNotificationScene(controller: MessageNotificationController.self, category: MessageNotificationCategory.reaction)
     }
 
     /// DEBUG-only: deletes TDLib's sqlite message-database files (keeping

@@ -7,6 +7,7 @@ struct ChatListView: View {
 
     @State private var dismissedLastError: String? = nil
     @State private var opener = ChatOpener()
+    private let notificationRouter = NotificationChatRouter.shared
     /// Bound to the outer chat-list `List`. Re-asserted after every pill tap so the
     /// digital crown stays glued to the chat list, never the pill bar's horizontal
     /// ScrollView (where rotation has no useful effect). watchOS otherwise routes
@@ -45,6 +46,26 @@ struct ChatListView: View {
             }
         }
         .accessibilityIdentifier("chatListView")
+        // A tapped notification names its chat; it opens once it is in the loaded list (the
+        // list may still be loading when the app is launched by the tap).
+        .onChange(of: notificationRouter.pendingChatId, initial: true) {
+            openPendingNotificationChat()
+        }
+        .onChange(of: store.chats.map(\.id)) {
+            openPendingNotificationChat()
+        }
+    }
+
+    /// A chat that is not in the loaded list (another account, an archived or not yet loaded
+    /// chat) is not opened: the list stays, as it did before notifications opened chats, and
+    /// the request expires (`NotificationChatRouter.pendingLifetime`).
+    private func openPendingNotificationChat() {
+        guard let chatId = notificationRouter.currentRequest(),
+              let row = store.chats.first(where: { $0.id == chatId }) else { return }
+        notificationRouter.clear()
+        guard opener.target?.id != chatId else { return }
+        opener.target = nil
+        opener.open(row, makeStore: makeHistoryStore)
     }
 
     @ViewBuilder
