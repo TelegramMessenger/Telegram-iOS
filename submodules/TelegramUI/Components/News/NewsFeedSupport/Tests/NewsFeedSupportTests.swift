@@ -59,6 +59,17 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertTrue(newsWindowIsResolved(entries: [], loadedIds: []))
     }
 
+    // A refresh puts a batch on top, and the first emission after it still carries the previous messages:
+    // rendering it showed the batch's interests block without the posts above it, then the posts pushed it away.
+    func testForYouIsResolvedOnlyByItsOwnMessages() {
+        let old: [EngineForYouItem] = [.post(self.entry(1, date: 100)), .interests]
+        let refreshed: [EngineForYouItem] = [.post(self.entry(3, date: 300)), .interests, .post(self.entry(1, date: 100))]
+        XCTAssertEqual(newsForYouMessageIds(refreshed), self.entry(3, date: 300).messageIds + self.entry(1, date: 100).messageIds)
+        XCTAssertFalse(newsForYouIsResolved(items: refreshed, loadedIds: newsForYouMessageIds(old)))
+        XCTAssertTrue(newsForYouIsResolved(items: refreshed, loadedIds: newsForYouMessageIds(refreshed)))
+        XCTAssertTrue(newsForYouIsResolved(items: [.interests], loadedIds: []))
+    }
+
     func testResolvedEntriesDropUnavailableMessages() {
         let album = EngineFeedEntry(position: EngineFeedPosition(date: 300, peerId: self.channel, id: 11), messageIds: [EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 10), EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 11)], groupingKey: 5)
         let gone = self.entry(1, date: 100)

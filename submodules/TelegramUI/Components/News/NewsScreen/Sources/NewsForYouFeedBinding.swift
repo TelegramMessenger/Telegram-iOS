@@ -30,17 +30,16 @@ final class NewsForYouFeedBinding {
         let state = self.feed.state
         let ids = state
         |> map { state -> [EngineMessage.Id] in
-            var ids: [EngineMessage.Id] = []
-            for item in state.items {
-                if case let .post(entry) = item {
-                    ids.append(contentsOf: entry.messageIds)
-                }
-            }
-            return ids
+            return newsForYouMessageIds(state.items)
         }
         self.stateDisposable = (combineLatest(state, newsFeedMessages(engine: engine, ids: ids))
         |> deliverOnMainQueue).start(next: { [weak self] state, loaded in
             guard let self else {
+                return
+            }
+            // A new batch first arrives with the previous items' messages: wait for its own, so its posts and its
+            // interests block appear together.
+            guard newsForYouIsResolved(items: state.items, loadedIds: loaded.ids) else {
                 return
             }
             self.state = state
