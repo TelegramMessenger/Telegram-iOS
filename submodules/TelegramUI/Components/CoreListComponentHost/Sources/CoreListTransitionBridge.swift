@@ -1,4 +1,5 @@
 import Foundation
+import Display
 import ComponentFlow
 import CoreList
 
@@ -23,6 +24,34 @@ public extension ComponentTransition {
             }
             self.init(animation: .curve(duration: duration,
                                         curve: ComponentTransition.Animation.Curve(curve)))
+        }
+    }
+}
+
+public extension CoreListTransition {
+    /// A layout transition as a pass transition, case for case, so a list moves on the very curve the layout
+    /// around it animates on. The News feeds and the chat history's item transitions both map through it.
+    init(_ transition: ContainedViewLayoutTransition) {
+        switch transition {
+        case .immediate:
+            self = .immediate
+        case let .animated(duration, curve):
+            let listCurve: CoreListTransition.Animation.Curve
+            switch curve {
+            case .linear:
+                listCurve = .linear
+            case .easeInOut:
+                listCurve = .easeInOut
+            case .easeIn:
+                listCurve = .easeIn
+            case .spring:
+                listCurve = .spring
+            case let .customSpring(mass, stiffness, damping, initialVelocity):
+                listCurve = .customSpring(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity)
+            case let .custom(x1, y1, x2, y2):
+                listCurve = .custom(x1, y1, x2, y2)
+            }
+            self.init(animation: .curve(duration: duration, curve: listCurve))
         }
     }
 }

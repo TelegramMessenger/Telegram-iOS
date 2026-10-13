@@ -19,32 +19,6 @@ import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
 
-private func newsCoreListTransition(_ transition: ContainedViewLayoutTransition) -> CoreListTransition {
-    switch transition {
-    case .immediate:
-        return .immediate
-    case let .animated(duration, curve):
-        // Case for case, as `CoreListChatHistoryBackend` maps them: the lists must move on the very curve
-        // the header and the rest of the layout animate on.
-        let coreListCurve: CoreListTransition.Animation.Curve
-        switch curve {
-        case .linear:
-            coreListCurve = .linear
-        case .easeInOut:
-            coreListCurve = .easeInOut
-        case .easeIn:
-            coreListCurve = .easeIn
-        case .spring:
-            coreListCurve = .spring
-        case let .customSpring(mass, stiffness, damping, initialVelocity):
-            coreListCurve = .customSpring(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity)
-        case let .custom(x1, y1, x2, y2):
-            coreListCurve = .custom(x1, y1, x2, y2)
-        }
-        return CoreListTransition(animation: .curve(duration: duration, curve: coreListCurve))
-    }
-}
-
 final class NewsScreenNode: ASDisplayNode {
     private let context: AccountContext
     private weak var controller: NewsScreen?
@@ -546,7 +520,7 @@ final class NewsScreenNode: ASDisplayNode {
         transition.updateFrame(node: self.listsContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.forYouList.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.addedList.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.updateLists(transition: newsCoreListTransition(transition))
+        self.updateLists(transition: CoreListTransition(transition))
 
         let edgeEffectHeight: CGFloat = layout.intrinsicInsets.bottom
         let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight), size: CGSize(width: layout.size.width, height: edgeEffectHeight))

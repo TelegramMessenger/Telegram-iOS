@@ -516,9 +516,12 @@ predecessors are unchanged keeps the exact original position track, phase, and d
 self-contained copy of ComponentFlow's `ComponentTransition` value model, vendored because CoreList
 has no Bazel `deps` and the demo builds standalone. The case shape is identical, so
 `ComponentTransition.init(_ CoreListTransition)` — in
-`TelegramUI/Sources/CoreListChatHistoryBackend.swift`, the only consumer — is a case-for-case map.
+`TelegramUI/Components/CoreListComponentHost/Sources/CoreListTransitionBridge.swift`, shared by the
+chat history backend and the News feeds — is a case-for-case map.
 It deliberately does NOT round-trip a zero duration: CoreList means "immediate" by it, so the
-conversion yields `.immediate` rather than a zero-length animation.
+conversion yields `.immediate` rather than a zero-length animation. The same file has the other
+direction, `CoreListTransition.init(_ ContainedViewLayoutTransition)`, so a list moves on the exact curve
+of the layout around it.
 `applyChanges(…, transition:)` is the only mutation entry point; the parallel duration-only overloads
 are gone. Production uses `.easeInOut` throughout, and the tests keep `.linear` (via a test-only
 `CoreListTransition.linear(duration:)`) as the contrast curve their curve-identity assertions need.

@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import Display
 import ComponentFlow
 import CoreList
 @testable import CoreListComponentHost
@@ -102,6 +103,22 @@ final class CoreListComponentHostTests: XCTestCase {
             }
         } else {
             XCTFail("expected a curve")
+        }
+    }
+
+    // News and the chat history map layout transitions through this one initializer.
+    func testLayoutTransitionsMapCaseForCase() {
+        XCTAssertEqual(CoreListTransition(ContainedViewLayoutTransition.immediate), .immediate)
+        let curves: [(ContainedViewLayoutTransitionCurve, CoreListTransition.Animation.Curve)] = [
+            (.linear, .linear),
+            (.easeInOut, .easeInOut),
+            (.easeIn, .easeIn),
+            (.spring, .spring),
+            (.customSpring(mass: 2.0, stiffness: 300.0, damping: 20.0, initialVelocity: 0.0), .customSpring(mass: 2.0, stiffness: 300.0, damping: 20.0, initialVelocity: 0.0)),
+            (.custom(0.33, 0.52, 0.25, 0.99), .custom(0.33, 0.52, 0.25, 0.99)),
+        ]
+        for (layoutCurve, listCurve) in curves {
+            XCTAssertEqual(CoreListTransition(ContainedViewLayoutTransition.animated(duration: 0.4, curve: layoutCurve)), CoreListTransition(animation: .curve(duration: 0.4, curve: listCurve)))
         }
     }
 }

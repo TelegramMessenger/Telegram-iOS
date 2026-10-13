@@ -12,6 +12,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
     ],
@@ -28,6 +29,7 @@ swift_library(
     ]),
     deps = [
         ":CoreListComponentHost",
+        "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
     ],

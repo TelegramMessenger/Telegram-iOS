@@ -1014,24 +1014,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             // (ChatControllerNode.swift:2619) and reaches the `updateSizeAndInsets` branch above, so
             // it is unaffected. The two were previously conflated, which is how this producer came to
             // be recorded as "the chat sets it in exactly one place".
-            switch curve {
-            case .easeInOut:
-                transition = .easeInOut(duration: duration)
-            case .easeIn:
-                transition = .init(animation: .curve(duration: duration, curve: .easeIn))
-            case .linear:
-                // `.linear(duration:)` is a CoreListDemoTests convenience, not shipping API.
-                transition = .init(animation: .curve(duration: duration, curve: .linear))
-            case .spring:
-                transition = .spring(duration: duration)
-            case let .customSpring(mass, stiffness, damping, initialVelocity):
-                transition = .init(animation: .curve(duration: duration,
-                                                     curve: .customSpring(mass: mass, stiffness: stiffness,
-                                                                          damping: damping,
-                                                                          initialVelocity: initialVelocity)))
-            case let .custom(x1, y1, x2, y2):
-                transition = .init(animation: .curve(duration: duration, curve: .custom(x1, y1, x2, y2)))
-            }
+            transition = CoreListTransition(.animated(duration: duration, curve: curve))
         } else if options.contains(.AnimateInsertion) {
             transition = .spring(duration: 0.4)
         }
