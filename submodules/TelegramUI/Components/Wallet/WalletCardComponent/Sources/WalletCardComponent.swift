@@ -145,6 +145,10 @@ public final class WalletCardComponent: Component {
         public var giftStyleUpdated: ((UIColor, UIColor, CGPoint, CGFloat, CGFloat, Bool) -> Void)?
 
         private var giftStyle: WalletContext.CardGiftStyle?
+
+        public func giftStyled(_ color: UIColor) -> UIColor? {
+            return self.giftStyle.map { WalletCardTint($0).tint(WalletOklch(color)).uiColor }
+        }
         private var giftAccentColor = UIColor(rgb: 0x6ddcff)
         private var giftAddressColor = UIColor(rgb: 0x055ac4, alpha: 0.8)
         private let giftPatternLayer = CALayer()
@@ -456,7 +460,11 @@ public final class WalletCardComponent: Component {
                 let id = sticker.gift.address
                 let view = self.stickerViews[id] ?? WalletCardStickerView(frame: .zero)
                 self.stickerViews[id] = view
+                let appeared = view.image == nil && images[id] != nil
                 view.image = images[id]
+                if appeared && self.window != nil && !hidden.contains(id) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
                 view.isHidden = hidden.contains(id)
                 self.stickerContainer.addSubview(view)
             }

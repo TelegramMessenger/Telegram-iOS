@@ -1666,7 +1666,13 @@ private final class WalletScreenComponent: Component {
             }
             let tooltipSize = tooltip.update(
                 transition: .immediate,
-                component: AnyComponent(WalletTooltipComponent(text: environment.strings.Wallet_GramTooltip)),
+                component: AnyComponent(WalletTooltipComponent(
+                    text: environment.strings.Wallet_GramTooltip,
+                    colors: (
+                        cardView.giftStyled(WalletTooltipComponent.defaultColors.0) ?? WalletTooltipComponent.defaultColors.0,
+                        cardView.giftStyled(WalletTooltipComponent.defaultColors.1) ?? WalletTooltipComponent.defaultColors.1
+                    )
+                )),
                 environment: {},
                 containerSize: CGSize(width: min(614.0, availableWidth), height: 10000.0)
             )
