@@ -540,6 +540,10 @@ private final class PeerWalletOverlayComponent: Component {
             }
             var buttonColor = defaultButtonTheme.list.itemCheckColors.fillColor
             var buttonForegroundColor = defaultButtonTheme.list.itemCheckColors.foregroundColor
+            if environment.theme.overallDarkAppearance {
+                buttonColor = defaultDarkColorPresentationTheme.list.itemAccentColor
+                buttonForegroundColor = .white
+            }
             if let cardView = self.card.view as? WalletCardComponent.View {
                 let walletAccentColor: UIColor
                 if let current = self.walletAccentColor, current.theme === environment.theme {

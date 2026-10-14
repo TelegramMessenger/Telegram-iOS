@@ -24,6 +24,8 @@ import UndoUI
 import WalletContext
 import WalletPagerComponent
 import WalletCollectibleHeaderComponent
+import GiftAnimationComponent
+import GlassBackgroundComponent
 import WalletPeerSelectionScreen
 import WalletAuthorizationUI
 import PasscodeCore
@@ -151,7 +153,7 @@ private final class WalletCollectibleActionComponent: Component {
             transition: ComponentTransition
         ) -> CGSize {
             self.component = component
-            let size = CGSize(width: availableSize.width, height: 60.0)
+            let size = CGSize(width: availableSize.width, height: 58.0)
             self.backgroundView.backgroundColor = component.theme.list.itemModalBlocksBackgroundColor
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: size))
             transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: size))
@@ -172,7 +174,7 @@ private final class WalletCollectibleActionComponent: Component {
                 }
                 transition.setFrame(view: iconView, frame: CGRect(
                     x: floorToScreenPixels((size.width - iconSize.width) / 2.0),
-                    y: 7.0,
+                    y: floorToScreenPixels(22.0 - iconSize.height * 0.5),
                     width: iconSize.width,
                     height: iconSize.height
                 ))
@@ -199,7 +201,7 @@ private final class WalletCollectibleActionComponent: Component {
                 }
                 transition.setFrame(view: titleView, frame: CGRect(
                     x: floorToScreenPixels((size.width - titleSize.width) / 2.0),
-                    y: 38.0 + UIScreenPixel,
+                    y: floorToScreenPixels(44.0 - titleSize.height * 0.5),
                     width: titleSize.width,
                     height: titleSize.height
                 ))
@@ -219,6 +221,96 @@ private final class WalletCollectibleActionComponent: Component {
         environment: Environment<Empty>,
         transition: ComponentTransition
     ) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+private final class WalletCollectibleHeaderButtonComponent: Component {
+    let title: String
+    let iconName: String
+    let buttonColor: UIColor
+    let action: () -> Void
+
+    init(title: String, iconName: String, buttonColor: UIColor, action: @escaping () -> Void) {
+        self.title = title
+        self.iconName = iconName
+        self.buttonColor = buttonColor
+        self.action = action
+    }
+
+    static func ==(lhs: WalletCollectibleHeaderButtonComponent, rhs: WalletCollectibleHeaderButtonComponent) -> Bool {
+        return lhs.title == rhs.title && lhs.iconName == rhs.iconName && lhs.buttonColor == rhs.buttonColor
+    }
+
+    final class View: UIView {
+        private let backgroundView = GlassBackgroundView()
+        private let icon = ComponentView<Empty>()
+        private let title = ComponentView<Empty>()
+        private let button = HighlightTrackingButton()
+        private var component: WalletCollectibleHeaderButtonComponent?
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            self.addSubview(self.backgroundView)
+            self.backgroundView.contentView.addSubview(self.button)
+            self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        @objc private func pressed() {
+            self.component?.action()
+        }
+
+        func update(component: WalletCollectibleHeaderButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            let bounds = CGRect(origin: .zero, size: availableSize)
+            self.backgroundView.update(size: bounds.size, cornerRadius: 16.0, isDark: true, tintColor: .init(kind: .custom(style: .default, color: component.buttonColor)), isInteractive: true, transition: transition)
+            transition.setFrame(view: self.backgroundView, frame: bounds)
+            transition.setFrame(view: self.button, frame: bounds)
+
+            let iconSize = self.icon.update(
+                transition: transition,
+                component: AnyComponent(BundleIconComponent(name: component.iconName, tintColor: .white)),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    iconView.isUserInteractionEnabled = false
+                    self.backgroundView.contentView.addSubview(iconView)
+                }
+                iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: floorToScreenPixels(22.0 - iconSize.height * 0.5)), size: iconSize)
+            }
+
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.title, font: Font.regular(11.0), textColor: .white)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 16.0, height: availableSize.height)
+            )
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.backgroundView.contentView.addSubview(titleView)
+                }
+                titleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels(44.0 - titleSize.height * 0.5)), size: titleSize)
+            }
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: .zero)
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -392,6 +484,15 @@ private final class WalletCollectibleContentComponent: Component {
         private var configuredAddress: String?
         private var uniqueGift: StarGift.UniqueGift?
         private var currentPeer: EnginePeer?
+        private let composition = ComponentView<Empty>()
+        private let compositionState = GiftCompositionComponent.ExternalState()
+        private let giftTitle = ComponentView<Empty>()
+        private let giftSubtitle = ComponentView<Empty>()
+        private let giftTransferButton = ComponentView<Empty>()
+        private let giftSellButton = ComponentView<Empty>()
+        private let tearOffAnchor = UIView()
+        private var giftSilhouetteView: UIImageView?
+        private var displaysGiftHeader = false
         private let tearOffGesture = UILongPressGestureRecognizer()
         private weak var tearOffHost: WalletCollectibleStickerHost?
         private var tearOffSheetGone = false
@@ -403,10 +504,28 @@ private final class WalletCollectibleContentComponent: Component {
             self.tearOffGesture.delegate = self
             self.tearOffGesture.addTarget(self, action: #selector(self.tearOffGestureChanged(_:)))
             self.addGestureRecognizer(self.tearOffGesture)
+            self.tearOffAnchor.isUserInteractionEnabled = false
         }
 
         private var tearOffSourceView: UIView? {
+            if self.displaysGiftHeader {
+                return self.tearOffAnchor.superview != nil ? self.tearOffAnchor : nil
+            }
             return (self.header.view as? WalletCollectibleHeaderComponent.View)?.giftView
+        }
+
+        private func showTearOffSilhouette(image: UIImage, frame: CGRect, color: UIColor) {
+            guard let compositionView = self.composition.view as? GiftCompositionComponent.View else { return }
+            compositionView.setModelHidden(true)
+            let silhouetteView = self.giftSilhouetteView ?? UIImageView()
+            self.giftSilhouetteView = silhouetteView
+            silhouetteView.isUserInteractionEnabled = false
+            silhouetteView.image = image.withRenderingMode(.alwaysTemplate)
+            silhouetteView.tintColor = color
+            silhouetteView.frame = frame.offsetBy(dx: self.tearOffAnchor.frame.minX - compositionView.frame.minX, dy: self.tearOffAnchor.frame.minY - compositionView.frame.minY)
+            if silhouetteView.superview !== compositionView {
+                compositionView.addSubview(silhouetteView)
+            }
         }
 
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -431,12 +550,18 @@ private final class WalletCollectibleContentComponent: Component {
                     return
                 }
                 self.tearOffHost = host
-                if let silhouette = host.stickerSilhouette(collectible: component.collectible, side: sourceView.bounds.width),
-                   let headerView = self.header.view as? WalletCollectibleHeaderComponent.View {
-                    var color = UIColor(white: 0.0, alpha: 0.2)
-                    for case let .backdrop(_, _, inner, _, pattern, _, _) in component.collectible.nft?.gift?.attributes ?? [] {
-                        color = UIColor(rgb: UInt32(bitPattern: pattern)).mixedWith(UIColor(rgb: UInt32(bitPattern: inner)), alpha: 0.5)
+                var color = UIColor(white: 0.0, alpha: 0.2)
+                for case let .backdrop(_, _, inner, _, pattern, _, _) in (component.collectible.nft?.gift ?? self.uniqueGift)?.attributes ?? [] {
+                    color = UIColor(rgb: UInt32(bitPattern: pattern)).mixedWith(UIColor(rgb: UInt32(bitPattern: inner)), alpha: 0.5)
+                }
+                let silhouette = host.stickerSilhouette(collectible: component.collectible, side: sourceView.bounds.width)
+                if self.displaysGiftHeader {
+                    if let silhouette {
+                        self.showTearOffSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
+                    } else {
+                        (self.composition.view as? GiftCompositionComponent.View)?.setModelHidden(true)
                     }
+                } else if let silhouette, let headerView = self.header.view as? WalletCollectibleHeaderComponent.View {
                     headerView.showModelSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
                 } else {
                     sourceView.isHidden = true
@@ -727,6 +852,50 @@ private final class WalletCollectibleContentComponent: Component {
             }
 
             let theme = environment.theme
+            let headerGift: StarGift.UniqueGift? = component.collectible.kind == .gift ? (component.collectible.nft?.gift ?? self.uniqueGift) : nil
+            self.displaysGiftHeader = headerGift != nil
+            let giftHeaderButtonHeight: CGFloat = 58.0
+            let giftHeaderButtonsBottomInset: CGFloat = 16.0
+            let giftHeaderHeight: CGFloat = 240.0 + giftHeaderButtonHeight + giftHeaderButtonsBottomInset
+            var controlsBackground: GlassControlGroupComponent.Background = .panel
+            var vibrantColor = UIColor.white.withAlphaComponent(0.6)
+            var headerButtonColor = UIColor(rgb: 0xffffff, alpha: 0.1)
+            if let headerGift {
+                let compositionSize = self.composition.update(
+                    transition: transition,
+                    component: AnyComponent(GiftCompositionComponent(
+                        context: component.context,
+                        theme: theme,
+                        subject: .unique(nil, headerGift),
+                        externalState: self.compositionState
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: giftHeaderHeight)
+                )
+                if let compositionView = self.composition.view {
+                    if compositionView.superview == nil {
+                        self.insertSubview(compositionView, at: 0)
+                    }
+                    transition.setFrame(view: compositionView, frame: CGRect(origin: .zero, size: compositionSize))
+                    compositionView.alpha = 1.0
+                }
+                if let backgroundColor = self.compositionState.backgroundColor {
+                    let color = backgroundColor.mixedWith(.white, alpha: 0.2)
+                    controlsBackground = .color(color)
+                    headerButtonColor = color
+                }
+                if let patternColor = self.compositionState.previewPatternColor {
+                    vibrantColor = patternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
+                }
+                let anchorSide = 136.0 / 0.7
+                self.tearOffAnchor.frame = CGRect(x: floorToScreenPixels((availableSize.width - anchorSide) / 2.0), y: 88.0 - anchorSide / 2.0, width: anchorSide, height: anchorSide)
+                if self.tearOffAnchor.superview == nil {
+                    self.addSubview(self.tearOffAnchor)
+                }
+            } else {
+                self.composition.view?.alpha = 0.0
+                self.tearOffAnchor.removeFromSuperview()
+            }
             let controlsComponent = AnyComponent(GlassControlPanelComponent(
                 theme: theme,
                 leftItem: GlassControlPanelComponent.Item(
@@ -737,7 +906,7 @@ private final class WalletCollectibleContentComponent: Component {
                             self?.close()
                         }
                     )],
-                    background: .panel
+                    background: controlsBackground
                 ),
                 centralItem: nil,
                 rightItem: GlassControlPanelComponent.Item(
@@ -753,10 +922,10 @@ private final class WalletCollectibleContentComponent: Component {
                             self.openMenu(sourceView: sourceView)
                         }
                     )],
-                    background: .panel
+                    background: controlsBackground
                 ),
                 centerAlignmentIfPossible: true,
-                isDark: theme.overallDarkAppearance
+                isDark: headerGift != nil ? true : theme.overallDarkAppearance
             ))
             let controlsSize = self.controlButtons.update(
                 transition: transition,
@@ -771,157 +940,262 @@ private final class WalletCollectibleContentComponent: Component {
                 transition.setFrame(view: controlsView, frame: CGRect(x: 16.0, y: 16.0, width: controlsSize.width, height: controlsSize.height))
             }
 
-            let displaysCollection: Bool
-            switch component.collectible.kind {
-            case .username, .anonymousNumber:
-                displaysCollection = false
-            case .gift, .other:
-                displaysCollection = true
-            }
             var contentHeight: CGFloat = 44.0
-            let headerSize = self.header.update(
-                transition: transition,
-                component: AnyComponent(WalletCollectibleHeaderComponent(
-                    context: component.context,
-                    theme: theme,
-                    item: WalletCollectibleHeaderComponent.Item(
-                        name: component.collectible.name,
-                        image: component.collectible.image,
-                        lottie: component.collectible.lottie,
-                        collectionName: component.collectible.collectionName,
-                        collectionUrl: component.collectible.collectionUrl,
-                        uniqueGift: component.collectible.nft?.gift
-                    ),
-                    displaysCollection: displaysCollection,
-                    openCollection: { url in
-                        component.openExternalUrl(url, theme)
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
-            )
-            if let headerView = self.header.view {
-                if headerView.superview == nil {
-                    self.addSubview(headerView)
+            let sideInset: CGFloat = headerGift != nil ? 16.0 : 20.0
+            if let headerGift {
+                if let headerView = self.header.view {
+                    headerView.isHidden = true
                 }
-                transition.setFrame(view: headerView, frame: CGRect(x: 0.0, y: contentHeight, width: headerSize.width, height: headerSize.height))
-                (headerView as? WalletCollectibleHeaderComponent.View)?.setAnimationVisible(true)
-            }
-            contentHeight += headerSize.height
+                self.descriptionText.view?.alpha = 0.0
+                self.transferButton.view?.isHidden = true
+                self.wearButton.view?.isHidden = true
+                self.sellButton.view?.isHidden = true
 
-            if component.collectible.kind != .gift,
-               let description = component.collectible.description,
-               !description.isEmpty {
-                contentHeight += 12.0
-                let descriptionSize = self.descriptionText.update(
-                    transition: transition,
-                    component: AnyComponent(BalancedTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: description,
-                            font: Font.regular(15.0),
-                            textColor: theme.actionSheet.secondaryTextColor,
-                            paragraphAlignment: .center
-                        )),
+                let titleFont = Font.bold(20.0)
+                let numberFont = headerGift.number < 1000 ? titleFont : Font.bold(15.0)
+                let titleString = NSMutableAttributedString(string: headerGift.title + " ", font: titleFont, textColor: .white)
+                titleString.append(NSAttributedString(string: "#" + formatCollectibleNumber(headerGift.number, dateTimeFormat: environment.dateTimeFormat), font: numberFont, textColor: vibrantColor))
+                let titleSize = self.giftTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(titleString),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.2
+                        maximumNumberOfLines: 1
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - 48.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - 32.0 - 60.0, height: 100.0)
                 )
-                if let descriptionView = self.descriptionText.view {
-                    if descriptionView.superview == nil {
-                        descriptionView.isUserInteractionEnabled = false
-                        self.addSubview(descriptionView)
+                if let titleView = self.giftTitle.view {
+                    if titleView.superview == nil {
+                        titleView.isUserInteractionEnabled = false
+                        self.addSubview(titleView)
                     }
-                    transition.setFrame(view: descriptionView, frame: CGRect(
-                        x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0),
-                        y: contentHeight,
-                        width: descriptionSize.width,
-                        height: descriptionSize.height
-                    ))
-                    transition.setAlpha(view: descriptionView, alpha: 1.0)
+                    titleView.isHidden = false
+                    titleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels(190.0 - titleSize.height / 2.0)), size: titleSize)
                 }
-                contentHeight += descriptionSize.height
-            } else if let descriptionView = self.descriptionText.view {
-                transition.setAlpha(view: descriptionView, alpha: 0.0)
-            }
 
-            contentHeight += 28.0
-            let buttonSpacing: CGFloat = 10.0
-            let sideInset: CGFloat = 20.0
-            let buttonCount: CGFloat = component.collectible.kind == .gift && !"".isEmpty ? 3.0 : 2.0
-            let buttonWidth = floor((availableSize.width - sideInset * 2.0 - buttonSpacing * (buttonCount - 1.0)) / buttonCount)
-            var buttonX = sideInset
-            let transferSize = self.transferButton.update(
-                transition: transition,
-                component: AnyComponent(WalletCollectibleActionComponent(
-                    theme: theme,
-                    title: environment.strings.Gift_View_Header_Transfer,
-                    iconName: "Premium/Collectible/Transfer",
-                    action: {
-                        component.openTransfer()
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: buttonWidth, height: 60.0)
-            )
-            if let transferView = self.transferButton.view {
-                if transferView.superview == nil {
-                    self.addSubview(transferView)
+                var modelName: String?
+                for case let .model(name, _, _, _) in headerGift.attributes {
+                    modelName = name
+                    break
                 }
-                transition.setFrame(view: transferView, frame: CGRect(x: buttonX, y: contentHeight, width: transferSize.width, height: transferSize.height))
-            }
-            buttonX += buttonWidth + buttonSpacing
-
-            if !"".isEmpty, component.collectible.kind == .gift {
-                let wearSize = self.wearButton.update(
-                    transition: transition,
-                    component: AnyComponent(WalletCollectibleActionComponent(
-                        theme: theme,
-                        title: environment.strings.Gift_View_Header_Wear,
-                        iconName: "Premium/Collectible/Wear",
-                        action: {
+                if let modelName {
+                    let subtitleSize = self.giftSubtitle.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: modelName, font: Font.regular(13.0), textColor: vibrantColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 1
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - 32.0 - 60.0, height: 100.0)
+                    )
+                    if let subtitleView = self.giftSubtitle.view {
+                        if subtitleView.superview == nil {
+                            subtitleView.isUserInteractionEnabled = false
+                            self.addSubview(subtitleView)
                         }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: buttonWidth, height: 60.0)
-                )
-                if let wearView = self.wearButton.view {
-                    if wearView.superview == nil {
-                        self.addSubview(wearView)
+                        subtitleView.isHidden = false
+                        subtitleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subtitleSize.width) / 2.0), y: 207.0), size: subtitleSize)
                     }
-                    transition.setFrame(view: wearView, frame: CGRect(x: buttonX, y: contentHeight, width: wearSize.width, height: wearSize.height))
-                    transition.setAlpha(view: wearView, alpha: 1.0)
+                } else {
+                    self.giftSubtitle.view?.isHidden = true
                 }
-                buttonX += buttonWidth + buttonSpacing
-            } else if let wearView = self.wearButton.view {
-                transition.setAlpha(view: wearView, alpha: 0.0)
-            }
 
-            let sellSize = self.sellButton.update(
-                transition: transition,
-                component: AnyComponent(WalletCollectibleActionComponent(
-                    theme: theme,
-                    title: environment.strings.Gift_View_Sell,
-                    iconName: "Premium/Collectible/Sell",
-                    action: {
+                let headerSideInset: CGFloat = 16.0
+                let headerButtonSpacing: CGFloat = 10.0
+                let headerButtonWidth = floor((availableSize.width - headerSideInset * 2.0 - headerButtonSpacing) / 2.0)
+                let headerButtonY = giftHeaderHeight - giftHeaderButtonHeight - giftHeaderButtonsBottomInset
+                let headerButtons: [(ComponentView<Empty>, String, String, () -> Void)] = [
+                    (self.giftTransferButton, environment.strings.Gift_View_Header_Transfer, "Premium/Collectible/Transfer", {
+                        component.openTransfer()
+                    }),
+                    (self.giftSellButton, environment.strings.Gift_View_Sell, "Premium/Collectible/Sell", {
                         guard let url = walletCollectibleFragmentUrl(collectible: component.collectible) else {
                             return
                         }
                         component.openExternalUrl(url, theme)
+                    })
+                ]
+                for (index, item) in headerButtons.enumerated() {
+                    let size = item.0.update(
+                        transition: transition,
+                        component: AnyComponent(WalletCollectibleHeaderButtonComponent(
+                            title: item.1,
+                            iconName: item.2,
+                            buttonColor: headerButtonColor,
+                            action: item.3
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: headerButtonWidth, height: giftHeaderButtonHeight)
+                    )
+                    if let view = item.0.view {
+                        if view.superview == nil {
+                            self.addSubview(view)
+                        }
+                        view.isHidden = false
+                        transition.setFrame(view: view, frame: CGRect(x: headerSideInset + CGFloat(index) * (headerButtonWidth + headerButtonSpacing), y: headerButtonY, width: size.width, height: size.height))
                     }
-                )),
-                environment: {},
-                containerSize: CGSize(width: buttonWidth, height: 60.0)
-            )
-            if let sellView = self.sellButton.view {
-                if sellView.superview == nil {
-                    self.addSubview(sellView)
                 }
-                transition.setFrame(view: sellView, frame: CGRect(x: buttonX, y: contentHeight, width: sellSize.width, height: sellSize.height))
+                contentHeight = giftHeaderHeight - 4.0
+            } else {
+                self.header.view?.isHidden = false
+                self.giftTitle.view?.isHidden = true
+                self.giftSubtitle.view?.isHidden = true
+                self.giftTransferButton.view?.isHidden = true
+                self.giftSellButton.view?.isHidden = true
+                self.transferButton.view?.isHidden = false
+                self.sellButton.view?.isHidden = false
+                let displaysCollection: Bool
+                switch component.collectible.kind {
+                case .username, .anonymousNumber:
+                    displaysCollection = false
+                case .gift, .other:
+                    displaysCollection = true
+                }
+                let headerSize = self.header.update(
+                    transition: transition,
+                    component: AnyComponent(WalletCollectibleHeaderComponent(
+                        context: component.context,
+                        theme: theme,
+                        item: WalletCollectibleHeaderComponent.Item(
+                            name: component.collectible.name,
+                            image: component.collectible.image,
+                            lottie: component.collectible.lottie,
+                            collectionName: component.collectible.collectionName,
+                            collectionUrl: component.collectible.collectionUrl,
+                            uniqueGift: component.collectible.nft?.gift
+                        ),
+                        displaysCollection: displaysCollection,
+                        openCollection: { url in
+                            component.openExternalUrl(url, theme)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                )
+                if let headerView = self.header.view {
+                    if headerView.superview == nil {
+                        self.addSubview(headerView)
+                    }
+                    transition.setFrame(view: headerView, frame: CGRect(x: 0.0, y: contentHeight, width: headerSize.width, height: headerSize.height))
+                    (headerView as? WalletCollectibleHeaderComponent.View)?.setAnimationVisible(true)
+                }
+                contentHeight += headerSize.height
+
+                if component.collectible.kind != .gift,
+                   let description = component.collectible.description,
+                   !description.isEmpty {
+                    contentHeight += 12.0
+                    let descriptionSize = self.descriptionText.update(
+                        transition: transition,
+                        component: AnyComponent(BalancedTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: description,
+                                font: Font.regular(15.0),
+                                textColor: theme.actionSheet.secondaryTextColor,
+                                paragraphAlignment: .center
+                            )),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.2
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - 48.0, height: 1000.0)
+                    )
+                    if let descriptionView = self.descriptionText.view {
+                        if descriptionView.superview == nil {
+                            descriptionView.isUserInteractionEnabled = false
+                            self.addSubview(descriptionView)
+                        }
+                        transition.setFrame(view: descriptionView, frame: CGRect(
+                            x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0),
+                            y: contentHeight,
+                            width: descriptionSize.width,
+                            height: descriptionSize.height
+                        ))
+                        transition.setAlpha(view: descriptionView, alpha: 1.0)
+                    }
+                    contentHeight += descriptionSize.height
+                } else if let descriptionView = self.descriptionText.view {
+                    transition.setAlpha(view: descriptionView, alpha: 0.0)
+                }
+
+                contentHeight += 28.0
+                let buttonSpacing: CGFloat = 10.0
+                let buttonCount: CGFloat = component.collectible.kind == .gift && !"".isEmpty ? 3.0 : 2.0
+                let buttonWidth = floor((availableSize.width - sideInset * 2.0 - buttonSpacing * (buttonCount - 1.0)) / buttonCount)
+                var buttonX = sideInset
+                let transferSize = self.transferButton.update(
+                    transition: transition,
+                    component: AnyComponent(WalletCollectibleActionComponent(
+                        theme: theme,
+                        title: environment.strings.Gift_View_Header_Transfer,
+                        iconName: "Premium/Collectible/Transfer",
+                        action: {
+                            component.openTransfer()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: buttonWidth, height: 58.0)
+                )
+                if let transferView = self.transferButton.view {
+                    if transferView.superview == nil {
+                        self.addSubview(transferView)
+                    }
+                    transition.setFrame(view: transferView, frame: CGRect(x: buttonX, y: contentHeight, width: transferSize.width, height: transferSize.height))
+                }
+                buttonX += buttonWidth + buttonSpacing
+
+                if !"".isEmpty, component.collectible.kind == .gift {
+                    let wearSize = self.wearButton.update(
+                        transition: transition,
+                        component: AnyComponent(WalletCollectibleActionComponent(
+                            theme: theme,
+                            title: environment.strings.Gift_View_Header_Wear,
+                            iconName: "Premium/Collectible/Wear",
+                            action: {
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: buttonWidth, height: 58.0)
+                    )
+                    if let wearView = self.wearButton.view {
+                        if wearView.superview == nil {
+                            self.addSubview(wearView)
+                        }
+                        transition.setFrame(view: wearView, frame: CGRect(x: buttonX, y: contentHeight, width: wearSize.width, height: wearSize.height))
+                        transition.setAlpha(view: wearView, alpha: 1.0)
+                    }
+                    buttonX += buttonWidth + buttonSpacing
+                } else if let wearView = self.wearButton.view {
+                    transition.setAlpha(view: wearView, alpha: 0.0)
+                }
+
+                let sellSize = self.sellButton.update(
+                    transition: transition,
+                    component: AnyComponent(WalletCollectibleActionComponent(
+                        theme: theme,
+                        title: environment.strings.Gift_View_Sell,
+                        iconName: "Premium/Collectible/Sell",
+                        action: {
+                            guard let url = walletCollectibleFragmentUrl(collectible: component.collectible) else {
+                                return
+                            }
+                            component.openExternalUrl(url, theme)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: buttonWidth, height: 58.0)
+                )
+                if let sellView = self.sellButton.view {
+                    if sellView.superview == nil {
+                        self.addSubview(sellView)
+                    }
+                    transition.setFrame(view: sellView, frame: CGRect(x: buttonX, y: contentHeight, width: sellSize.width, height: sellSize.height))
+                }
+                contentHeight += 58.0
             }
-            contentHeight += 60.0
 
             if component.collectible.kind == .gift {
                 contentHeight += 20.0
@@ -929,9 +1203,7 @@ private final class WalletCollectibleContentComponent: Component {
                     transition: transition,
                     component: AnyComponent(TableComponent(
                         theme: theme,
-                        items: self.giftTableItems(component: component, theme: theme, strings: environment.strings),
-                        semiTransparent: true,
-                        rightColumnBackgroundColor: theme.list.itemModalBlocksBackgroundColor
+                        items: self.giftTableItems(component: component, theme: theme, strings: environment.strings)
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1162,7 +1434,7 @@ private final class WalletCollectibleSheetComponent: CombinedComponent {
                         screenSize: context.availableSize
                     )),
                     style: .glass,
-                    backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
+                    backgroundColor: .color(context.component.collectible.kind == .gift ? environment.theme.list.modalPlainBackgroundColor : environment.theme.list.modalBlocksBackgroundColor),
                     followContentSizeChanges: true,
                     clipsContent: true,
                     hasDimView: false,
