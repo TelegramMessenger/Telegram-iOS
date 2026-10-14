@@ -17146,3 +17146,4 @@ Error: %8$@";
 "Wallet.Sticker.SaveErrorTitle" = "Couldn’t Save Card";
 "Wallet.Sticker.ProfileError" = "A gift displayed on your profile can’t also be a card sticker. Hide it from your profile first.";
 "Wallet.Sticker.InvalidError" = "One of these stickers can’t be used on the card. Only gifts owned by this wallet are supported.";
+"Wallet.Sticker.LimitError" = "You can place up to %@ gifts on your card.\nRemove one to add another.";

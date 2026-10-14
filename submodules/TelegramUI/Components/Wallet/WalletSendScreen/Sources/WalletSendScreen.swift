@@ -1162,7 +1162,8 @@ private final class WalletSendScreenComponent: Component {
         }
 
         func requestDismiss(completion: @escaping () -> Void) {
-            guard self.hasUnsavedInput, let component = self.component, let controller = self.environment?.controller() else {
+            guard self.hasUnsavedInput, let component = self.component,
+                  let controller = self.environment?.controller() as? WalletSendScreen, controller.parentController() != nil else {
                 completion()
                 return
             }

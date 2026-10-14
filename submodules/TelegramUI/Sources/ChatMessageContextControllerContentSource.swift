@@ -250,7 +250,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                     isStandalone: true,
                     rank: nil,
                     rankRole: nil,
-                    isGiftMessageComposerPreview: false
+                    isGiftMessageComposerPreview: false,
+                    activateGiftMessageInput: nil
                 )
                 
                 let width = chatNode.historyNode.frame.width

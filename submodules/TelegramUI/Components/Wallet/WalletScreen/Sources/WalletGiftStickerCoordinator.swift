@@ -62,6 +62,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         var contacted = false
         var peelFirst = false
         var fast = false
+        var rejected: WalletContext.Collectible?
     }
     private struct Play {
         let id: String
@@ -144,6 +145,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     private var externalFlight = false
     private var pendingMenuAction: (gift: WalletContext.Collectible, color: Bool)?
     private var lifecycleObserver: NSObjectProtocol?
+    static let maxStickers = 10
     var limitReached: (() -> Void)?
     var isDragging: Bool { self.drag != nil || self.pending != nil || self.edit != nil }
 
@@ -241,7 +243,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             } else { self.placements = value }
         }
         if let selectedId, !self.placements.contains(where: { $0.gift.address == selectedId }) { self.deselect(animated: false) }
-        for (id, flight) in self.flights where flight.sticking && !self.placements.contains(where: { $0.gift.address == id }) {
+        for (id, flight) in self.flights where flight.sticking && flight.rejected == nil && !self.placements.contains(where: { $0.gift.address == id }) {
             self.flights.removeValue(forKey: id); self.flightViews.removeValue(forKey: id)?.removeFromSuperview()
         }
         self.placedIds.formUnion(self.placements.map(\.gift.address))
@@ -879,15 +881,20 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         guard let card else { return }
         let size = card.stickerSurface.bounds.size
         let previous = self.placements.first(where: { $0.gift.address == gift.address })
-        guard previous != nil || self.placements.count < 10 else {
-            self.returnGift(gift, from: from)
-            self.limitReached?()
-            return
-        }
         let sticker = WalletContext.CardSticker(gift: gift, x: Double(spot.center.x / size.width), y: Double(spot.center.y / size.height),
             angle: Double(angle), scale: Double(spot.scale), modelFile: self.media[gift.address]?.modelFile,
             geometryVersion: 1, style: style ?? previous?.style, giftStyle: self.media[gift.address]?.style,
             aspectRatio: previous?.aspectRatio, cornerRadius: previous?.cornerRadius)
+        guard previous != nil || self.placements.count < Self.maxStickers else {
+            // Over the limit: stick for a moment, then peel off and fly back.
+            if thrown { self.revealCard() }
+            var flight = Flight(id: gift.address, from: from, to: self.pose(sticker) ?? from,
+                start: CACurrentMediaTime(), sticking: true, returning: false, thrown: thrown)
+            flight.rejected = gift
+            self.flights[gift.address] = flight
+            self.sync(); self.startClock()
+            return
+        }
         self.placements.removeAll { $0.gift.address == gift.address }
         if style != nil { self.placements = self.placements.map { $0.withStyle(nil) } }
         self.placements.append(sticker)
@@ -1062,7 +1069,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             let contact = flight.thrown ? 0.5 : 0.18
             let travel = flight.peelFirst ? 0.5 : (flight.fast ? 0.32 : 0.44)
             let lead = flight.peelFirst ? 0.225 : 0
-            let duration = flight.sticking ? contact + 0.42 + 0.08 : (flight.trash ? 0.34 : (flight.returning ? lead + travel : 0.25))
+            let duration = flight.sticking ? contact + 0.42 + (flight.rejected != nil ? 0.6 : 0.08) : (flight.trash ? 0.34 : (flight.returning ? lead + travel : 0.25))
             var target = flight.to
             if flight.sticking, let sticker = self.placements.first(where: { $0.gift.address == id }), let projected = self.pose(sticker) {
                 target = projected
@@ -1102,9 +1109,17 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                         card.stickerImpact(at: card.stickerSurface.convert(target.center, from: host), thrown: flight.thrown)
                         self.impactActive = true
                     }
-                    UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                    if flight.rejected == nil {
+                        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                    }
                 }
                 if elapsed >= contact + 0.42 && !flight.handedOff {
+                    if flight.rejected != nil {
+                        UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        self.card?.shake()
+                        self.flightViews[id]?.layer.add(WalletCardComponent.View.makeShakeAnimation(), forKey: "stickerLimitShake")
+                        self.limitReached?()
+                    }
                     flight.handedOff = true
                     self.flights[id] = flight
                     self.sync()
@@ -1151,6 +1166,13 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 }
                 path.close(); shape.path = path.cgPath; view.layer.mask = shape
             } else { view.layer.mask = nil }
+            if elapsed >= duration, let gift = flight.rejected {
+                var stuck = flight.to
+                stuck.lift = 0; stuck.front = 1; stuck.bend = 0; stuck.shade = 0; stuck.tilt = 0
+                self.flights.removeValue(forKey: id)
+                self.returnGift(gift, from: stuck, peelFirst: true)
+                continue
+            }
             if elapsed >= duration {
                 self.flights.removeValue(forKey: id); self.flightViews.removeValue(forKey: id)?.removeFromSuperview()
                 self.grid?.setStickerReturnScale(address: id, scale: 1)

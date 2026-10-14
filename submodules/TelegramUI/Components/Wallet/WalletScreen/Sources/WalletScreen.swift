@@ -1165,6 +1165,17 @@ private final class WalletScreenComponent: Component {
             self.waltBalanceBotAppDisposable.set(nil)
         }
 
+        private func presentStickerLimitError() {
+            guard self.environment?.isVisible == true, let component = self.component, let controller = self.environment?.controller() else { return }
+            let data = self.currentPresentationData(for: component)
+            controller.present(UndoOverlayController(
+                presentationData: data.initial,
+                content: .info(title: nil, text: data.initial.strings.Wallet_Sticker_LimitError("\(WalletGiftStickerCoordinator.maxStickers)").string, timeout: nil, customUndoText: nil),
+                position: .bottom,
+                action: { _ in false }
+            ), in: .current)
+        }
+
         private func presentCardSaveError(_ error: WalletCardUpdateError) {
             guard self.environment?.isVisible == true else { return }
             guard let component = self.component, let controller = self.environment?.controller() else { return }
@@ -1172,7 +1183,7 @@ private final class WalletScreenComponent: Component {
             let strings = data.initial.strings
             let text: String?
             switch error {
-            case .limitExceeded: text = nil
+            case .limitExceeded: text = strings.Wallet_Sticker_LimitError("\(WalletGiftStickerCoordinator.maxStickers)").string
             case .savedInProfile: text = strings.Wallet_Sticker_ProfileError
             case .invalidSticker, .notOwned, .duplicate, .invalidAddress, .invalidNft: text = strings.Wallet_Sticker_InvalidError
             case .unavailable, .generic: text = strings.Login_UnknownError
@@ -3876,7 +3887,7 @@ private final class WalletScreenComponent: Component {
 
             self.revealPendingTransferIfNeeded()
             self.updatePendingTransferAnimations()
-            self.giftStickers.limitReached = { [weak self] in self?.presentCardSaveError(.limitExceeded) }
+            self.giftStickers.limitReached = { [weak self] in self?.presentStickerLimitError() }
             self.giftStickers.removeTitle = component.context.sharedContext.currentPresentationData.with { $0 }.strings.Wallet_Sticker_Remove
             self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, placementAction, styleAction, dismissed in
                 guard let self, let component = self.component, let controller = self.environment?.controller() else { return nil }

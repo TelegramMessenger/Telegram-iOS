@@ -94,6 +94,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var appliedIsExpanded: Bool = false
     
     private var isStarGift = false
+    private var isGiftMessagePlaceholder = false
     
     private var currentProgressDisposable: Disposable?
     
@@ -1317,6 +1318,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.hasAnimationSource = animationSourceId != nil
                             strongSelf.item = item
                             strongSelf.isStarGift = isStarGift
+                            strongSelf.isGiftMessagePlaceholder = giftMessageIsPlaceholder
                             
                             strongSelf.updateVisibility()
                             
@@ -1943,6 +1945,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         } else if self.textClippingNode.frame.contains(point) && !self.isExpanded && !self.moreTextNode.alpha.isZero {
             return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
                 self?.expandPressed()
+            }))
+        } else if let item = self.item, item.attributes.isGiftMessageComposerPreview, self.isGiftMessagePlaceholder, !self.giftMessageBackgroundNode.isHidden, self.giftMessageBackgroundNode.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .custom({
+                item.controllerInteraction.updateInputMode { _ in .text }
             }))
         } else if self.item?.attributes.isGiftMessageComposerPreview == true {
             return ChatMessageBubbleContentTapAction(content: .ignore)

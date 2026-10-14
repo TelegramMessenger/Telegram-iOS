@@ -355,6 +355,23 @@ public final class WalletCardComponent: Component {
         private let stickerSquash = WalletStickerSpring(1, 420, 0.38)
         private var stickerYaw: Double { self.currentCardY + Double(self.stickerKickH.value) * .pi / 18 }
 
+        public static func makeShakeAnimation() -> CAAnimation {
+            let animation = CAKeyframeAnimation(keyPath: "position.x")
+            animation.values = [0.0, -8.0, 7.0, -5.0, 3.0, -1.5, 0.0].map { NSNumber(value: Double($0)) }
+            animation.keyTimes = [0.0, 0.14, 0.32, 0.5, 0.68, 0.84, 1.0].map { NSNumber(value: $0) }
+            animation.duration = 0.45
+            animation.isAdditive = true
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            return animation
+        }
+
+        public func shake() {
+            self.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            if self.balanceTransitionView.superview != nil && !self.balanceTransitionView.isDescendant(of: self) {
+                self.balanceTransitionView.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            }
+        }
+
         public func stickerImpact(at point: CGPoint, thrown: Bool) {
             guard !UIAccessibility.isReduceMotionEnabled else { return }
             let push: CGFloat = thrown ? 3.4 : 1.4
