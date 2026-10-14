@@ -37,29 +37,29 @@ private struct AccountSwitcherSheetModifier: ViewModifier {
                     .onEnded { _ in showActionSheet = true }
             )
             .confirmationDialog(
-                "Accounts",
+                L("Watch.Accounts.Title"),
                 isPresented: $showActionSheet,
                 titleVisibility: .hidden
             ) {
-                Button("Switch account…") {
+                Button(L("Watch.Accounts.Switch")) {
                     showAccountsList = true
                 }
                 if logoutAffordance == .allowed {
-                    Button("Log out current", role: .destructive) {
+                    Button(L("Watch.Accounts.LogOutCurrent"), role: .destructive) {
                         showLogoutConfirm = true
                     }
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(L("Common.Cancel"), role: .cancel) {}
             }
             .confirmationDialog(
-                "Log out?",
+                L("Settings.LogoutConfirmationTitle"),
                 isPresented: $showLogoutConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Log out", role: .destructive) {
+                Button(L("Settings.Logout"), role: .destructive) {
                     Task { await manager.removeActive() }
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(L("Common.Cancel"), role: .cancel) {}
             }
             .modifier(
                 AccountsListPresenter(

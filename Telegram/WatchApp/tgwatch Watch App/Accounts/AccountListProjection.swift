@@ -33,6 +33,6 @@ enum AccountListProjection {
         if let phone = account.phoneNumber, !phone.isEmpty {
             return "+\(phone)"
         }
-        return "New account"
+        return L("Watch.Accounts.NewAccount")
     }
 }

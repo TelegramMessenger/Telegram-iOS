@@ -14,29 +14,29 @@ func humanMessage(_ error: Swift.Error) -> String {
 /// passing the raw code through.
 func passwordSubmitErrorMessage(_ error: Swift.Error) -> String {
     guard let tdErr = error as? TDError else {
-        return "An error occurred"
+        return L("Watch.Error.Generic")
     }
     if tdErr.message == "PASSWORD_HASH_INVALID" {
-        return "Incorrect password"
+        return L("Watch.Password.Incorrect")
     }
     if let flood = floodWaitMessage(tdErr.message) {
         return flood
     }
-    return "An error occurred"
+    return L("Watch.Error.Generic")
 }
 
 private func humanMessageForTdLibCode(_ code: String) -> String {
     switch code {
     case "PHONE_NUMBER_INVALID":
-        return "That phone number doesn't look right."
+        return L("Watch.Error.InvalidPhone")
     case "PHONE_CODE_INVALID":
-        return "That code is wrong."
+        return L("Watch.Error.InvalidCode")
     case "PHONE_CODE_EXPIRED":
-        return "Code expired — request a new one."
+        return L("Watch.Error.CodeExpired")
     case "FIRSTNAME_INVALID":
-        return "That first name doesn't look right."
+        return L("Watch.Error.InvalidFirstName")
     case "LASTNAME_INVALID":
-        return "That last name doesn't look right."
+        return L("Watch.Error.InvalidLastName")
     default:
         return floodWaitMessage(code) ?? code
     }
@@ -48,7 +48,7 @@ private func floodWaitMessage(_ code: String) -> String? {
     guard code.hasPrefix("FLOOD_WAIT_") else { return nil }
     let suffix = code.dropFirst("FLOOD_WAIT_".count)
     if let seconds = Int(suffix), seconds > 0 {
-        return "Too many attempts. Wait \(seconds)s."
+        return L("Watch.Error.FloodWait", seconds)
     }
-    return "Too many attempts. Try again later."
+    return L("Login.CodeFloodError")
 }

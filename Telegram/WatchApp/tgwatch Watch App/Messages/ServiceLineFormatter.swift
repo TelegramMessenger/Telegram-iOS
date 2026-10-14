@@ -1,92 +1,167 @@
 import Foundation
 import TDShim
 
-/// Renders the actor token for a service message:
-/// - sender user matches `selfUserId` → "You"
+/// The actor of a service message, as named in its line.
+private enum ServiceActor {
+    /// Sender user matches `selfUserId`; `name` is the user's own first name.
+    case you(name: String?)
+    /// Sender user is in `userNames` (first name).
+    case named(String)
+    /// Unknown user or `messageSenderChat`.
+    case someone
+
+    /// The name substituted into a line's actor placeholder. Like the iOS
+    /// app, the current user is named too: the templates are written for a
+    /// third-person name, and "You" there breaks verb agreement in many
+    /// languages. Lines with a dedicated sentence for the current user pass
+    /// it as `you:` instead.
+    var name: String {
+        switch self {
+        case .you(let name): return name ?? L("DialogList.You")
+        case .named(let name): return name
+        case .someone: return L("Watch.Service.Someone")
+        }
+    }
+}
+
+/// Resolves the actor for a service message:
+/// - sender user matches `selfUserId` → `.you` (with the user's first name)
 /// - sender user is in `userNames` → first name
 /// - otherwise (unknown user or `messageSenderChat`) → "Someone"
 private func serviceActor(
     senderId: MessageSender,
     selfUserId: Int64?,
     userNames: [Int64: String]
-) -> String {
+) -> ServiceActor {
     if case .messageSenderUser(let u) = senderId {
-        if let selfId = selfUserId, u.userId == selfId { return "You" }
-        if let name = userNames[u.userId], !name.isEmpty { return name }
+        if let selfId = selfUserId, u.userId == selfId {
+            let name = userNames[selfId].flatMap { $0.isEmpty ? nil : $0 }
+            return .you(name: name)
+        }
+        if let name = userNames[u.userId], !name.isEmpty { return .named(name) }
     }
-    return "Someone"
+    return .someone
 }
 
-/// Prepends the actor token when `includeActor`, otherwise returns the action
-/// with no actor sentence prefix.
-private func withActor(_ action: String, actor: String, includeActor: Bool) -> String {
-    includeActor ? "\(actor) \(action)" : action
+/// Renders a service line from its localized templates.
+///
+/// - `key`: the sentence with the actor; its first placeholder is the actor's
+///   name, followed by `args`.
+/// - `noActor`: the same sentence without the actor (placeholders: `args`),
+///   used when `includeActor` is false. Lines that only occur in groups and
+///   channels (where the chat list always includes the actor) pass nil and
+///   keep the actor.
+/// - `you`: optional sentence for when the actor is the current user
+///   (placeholders: `args`).
+/// - `count`: when set, the templates are plural keys selected by `count`.
+private func serviceLine(
+    _ key: String,
+    noActor noActorKey: String?,
+    you youKey: String? = nil,
+    count: Int? = nil,
+    actor: ServiceActor,
+    includeActor: Bool,
+    _ args: CustomStringConvertible...
+) -> String {
+    return serviceLine(key, noActor: noActorKey, you: youKey, count: count,
+                       actor: actor, includeActor: includeActor, args: args)
+}
+
+private func serviceLine(
+    _ key: String,
+    noActor noActorKey: String?,
+    you youKey: String? = nil,
+    count: Int? = nil,
+    actor: ServiceActor,
+    includeActor: Bool,
+    args: [CustomStringConvertible]
+) -> String {
+    func lookup(_ key: String, _ args: [CustomStringConvertible]) -> String {
+        if let count {
+            return AppStrings.shared.plural(key, count: count, args)
+        }
+        return AppStrings.shared.string(key, args)
+    }
+    let line: String
+    if !includeActor, let noActorKey {
+        line = lookup(noActorKey, args)
+    } else if case .you = actor, let youKey {
+        line = lookup(youKey, args)
+    } else {
+        let withActor: [CustomStringConvertible] = [actor.name] + args
+        line = lookup(key, withActor)
+    }
+    // Some iOS templates carry a trailing space.
+    return line.trimmingCharacters(in: .whitespaces)
 }
 
 /// Bands the seconds value into a human label matching Telegram desktop.
 private func autoDeleteDuration(seconds: Int) -> String {
-    if seconds < 60 { return "\(seconds)s" }
-    if seconds < 3600 { return "\(seconds / 60) min" }
-    if seconds < 86400 { return "\(seconds / 3600) h" }
-    if seconds < 7 * 86400 {
-        let d = seconds / 86400
-        return d == 1 ? "1 day" : "\(d) days"
-    }
-    if seconds < 30 * 86400 {
-        let w = seconds / (7 * 86400)
-        return w == 1 ? "1 week" : "\(w) weeks"
-    }
-    let mo = seconds / (30 * 86400)
-    return mo == 1 ? "1 month" : "\(mo) months"
+    if seconds < 60 { return LPlural("MessageTimer.Seconds", seconds) }
+    if seconds < 3600 { return LPlural("MessageTimer.Minutes", seconds / 60) }
+    if seconds < 86400 { return LPlural("MessageTimer.Hours", seconds / 3600) }
+    if seconds < 7 * 86400 { return LPlural("MessageTimer.Days", seconds / 86400) }
+    if seconds < 30 * 86400 { return LPlural("MessageTimer.Weeks", seconds / (7 * 86400)) }
+    return LPlural("MessageTimer.Months", seconds / (30 * 86400))
 }
 
-/// "{m} m" under 1 km, else whole "{km} km".
+/// "{m} m" under 1 km, else whole "{km} km", in the UI locale's notation.
 private func distanceLabel(meters: Int) -> String {
-    if meters < 1000 { return "\(meters) m" }
-    return "\(meters / 1000) km"
+    let formatter = MeasurementFormatter()
+    formatter.locale = AppStrings.shared.locale
+    formatter.unitOptions = .providedUnit
+    formatter.unitStyle = .medium
+    if meters < 1000 {
+        return formatter.string(from: Measurement(value: Double(meters), unit: UnitLength.meters))
+    }
+    return formatter.string(from: Measurement(value: Double(meters / 1000), unit: UnitLength.kilometers))
 }
 
-/// "channel" when the chat is a broadcast channel; "group" otherwise (incl. nil).
-private func groupNoun(_ chatType: ChatType?) -> String {
-    if case .chatTypeSupergroup(let s) = chatType, s.isChannel { return "channel" }
-    return "group"
+/// True when the chat is a broadcast channel (false for groups, incl. nil).
+private func isChannel(_ chatType: ChatType?) -> Bool {
+    if case .chatTypeSupergroup(let s) = chatType, s.isChannel { return true }
+    return false
 }
 
-/// Renders the pinned-snippet phrase used in "{Actor} pinned ...". Returns
-/// "«{snippet}»" for text content (with truncation to 24 characters +
-/// ellipsis), "a {type}" for non-text recognized content, or "a message" for
-/// anything else (including service content where messageBody returns "").
-private func pinnedSnippetPhrase(target: CachedMessage?) -> String {
-    guard let target else { return "a message" }
+/// Renders the "{Actor} pinned ..." line: "«{snippet}»" for text content (with
+/// truncation to 24 characters + ellipsis), "a {type}" for non-text recognized
+/// content, or "a message" for anything else (including service content where
+/// messageBody returns "").
+private func pinnedLine(target: CachedMessage?, actor: ServiceActor, includeActor: Bool) -> String {
+    func line(_ key: String, _ noActorKey: String, _ args: CustomStringConvertible...) -> String {
+        serviceLine(key, noActor: noActorKey, actor: actor, includeActor: includeActor, args: args)
+    }
+    let pinnedMessage = { line("Watch.Service.PinnedMessage", "Watch.ServiceNoActor.PinnedMessage") }
+    guard let target else { return pinnedMessage() }
     switch target.content {
     case .messageText:
         let body = messageBody(target.content)
-        if body.isEmpty { return "a message" }
+        if body.isEmpty { return pinnedMessage() }
         if body.count <= 24 {
-            return "«\(body)»"
+            return line("Watch.Service.PinnedText", "Watch.ServiceNoActor.PinnedText", body)
         }
         // Character (extended-grapheme-cluster) prefix — safer than UTF-16
         // truncation for non-ASCII text, and the visual length the reader
         // cares about on a 46mm watch.
         let truncated = body.prefix(24)
-        return "«\(truncated)…»"
-    case .messagePhoto:    return "a photo"
-    case .messageVideo:    return "a video"
-    case .messageVideoNote: return "a video message"
-    case .messageSticker:  return "a sticker"
-    case .messageVoiceNote: return "a voice message"
-    case .messageAudio:    return "a music file"
-    case .messageDocument: return "a document"
-    case .messageLocation: return "a location"
-    case .messageVenue:    return "a venue"
-    case .messageContact:  return "a contact"
-    case .messagePoll:     return "a poll"
-    default:               return "a message"
+        return line("Watch.Service.PinnedText", "Watch.ServiceNoActor.PinnedText", "\(truncated)…")
+    case .messagePhoto:     return line("Notification.PinnedPhotoMessage", "Watch.ServiceNoActor.PinnedPhoto")
+    case .messageVideo:     return line("Notification.PinnedVideoMessage", "Watch.ServiceNoActor.PinnedVideo")
+    case .messageVideoNote: return line("Notification.PinnedRoundMessage", "Watch.ServiceNoActor.PinnedVideoMessage")
+    case .messageSticker:   return line("Notification.PinnedStickerMessage", "Watch.ServiceNoActor.PinnedSticker")
+    case .messageVoiceNote: return line("Notification.PinnedAudioMessage", "Watch.ServiceNoActor.PinnedVoiceMessage")
+    case .messageAudio:     return line("Watch.Service.PinnedMusic", "Watch.ServiceNoActor.PinnedMusic")
+    case .messageDocument:  return line("Watch.Service.PinnedDocument", "Watch.ServiceNoActor.PinnedDocument")
+    case .messageLocation:  return line("Watch.Service.PinnedLocation", "Watch.ServiceNoActor.PinnedLocation")
+    case .messageVenue:     return line("Watch.Service.PinnedVenue", "Watch.ServiceNoActor.PinnedVenue")
+    case .messageContact:   return line("Notification.PinnedContactMessage", "Watch.ServiceNoActor.PinnedContact")
+    case .messagePoll:      return line("Notification.PinnedPollMessage", "Watch.ServiceNoActor.PinnedPoll")
+    default:                return pinnedMessage()
     }
 }
 
-/// Resolves a list of user-ids into a single comma-joined string used as the
-/// `{Targets}` token in service lines.
+/// Resolves a list of user-ids into a single string used as the `{Targets}`
+/// token in service lines.
 ///
 /// Rules (matches the spec):
 /// - empty list → caller handles via a different fallback
@@ -100,18 +175,17 @@ private func targetList(_ ids: [Int64], userNames: [Int64: String]) -> String {
         return n
     }
     if known.isEmpty {
-        return ids.count == 1 ? "1 member" : "\(ids.count) members"
+        return LPlural("Conversation.StatusMembers", ids.count)
     }
     if ids.count == 1 {
         return known[0]
     }
     if ids.count == 2, known.count == 2 {
-        return "\(known[0]) and \(known[1])"
+        return L("Watch.Service.TargetsPair", known[0], known[1])
     }
     // Either >=3 ids, or mix of known + unknown.
     let others = ids.count - 1
-    let suffix = others == 1 ? "other" : "others"
-    return "\(known[0]) and \(others) \(suffix)"
+    return LPlural("Watch.Service.TargetsMore", others, known[0], others)
 }
 
 /// Renders the centered-italic line for a service message, or `nil` for content
@@ -145,10 +219,11 @@ func serviceLineText(
 
     switch msg.content {
     case .messageContactRegistered:
-        return withActor("joined Telegram", actor: actor, includeActor: includeActor)
+        return serviceLine("Notification.Joined", noActor: "Watch.Notification.Joined",
+                           actor: actor, includeActor: includeActor)
 
     case .messageChatJoinByLink, .messageChatJoinByRequest:
-        return withActor("joined the chat", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.JoinedChat", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageChatAddMembers(let m):
         let senderUserId: Int64? = {
@@ -156,14 +231,14 @@ func serviceLineText(
             return nil
         }()
         if m.memberUserIds.isEmpty {
-            return withActor("added members", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.AddedMembers", noActor: nil, actor: actor, includeActor: includeActor)
         }
         if let s = senderUserId, m.memberUserIds == [s] {
             // Self-add collapses to a join line.
-            return withActor("joined the chat", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.JoinedChat", noActor: nil, actor: actor, includeActor: includeActor)
         }
-        return withActor("added \(targetList(m.memberUserIds, userNames: userNames))",
-                         actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.Added", noActor: nil, actor: actor, includeActor: includeActor,
+                           targetList(m.memberUserIds, userNames: userNames))
 
     case .messageChatDeleteMember(let m):
         let senderUserId: Int64? = {
@@ -171,154 +246,185 @@ func serviceLineText(
             return nil
         }()
         if let s = senderUserId, m.userId == s {
-            return withActor("left the chat", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.LeftChat", noActor: nil, actor: actor, includeActor: includeActor)
         }
         if let name = userNames[m.userId], !name.isEmpty {
-            return withActor("removed \(name)", actor: actor, includeActor: includeActor)
+            return serviceLine("Notification.Kicked", noActor: nil, actor: actor, includeActor: includeActor, name)
         }
-        return withActor("removed a member", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.RemovedMember", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageChatChangeTitle(let m):
-        return withActor("changed group name to \"\(m.title)\"", actor: actor, includeActor: includeActor)
+        return serviceLine("Notification.ChangedGroupName", noActor: nil, actor: actor, includeActor: includeActor,
+                           m.title)
 
     case .messageChatChangePhoto:
-        return withActor("changed group photo", actor: actor, includeActor: includeActor)
+        return serviceLine("Notification.ChangedGroupPhoto", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageChatDeletePhoto:
-        return withActor("removed group photo", actor: actor, includeActor: includeActor)
+        return serviceLine("Notification.RemovedGroupPhoto", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messagePinMessage(let m):
         let target = messageCache[m.messageId]
-        let phrase = pinnedSnippetPhrase(target: target)
-        return withActor("pinned \(phrase)", actor: actor, includeActor: includeActor)
+        return pinnedLine(target: target, actor: actor, includeActor: includeActor)
 
     case .messageVideoChatScheduled:
-        return withActor("scheduled a video chat", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.VideoChatScheduled", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageVideoChatStarted:
-        return withActor("started a video chat", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.VideoChatStarted", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageVideoChatEnded(let m):
         // Actor intentionally dropped — TDLib emits one but stock Telegram clients
         // render this without one. includeActor is ignored.
         if m.duration >= 60 {
             let mins = m.duration / 60
-            return "Video chat ended (\(mins) min)"
+            return L("Watch.Service.VideoChatEndedDuration", mins)
         }
-        return "Video chat ended"
+        return L("Watch.Service.VideoChatEnded")
 
     case .messageInviteVideoChatParticipants(let m):
         if m.userIds.isEmpty {
-            return withActor("invited members to the video chat", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.VideoChatInvitedMembers", noActor: nil,
+                               actor: actor, includeActor: includeActor)
         }
-        return withActor("invited \(targetList(m.userIds, userNames: userNames)) to the video chat",
-                         actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.VideoChatInvited", noActor: nil, actor: actor, includeActor: includeActor,
+                           targetList(m.userIds, userNames: userNames))
 
     case .messageScreenshotTaken:
-        return withActor("took a screenshot", actor: actor, includeActor: includeActor)
+        return serviceLine("Notification.SecretChatMessageScreenshot", noActor: "Watch.ServiceNoActor.ScreenshotTaken",
+                           you: "Notification.SecretChatMessageScreenshotSelf",
+                           actor: actor, includeActor: includeActor)
 
     case .messageChatSetMessageAutoDeleteTime(let m):
         if m.messageAutoDeleteTime == 0 {
-            return withActor("disabled auto-delete", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.AutoDeleteDisabled", noActor: "Watch.ServiceNoActor.AutoDeleteDisabled",
+                               actor: actor, includeActor: includeActor)
         }
         let label = autoDeleteDuration(seconds: m.messageAutoDeleteTime)
-        return withActor("set messages to auto-delete after \(label)",
-                         actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.AutoDeleteSet", noActor: "Watch.ServiceNoActor.AutoDeleteSet",
+                           actor: actor, includeActor: includeActor, label)
 
     case .messageCustomServiceAction(let m):
         return m.text
 
     case .messageBasicGroupChatCreate:
         // Chat-lifecycle event — rendered without an actor (Telegram convention).
-        return "Group created"
+        return L("Notification.CreatedGroup")
 
     case .messageSupergroupChatCreate:
         // Both channels and supergroups carry this content type; the chat type
         // is the only signal for which word to use.
-        if case .chatTypeSupergroup(let s) = chatType, s.isChannel {
-            return "Channel created"
+        if isChannel(chatType) {
+            return L("Notification.CreatedChannel")
         }
-        return "Group created"
+        return L("Notification.CreatedGroup")
 
     case .messageForumTopicCreated(let m):
-        return withActor("created topic «\(m.name)»", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.TopicCreated", noActor: nil, actor: actor, includeActor: includeActor,
+                           m.name)
 
     case .messageForumTopicEdited(let m):
         if !m.name.isEmpty {
-            return withActor("changed the topic name to «\(m.name)»", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.TopicRenamed", noActor: nil, actor: actor, includeActor: includeActor,
+                               m.name)
         }
         if m.editIconCustomEmojiId {
-            return withActor("changed the topic icon", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.TopicIconChanged", noActor: nil, actor: actor, includeActor: includeActor)
         }
-        return withActor("edited the topic", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.TopicEdited", noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageForumTopicIsClosedToggled(let m):
-        return withActor(m.isClosed ? "closed the topic" : "reopened the topic",
-                         actor: actor, includeActor: includeActor)
+        return serviceLine(m.isClosed ? "Watch.Service.TopicClosed" : "Watch.Service.TopicReopened",
+                           noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageForumTopicIsHiddenToggled(let m):
-        return withActor(m.isHidden ? "hid the topic" : "unhid the topic",
-                         actor: actor, includeActor: includeActor)
+        return serviceLine(m.isHidden ? "Notification.ForumTopicHiddenAuthor" : "Notification.ForumTopicUnhiddenAuthor",
+                           noActor: nil, actor: actor, includeActor: includeActor)
 
     case .messageChatSetTheme(let m):
         guard let theme = m.theme else {
-            return withActor("disabled the chat theme", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.ThemeDisabled", noActor: "Watch.ServiceNoActor.ThemeDisabled",
+                               actor: actor, includeActor: includeActor)
         }
         if case .chatThemeEmoji(let e) = theme {
-            return withActor("changed the chat theme to \(e.name)", actor: actor, includeActor: includeActor)
+            return serviceLine("Watch.Service.ThemeChangedTo", noActor: "Watch.ServiceNoActor.ThemeChangedTo",
+                               actor: actor, includeActor: includeActor, e.name)
         }
-        return withActor("changed the chat theme", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.ThemeChanged", noActor: "Watch.ServiceNoActor.ThemeChanged",
+                           actor: actor, includeActor: includeActor)
 
     case .messageChatSetBackground:
-        return withActor("changed the chat background", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.BackgroundChanged", noActor: "Watch.ServiceNoActor.BackgroundChanged",
+                           actor: actor, includeActor: includeActor)
 
     case .messageChatBoost(let m):
-        let noun = groupNoun(chatType)
-        if m.boostCount == 1 {
-            return withActor("boosted the \(noun)", actor: actor, includeActor: includeActor)
+        if isChannel(chatType) {
+            if m.boostCount == 1 {
+                return serviceLine("Watch.Service.BoostedChannel", noActor: nil,
+                                   actor: actor, includeActor: includeActor)
+            }
+            return serviceLine("Watch.Service.BoostedChannelTimes", noActor: nil,
+                               actor: actor, includeActor: includeActor,
+                               LPlural("Notification.Boost.Times", m.boostCount))
         }
-        return withActor("boosted the \(noun) \(m.boostCount) times", actor: actor, includeActor: includeActor)
+        if m.boostCount == 1 {
+            return serviceLine("Notification.Boost.Single", noActor: nil, you: "Notification.Boost.SingleYou",
+                               actor: actor, includeActor: includeActor)
+        }
+        return serviceLine("Notification.Boost.Multiple", noActor: nil, you: "Notification.Boost.MultipleYou",
+                           actor: actor, includeActor: includeActor,
+                           LPlural("Notification.Boost.Times", m.boostCount))
 
     case .messageChatHasProtectedContentToggled(let m):
-        return withActor(m.newHasProtectedContent ? "enabled content protection" : "disabled content protection",
-                         actor: actor, includeActor: includeActor)
+        if m.newHasProtectedContent {
+            return serviceLine("Watch.Service.ContentProtectionEnabled",
+                               noActor: "Watch.ServiceNoActor.ContentProtectionEnabled",
+                               actor: actor, includeActor: includeActor)
+        }
+        return serviceLine("Watch.Service.ContentProtectionDisabled",
+                           noActor: "Watch.ServiceNoActor.ContentProtectionDisabled",
+                           actor: actor, includeActor: includeActor)
 
     case .messageChatUpgradeTo, .messageChatUpgradeFrom:
         // Chat-lifecycle event — actor-less (Telegram convention), ignores includeActor.
-        return "Group upgraded to a supergroup"
+        return L("Watch.Service.GroupUpgraded")
 
     case .messageChatShared:
-        return withActor("shared a chat", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.SharedChat", noActor: "Watch.ServiceNoActor.SharedChat",
+                           actor: actor, includeActor: includeActor)
 
     case .messageUsersShared(let m):
-        let action = m.users.count == 1 ? "shared a user" : "shared \(m.users.count) users"
-        return withActor(action, actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.SharedUsers", noActor: "Watch.ServiceNoActor.SharedUsers",
+                           count: m.users.count, actor: actor, includeActor: includeActor, m.users.count)
 
     case .messageBotWriteAccessAllowed:
-        return withActor("allowed this bot to message you", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.BotWriteAccessAllowed", noActor: "Watch.ServiceNoActor.BotWriteAccessAllowed",
+                           actor: actor, includeActor: includeActor)
 
     case .messageWebAppDataSent:
-        return withActor("sent data to the bot", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.WebAppDataSent", noActor: "Watch.ServiceNoActor.WebAppDataSent",
+                           actor: actor, includeActor: includeActor)
 
     case .messageSuggestProfilePhoto:
-        return withActor("suggested a new profile photo", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.SuggestedProfilePhoto", noActor: "Watch.ServiceNoActor.SuggestedProfilePhoto",
+                           actor: actor, includeActor: includeActor)
 
     case .messageGameScore(let m):
-        return withActor("scored \(m.score)", actor: actor, includeActor: includeActor)
+        return serviceLine("Watch.Service.GameScore", noActor: "Notification.GameScoreSimple",
+                           count: m.score, actor: actor, includeActor: includeActor, m.score)
 
     case .messageProximityAlertTriggered(let m):
         // Actor-less: the line names traveler + watcher, not the message sender.
         let traveler = serviceActor(senderId: m.travelerId, selfUserId: selfUserId, userNames: userNames)
         let watcher = serviceActor(senderId: m.watcherId, selfUserId: selfUserId, userNames: userNames)
-        return "\(traveler) is within \(distanceLabel(meters: m.distance)) of \(watcher)"
+        return L("Watch.Service.ProximityAlert", traveler.name, distanceLabel(meters: m.distance), watcher.name)
 
     case .messageGiveawayCreated(let m):
         // Actor-less — giveaways are posted by channels.
-        return m.starCount > 0 ? "Stars giveaway started" : "Giveaway started"
+        return m.starCount > 0 ? L("Watch.Service.StarsGiveawayStarted") : L("Watch.Service.GiveawayStarted")
 
     case .messageGiveawayCompleted(let m):
-        let winners = m.winnerCount == 1 ? "1 winner" : "\(m.winnerCount) winners"
-        return "Giveaway ended — \(winners)"
+        return LPlural("Watch.Service.GiveawayEnded", m.winnerCount)
 
     default:
         return nil

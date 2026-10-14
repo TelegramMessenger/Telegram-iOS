@@ -60,7 +60,7 @@ final class LocationSendController {
             let coord = try await provider.requestLocation()
             state = .ready(latitude: coord.latitude, longitude: coord.longitude)
         } catch {
-            state = .failed("Couldn't get your location. Try again.")
+            state = .failed(L("Watch.Location.Failed"))
         }
     }
 }

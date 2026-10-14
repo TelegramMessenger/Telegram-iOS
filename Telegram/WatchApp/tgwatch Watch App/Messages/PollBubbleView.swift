@@ -16,9 +16,9 @@ struct PollBubbleView: View {
     private var style: BubbleStyle { .resolve(isOutgoing: isOutgoing) }
 
     private var typeLabel: String {
-        if poll.isClosed { return "Final results" }
-        if poll.isQuiz { return "Quiz" }
-        return poll.isAnonymous ? "Anonymous Poll" : "Poll"
+        if poll.isClosed { return L("MessagePoll.LabelClosed") }
+        if poll.isQuiz { return L("MessagePoll.LabelQuiz") }
+        return poll.isAnonymous ? L("MessagePoll.LabelAnonymous") : L("Watch.Message.Poll")
     }
 
     private var canVote: Bool {
@@ -29,8 +29,8 @@ struct PollBubbleView: View {
 
     private var voterCountLabel: String {
         poll.totalVoterCount == 0
-            ? "No votes yet"
-            : "\(poll.totalVoterCount) voter\(poll.totalVoterCount == 1 ? "" : "s")"
+            ? L("MessagePoll.NoVotes")
+            : LPlural("MessagePoll.VotedCount", Int(poll.totalVoterCount))
     }
 
     private var secondaryColor: Color { style.secondary }
@@ -40,7 +40,7 @@ struct PollBubbleView: View {
             if let header = replyHeader {
                 ReplyHeaderView(header: header, style: BubbleStyle.resolve(isOutgoing: isOutgoing))
             }
-            Text(typeLabel.uppercased())
+            Text(typeLabel.uppercased(with: AppStrings.shared.locale))
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(secondaryColor)
             Text(poll.question)
@@ -57,7 +57,7 @@ struct PollBubbleView: View {
             }
             if canVote {
                 Button(action: onVote) {
-                    Text("Vote").font(.caption2).bold().frame(maxWidth: .infinity)
+                    Text(L("MessagePoll.SubmitVote")).font(.caption2).bold().frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.mini)

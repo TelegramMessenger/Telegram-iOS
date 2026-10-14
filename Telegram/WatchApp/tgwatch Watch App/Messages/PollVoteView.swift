@@ -41,7 +41,7 @@ struct PollVoteView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if poll.allowsMultipleAnswers && !revealed {
-                    Button("Vote") {
+                    Button(L("MessagePoll.SubmitVote")) {
                         guard !submitting else { return }
                         Task { _ = await cast(Array(selection).sorted()) }
                     }
@@ -49,7 +49,7 @@ struct PollVoteView: View {
                     .disabled(selection.isEmpty || submitting)
                 }
                 if revealed {
-                    Button("Done") { dismiss() }.buttonStyle(.bordered)
+                    Button(L("Common.Done")) { dismiss() }.buttonStyle(.bordered)
                 }
             }
             .padding()
