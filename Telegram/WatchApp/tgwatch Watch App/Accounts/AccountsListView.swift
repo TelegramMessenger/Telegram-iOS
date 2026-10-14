@@ -30,7 +30,7 @@ struct AccountsListView: View {
             }
             Section {
                 HStack {
-                    Text("+ Add account")
+                    Text("+ \(L("Settings.AddAccount"))")
                     Spacer()
                 }
                 .contentShape(Rectangle())
@@ -44,33 +44,33 @@ struct AccountsListView: View {
                 .accessibilityIdentifier("addAccountButton")
             }
         }
-        .navigationTitle("Accounts")
+        .navigationTitle(L("Watch.Accounts.Title"))
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
-            "Choose server",
+            L("Watch.Accounts.ChooseServer"),
             isPresented: $showAddSheet,
             titleVisibility: .visible
         ) {
-            Button("Production") {
+            Button(L("Watch.Accounts.ServerProduction")) {
                 Task {
                     await manager.addAccount(useTestDc: false)
                     dismiss()
                 }
             }
-            Button("Test (developers)") {
+            Button(L("Watch.Accounts.ServerTest")) {
                 Task {
                     await manager.addAccount(useTestDc: true)
                     dismiss()
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L("Common.Cancel"), role: .cancel) {}
         }
         .confirmationDialog(
-            "Remove this account?",
+            L("Watch.Accounts.RemoveConfirmation"),
             isPresented: removalBinding,
             titleVisibility: .visible
         ) {
-            Button("Remove", role: .destructive) {
+            Button(L("Settings.RemoveConfirmation"), role: .destructive) {
                 if let id = pendingRemoval {
                     Task {
                         if id == manager.activeAccountId {
@@ -82,7 +82,7 @@ struct AccountsListView: View {
                 }
                 pendingRemoval = nil
             }
-            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+            Button(L("Common.Cancel"), role: .cancel) { pendingRemoval = nil }
         }
     }
 
@@ -118,7 +118,7 @@ struct AccountsListView: View {
             }
             Spacer()
             if row.isActive {
-                Text("active")
+                Text(L("Watch.Accounts.Active"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

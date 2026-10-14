@@ -119,7 +119,7 @@ struct VideoNotePlayerView: View {
                     .font(.caption)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                Button("Retry") {
+                Button(L("Watch.Common.Retry")) {
                     phase = .preparing(progress: 0)
                     store.requestFileDownload(fileId: note.videoFileId, priority: 2)
                 }
@@ -153,7 +153,7 @@ struct VideoNotePlayerView: View {
             statusObserver = item.observe(\.status, options: [.new]) { item, _ in
                 if item.status == .failed {
                     Task { @MainActor in
-                        phase = .failed("Could not play video")
+                        phase = .failed(L("Watch.Video.PlaybackFailed"))
                     }
                 }
             }

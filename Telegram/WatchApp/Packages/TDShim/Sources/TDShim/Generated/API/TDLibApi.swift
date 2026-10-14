@@ -707,6 +707,62 @@ public class TDLibApi {
         return try await self.run(query: query)
     }
 
+    /// Returns strings from a language pack in the current localization target by their keys. Can be called before authorization
+    /// - Parameter keys: Language pack keys of the strings to be returned; leave empty to request all available strings
+    /// - Parameter languagePackId: Language pack identifier of the strings to be returned
+    /// - Returns: Strings from a language pack in the current localization target by their keys
+    public final func getLanguagePackStrings(
+        keys: [String]?,
+        languagePackId: String?,
+        completion: @escaping (Result<LanguagePackStrings, Swift.Error>) -> Void
+    ) throws {
+        let query = GetLanguagePackStrings(
+            keys: keys,
+            languagePackId: languagePackId
+        )
+        self.run(query: query, completion: completion)
+    }
+
+    /// Returns strings from a language pack in the current localization target by their keys. Can be called before authorization
+    /// - Parameter keys: Language pack keys of the strings to be returned; leave empty to request all available strings
+    /// - Parameter languagePackId: Language pack identifier of the strings to be returned
+    /// - Returns: Strings from a language pack in the current localization target by their keys
+    @available(iOS 13.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
+    public final func getLanguagePackStrings(
+        keys: [String]?,
+        languagePackId: String?
+    ) async throws -> LanguagePackStrings {
+        let query = GetLanguagePackStrings(
+            keys: keys,
+            languagePackId: languagePackId
+        )
+        return try await self.run(query: query)
+    }
+
+    /// Returns information about the current localization target. This is an offline method if only_local is true. Can be called before authorization
+    /// - Parameter onlyLocal: Pass true to get only locally available information without sending network requests
+    /// - Returns: Information about the current localization target
+    public final func getLocalizationTargetInfo(
+        onlyLocal: Bool?,
+        completion: @escaping (Result<LocalizationTargetInfo, Swift.Error>) -> Void
+    ) throws {
+        let query = GetLocalizationTargetInfo(
+            onlyLocal: onlyLocal
+        )
+        self.run(query: query, completion: completion)
+    }
+
+    /// Returns information about the current localization target. This is an offline method if only_local is true. Can be called before authorization
+    /// - Parameter onlyLocal: Pass true to get only locally available information without sending network requests
+    /// - Returns: Information about the current localization target
+    @available(iOS 13.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
+    public final func getLocalizationTargetInfo(onlyLocal: Bool?) async throws -> LocalizationTargetInfo {
+        let query = GetLocalizationTargetInfo(
+            onlyLocal: onlyLocal
+        )
+        return try await self.run(query: query)
+    }
+
     /// Returns the value of an option by its name. (Check the list of available options on https://core.telegram.org/tdlib/options.) Can be called before authorization. Can be called synchronously for options "version" and "commit_hash"
     /// - Parameter name: The name of the option
     /// - Returns: The value of an option by its name

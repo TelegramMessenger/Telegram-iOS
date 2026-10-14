@@ -82,7 +82,7 @@ private func isSavedMessages(chat: CachedChat, selfUserId: Int64?) -> Bool {
 /// the title as the user's own first name, but Telegram clients universally relabel it.
 private func displayTitle(for chat: CachedChat, selfUserId: Int64?) -> String {
     if isSavedMessages(chat: chat, selfUserId: selfUserId) {
-        return "Saved Messages"
+        return L("DialogList.SavedMessages")
     }
     return chat.title
 }

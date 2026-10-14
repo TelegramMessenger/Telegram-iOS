@@ -34,7 +34,7 @@ struct AccountBootstrapContent: View {
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("accountBootstrapError")
-                Text("Try again")
+                Text(L("Watch.Common.TryAgain"))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(Color.gray.opacity(0.25), in: Capsule())
@@ -44,7 +44,7 @@ struct AccountBootstrapContent: View {
             }
             .padding()
         } else {
-            LoadingView(label: "Preparing…")
+            LoadingView(label: L("Watch.Accounts.Preparing"))
         }
     }
 }

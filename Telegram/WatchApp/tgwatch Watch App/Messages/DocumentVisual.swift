@@ -11,8 +11,8 @@ struct DocumentVisual: Equatable, Hashable {
 
 /// Human-readable byte count, e.g. "50 MB".
 func formatFileSize(_ bytes: Int64) -> String {
-    let f = ByteCountFormatter()
-    f.countStyle = .file
-    f.allowsNonnumericFormatting = false
-    return f.string(fromByteCount: bytes)
+    return bytes.formatted(
+        .byteCount(style: .file, spellsOutZero: false)
+            .locale(AppStrings.shared.locale)
+    )
 }

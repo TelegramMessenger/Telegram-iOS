@@ -80,7 +80,7 @@ struct LocationBubbleView: View {
                     .padding(.horizontal, 8)
             }
             if location.isLive {
-                Text("Live Location")
+                Text(L("Message.LiveLocation"))
                     .font(.caption2).bold()
                     .padding(.horizontal, 8)
                 liveCaption.padding(.horizontal, 8)
