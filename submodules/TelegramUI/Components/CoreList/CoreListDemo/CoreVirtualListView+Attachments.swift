@@ -146,6 +146,13 @@ extension CoreVirtualListView {
 
         let loadedRange = window.startIndex..<(window.endIndex + 1)
         let pending = AttachmentRuns.pendingRuns(in: items, loadedRange: loadedRange)
+        // Nothing to assign and nothing to depart. Returning here also skips `assignSerials`' identity map,
+        // which is built over the WHOLE collection on every window change: a list without attachments (the
+        // News feeds) paid for it on every row a scroll loaded, more the further its pages reached.
+        if pending.isEmpty && (sourceWindow?.attachments ?? []).isEmpty {
+            window.attachments = []
+            return
+        }
 
         let prior: [AttachmentRuns.PriorRun] = (sourceWindow?.attachments ?? []).map { attachment in
             AttachmentRuns.PriorRun(

@@ -60,14 +60,27 @@ public struct ListViewScrollToItem {
     public let curve: ListViewAnimationCurve
     public let directionHint: ListViewScrollToItemDirectionHint
     public let displayLink: Bool
-    
-    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false) {
+    /// Asks the list to keep the target where this scroll lands it until the next touch or scroll.
+    /// Honoured by the chat's CoreList backend only; `ListViewImpl` ignores it.
+    public let holdsPosition: Bool
+    /// Positions the target's own content: `.top` and `.bottom` leave out the space it reserves for a header
+    /// attached to it (the chat's date header), so the content stays put when that header moves to another
+    /// item. Honoured by the chat's CoreList backend only; `ListViewImpl` ignores it.
+    public let excludesAttachedHeaderSpace: Bool
+
+    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false, holdsPosition: Bool = false, excludesAttachedHeaderSpace: Bool = false) {
         self.index = index
         self.position = position
         self.animated = animated
         self.curve = curve
         self.directionHint = directionHint
         self.displayLink = displayLink
+        self.holdsPosition = holdsPosition
+        self.excludesAttachedHeaderSpace = excludesAttachedHeaderSpace
+    }
+
+    public func withHoldsPosition(_ holdsPosition: Bool) -> ListViewScrollToItem {
+        return ListViewScrollToItem(index: self.index, position: self.position, animated: self.animated, curve: self.curve, directionHint: self.directionHint, displayLink: self.displayLink, holdsPosition: holdsPosition, excludesAttachedHeaderSpace: self.excludesAttachedHeaderSpace)
     }
 }
 

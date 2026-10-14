@@ -1134,6 +1134,8 @@ private final class ItemComponent: Component {
                         animationIcon = ComponentView()
                         self.animationIcon = animationIcon
                     }
+                    
+                    let animationScale: CGFloat = tabBarItem.animationScale == 0.0 ? 1.0 : tabBarItem.animationScale;
 
                     let iconSize = animationIcon.update(
                         transition: iconTransition,
@@ -1144,12 +1146,12 @@ private final class ItemComponent: Component {
                             color: iconTintColor,
                             placeholderColor: nil,
                             startingPosition: .end,
-                            size: CGSize(width: 48.0, height: 48.0),
+                            size: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale)),
                             loop: false,
                             lottieSettings: .noAccountFallback
                         )),
                         environment: {},
-                        containerSize: CGSize(width: 48.0, height: 48.0)
+                        containerSize: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale))
                     )
                     let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
                     if let animationIconView = animationIcon.view {
@@ -1178,11 +1180,12 @@ private final class ItemComponent: Component {
                         self.imageIcon = imageIcon
                     }
 
+                    let iconImage = component.isSelected ? tabBarItem.selectedImage : tabBarItem.image
                     let iconSize = imageIcon.update(
                         transition: iconTransition,
                         component: AnyComponent(Image(
-                            image: component.isSelected ? tabBarItem.selectedImage : tabBarItem.image,
-                            tintColor: nil,
+                            image: iconImage,
+                            tintColor: iconImage?.renderingMode == .alwaysTemplate ? iconTintColor : nil,
                             contentMode: .center
                         )),
                         environment: {},

@@ -55,7 +55,7 @@ public struct MessageHistoryInitialSearchSubject: Equatable {
 
 public enum ChatHistoryLocation: Equatable {
     case Initial(count: Int)
-    case InitialSearch(subject: MessageHistoryInitialSearchSubject, count: Int, highlight: Bool, setupReply: Bool)
+    case InitialSearch(subject: MessageHistoryInitialSearchSubject, count: Int, highlight: Bool, setupReply: Bool, cachedAnchor: Bool = false)
     case Navigation(index: EngineMessageHistoryAnchorIndex, anchorIndex: EngineMessageHistoryAnchorIndex, count: Int, highlight: Bool)
     case Scroll(subject: MessageHistoryScrollToSubject, anchorIndex: EngineMessageHistoryAnchorIndex, sourceIndex: EngineMessageHistoryAnchorIndex, scrollPosition: ListViewScrollPosition, animated: Bool, highlight: Bool, setupReply: Bool)
 }

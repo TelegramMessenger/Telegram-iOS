@@ -13,6 +13,8 @@ final class NewsFeedSupportTests: XCTestCase {
     // MARK: compact time
 
     func testCompactTimeThresholds() {
+        XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000), .now)
+        XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1001), .seconds(1))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1030), .seconds(30))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000 + 6 * 60), .minutes(6))
         XCTAssertEqual(newsCompactTime(timestamp: 1000, now: 1000 + 60 * 60), .hours(1))
@@ -21,7 +23,7 @@ final class NewsFeedSupportTests: XCTestCase {
     }
 
     func testCompactTimeClampsAFutureTimestamp() {
-        XCTAssertEqual(newsCompactTime(timestamp: 2000, now: 1000), .seconds(0))
+        XCTAssertEqual(newsCompactTime(timestamp: 2000, now: 1000), .now)
     }
 
     // MARK: rows
@@ -59,6 +61,17 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertTrue(newsWindowIsResolved(entries: [], loadedIds: []))
     }
 
+    // A refresh puts a batch on top, and the first emission after it still carries the previous messages:
+    // rendering it showed the batch's interests block without the posts above it, then the posts pushed it away.
+    func testForYouIsResolvedOnlyByItsOwnMessages() {
+        let old: [EngineForYouItem] = [.post(self.entry(1, date: 100)), .interests]
+        let refreshed: [EngineForYouItem] = [.post(self.entry(3, date: 300)), .interests, .post(self.entry(1, date: 100))]
+        XCTAssertEqual(newsForYouMessageIds(refreshed), self.entry(3, date: 300).messageIds + self.entry(1, date: 100).messageIds)
+        XCTAssertFalse(newsForYouIsResolved(items: refreshed, loadedIds: newsForYouMessageIds(old)))
+        XCTAssertTrue(newsForYouIsResolved(items: refreshed, loadedIds: newsForYouMessageIds(refreshed)))
+        XCTAssertTrue(newsForYouIsResolved(items: [.interests], loadedIds: []))
+    }
+
     func testResolvedEntriesDropUnavailableMessages() {
         let album = EngineFeedEntry(position: EngineFeedPosition(date: 300, peerId: self.channel, id: 11), messageIds: [EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 10), EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 11)], groupingKey: 5)
         let gone = self.entry(1, date: 100)
@@ -67,19 +80,36 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(resolved[0].messageIds, [album.messageIds[1]])
     }
 
-    // MARK: post text
+    // MARK: swiping between the tabs
 
-    // A block quote lays the text out in blocks, and the 3-line limit does not hold across them: the row ran on
-    // with overlapping lines. Inline formatting stays.
-    func testPostPreviewDropsBlockFormatting() {
-        let entities = [
-            MessageTextEntity(range: 0 ..< 4, type: .Bold),
-            MessageTextEntity(range: 5 ..< 40, type: .BlockQuote(isCollapsed: false)),
-            MessageTextEntity(range: 41 ..< 60, type: .Pre(language: nil)),
-            MessageTextEntity(range: 61 ..< 65, type: .Italic),
-            MessageTextEntity(range: 66 ..< 68, type: .CustomEmoji(stickerPack: nil, fileId: 1)),
-        ]
-        XCTAssertEqual(newsPostPreviewEntities(entities), [entities[0], entities[3], entities[4]])
+    func testPagerFlickGoesItsOwnWay() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -20.0, velocity: -300.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: 20.0, velocity: 300.0, width: 400.0), 0)
+        // A flick back cancels a long drag.
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -300.0, velocity: 300.0, width: 400.0), 0)
+    }
+
+    // Peer Info's version of this rule sends a slow release past half the width back the way it came.
+    func testPagerSlowReleaseGoesOnPastHalfTheWidth() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -250.0, velocity: 0.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: 250.0, velocity: 0.0, width: 400.0), 0)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: -150.0, velocity: 0.0, width: 400.0), 0)
+    }
+
+    func testPagerStaysWithinThePages() {
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 1, pageCount: 2, translation: -20.0, velocity: -300.0, width: 400.0), 1)
+        XCTAssertEqual(newsPagerSettledIndex(currentIndex: 0, pageCount: 2, translation: 20.0, velocity: 300.0, width: 400.0), 0)
+    }
+
+    // Each list keeps its own position, so mid-swipe the header is between the two lists' folds.
+    func testPagerHeaderBlendsTheTwoFolds() {
+        XCTAssertEqual(newsPagerHeaderOffset(current: 0.0, next: 300.0, progress: 0.5, foldHeight: 54.0), 27.0)
+        XCTAssertEqual(newsPagerHeaderOffset(current: 10.0, next: 300.0, progress: 0.0, foldHeight: 54.0), 10.0)
+        XCTAssertEqual(newsPagerHeaderOffset(current: 10.0, next: 300.0, progress: 1.0, foldHeight: 54.0), 54.0)
+    }
+
+    func testPagerHeaderIgnoresOverscrollAndCountsAnUnloadedTopAsFolded() {
+        XCTAssertEqual(newsPagerHeaderOffset(current: -40.0, next: nil, progress: 0.5, foldHeight: 54.0), 27.0)
     }
 
     // MARK: For you interests block
@@ -196,5 +226,47 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(newsChannelBarAction(isBroadcast: false, isInNews: false, participation: .left, featureEnabled: true, isAddingToNews: false), .existing)
         XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .member, featureEnabled: true, isAddingToNews: false), .existing)
         XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .kicked, featureEnabled: true, isAddingToNews: false), .existing)
+    }
+
+    // MARK: preview text
+
+    func testShortTextKeepsItsEntities() {
+        let entities = [MessageTextEntity(range: 0 ..< 5, type: .Spoiler)]
+        let result = newsPreviewTextPrefix("hello world", entities: entities, maxLength: 11)
+        XCTAssertEqual(result.text, "hello world")
+        XCTAssertEqual(result.entities, entities)
+    }
+
+    func testLongTextIsCutWithItsEntities() {
+        let text = String(repeating: "a", count: 100)
+        let result = newsPreviewTextPrefix(text, entities: [
+            MessageTextEntity(range: 0 ..< 5, type: .Strikethrough),
+            MessageTextEntity(range: 5 ..< 60, type: .Spoiler),
+            MessageTextEntity(range: 70 ..< 80, type: .Underline)
+        ], maxLength: 50)
+        XCTAssertEqual(result.text, String(repeating: "a", count: 50))
+        // A spoiler running past the cut still hides the part that is shown.
+        XCTAssertEqual(result.entities, [
+            MessageTextEntity(range: 0 ..< 5, type: .Strikethrough),
+            MessageTextEntity(range: 5 ..< 50, type: .Spoiler)
+        ])
+    }
+
+    func testCustomEmojiAndDatesAcrossTheCutAreDropped() {
+        let text = String(repeating: "a", count: 48) + "😀😀" + String(repeating: "b", count: 20)
+        let result = newsPreviewTextPrefix(text, entities: [
+            MessageTextEntity(range: 48 ..< 52, type: .CustomEmoji(stickerPack: nil, fileId: 1)),
+            MessageTextEntity(range: 40 ..< 60, type: .FormattedDate(format: nil, date: 0))
+        ], maxLength: 51)
+        XCTAssertEqual(result.entities, [])
+    }
+
+    func testCutDoesNotSplitACharacter() {
+        // The cut falls between the two halves of the second emoji's surrogate pair.
+        let text = String(repeating: "a", count: 48) + "😀😀" + String(repeating: "b", count: 20)
+        XCTAssertEqual(newsPreviewTextPrefix(text, entities: [], maxLength: 51).text, String(repeating: "a", count: 48) + "😀")
+        // A family emoji is one character of several scalars.
+        let family = "x👨‍👩‍👧‍👦y"
+        XCTAssertEqual(newsPreviewTextPrefix(family, entities: [], maxLength: 4).text, "x")
     }
 }

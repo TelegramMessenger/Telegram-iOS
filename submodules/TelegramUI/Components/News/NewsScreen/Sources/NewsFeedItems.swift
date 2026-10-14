@@ -37,7 +37,10 @@ func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], No
 struct NewsFeedItemEnvironment {
     let context: AccountContext
     let presentationData: PresentationData
-    let now: Int32
+    /// Measured from a post row at the list's width; the load-more placeholder is drawn from it.
+    let skeletonRowLayout: NewsFeedSkeletonRowLayout
+    /// The list the rows are for: whether they load synchronously as they are built.
+    let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
 }
 
@@ -59,7 +62,6 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         newest = message
     }
     let presentationData = environment.presentationData
-    let timeText = newsTimeText(newsCompactTime(timestamp: newest.timestamp, now: environment.now), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
     let openPost = environment.openPost
     let messageId = first.id
     return CoreListComponentItem(identity: newsPostIdentity(entry), component: AnyComponent(NewsFeedPostComponent(
@@ -70,16 +72,17 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         nameDisplayOrder: presentationData.nameDisplayOrder,
         peer: peer,
         messages: resolved,
-        timeText: timeText,
+        timestamp: newest.timestamp,
+        loading: environment.rowLoading,
         action: {
             openPost(peer, messageId)
         }
     )))
 }
 
-func newsPlaceholderItems(count: Int, theme: PresentationTheme, identityPrefix: String) -> [CoreListComponentItem] {
+func newsPlaceholderItems(count: Int, theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout, identityPrefix: String) -> [CoreListComponentItem] {
     return (0 ..< count).map { index in
-        CoreListComponentItem(identity: AnyHashable("\(identityPrefix)-placeholder-\(index)"), component: AnyComponent(NewsPlaceholderRowComponent(theme: theme)))
+        CoreListComponentItem(identity: AnyHashable("\(identityPrefix)-placeholder-\(index)"), component: AnyComponent(NewsPlaceholderRowComponent(theme: theme, rowLayout: rowLayout)))
     }
 }
 

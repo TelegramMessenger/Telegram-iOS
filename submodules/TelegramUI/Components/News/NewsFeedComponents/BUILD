@@ -15,6 +15,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",

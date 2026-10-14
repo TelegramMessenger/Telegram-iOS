@@ -5,16 +5,18 @@ import ComponentFlow
 import TelegramPresentationData
 import ShimmerEffect
 
-/// A shimmering stand-in for a post row while the first page loads.
+/// A shimmering stand-in for the post a load-more is fetching, shaped like the full-screen skeleton's rows.
 public final class NewsPlaceholderRowComponent: Component {
     public let theme: PresentationTheme
+    public let rowLayout: NewsFeedSkeletonRowLayout
 
-    public init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout) {
         self.theme = theme
+        self.rowLayout = rowLayout
     }
 
     public static func ==(lhs: NewsPlaceholderRowComponent, rhs: NewsPlaceholderRowComponent) -> Bool {
-        return lhs.theme === rhs.theme
+        return lhs.theme === rhs.theme && lhs.rowLayout == rhs.rowLayout
     }
 
     public final class View: UIView {
@@ -31,20 +33,10 @@ public final class NewsPlaceholderRowComponent: Component {
 
         func update(component: NewsPlaceholderRowComponent, availableSize: CGSize) -> CGSize {
             let theme = component.theme
-            let size = CGSize(width: availableSize.width, height: 96.0)
-            let sideInset: CGFloat = 16.0
-            let lineDiameter: CGFloat = 10.0
-            let textWidth = size.width - sideInset * 2.0
+            let size = CGSize(width: availableSize.width, height: component.rowLayout.height)
             self.shimmerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.shimmerNode.updateAbsoluteRect(CGRect(origin: CGPoint(), size: size), within: size)
-            let shapes: [ShimmerEffectNode.Shape] = [
-                .circle(CGRect(x: sideInset, y: 12.0, width: 20.0, height: 20.0)),
-                .roundedRectLine(startPoint: CGPoint(x: sideInset + 26.0, y: 17.0), width: 140.0, diameter: lineDiameter),
-                .roundedRectLine(startPoint: CGPoint(x: sideInset, y: 42.0), width: textWidth, diameter: lineDiameter),
-                .roundedRectLine(startPoint: CGPoint(x: sideInset, y: 60.0), width: textWidth, diameter: lineDiameter),
-                .roundedRectLine(startPoint: CGPoint(x: sideInset, y: 78.0), width: floor(textWidth * 0.6), diameter: lineDiameter)
-            ]
-            self.shimmerNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: size)
+            self.shimmerNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: newsFeedSkeletonRowShapes(component.rowLayout, y: 0.0), size: size)
             return size
         }
     }

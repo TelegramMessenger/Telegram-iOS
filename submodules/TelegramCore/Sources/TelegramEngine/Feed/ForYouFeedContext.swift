@@ -3,12 +3,11 @@ import Postbox
 import SwiftSignalKit
 internal import TelegramApi
 
-private let forYouBatchLimit: Int32 = 40
 private let forYouSnapshotLimit = 300
 
 /// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error.
-private func fetchForYouBatch(account: Account) -> Signal<[EngineForYouItem]?, NoError> {
-    return account.network.request(Api.functions.feed.getForYou(limit: forYouBatchLimit))
+private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
+    return account.network.request(Api.functions.feed.getForYou(limit: limit))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.feed.ForYouFeed?, NoError> in
         return .single(nil)
@@ -27,7 +26,7 @@ private func fetchForYouBatch(account: Account) -> Signal<[EngineForYouItem]?, N
                 }
             }
             let stored = storeFeedMessages(transaction: transaction, accountPeerId: account.peerId, messages: apiMessages, chats: parsed.chats, users: parsed.users)
-            Logger.shared.log("ForYouFeed", "getForYou: \(parsed.elements.count) items (\(apiMessages.count) messages, \(parsed.elements.count - apiMessages.count) interests), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
+            Logger.shared.log("ForYouFeed", "getForYou(limit: \(limit)): \(parsed.elements.count) items (\(apiMessages.count) messages, \(parsed.elements.count - apiMessages.count) interests), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
             var storedById: [MessageId: FeedPageMessage] = [:]
             for message in stored {
                 storedById[message.id] = message
@@ -102,7 +101,7 @@ private final class ForYouFeedContextImpl {
         self.state.isLoadingMore = true
         self.state.hasError = false
         self.pushState()
-        self.loadMoreDisposable.set((fetchForYouBatch(account: self.account)
+        self.loadMoreDisposable.set((fetchForYouBatch(account: self.account, limit: forYouBatchLimit(for: self.state.items))
         |> deliverOn(self.queue)).start(next: { [weak self] batch in
             guard let self else {
                 return
@@ -132,7 +131,7 @@ private final class ForYouFeedContextImpl {
         self.state.isRefreshing = true
         self.state.hasError = false
         self.pushState()
-        self.refreshDisposable.set((fetchForYouBatch(account: self.account)
+        self.refreshDisposable.set((fetchForYouBatch(account: self.account, limit: forYouBatchLimit(for: self.state.items))
         |> deliverOn(self.queue)).start(next: { [weak self] batch in
             guard let self else {
                 return

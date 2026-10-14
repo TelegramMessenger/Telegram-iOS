@@ -250,6 +250,45 @@ cannot tell a transient absence from a real one.
 `docs/superpowers/specs/2026-08-04-corelist-pin-to-edge-design.md` (telegram-ios repo root) describes
 the **superseded** slack-only mechanism; this section is the current contract.
 
+**The scroll hold (`CoreListScrollHold`).** A `scrollTo` may carry a hold: an edge of the visible area
+(`topInset`, `bottomInset`, `visibleCenter`) and a point in the row. The pass that lands it records
+`rowPoint − edge` in its SETTLED geometry — where the row actually ended up after `buildWindow`'s edge
+alignment, so a clamped jump is held where it landed, not where it was asked to go — and
+`resolveAnchor` re-places the row at that distance on every later pass (`.resolved`, directly below
+the pin latch, above `preserveVisibleContent`). **A landing the list clamped against one of its ends
+is held against that end**, whatever reference the scroll carried: resting on the newest edge (window
+from index 0, settled offset on the natural minimum) by its minY from `topInset`, on the oldest by its
+maxY from `bottomInset`, the newest winning when both hold. Held from the edge it named, a `.bottom`
+landing clamped at the newest edge — the chat opening at the unread line with a few unread — kept its
+distance from the bars, so the keyboard covered the newest rows and a top-inset shrink opened a gap
+under them. Released when a drag begins (`onWillBeginDragging`: under `PhysicsScrollEngine` the pan's
+`.began`, after its movement hysteresis, or at once for a finger landing on moving content — a tap
+keeps the hold; under `UIKitScrollEngine`, `scrollViewWillBeginDragging`), any later `scrollTo` (a
+holding one arms a new hold), the held identity leaving the collection, a full replace,
+`rebuildFromScratch`, and `releaseScrollHold()`. Keyed by identity, never index.
+
+While held, `buildWindow` skips the underfill alignments and the loaded-top pin, and `heldWindowSlack`
+turns their gaps into scroll room (`holdSlack`, both edges, clamped at zero, measured against the
+unfolded edges or it would feed itself). It folds in beside the pin slack — `buildWindow`'s
+`topEdge` (`+ holdSlack.min`, adding to the pin slack at the newest edge), its `bottomEdge`
+(`− holdSlack.max`) and `loadedEdgeRange` — and is zeroed by every scroll, full replace and
+`rebuildFromScratch`. After release it only ever shrinks, to what the current offset still needs
+(`retireHoldSlack`, measured against the natural range), so release never moves content under the
+finger; the `topEdge`/`bottomEdge` folds are what keep a later pass from aligning onto the natural
+edge and closing the gap. It retires at the end of every `applyChanges`, on every `handleUserScroll`
+frame that is not a flight's tick, and once when a flight ends (`onFlightChanged(nil)` outside a
+pass). **Never on a flight's ticks:** each retire re-declares the minimum edge at the live offset,
+which is on the flight's remaining path, so `KeyframeFlight` rebaked every frame of a fling out of the
+slack; the flight plays against the extended edge instead. `resolveAnchor`'s
+resting-at-the-newest-edge shortcut reads the natural edge too (`includesHoldSlack: false`); that only
+matters when `pinsLoadedTop` declines (a nonzero `additionalScrollDistance`), where it would hand the
+anchor to row 0 at point offset 0 and move everything by the slack. `ScrollHoldTests` pins the hold,
+its releases, the clamped-landing rule and the newest-edge retirement on `UIKitScrollEngine`, and the
+flight case (no rebake, retired once at the end) on `TestScrollEngine`'s `.keyframe` mode (not yet:
+oldest-edge retirement, the `rebuildFromScratch` release, pin and hold slack together); the chat runs
+`PhysicsScrollEngine`, whose release/retire path (a fling out of a released slack) has not been
+checked on device (2026-10-14).
+
 `activeWindow` is a pure settled `Window` value containing contiguous `(index, view, frame)` items.
 It is the loaded projection of the current item collection, not animation state. Frames are
 container-local; `minY` may be negative, and `render()` places each view at

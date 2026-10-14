@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
+import HierarchyTrackingLayer
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
@@ -48,19 +50,22 @@ private func newsPostThumbnail(_ messages: [EngineMessage]) -> (EngineMessage, N
     return nil
 }
 
-private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedString {
+private func newsPostText(component: NewsFeedPostComponent, maxLength: Int) -> NSAttributedString {
     let theme = component.theme
     let font = Font.regular(15.0)
     if let message = component.messages.first(where: { !$0.text.isEmpty }) {
+        // The chat list's preview rule (which also keeps quotes and code blocks out, whose block layout breaks the
+        // line limit), with italic drawn upright too.
         var entities: [MessageTextEntity] = []
         for attribute in message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
-                entities = newsPostPreviewEntities(attribute.entities)
+                entities = chatListPreviewTextEntities(attribute.entities)
             }
         }
+        let prefix = newsPreviewTextPrefix(message.text, entities: entities, maxLength: maxLength)
         // One character for one, so the entity ranges stay valid.
-        let text = message.text.replacingOccurrences(of: "\n", with: " ")
-        return stringWithAppliedEntities(text, entities: entities, baseColor: theme.list.itemPrimaryTextColor, linkColor: theme.list.itemPrimaryTextColor, baseFont: font, linkFont: font, boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), boldItalicFont: Font.semiboldItalic(15.0), fixedFont: Font.monospace(15.0), blockQuoteFont: font, underlineLinks: false, message: message._asMessage())
+        let text = prefix.text.replacingOccurrences(of: "\n", with: " ")
+        return chatListPreviewAttributedString(text, entities: prefix.entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemPrimaryTextColor, message: message._asMessage())
     }
     guard let message = component.messages.first else {
         return NSAttributedString()
@@ -70,8 +75,13 @@ private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedStrin
     return NSAttributedString(string: summary.string, font: font, textColor: isMediaLabel ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
 }
 
+/// The time a post row shows now.
+private func newsPostTimeText(component: NewsFeedPostComponent) -> String {
+    return newsTimeText(newsCompactTime(timestamp: component.timestamp, now: Int32(Date().timeIntervalSince1970)), strings: component.strings, dateTimeFormat: component.dateTimeFormat)
+}
+
 /// A post row: avatar, channel name, verified badge, compact time, up to three lines of text, and an
-/// optional thumbnail on the right. Tapping opens the post.
+/// optional thumbnail on the right. Tapping opens the post. The time keeps itself current while on screen.
 public final class NewsFeedPostComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
@@ -81,10 +91,12 @@ public final class NewsFeedPostComponent: Component {
     public let peer: EnginePeer
     /// Ascending ids; an album has several.
     public let messages: [EngineMessage]
-    public let timeText: String
+    /// The newest message's: the post's age is shown from it.
+    public let timestamp: Int32
+    public let loading: NewsFeedRowLoading
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timeText: String, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -92,7 +104,8 @@ public final class NewsFeedPostComponent: Component {
         self.nameDisplayOrder = nameDisplayOrder
         self.peer = peer
         self.messages = messages
-        self.timeText = timeText
+        self.timestamp = timestamp
+        self.loading = loading
         self.action = action
     }
 
@@ -118,7 +131,10 @@ public final class NewsFeedPostComponent: Component {
         if lhs.messages != rhs.messages {
             return false
         }
-        if lhs.timeText != rhs.timeText {
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.loading !== rhs.loading {
             return false
         }
         return true
@@ -132,14 +148,24 @@ public final class NewsFeedPostComponent: Component {
         private let text = ComponentView<Empty>()
         private let thumbnailView = TransformImageView()
         private let separatorLayer = SimpleLayer()
+        /// In a window and the app in the foreground: only then does the time need checking.
+        private let hierarchyTrackingLayer = HierarchyTrackingLayer()
 
         private var component: NewsFeedPostComponent?
+        private weak var state: EmptyComponentState?
         private var thumbnailMediaId: EngineMedia.Id?
+        /// The time as last laid out.
+        private var renderedTimeText: String?
+        private var timeTimer: SwiftSignalKit.Timer?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
             self.addSubview(self.thumbnailView)
             self.layer.addSublayer(self.separatorLayer)
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] _ in
+                self?.updateTimeTimer()
+            }
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
         }
 
@@ -147,13 +173,61 @@ public final class NewsFeedPostComponent: Component {
             preconditionFailure()
         }
 
+        deinit {
+            self.timeTimer?.invalidate()
+        }
+
+        /// Where the last layout put the avatar, the channel name and each line of the text, in the row's own
+        /// coordinates: the loading skeleton is measured from them.
+        public var avatarFrame: CGRect {
+            return self.avatar.view?.frame ?? CGRect()
+        }
+
+        public var titleFrame: CGRect {
+            return self.title.view?.frame ?? CGRect()
+        }
+
+        public var textLineFrames: [CGRect] {
+            guard let textView = self.text.view as? MultilineTextWithEntitiesComponent.View, let layout = textView.textNode.cachedLayout else {
+                return []
+            }
+            return layout.linesRects().map { textView.textNode.view.convert($0, to: self) }
+        }
+
         @objc private func tapped() {
             self.component?.action()
         }
 
-        func update(component: NewsFeedPostComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+        /// While on screen, every 0.5 s: when the time reads differently now, the row asks to be updated.
+        private func updateTimeTimer() {
+            if self.hierarchyTrackingLayer.isInHierarchy && self.component != nil {
+                if self.timeTimer == nil {
+                    let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if newsPostTimeText(component: component) != self.renderedTimeText {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }, queue: Queue.mainQueue())
+                    self.timeTimer = timer
+                    timer.start()
+                }
+            } else {
+                self.timeTimer?.invalidate()
+                self.timeTimer = nil
+            }
+        }
+
+        func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.state = state
             let theme = component.theme
+            let timeText = newsPostTimeText(component: component)
+            self.renderedTimeText = timeText
+            defer {
+                self.updateTimeTimer()
+            }
 
             let sideInset: CGFloat = 16.0
             let topInset: CGFloat = 10.0
@@ -169,7 +243,7 @@ public final class NewsFeedPostComponent: Component {
 
             let timeSize = self.time.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.timeText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: timeText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
@@ -206,7 +280,7 @@ public final class NewsFeedPostComponent: Component {
             let avatarFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels(titleFrame.midY - avatarSize * 0.5)), size: CGSize(width: avatarSize, height: avatarSize))
             let _ = self.avatar.update(
                 transition: .immediate,
-                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size)),
+                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size, synchronousLoad: component.loading.isSynchronous)),
                 environment: {},
                 containerSize: avatarFrame.size
             )
@@ -250,7 +324,9 @@ public final class NewsFeedPostComponent: Component {
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
                     placeholderColor: theme.list.mediaPlaceholderColor,
-                    text: .plain(newsPostText(component: component)),
+                    // Three lines hold under one character per point of width (the narrowest glyphs are
+                    // 3.5 pt wide); twice the width leaves room for characters of several UTF-16 units.
+                    text: .plain(newsPostText(component: component, maxLength: Int(contentWidth * 2.0))),
                     maximumNumberOfLines: 3,
                     lineSpacing: 0.12
                 )),
@@ -311,6 +387,6 @@ public final class NewsFeedPostComponent: Component {
     }
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+        return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
     }
 }

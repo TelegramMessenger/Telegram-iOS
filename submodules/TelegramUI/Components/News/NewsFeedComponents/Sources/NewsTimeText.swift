@@ -5,6 +5,8 @@ import NewsFeedSupport
 
 public func newsTimeText(_ time: NewsCompactTime, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
     switch time {
+    case .now:
+        return strings.News_Time_Now
     case let .seconds(value):
         return strings.News_Time_Seconds("\(value)").string
     case let .minutes(value):

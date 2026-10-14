@@ -15,6 +15,8 @@ final class NewsAddedFeedBinding {
         var positions: [Int: EngineFeedPosition]
         /// Item index of the oldest unread post.
         var firstUnreadItemIndex: Int?
+        /// The first load is under way and there are no rows: the list's skeleton stands in.
+        var isLoading: Bool = false
     }
 
     let feed: AddedFeedContext
@@ -61,12 +63,12 @@ final class NewsAddedFeedBinding {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
         guard let state = self.state else {
-            return Rows(items: newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "added"), positions: [:], firstUnreadItemIndex: nil)
+            return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
         }
         let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys))
         if entries.isEmpty {
             if state.isLoadingInitial {
-                return Rows(items: newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "added"), positions: [:], firstUnreadItemIndex: nil)
+                return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
             }
             if state.hasError {
                 return Rows(items: [newsStatusItem(theme: theme, text: presentationData.strings.News_Error_Text, actionTitle: presentationData.strings.News_Error_Retry, action: { [weak self] in

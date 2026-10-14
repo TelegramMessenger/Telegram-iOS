@@ -30,17 +30,16 @@ final class NewsForYouFeedBinding {
         let state = self.feed.state
         let ids = state
         |> map { state -> [EngineMessage.Id] in
-            var ids: [EngineMessage.Id] = []
-            for item in state.items {
-                if case let .post(entry) = item {
-                    ids.append(contentsOf: entry.messageIds)
-                }
-            }
-            return ids
+            return newsForYouMessageIds(state.items)
         }
         self.stateDisposable = (combineLatest(state, newsFeedMessages(engine: engine, ids: ids))
         |> deliverOnMainQueue).start(next: { [weak self] state, loaded in
             guard let self else {
+                return
+            }
+            // A new batch first arrives with the previous items' messages: wait for its own, so its posts and its
+            // interests block appear together.
+            guard newsForYouIsResolved(items: state.items, loadedIds: loaded.ids) else {
                 return
             }
             self.state = state
@@ -104,11 +103,12 @@ final class NewsForYouFeedBinding {
         timer.start()
     }
 
-    func items(environment: NewsFeedItemEnvironment) -> [CoreListComponentItem] {
+    /// The rows, or none while the first load is under way (`isLoading`): the list's skeleton stands in then.
+    func items(environment: NewsFeedItemEnvironment) -> (items: [CoreListComponentItem], isLoading: Bool) {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
         guard let state = self.state else {
-            return newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "foryou")
+            return ([], true)
         }
         let available = Set(self.messages.keys)
         var result: [CoreListComponentItem] = []
@@ -142,7 +142,7 @@ final class NewsForYouFeedBinding {
         // Without posts, `result` holds only the interests block, which stays above the status row.
         switch newsForYouListStatus(hasPosts: hasPosts, didLoadSnapshot: state.didLoadSnapshot, isLoadingMore: state.isLoadingMore, isExhausted: state.isExhausted, hasError: state.hasError) {
         case .placeholders:
-            return newsPlaceholderItems(count: 4, theme: theme, identityPrefix: "foryou")
+            return ([], true)
         case .error:
             result.append(newsStatusItem(theme: theme, text: presentationData.strings.News_Error_Text, actionTitle: presentationData.strings.News_Error_Retry, action: { [weak self] in
                 self?.feed.loadMore()
@@ -152,7 +152,7 @@ final class NewsForYouFeedBinding {
                 self?.feed.refresh()
             }))
         case .loadingMore:
-            result.append(contentsOf: newsPlaceholderItems(count: 1, theme: theme, identityPrefix: "foryou-more"))
+            result.append(contentsOf: newsPlaceholderItems(count: 1, theme: theme, rowLayout: environment.skeletonRowLayout, identityPrefix: "foryou-more"))
         case .loadMoreFailed:
             result.append(newsStatusItem(theme: theme, text: presentationData.strings.News_Error_Text, actionTitle: presentationData.strings.News_Error_Retry, action: { [weak self] in
                 self?.feed.loadMore()
@@ -160,6 +160,6 @@ final class NewsForYouFeedBinding {
         case .none:
             break
         }
-        return result
+        return (result, false)
     }
 }

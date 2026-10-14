@@ -43,10 +43,13 @@ public final class NewsScreen: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.title = self.presentationData.strings.News_Title
         self.tabBarItem.title = self.presentationData.strings.News_Title
-        // The tab bar is not ready until every tab has an image: set it here, not later.
-        let icon = UIImage(bundleImageName: "Chat List/Tabs/IconNews")
+        let icon = UIImage(bundleImageName: "Chat List/Tabs/IconNews")?.withRenderingMode(.alwaysTemplate)
         self.tabBarItem.image = icon
         self.tabBarItem.selectedImage = icon
+        if !self.presentationData.reduceMotion {
+            self.tabBarItem.animationName = "TabNews"
+            self.tabBarItem.animationOffset = CGPoint(x: 0.0, y: UIScreenPixel)
+        }
 
         self.scrollToTop = { [weak self] in
             guard let self, self.isNodeLoaded else {

@@ -405,6 +405,11 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
             + "edges=\(String(describing: core.edges)) vScale=\(core.decelerationVelocityScale)")
         stopDisplayLink()
         let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        // This link is what moves the content, so it holds the rate the keyframe flight pins. With no range
+        // it ran at ~61Hz on a 120Hz device, so a fling dropped to half the drag's rate at the release.
+        if #available(iOS 15.0, *), let r = maxRefreshRange() {
+            link.preferredFrameRateRange = r
+        }
         link.add(to: .main, forMode: .common)
         displayLink = link
     }
@@ -689,10 +694,10 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// at ~0.5ms, with no re-emit — because `preferHighRefreshRate()` asks for `(min: 30, max, max)`
     /// and that low floor let the system throttle to ~80Hz and intermittently halve it.
     ///
-    /// It is togglable because it is also a **keyframe-only, ProMotion-only** asymmetry, and therefore
-    /// a candidate for a "constrained velocity" reported on device and unreproducible in the 60Hz
-    /// Simulator, where `maxRefreshRange()` is inert: `.stepped` sets no range on its display link at
-    /// all, so the two drivers ask the system for different things on a 120Hz panel. A rigid range is
+    /// It is togglable because it is a **ProMotion-only** behaviour, and therefore a candidate for a
+    /// "constrained velocity" reported on device and unreproducible in the 60Hz Simulator, where
+    /// `maxRefreshRange()` is inert. `.stepped`'s display link takes the same range; until 2026-10-14 it
+    /// set none, and a 120Hz panel ran it at ~61Hz. A rigid range is
     /// also the one the system is least able to satisfy under thermal pressure or Low Power Mode
     /// (which caps ProMotion at 60Hz), and an unsatisfiable request is served by falling back rather
     /// than by negotiating. Defaults to the shipped behaviour; only the demo flips it.
@@ -703,7 +708,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// It does not move the content — the render server plays the baked animation — it only drives
     /// `onScroll` → rebalance → row loading. Pinning it therefore buys no smoothness and costs DOUBLE
     /// the main-thread row work per second: measured on a 120Hz device, the keyframe sampler runs at
-    /// ~116Hz while `.stepped`'s link runs at ~61Hz, because only the keyframe path applies
+    /// ~116Hz while `.stepped`'s link ran at ~61Hz, when only the keyframe path applied
     /// `maxRefreshRange()`. A saturated main thread means rows arrive late behind a container whose
     /// motion is provably correct (measured within 1% of the analytic path from the first frame),
     /// which is a candidate for a flick that measures right and feels constrained.

@@ -1221,6 +1221,52 @@ bump and a rebuild from the scan, so it is the eventual replacement only if a ta
 derive from the web-page media rather than the URL entity. Tests belong in
 `submodules/Postbox/Tests/` on `PostboxFixture` (two messages sharing one media, then an empty update).
 
+## Opening a channel at a post (history fill and the poll gate)
+
+Measured 2026-10-13:
+the Postbox `MessageHistoryView` issues no request; the round trips before a chat shows messages all
+come from TelegramCore around it. Four facts keep the critical path at one `messages.getHistory`:
+
+- **A history fill stores before it resolves.** `fetchMessageHistoryHole` stores the messages and
+  closes the hole in its first transaction; reply targets, custom emoji files and stories follow, and
+  the follow-up re-adds the messages whose reply targets arrived so a view (which watches its own
+  chat only) re-renders them. Forums and monoforums keep thread resolution before storage.
+- **The around fill learns the top from the server.** `offset_id_offset` is the 1-based position of
+  the anchor from the newest message and the server does not fill downward, so the hole closes to the
+  top exactly when the newer ids returned number one less than it (`aroundHoleFillRange`, tested in
+  `AroundHoleFillRangeTests`). `inexact` vetoes it; the bottom is never inferred.
+- **Plain channels request no forum topics.** Every channel post is stored with `threadId = 1`;
+  `resolveForumThreads` skips peers that are neither forum nor monoforum (`peerCanHaveForumThreads`).
+- **An unjoined channel's view does not wait for the poll.** `wrappedMessageHistorySignal` still
+  resets the read state and adds the full hole first, and `keepPollingChannel` still runs (with its
+  1.0 s start delay), but the Postbox view is created at once. The profile warmup
+  (`keepPeerInfoScreenDataHot`, eight tag views) starts after the first loaded history view.
+  The full hole is added once per unpolled period (a flag on the channel's polling context), and a
+  fill that closes the hole to the top advances the channel state's `synchronizedUntilMessageId`, so
+  the chat's re-subscription after a fill does not wipe it and the poll does not seed a gap hole over it.
+
+## Opening a post from the News feed: the cached post first
+
+The feed stores every post it shows into the channel's history (inside the hole). Opening a post
+from the feed passes `cachedAnchor: true` in `ChatControllerSubject.message`, which the history
+view turns into `includeAnchorWhileLoading`: a Postbox view opened around a message that is stored
+but still inside a hole then carries that message and its album as entries while it reports
+`isLoading` (`MessageHistoryView.isAnchorOnlyWhileLoading`, `PostboxTests`
+`MessageHistoryViewAnchorWhileLoadingTests`). Views without the flag keep no entries while loading.
+The chat applies the partial view scrolled with the post at the bottom (top edge at the top when
+taller). Both measure the post without its date header's space
+(`ChatMessageItemView.attachedDateHeaderInset`, `ListViewScrollToItem.excludesAttachedHeaderSpace`):
+alone in the view the post carries its day's header, which moves to an older post of the same day once
+those load, and a tall post held by its top edge moved with it. The chat also reports the partial
+view as loading earlier so the existing placeholder stacks its skeleton bubbles above it, and applies
+the loaded view in place (`ChatHistoryViewScrollPosition.pinnedAnchor` /
+`.keepInPlace`, resolved in the history node from the post's relative offset). The partial view
+reports the history as still loading (`historyState`), so the profile warmup and the pinned-message
+view start after the fill as for any other open, and it makes no read claim (`maxReadIndex` is nil,
+so no unread separator lands above the post). While the post is pinned and its surroundings have not
+loaded, the view reports no hole-fill restart, so a hole operation on the channel (the poll's, or any
+other) cannot restart the history around a post that is still inside the hole.
+
 ## Postbox → TelegramEngine refactor (in progress)
 
 A gradual migration is underway to eliminate direct `import Postbox` from consumer submodules in favor of `TelegramEngine`.

@@ -98,6 +98,13 @@ final class FeedEntryGroupingTests: XCTestCase {
         XCTAssertEqual(forYouPostCount(forYouItems(from: [.interests, .message(self.message(self.channelA, 1, date: 1))])), 1)
     }
 
+    // An interests block alone is not a feed yet, so the batch after it is still the first one.
+    func testTheFirstForYouBatchIsLarger() {
+        XCTAssertEqual(forYouBatchLimit(for: []), 100)
+        XCTAssertEqual(forYouBatchLimit(for: forYouItems(from: [.interests])), 100)
+        XCTAssertEqual(forYouBatchLimit(for: forYouItems(from: [.message(self.message(self.channelA, 1, date: 1))])), 40)
+    }
+
     // An Added feed that loaded empty used to stay empty: the newer probe needs a top entry to page from.
     func testRevalidatingAnEmptyAddedFeedReloadsIt() {
         XCTAssertEqual(addedFeedRevalidation(hasEntries: false, isLoadingInitial: false, hasNewer: false), .reloadInitial)
