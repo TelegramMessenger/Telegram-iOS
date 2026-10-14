@@ -77,8 +77,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.view.addSubview(self.edgeEffectView)
 
         self.forYouList.isPullToRefreshEnabled = true
-        self.forYouList.updateTheme(indicatorColor: self.presentationData.theme.list.itemSecondaryTextColor)
-        self.addedList.updateTheme(indicatorColor: self.presentationData.theme.list.itemSecondaryTextColor)
 
         self.forYouList.onEdgeReached = { [weak self] edge in
             if edge == .bottom {
@@ -240,8 +238,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
-        self.forYouList.updateTheme(indicatorColor: presentationData.theme.list.itemSecondaryTextColor)
-        self.addedList.updateTheme(indicatorColor: presentationData.theme.list.itemSecondaryTextColor)
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         }
@@ -367,7 +363,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let environment = self.itemEnvironment(list: self.forYouList)
         let forYouRows = self.forYou.items(environment: environment)
         self.forYouList.setShowsSkeleton(forYouRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
-        self.forYouList.setRefreshing(self.forYou.state?.isRefreshing ?? false)
         self.forYouList.update(size: layout.size, insets: self.listInsets, items: forYouRows.items, scrollTo: nil, anchorMode: .automatic, transition: transition)
         self.recheckForYouEdgeIfGrown(count: forYouRows.items.count)
     }
