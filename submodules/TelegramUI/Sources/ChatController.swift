@@ -8029,7 +8029,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if case let .peer(peerId) = self.chatLocation {
                 let context = self.context
-                self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: context, peerId: peerId, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder).startStrict())
+                let chatLocation = self.chatLocation
+                let chatLocationContextHolder = self.chatLocationContextHolder
+                // The profile warmup subscribes to the shared-media panes, eight tag views whose
+                // fills would otherwise share the connection and the Postbox queue with the
+                // history's own fill. It starts once the history has loaded (spec 2026-10-13).
+                self.keepPeerInfoScreenDataHotDisposable.set((self.chatDisplayNode.historyNode.historyState.get()
+                |> filter { state -> Bool in
+                    if case .loaded = state {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> take(1)
+                |> mapToSignal { _ -> Signal<Never, NoError> in
+                    return keepPeerInfoScreenDataHot(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder)
+                }).startStrict())
                 
                 if peerId.namespace == Namespaces.Peer.CloudUser {
                     self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
@@ -9932,7 +9948,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case let .chat(textInputState, subject, peekData):
                     dismissWebAppControllers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
-                        if let subject = subject, case let .message(messageSubject, highlight, timecode, _) = subject {
+                        if let subject = subject, case let .message(messageSubject, highlight, timecode, _, _) = subject {
                             if case let .id(messageId) = messageSubject {
                                 strongSelf.navigateToMessage(from: sourceMessageId, to: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: nil, subject: highlight?.subject)))
                             }

@@ -2104,12 +2104,19 @@ final class HistoryViewLoadingState {
     let threadId: Int64?
     let halfLimit: Int
     var holes: HistoryViewHoles
+    /// Whether `checkAndSample` renders the anchor message (and its album) while the hole still covers it.
+    let includeAnchorWhileLoading: Bool
+    /// The anchor's index and rendered entries, set by `checkAndSample` while the hole covers the anchor;
+    /// empty when the message is not stored or the flag is off.
+    private(set) var anchorIndex: MessageIndex?
+    private(set) var anchorEntries: [MessageHistoryMessageEntry] = []
     
-    init(postbox: PostboxImpl, locations: MessageHistoryViewInput, tag: HistoryViewInputTag?, threadId: Int64?, namespaces: MessageIdNamespaces, messageId: MessageId, halfLimit: Int) {
+    init(postbox: PostboxImpl, locations: MessageHistoryViewInput, tag: HistoryViewInputTag?, threadId: Int64?, namespaces: MessageIdNamespaces, messageId: MessageId, halfLimit: Int, includeAnchorWhileLoading: Bool = false) {
         self.messageId = messageId
         self.tag = tag
         self.threadId = threadId
         self.halfLimit = halfLimit
+        self.includeAnchorWhileLoading = includeAnchorWhileLoading
         self.holes = HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))
     }
     
@@ -2125,6 +2132,7 @@ final class HistoryViewLoadingState {
         while true {
             if let indices = self.holes.holesBySpace[PeerIdAndNamespace(peerId: self.messageId.peerId, namespace: self.messageId.namespace)] {
                 if indices.contains(Int(messageId.id)) {
+                    self.sampleAnchorEntries(postbox: postbox)
                     return .loadHole(messageId.peerId, messageId.namespace, self.tag, self.threadId, messageId.id)
                 }
             }
@@ -2139,6 +2147,28 @@ final class HistoryViewLoadingState {
             }
         }
     }
+    
+    /// Renders the stored anchor and its album the way loaded entries are rendered, so a consumer can
+    /// show the cached message before the hole around it is filled.
+    private func sampleAnchorEntries(postbox: PostboxImpl) {
+        self.anchorIndex = nil
+        self.anchorEntries = []
+        guard self.includeAnchorWhileLoading, let index = postbox.messageHistoryIndexTable.getIndex(self.messageId), let message = postbox.messageHistoryTable.getMessage(index) else {
+            return
+        }
+        self.anchorIndex = index
+        let group = postbox.messageHistoryTable.getMessageGroup(at: index, limit: 20) ?? [message]
+        var entries: [MessageHistoryMessageEntry] = []
+        for intermediate in group {
+            let rendered = postbox.messageHistoryTable.renderMessage(intermediate, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable, storyTable: postbox.storyTable)
+            var authorIsContact = false
+            if let author = rendered.author {
+                authorIsContact = postbox.contactsTable.isContact(peerId: author.id)
+            }
+            entries.append(MessageHistoryMessageEntry(message: rendered, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact)))
+        }
+        self.anchorEntries = entries.sorted(by: { $0.message.index < $1.message.index })
+    }
 }
 
 enum HistoryViewSample {
@@ -2150,7 +2180,7 @@ enum HistoryViewState {
     case loaded(HistoryViewLoadedState)
     case loading(HistoryViewLoadingState)
     
-    init(postbox: PostboxImpl, inputAnchor: HistoryViewInputAnchor, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, halfLimit: Int, locations: MessageHistoryViewInput) {
+    init(postbox: PostboxImpl, inputAnchor: HistoryViewInputAnchor, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, ignoreMessageIds: Set<MessageId>, halfLimit: Int, locations: MessageHistoryViewInput, includeAnchorWhileLoading: Bool = false) {
         switch inputAnchor {
         case let .index(index):
             self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
@@ -2226,7 +2256,7 @@ enum HistoryViewState {
             default:
                 break
             }
-            let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, threadId: threadId, namespaces: namespaces, messageId: messageId, halfLimit: halfLimit)
+            let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, threadId: threadId, namespaces: namespaces, messageId: messageId, halfLimit: halfLimit, includeAnchorWhileLoading: includeAnchorWhileLoading)
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
             case let .ready(anchor, holes):

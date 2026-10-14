@@ -2393,6 +2393,9 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             var missingForumThreadIds: [PeerId: [Int64]] = [:]
             for threadId in forumThreadIds {
+                if !peerCanHaveForumThreads(transaction.getPeer(threadId.peerId) ?? additionalPeers.get(threadId.peerId)) {
+                    continue
+                }
                 if let _ = transaction.getMessageHistoryThreadInfo(peerId: threadId.peerId, threadId: threadId.threadId) {
                 } else {
                     missingForumThreadIds[threadId.peerId, default: []].append(threadId.threadId)

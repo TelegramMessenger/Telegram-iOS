@@ -926,7 +926,7 @@ public enum ChatControllerSubject: Equatable {
     }
     
     case tag(EngineMessage.Tags)
-    case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?, setupReply: Bool)
+    case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?, setupReply: Bool, cachedAnchor: Bool = false)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case messageOptions(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], info: MessageOptionsInfo)
@@ -940,8 +940,8 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
-        case let .message(lhsId, lhsHighlight, lhsTimecode, lhsSetupReply):
-            if case let .message(rhsId, rhsHighlight, rhsTimecode, rhsSetupReply) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode && lhsSetupReply == rhsSetupReply {
+        case let .message(lhsId, lhsHighlight, lhsTimecode, lhsSetupReply, lhsCachedAnchor):
+            if case let .message(rhsId, rhsHighlight, rhsTimecode, rhsSetupReply, rhsCachedAnchor) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode && lhsSetupReply == rhsSetupReply && lhsCachedAnchor == rhsCachedAnchor {
                 return true
             } else {
                 return false

@@ -172,7 +172,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     }
                     var popAndComplete = true
                     var switchToThreadHandled = false
-                    if let subject = params.subject, case let .message(messageSubject, highlight, timecode, setupReply) = subject {
+                    if let subject = params.subject, case let .message(messageSubject, highlight, timecode, setupReply, _) = subject {
                         if case let .id(messageId) = messageSubject {
                             let navigationController = params.navigationController
                             let animated = params.animated

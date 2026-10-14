@@ -134,6 +134,14 @@ final class HistoryViewStateValidationContexts {
             }
             return
         }
+        if view.isAnchorOnlyWhileLoading {
+            // The view carries only its anchor while the hole around it is filled, and the fill re-stores
+            // that message from the server; validating it now would add a second request beside the fill.
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
+            return
+        }
         
         guard view.tag == nil || view.tag == .tag(MessageTags.unseenPersonalMessage) || view.tag == .tag(MessageTags.unseenReaction) || view.tag == .tag(MessageTags.unseenPollVote) || view.tag == .tag(MessageTags.music) || view.tag == .tag(MessageTags.pinned) else {
             if self.contexts[id] != nil {
