@@ -3384,7 +3384,9 @@ public final class EmojiPagerContentComponent: Component {
                                     color: backgroundColor,
                                     foreground: foregroundColor,
                                     pressedColor: backgroundColor.withMultipliedAlpha(0.8),
-                                    cornerRadius: groupBorderRadius,
+                                    cornerRadius: isPremiumLocked
+                                        ? itemLayout.premiumButtonHeight * 0.5
+                                        : groupBorderRadius,
                                     isShimmering: gloss,
                                     gradient: backgroundColors.count > 1 ? ButtonComponent.Background.Gradient(colors: backgroundColors) : nil
                                 ),
