@@ -529,6 +529,18 @@ public final class InteractiveDiamondComponent: Component {
             self.applyExpansion()
         }
 
+        public func setTint(_ color: UIColor?, amount: CGFloat) {
+            var style = self.diamondLayer.diamondStyle
+            if let color, amount > 0.001 {
+                var r: CGFloat = 0.0, g: CGFloat = 0.0, b: CGFloat = 0.0, a: CGFloat = 0.0
+                color.getRed(&r, green: &g, blue: &b, alpha: &a)
+                style.tint = SIMD4(Float(r), Float(g), Float(b), Float(min(1.0, amount)))
+            } else {
+                style.tint = .zero
+            }
+            self.diamondLayer.update(style: style)
+        }
+
         public func updateWalletTransfer(width: CGFloat, rotationSpeed: Float, completion: Bool, isDark: Bool, appearance: Appearance = .blue) {
             self.diamondLayer.lightBackground = !isDark
             var style = self.diamondLayer.diamondStyle

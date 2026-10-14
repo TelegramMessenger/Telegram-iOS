@@ -155,8 +155,6 @@ private final class PeerWalletOverlayComponent: Component {
         private var dismissAction: (() -> Void)?
         private weak var state: State?
         private let stickerPlayback = WalletGiftStickerPlayback()
-        private var stickerIntroDeadline: Double?
-        private var stickerIntroPlayed = Set<String>()
         private let stickerTap = UITapGestureRecognizer()
 
         override init(frame: CGRect) {
@@ -204,19 +202,8 @@ private final class PeerWalletOverlayComponent: Component {
         @objc private func stickerTapped(_ recognizer: UITapGestureRecognizer) {
             guard recognizer.state == .ended, let sticker = self.tappedSticker(recognizer),
                   let media = self.state?.stickerMedia[sticker.gift.address] else { return }
-            self.stickerIntroDeadline = 0
             self.stickerPlayback.play(sticker.gift.address, media: media, enlarge: true)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-
-        private func playStickerIntro(state: State) {
-            guard let deadline = self.stickerIntroDeadline, CACurrentMediaTime() < deadline else { return }
-            for sticker in state.stickers {
-                let id = sticker.gift.address
-                guard !self.stickerIntroPlayed.contains(id), let media = state.stickerMedia[id], media.first != nil else { continue }
-                self.stickerIntroPlayed.insert(id)
-                self.stickerPlayback.play(id, media: media, enlarge: false)
-            }
         }
 
         deinit {
@@ -335,40 +322,61 @@ private final class PeerWalletOverlayComponent: Component {
                 let slotReach = project(pose(pitch: slotPitch, yaw: 0.0, roll: -.pi / 2, scale: slotScale, camera: cameraDistance)).map { abs($0.x) }.max() ?? halfHeight
                 let startScale = slotScale * min(1.0, source.width * 0.45 / max(1.0, slotReach))
 
-                let travel = flight(p, start: 1.2, arrival: 0.16, hold: 0.1)
-                let twist = smooth((p / impact - 0.4) / 0.3)
-                let velocity = (flight(p + 0.004, start: 1.2, arrival: 0.16, hold: 0.1) - flight(p - 0.004, start: 1.2, arrival: 0.16, hold: 0.1)) / 0.008 * impact / 1.5 * twist
-                let pitch = slotPitch * (1.0 - flight(p, start: 0.0, arrival: 0.16, hold: 0.38))
-                let roll = -(1.0 - flight(p, start: 0.0, arrival: 0.18, hold: 0.4)) * .pi / 2
-                let yaw = velocity * 9.0 * .pi / 180
-                let scale = startScale + (1.0 - startScale) * flight(p, start: 0.0, arrival: 0.13, hold: 0.4)
-                transform = pose(pitch: pitch, yaw: yaw, roll: roll, scale: scale, camera: cameraDistance)
-
-                let projected = project(transform)
                 let slotLine = source.midY
                 let slidesDown = self.cardFrame.midY >= slotLine
-                let hiddenEdge = slidesDown ? (projected.map { $0.y }.max() ?? halfHeight) : (projected.map { $0.y }.min() ?? -halfHeight)
+                let straddlesSlot = slidesDown ? self.cardFrame.minY < slotLine : self.cardFrame.maxY > slotLine
+                let sidewaysHold: CGFloat = straddlesSlot && !dismissing ? 0.6 : 0.45
+                func cardPose(_ time: CGFloat) -> (pitch: CGFloat, yaw: CGFloat, roll: CGFloat, scale: CGFloat, travel: CGFloat, sideTravel: CGFloat, velocity: CGFloat) {
+                    let travel = flight(time, start: 1.2, arrival: 0.16, hold: 0.1)
+                    let twist = smooth((time / impact - sidewaysHold + 0.05) / 0.3)
+                    let velocity = (flight(time + 0.004, start: 1.2, arrival: 0.16, hold: 0.1) - flight(time - 0.004, start: 1.2, arrival: 0.16, hold: 0.1)) / 0.008 * impact / 1.5 * twist
+                    return (
+                        pitch: slotPitch * (1.0 - flight(time, start: 0.0, arrival: 0.16, hold: 0.38)),
+                        yaw: velocity * 9.0 * .pi / 180,
+                        roll: -(1.0 - flight(time, start: 0.0, arrival: 0.18, hold: 0.4)) * .pi / 2,
+                        scale: startScale + (1.0 - startScale) * flight(time, start: 0.0, arrival: 0.13, hold: 0.4),
+                        travel: travel,
+                        sideTravel: flight(time, start: 0.0, arrival: 0.16, hold: sidewaysHold),
+                        velocity: velocity
+                    )
+                }
+                func baseCenterY(_ projected: [CGPoint], travel: CGFloat) -> CGFloat {
+                    let hiddenEdge = slidesDown ? (projected.map { $0.y }.max() ?? halfHeight) : (projected.map { $0.y }.min() ?? -halfHeight)
+                    let startY = slotLine - hiddenEdge
+                    return startY + (self.cardFrame.midY - startY) * travel
+                }
+
+                let peak: CGFloat = dismissing ? 0.42 : 0.6 * impact
+                let peakPose = cardPose(peak)
+                let peakProjected = project(pose(pitch: peakPose.pitch, yaw: peakPose.yaw, roll: peakPose.roll, scale: peakPose.scale, camera: cameraDistance))
+                let peakCenterY = baseCenterY(peakProjected, travel: peakPose.travel)
+                let clearance: CGFloat = slidesDown
+                    ? max(0.0, slotLine + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
+                    : max(0.0, peakCenterY + (peakProjected.map { $0.y }.max() ?? halfHeight) - (slotLine - 4.0))
+                let dip = p < peak
+                    ? (dismissing ? smooth((p - 0.1) / (peak - 0.1)) : smooth((p / impact - 0.15) / 0.45))
+                    : 1.0 - smooth((p - peak) / (dismissing ? 1.0 - peak : 0.8 * impact))
+
+                let current = cardPose(p)
+                transform = pose(pitch: current.pitch, yaw: current.yaw, roll: current.roll, scale: current.scale, camera: cameraDistance)
+                let projected = project(transform)
                 let reach = WalletCardComponent.View.projectionReach - 4.0
                 let fit = projected.reduce(CGFloat(1.0)) { min($0, (halfWidth + reach) / max(1.0, abs($1.x)), (halfHeight + reach) / max(1.0, abs($1.y))) }
                 if fit < 1.0 {
-                    transform = pose(pitch: pitch, yaw: yaw, roll: roll, scale: scale * fit, camera: cameraDistance * fit)
+                    transform = pose(pitch: current.pitch, yaw: current.yaw, roll: current.roll, scale: current.scale * fit, camera: cameraDistance * fit)
                 }
                 self.cardContainer.layer.transform = CATransform3DMakeScale(1.0 / fit, 1.0 / fit, 1.0)
 
-                let sideways = self.cardFrame.width * 0.055 * velocity
-                let startY = slotLine - hiddenEdge
-                center = CGPoint(x: source.midX + (self.cardFrame.midX - source.midX) * travel + sideways,
-                    y: startY + (self.cardFrame.midY - startY) * travel)
+                let sideways = self.cardFrame.width * 0.055 * current.velocity
+                center = CGPoint(x: source.midX + (self.cardFrame.midX - source.midX) * current.sideTravel + sideways,
+                    y: baseCenterY(projected, travel: current.travel) + (slidesDown ? clearance : -clearance) * dip)
                 self.cardContainer.center = center
                 self.cardContainer.alpha = smooth(p / 0.045)
                 self.cardMask.frame = self.cardContainer.bounds
-                let overlap = slidesDown ? max(0.0, slotLine - self.cardFrame.minY + 24.0) : max(0.0, self.cardFrame.maxY + 24.0 - slotLine)
-                let release = smooth((p / impact - 0.35) / 0.4)
-                let maskLine = slotLine + (slidesDown ? -overlap : overlap) * release
-                let edge = halfHeight + (maskLine - center.y) * fit
+                let edge = halfHeight + (slotLine - center.y) * fit
                 let span = max(self.animationSize.width, self.animationSize.height) * 3.0
                 self.cardMask.path = CGPath(rect: CGRect(x: -span, y: slidesDown ? edge : edge - span, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
-                self.cardContainer.layer.mask = p < (dismissing ? 0.75 : impact) ? self.cardMask : nil
+                self.cardContainer.layer.mask = p < (clearance > 0.0 ? peak : (dismissing ? 0.75 : impact)) ? self.cardMask : nil
 
                 let shutterLift = smooth(p / (dismissing ? 0.42 : 0.16))
                 self.shutterView?.layer.transform = CATransform3DMakeScale(1.0, 1.0 - shutterLift * 0.5, 1.0)
@@ -438,11 +446,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.applyProgress()
             self.alpha = 1.0
             self.isDismissing = false
-            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: { [weak self] in
-                guard let self, self.stickerIntroDeadline == nil else { return }
-                self.stickerIntroDeadline = CACurrentMediaTime() + 4
-                if let state = self.state { self.playStickerIntro(state: state) }
-            })
+            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: {})
         }
 
         override func layoutSubviews() {
@@ -569,7 +573,6 @@ private final class PeerWalletOverlayComponent: Component {
                 cardView.setCardStickers(state.stickers, images: state.stickerMedia.compactMapValues { $0.first?.image }, hidden: [])
                 self.state = state
                 if self.stickerTap.view !== cardView { cardView.addGestureRecognizer(self.stickerTap) }
-                self.playStickerIntro(state: state)
                 let source = state.stickers.last(where: { $0.style != nil })
                 cardView.setGiftStyle(from: source?.style, to: source?.style, origin: .zero, progress: 1,
                     pattern: source.flatMap { state.stickerMedia[$0.gift.address]?.patternImage })

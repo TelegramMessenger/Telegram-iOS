@@ -200,6 +200,11 @@ public final class WalletCardComponent: Component {
                 to.map { WalletCardTint($0).address.withAlphaComponent(0.8) } ?? UIColor(rgb: 0x055ac4, alpha: 0.8), frame.textMix)
             let textChanged = self.giftAccentColor != accent || self.giftAddressColor != address
             self.giftAccentColor = accent; self.giftAddressColor = address
+            let tintAmount = (from == nil ? 0.0 : 1.0) * (1.0 - frame.textMix) + (to == nil ? 0.0 : 1.0) * frame.textMix
+            (self.gramDiamond.view as? InteractiveDiamondComponent.View)?.setTint(
+                (to ?? from).map { _ in Self.mixStyleColor(from.map { WalletCardTint($0).accent } ?? to.map { WalletCardTint($0).accent } ?? accent,
+                    to.map { WalletCardTint($0).accent } ?? from.map { WalletCardTint($0).accent } ?? accent, frame.textMix) },
+                amount: tintAmount * 0.7)
             if textChanged, let component = self.component {
                 _ = self.update(component: component, availableSize: self.currentSize, state: EmptyComponentState(),
                     environment: .value, transition: .immediate)
@@ -273,11 +278,6 @@ public final class WalletCardComponent: Component {
         }
         private var liveStickers: [String: StickerLive] = [:]
         private var stickerImages: [String: UIImage] = [:]
-        private var stickerFrames: [String: UIImage] = [:]
-        public func setStickerFrames(_ frames: [String: UIImage]) {
-            self.stickerFrames = frames
-            self.layoutCardStickers()
-        }
         public func sticker(at point: CGPoint) -> WalletContext.CardSticker? {
             let size = self.foregroundView.bounds.size
             guard CGRect(origin: .zero, size: size).contains(point), self.stickerPointIsInteractive(point) else { return nil }
@@ -514,7 +514,7 @@ public final class WalletCardComponent: Component {
                 view.bounds = CGRect(x: 0, y: 0, width: geometry.side, height: geometry.side * CGFloat(sticker.aspectRatio ?? 1))
                 view.center = geometry.center
                 view.transform = CGAffineTransform(rotationAngle: geometry.angle)
-                view.image = live?.image ?? self.stickerFrames[sticker.gift.address] ?? self.stickerImages[sticker.gift.address]
+                view.image = live?.image ?? self.stickerImages[sticker.gift.address]
                 view.update(press: live?.press ?? 0, shine: 0.5 + CGFloat(sin(self.smoothedStickerShine)) * 0.35)
             }
             if self.stickerSelectionView.isShown {

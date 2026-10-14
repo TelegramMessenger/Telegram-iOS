@@ -50,6 +50,7 @@ final class DiamondRenderer: ComputeState {
         var appearance: SIMD4<Float>
         var referenceCrownFlash: SIMD4<Float>
         var referencePavilionFlash: SIMD4<Float>
+        var tint: SIMD4<Float>
     }
 
     private struct LensUniforms {
@@ -355,7 +356,7 @@ final class DiamondRenderer: ComputeState {
                         leftCrownSweep: light.leftCrownSweep, pavilionSweep: light.pavilionSweep,
                         rightPavilionSweep: light.rightPavilionSweep, leftPavilionSweep: light.leftPavilionSweep,
                         appearance: SIMD4(Float(style.appearance.rawValue), min(1, max(0, style.whiten)), max(0, highlightBoost), 0),
-                        referenceCrownFlash: flashes.0, referencePavilionFlash: flashes.1)
+                        referenceCrownFlash: flashes.0, referencePavilionFlash: flashes.1, tint: style.tint)
     }
 
     func encode(encoder: MTLRenderCommandEncoder, size: CGSize, time: Float, starBursts: [DiamondStarBurst], starOffset: CGPoint, motion: DiamondMotion, style: DiamondStyle, grow: Float, pixelsPerPoint: Float, reduceMotion: Bool, lightBackground: Bool, refractionSource: InteractiveDiamondComponent.RefractionSource?, refractionStrength: Float, highlightBoost: Float, colorPixelFormat: MTLPixelFormat, refractionUpdated: ((InteractiveDiamondComponent.RefractionGeometry?) -> Void)? = nil) {

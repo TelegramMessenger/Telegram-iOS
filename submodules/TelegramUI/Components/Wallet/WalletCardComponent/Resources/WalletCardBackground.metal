@@ -183,6 +183,28 @@ static inline float3 walletCardApplySaturation(float3 value) {
     return clamp(mix(float3(luminance), value, 1.6), float3(0.0), float3(1.0));
 }
 
+// Moves a pale tinted color's hue toward the style hue, keeping its lightness and chroma.
+static inline float3 walletHueShift(float3 srgb, float hue, float amount) {
+    float3 lab = walletOklab(srgb);
+    float C = length(lab.yz);
+    float3 lin = walletOklchLinear(lab.x, C, hue);
+    float3 shifted = walletCardLinearToSrgb(clamp(lin, 0.0, 1.0));
+    return mix(srgb, shifted, amount);
+}
+
+static inline float3 walletHueStyled(float3 srgb, float2 p, constant WalletCardStyle &s, float amount) {
+    if (s.mode.x < 0.5 && s.mode.y < 0.5) return srgb;
+    float inside;
+    if (s.mode.z >= 0.0) {
+        inside = s.mode.z;
+    } else {
+        inside = 1.0 - smoothstep(s.wave.z - 18.0, s.wave.z, distance(p, s.wave.xy));
+    }
+    float3 a = s.mode.x > 0.5 ? walletHueShift(srgb, s.from0.x, amount) : srgb;
+    float3 b = s.mode.y > 0.5 ? walletHueShift(srgb, s.to0.x, amount) : srgb;
+    return mix(a, b, inside);
+}
+
 // Premultiplied chip and socket, in the reference's 50 x 38 point coordinates.
 static inline float4 walletCardQRChip(float2 cp, float2 surface, float time,
                                      texture2d<float> noiseMap, texture2d<float> qrMap,
@@ -220,6 +242,7 @@ static inline float4 walletCardQRChip(float2 cp, float2 surface, float time,
     metal = mix(metal, float3(0.98, 0.99, 1.0), fresnel * 0.18);
     float chamfer = smoothstep(-1.3, -0.1, inner);
     metal -= chamfer * dot(n, light) * 0.12;
+    metal = walletHueStyled(clamp(metal, 0.0, 1.0), stylePoint, style, 0.7);
 
     float2 qrUV = (cp - float2(282.5, 90.0)) / 22.0;
     float ink = qrMap.sample(cardSampler, qrUV).a;

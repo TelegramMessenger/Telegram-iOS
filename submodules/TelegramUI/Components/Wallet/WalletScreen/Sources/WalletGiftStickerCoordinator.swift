@@ -138,9 +138,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     private let overlay = UIView()
     private let face = WalletStickerWaveView(frame: .zero)
     private var savedScrollEnabled = true
-    private let intro = WalletGiftStickerPlayback()
-    private var introDeadline: Double?
-    private var introPlayed = Set<String>()
     private var placedIds = Set<String>()
     private var externalDrag = false
     private var overlayInWindow = false
@@ -187,9 +184,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.tap.require(toFail: self.gesture)
         host.addGestureRecognizer(self.tap)
         self.grid?.visibleGiftsChanged = { [weak self] gifts in self?.prepare(gifts) }
-        self.intro.updated = { [weak self] frames in
-            self?.card?.setStickerFrames(frames.compactMapValues(\.image))
-        }
         self.lifecycleObserver = NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification,
             object: nil, queue: .main) { [weak self] _ in self?.cancel() }
     }
@@ -219,9 +213,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.context = context
         self.wallet = wallet
         self.address = address
-        if visible && self.introDeadline == nil { self.introDeadline = CACurrentMediaTime() + 4 }
         if self.card !== card {
-            self.intro.stop()
             self.card?.setStickerSelection(nil, animated: false)
             card?.setStickerSelection(self.selectedId, animated: false)
         }
@@ -275,7 +267,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.play = nil
         self.finishSettle()
         self.deselect(animated: false)
-        self.intro.stop()
         self.tapBoop.set(0)
         self.liveStickerId = nil; self.trash.reset()
         self.card?.setStickerLive([:])
@@ -355,23 +346,12 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.stickerDiagnostics = diagnostics
         #endif
         self.card?.setCardStickers(self.placements, images: images, hidden: hidden)
-        self.playIntro()
         let occupied = Set(self.placements.map { $0.gift.address })
         var lifted = Set(self.flights.keys)
         if let drag { lifted.insert(drag.gift.address) }
         self.grid?.setStickers(occupied: occupied, lifted: lifted, styles: self.media.compactMapValues { $0.style }, media: self.media)
         self.updateStyle()
 
-    }
-
-    private func playIntro() {
-        guard let introDeadline, CACurrentMediaTime() < introDeadline, self.visible, !self.isDragging, self.play == nil else { return }
-        for sticker in self.placements {
-            let id = sticker.gift.address
-            guard !self.introPlayed.contains(id), self.flights[id] == nil, let media = self.media[id], media.first != nil else { continue }
-            self.introPlayed.insert(id)
-            self.intro.play(id, media: media, enlarge: false)
-        }
     }
 
     private func sticker(at point: CGPoint) -> WalletContext.CardSticker? {
@@ -425,8 +405,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
 
     private func beginPending(at point: CGPoint) -> Bool {
         guard let host, self.pending == nil, self.drag == nil, self.edit == nil else { return false }
-        self.introDeadline = 0
-        self.intro.stop()
         self.finishSettle()
         self.play = nil
         let gift: WalletContext.Collectible
@@ -947,8 +925,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         guard recognizer.state == .ended, self.drag == nil, self.play == nil,
               let sticker = self.sticker(at: recognizer.location(in: self.host)),
               let media = self.media[sticker.gift.address], media.first != nil else { return }
-        self.introDeadline = 0
-        self.intro.stop()
         self.liveStickerId = sticker.gift.address; self.tapBoop.velocity += 3
         self.play = Play(id: sticker.gift.address, start: CACurrentMediaTime(), image: media.first?.image)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1271,8 +1247,6 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
               let spot = self.solver(excluding: collectible.address)?.spread(aim: nil, scale: 1) else { return false }
         self.finishSettle()
         self.deselect(animated: false)
-        self.introDeadline = 0
-        self.intro.stop()
         let rect = sourceView.convert(sourceView.bounds, to: host)
         let frame = self.grid?.stickerModelFrame(address: collectible.address, side: rect.width)
             ?? CGRect(origin: .zero, size: rect.size)
@@ -1302,8 +1276,6 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
               self.drag == nil, self.pending == nil, self.edit == nil, self.flights[collectible.address] == nil else { return false }
         self.finishSettle()
         self.deselect(animated: false)
-        self.introDeadline = 0
-        self.intro.stop()
         self.prepare([collectible])
         guard let media = self.media[collectible.address] else { return false }
         if let context { media.prepareForSticker(context: context) }
