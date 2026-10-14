@@ -274,6 +274,8 @@ func chatHistoryEntriesForView(
                         
                         var currentMessages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
                         
+                        var currentAttributes = currentAttributes
+                        currentAttributes.groupStableId = nil
                         currentMessages.append((currentMessage, currentIsRead, currentSelection, currentAttributes, currentLocation))
                         if reverseGroupedMessages {
                             currentMessages.insert((message, isRead, selection, attributes, entry.location), at: 0)
@@ -295,6 +297,12 @@ func chatHistoryEntriesForView(
                     }
                 }
                 if !found {
+                    var attributes = attributes
+                    if groupMessages {
+                        // Alone so far: keep the identity of the album entry it becomes once another of
+                        // the album's messages loads. Not when albums are split into messages below.
+                        attributes.groupStableId = groupStableId
+                    }
                     entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, attributes))
                 }
             } else {
