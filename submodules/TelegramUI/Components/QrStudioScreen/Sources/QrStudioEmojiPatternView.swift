@@ -6,9 +6,7 @@ import AccountContext
 
 private final class QrStudioPatternNode {
     let layer = SimpleLayer()
-    static let unassigned = Int.min
-
-    var fileIndex: Int = QrStudioPatternNode.unassigned
+    var fileId: Int64?
     var isUsed = false
     var isTemplate = false
 }
@@ -137,8 +135,10 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
             self.previousFiles = nil
             let currentIds = Set(self.files.map { $0.fileId.id })
             for (_, node) in self.nodes {
-                self.detach(node)
-                node.fileIndex = QrStudioPatternNode.unassigned
+                if let fileId = node.fileId, !currentIds.contains(fileId) {
+                    self.detach(node)
+                    node.fileId = nil
+                }
             }
             self.animations = self.animations.filter { currentIds.contains($0.key) }
         }
@@ -197,17 +197,17 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
             }
             node.isUsed = true
 
-            if node.fileIndex != fileIndex {
+            let file: TelegramMediaFile?
+            if fileIndex >= 0 {
+                file = self.files[fileIndex]
+            } else if let previousFiles = self.previousFiles {
+                file = previousFiles[-1 - fileIndex]
+            } else {
+                file = nil
+            }
+            if node.fileId != file?.fileId.id {
                 self.detach(node)
-                node.fileIndex = fileIndex
-                let file: TelegramMediaFile?
-                if fileIndex >= 0 {
-                    file = self.files[fileIndex]
-                } else if let previousFiles = self.previousFiles {
-                    file = previousFiles[-1 - fileIndex]
-                } else {
-                    file = nil
-                }
+                node.fileId = file?.fileId.id
                 if let file {
                     self.animation(for: file).attach(node.layer, group: qrStudioPhaseGroup(hash: cell.hash))
                     node.isTemplate = file.isCustomTemplateEmoji
@@ -227,7 +227,7 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
 
         for (key, node) in self.nodes where !node.isUsed {
             self.detach(node)
-            node.fileIndex = QrStudioPatternNode.unassigned
+            node.fileId = nil
             node.layer.contents = nil
             node.layer.removeFromSuperlayer()
             self.reusableNodes.append(node)

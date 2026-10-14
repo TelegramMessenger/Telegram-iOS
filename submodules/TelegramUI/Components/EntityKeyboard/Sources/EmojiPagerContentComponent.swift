@@ -3993,6 +3993,7 @@ public final class EmojiPagerContentComponent: Component {
                 } else if case let .staticEmoji(emoji) = id.itemId, component.selectedItems.contains(emoji) {
                 } else {
                     itemSelectionLayer.removeFromSuperlayer()
+                    itemSelectionLayer.tintContainerLayer.removeFromSuperlayer()
                     removedItemSelectionLayerIds.append(id)
                 }
             }

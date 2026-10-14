@@ -27,6 +27,8 @@ private final class QrStudioWeakFrames {
 
 private var qrStudioPhasedFrames: [String: QrStudioWeakFrames] = [:]
 
+private let qrStudioPhasedEpoch = CACurrentMediaTime()
+
 private final class QrStudioPhaseMember {
     weak var layer: CALayer?
     let group: Int
@@ -47,7 +49,6 @@ final class QrStudioPhasedAnimation {
     private let customColor: UIColor?
     private var members: [ObjectIdentifier: QrStudioPhaseMember] = [:]
     private var firstFrameDisposable: Disposable?
-    private var placeholderDisposable: Disposable?
     private var framesDisposable: Disposable?
     private var placeholder: CGImage?
     private var frames: QrStudioExportSticker?
@@ -76,24 +77,6 @@ final class QrStudioPhasedAnimation {
             return
         }
 
-        self.placeholderDisposable = context.animationRenderer.loadFirstFrameAsImage(cache: context.animationCache, itemId: self.itemId, size: self.pixelSize, fetch: self.fetch(), completion: { [weak self] image in
-            Queue.mainQueue().async {
-                guard let self, let image, self.frames == nil else {
-                    return
-                }
-                self.placeholder = image
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                for (_, member) in self.members {
-                    if let layer = member.layer {
-                        qrStudioCrossfadeContents(layer)
-                        layer.contents = image
-                    }
-                }
-                CATransaction.commit()
-            }
-        })
-
         self.framesDisposable = (qrStudioDecodeExportSticker(context: context, file: file, pixelSide: Int(self.pixelSize.width), tint: nil, firstFrameOnly: false)
         |> deliverOnMainQueue).start(next: { [weak self] frames in
             guard let self, let frames else {
@@ -116,7 +99,6 @@ final class QrStudioPhasedAnimation {
 
     deinit {
         self.firstFrameDisposable?.dispose()
-        self.placeholderDisposable?.dispose()
         self.framesDisposable?.dispose()
     }
 
@@ -131,7 +113,8 @@ final class QrStudioPhasedAnimation {
         let offset = frames.period * Double(group) / Double(QrStudioPhasedAnimation.groupCount)
         layer.removeAnimation(forKey: QrStudioPhasedAnimation.animationKey)
         if frames.isAnimated {
-            let index = min(frames.frames.count - 1, Int(Double(frames.frames.count) * offset / frames.period))
+            let local = (CACurrentMediaTime() - qrStudioPhasedEpoch + offset).truncatingRemainder(dividingBy: frames.period)
+            let index = min(frames.frames.count - 1, max(0, Int(Double(frames.frames.count) * local / frames.period)))
             layer.contents = frames.frames[index]
             let animation = CAKeyframeAnimation(keyPath: "contents")
             animation.values = frames.frames
@@ -140,6 +123,7 @@ final class QrStudioPhasedAnimation {
             animation.repeatCount = .infinity
             animation.isRemovedOnCompletion = false
             animation.timeOffset = offset
+            animation.beginTime = layer.convertTime(qrStudioPhasedEpoch, from: nil)
             layer.add(animation, forKey: QrStudioPhasedAnimation.animationKey)
         } else {
             layer.contents = frames.frames.first
