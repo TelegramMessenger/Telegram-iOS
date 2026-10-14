@@ -144,6 +144,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     private var placedIds = Set<String>()
     private var externalDrag = false
     private var overlayInWindow = false
+    private var externalFlight = false
     private var pendingMenuAction: (gift: WalletContext.Collectible, color: Bool)?
     private var lifecycleObserver: NSObjectProtocol?
     var limitReached: (() -> Void)?
@@ -199,7 +200,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     func update(context: AccountContext, wallet: WalletContext, state: WalletContext.State?, card: WalletCardComponent.View?, visible: Bool) {
-        let visible = visible || self.externalDrag
+        let visible = visible || self.externalDrag || self.externalFlight
         let isWallet: Bool
         if case .wallet? = state?.phase { isWallet = true } else { isWallet = false }
         var address = state?.walletAddress
@@ -993,6 +994,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.overlay.removeFromSuperview()
         self.overlay.layer.mask = nil
         self.overlayInWindow = false
+        self.externalFlight = false
     }
 
     private func tick() {
@@ -1258,6 +1260,28 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
         if let context { self.media[collectible.address]?.prepareForSticker(context: context) }
         self.pendingMenuAction = (collectible, color)
         self.runPendingMenuAction()
+    }
+
+    func placeSticker(collectible: WalletContext.Collectible, color: Bool, sourceView: UIView) -> Bool {
+        guard self.canEdit, collectible.kind == .gift, let host, host.window != nil,
+              !self.placements.contains(where: { $0.gift.address == collectible.address }),
+              self.drag == nil, self.pending == nil, self.edit == nil, self.flights[collectible.address] == nil else { return false }
+        self.prepare([collectible])
+        guard let media = self.media[collectible.address], media.first != nil, !color || media.style != nil,
+              let spot = self.solver(excluding: collectible.address)?.spread(aim: nil, scale: 1) else { return false }
+        self.finishSettle()
+        self.deselect(animated: false)
+        self.introDeadline = 0
+        self.intro.stop()
+        let rect = sourceView.convert(sourceView.bounds, to: host)
+        let frame = self.grid?.stickerModelFrame(address: collectible.address, side: rect.width)
+            ?? CGRect(origin: .zero, size: rect.size)
+        let from = Pose(center: CGPoint(x: rect.minX + frame.midX, y: rect.minY + frame.midY), side: frame.width, angle: 0)
+        self.externalFlight = true
+        self.overlayInWindow = true
+        self.visible = true
+        self.place(collectible, from: from, spot: spot, angle: 0, thrown: true, style: color ? media.style : nil)
+        return true
     }
 
     fileprivate func runPendingMenuAction() {

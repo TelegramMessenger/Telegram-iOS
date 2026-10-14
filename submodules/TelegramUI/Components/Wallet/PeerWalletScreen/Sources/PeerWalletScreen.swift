@@ -362,7 +362,10 @@ private final class PeerWalletOverlayComponent: Component {
                 self.cardContainer.center = center
                 self.cardContainer.alpha = smooth(p / 0.045)
                 self.cardMask.frame = self.cardContainer.bounds
-                let edge = halfHeight + (slotLine - center.y) * fit
+                let overlap = slidesDown ? max(0.0, slotLine - self.cardFrame.minY + 24.0) : max(0.0, self.cardFrame.maxY + 24.0 - slotLine)
+                let release = smooth((p / impact - 0.35) / 0.4)
+                let maskLine = slotLine + (slidesDown ? -overlap : overlap) * release
+                let edge = halfHeight + (maskLine - center.y) * fit
                 let span = max(self.animationSize.width, self.animationSize.height) * 3.0
                 self.cardMask.path = CGPath(rect: CGRect(x: -span, y: slidesDown ? edge : edge - span, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
                 self.cardContainer.layer.mask = p < (dismissing ? 0.75 : impact) ? self.cardMask : nil

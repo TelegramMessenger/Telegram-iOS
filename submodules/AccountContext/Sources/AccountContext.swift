@@ -2197,6 +2197,7 @@ public struct WalletCollectibleStickerMenuState {
 public protocol WalletCollectibleStickerHost: AnyObject {
     func stickerMenuState(collectible: WalletContext.Collectible) -> WalletCollectibleStickerMenuState?
     func performStickerAction(collectible: WalletContext.Collectible, color: Bool)
+    func placeSticker(collectible: WalletContext.Collectible, color: Bool, sourceView: UIView) -> Bool
     func stickerSilhouette(collectible: WalletContext.Collectible, side: CGFloat) -> (image: UIImage, frame: CGRect)?
     func beginStickerTearOff(collectible: WalletContext.Collectible, sourceView: UIView, location: CGPoint) -> Bool
     func updateStickerTearOff(location: CGPoint)

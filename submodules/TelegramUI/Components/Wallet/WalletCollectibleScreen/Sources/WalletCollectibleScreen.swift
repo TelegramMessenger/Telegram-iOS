@@ -514,6 +514,25 @@ private final class WalletCollectibleContentComponent: Component {
             return (self.header.view as? WalletCollectibleHeaderComponent.View)?.giftView
         }
 
+        private func hideModelForFlight(host: WalletCollectibleStickerHost, collectible: WalletContext.Collectible, sourceView: UIView) {
+            var color = UIColor(white: 0.0, alpha: 0.2)
+            for case let .backdrop(_, _, inner, _, pattern, _, _) in (collectible.nft?.gift ?? self.uniqueGift)?.attributes ?? [] {
+                color = UIColor(rgb: UInt32(bitPattern: pattern)).mixedWith(UIColor(rgb: UInt32(bitPattern: inner)), alpha: 0.5)
+            }
+            let silhouette = host.stickerSilhouette(collectible: collectible, side: sourceView.bounds.width)
+            if self.displaysGiftHeader {
+                if let silhouette {
+                    self.showTearOffSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
+                } else {
+                    (self.composition.view as? GiftCompositionComponent.View)?.setModelHidden(true)
+                }
+            } else if let silhouette, let headerView = self.header.view as? WalletCollectibleHeaderComponent.View {
+                headerView.showModelSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
+            } else {
+                sourceView.isHidden = true
+            }
+        }
+
         private func showTearOffSilhouette(image: UIImage, frame: CGRect, color: UIColor) {
             guard let compositionView = self.composition.view as? GiftCompositionComponent.View else { return }
             compositionView.setModelHidden(true)
@@ -550,22 +569,7 @@ private final class WalletCollectibleContentComponent: Component {
                     return
                 }
                 self.tearOffHost = host
-                var color = UIColor(white: 0.0, alpha: 0.2)
-                for case let .backdrop(_, _, inner, _, pattern, _, _) in (component.collectible.nft?.gift ?? self.uniqueGift)?.attributes ?? [] {
-                    color = UIColor(rgb: UInt32(bitPattern: pattern)).mixedWith(UIColor(rgb: UInt32(bitPattern: inner)), alpha: 0.5)
-                }
-                let silhouette = host.stickerSilhouette(collectible: component.collectible, side: sourceView.bounds.width)
-                if self.displaysGiftHeader {
-                    if let silhouette {
-                        self.showTearOffSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
-                    } else {
-                        (self.composition.view as? GiftCompositionComponent.View)?.setModelHidden(true)
-                    }
-                } else if let silhouette, let headerView = self.header.view as? WalletCollectibleHeaderComponent.View {
-                    headerView.showModelSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
-                } else {
-                    sourceView.isHidden = true
-                }
+                self.hideModelForFlight(host: host, collectible: component.collectible, sourceView: sourceView)
                 self.close(completion: { [weak self] dismiss in
                     guard let self else {
                         dismiss()
@@ -685,6 +689,12 @@ private final class WalletCollectibleContentComponent: Component {
                 let collectible = component.collectible
                 let strings = environment.strings
                 let perform: (Bool) -> Void = { [weak self, weak host] color in
+                    if !state.isOnCard, let self, let host, let sourceView = self.tearOffSourceView,
+                       host.placeSticker(collectible: collectible, color: color, sourceView: sourceView) {
+                        self.hideModelForFlight(host: host, collectible: collectible, sourceView: sourceView)
+                        self.close()
+                        return
+                    }
                     self?.close(completion: { dismiss in
                         dismiss()
                         host?.performStickerAction(collectible: collectible, color: color)
