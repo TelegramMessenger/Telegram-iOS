@@ -39,6 +39,8 @@ struct NewsFeedItemEnvironment {
     let presentationData: PresentationData
     /// Measured from a post row at the list's width; the load-more placeholder is drawn from it.
     let skeletonRowLayout: NewsFeedSkeletonRowLayout
+    /// The list the rows are for: whether they load synchronously as they are built.
+    let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
 }
 
@@ -71,6 +73,7 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         peer: peer,
         messages: resolved,
         timestamp: newest.timestamp,
+        loading: environment.rowLoading,
         action: {
             openPost(peer, messageId)
         }

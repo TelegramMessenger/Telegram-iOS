@@ -79,7 +79,7 @@ public func newsFeedSkeletonRowLayout(context: AccountContext, theme: Presentati
     let row = ComponentView<Empty>()
     let size = row.update(
         transition: .immediate,
-        component: AnyComponent(NewsFeedPostComponent(context: context, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peer: peer, messages: [message], timestamp: timestamp, action: {})),
+        component: AnyComponent(NewsFeedPostComponent(context: context, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peer: peer, messages: [message], timestamp: timestamp, loading: NewsFeedRowLoading(), action: {})),
         environment: {},
         containerSize: CGSize(width: width, height: 10000.0)
     )

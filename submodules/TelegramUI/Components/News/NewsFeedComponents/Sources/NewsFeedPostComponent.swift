@@ -50,7 +50,7 @@ private func newsPostThumbnail(_ messages: [EngineMessage]) -> (EngineMessage, N
     return nil
 }
 
-private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedString {
+private func newsPostText(component: NewsFeedPostComponent, maxLength: Int) -> NSAttributedString {
     let theme = component.theme
     let font = Font.regular(15.0)
     if let message = component.messages.first(where: { !$0.text.isEmpty }) {
@@ -62,9 +62,10 @@ private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedStrin
                 entities = chatListPreviewTextEntities(attribute.entities)
             }
         }
+        let prefix = newsPreviewTextPrefix(message.text, entities: entities, maxLength: maxLength)
         // One character for one, so the entity ranges stay valid.
-        let text = message.text.replacingOccurrences(of: "\n", with: " ")
-        return chatListPreviewAttributedString(text, entities: entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemPrimaryTextColor, message: message._asMessage())
+        let text = prefix.text.replacingOccurrences(of: "\n", with: " ")
+        return chatListPreviewAttributedString(text, entities: prefix.entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemPrimaryTextColor, message: message._asMessage())
     }
     guard let message = component.messages.first else {
         return NSAttributedString()
@@ -92,9 +93,10 @@ public final class NewsFeedPostComponent: Component {
     public let messages: [EngineMessage]
     /// The newest message's: the post's age is shown from it.
     public let timestamp: Int32
+    public let loading: NewsFeedRowLoading
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -103,6 +105,7 @@ public final class NewsFeedPostComponent: Component {
         self.peer = peer
         self.messages = messages
         self.timestamp = timestamp
+        self.loading = loading
         self.action = action
     }
 
@@ -129,6 +132,9 @@ public final class NewsFeedPostComponent: Component {
             return false
         }
         if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.loading !== rhs.loading {
             return false
         }
         return true
@@ -274,7 +280,7 @@ public final class NewsFeedPostComponent: Component {
             let avatarFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels(titleFrame.midY - avatarSize * 0.5)), size: CGSize(width: avatarSize, height: avatarSize))
             let _ = self.avatar.update(
                 transition: .immediate,
-                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size)),
+                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size, synchronousLoad: component.loading.isSynchronous)),
                 environment: {},
                 containerSize: avatarFrame.size
             )
@@ -318,7 +324,9 @@ public final class NewsFeedPostComponent: Component {
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
                     placeholderColor: theme.list.mediaPlaceholderColor,
-                    text: .plain(newsPostText(component: component)),
+                    // Three lines hold under one character per point of width (the narrowest glyphs are
+                    // 3.5 pt wide); twice the width leaves room for characters of several UTF-16 units.
+                    text: .plain(newsPostText(component: component, maxLength: Int(contentWidth * 2.0))),
                     maximumNumberOfLines: 3,
                     lineSpacing: 0.12
                 )),

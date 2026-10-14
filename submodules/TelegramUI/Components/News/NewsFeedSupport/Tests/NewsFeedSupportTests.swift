@@ -227,4 +227,46 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .member, featureEnabled: true, isAddingToNews: false), .existing)
         XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .kicked, featureEnabled: true, isAddingToNews: false), .existing)
     }
+
+    // MARK: preview text
+
+    func testShortTextKeepsItsEntities() {
+        let entities = [MessageTextEntity(range: 0 ..< 5, type: .Spoiler)]
+        let result = newsPreviewTextPrefix("hello world", entities: entities, maxLength: 11)
+        XCTAssertEqual(result.text, "hello world")
+        XCTAssertEqual(result.entities, entities)
+    }
+
+    func testLongTextIsCutWithItsEntities() {
+        let text = String(repeating: "a", count: 100)
+        let result = newsPreviewTextPrefix(text, entities: [
+            MessageTextEntity(range: 0 ..< 5, type: .Strikethrough),
+            MessageTextEntity(range: 5 ..< 60, type: .Spoiler),
+            MessageTextEntity(range: 70 ..< 80, type: .Underline)
+        ], maxLength: 50)
+        XCTAssertEqual(result.text, String(repeating: "a", count: 50))
+        // A spoiler running past the cut still hides the part that is shown.
+        XCTAssertEqual(result.entities, [
+            MessageTextEntity(range: 0 ..< 5, type: .Strikethrough),
+            MessageTextEntity(range: 5 ..< 50, type: .Spoiler)
+        ])
+    }
+
+    func testCustomEmojiAndDatesAcrossTheCutAreDropped() {
+        let text = String(repeating: "a", count: 48) + "😀😀" + String(repeating: "b", count: 20)
+        let result = newsPreviewTextPrefix(text, entities: [
+            MessageTextEntity(range: 48 ..< 52, type: .CustomEmoji(stickerPack: nil, fileId: 1)),
+            MessageTextEntity(range: 40 ..< 60, type: .FormattedDate(format: nil, date: 0))
+        ], maxLength: 51)
+        XCTAssertEqual(result.entities, [])
+    }
+
+    func testCutDoesNotSplitACharacter() {
+        // The cut falls between the two halves of the second emoji's surrogate pair.
+        let text = String(repeating: "a", count: 48) + "😀😀" + String(repeating: "b", count: 20)
+        XCTAssertEqual(newsPreviewTextPrefix(text, entities: [], maxLength: 51).text, String(repeating: "a", count: 48) + "😀")
+        // A family emoji is one character of several scalars.
+        let family = "x👨‍👩‍👧‍👦y"
+        XCTAssertEqual(newsPreviewTextPrefix(family, entities: [], maxLength: 4).text, "x")
+    }
 }

@@ -349,8 +349,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         return layout
     }
 
-    private func itemEnvironment() -> NewsFeedItemEnvironment {
-        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), openPost: { [weak self] peer, messageId in
+    private func itemEnvironment(list: NewsFeedListView) -> NewsFeedItemEnvironment {
+        return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
         })
     }
@@ -364,7 +364,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let (layout, _) = self.validLayout else {
             return
         }
-        let environment = self.itemEnvironment()
+        let environment = self.itemEnvironment(list: self.forYouList)
         let forYouRows = self.forYou.items(environment: environment)
         self.forYouList.setShowsSkeleton(forYouRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         self.forYouList.setRefreshing(self.forYou.state?.isRefreshing ?? false)
@@ -376,7 +376,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let (layout, _) = self.validLayout else {
             return
         }
-        let environment = self.itemEnvironment()
+        let environment = self.itemEnvironment(list: self.addedList)
         self.addedRows = self.added.rows(environment: environment)
         self.addedList.setShowsSkeleton(self.addedRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         var scrollTo: CoreListScrollTarget?

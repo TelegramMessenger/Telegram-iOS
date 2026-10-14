@@ -23,8 +23,12 @@ final class NewsFeedListView: UIView {
         }
     }
 
-    // Main-thread physics for now, rather than the render-server keyframe flights the chat uses.
+    // Main-thread physics rather than the render-server keyframe flights the chat uses, so the navigation bar,
+    // which follows this list's offset, stays in sync with the content.
     let coreList = CoreVirtualListView(forEmbedding: CGRect(), deceleration: .stepped)
+    /// Set only during this list's own passes, whose rows are on screen at once; rows a scroll builds load
+    /// their avatars in the background.
+    let rowLoading = NewsFeedRowLoading()
     private let refreshIndicator = UIActivityIndicatorView(style: .medium)
     private let skeletonView = NewsFeedSkeletonView()
     private var showsSkeleton = false
@@ -99,7 +103,9 @@ final class NewsFeedListView: UIView {
         self.coreList.frame = CGRect(origin: CGPoint(), size: size)
         self.items = items
         self.insets = insets
-        self.coreList.applyChanges(items: items, newSize: size, newInsets: insets, scrollTo: scrollTo, anchorMode: anchorMode, transition: transition)
+        self.withSynchronousRowLoading {
+            self.coreList.applyChanges(items: items, newSize: size, newInsets: insets, scrollTo: scrollTo, anchorMode: anchorMode, transition: transition)
+        }
         // A programmatic pass fires no scroll callback: report the settled offset.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
         self.layoutRefreshIndicator()
@@ -107,6 +113,13 @@ final class NewsFeedListView: UIView {
         if scrollTo != nil {
             self.onProgrammaticScroll?()
         }
+    }
+
+    private func withSynchronousRowLoading(_ f: () -> Void) {
+        let previous = self.rowLoading.isSynchronous
+        self.rowLoading.isSynchronous = true
+        f()
+        self.rowLoading.isSynchronous = previous
     }
 
     /// Until the list's first content arrives a skeleton stands in for it, moving with the list's offset (an
@@ -177,7 +190,9 @@ final class NewsFeedListView: UIView {
         guard index >= 0, index < self.items.count else {
             return
         }
-        self.coreList.applyChanges(scrollTo: CoreListScrollTarget(index: index, pointOffset: pointOffset), transition: transition)
+        self.withSynchronousRowLoading {
+            self.coreList.applyChanges(scrollTo: CoreListScrollTarget(index: index, pointOffset: pointOffset), transition: transition)
+        }
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
         self.onProgrammaticScroll?()
     }
