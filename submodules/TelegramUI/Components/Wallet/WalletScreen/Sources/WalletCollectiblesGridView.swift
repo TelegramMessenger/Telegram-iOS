@@ -13,12 +13,15 @@ final class WalletCollectiblesGridView: UIView {
     private final class ItemView: UIControl {
         let media = WalletCollectibleMediaView(frame: .zero)
         let giftTile = UIView()
+        private let modelSilhouette = UIImageView()
+        private var silhouetteSource: UIImage?
         private let giftContent = ComponentView<Empty>()
         private var decorationStyle: WalletContext.CardGiftStyle?
         private var decorationModel: Data?
         private var decorationAttributes: [StarGift.UniqueGift.Attribute] = []
         private(set) var stickerReady = false
         let badge = UIImageView(image: UIImage(systemName: "creditcard.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)))
+        private var isOnCard = false
         var action: (() -> Void)?
 
         override init(frame: CGRect) {
@@ -33,6 +36,23 @@ final class WalletCollectiblesGridView: UIView {
             self.isAccessibilityElement = true
             self.accessibilityTraits = .button
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+        }
+
+        func setOnCard(_ onCard: Bool) {
+            guard self.isOnCard != onCard else { return }
+            self.isOnCard = onCard
+            if self.badge.isHidden {
+                self.badge.alpha = 0
+                self.badge.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+                self.badge.isHidden = false
+            }
+            UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut, .beginFromCurrentState]) {
+                self.badge.alpha = onCard ? 1 : 0
+                self.badge.transform = onCard ? .identity : CGAffineTransform(scaleX: 0.5, y: 0.5)
+            } completion: { [weak self] finished in
+                guard let self, finished, !self.isOnCard else { return }
+                self.badge.isHidden = true
+            }
         }
 
         required init?(coder: NSCoder) {
@@ -92,6 +112,25 @@ final class WalletCollectiblesGridView: UIView {
             }
         }
 
+        func setModelSilhouette(_ visible: Bool, image: UIImage?, frame: CGRect) {
+            let showSilhouette = visible && image != nil && self.decorationStyle != nil
+            (self.giftContent.view as? GiftItemComponent.View)?.setModelHidden(showSilhouette)
+            if self.silhouetteSource !== image {
+                self.silhouetteSource = image
+                self.modelSilhouette.image = image?.withRenderingMode(.alwaysTemplate)
+            }
+            if showSilhouette, self.modelSilhouette.superview == nil {
+                self.modelSilhouette.isUserInteractionEnabled = false
+                self.giftTile.addSubview(self.modelSilhouette)
+            }
+            if let style = self.decorationStyle {
+                self.modelSilhouette.tintColor = UIColor(rgb: UInt32(bitPattern: style.patternColor))
+                    .mixedWith(UIColor(rgb: UInt32(bitPattern: style.innerColor)), alpha: 0.5)
+            }
+            self.modelSilhouette.frame = frame
+            self.modelSilhouette.isHidden = !showSilhouette
+        }
+
         override var isHighlighted: Bool {
             didSet {
                 self.alpha = self.isHighlighted ? 0.7 : 1.0
@@ -121,11 +160,14 @@ final class WalletCollectiblesGridView: UIView {
         self.giftMedia = media
         for (id, view) in self.itemViews {
             let lifted = self.lifted.contains(id)
-            view.badge.isHidden = !occupied.contains(id) || lifted
-            view.badge.frame = CGRect(x: 3, y: 3, width: 24, height: 24)
+            view.badge.bounds = CGRect(x: 0, y: 0, width: 24, height: 24)
+            view.badge.center = CGPoint(x: 15, y: 15)
+            view.setOnCard(occupied.contains(id))
             if let item = self.items.first(where: { $0.address == id }), item.kind == .gift,
                let context = self.context, let theme = self.theme {
                 view.updateGiftTile(context: context, theme: theme, item: item, media: media[id], side: self.itemSide)
+                view.setModelSilhouette(occupied.contains(id) || lifted, image: media[id]?.first?.art,
+                    frame: self.stickerModelFrame(address: id, side: self.itemSide))
             }
             view.media.setAnimationVisible(!lifted && view.frame.intersects(self.viewport))
         }
@@ -229,7 +271,8 @@ final class WalletCollectiblesGridView: UIView {
                     size: frame.size, cornerRadius: Self.cornerRadius, transition: itemTransition)
             }
             itemTransition.setFrame(view: view.media, frame: CGRect(origin: .zero, size: frame.size))
-            itemTransition.setFrame(view: view, frame: frame)
+            itemTransition.setPosition(view: view, position: CGPoint(x: frame.midX, y: frame.midY))
+            itemTransition.setBounds(view: view, bounds: CGRect(origin: .zero, size: frame.size))
             view.media.setAnimationVisible(!self.occupied.contains(item.address) && frame.intersects(visibleBounds))
         }
         for id in Array(self.itemViews.keys) where !validIds.contains(id) {

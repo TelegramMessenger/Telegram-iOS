@@ -1471,22 +1471,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
 
         self.headerNode.openWallet = { [weak self] in
             guard let self, let controller = self.controller, let peer = self.data?.peer else { return }
-            if peer.id == self.context.account.peerId {
-                self.openSettings(section: .wallet)
-            } else {
-                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sendMoney: { [weak self] peerWalletScreen in
-                    guard let self, let controller = self.controller, let walletContext = self.context.walletContext else { return }
-                    let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
-                        guard let self, let navigationController = self.controller?.navigationController as? NavigationController else { return }
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .default, useExisting: true, completion: { chatController in
-                            chatController.scrollToEndOfHistory()
-                        }))
-                    })
-                    sendController.navigationPresentation = .modal
-                    peerWalletScreen.openSendMoney(sendController)
+            let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sourceBackgroundColor: self.headerNode.walletSourceBackgroundColor, sendMoney: { [weak self] peerWalletScreen in
+                guard let self, let controller = self.controller else { return }
+                if peer.id == self.context.account.peerId {
+                    guard WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable else {
+                        self.openSettings(section: .wallet)
+                        return
+                    }
+                    peerWalletScreen.openScreen(self.context.sharedContext.makeWalletScreen(context: self.context))
+                    return
+                }
+                guard let walletContext = self.context.walletContext else { return }
+                let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
+                    guard let self, let navigationController = self.controller?.navigationController as? NavigationController else { return }
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .default, useExisting: true, completion: { chatController in
+                        chatController.scrollToEndOfHistory()
+                    }))
                 })
-                controller.push(screen)
-            }
+                sendController.navigationPresentation = .modal
+                peerWalletScreen.openScreen(sendController)
+            })
+            controller.push(screen)
         }
         
         self.headerNode.cancelUpload = { [weak self] in

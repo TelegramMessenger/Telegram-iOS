@@ -121,8 +121,6 @@ public final class WalletStickerWaveView: UIView {
 final class WalletCardStickerView: UIImageView {
     private let gloss = CAGradientLayer()
     private let silhouette = CALayer()
-    private let ring = CAShapeLayer()
-    private let degrees = UILabel()
     override init(frame: CGRect) {
         super.init(frame: frame)
         isUserInteractionEnabled = false
@@ -131,36 +129,13 @@ final class WalletCardStickerView: UIImageView {
         gloss.startPoint = CGPoint(x: 0, y: 0); gloss.endPoint = CGPoint(x: 1, y: 1)
         gloss.mask = silhouette
         layer.addSublayer(gloss)
-        ring.fillColor = nil; ring.strokeColor = UIColor.white.cgColor; ring.lineWidth = 1
-        layer.addSublayer(ring)
-        degrees.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
-        degrees.textColor = .white; degrees.textAlignment = .center
-        degrees.backgroundColor = UIColor.black.withAlphaComponent(0.45)
-        degrees.layer.cornerRadius = 11; degrees.clipsToBounds = true
-        addSubview(degrees)
     }
     required init?(coder: NSCoder) { fatalError() }
-    func update(press: CGFloat, angle: CGFloat, shine: CGFloat) {
+    func update(press: CGFloat, shine: CGFloat) {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         gloss.frame = bounds; silhouette.frame = bounds; silhouette.contents = image?.cgImage
         gloss.locations = [NSNumber(value: Double(max(0, shine - 0.14))), NSNumber(value: Double(shine)), NSNumber(value: Double(min(1, shine + 0.14)))]
         gloss.opacity = 0.5
-        let center = CGPoint(x: bounds.midX, y: bounds.midY), radius = bounds.width * 0.6
-        let path = UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true)
-        ring.path = path.cgPath; ring.opacity = Float(press * 0.45)
-        degrees.alpha = press
-        degrees.text = "\(Int((atan2(sin(angle), cos(angle)) * 180 / .pi).rounded()))°"
-        degrees.bounds = CGRect(x: 0, y: 0, width: max(44, degrees.intrinsicContentSize.width + 16), height: 22)
-        degrees.center = CGPoint(x: center.x + (radius + 20) * sin(angle), y: center.y + (radius + 20) * cos(angle))
-        if let parent = self.superview {
-            var labelCenter = self.convert(degrees.center, to: parent)
-            let home = self.convert(center, to: parent)
-            if labelCenter.y > parent.bounds.maxY - 14 { labelCenter.y = home.y - radius - 20 }
-            labelCenter.x = min(parent.bounds.maxX - degrees.bounds.width / 2 - 4, max(degrees.bounds.width / 2 + 4, labelCenter.x))
-            labelCenter.y = min(parent.bounds.maxY - 14, max(14, labelCenter.y))
-            degrees.center = self.convert(labelCenter, from: parent)
-        }
-        degrees.transform = CGAffineTransform(rotationAngle: -angle)
         layer.shadowColor = UIColor.black.cgColor; layer.shadowOpacity = Float(press * 0.25)
         layer.shadowRadius = press * 9; layer.shadowOffset = CGSize(width: 0, height: press * 5)
         CATransaction.commit()

@@ -4297,11 +4297,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         )
     }
 
-    public func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, collectibleSent: @escaping (String) -> Void) -> ViewController {
+    public func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, stickerHost: WalletCollectibleStickerHost?, collectibleSent: @escaping (String) -> Void) -> ViewController {
         return WalletCollectibleScreen(
             context: context,
             walletContext: walletContext,
             collectible: collectible,
+            stickerHost: stickerHost,
             collectibleSent: collectibleSent
         )
     }

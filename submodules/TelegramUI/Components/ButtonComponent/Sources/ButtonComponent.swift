@@ -483,6 +483,54 @@ public final class ButtonComponent: Component {
     }
 
     public final class View: UIView {
+        private var backgroundReveal: (from: UIColor, to: UIColor, origin: CGPoint, radius: CGFloat, progress: CGFloat, fade: Bool)?
+        private var colorRevealLayer: CALayer?
+        private var colorRevealMask: CAGradientLayer?
+
+        public func setBackgroundReveal(from: UIColor, to: UIColor, origin: CGPoint, radius: CGFloat, progress: CGFloat, fade: Bool) {
+            self.backgroundReveal = (from, to, origin, radius, progress, fade)
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            defer { CATransaction.commit() }
+            self.containerView.backgroundColor = progress >= 1 ? to : from
+            guard progress < 1 else {
+                self.colorRevealLayer?.removeFromSuperlayer()
+                self.colorRevealLayer = nil
+                self.colorRevealMask = nil
+                return
+            }
+            let layer: CALayer
+            if let current = self.colorRevealLayer {
+                layer = current
+            } else {
+                layer = CALayer()
+                self.colorRevealLayer = layer
+                self.containerView.layer.insertSublayer(layer, at: 0)
+            }
+            layer.frame = self.containerView.bounds
+            layer.backgroundColor = to.cgColor
+            layer.opacity = fade ? Float(progress) : 1
+            if fade {
+                layer.mask = nil
+            } else {
+                let mask = self.colorRevealMask ?? CAGradientLayer()
+                self.colorRevealMask = mask
+                mask.type = .radial
+                mask.startPoint = CGPoint(x: 0.5, y: 0.5)
+                mask.endPoint = CGPoint(x: 1, y: 1)
+                let r = max(0.001, radius)
+                mask.frame = CGRect(x: origin.x - r, y: origin.y - r, width: r * 2, height: r * 2)
+                mask.colors = (0...8).map { index in
+                    let t = CGFloat(index) / 8
+                    return UIColor.black.withAlphaComponent(1 - t * t * (3 - 2 * t)).cgColor
+                }
+                mask.locations = (0...8).map { index in
+                    NSNumber(value: Double(max(0, 1 - 18 / r) + min(1, 18 / r) * CGFloat(index) / 8))
+                }
+                layer.mask = mask
+            }
+        }
+
         private var component: ButtonComponent?
         private weak var componentState: EmptyComponentState?
 
@@ -756,7 +804,9 @@ public final class ButtonComponent: Component {
                 }
                 contentContainerView = self.containerView
                 
-                transition.setBackgroundColor(view: self.containerView, color: component.background.color)
+                if self.backgroundReveal == nil {
+                    transition.setBackgroundColor(view: self.containerView, color: component.background.color)
+                }
                 transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: cornerRadius)
             }
             
@@ -890,6 +940,10 @@ public final class ButtonComponent: Component {
             
             transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: size))
             
+            if let reveal = self.backgroundReveal {
+                self.setBackgroundReveal(from: reveal.from, to: reveal.to, origin: reveal.origin,
+                    radius: reveal.radius, progress: reveal.progress, fade: reveal.fade)
+            }
             return size
         }
     }

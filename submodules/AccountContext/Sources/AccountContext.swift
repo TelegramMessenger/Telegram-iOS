@@ -1618,7 +1618,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController
     func makeWalletTransactionPreviewScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, address: String, amount: Int64, sendAll: Bool, comment: String?, initialFee: Int64?, dismissSendScreen: @escaping () -> Void) -> ViewController
     func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, recipientPeer: EnginePeer?, collectible: WalletContext.Collectible, comment: String?, dismissSendScreen: @escaping () -> Void) -> ViewController
-    func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, collectibleSent: @escaping (String) -> Void) -> ViewController
+    func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, stickerHost: WalletCollectibleStickerHost?, collectibleSent: @escaping (String) -> Void) -> ViewController
     func authorizeWalletAccess(context: AccountContext, completion: @escaping (Bool) -> Void)
     func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: ((StarGift.UniqueGift) -> Void)?) -> ViewController
     func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: ((StarGift.UniqueGift) -> Void)?, openChatTheme: (() -> Void)?, dismissed: (() -> Void)?) -> ViewController
@@ -2180,4 +2180,25 @@ public struct GiftConfiguration {
             return .defaultValue
         }
     }
+}
+
+public struct WalletCollectibleStickerMenuState {
+    public let isOnCard: Bool
+    public let isStyled: Bool
+    public let canStyle: Bool
+
+    public init(isOnCard: Bool, isStyled: Bool, canStyle: Bool) {
+        self.isOnCard = isOnCard
+        self.isStyled = isStyled
+        self.canStyle = canStyle
+    }
+}
+
+public protocol WalletCollectibleStickerHost: AnyObject {
+    func stickerMenuState(collectible: WalletContext.Collectible) -> WalletCollectibleStickerMenuState?
+    func performStickerAction(collectible: WalletContext.Collectible, color: Bool)
+    func stickerSilhouette(collectible: WalletContext.Collectible, side: CGFloat) -> (image: UIImage, frame: CGRect)?
+    func beginStickerTearOff(collectible: WalletContext.Collectible, sourceView: UIView, location: CGPoint) -> Bool
+    func updateStickerTearOff(location: CGPoint)
+    func endStickerTearOff()
 }

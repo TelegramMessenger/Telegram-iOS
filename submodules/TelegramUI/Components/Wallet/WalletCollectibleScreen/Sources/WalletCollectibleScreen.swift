@@ -343,6 +343,7 @@ private final class WalletCollectibleContentComponent: Component {
 
     let context: AccountContext
     let collectible: WalletContext.Collectible
+    weak var stickerHost: WalletCollectibleStickerHost?
     let openExternalUrl: (String, PresentationTheme) -> Void
     let openTransfer: () -> Void
     let animateOut: ActionSlot<Action<Void>>
@@ -351,6 +352,7 @@ private final class WalletCollectibleContentComponent: Component {
     init(
         context: AccountContext,
         collectible: WalletContext.Collectible,
+        stickerHost: WalletCollectibleStickerHost?,
         openExternalUrl: @escaping (String, PresentationTheme) -> Void,
         openTransfer: @escaping () -> Void,
         animateOut: ActionSlot<Action<Void>>,
@@ -358,6 +360,7 @@ private final class WalletCollectibleContentComponent: Component {
     ) {
         self.context = context
         self.collectible = collectible
+        self.stickerHost = stickerHost
         self.openExternalUrl = openExternalUrl
         self.openTransfer = openTransfer
         self.animateOut = animateOut
@@ -368,7 +371,7 @@ private final class WalletCollectibleContentComponent: Component {
         return lhs.context === rhs.context && lhs.collectible == rhs.collectible && lhs.screenSize == rhs.screenSize
     }
 
-    final class View: UIView {
+    final class View: UIView, UIGestureRecognizerDelegate {
         private let controlButtons = ComponentView<Empty>()
         /// How far the controls' trailing button keeps from a top corner block the sheet has risen beside (iPhone Duo), as
         /// of the last layout: the controls are laid out with it before the content height that decides it is known.
@@ -389,9 +392,80 @@ private final class WalletCollectibleContentComponent: Component {
         private var configuredAddress: String?
         private var uniqueGift: StarGift.UniqueGift?
         private var currentPeer: EnginePeer?
+        private let tearOffGesture = UILongPressGestureRecognizer()
+        private weak var tearOffHost: WalletCollectibleStickerHost?
+        private var tearOffSheetGone = false
+        private var tearOffFinished = false
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+            self.tearOffGesture.minimumPressDuration = 0.25
+            self.tearOffGesture.delegate = self
+            self.tearOffGesture.addTarget(self, action: #selector(self.tearOffGestureChanged(_:)))
+            self.addGestureRecognizer(self.tearOffGesture)
+        }
+
+        private var tearOffSourceView: UIView? {
+            return (self.header.view as? WalletCollectibleHeaderComponent.View)?.giftView
+        }
+
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer === self.tearOffGesture {
+                guard let component = self.component, component.collectible.kind == .gift, component.stickerHost != nil,
+                      let sourceView = self.tearOffSourceView else {
+                    return false
+                }
+                return sourceView.bounds.contains(gestureRecognizer.location(in: sourceView))
+            }
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+
+        @objc private func tearOffGestureChanged(_ recognizer: UILongPressGestureRecognizer) {
+            let location = recognizer.location(in: nil)
+            switch recognizer.state {
+            case .began:
+                guard let component = self.component, let host = component.stickerHost, let sourceView = self.tearOffSourceView,
+                      host.beginStickerTearOff(collectible: component.collectible, sourceView: sourceView, location: location) else {
+                    recognizer.isEnabled = false
+                    recognizer.isEnabled = true
+                    return
+                }
+                self.tearOffHost = host
+                if let silhouette = host.stickerSilhouette(collectible: component.collectible, side: sourceView.bounds.width),
+                   let headerView = self.header.view as? WalletCollectibleHeaderComponent.View {
+                    var color = UIColor(white: 0.0, alpha: 0.2)
+                    for case let .backdrop(_, _, inner, _, pattern, _, _) in component.collectible.nft?.gift?.attributes ?? [] {
+                        color = UIColor(rgb: UInt32(bitPattern: pattern)).mixedWith(UIColor(rgb: UInt32(bitPattern: inner)), alpha: 0.5)
+                    }
+                    headerView.showModelSilhouette(image: silhouette.image, frame: silhouette.frame, color: color)
+                } else {
+                    sourceView.isHidden = true
+                }
+                self.close(completion: { [weak self] dismiss in
+                    guard let self else {
+                        dismiss()
+                        return
+                    }
+                    self.tearOffSheetGone = true
+                    if self.tearOffFinished {
+                        dismiss()
+                    }
+                })
+            case .changed:
+                self.tearOffHost?.updateStickerTearOff(location: location)
+            case .ended, .cancelled, .failed:
+                guard let host = self.tearOffHost else {
+                    return
+                }
+                self.tearOffHost = nil
+                host.endStickerTearOff()
+                self.tearOffFinished = true
+                if self.tearOffSheetGone {
+                    (self.environment?.controller() as? WalletCollectibleScreen)?.dismiss(completion: nil)
+                }
+            default:
+                break
+            }
         }
 
         required init?(coder: NSCoder) {
@@ -435,7 +509,7 @@ private final class WalletCollectibleContentComponent: Component {
             }
         }
 
-        private func close() {
+        private func close(completion: ((@escaping () -> Void) -> Void)? = nil) {
             guard let component = self.component,
                   let controller = self.environment?.controller() as? WalletCollectibleScreen else {
                 return
@@ -446,11 +520,18 @@ private final class WalletCollectibleContentComponent: Component {
                 transition: .easeInOut(duration: 0.3).withUserData(ViewControllerComponentContainer.AnimateOutTransition())
             )
             component.animateOut.invoke(Action { [weak controller] _ in
-                controller?.dismiss(completion: nil)
+                let dismiss: () -> Void = {
+                    controller?.dismiss(completion: nil)
+                }
+                if let completion {
+                    completion(dismiss)
+                } else {
+                    dismiss()
+                }
             })
         }
 
-        private func openExplorer(sourceView: UIView) {
+        private func openMenu(sourceView: UIView) {
             guard let component = self.component,
                   let environment = self.environment,
                   let controller = environment.controller() as? WalletCollectibleScreen else {
@@ -474,10 +555,40 @@ private final class WalletCollectibleContentComponent: Component {
                     }
                 }
             )
+            var items: [ContextMenuItem] = [.action(item)]
+            if let host = component.stickerHost, let state = host.stickerMenuState(collectible: component.collectible) {
+                let collectible = component.collectible
+                let strings = environment.strings
+                let perform: (Bool) -> Void = { [weak self, weak host] color in
+                    self?.close(completion: { dismiss in
+                        dismiss()
+                        host?.performStickerAction(collectible: collectible, color: color)
+                    })
+                }
+                items.append(.separator)
+                if state.canStyle || state.isStyled {
+                    items.append(.action(ContextMenuActionItem(
+                        text: state.isStyled ? strings.Wallet_Sticker_RemoveColor : strings.Wallet_Sticker_ApplyColor,
+                        icon: { theme in generateTintedImage(image: UIImage(bundleImageName: state.isStyled ? "Media Editor/Erase" : "Chat/Context Menu/Palette"), color: theme.contextMenu.primaryColor) },
+                        action: { _, dismiss in
+                            dismiss(.default)
+                            perform(true)
+                        }
+                    )))
+                }
+                items.append(.action(ContextMenuActionItem(
+                    text: state.isOnCard ? strings.Wallet_Sticker_RemoveFromCard : strings.Wallet_Sticker_AddToCard,
+                    icon: { theme in generateTintedImage(image: UIImage(bundleImageName: state.isOnCard ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Card"), color: theme.contextMenu.primaryColor) },
+                    action: { _, dismiss in
+                        dismiss(.default)
+                        perform(false)
+                    }
+                )))
+            }
             let contextController = makeContextController(
                 presentationData: component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: environment.theme),
                 source: .reference(WalletCollectibleContextReferenceContentSource(sourceView: sourceView)),
-                items: .single(ContextController.Items(content: .list([.action(item)]))),
+                items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
             controller.presentInGlobalOverlay(contextController)
@@ -639,7 +750,7 @@ private final class WalletCollectibleContentComponent: Component {
                                   let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
                                 return
                             }
-                            self.openExplorer(sourceView: sourceView)
+                            self.openMenu(sourceView: sourceView)
                         }
                     )],
                     background: .panel
@@ -678,7 +789,8 @@ private final class WalletCollectibleContentComponent: Component {
                         image: component.collectible.image,
                         lottie: component.collectible.lottie,
                         collectionName: component.collectible.collectionName,
-                        collectionUrl: component.collectible.collectionUrl
+                        collectionUrl: component.collectible.collectionUrl,
+                        uniqueGift: component.collectible.nft?.gift
                     ),
                     displaysCollection: displaysCollection,
                     openCollection: { url in
@@ -930,6 +1042,7 @@ private final class WalletCollectiblePagerComponent: Component {
     let collectibles: [WalletContext.Collectible]
     let initialIndex: Int
     let itemSpacing: CGFloat
+    weak var stickerHost: WalletCollectibleStickerHost?
     let openExternalUrl: (String, PresentationTheme) -> Void
     let openTransfer: (WalletContext.Collectible) -> Void
     let indexUpdated: (Int) -> Void
@@ -940,6 +1053,7 @@ private final class WalletCollectiblePagerComponent: Component {
         collectibles: [WalletContext.Collectible],
         initialIndex: Int,
         itemSpacing: CGFloat,
+        stickerHost: WalletCollectibleStickerHost?,
         openExternalUrl: @escaping (String, PresentationTheme) -> Void,
         openTransfer: @escaping (WalletContext.Collectible) -> Void,
         indexUpdated: @escaping (Int) -> Void,
@@ -949,6 +1063,7 @@ private final class WalletCollectiblePagerComponent: Component {
         self.collectibles = collectibles
         self.initialIndex = initialIndex
         self.itemSpacing = itemSpacing
+        self.stickerHost = stickerHost
         self.openExternalUrl = openExternalUrl
         self.openTransfer = openTransfer
         self.indexUpdated = indexUpdated
@@ -987,6 +1102,7 @@ private final class WalletCollectiblePagerComponent: Component {
                 return AnyComponent(WalletCollectibleSheetComponent(
                     context: self.context,
                     collectible: collectible,
+                    stickerHost: self.stickerHost,
                     openExternalUrl: self.openExternalUrl,
                     openTransfer: {
                         self.openTransfer(collectible)
@@ -1004,17 +1120,20 @@ private final class WalletCollectibleSheetComponent: CombinedComponent {
 
     let context: AccountContext
     let collectible: WalletContext.Collectible
+    weak var stickerHost: WalletCollectibleStickerHost?
     let openExternalUrl: (String, PresentationTheme) -> Void
     let openTransfer: () -> Void
 
     init(
         context: AccountContext,
         collectible: WalletContext.Collectible,
+        stickerHost: WalletCollectibleStickerHost?,
         openExternalUrl: @escaping (String, PresentationTheme) -> Void,
         openTransfer: @escaping () -> Void
     ) {
         self.context = context
         self.collectible = collectible
+        self.stickerHost = stickerHost
         self.openExternalUrl = openExternalUrl
         self.openTransfer = openTransfer
     }
@@ -1036,6 +1155,7 @@ private final class WalletCollectibleSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(WalletCollectibleContentComponent(
                         context: context.component.context,
                         collectible: context.component.collectible,
+                        stickerHost: context.component.stickerHost,
                         openExternalUrl: context.component.openExternalUrl,
                         openTransfer: context.component.openTransfer,
                         animateOut: animateOut,
@@ -1133,6 +1253,7 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
     private let walletContext: WalletContext
     private let openExternalUrl: (String, PresentationTheme) -> Void
     private let collectibleSent: (String) -> Void
+    private weak var stickerHost: WalletCollectibleStickerHost?
     private let walletPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)
     private let stateDisposable = MetaDisposable()
     private let loadMoreDisposable = MetaDisposable()
@@ -1155,6 +1276,7 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
         context: AccountContext,
         walletContext: WalletContext,
         collectible: WalletContext.Collectible,
+        stickerHost: WalletCollectibleStickerHost? = nil,
         collectibleSent: @escaping (String) -> Void
     ) {
         let updatedPresentationData = presentationDataWithDefaultAccent((
@@ -1184,6 +1306,7 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
         self.walletContext = walletContext
         self.openExternalUrl = openExternalUrl
         self.collectibleSent = collectibleSent
+        self.stickerHost = stickerHost
         self.walletPresentationData = updatedPresentationData
         self.collectiblesState = initialState
         self.collectibles = initialCollectibles
@@ -1199,6 +1322,7 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
                 collectibles: initialCollectibles,
                 initialIndex: initialIndex,
                 itemSpacing: 10.0,
+                stickerHost: stickerHost,
                 openExternalUrl: openExternalUrl,
                 openTransfer: { collectible in
                     openTransferImpl?(collectible)
@@ -1333,6 +1457,7 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
                 collectibles: self.collectibles,
                 initialIndex: initialIndex,
                 itemSpacing: 10.0,
+                stickerHost: self.stickerHost,
                 openExternalUrl: self.openExternalUrl,
                 openTransfer: { [weak self] collectible in
                     self?.openTransfer(collectible)

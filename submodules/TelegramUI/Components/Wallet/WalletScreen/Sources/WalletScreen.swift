@@ -2726,6 +2726,7 @@ private final class WalletScreenComponent: Component {
                 context: component.context,
                 walletContext: walletContext,
                 collectible: collectible,
+                stickerHost: self.giftStickers,
                 collectibleSent: { [weak self, weak walletContext] address in
                     guard let self, let walletContext, self.walletContext === walletContext else {
                         return
@@ -3879,13 +3880,13 @@ private final class WalletScreenComponent: Component {
                 if canStyle || styled {
                     items.append(.action(ContextMenuActionItem(
                         text: styled ? strings.Wallet_Sticker_RemoveColor : strings.Wallet_Sticker_ApplyColor,
-                        icon: { theme in generateTintedImage(image: UIImage(bundleImageName: styled ? "Media Editor/Erase" : "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) },
+                        icon: { theme in generateTintedImage(image: UIImage(bundleImageName: styled ? "Media Editor/Erase" : "Chat/Context Menu/Palette"), color: theme.contextMenu.primaryColor) },
                         action: { _, dismiss in dismiss(.default); styleAction() }
                     )))
                 }
                 items.append(.action(ContextMenuActionItem(
                     text: onCard ? strings.Wallet_Sticker_RemoveFromCard : strings.Wallet_Sticker_AddToCard,
-                    icon: { theme in generateTintedImage(image: onCard ? UIImage(bundleImageName: "Chat/Context Menu/Clear") : UIImage(systemName: "creditcard"), color: theme.contextMenu.primaryColor) },
+                    icon: { theme in generateTintedImage(image: onCard ? UIImage(bundleImageName: "Chat/Context Menu/Clear") : UIImage(bundleImageName: "Chat/Context Menu/Card"), color: theme.contextMenu.primaryColor) },
                     action: { _, dismiss in dismiss(.default); placementAction() }
                 )))
                 // ContextUI adds 7 pt; add 10 pt in the enlarged cell's coordinates
@@ -3896,6 +3897,23 @@ private final class WalletScreenComponent: Component {
                 menu.dismissed = dismissed
                 controller.presentInGlobalOverlay(menu)
                 return { [weak menu] in menu?.dismiss(completion: nil) }
+            }
+            if let cardView = self.card.view as? WalletCardComponent.View {
+                let buttons = [self.addFundsButton.view, self.sendButton.view].compactMap { $0 as? ButtonComponent.View }
+                var waveBounds = cardView.stickerSurface.bounds
+                for button in buttons {
+                    waveBounds = waveBounds.union(button.convert(button.bounds, to: cardView.stickerSurface))
+                }
+                cardView.giftStyleWaveSize = CGSize(width: waveBounds.maxX, height: waveBounds.maxY)
+                cardView.giftButtonDefaultColor = environment.theme.list.itemCheckColors.fillColor
+                cardView.giftStyleUpdated = { [weak self, weak cardView] from, to, origin, radius, progress, fade in
+                    guard let self, let cardView else { return }
+                    for case let button as ButtonComponent.View in [self.addFundsButton.view, self.sendButton.view].compactMap({ $0 }) {
+                        button.setBackgroundReveal(from: from, to: to,
+                            origin: cardView.stickerSurface.convert(origin, to: button), radius: radius,
+                            progress: progress, fade: fade)
+                    }
+                }
             }
             self.giftStickers.update(context: component.context, wallet: component.walletContext,
                 state: self.walletState, card: self.card.view as? WalletCardComponent.View, visible: environment.isVisible)

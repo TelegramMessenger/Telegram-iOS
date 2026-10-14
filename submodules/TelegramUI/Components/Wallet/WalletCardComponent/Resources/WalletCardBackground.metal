@@ -238,6 +238,48 @@ static inline float4 walletCardQRChip(float2 cp, float2 surface, float time,
     return float4(chip * cover, cover + socket * (1.0 - cover));
 }
 
+struct WalletChipVertex {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex WalletChipVertex walletChipVertex(uint id [[vertex_id]]) {
+    float2 uv = float2((id << 1) & 2, id & 2);
+    return { float4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, 0.0, 1.0), uv };
+}
+
+fragment float4 walletChipFragment(WalletChipVertex input [[stage_in]],
+    constant WalletCardShaderUniforms &uniforms [[buffer(0)]],
+    constant WalletCardStyle &style [[buffer(1)]],
+    constant float4 &rect [[buffer(2)]],
+    texture2d<float> noiseMap [[texture(0)]], texture2d<float> qrMap [[texture(1)]]) {
+    float2 point = rect.xy + input.uv * rect.zw;
+    float2 scale = uniforms.qrRect.zw / float2(50.0, 38.0);
+    float2 cp = (point - uniforms.qrRect.xy) / scale + float2(268.5, 82.0);
+    float2 surface = clamp(float2(uniforms.surfaceTilt.y / 0.30, uniforms.surfaceTilt.x / 0.20),
+        float2(-1.0), float2(1.0));
+    return walletCardQRChip(cp, surface, uniforms.time, noiseMap, qrMap, point, style);
+}
+
+kernel void walletChipBlur(texture2d<float, access::read> source [[texture(0)]],
+    texture2d<float, access::write> target [[texture(1)]],
+    constant float &sigma [[buffer(0)]], constant int2 &direction [[buffer(1)]],
+    uint2 position [[thread_position_in_grid]]) {
+    if (position.x >= target.get_width() || position.y >= target.get_height()) return;
+    int radius = int(ceil(3.0 * sigma));
+    float4 result = float4(0.0);
+    float total = 0.0;
+    for (int i = -radius; i <= radius; i++) {
+        float weight = exp(-0.5 * float(i * i) / max(sigma * sigma, 0.0001));
+        int2 p = int2(position) + direction * i;
+        if (all(p >= int2(0)) && p.x < int(source.get_width()) && p.y < int(source.get_height())) {
+            result += source.read(uint2(p)) * weight;
+        }
+        total += weight;
+    }
+    target.write(result / total, position);
+}
+
 vertex WalletCardVertexOutput walletCardBackgroundVertex(
     constant float4 &rect [[buffer(0)]],
     constant WalletCardVertexUniforms &uniforms [[buffer(1)]],
@@ -293,7 +335,9 @@ fragment float4 walletCardBackgroundFragment(
     constant WalletCardStyle &style [[buffer(3)]],
     texture2d<float> starsMap [[texture(0)]],
     texture2d<float> noiseMap [[texture(1)]],
-    texture2d<float> qrMap [[texture(2)]]
+    texture2d<float> qrMap [[texture(2)]],
+    texture2d<float> blurredChip [[texture(3)]],
+    constant float4 &chipTextureRect [[buffer(4)]]
 ) {
     constexpr sampler cardSampler(filter::linear, address::clamp_to_edge);
     constexpr sampler noiseSampler(filter::linear, address::repeat);
@@ -510,24 +554,16 @@ fragment float4 walletCardBackgroundFragment(
     if (uniforms.qrEffects.x > 0.0 && all(uniforms.qrRect.zw > 0.0)) {
         float2 position = uv * float2(safeWidth, safeHeight);
         float2 chipScale = uniforms.qrRect.zw / float2(50.0, 38.0);
-        float blur = uniforms.qrEffects.y;
-        float2 margin = chipScale * 2.0 + blur * 1.5;
+        bool hasBlur = chipTextureRect.z > 0.0;
+        float2 margin = hasBlur ? (chipTextureRect.zw - uniforms.qrRect.zw) * 0.5 : chipScale * 2.0;
         if (all(position >= uniforms.qrRect.xy - margin)
             && all(position <= uniforms.qrRect.xy + uniforms.qrRect.zw + margin)) {
-            float2 cp = (position - uniforms.qrRect.xy) / chipScale + float2(268.5, 82.0);
             float4 chip;
-            if (blur > 0.01) {
-                // Blur only this small overlay, in premultiplied color, during card collapse.
-                constexpr float weights[] = { 0.25, 0.5, 0.25 };
-                chip = float4(0.0);
-                for (int y = -1; y <= 1; y++) {
-                    for (int x = -1; x <= 1; x++) {
-                        float2 offset = float2(x, y) * (blur * 1.41421356) / chipScale;
-                        chip += walletCardQRChip(cp + offset, surface, uniforms.time, noiseMap, qrMap, input.uv * float2(safeWidth, safeHeight), style)
-                            * weights[x + 1] * weights[y + 1];
-                    }
-                }
+            if (hasBlur) {
+                constexpr sampler chipSampler(filter::linear, address::clamp_to_zero);
+                chip = blurredChip.sample(chipSampler, (position - chipTextureRect.xy) / chipTextureRect.zw);
             } else {
+                float2 cp = (position - uniforms.qrRect.xy) / chipScale + float2(268.5, 82.0);
                 chip = walletCardQRChip(cp, surface, uniforms.time, noiseMap, qrMap, input.uv * float2(safeWidth, safeHeight), style);
             }
             chip *= uniforms.qrEffects.x;

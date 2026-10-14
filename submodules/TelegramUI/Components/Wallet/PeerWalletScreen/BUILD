@@ -13,6 +13,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
+        "//submodules/PresentationDataUtils",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/Wallet/WalletCardComponent",
         "//submodules/WalletContext",

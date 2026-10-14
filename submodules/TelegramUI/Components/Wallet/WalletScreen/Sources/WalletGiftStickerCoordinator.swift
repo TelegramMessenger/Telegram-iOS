@@ -91,27 +91,39 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     private var flights: [String: Flight] = [:]
     private var flightViews: [String: WalletStickerWaveView] = [:]
     private struct Pending { let gift: WalletContext.Collectible; let point: CGPoint; let fromCard: Bool }
-    private struct Hold {
+    private struct Edit {
+        enum Mode { case press, move, twist, handle }
         let original: WalletContext.CardSticker
-        let start: Double
-        var previousAngle: CGFloat
-        var distance: CGFloat
+        var mode: Mode
+        var anchor: CGPoint
+        var center: CGPoint
+        var angle: CGFloat
         var scale: CGFloat
-        var rawAngle: CGFloat
-        var resized = false
+        var reach: CGFloat
+        var grip: CGFloat
+        var turn: CGFloat = 0
         var snapped: Int?
+        var moved = false
     }
+    private struct Settle {
+        let id: String
+        let from: WalletContext.CardSticker
+        let to: WalletContext.CardSticker
+        let start: Double
+    }
+    private enum SelectionHit { case body, handle }
     private var pending: Pending?
-    private var hold: Hold?
+    private var edit: Edit?
+    private var settle: Settle?
     private var holdTimer: Timer?
+    private var selectedId: String?
+    private var selectionTimer: Timer?
     private var dismissMenu: (() -> Void)?
     var showMenu: ((UIView, Bool, Bool, Bool, @escaping () -> Void, @escaping () -> Void, @escaping () -> Void) -> (() -> Void)?)?
     private let trash = WalletStickerTrashView()
     var removeTitle: String = "" { didSet { self.trash.title = self.removeTitle } }
     private var previousTick: Double?
     private var impactActive = false
-    private let holdPress = WalletStickerSpring(0, 260, 0.58)
-    private let holdRealSize = WalletStickerSpring(0, 420, 1)
     private let tapBoop = WalletStickerSpring(0, 300, 0.5)
     private var liveStickerId: String?
     private var trashHot = false
@@ -126,9 +138,16 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     private let overlay = UIView()
     private let face = WalletStickerWaveView(frame: .zero)
     private var savedScrollEnabled = true
+    private let intro = WalletGiftStickerPlayback()
+    private var introDeadline: Double?
+    private var introPlayed = Set<String>()
+    private var placedIds = Set<String>()
+    private var externalDrag = false
+    private var overlayInWindow = false
+    private var pendingMenuAction: (gift: WalletContext.Collectible, color: Bool)?
     private var lifecycleObserver: NSObjectProtocol?
     var limitReached: (() -> Void)?
-    var isDragging: Bool { self.drag != nil || self.pending != nil || self.hold != nil }
+    var isDragging: Bool { self.drag != nil || self.pending != nil || self.edit != nil }
 
     init(host: UIView, scrollView: UIScrollView, grid: WalletCollectiblesGridView) {
         self.host = host
@@ -143,12 +162,18 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.overlay.addSubview(self.trash)
         self.gesture.delayAtPoint = { [weak self] point in
             guard let self, let host = self.host, self.visible, self.canEdit else { return nil }
-            if self.sticker(at: point) != nil { return 0 }
-            if let (gift, _) = self.grid?.stickerCandidate(at: point, in: host), gift.kind == .gift,
-               self.grid?.isStickerReady(address: gift.address) == true,
-               self.flights[gift.address] == nil, let context = self.context {
-                self.media[gift.address]?.prepareForSticker(context: context)
-                return 0.17
+            if self.selectionHit(at: point) != nil { return 0 }
+            if let sticker = self.sticker(at: point) {
+                if sticker.gift.address != self.selectedId { self.deselect() }
+                return 0
+            }
+            if let (gift, _) = self.grid?.stickerCandidate(at: point, in: host), gift.kind == .gift {
+                self.deselect()
+                if self.grid?.isStickerReady(address: gift.address) == true,
+                   self.flights[gift.address] == nil, let context = self.context {
+                    self.media[gift.address]?.prepareForSticker(context: context)
+                    return 0.17
+                }
             }
             return nil
         }
@@ -161,6 +186,9 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.tap.require(toFail: self.gesture)
         host.addGestureRecognizer(self.tap)
         self.grid?.visibleGiftsChanged = { [weak self] gifts in self?.prepare(gifts) }
+        self.intro.updated = { [weak self] frames in
+            self?.card?.setStickerFrames(frames.compactMapValues(\.image))
+        }
         self.lifecycleObserver = NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification,
             object: nil, queue: .main) { [weak self] _ in self?.cancel() }
     }
@@ -171,12 +199,17 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     func update(context: AccountContext, wallet: WalletContext, state: WalletContext.State?, card: WalletCardComponent.View?, visible: Bool) {
-        let address = state?.walletAddress
+        let visible = visible || self.externalDrag
+        let isWallet: Bool
+        if case .wallet? = state?.phase { isWallet = true } else { isWallet = false }
+        var address = state?.walletAddress
+        if address == nil, !isWallet, self.context === context, self.wallet === wallet { address = self.address }
         let restoring = self.context !== context || self.wallet !== wallet || self.address != address || !self.visible
         if self.context !== context || self.wallet !== wallet || self.address != address {
             self.cancel()
             self.media.removeAll()
             self.mediaGifts.removeAll()
+            self.placedIds.removeAll()
             self.pendingCommit = nil
             self.placements = []
             self.styleFrom = nil; self.styleTo = nil; self.styleStart = nil
@@ -185,35 +218,47 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.context = context
         self.wallet = wallet
         self.address = address
+        if visible && self.introDeadline == nil { self.introDeadline = CACurrentMediaTime() + 4 }
+        if self.card !== card {
+            self.intro.stop()
+            self.card?.setStickerSelection(nil, animated: false)
+            card?.setStickerSelection(self.selectedId, animated: false)
+        }
         self.card = card
         self.visible = visible
-        if case .wallet? = state?.phase { self.canEdit = true } else { self.canEdit = false }
+        self.canEdit = isWallet
         self.gesture.isEnabled = visible && self.canEdit
         self.tap.isEnabled = visible
         if !visible { self.cancel() }
-        let stored = state?.cardStickers ?? []
+        var stored = state?.cardStickers ?? []
+        if stored.isEmpty, !isWallet { stored = self.pendingCommit ?? self.placements }
         if self.pendingCommit == stored { self.pendingCommit = nil }
         let value = self.pendingCommit ?? stored
+        let external = value != self.placements && self.pendingCommit == nil
         if value != self.placements {
             // A confirmed transfer or wallet refresh can remove a gift mid-gesture.
             let activePlacedId = self.drag.flatMap { $0.fromCard ? $0.gift.address : nil }
-                ?? self.hold?.original.gift.address ?? self.play?.id
+                ?? self.edit?.original.gift.address ?? self.settle?.id ?? self.play?.id
             if let activePlacedId, !value.contains(where: { $0.gift.address == activePlacedId }) {
                 self.cancel()
             }
-            if let hold = self.hold, let edited = self.placements.first(where: { $0.gift.address == hold.original.gift.address }), value.contains(where: { $0.gift.address == edited.gift.address }) {
-                self.placements = value.map { $0.gift.address == edited.gift.address ? edited : $0 }
+            if let editedId = self.edit?.original.gift.address ?? self.settle?.id,
+               let edited = self.placements.first(where: { $0.gift.address == editedId }), value.contains(where: { $0.gift.address == editedId }) {
+                self.placements = value.map { $0.gift.address == editedId ? edited : $0 }
             } else { self.placements = value }
         }
+        if let selectedId, !self.placements.contains(where: { $0.gift.address == selectedId }) { self.deselect(animated: false) }
         for (id, flight) in self.flights where flight.sticking && !self.placements.contains(where: { $0.gift.address == id }) {
             self.flights.removeValue(forKey: id); self.flightViews.removeValue(forKey: id)?.removeFromSuperview()
         }
-        if restoring {
+        self.placedIds.formUnion(self.placements.map(\.gift.address))
+        if restoring || external {
             self.styleTo = self.placements.compactMap(\.style).last
             self.styleFrom = self.styleTo; self.styleStart = nil
         }
         self.prepare(self.placements.map(\.gift) + (visible ? (self.grid?.visibleGifts ?? []) : []))
         self.sync()
+        self.runPendingMenuAction()
     }
 
     func cancel() {
@@ -227,7 +272,10 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.flightViews.removeAll()
         self.styleStart = nil
         self.play = nil
-        self.holdPress.set(0); self.holdRealSize.set(0); self.tapBoop.set(0)
+        self.finishSettle()
+        self.deselect(animated: false)
+        self.intro.stop()
+        self.tapBoop.set(0)
         self.liveStickerId = nil; self.trash.reset()
         self.card?.setStickerLive([:])
         for id in self.media.keys { self.grid?.setStickerReturnScale(address: id, scale: 1) }
@@ -238,10 +286,19 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
 
     private func prepare(_ gifts: [WalletContext.Collectible]) {
         guard let context else { return }
-        for gift in gifts where gift.kind == .gift {
+        var prepared = Set<String>()
+        for gift in gifts where gift.kind == .gift && prepared.insert(gift.address).inserted {
+            let gift = gifts.last(where: { $0.address == gift.address && $0.nft?.gift != nil }) ?? gift
             let onCard = self.placements.contains(where: { $0.gift.address == gift.address })
-            if let media = self.media[gift.address], self.mediaGifts[gift.address]?.giftSlug == gift.giftSlug {
-                if onCard { media.prepareForSticker(context: context) }
+            if let media = self.media[gift.address] {
+                if self.mediaGifts[gift.address] != gift {
+                    self.mediaGifts[gift.address] = gift
+                    media.updateGift(context: context, gift: gift)
+                }
+                if onCard {
+                    media.prepareForSticker(context: context,
+                        modelFile: self.placements.first(where: { $0.gift.address == gift.address })?.modelFile)
+                }
                 continue
             }
             let item = WalletGiftStickerMedia(context: context, gift: gift,
@@ -251,21 +308,13 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             self.mediaGifts[gift.address] = gift
             item.updated = { [weak self, weak item] in
                 guard let self, let item, self.media[gift.address] === item else { return }
-                // Upgrade pre-model layouts without changing their position or stacking order.
-                if let index = self.placements.firstIndex(where: { $0.gift.address == gift.address }),
-                   let modelFile = item.modelFile,
-                   self.placements[index].modelFile != modelFile || (item.style != nil && self.placements[index].giftStyle != item.style) {
-                    let sticker = self.placements[index]
-                    self.placements[index] = WalletContext.CardSticker(gift: sticker.gift, x: sticker.x, y: sticker.y,
-                        angle: sticker.angle, scale: sticker.scale, modelFile: modelFile, geometryVersion: sticker.geometryVersion,
-                        style: sticker.style, giftStyle: item.style ?? sticker.giftStyle,
-                        aspectRatio: sticker.aspectRatio, cornerRadius: sticker.cornerRadius)
-                    if self.hold == nil { self.commit() }
-                }
                 self.sync()
+                self.runPendingMenuAction()
             }
         }
         var keep = Set(self.placements.map { $0.gift.address } + (self.grid?.visibleGifts.map(\.address) ?? []))
+        keep.formUnion(self.placedIds)
+        if let pendingMenuAction { keep.insert(pendingMenuAction.gift.address) }
         if let drag { keep.insert(drag.gift.address) }
         keep.formUnion(self.flights.keys)
         if let play { keep.insert(play.id) }
@@ -275,6 +324,10 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         }
     }
 
+    #if DEBUG
+    private var stickerDiagnostics: [String: String] = [:]
+    #endif
+
     private func sync() {
         var images: [String: UIImage] = [:]
         for (id, item) in self.media {
@@ -282,20 +335,42 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 images[id] = first.image
             }
         }
-        if self.hold != nil, let play, let image = play.image { images[play.id] = image }
+        if self.edit != nil, let play, let image = play.image { images[play.id] = image }
         var hidden = Set<String>()
         if let drag { hidden.insert(drag.gift.address) }
         for flight in self.flights.values where flight.sticking && !flight.handedOff { hidden.insert(flight.id) }
-        if let play, self.hold == nil, CACurrentMediaTime() - play.start >= 0.14,
+        if let play, self.edit == nil, CACurrentMediaTime() - play.start >= 0.14,
            play.ended.map({ CACurrentMediaTime() - $0 < 0.20 }) ?? true { hidden.insert(play.id) }
+        #if DEBUG
+        var diagnostics: [String: String] = [:]
+        for sticker in self.placements {
+            let id = sticker.gift.address
+            let status = "\(self.media[id]?.diagnosticState ?? "missing loader"); hidden=\(hidden.contains(id)); card=\(self.card != nil)"
+            diagnostics[id] = status
+            if self.stickerDiagnostics[id] != status {
+                NSLog("WalletCardSticker %@: %@", sticker.gift.name, status)
+            }
+        }
+        self.stickerDiagnostics = diagnostics
+        #endif
         self.card?.setCardStickers(self.placements, images: images, hidden: hidden)
-        var occupied = Set(self.placements.map { $0.gift.address })
-        if let drag { occupied.insert(drag.gift.address) }
+        self.playIntro()
+        let occupied = Set(self.placements.map { $0.gift.address })
         var lifted = Set(self.flights.keys)
         if let drag { lifted.insert(drag.gift.address) }
         self.grid?.setStickers(occupied: occupied, lifted: lifted, styles: self.media.compactMapValues { $0.style }, media: self.media)
         self.updateStyle()
 
+    }
+
+    private func playIntro() {
+        guard let introDeadline, CACurrentMediaTime() < introDeadline, self.visible, !self.isDragging, self.play == nil else { return }
+        for sticker in self.placements {
+            let id = sticker.gift.address
+            guard !self.introPlayed.contains(id), self.flights[id] == nil, let media = self.media[id], media.first != nil else { continue }
+            self.introPlayed.insert(id)
+            self.intro.play(id, media: media, enlarge: false)
+        }
     }
 
     private func sticker(at point: CGPoint) -> WalletContext.CardSticker? {
@@ -348,13 +423,25 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     private func beginPending(at point: CGPoint) -> Bool {
-        guard let host, self.pending == nil, self.drag == nil, self.hold == nil else { return false }
+        guard let host, self.pending == nil, self.drag == nil, self.edit == nil else { return false }
+        self.introDeadline = 0
+        self.intro.stop()
+        self.finishSettle()
         self.play = nil
         let gift: WalletContext.Collectible
         let onCard: Bool
-        if let sticker = self.sticker(at: point) { gift = sticker.gift; onCard = true }
+        if let hit = self.selectionHit(at: point), let selectedId,
+           let sticker = self.placements.first(where: { $0.gift.address == selectedId }) {
+            if case .handle = hit {
+                self.beginEdit(sticker, mode: .handle, at: point)
+                return self.edit != nil
+            }
+            gift = sticker.gift; onCard = true
+        } else if let sticker = self.sticker(at: point) { gift = sticker.gift; onCard = true }
         else if let (item, _) = self.grid?.stickerCandidate(at: point, in: host) { gift = item; onCard = false }
         else { return false }
+        if gift.address == self.selectedId { self.selectionTimer?.invalidate(); self.selectionTimer = nil }
+        else { self.deselect() }
         self.pending = Pending(gift: gift, point: point, fromCard: onCard)
         self.lockInteraction()
         self.grid?.pressSticker(address: gift.address, pressed: !onCard)
@@ -410,17 +497,25 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     private func beginHold(_ pending: Pending) {
-        guard let sticker = self.placements.first(where: { $0.gift.address == pending.gift.address }),
-              let pose = self.pose(sticker) else { return }
+        guard let sticker = self.placements.first(where: { $0.gift.address == pending.gift.address }) else { return }
         self.pending = nil
-        self.liveStickerId = sticker.gift.address
-        self.holdPress.with(260, 0.58).to(1); self.holdRealSize.set(0)
-        self.hold = Hold(original: sticker, start: CACurrentMediaTime(),
-            previousAngle: atan2(pending.point.y - pose.center.y, pending.point.x - pose.center.x),
-            distance: hypot(pending.point.x - pose.center.x, pending.point.y - pose.center.y),
-            scale: Self.clamp(CGFloat(sticker.renderedWidthFraction / WalletContext.CardSticker.widthFraction)), rawAngle: CGFloat(sticker.angle))
-        self.play = Play(id: sticker.gift.address, start: CACurrentMediaTime(), image: self.media[sticker.gift.address]?.first?.image)
+        self.beginEdit(sticker, mode: .press, at: pending.point)
+        guard self.edit != nil else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        self.startClock(); self.sync()
+    }
+
+    private func beginEdit(_ sticker: WalletContext.CardSticker, mode: Edit.Mode, at point: CGPoint) {
+        guard let card, let host else { return }
+        let surface = card.stickerSurface
+        let local = surface.convert(point, from: host)
+        let center = CGPoint(x: CGFloat(sticker.x) * surface.bounds.width, y: CGFloat(sticker.y) * surface.bounds.height)
+        self.edit = Edit(original: sticker, mode: mode, anchor: local, center: center, angle: CGFloat(sticker.angle),
+            scale: Self.scale(of: sticker), reach: max(1, hypot(local.x - center.x, local.y - center.y)),
+            grip: atan2(local.y - center.y, local.x - center.x))
+        self.liveStickerId = sticker.gift.address
+        self.select(sticker.gift.address)
+        self.lockInteraction()
         self.startClock(); self.sync()
     }
 
@@ -432,50 +527,201 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 self.dismissMenu?(); self.dismissMenu = nil
                 self.grid?.pressSticker(address: pending.gift.address, pressed: false)
                 self.pending = nil
-                if self.begin(at: pending.point) { self.move(points) }
+                if pending.fromCard, pending.gift.address == self.selectedId,
+                   let sticker = self.placements.first(where: { $0.gift.address == pending.gift.address }) {
+                    self.beginEdit(sticker, mode: .move, at: pending.point)
+                    self.updateEdit(points)
+                } else if self.begin(at: pending.point) { self.move(points) }
                 else { self.unlockInteraction() }
             }
             return
         }
-        if var hold = self.hold,
-           let index = self.placements.firstIndex(where: { $0.gift.address == hold.original.gift.address }),
-           let pose = self.pose(self.placements[index]) {
-            let distance = hypot(first.x - pose.center.x, first.y - pose.center.y)
-            var angle = hold.rawAngle
-            var scale = CGFloat(self.placements[index].renderedWidthFraction / WalletContext.CardSticker.widthFraction)
-            if points.count > 1 {
-                let other = points[1]
-                let d = max(1, hypot(other.x - first.x, other.y - first.y))
-                let a = atan2(other.y - first.y, other.x - first.x)
-                if self.twist == nil { self.twist = Twist(distance: d, lastAngle: a, scale: scale, angle: angle, center: pose.center, midpoint: first) }
-                if var twist = self.twist {
-                    twist.turn += atan2(sin(a - twist.lastAngle), cos(a - twist.lastAngle)); twist.lastAngle = a
-                    angle = twist.angle + twist.turn; scale = Self.clamp(twist.scale * d / twist.distance)
-                    self.twist = twist; hold.resized = true
+        if self.edit != nil { self.updateEdit(points); return }
+        self.move(points)
+    }
+
+    private func updateEdit(_ points: [CGPoint]) {
+        guard var edit = self.edit, let card, let host, let first = points.first,
+              let index = self.placements.firstIndex(where: { $0.gift.address == edit.original.gift.address }) else { return }
+        let surface = card.stickerSurface
+        let size = surface.bounds.size
+        guard size.width > 0, size.height > 0 else { return }
+        let local = points.prefix(2).map { surface.convert($0, from: host) }
+        let sticker = self.placements[index]
+        var center = CGPoint(x: CGFloat(sticker.x) * size.width, y: CGFloat(sticker.y) * size.height)
+        var angle = CGFloat(sticker.angle)
+        var scale = Self.scale(of: sticker)
+        if edit.mode == .press, points.count > 1 || hypot(local[0].x - edit.anchor.x, local[0].y - edit.anchor.y) > 6 {
+            edit.mode = .move
+        }
+        switch edit.mode {
+        case .press:
+            self.edit = edit
+            return
+        case .handle:
+            guard local.count == 1 else { return }
+            let dx = local[0].x - edit.center.x, dy = local[0].y - edit.center.y
+            let a = atan2(dy, dx)
+            edit.turn += atan2(sin(a - edit.grip), cos(a - edit.grip)); edit.grip = a
+            angle = edit.angle + edit.turn
+            scale = Self.clamp(edit.scale * hypot(dx, dy) / edit.reach)
+            center = edit.center
+        case .move, .twist:
+            if local.count > 1 {
+                let midpoint = CGPoint(x: (local[0].x + local[1].x) * 0.5, y: (local[0].y + local[1].y) * 0.5)
+                let distance = max(1, hypot(local[1].x - local[0].x, local[1].y - local[0].y))
+                let a = atan2(local[1].y - local[0].y, local[1].x - local[0].x)
+                if edit.mode != .twist {
+                    edit.mode = .twist
+                    edit.anchor = midpoint; edit.center = center; edit.angle = angle; edit.scale = scale
+                    edit.reach = distance; edit.grip = a; edit.turn = 0
                 }
+                edit.turn += atan2(sin(a - edit.grip), cos(a - edit.grip)); edit.grip = a
+                scale = Self.clamp(edit.scale * distance / edit.reach)
+                angle = edit.angle + edit.turn
+                let k = scale / edit.scale
+                let dx = edit.center.x - edit.anchor.x, dy = edit.center.y - edit.anchor.y
+                center = CGPoint(x: midpoint.x + (dx * cos(edit.turn) - dy * sin(edit.turn)) * k,
+                    y: midpoint.y + (dx * sin(edit.turn) + dy * cos(edit.turn)) * k)
             } else {
-                let a = atan2(first.y - pose.center.y, first.x - pose.center.x)
-                if self.twist == nil, distance > 14 {
-                    angle += atan2(sin(a - hold.previousAngle), cos(a - hold.previousAngle))
-                    if abs(distance - hold.distance) > 5 { hold.resized = true }
-                    if hold.resized { scale = Self.clamp(hold.scale + (distance - hold.distance) / 110) }
+                if edit.mode == .twist {
+                    edit.mode = .move
+                    edit.anchor = local[0]; edit.center = center
                 }
-                if self.twist != nil { hold.distance = distance; hold.scale = scale }
-                hold.previousAngle = a; self.twist = nil
+                if !surface.bounds.insetBy(dx: -28, dy: -28).contains(local[0]) {
+                    self.edit = edit
+                    self.detachEdit(at: first)
+                    return
+                }
+                center = CGPoint(x: edit.center.x + local[0].x - edit.anchor.x, y: edit.center.y + local[0].y - edit.anchor.y)
             }
-            hold.rawAngle = angle
+        }
+        center.x = min(size.width, max(0, center.x))
+        center.y = min(size.height, max(0, center.y))
+        if edit.mode == .handle || edit.mode == .twist {
             let quarter = Int((angle / (.pi / 2)).rounded())
             let snap = CGFloat(quarter) * .pi / 2
             if abs(angle - snap) < 5 * .pi / 180 {
-                if hold.snapped != quarter { UISelectionFeedbackGenerator().selectionChanged() }
-                hold.snapped = quarter; angle = snap
-            } else { hold.snapped = nil }
-            self.placements[index] = self.placements[index].updated(angle: Double(angle), scale: Double(Self.clamp(scale)), geometryVersion: 1)
-            self.hold = hold
-            self.sync()
+                if edit.snapped != quarter { UISelectionFeedbackGenerator().selectionChanged() }
+                edit.snapped = quarter; angle = snap
+            } else { edit.snapped = nil }
+        }
+        if edit.mode != .press { edit.moved = true }
+        self.placements[index] = sticker.updated(x: Double(center.x / size.width), y: Double(center.y / size.height),
+            angle: Double(angle), scale: Double(scale), geometryVersion: 1)
+        self.edit = edit
+        self.sync()
+    }
+
+    private func detachEdit(at point: CGPoint) {
+        guard let edit = self.edit, let index = self.placements.firstIndex(where: { $0.gift.address == edit.original.gift.address }),
+              let pose = self.pose(self.placements[index]) else { return }
+        let sticker = self.placements[index]
+        self.placements[index] = edit.original
+        self.edit = nil; self.play = nil
+        self.flights.removeValue(forKey: sticker.gift.address)
+        self.flightViews.removeValue(forKey: sticker.gift.address)?.removeFromSuperview()
+        self.deselect()
+        self.drag = Drag(gift: sticker.gift, original: pose, start: CACurrentMediaTime(), fromCard: true,
+            center: pose.center, angle: pose.angle, scale: Self.scale(of: sticker),
+            offset: CGPoint(x: pose.center.x - point.x, y: pose.center.y - point.y), previousPoint: point)
+        self.twist = nil
+        self.fingerCount = 1
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        self.startClock()
+        self.tick()
+        self.sync()
+    }
+
+    private func finishEdit(cancelled: Bool) {
+        guard let edit else { return }
+        guard let index = self.placements.firstIndex(where: { $0.gift.address == edit.original.gift.address }) else {
+            self.edit = nil; self.play = nil
             return
         }
-        self.move(points)
+        if cancelled { self.placements[index] = edit.original }
+        self.edit = nil; self.play = nil
+        if cancelled { return }
+        guard edit.moved else { return }
+        let sticker = self.placements[index]
+        guard let card else { self.commit(); return }
+        let size = card.stickerSurface.bounds.size
+        let center = CGPoint(x: CGFloat(sticker.x) * size.width, y: CGFloat(sticker.y) * size.height)
+        let scale = Self.scale(of: sticker)
+        let solver = WalletStickerPlacement(size: size, obstacles: card.stickerObstacles, occupants: [])
+        if solver.fits(center, scale: scale) { self.commit(); return }
+        let target: WalletContext.CardSticker
+        if let spot = solver.drop(near: center, scale: scale) {
+            target = sticker.updated(x: Double(spot.center.x / size.width), y: Double(spot.center.y / size.height),
+                scale: Double(spot.scale), geometryVersion: 1)
+        } else {
+            target = edit.original
+        }
+        self.placements[index] = target
+        self.commit()
+        guard let settled = self.placements.firstIndex(where: { $0.gift.address == target.gift.address }) else { return }
+        self.placements[settled] = sticker
+        self.settle = Settle(id: sticker.gift.address, from: sticker, to: target, start: CACurrentMediaTime())
+        self.startClock()
+    }
+
+    private func tickSettle(now: Double) {
+        guard let settle else { return }
+        guard let index = self.placements.firstIndex(where: { $0.gift.address == settle.id }) else { self.settle = nil; return }
+        let t = Double(Self.ease((now - settle.start) / 0.28))
+        let a = settle.from, b = settle.to
+        self.placements[index] = a.updated(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t,
+            angle: a.angle + (b.angle - a.angle) * t, scale: a.scale + (b.scale - a.scale) * t, geometryVersion: b.geometryVersion)
+        if now - settle.start >= 0.28 { self.finishSettle() } else { self.sync() }
+    }
+
+    private func finishSettle() {
+        guard let settle else { return }
+        self.settle = nil
+        if let index = self.placements.firstIndex(where: { $0.gift.address == settle.id }) {
+            self.placements[index] = settle.to
+        }
+        self.sync()
+    }
+
+    private func selectionHit(at point: CGPoint) -> SelectionHit? {
+        guard let selectedId, let card, let host, self.visible, self.flights[selectedId].map({ $0.sticking }) ?? true,
+              let selection = card.stickerSelection else { return nil }
+        let surface = card.stickerSurface
+        let left = surface.convert(selection.left, to: host), right = surface.convert(selection.right, to: host)
+        if min(hypot(point.x - left.x, point.y - left.y), hypot(point.x - right.x, point.y - right.y)) < 24 { return .handle }
+        let local = surface.convert(point, from: host)
+        if hypot(local.x - selection.center.x, local.y - selection.center.y) < selection.radius { return .body }
+        return nil
+    }
+
+    private func select(_ id: String) {
+        self.selectionTimer?.invalidate(); self.selectionTimer = nil
+        guard self.selectedId != id else { return }
+        self.selectedId = id
+        self.card?.setStickerSelection(id, animated: true)
+    }
+
+    private func deselect(animated: Bool = true) {
+        self.selectionTimer?.invalidate(); self.selectionTimer = nil
+        guard self.selectedId != nil else { return }
+        self.selectedId = nil
+        self.card?.setStickerSelection(nil, animated: animated)
+    }
+
+    private func scheduleDeselection() {
+        self.selectionTimer?.invalidate()
+        guard self.selectedId != nil else { return }
+        let timer = Timer(timeInterval: 2, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.selectionTimer = nil
+            if self.edit == nil && self.pending == nil { self.deselect() }
+        }
+        self.selectionTimer = timer; RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private static func scale(of sticker: WalletContext.CardSticker) -> CGFloat {
+        return Self.clamp(CGFloat(sticker.renderedWidthFraction / WalletContext.CardSticker.widthFraction))
     }
 
     private func finishInteraction(cancelled: Bool) {
@@ -491,15 +737,9 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 self.startClock()
             }
         }
-        if let hold {
-            if cancelled, let index = self.placements.firstIndex(where: { $0.gift.address == hold.original.gift.address }) {
-                self.placements[index] = hold.original
-            }
-            self.hold = nil; self.twist = nil; self.play = nil
-            self.holdPress.with(380, 0.62).to(0)
-            if !cancelled { self.commit() }
-        }
+        self.finishEdit(cancelled: cancelled)
         if self.drag != nil { self.release(cancelled: cancelled) }
+        if self.selectedId != nil { self.scheduleDeselection() }
         self.unlockInteraction(); self.sync()
     }
 
@@ -700,9 +940,14 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
+        if recognizer.state == .ended, self.selectedId != nil, self.selectionHit(at: recognizer.location(in: self.host)) == nil {
+            self.deselect()
+        }
         guard recognizer.state == .ended, self.drag == nil, self.play == nil,
               let sticker = self.sticker(at: recognizer.location(in: self.host)),
               let media = self.media[sticker.gift.address], media.first != nil else { return }
+        self.introDeadline = 0
+        self.intro.stop()
         self.liveStickerId = sticker.gift.address; self.tapBoop.velocity += 3
         self.play = Play(id: sticker.gift.address, start: CACurrentMediaTime(), image: media.first?.image)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -713,15 +958,28 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         guard self.visible else { return false }
-        if gestureRecognizer === self.tap { return self.sticker(at: touch.location(in: self.host)) != nil }
+        if gestureRecognizer === self.tap {
+            let point = touch.location(in: self.host)
+            if self.sticker(at: point) != nil { return true }
+            guard self.selectedId != nil, let card else { return false }
+            return card.stickerSurface.bounds.contains(card.stickerSurface.convert(point, from: self.host))
+        }
         return true
     }
 
-    private func startClock() {
+    private func layoutOverlay() {
         guard let host else { return }
-        self.overlay.frame = host.bounds
-        if self.overlay.superview == nil { host.addSubview(self.overlay) }
-        host.bringSubviewToFront(self.overlay)
+        let parent: UIView = self.overlayInWindow ? (host.window ?? host) : host
+        if self.overlay.superview !== parent {
+            self.overlay.removeFromSuperview()
+            parent.addSubview(self.overlay)
+        }
+        parent.bringSubviewToFront(self.overlay)
+        self.overlay.frame = host.convert(host.bounds, to: parent)
+    }
+
+    private func startClock() {
+        self.layoutOverlay()
         if self.link == nil {
             self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(60)) { [weak self] _ in self?.tick() }
         }
@@ -734,6 +992,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         if !self.isDragging { self.card?.stickerInteractionLocked = false }
         self.overlay.removeFromSuperview()
         self.overlay.layer.mask = nil
+        self.overlayInWindow = false
     }
 
     private func tick() {
@@ -741,6 +1000,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         let now = CACurrentMediaTime()
         let dt = CGFloat(min(1 / 30.0, max(0, now - (self.previousTick ?? now))))
         self.previousTick = now
+        self.layoutOverlay()
         self.impactActive = self.card?.stepStickerImpact(dt) ?? false
         let carrying = self.drag.map { drag in
             guard drag.fromCard, let card else { return false }
@@ -750,7 +1010,6 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         var image: UIImage?
         var art: UIImage?
         var pose: Pose?
-        self.overlay.frame = host.bounds
         self.overlay.layer.mask = nil
         if let drag {
             image = self.media[drag.gift.address]?.first?.image
@@ -762,7 +1021,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             if let ended = play.ended {
                 up = 1 - Self.ease((now - ended) / 0.34)
                 if now - ended >= 0.34 {
-                    if self.hold != nil { self.play = Play(id: play.id, start: now, image: media.first?.image) }
+                    if self.edit != nil { self.play = Play(id: play.id, start: now, image: media.first?.image) }
                     else { self.play = nil; self.sync() }
                 }
             } else {
@@ -801,21 +1060,20 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             self.face.alpha = pose.opacity
             self.face.update(image: image, art: art, border: pose.border, front: pose.front, bend: pose.bend, shade: pose.shade, lift: pose.lift)
         }
-        self.face.isHidden = pose == nil || self.hold != nil
+        self.face.isHidden = pose == nil || self.edit != nil
         if self.play != nil { self.sync() }
         self.tickFlights(now: now)
         self.tickStyle(now: now)
-        self.holdRealSize.to(self.hold?.resized == true ? 1 : 0)
-        for spring in [self.holdPress, self.holdRealSize, self.tapBoop] { spring.step(dt) }
-        let liveActive = self.hold != nil || !self.holdPress.resting() || !self.tapBoop.resting()
+        self.tickSettle(now: now)
+        self.tapBoop.step(dt)
+        let liveActive = self.edit != nil || !self.tapBoop.resting()
         if let id = self.liveStickerId, let sticker = self.placements.first(where: { $0.gift.address == id }), liveActive {
-            let grow = 0.7 * self.holdPress.value * (1 - 0.9 * min(1, max(0, self.holdRealSize.value)))
-            self.card?.setStickerLive([id: .init(angle: CGFloat(sticker.angle), press: min(1, max(0, self.holdPress.value)),
-                grow: (1 + grow) * (1 + self.tapBoop.value), image: self.play?.image)])
+            self.card?.setStickerLive([id: .init(angle: CGFloat(sticker.angle), press: 0,
+                grow: 1 + self.tapBoop.value, image: self.play?.image)])
         } else {
             self.card?.setStickerLive([:]); self.liveStickerId = nil
         }
-        if self.drag == nil && self.flights.isEmpty && self.play == nil && !liveActive && self.styleStart == nil && !self.impactActive && !trashActive { self.stopClock() }
+        if self.drag == nil && self.flights.isEmpty && self.play == nil && !liveActive && self.settle == nil && self.styleStart == nil && !self.impactActive && !trashActive { self.stopClock() }
 
     }
 
@@ -937,7 +1195,15 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
     }
 
     private func stylePattern(_ style: WalletContext.CardGiftStyle?) -> UIImage? {
-        self.media.values.first(where: { $0.style == style })?.patternImage
+        guard let style else { return nil }
+        if let source = self.placements.last(where: { $0.style == style }),
+           let image = self.media[source.gift.address]?.patternImage {
+            return image
+        }
+        return self.media.values.first(where: { media in
+            guard let value = media.style, media.patternImage != nil else { return false }
+            return value.innerColor == style.innerColor && value.outerColor == style.outerColor && value.patternColor == style.patternColor
+        })?.patternImage
     }
 
     private func updateStyle() {
@@ -973,6 +1239,84 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         return Pose(center: CGPoint(x: a.center.x + (b.center.x - a.center.x) * t, y: a.center.y + (b.center.y - a.center.y) * t),
             side: a.side + (b.side - a.side) * t, angle: a.angle + (b.angle - a.angle) * t,
             opacity: a.opacity + (b.opacity - a.opacity) * t)
+    }
+}
+
+extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
+    func stickerMenuState(collectible: WalletContext.Collectible) -> WalletCollectibleStickerMenuState? {
+        guard self.canEdit, collectible.kind == .gift else { return nil }
+        self.prepare([collectible])
+        let sticker = self.placements.first(where: { $0.gift.address == collectible.address })
+        let media = self.media[collectible.address]
+        return WalletCollectibleStickerMenuState(isOnCard: sticker != nil, isStyled: sticker?.style != nil,
+            canStyle: media?.style != nil && media?.patternImage != nil)
+    }
+
+    func performStickerAction(collectible: WalletContext.Collectible, color: Bool) {
+        guard self.canEdit, collectible.kind == .gift else { return }
+        self.prepare([collectible])
+        if let context { self.media[collectible.address]?.prepareForSticker(context: context) }
+        self.pendingMenuAction = (collectible, color)
+        self.runPendingMenuAction()
+    }
+
+    fileprivate func runPendingMenuAction() {
+        guard let pending = self.pendingMenuAction, self.visible, self.drag == nil, self.pending == nil, self.edit == nil,
+              self.media[pending.gift.address]?.first != nil else { return }
+        self.pendingMenuAction = nil
+        self.menuAction(pending.gift, color: pending.color)
+    }
+
+    func stickerSilhouette(collectible: WalletContext.Collectible, side: CGFloat) -> (image: UIImage, frame: CGRect)? {
+        guard let image = self.media[collectible.address]?.first?.silhouette,
+              let frame = self.grid?.stickerModelFrame(address: collectible.address, side: side) else { return nil }
+        return (image, frame)
+    }
+
+    func beginStickerTearOff(collectible: WalletContext.Collectible, sourceView: UIView, location: CGPoint) -> Bool {
+        guard self.canEdit, collectible.kind == .gift, let host, host.window != nil,
+              self.drag == nil, self.pending == nil, self.edit == nil, self.flights[collectible.address] == nil else { return false }
+        self.finishSettle()
+        self.deselect(animated: false)
+        self.introDeadline = 0
+        self.intro.stop()
+        self.prepare([collectible])
+        guard let media = self.media[collectible.address] else { return false }
+        if let context { media.prepareForSticker(context: context) }
+        let rect = sourceView.convert(sourceView.bounds, to: host)
+        let frame = self.grid?.stickerModelFrame(address: collectible.address, side: rect.width)
+            ?? CGRect(origin: .zero, size: rect.size)
+        let original = Pose(center: CGPoint(x: rect.minX + frame.midX, y: rect.minY + frame.midY), side: frame.width, angle: 0)
+        let point = host.convert(location, from: nil)
+        let placed = self.placements.first(where: { $0.gift.address == collectible.address })
+        self.externalDrag = true
+        self.overlayInWindow = true
+        self.visible = true
+        self.drag = Drag(gift: collectible, original: original, start: CACurrentMediaTime(), fromCard: placed != nil,
+            center: original.center, angle: 0, scale: placed.map { Self.scale(of: $0) } ?? 1,
+            offset: CGPoint(x: original.center.x - point.x, y: original.center.y - point.y), previousPoint: point)
+        self.twist = nil
+        self.fingerCount = 1
+        self.lockInteraction()
+        self.revealCard()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        self.startClock()
+        self.tick()
+        self.sync()
+        return true
+    }
+
+    func updateStickerTearOff(location: CGPoint) {
+        guard self.externalDrag, let host else { return }
+        self.move([host.convert(location, from: nil)])
+    }
+
+    func endStickerTearOff() {
+        guard self.externalDrag else { return }
+        self.externalDrag = false
+        if self.drag != nil { self.release(cancelled: false) }
+        self.unlockInteraction()
+        self.sync()
     }
 }
 

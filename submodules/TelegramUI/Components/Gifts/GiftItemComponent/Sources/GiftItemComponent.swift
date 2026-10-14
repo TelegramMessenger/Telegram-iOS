@@ -342,6 +342,17 @@ public final class GiftItemComponent: Component {
         private let ribbonText = ComponentView<Empty>()
         
         private var animationLayer: InlineStickerItemLayer?
+        private var modelHidden = false
+
+        public func setModelHidden(_ hidden: Bool) {
+            self.modelHidden = hidden
+            self.animationLayer?.isHidden = hidden
+        }
+
+        public func playModelOnce() {
+            self.animationLayer?.playOnce()
+        }
+
         private var selectionLayer: SimpleShapeLayer?
         private var checkLayer: CheckLayer?
         private var outlineLayer: SimpleLayer?
@@ -792,6 +803,7 @@ public final class GiftItemComponent: Component {
             
             let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : (floorToScreenPixels((size.height - iconSize.height) / 2.0) + explicitAnimationOffset)), size: iconSize)
             if let animationLayer = self.animationLayer {
+                animationLayer.isHidden = self.modelHidden
                 animationTransition.setFrame(layer: animationLayer, frame: animationFrame)
             }
             
