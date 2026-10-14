@@ -2836,16 +2836,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
                         }
                                        
-                        var entities = entities.filter { entity in
-                            switch entity.type {
-                            case .Spoiler, .CustomEmoji, .FormattedDate:
-                                return true
-                            case .Strikethrough, .Underline, .Italic, .Bold:
-                                return true
-                            default:
-                                return false
-                            }
-                        }
+                        var entities = chatListPreviewTextEntities(entities)
                         if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
                             entities = []
                         }
@@ -2880,7 +2871,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             messageString = chatListRichTextPreview(foldedRichTextPreview, font: textFont, italicFont: italicTextFont, textColor: theme.messageTextColor, additionalSpoilers: spoilerRanges)
                         } else if !messageText.isEmpty && entities.count > 0 {
-                            let appliedString = stringWithAppliedEntities(messageText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
+                            let appliedString = chatListPreviewAttributedString(messageText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, font: textFont, italicFont: italicTextFont, textColor: theme.messageTextColor, message: message._asMessage())
                             messageString = foldLineBreaks(appliedString)
                         } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)

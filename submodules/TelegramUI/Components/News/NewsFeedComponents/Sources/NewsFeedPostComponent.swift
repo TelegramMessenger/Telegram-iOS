@@ -54,15 +54,17 @@ private func newsPostText(component: NewsFeedPostComponent) -> NSAttributedStrin
     let theme = component.theme
     let font = Font.regular(15.0)
     if let message = component.messages.first(where: { !$0.text.isEmpty }) {
+        // The chat list's preview rule (which also keeps quotes and code blocks out, whose block layout breaks the
+        // line limit), with italic drawn upright too.
         var entities: [MessageTextEntity] = []
         for attribute in message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
-                entities = newsPostPreviewEntities(attribute.entities)
+                entities = chatListPreviewTextEntities(attribute.entities)
             }
         }
         // One character for one, so the entity ranges stay valid.
         let text = message.text.replacingOccurrences(of: "\n", with: " ")
-        return stringWithAppliedEntities(text, entities: entities, baseColor: theme.list.itemPrimaryTextColor, linkColor: theme.list.itemPrimaryTextColor, baseFont: font, linkFont: font, boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), boldItalicFont: Font.semiboldItalic(15.0), fixedFont: Font.monospace(15.0), blockQuoteFont: font, underlineLinks: false, message: message._asMessage())
+        return chatListPreviewAttributedString(text, entities: entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemPrimaryTextColor, message: message._asMessage())
     }
     guard let message = component.messages.first else {
         return NSAttributedString()
