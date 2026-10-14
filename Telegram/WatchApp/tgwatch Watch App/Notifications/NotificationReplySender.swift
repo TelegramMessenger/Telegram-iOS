@@ -16,9 +16,11 @@ final class NotificationReplySender {
     /// Set by the app at launch; the reply goes through its active account.
     weak var accountManager: AccountManager?
 
-    /// The app may be launched by the reply itself, so its session can still be starting.
-    static let readyTimeout: TimeInterval = 15
-    static let sendTimeout: TimeInterval = 20
+    /// The app may be launched by the reply itself, so its session can still be starting. Both
+    /// waits together stay under the time watchOS gives an app to handle a notification response
+    /// in the background (about 30 s); a message still pending then is sent by TDLib later.
+    static let readyTimeout: TimeInterval = 10
+    static let sendTimeout: TimeInterval = 15
 
     private let logger = Logger(subsystem: "com.isaac.tgwatch", category: "notification-reply")
 
@@ -53,9 +55,14 @@ final class NotificationReplySender {
         }
     }
 
-    /// The logged-in account's user id, known once its session has fetched it (`TDClient.me`).
+    /// The logged-in account's user id: saved with the account once it has logged in (so known as
+    /// soon as the app launches), else from its session (`TDClient.me`). Nil when not logged in.
     func activeUserId() -> Int64? {
-        accountManager?.activeClient?.me.map { Int64($0.id) }
+        guard let manager = accountManager, let activeId = manager.activeAccountId else { return nil }
+        if let saved = manager.accounts.first(where: { $0.id == activeId })?.userId {
+            return saved
+        }
+        return manager.activeClient?.me.map { Int64($0.id) }
     }
 
     func waitActiveUserId() async -> Int64? {

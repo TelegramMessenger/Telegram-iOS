@@ -103,12 +103,11 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
         self.recipientUserId = recipient
         latestEntryId = received.id
 
-        // Another account of the iPhone app (or none named): the app cannot reply as that account
-        // or open its chats, so Reply is removed and a tap does not open the chat. While the app
-        // does not know its own account yet, both stay; sending and opening check again.
-        let isActiveAccount = NotificationChatRouter.isForActiveAccount(userInfo)
-        model.opensChat = isActiveAccount != false
-        if isActiveAccount == false {
+        // With this interface watchOS delivers Reply to this app, so Reply is offered only when the
+        // app can send it (`NotificationChatRouter.canReply`): not for another account of the
+        // iPhone app, a secret chat, or when the app is not logged in, where the reply would be lost.
+        model.opensChat = NotificationChatRouter.isForActiveAccount(userInfo)
+        if !NotificationChatRouter.canReply(userInfo) {
             notificationActions = notificationActions.filter { $0.identifier != "reply" }
         }
 
@@ -248,7 +247,7 @@ final class MessageNotificationModel {
     var voiceWaveforms: [String: [Float]] = [:]
     @ObservationIgnored let voice = MessageNotificationVoicePlayer()
     @ObservationIgnored var openChat: () -> Void = {}
-    /// False for another account's notification (see `NotificationChatRouter.isForActiveAccount`).
+    /// False when the chat is not the logged-in account's (`NotificationChatRouter.isForActiveAccount`).
     @ObservationIgnored var opensChat = true
 
     init(entries: [MessageNotificationEntry] = [], thumbnails: [String: UIImage] = [:]) {
@@ -490,6 +489,8 @@ private struct MessageNotificationEntryView: View {
                         }
                     }
                 )
+                // The drag above is not reachable with VoiceOver.
+                .accessibilityAction { openChat() }
             if let voiceMessage {
                 MessageNotificationVoiceButton(id: entry.id, url: voiceMessage, duration: voiceDuration, waveform: voiceWaveform, voice: voice)
             }

@@ -45,13 +45,22 @@ final class NotificationChatRouter {
     /// Whether the notification was received on the account the watch app is logged in to. The
     /// iPhone app can be signed in to several accounts and mirrors all their notifications; the
     /// watch app uses one at a time, so for the others it must neither reply nor open the chat (a
-    /// reply would come from the wrong account). A notification that does not name its account is
-    /// another account's. Nil while the app does not know its own account yet (just launched).
+    /// reply would come from the wrong account). False when the notification names no account or
+    /// the watch app is not logged in.
     @MainActor
-    static func isForActiveAccount(_ userInfo: [AnyHashable: Any]) -> Bool? {
-        guard let recipient = recipientUserId(fromUserInfo: userInfo) else { return false }
-        guard let userId = NotificationReplySender.shared.activeUserId() else { return nil }
+    static func isForActiveAccount(_ userInfo: [AnyHashable: Any]) -> Bool {
+        guard let recipient = recipientUserId(fromUserInfo: userInfo),
+              let userId = NotificationReplySender.shared.activeUserId() else {
+            return false
+        }
         return userId == recipient
+    }
+
+    /// Whether the app can send a Reply to this notification: one the logged-in account received,
+    /// in a chat it can reach. Secret chats (no chat id) exist only on the iPhone.
+    @MainActor
+    static func canReply(_ userInfo: [AnyHashable: Any]) -> Bool {
+        chatId(fromUserInfo: userInfo) != nil && isForActiveAccount(userInfo)
     }
 
     /// As `isForActiveAccount`, waiting for the app's session to know its account.
