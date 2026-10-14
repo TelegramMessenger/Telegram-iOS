@@ -1451,6 +1451,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case .inaccessiblePeer:
                         strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                    case let .noPaidMessagesToken(peer, _):
+                        strongSelf.openPeer(peer: EnginePeer(peer))
                     case .botStart:
                         break
                     case .groupBotStart:

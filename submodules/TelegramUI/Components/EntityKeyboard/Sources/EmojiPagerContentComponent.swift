@@ -646,6 +646,7 @@ public final class EmojiPagerContentComponent: Component {
     public let enableLongPress: Bool
     public let selectedItems: Set<AnyHashable>
     public let customTintColor: UIColor?
+    public let selectedItemOrder: [AnyHashable: Int]?
     
     public init(
         id: AnyHashable,
@@ -672,7 +673,8 @@ public final class EmojiPagerContentComponent: Component {
         emptySearchResults: EmptySearchResults?,
         enableLongPress: Bool,
         selectedItems: Set<AnyHashable>,
-        customTintColor: UIColor?
+        customTintColor: UIColor?,
+        selectedItemOrder: [AnyHashable: Int]? = nil
     ) {
         self.id = id
         self.context = context
@@ -699,6 +701,7 @@ public final class EmojiPagerContentComponent: Component {
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
         self.customTintColor = customTintColor
+        self.selectedItemOrder = selectedItemOrder
     }
     
     public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: ContentId?, emptySearchResults: EmptySearchResults?, searchState: SearchState, canLoadMore: Bool? = nil) -> EmojiPagerContentComponent {
@@ -727,7 +730,8 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
-            customTintColor: self.customTintColor
+            customTintColor: self.customTintColor,
+            selectedItemOrder: self.selectedItemOrder
         )
     }
     
@@ -757,7 +761,8 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: selectedItems,
-            customTintColor: self.customTintColor
+            customTintColor: self.customTintColor,
+            selectedItemOrder: self.selectedItemOrder
         )
     }
     
@@ -787,7 +792,39 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
-            customTintColor: customTintColor
+            customTintColor: customTintColor,
+            selectedItemOrder: self.selectedItemOrder
+        )
+    }
+    
+    public func withSelection(items selectedItems: Set<AnyHashable>, order selectedItemOrder: [AnyHashable: Int]?) -> EmojiPagerContentComponent {
+        return EmojiPagerContentComponent(
+            id: self.id,
+            context: self.context,
+            avatarPeer: self.avatarPeer,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            inputInteractionHolder: self.inputInteractionHolder,
+            panelItemGroups: panelItemGroups,
+            contentItemGroups: contentItemGroups,
+            itemLayoutType: self.itemLayoutType,
+            itemContentUniqueId: itemContentUniqueId,
+            canLoadMore: self.canLoadMore,
+            searchState: searchState,
+            warpContentsOnEdges: self.warpContentsOnEdges,
+            hideBackground: self.hideBackground,
+            maskEdge: self.maskEdge,
+            displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
+            searchCategories: self.searchCategories,
+            searchInitiallyHidden: self.searchInitiallyHidden,
+            searchAlwaysActive: self.searchAlwaysActive,
+            searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            searchUnicodeEmojiOnly: self.searchUnicodeEmojiOnly,
+            emptySearchResults: emptySearchResults,
+            enableLongPress: self.enableLongPress,
+            selectedItems: selectedItems,
+            customTintColor: self.customTintColor,
+            selectedItemOrder: selectedItemOrder
         )
     }
     
@@ -865,6 +902,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.customTintColor != rhs.customTintColor {
+            return false
+        }
+        if lhs.selectedItemOrder != rhs.selectedItemOrder {
             return false
         }
         
@@ -1277,6 +1317,8 @@ public final class EmojiPagerContentComponent: Component {
         
         private final class ItemSelectionLayer: PassthroughLayer {
             let tintContainerLayer: SimpleLayer
+            private var orderBadgeLayer: SimpleLayer?
+            private var orderBadgeValue: (Int, UIColor)?
             
             override init() {
                 self.tintContainerLayer = SimpleLayer()
@@ -1284,6 +1326,49 @@ public final class EmojiPagerContentComponent: Component {
                 super.init()
                 
                 self.mirrorLayer = self.tintContainerLayer
+            }
+            
+            override func removeFromSuperlayer() {
+                self.orderBadgeLayer?.removeFromSuperlayer()
+                
+                super.removeFromSuperlayer()
+            }
+            
+            func updateOrderBadge(order: Int?, color: UIColor, itemFrame: CGRect, container: CALayer) {
+                guard let order else {
+                    if let orderBadgeLayer = self.orderBadgeLayer {
+                        self.orderBadgeLayer = nil
+                        self.orderBadgeValue = nil
+                        orderBadgeLayer.removeFromSuperlayer()
+                    }
+                    return
+                }
+                let badgeSide: CGFloat = 15.0
+                let orderBadgeLayer: SimpleLayer
+                if let current = self.orderBadgeLayer {
+                    orderBadgeLayer = current
+                } else {
+                    orderBadgeLayer = SimpleLayer()
+                    orderBadgeLayer.zPosition = 10.0
+                    self.orderBadgeLayer = orderBadgeLayer
+                }
+                if orderBadgeLayer.superlayer !== container {
+                    container.addSublayer(orderBadgeLayer)
+                }
+                if self.orderBadgeValue?.0 != order || self.orderBadgeValue?.1 != color {
+                    self.orderBadgeValue = (order, color)
+                    orderBadgeLayer.contents = generateImage(CGSize(width: badgeSide, height: badgeSide), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(color.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        let string = NSAttributedString(string: "\(order)", font: Font.with(size: 10.0, design: .round, weight: .bold), textColor: .white)
+                        let stringSize = string.boundingRect(with: size, options: .usesLineFragmentOrigin, context: nil).size
+                        UIGraphicsPushContext(context)
+                        string.draw(at: CGPoint(x: floorToScreenPixels((size.width - stringSize.width) / 2.0), y: floorToScreenPixels((size.height - stringSize.height) / 2.0)))
+                        UIGraphicsPopContext()
+                    })?.cgImage
+                }
+                orderBadgeLayer.frame = CGRect(x: itemFrame.maxX - badgeSide + 4.0, y: itemFrame.minY - 4.0, width: badgeSide, height: badgeSide)
             }
             
             override func action(forKey event: String) -> CAAction? {
@@ -3699,6 +3784,18 @@ public final class EmojiPagerContentComponent: Component {
                             }
                             
                             itemTransition.setFrame(layer: itemSelectionLayer, frame: baseItemFrame)
+                            
+                            if let selectedItemOrder = component.selectedItemOrder {
+                                var order: Int?
+                                if case let .staticEmoji(emoji) = item.content {
+                                    order = selectedItemOrder[emoji]
+                                } else if let itemFile = item.itemFile {
+                                    order = selectedItemOrder[itemFile.fileId]
+                                }
+                                itemSelectionLayer.updateOrderBadge(order: order, color: component.customTintColor ?? keyboardChildEnvironment.theme.list.itemAccentColor, itemFrame: baseItemFrame, container: self.scrollView.layer)
+                            } else {
+                                itemSelectionLayer.updateOrderBadge(order: nil, color: .clear, itemFrame: baseItemFrame, container: self.scrollView.layer)
+                            }
                             
                             if isEmoji {
                                 itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)

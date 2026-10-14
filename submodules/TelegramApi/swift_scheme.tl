@@ -2371,13 +2371,21 @@ feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string 
 feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
 feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
 
-exportedNoPaidMessagesToken#9e8178a2 flags:# token:string url:flags.0?string = ExportedNoPaidMessagesToken;
+exportedNoPaidMessagesToken#cf5105be flags:# token:string url:flags.0?string expires:flags.1?int = ExportedNoPaidMessagesToken;
+
+shareThemeDefault#95ace84f = ShareTheme;
+shareThemeEmoji#3ab4430a emojis:Vector<Reaction> = ShareTheme;
+shareThemeColor#1f48bc20 color_id:int = ShareTheme;
+shareThemeGift#ebece66d stargift:StarGift = ShareTheme;
+inputShareThemeGift#3fb92b5b stargift:InputSavedStarGift = ShareTheme;
 
 inputWalletCardSticker#57df45a7 coordinates:MediaAreaCoordinates nft_address:string = InputWalletCardSticker;
 
 wallet.cardSticker#f3010cba coordinates:MediaAreaCoordinates nft:wallet.NftItem = wallet.CardSticker;
 
 wallet.card#8ed043b1 flags:# stickers:flags.0?Vector<wallet.CardSticker> bg_nft_item:flags.1?wallet.NftItem address:string balance:long = wallet.Card;
+
+payments.starGiftDepositPayload#725bb4eb nft_address:string payload:bytes amount:long = payments.StarGiftDepositPayload;
 
 ---functions---
 
@@ -2552,6 +2560,8 @@ account.getWebBrowserSettings#56655768 hash:long = account.WebBrowserSettings;
 account.updateWebBrowserSettings#9adf82fe flags:# open_external_browser:flags.0?true display_close_button:flags.1?true = account.WebBrowserSettings;
 account.toggleWebBrowserSettingsException#60ed4229 flags:# delete:flags.1?true open_external_browser:flags.0?Bool url:string = Updates;
 account.deleteWebBrowserSettingsExceptions#86a0765d = account.WebBrowserSettings;
+account.getShareTheme#a3455427 = ShareTheme;
+account.setShareTheme#82bab396 theme:ShareTheme = Bool;
 
 users.getUsers#d91a548 id:Vector<InputUser> = Vector<User>;
 users.getFullUser#b60f5918 id:InputUser = users.UserFull;
@@ -2589,7 +2599,7 @@ contacts.setBlocked#94c65c76 flags:# my_stories_from:flags.0?true id:Vector<Inpu
 contacts.getBirthdays#daeda864 = contacts.ContactBirthdays;
 contacts.getSponsoredPeers#b6c8c393 q:string = contacts.SponsoredPeers;
 contacts.updateContactNote#139f63fb id:InputUser note:TextWithEntities = Bool;
-contacts.exportNoPaidMessagesToken#83c586ae flags:# revoke:flags.0?true = ExportedNoPaidMessagesToken;
+contacts.exportNoPaidMessagesToken#83c586ae flags:# revoke:flags.0?true temporary:flags.1?true = ExportedNoPaidMessagesToken;
 contacts.importNoPaidMessagesToken#35a7c6ca user_id:InputUser token:string = User;
 
 messages.getMessages#63c66506 id:Vector<InputMessage> = messages.Messages;
@@ -3070,6 +3080,9 @@ payments.getOnrampAvailability#2ec29951 flags:# provider:string crypto_currency:
 payments.getOnrampLimits#80e851fd flags:# provider:string crypto_currency:string base_currency:string payment_method:flags.0?string = OnrampLimits;
 payments.getOnrampQuote#e06645fa flags:# provider:string crypto_currency:string base_currency:string base_amount:flags.0?string crypto_amount:flags.1?string payment_method:flags.2?string = OnrampQuote;
 payments.createOnrampSession#a2197cf6 flags:# provider:string crypto_currency:string address:string payment_method:flags.0?string base_currency:flags.1?string base_amount:flags.2?string memo:flags.3?string theme:flags.4?string success_return_url:flags.5?string fail_return_url:flags.6?string crypto_amount:flags.7?string = OnrampSession;
+payments.withdrawStarGift#97c2805a flags:# keep_on_profile:flags.0?true stargift:InputSavedStarGift password:InputCheckPasswordSRP = Bool;
+payments.depositStarGift#c0a2ea9f flags:# hide_sender:flags.0?true peer:InputPeer slug:string = payments.StarGiftDepositPayload;
+payments.displayStarGift#4aa5f0fe flags:# peer:flags.0?InputPeer slug:string = Bool;
 
 stickers.createStickerSet#9021ab67 flags:# masks:flags.0?true emojis:flags.5?true text_color:flags.6?true user_id:InputUser title:string short_name:string thumb:flags.2?InputDocument stickers:Vector<InputStickerSetItem> software:flags.3?string = messages.StickerSet;
 stickers.removeStickerFromSet#f7760f51 sticker:InputDocument = messages.StickerSet;

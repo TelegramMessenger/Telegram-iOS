@@ -53,6 +53,7 @@ import ChatMessageItemImpl
 import ChatRecentActionsController
 import PeerInfoScreen
 import ChatQrCodeScreen
+import QrStudioScreen
 import UndoUI
 import ChatMessageNotificationItem
 import ChatbotSetupScreen
@@ -2798,7 +2799,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: EnginePeer, threadId: Int64?, temporary: Bool) -> ViewController {
-        return ChatQrCodeScreenImpl(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
+        return QrStudioScreen(context: context, peer: peer, threadId: threadId, temporary: temporary)
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {

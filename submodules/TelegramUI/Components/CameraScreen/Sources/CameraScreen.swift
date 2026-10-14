@@ -4373,6 +4373,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                          if case let .peer(peer, _) = resolvedUrl, let peer {
                              self.resolvedCodePeer = EnginePeer(peer)
                              self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                         } else if case let .noPaidMessagesToken(peer, _) = resolvedUrl {
+                             self.resolvedCodePeer = EnginePeer(peer)
+                             self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                          }
                      })
                 )

@@ -340,6 +340,7 @@ public enum ResolvedUrl {
     case peer(EngineRawPeer?, ChatControllerInteractionNavigateToPeer)
     case inaccessiblePeer
     case botStart(peer: EngineRawPeer, payload: String)
+    case noPaidMessagesToken(peer: EngineRawPeer, token: String)
     case groupBotStart(peerId: EnginePeer.Id, payload: String, adminRights: ResolvedBotAdminRights?, peerType: ResolvedBotStartPeerType?)
     case gameStart(peerId: EnginePeer.Id, game: String)
     case channelMessage(peer: EngineRawPeer, messageId: EngineMessage.Id, timecode: Double?)

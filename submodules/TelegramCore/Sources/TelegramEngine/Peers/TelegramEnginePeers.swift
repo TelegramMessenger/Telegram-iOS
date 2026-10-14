@@ -1450,6 +1450,14 @@ public extension TelegramEngine {
         public func exportContactToken() -> Signal<ExportedContactToken?, NoError> {
             return _internal_exportContactToken(account: self.account)
         }
+
+        public func exportNoPaidMessagesToken(revoke: Bool, temporary: Bool) -> Signal<ExportedNoPaidMessagesToken?, NoError> {
+            return _internal_exportNoPaidMessagesToken(account: self.account, revoke: revoke, temporary: temporary)
+        }
+
+        public func importNoPaidMessagesToken(peerId: EnginePeer.Id, token: String) -> Signal<EnginePeer, ImportNoPaidMessagesTokenError> {
+            return _internal_importNoPaidMessagesToken(account: self.account, peerId: peerId, token: token)
+        }
         
         public func updateChannelMembersHidden(peerId: EnginePeer.Id, value: Bool) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Api.InputChannel? in
