@@ -51,11 +51,12 @@ final class QrStudioPhasedAnimation {
     private var firstFrameDisposable: Disposable?
     private var framesDisposable: Disposable?
     private var placeholder: CGImage?
+    private var firstFrame: CGImage?
     private var frames: QrStudioExportSticker?
 
     private(set) var hasFrames = false
     var hasPlaceholder: Bool {
-        return self.placeholder != nil
+        return self.placeholder != nil || self.firstFrame != nil
     }
     var onFirstFrame: (() -> Void)?
 
@@ -77,6 +78,10 @@ final class QrStudioPhasedAnimation {
             return
         }
 
+        if let item = context.animationCache.getFirstFrameSynchronously(sourceId: file.resource.id.stringRepresentation, size: self.pixelSize), let advance = item.advance(advance: .frames(1), requestedFormat: .rgba), case let .rgba(data, width, height, bytesPerRow) = advance.frame.format {
+            self.firstFrame = qrStudioExportCGImage(rgba: data, width: width, height: height, bytesPerRow: bytesPerRow)
+        }
+
         self.framesDisposable = (qrStudioDecodeExportSticker(context: context, file: file, pixelSide: Int(self.pixelSize.width), tint: nil, firstFrameOnly: false)
         |> deliverOnMainQueue).start(next: { [weak self] frames in
             guard let self, let frames else {
@@ -84,12 +89,16 @@ final class QrStudioPhasedAnimation {
             }
             qrStudioPhasedFrames[framesKey] = QrStudioWeakFrames(frames)
             self.frames = frames
+            let startsFromFirstFrame = self.firstFrame != nil
             for (_, member) in self.members {
                 if let layer = member.layer {
-                    qrStudioCrossfadeContents(layer)
-                    self.apply(layer, group: member.group)
+                    if !startsFromFirstFrame {
+                        qrStudioCrossfadeContents(layer)
+                    }
+                    self.apply(layer, group: member.group, startsFromFirstFrame: startsFromFirstFrame)
                 }
             }
+            self.firstFrame = nil
             if !self.hasFrames {
                 self.hasFrames = true
                 self.onFirstFrame?()
@@ -105,25 +114,32 @@ final class QrStudioPhasedAnimation {
     func setPaused(_ isPaused: Bool) {
     }
 
-    private func apply(_ layer: CALayer, group: Int) {
+    private func apply(_ layer: CALayer, group: Int, startsFromFirstFrame: Bool = false) {
         guard let frames = self.frames else {
-            layer.contents = self.placeholder
+            layer.contents = self.firstFrame ?? self.placeholder
             return
         }
         let offset = frames.period * Double(group) / Double(QrStudioPhasedAnimation.groupCount)
         layer.removeAnimation(forKey: QrStudioPhasedAnimation.animationKey)
         if frames.isAnimated {
-            let local = (CACurrentMediaTime() - qrStudioPhasedEpoch + offset).truncatingRemainder(dividingBy: frames.period)
-            let index = min(frames.frames.count - 1, max(0, Int(Double(frames.frames.count) * local / frames.period)))
-            layer.contents = frames.frames[index]
             let animation = CAKeyframeAnimation(keyPath: "contents")
             animation.values = frames.frames
             animation.duration = frames.period
             animation.calculationMode = .discrete
             animation.repeatCount = .infinity
             animation.isRemovedOnCompletion = false
-            animation.timeOffset = offset
-            animation.beginTime = layer.convertTime(qrStudioPhasedEpoch, from: nil)
+            let elapsed = CACurrentMediaTime() - qrStudioPhasedEpoch + offset
+            if startsFromFirstFrame {
+                layer.contents = frames.frames[0]
+                let start = qrStudioPhasedEpoch - offset + ceil(elapsed / frames.period) * frames.period
+                animation.beginTime = layer.convertTime(start, from: nil)
+            } else {
+                let local = elapsed.truncatingRemainder(dividingBy: frames.period)
+                let index = min(frames.frames.count - 1, max(0, Int(Double(frames.frames.count) * local / frames.period)))
+                layer.contents = frames.frames[index]
+                animation.timeOffset = offset
+                animation.beginTime = layer.convertTime(qrStudioPhasedEpoch, from: nil)
+            }
             layer.add(animation, forKey: QrStudioPhasedAnimation.animationKey)
         } else {
             layer.contents = frames.frames.first
