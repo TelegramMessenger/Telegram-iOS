@@ -11,8 +11,8 @@ import WatchKit
 /// delivered notification of that thread instead, newest first, so the chat's recent history
 /// scrolls with the Digital Crown.
 ///
-/// The actions under it (Reply) come from the category the iPhone app registers, and the reply
-/// is delivered to the iPhone app, which sends it.
+/// The actions under it (Reply) come from the category the iPhone app registers. With this
+/// interface watchOS delivers Reply to this app, which sends it (`NotificationReplySender`).
 ///
 /// Unlike the system interface it does not show the sender's photo: the iPhone app attaches it
 /// to the message intent, which a notification does not expose.
@@ -163,10 +163,17 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
         for notification in notifications {
             let id = notification.request.identifier
             if model.voiceMessages[id] == nil, let attachment = notification.request.content.attachments.first(where: { $0.identifier == "audio" }) {
-                model.voiceMessages[id] = attachment.url
-                let info = MessageNotificationVoicePlayer.info(of: attachment.url)
-                model.voiceDurations[id] = info?.duration
-                model.voiceWaveforms[id] = info?.waveform
+                let url = attachment.url
+                model.voiceMessages[id] = url
+                // Reading a long voice message takes a while, so it is done off the main thread; the
+                // bar has a fixed height, so the length and waveform arriving later move nothing.
+                DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                    let info = MessageNotificationVoicePlayer.info(of: url)
+                    DispatchQueue.main.async {
+                        self?.model.voiceDurations[id] = info?.duration
+                        self?.model.voiceWaveforms[id] = info?.waveform
+                    }
+                }
             }
         }
     }
