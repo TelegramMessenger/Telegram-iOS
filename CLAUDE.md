@@ -1254,8 +1254,12 @@ but still inside a hole then carries that message and its album as entries while
 `isLoading` (`MessageHistoryView.isAnchorOnlyWhileLoading`, `PostboxTests`
 `MessageHistoryViewAnchorWhileLoadingTests`). Views without the flag keep no entries while loading.
 The chat applies the partial view scrolled with the post at the bottom (top edge at the top when
-taller), reports it as loading earlier so the existing placeholder stacks its skeleton bubbles above
-it, and applies the loaded view in place (`ChatHistoryViewScrollPosition.pinnedAnchor` /
+taller). Both measure the post without its date header's space
+(`ChatMessageItemView.attachedDateHeaderInset`, `ListViewScrollToItem.excludesAttachedHeaderSpace`):
+alone in the view the post carries its day's header, which moves to an older post of the same day once
+those load, and a tall post held by its top edge moved with it. The chat also reports the partial
+view as loading earlier so the existing placeholder stacks its skeleton bubbles above it, and applies
+the loaded view in place (`ChatHistoryViewScrollPosition.pinnedAnchor` /
 `.keepInPlace`, resolved in the history node from the post's relative offset). The partial view
 reports the history as still loading (`historyState`), so the profile warmup and the pinned-message
 view start after the fill as for any other open, and it makes no read claim (`maxReadIndex` is nil,

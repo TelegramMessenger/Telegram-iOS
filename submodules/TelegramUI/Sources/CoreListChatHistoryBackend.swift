@@ -548,6 +548,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     }
 
     private func pointOffset(for position: ListViewScrollPosition,
+                             excludesAttachedHeaderSpace: Bool,
                              index: Int,
                              height: CGFloat,
                              view: UIView & CoreListItemView) -> CGFloat {
@@ -583,7 +584,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         }
 
         guard case .visible = position else {
-            return self.placementOffset(for: position, height: height, view: view)
+            return self.placementOffset(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace, height: height, view: view)
         }
         // `.visible` is the one position that depends on where the row already is, so it needs
         // the row loaded. It is produced only by ensureItemNodeVisible — which always holds a
@@ -611,6 +612,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     /// edge — `ListViewImpl`'s arithmetic. Index-free, so `scrollHold(for:)` can re-evaluate it on every
     /// held pass without an index that rows arriving below have made stale.
     private func placementOffset(for position: ListViewScrollPosition,
+                                 excludesAttachedHeaderSpace: Bool,
                                  height: CGFloat,
                                  view: UIView & CoreListItemView) -> CGFloat {
         let node = (view as? CoreListNodeHostView)?.itemNode
@@ -619,14 +621,19 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         let insetTop = self.currentInsets.top
         let insetBottom = self.currentInsets.bottom
         let contentAreaHeight = viewportHeight - insetTop - insetBottom
+        // Read on every evaluation, so a held row keeps its content in place when the header leaves it. The
+        // space is in the node's top layout inset, which the node's own π puts at the row's far end (maxY)
+        // under the rotated chat (`attachmentBandTrim`), so only `.bottom` measures across it there.
+        let headerSpace = excludesAttachedHeaderSpace ? ((node as? ChatMessageItemView)?.attachedDateHeaderInset ?? 0.0) : 0.0
 
         switch position {
         case let .top(additionalOffset):
-            return additionalOffset + scrollPositioningInsets.top
+            return additionalOffset + scrollPositioningInsets.top - (self.rotated ? 0.0 : headerSpace)
         case let .bottom(additionalOffset):
             let targetMaxY = (viewportHeight - insetBottom)
                 + scrollPositioningInsets.bottom
                 + additionalOffset
+                + (self.rotated ? headerSpace : 0.0)
             return targetMaxY - height - insetTop
         case let .center(overflow):
             if height <= contentAreaHeight + CGFloat.ulpOfOne {
@@ -658,7 +665,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     /// distance from it. `rowPoint = edge − placement` reproduces every case: the row's minY for `.top`,
     /// its maxY for `.bottom`, its centre for a `.center` that fits, and for one that overflows the point
     /// that sat on the visible centre — continuous where the row starts or stops fitting.
-    private func scrollHold(for position: ListViewScrollPosition) -> CoreListScrollHold? {
+    private func scrollHold(for position: ListViewScrollPosition, excludesAttachedHeaderSpace: Bool) -> CoreListScrollHold? {
         let edge: CoreListScrollHold.Edge
         switch position {
         case .top:
@@ -684,7 +691,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             case .visibleCenter:
                 edgeOffset = contentAreaHeight * 0.5
             }
-            return edgeOffset - self.placementOffset(for: position, height: height, view: view)
+            return edgeOffset - self.placementOffset(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace, height: height, view: view)
         }
     }
 
@@ -994,14 +1001,15 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             case .Up:
                 direction = .backward
             }
+            let excludesAttachedHeaderSpace = scrollToItem.excludesAttachedHeaderSpace
             let hold = scrollToItem.holdsPosition && !self.isLowestPinToEdgeIndex(index)
-                ? self.scrollHold(for: position)
+                ? self.scrollHold(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace)
                 : nil
             scrollTo = CoreListScrollTarget(index: index, direction: direction, hold: hold) { [weak self] height, view in
                 guard let self else {
                     return 0.0
                 }
-                return self.pointOffset(for: position, index: index, height: height, view: view)
+                return self.pointOffset(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace, index: index, height: height, view: view)
             }
         }
 
@@ -1616,7 +1624,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // `frame.minY == insets.top + offset` — the exact inverse. CoreList's scrollTo pointOffset uses
     // the identical convention (screen target = viewportInsets.top + pointOffset), so no unit
     // conversion is needed here. Both sides are live: the restore path resolves `.top(offset)`
-    // through pointOffset(for:index:height:view:).
+    // through pointOffset(for:excludesAttachedHeaderSpace:index:height:view:).
     func itemNodeRelativeOffset(_ node: ListViewItemNode) -> CGFloat? {
         guard let frame = self.loadedFrame(of: node) else {
             return nil

@@ -3945,11 +3945,6 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         return result
     }
     
-    /// The list-space frame of the item node showing `messageId` (alone or inside its album), if it has one.
-    private func itemNodeFrame(containingMessageId messageId: MessageId) -> CGRect? {
-        return self.liveItemNode(containingMessageId: messageId).flatMap { self.listView.itemNodeFrame($0) }
-    }
-    
     /// The offset of the item node showing `messageId` from the list's top inset, in the convention
     /// `.top(offset)` scrolls back to (the backend's `itemNodeRelativeOffset(_:)`), if it has a node.
     private func itemNodeRelativeOffset(containingMessageId messageId: MessageId) -> CGFloat? {
@@ -4741,11 +4736,14 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     }
                 }
                 
-                if let anchor = transition.pinnedAnchor, let frame = strongSelf.itemNodeFrame(containingMessageId: anchor.id), let listIndex = chatHistoryListIndex(ofMessageId: anchor.id, in: transition.historyView) {
-                    // Taller than the visible area: show its top edge at the top (the list's bottom) instead.
+                if let anchor = transition.pinnedAnchor, let itemNode = strongSelf.liveItemNode(containingMessageId: anchor.id), let frame = strongSelf.listView.itemNodeFrame(itemNode), let listIndex = chatHistoryListIndex(ofMessageId: anchor.id, in: transition.historyView) {
+                    // Taller than the visible area: show its top edge at the top (the list's bottom) instead. Both
+                    // measure the post without its date header's space: alone in the view the post carries its
+                    // day's header, which moves to an older post of the same day once those load, and the post
+                    // must not move with it.
                     let contentHeight = strongSelf.listView.visibleSize.height - strongSelf.listView.insets.top - strongSelf.listView.insets.bottom
-                    if frame.height > contentHeight + CGFloat.ulpOfOne {
-                        strongSelf.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: listIndex, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down, holdsPosition: true), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    if frame.height - itemNode.attachedDateHeaderInset > contentHeight + CGFloat.ulpOfOne {
+                        strongSelf.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: listIndex, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down, holdsPosition: true, excludesAttachedHeaderSpace: true), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     }
                 }
                 strongSelf.hasActiveTransition = false

@@ -1309,8 +1309,13 @@ re-align and `requestMessageUpdate(andScrollToItem:)`). The playing-message foll
 autoplay) and the `scrollToMessageId` scroll are scrolls to a message, so they hold too. The backend
 maps the position to a `CoreListScrollHold` (`scrollHold(for:)`: `rowPoint = edge − placement`, so
 `.top` holds the row's minY against the input-panel edge, `.bottom` its maxY against the bars,
-`.center` the point that sat on the visible centre). A landing CoreList clamped against one of its
-ends is held against that end instead: opening at the unread line with a few unread lands the
+`.center` the point that sat on the visible centre). A scroll that sets
+`ListViewScrollToItem.excludesAttachedHeaderSpace` (the feed post's tall-post re-align) places and
+holds the message rather than its row: `placementOffset` leaves out
+`ChatMessageItemView.attachedDateHeaderInset`, re-read on every held pass, at the row end the node's
+top inset is on (maxY under the rotated chat, so `.bottom`), so the content stays put when the date
+header moves to an older row. A landing CoreList clamped against one of its ends is held against that
+end instead: opening at the unread line with a few unread lands the
 separator's `.bottom` resting on the newest edge, so it is held by its minY from the input-panel edge
 and the keyboard carries the newest messages rather than covering them. Node-issued scrolls never
 hold (the first sponsored message, a join, the bot-reply pin), scroll to either end releases explicitly

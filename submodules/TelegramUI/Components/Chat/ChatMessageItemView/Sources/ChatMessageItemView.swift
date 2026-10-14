@@ -959,6 +959,22 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         }
     }
     
+    /// The space this row reserves in its top layout inset for the date (and topic) header attached to it,
+    /// which the first message of a day carries. Positioning on the message rather than its row leaves it
+    /// out: the header moves to an older message of the same day once that one loads. `compact` and
+    /// `regular` agree on both heights. A row that never reports its header here answers 0.
+    public var attachedDateHeaderInset: CGFloat {
+        let constants = ChatMessageItemLayoutConstants.compact
+        switch (self.attachedDateHeader.hasDate, self.attachedDateHeader.hasPeer) {
+        case (true, true):
+            return constants.timestampDateAndTopicHeaderHeight
+        case (true, false), (false, true):
+            return constants.timestampHeaderHeight
+        case (false, false):
+            return 0.0
+        }
+    }
+
     open func updateAttachedDateHeader(hasDate: Bool, hasPeer: Bool) {
         self.attachedDateHeader = (hasDate, hasPeer)
         for headerNode in self.attachedHeaderNodes {
