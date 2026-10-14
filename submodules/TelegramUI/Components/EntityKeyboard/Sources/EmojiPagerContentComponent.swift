@@ -22,6 +22,7 @@ import AppBundle
 import UndoUI
 import AudioToolbox
 import ButtonComponent
+import MultilineTextComponent
 import LottieComponent
 import EmojiTextAttachmentView
 import EmojiStatusComponent
@@ -3358,12 +3359,14 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         var groupPremiumButtonItems: [AnyComponentWithIdentity<Empty>] = []
-                        groupPremiumButtonItems.append(AnyComponentWithIdentity(id: "title", component: AnyComponent(ButtonTextContentComponent(
-                            text: title,
-                            badge: 0,
-                            textColor: foregroundColor,
-                            badgeBackground: foregroundColor,
-                            badgeForeground: backgroundColor
+                        groupPremiumButtonItems.append(AnyComponentWithIdentity(id: "title", component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: title, font: Font.semibold(17.0), textColor: foregroundColor
+                            )),
+                            maximumNumberOfLines: 1,
+                            cutout: animationName == nil ? nil : TextNodeCutout(
+                                topRight: CGSize(width: 30.0 + 4.0, height: 30.0)
+                            )
                         ))))
                         if let animationName {
                             groupPremiumButtonItems.append(AnyComponentWithIdentity(id: "animation", component: AnyComponent(LottieComponent(
@@ -3390,7 +3393,10 @@ public final class EmojiPagerContentComponent: Component {
                                 ),
                                 content: AnyComponentWithIdentity(
                                     id: AnyHashable("\(title)-\(animationName ?? "")"),
-                                    component: AnyComponent(HStack(groupPremiumButtonItems, spacing: 4.0))
+                                    // Place the lock in the space reserved by the text cutout.
+                                    component: AnyComponent(HStack(
+                                        groupPremiumButtonItems, spacing: animationName == nil ? 4.0 : -30.0
+                                    ))
                                 ),
                                 action: { [weak self] in
                                     guard let strongSelf = self, let component = strongSelf.component else {
