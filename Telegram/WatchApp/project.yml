@@ -52,6 +52,11 @@ targets:
       path: tgwatch Watch App/Info.plist
       properties:
         CFBundleDisplayName: Telegram
+        # The app's own strings come from Telegram language packs (see
+        # Localization/), not from .lproj folders, so let system-provided UI
+        # follow the device language instead of the bundle's only (English)
+        # localization.
+        CFBundleAllowMixedLocalizations: true
         CFBundleIconName: AppIcon
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

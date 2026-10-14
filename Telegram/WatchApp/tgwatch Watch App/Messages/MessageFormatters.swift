@@ -16,10 +16,10 @@ func messageBody(_ content: MessageContent) -> String {
     case .messageVoiceNote(let m): return m.caption.text
     case .messageAudio(let m):   return m.caption.text
     case .messageSticker:        return ""
-    case .messageDocument:       return "Document"
+    case .messageDocument:       return L("Watch.Message.Document")
     case .messageLocation:       return ""
     case .messageVenue:          return ""
-    case .messageContact:        return "Contact"
+    case .messageContact:        return L("Message.Contact")
     case .messagePoll:           return ""
     default:                     return ""
     }
@@ -50,19 +50,19 @@ func isUnsupportedContent(_ content: MessageContent) -> Bool {
 /// `MMM d` for older or future dates.
 ///
 /// Pure: takes its `today` and `calendar` so tests are deterministic. The default `locale`
-/// uses the user's system locale at runtime; tests pin `en_US` for stable strings.
+/// is the UI locale (`AppStrings.shared.locale`) at runtime; tests pin `en_US` for stable strings.
 func daySeparatorLabel(
     for date: Foundation.Date,
     today: Foundation.Date,
     calendar: Calendar,
-    locale: Locale = .current
+    locale: Locale = AppStrings.shared.locale
 ) -> String {
     let dayStart = calendar.startOfDay(for: date)
     let todayStart = calendar.startOfDay(for: today)
     let dayDiff = calendar.dateComponents([.day], from: dayStart, to: todayStart).day ?? 0
 
-    if dayDiff == 0 { return "Today" }
-    if dayDiff == 1 { return "Yesterday" }
+    if dayDiff == 0 { return L("Weekday.Today") }
+    if dayDiff == 1 { return L("Weekday.Yesterday") }
 
     let formatter = DateFormatter()
     formatter.calendar = calendar

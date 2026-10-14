@@ -60,6 +60,80 @@ final class TDClient {
         return TDLibStickerPickerLoader(client: client)
     }
 
+    // MARK: - Notification replies
+
+    enum NotificationReplyError: Error {
+        case notReady
+        case failed(String)
+        case timedOut
+    }
+
+    /// Sends a notification's Reply (`NotificationReplySender`) and returns once TDLib reports it
+    /// sent: `sendMessage` returns while the message is still pending.
+    func sendNotificationReply(chatId: Int64, text: String, forumTopicId: Int?, readUpToMessageId: Int64?, timeout: TimeInterval) async throws {
+        guard authState == .ready, let client else { throw NotificationReplyError.notReady }
+        notificationRepliesInFlight += 1
+        defer {
+            notificationRepliesInFlight -= 1
+            if notificationRepliesInFlight == 0 {
+                notificationReplyResults.removeAll()
+            }
+        }
+        if let readUpToMessageId {
+            _ = try? await client.viewMessages(chatId: chatId, forceRead: true, messageIds: [readUpToMessageId], source: nil)
+        }
+        let message = try await client.sendMessage(
+            chatId: chatId,
+            inputMessageContent: .inputMessageText(InputMessageText(
+                clearDraft: false,
+                linkPreviewOptions: nil,
+                text: FormattedText(entities: [], text: text)
+            )),
+            options: nil,
+            replyMarkup: nil,
+            replyTo: nil,
+            topicId: forumTopicId.map { .messageTopicForum(MessageTopicForum(forumTopicId: $0)) }
+        )
+        if let result = notificationReplyResults.removeValue(forKey: message.id) {
+            return try result.get()
+        }
+        guard message.sendingState != nil else { return }
+        let messageId = message.id
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            notificationReplyWaiters[messageId] = continuation
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                self?.notificationReplyWaiters.removeValue(forKey: messageId)?.resume(throwing: NotificationReplyError.timedOut)
+            }
+        }
+    }
+
+    /// By the temporary id `sendMessage` returned for a notification reply.
+    private var notificationReplyWaiters: [Int64: CheckedContinuation<Void, Error>] = [:]
+    /// Results that arrived before their waiter was registered, kept only while a reply is sending.
+    private var notificationReplyResults: [Int64: Result<Void, Error>] = [:]
+    private var notificationRepliesInFlight = 0
+
+    private func handleNotificationReplySendResult(_ update: Update) {
+        let messageId: Int64
+        let result: Result<Void, Error>
+        switch update {
+        case .updateMessageSendSucceeded(let upd):
+            messageId = upd.oldMessageId
+            result = .success(())
+        case .updateMessageSendFailed(let upd):
+            messageId = upd.oldMessageId
+            result = .failure(NotificationReplyError.failed(upd.error.message))
+        default:
+            return
+        }
+        if let waiter = notificationReplyWaiters.removeValue(forKey: messageId) {
+            waiter.resume(with: result)
+        } else if notificationRepliesInFlight > 0 {
+            notificationReplyResults[messageId] = result
+        }
+    }
+
     /// Auth-state transitions and user-initiated lifecycle calls log at `.notice`
     /// (default level). `.notice` is reliably persisted by Apple's unified log;
     /// `.info` is memory-only for non-system subsystems and disappears from
@@ -265,7 +339,14 @@ final class TDClient {
             }
             return
         }
+        if case .updateLanguagePackStrings(let upd) = update {
+            if let client {
+                LanguagePackSync.handle(upd, client: client)
+            }
+            return
+        }
 
+        handleNotificationReplySendResult(update)
         userNames.handle(update)
         chatList?.handle(update)
         activeHistory?.handle(update)
@@ -374,6 +455,8 @@ final class TDClient {
         guard let client else { return }
         let useTest = self.useTestDc
         let dbDir = Self.databaseDirectory(accountId: account.id)
+        // Sent before the parameters so TDLib applies them while starting up.
+        LanguagePackSync.configure(client: client)
         Task { [logger, client] in
             do {
                 _ = try await client.setTdlibParameters(
@@ -384,7 +467,9 @@ final class TDClient {
                     databaseEncryptionKey: nil,
                     deviceModel: "Apple Watch",
                     filesDirectory: dbDir.path,
-                    systemLanguageCode: "en",
+                    systemLanguageCode: Locale.preferredLanguages.first.flatMap {
+                        Locale.Language(identifier: $0).languageCode?.identifier
+                    } ?? "en",
                     systemVersion: nil,
                     useChatInfoDatabase: true,
                     useFileDatabase: true,
@@ -397,7 +482,9 @@ final class TDClient {
                 Task { @MainActor [weak self] in
                     self?.authState = .failed(humanMessage(error))
                 }
+                return
             }
+            await LanguagePackSync.run(client: client)
         }
     }
 

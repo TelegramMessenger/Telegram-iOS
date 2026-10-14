@@ -16,7 +16,7 @@ struct UnsupportedBubbleView: View {
             if let header = replyHeader {
                 ReplyHeaderView(header: header, style: style)
             }
-            Text("Unsupported message")
+            Text(L("Watch.Message.Unsupported"))
                 .font(.caption)
                 .italic()
                 .foregroundStyle(style.content.opacity(0.6))

@@ -7,7 +7,12 @@ import Foundation
 /// - yesterday → "Yesterday"
 /// - 2–6 days ago → short weekday ("Mon")
 /// - 7+ days ago → locale short date ("5/12/26")
-func chatListTimestamp(_ unixSeconds: Int, now: Date, calendar: Calendar = .current) -> String {
+func chatListTimestamp(
+    _ unixSeconds: Int,
+    now: Date,
+    calendar: Calendar = .current,
+    locale: Locale = AppStrings.shared.locale
+) -> String {
     let date = Date(timeIntervalSince1970: TimeInterval(unixSeconds))
     let startOfDate = calendar.startOfDay(for: date)
     let startOfNow = calendar.startOfDay(for: now)
@@ -15,20 +20,20 @@ func chatListTimestamp(_ unixSeconds: Int, now: Date, calendar: Calendar = .curr
 
     switch dayDiff {
     case ...0:
-        return formatted(date, calendar: calendar) { $0.dateStyle = .none; $0.timeStyle = .short }
+        return formatted(date, calendar: calendar, locale: locale) { $0.dateStyle = .none; $0.timeStyle = .short }
     case 1:
-        return "Yesterday"
+        return L("Weekday.Yesterday")
     case 2...6:
-        return formatted(date, calendar: calendar) { $0.setLocalizedDateFormatFromTemplate("EEE") }
+        return formatted(date, calendar: calendar, locale: locale) { $0.setLocalizedDateFormatFromTemplate("EEE") }
     default:
-        return formatted(date, calendar: calendar) { $0.dateStyle = .short; $0.timeStyle = .none }
+        return formatted(date, calendar: calendar, locale: locale) { $0.dateStyle = .short; $0.timeStyle = .none }
     }
 }
 
-private func formatted(_ date: Date, calendar: Calendar, _ configure: (DateFormatter) -> Void) -> String {
+private func formatted(_ date: Date, calendar: Calendar, locale: Locale, _ configure: (DateFormatter) -> Void) -> String {
     let f = DateFormatter()
     f.calendar = calendar
-    f.locale = calendar.locale ?? .current
+    f.locale = locale
     f.timeZone = calendar.timeZone
     configure(f)
     return f.string(from: date)

@@ -6,7 +6,7 @@ struct ErrorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Something went wrong")
+            Text(L("Watch.Error.Title"))
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 8)
