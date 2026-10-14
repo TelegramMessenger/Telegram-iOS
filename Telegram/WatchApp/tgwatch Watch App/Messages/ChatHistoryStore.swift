@@ -98,6 +98,9 @@ final class ChatHistoryStore {
             unreadDividerAfterId: dividerAfter
         )
         self.loadState = .loadingFirstPage
+        // Rows hold formatted strings (service lines, day separators);
+        // rebuild them when the language pack changes.
+        AppStrings.shared.observeChanges(self) { $0.reproject() }
     }
 
     func start() async {

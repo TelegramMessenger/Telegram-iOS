@@ -63,7 +63,7 @@ struct StickerBubbleView: View {
 
     private var unsupportedBubble: some View {
         HStack(spacing: 4) {
-            Text("[Sticker]")
+            Text("[\(L("Message.Sticker"))]")
             if !sticker.emoji.isEmpty {
                 Text(sticker.emoji)
             }

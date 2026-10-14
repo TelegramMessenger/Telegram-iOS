@@ -58,7 +58,7 @@ final class VoiceRecorder {
         case .granted:
             break
         case .denied, .undetermined:
-            state = .failed("Microphone access denied. Enable in Settings → Privacy.")
+            state = .failed(L("Watch.Voice.MicrophoneDenied"))
             return
         }
         do {
@@ -67,7 +67,7 @@ final class VoiceRecorder {
             state = .recording(elapsed: 0, level: 0)
             startTicker()
         } catch {
-            state = .failed("Couldn't start microphone")
+            state = .failed(L("Watch.Voice.MicrophoneFailed"))
         }
     }
 
@@ -132,7 +132,7 @@ final class VoiceRecorder {
             state = .review(draft)
         } catch {
             guard tok == stopTok else { return }
-            state = .failed("Couldn't save recording")
+            state = .failed(L("Watch.Voice.SaveFailed"))
         }
     }
 

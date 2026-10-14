@@ -23,7 +23,7 @@ struct StickerPickerView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L("Common.Cancel")) { dismiss() }
                 }
             }
             .environment(store)
@@ -42,7 +42,7 @@ struct StickerPickerView: View {
         case .failed(let message):
             VStack(spacing: 6) {
                 Text(message).font(.caption2).multilineTextAlignment(.center)
-                Button("Retry") { Task { await store.load() } }
+                Button(L("Watch.Common.Retry")) { Task { await store.load() } }
                     .buttonStyle(.borderedProminent)
             }
             .padding()
@@ -55,21 +55,21 @@ struct StickerPickerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 if !store.favorites.isEmpty {
-                    StickerSectionGrid(title: "FAVORITES", stickers: store.favorites, onTap: sendAndComplete)
+                    StickerSectionGrid(title: L("Stickers.Favorites").uppercased(with: AppStrings.shared.locale), stickers: store.favorites, onTap: sendAndComplete)
                 }
                 if !store.recents.isEmpty {
-                    StickerSectionGrid(title: "FREQUENTLY USED", stickers: store.recents, onTap: sendAndComplete)
+                    StickerSectionGrid(title: L("Watch.Stickers.FrequentlyUsed").uppercased(with: AppStrings.shared.locale), stickers: store.recents, onTap: sendAndComplete)
                 }
                 if !store.sets.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("STICKER SETS").font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 4)
+                        Text(L("Watch.Stickers.StickerPacks").uppercased(with: AppStrings.shared.locale)).font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 4)
                         ForEach(store.sets) { set in
                             StickerSetRow(set: set, onSend: sendAndComplete)
                         }
                     }
                 }
                 if store.favorites.isEmpty && store.recents.isEmpty && store.sets.isEmpty {
-                    Text("No stickers yet").font(.caption).foregroundStyle(.secondary).padding(.top, 20)
+                    Text(L("Watch.Stickers.Empty")).font(.caption).foregroundStyle(.secondary).padding(.top, 20)
                 }
             }
             .padding(.horizontal, 4)

@@ -265,6 +265,12 @@ final class TDClient {
             }
             return
         }
+        if case .updateLanguagePackStrings(let upd) = update {
+            if let client {
+                LanguagePackSync.handle(upd, client: client)
+            }
+            return
+        }
 
         userNames.handle(update)
         chatList?.handle(update)
@@ -374,6 +380,8 @@ final class TDClient {
         guard let client else { return }
         let useTest = self.useTestDc
         let dbDir = Self.databaseDirectory(accountId: account.id)
+        // Sent before the parameters so TDLib applies them while starting up.
+        LanguagePackSync.configure(client: client)
         Task { [logger, client] in
             do {
                 _ = try await client.setTdlibParameters(
@@ -384,7 +392,9 @@ final class TDClient {
                     databaseEncryptionKey: nil,
                     deviceModel: "Apple Watch",
                     filesDirectory: dbDir.path,
-                    systemLanguageCode: "en",
+                    systemLanguageCode: Locale.preferredLanguages.first.flatMap {
+                        Locale.Language(identifier: $0).languageCode?.identifier
+                    } ?? "en",
                     systemVersion: nil,
                     useChatInfoDatabase: true,
                     useFileDatabase: true,
@@ -397,7 +407,9 @@ final class TDClient {
                 Task { @MainActor [weak self] in
                     self?.authState = .failed(humanMessage(error))
                 }
+                return
             }
+            await LanguagePackSync.run(client: client)
         }
     }
 

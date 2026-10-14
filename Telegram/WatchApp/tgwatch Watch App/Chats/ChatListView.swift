@@ -28,7 +28,7 @@ struct ChatListView: View {
                 .navigationDestination(item: $opener.target) { target in
                     MessageListView(row: target.row, store: target.store)
                 }
-                .navigationTitle("Chats")
+                .navigationTitle(L("DialogList.Title"))
                 .navigationBarTitleDisplayMode(.inline)
                 // `.toolbar(.visible)` forces the nav-bar container to
                 // materialize on the chat list. Without it, watchOS-26 skips
@@ -126,9 +126,9 @@ struct ChatListView: View {
     private func emptyStateRow(loadState: LoadState) -> some View {
         Group {
             if loadState == .loadingFirstPage {
-                LoadingView(label: "Loading chats…")
+                LoadingView(label: L("Watch.ChatList.Loading"))
             } else {
-                Text(store.folders.isEmpty ? "No chats yet" : "No chats in this folder")
+                Text(store.folders.isEmpty ? L("Watch.ChatList.Empty") : L("Watch.ChatList.EmptyFolder"))
                     .foregroundStyle(.secondary)
             }
         }
@@ -160,7 +160,7 @@ struct ChatListView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             switch kind {
             case .retry:
-                Button("Retry") { store.retry() }
+                Button(L("Watch.ChatList.Retry")) { store.retry() }
                     .font(.caption2)
                     .buttonStyle(.borderedProminent)
             case .dismiss:
