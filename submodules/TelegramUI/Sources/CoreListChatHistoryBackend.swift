@@ -298,6 +298,14 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         return self.beganDragPinnedToNewestEdge && self.didMoveContentDuringDrag
     }
 
+    var isHoldingScrollTarget: Bool {
+        return self.coreList.isHoldingScrollTarget
+    }
+
+    func releaseScrollHold() {
+        self.coreList.releaseScrollHold()
+    }
+
     // MARK: - Tracking
     //
     // Parity with `ListViewImpl.isTracking`: a finger is on the list right now. Unlike the two flags
@@ -574,6 +582,44 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             return (viewportHeight - insetBottom + extensionOffset) - height - insetTop
         }
 
+        guard case .visible = position else {
+            return self.placementOffset(for: position, height: height, view: view)
+        }
+        // `.visible` is the one position that depends on where the row already is, so it needs
+        // the row loaded. It is produced only by ensureItemNodeVisible — which always holds a
+        // loaded node — and by the experimentalSnapScrollToItem path, which nothing in chat ever
+        // enables. An unloaded target therefore falls back to center-with-top-overflow.
+        //
+        // `.presented`: the question here is literally "is this row on screen right now", so the
+        // rendered position is the input, not where a pass in flight is taking it.
+        guard let frame = self.loadedFrame(atIndex: index, .presented) else {
+            return height <= contentAreaHeight + CGFloat.ulpOfOne
+                ? floor((contentAreaHeight - height) / 2.0)
+                : 0.0
+        }
+        if frame.maxY > viewportHeight - insetBottom {
+            let targetMaxY = (viewportHeight - insetBottom) + scrollPositioningInsets.bottom
+            return targetMaxY - height - insetTop
+        }
+        if height <= contentAreaHeight + CGFloat.ulpOfOne, frame.minY < insetTop {
+            return -scrollPositioningInsets.top
+        }
+        return frame.minY - insetTop
+    }
+
+    /// Where `.top`, `.bottom` and `.center` place a row of `height`, as an offset from the top inset
+    /// edge — `ListViewImpl`'s arithmetic. Index-free, so `scrollHold(for:)` can re-evaluate it on every
+    /// held pass without an index that rows arriving below have made stale.
+    private func placementOffset(for position: ListViewScrollPosition,
+                                 height: CGFloat,
+                                 view: UIView & CoreListItemView) -> CGFloat {
+        let node = (view as? CoreListNodeHostView)?.itemNode
+        let scrollPositioningInsets = node?.scrollPositioningInsets ?? UIEdgeInsets()
+        let viewportHeight = self.currentSize.height
+        let insetTop = self.currentInsets.top
+        let insetBottom = self.currentInsets.bottom
+        let contentAreaHeight = viewportHeight - insetTop - insetBottom
+
         switch position {
         case let .top(additionalOffset):
             return additionalOffset + scrollPositioningInsets.top
@@ -602,26 +648,43 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 return targetMaxY - height - insetTop
             }
         case .visible:
-            // `.visible` is the one position that depends on where the row already is, so it needs
-            // the row loaded. It is produced only by ensureItemNodeVisible — which always holds a
-            // loaded node — and by the experimentalSnapScrollToItem path, which nothing in chat ever
-            // enables. An unloaded target therefore falls back to center-with-top-overflow.
-            //
-            // `.presented`: the question here is literally "is this row on screen right now", so the
-            // rendered position is the input, not where a pass in flight is taking it.
-            guard let frame = self.loadedFrame(atIndex: index, .presented) else {
-                return height <= contentAreaHeight + CGFloat.ulpOfOne
-                    ? floor((contentAreaHeight - height) / 2.0)
-                    : 0.0
+            // Routed by `pointOffset` before it gets here, and never held (`scrollHold(for:)`).
+            return 0.0
+        }
+    }
+
+    /// The hold reference for a scroll that asked to hold (`ListViewScrollToItem.holdsPosition`): the
+    /// edge the placement measured from, and the point in the row that placement put at a fixed
+    /// distance from it. `rowPoint = edge − placement` reproduces every case: the row's minY for `.top`,
+    /// its maxY for `.bottom`, its centre for a `.center` that fits, and for one that overflows the point
+    /// that sat on the visible centre — continuous where the row starts or stops fitting.
+    private func scrollHold(for position: ListViewScrollPosition) -> CoreListScrollHold? {
+        let edge: CoreListScrollHold.Edge
+        switch position {
+        case .top:
+            edge = .topInset
+        case .bottom:
+            edge = .bottomInset
+        case .center:
+            edge = .visibleCenter
+        case .visible:
+            return nil
+        }
+        return CoreListScrollHold(edge: edge) { [weak self] height, view in
+            guard let self else {
+                return 0.0
             }
-            if frame.maxY > viewportHeight - insetBottom {
-                let targetMaxY = (viewportHeight - insetBottom) + scrollPositioningInsets.bottom
-                return targetMaxY - height - insetTop
+            let contentAreaHeight = self.currentSize.height - self.currentInsets.top - self.currentInsets.bottom
+            let edgeOffset: CGFloat
+            switch edge {
+            case .topInset:
+                edgeOffset = 0.0
+            case .bottomInset:
+                edgeOffset = contentAreaHeight
+            case .visibleCenter:
+                edgeOffset = contentAreaHeight * 0.5
             }
-            if height <= contentAreaHeight + CGFloat.ulpOfOne, frame.minY < insetTop {
-                return -scrollPositioningInsets.top
-            }
-            return frame.minY - insetTop
+            return edgeOffset - self.placementOffset(for: position, height: height, view: view)
         }
     }
 
@@ -819,8 +882,10 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         // the re-pin as a second transaction from its completion, `applyChanges` takes `newInsets`
         // and `scrollTo` together — so this rides the same pass as one movement, with no
         // intermediate frame and a single animation.
+        // Skipped while a scroll target is held: the hold already re-places its row on an inset change.
         var effectiveScrollToItem = scrollToItem
         if maintainsUnreadItemAlignment,
+           !self.coreList.isHoldingScrollTarget,
            effectiveScrollToItem == nil,
            let sizeAndInsets = updateSizeAndInsets,
            sizeAndInsets.insets.bottom != self.currentInsets.bottom {
@@ -929,7 +994,10 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             case .Up:
                 direction = .backward
             }
-            scrollTo = CoreListScrollTarget(index: index, direction: direction) { [weak self] height, view in
+            let hold = scrollToItem.holdsPosition && !self.isLowestPinToEdgeIndex(index)
+                ? self.scrollHold(for: position)
+                : nil
+            scrollTo = CoreListScrollTarget(index: index, direction: direction, hold: hold) { [weak self] height, view in
                 guard let self else {
                     return 0.0
                 }

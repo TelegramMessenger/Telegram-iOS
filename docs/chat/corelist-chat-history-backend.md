@@ -1300,6 +1300,31 @@ existing CoreList suite applies its geometry *after* `VirtualListDriver.init` an
 reality). Whether this reaches the app — where a layout pass can land between `applyChanges` and the
 next frame — has not been established.
 
+## Holding a scrolled-to message
+
+Every chat scroll to a message holds it where it lands until a drag begins or the chat scrolls elsewhere
+(`ListViewScrollToItem.holdsPosition`, set in `preparedChatHistoryViewTransition` for `.unread`,
+`.positionRestoration`, `.pinnedAnchor` and `.index` to a message; also the feed post's tall-post
+re-align and `requestMessageUpdate(andScrollToItem:)`). The playing-message follow scroll (round-video
+autoplay) and the `scrollToMessageId` scroll are scrolls to a message, so they hold too. The backend
+maps the position to a `CoreListScrollHold` (`scrollHold(for:)`: `rowPoint = edge − placement`, so
+`.top` holds the row's minY against the input-panel edge, `.bottom` its maxY against the bars,
+`.center` the point that sat on the visible centre). A landing CoreList clamped against one of its
+ends is held against that end instead: opening at the unread line with a few unread lands the
+separator's `.bottom` resting on the newest edge, so it is held by its minY from the input-panel edge
+and the keyboard carries the newest messages rather than covering them. Node-issued scrolls never
+hold (the first sponsored message, a join, the bot-reply pin), scroll to either end releases explicitly
+(`releaseScrollHold()`, because scroll-to-end issues no scroll at the newest edge), and three scrolls
+are skipped while `isHoldingScrollTarget`: keep-in-place, the first-sponsored-message tuck, and the
+unread-separator re-pin. The hold is strict: a message arriving below a held row lands under the input
+panel. Its cue is the scroll-to-bottom button, so while held its threshold in `contentPositionChanged`
+(`ChatControllerLoadDisplayNode`) drops from 40pt to 0.5pt (ad heights still added, read through
+`ChatHistoryListNodeImpl.isHoldingScrollTarget`): a one-line arrival (~37pt) hidden under the panel
+shows the button, an ad alone does not. A released hold's slack retires on drag frames and once when
+a fling ends, never on the fling's own frames, where it rebaked the `KeyframeFlight` every frame.
+`ListViewImpl` ignores the flag.
+The engine half is `submodules/TelegramUI/Components/CoreList/CLAUDE.md`, "The scroll hold".
+
 ## Trailing item space
 
 When the whole collection fits on screen with room to spare, the list tells its **last** item how much

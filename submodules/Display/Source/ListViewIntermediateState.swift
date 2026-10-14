@@ -60,14 +60,22 @@ public struct ListViewScrollToItem {
     public let curve: ListViewAnimationCurve
     public let directionHint: ListViewScrollToItemDirectionHint
     public let displayLink: Bool
-    
-    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false) {
+    /// Asks the list to keep the target where this scroll lands it until the next touch or scroll.
+    /// Honoured by the chat's CoreList backend only; `ListViewImpl` ignores it.
+    public let holdsPosition: Bool
+
+    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false, holdsPosition: Bool = false) {
         self.index = index
         self.position = position
         self.animated = animated
         self.curve = curve
         self.directionHint = directionHint
         self.displayLink = displayLink
+        self.holdsPosition = holdsPosition
+    }
+
+    public func withHoldsPosition(_ holdsPosition: Bool) -> ListViewScrollToItem {
+        return ListViewScrollToItem(index: self.index, position: self.position, animated: self.animated, curve: self.curve, directionHint: self.directionHint, displayLink: self.displayLink, holdsPosition: holdsPosition)
     }
 }
 

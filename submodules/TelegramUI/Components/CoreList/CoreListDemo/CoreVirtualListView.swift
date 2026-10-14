@@ -114,6 +114,43 @@ public enum CoreListAnchorMode: Equatable {
     case preserveVisibleContent
 }
 
+/// Keeps a scrolled-to row where it landed until a drag begins or the list scrolls elsewhere. Carried by
+/// a `CoreListScrollTarget`; the engine records, in the pass that lands the target, the distance between
+/// `rowPoint` and `edge` in settled geometry, and re-places the row at that distance on every later pass.
+///
+/// A landing the list CLAMPED against one of its ends is held against that end instead of this hold's
+/// reference: resting on the newest edge (index 0 loaded, offset on the natural minimum), by the row's
+/// minY from `.topInset`; resting on the oldest, by its maxY from `.bottomInset`. The newest edge wins
+/// when both hold. That end, not the request, decided where the row is, so a bar or panel appearing at
+/// the other edge must not move it off the end it rests on.
+///
+/// Released when a drag begins (`ScrollEngine.onWillBeginDragging`: under `PhysicsScrollEngine` the
+/// pan's `.began` — after its movement hysteresis, or at once for a finger landing on moving content —
+/// and under `UIKitScrollEngine`, `scrollViewWillBeginDragging`; a tap that never becomes a drag keeps
+/// it), by any later `scrollTo` (a holding one arms a new hold), by the row leaving the collection, by a
+/// full replace, and by `releaseScrollHold()`.
+public struct CoreListScrollHold {
+    public enum Edge {
+        /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
+        case topInset
+        /// `logicalSize.height - viewportInsets.bottom`.
+        case bottomInset
+        /// Midway between the two inset edges.
+        case visibleCenter
+    }
+
+    public let edge: Edge
+    /// A point inside the row, in the row's own coordinates (0 = its minY), for its current measured
+    /// height and view. Evaluated on every held pass, so the row's re-measure keeps THIS point still.
+    public let rowPoint: (_ measuredHeight: CGFloat, _ view: UIView & CoreListItemView) -> CGFloat
+
+    public init(edge: Edge,
+                rowPoint: @escaping (_ measuredHeight: CGFloat, _ view: UIView & CoreListItemView) -> CGFloat) {
+        self.edge = edge
+        self.rowPoint = rowPoint
+    }
+}
+
 /// Where a programmatic scroll should place one row.
 ///
 /// `resolve` returns the row's settled Y as an offset from the top inset edge — the convention the
@@ -137,19 +174,24 @@ public struct CoreListScrollTarget {
     public let index: Int
     public let resolve: (_ measuredHeight: CGFloat, _ view: UIView & CoreListItemView) -> CGFloat
     public let direction: Direction?
+    /// Non-nil to hold the target where this scroll lands it — see `CoreListScrollHold`.
+    public let hold: CoreListScrollHold?
 
     public init(index: Int, pointOffset: CGFloat) {
         self.index = index
         self.resolve = { _, _ in pointOffset }
         self.direction = nil
+        self.hold = nil
     }
 
     public init(index: Int,
                 direction: Direction? = nil,
+                hold: CoreListScrollHold? = nil,
                 resolve: @escaping (CGFloat, UIView & CoreListItemView) -> CGFloat) {
         self.index = index
         self.resolve = resolve
         self.direction = direction
+        self.hold = hold
     }
 }
 
@@ -287,6 +329,10 @@ public final class CoreVirtualListView: UIView {
         /// Stored rather than re-derived as `index == lowestPinnedItemIndex`: an explicit `scrollTo`
         /// to the pinned row is a DIFFERENT case that keeps its own behaviour.
         let isPin: Bool
+        /// Set only by `resolveAnchor`'s scroll-hold branch. Like `isPin`, read by `pinsLoadedTop`
+        /// (resting at the newest edge must not hand the anchor to index 0), and by `applyChanges`,
+        /// which measures the hold's slack from the window this anchor built.
+        let isHeld: Bool
 
         // Every non-scrollTo branch of resolveAnchor computes a plain point offset, so they keep
         // their existing call shape.
@@ -295,13 +341,19 @@ public final class CoreVirtualListView: UIView {
             self.offset = .fixed(pointOffset)
             self.preservesVisibleContent = preservesVisibleContent
             self.isPin = false
+            self.isHeld = false
         }
 
-        init(index: Int, offset: Offset, preservesVisibleContent: Bool, isPin: Bool = false) {
+        init(index: Int,
+             offset: Offset,
+             preservesVisibleContent: Bool,
+             isPin: Bool = false,
+             isHeld: Bool = false) {
             self.index = index
             self.offset = offset
             self.preservesVisibleContent = preservesVisibleContent
             self.isPin = isPin
+            self.isHeld = isHeld
         }
     }
 
@@ -486,6 +538,44 @@ public final class CoreVirtualListView: UIView {
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
     /// scroll ROOM to rest there, and is deliberately independent of this flag.
     private var holdsPinnedRow = false
+
+    /// The row a holding `scrollTo` landed, and where — see `CoreListScrollHold`. Keyed by identity,
+    /// never index: rows arriving below it shift its index on every pass.
+    private struct HeldRow {
+        let identity: AnyHashable
+        let hold: CoreListScrollHold
+        /// `rowPoint − edge` in settled screen coordinates, measured in the pass that landed the row:
+        /// where it actually ended up after that pass's edge alignment, not where it was asked to go.
+        let distance: CGFloat
+    }
+
+    private var heldRow: HeldRow?
+
+    /// Scroll room the held row's placement needs beyond each loaded edge. While held it is measured
+    /// from every window the held anchor builds (`heldWindowSlack(_:)`); after release it only ever
+    /// shrinks, to what the current offset still needs (`retireHoldSlack()`), so release — which
+    /// happens at finger-down — never moves content under the finger. Folded into `loadedEdgeRange`.
+    private var holdSlack: (min: CGFloat, max: CGFloat) = (0, 0)
+
+    public var isHoldingScrollTarget: Bool { heldRow != nil }
+
+    /// Ends the hold without moving anything. The chat calls it from scroll-to-end, which issues no
+    /// scroll when the list already rests at its newest edge.
+    public func releaseScrollHold() {
+        heldRow = nil
+    }
+
+    /// The settled screen Y of a hold's edge under the CURRENT geometry.
+    private func holdEdgeY(_ edge: CoreListScrollHold.Edge) -> CGFloat {
+        switch edge {
+        case .topInset:
+            return viewportInsets.top
+        case .bottomInset:
+            return logicalSize.height - viewportInsets.bottom
+        case .visibleCenter:
+            return (viewportInsets.top + logicalSize.height - viewportInsets.bottom) * 0.5
+        }
+    }
 
     var items: [CoreListItem] {
         get { _items }
@@ -943,8 +1033,9 @@ public final class CoreVirtualListView: UIView {
         engine.onWillBeginDragging = { [weak self] in
             // Mirrors `ListViewImpl.scrollViewWillBeginDragging` (`Display/Source/ListView.swift:879`).
             // The TOUCH releases the pin, not the movement: a programmatic offset write keeps it, which
-            // is what every self-update flush and inset change is.
+            // is what every self-update flush and inset change is. The scroll hold releases the same way.
             self?.holdsPinnedRow = false
+            self?.heldRow = nil
             self?.willBeginDragging?()
         }
         engine.onDidEndDragging = { [weak self] in
@@ -954,6 +1045,12 @@ public final class CoreVirtualListView: UIView {
             guard let self else { return }
             let wasFlying = self.activeScrollFlight != nil
             self.activeScrollFlight = flight
+            if wasFlying && flight == nil && !self.isApplyingChanges {
+                // The one retire a flight gets (`handleUserScroll` skips its ticks), at the offset it
+                // came to rest at or was caught at. Inside a pass — a scroll's halt catching a flight —
+                // the pass's own retire at its end covers it, against the geometry it settles.
+                self.retireHoldSlack()
+            }
             self.renderAttachments()
             // After renderAttachments, so a host reading geometry from this callback sees the solve for
             // the state it is being told about rather than the one it replaced.
@@ -1305,12 +1402,30 @@ public final class CoreVirtualListView: UIView {
             // the pinned stableId CHANGES.
             holdsPinnedRow = true
         }
+        // The scroll hold, resolved against THIS pass's collection. Any explicit scroll ends it (a
+        // holding one arms a new hold once it has landed, below), as does a full replace and the row
+        // leaving the collection — deleted, or the history window moved past it.
+        var heldIndex: Int?
+        if isNoOverlapSwap {
+            heldRow = nil
+            holdSlack = (0, 0)
+        } else if scrollTo != nil {
+            heldRow = nil
+            // A scroll lands inside the natural range (`buildWindow` aligns it), so no slack applies.
+            holdSlack = (0, 0)
+        } else if let held = heldRow {
+            heldIndex = effectiveItems.firstIndex(where: { $0.identity == held.identity })
+            if heldIndex == nil {
+                heldRow = nil
+            }
+        }
         let resolvedAnchor: ResolvedAnchor?
         if effectiveItems.isEmpty {
             resolvedAnchor = nil
         } else {
             guard let anchor = resolveAnchor(
                 scrollTo: scrollTo,
+                heldIndex: heldIndex,
                 anchorMode: anchorMode,
                 isNoOverlapSwap: isNoOverlapSwap,
                 diff: diff,
@@ -1373,6 +1488,7 @@ public final class CoreVirtualListView: UIView {
             // scrolls down into content, which ListViewImpl honours and the pin would discard.
             let pinsLoadedTop = !resolvedAnchor.preservesVisibleContent
                 && !resolvedAnchor.isPin
+                && !resolvedAnchor.isHeld
                 && !hasScrollTo
                 && !hasAdditionalScrollDistance
                 && oldWindow.startIndex == 0
@@ -1405,9 +1521,15 @@ public final class CoreVirtualListView: UIView {
                                     resolveY: resolveY,
                                     pinsLoadedTop: pinsLoadedTop,
                                     pinSlackBaseline: pinSlackBaseline,
+                                    holdsAnchor: resolvedAnchor.isHeld,
                                     sourceWindow: oldWindow,
                                     survivorMapNewToOld: survivorMapNewToOld,
                                     moveReuseNewToOld: moveReuseNewToOld)
+            if resolvedAnchor.isHeld {
+                // Before `render()` and the settle clamp below: both read `loadedEdgeRange`, which must
+                // already carry the room this placement needs.
+                holdSlack = heldWindowSlack(newWindow)
+            }
         } else {
             newWindow = Window()
         }
@@ -1670,6 +1792,46 @@ public final class CoreVirtualListView: UIView {
             newBoundsOriginY = newSettledOffset + presentationOverscroll
         }
         setBoundsOriginY(newBoundsOriginY)
+        if let scrollTo, let requestedHold = scrollTo.hold,
+           effectiveItems.indices.contains(scrollTo.index),
+           let landed = newWindow.items.first(where: { $0.index == scrollTo.index }) {
+            // A landing the list CLAMPED against one of its ends is held against that end, not against
+            // the edge the request named: that end, not the request, decided where it is. Resting on
+            // the newest edge (window from index 0, settled offset on the natural minimum), the row
+            // keeps its minY's distance from the top inset edge, so the rows under it ride the input
+            // panel — a `.bottom` hold there would keep its distance from the bars instead, and a
+            // keyboard would cover the newest rows (or a top-inset shrink open a gap under them).
+            // Resting on the oldest edge, it keeps its maxY's distance from the bottom inset edge, so
+            // it follows the bars. The newest edge wins when both hold (a collection shorter than the
+            // viewport). Natural edges: a scroll pass has reset `holdSlack` and skips the settle clamp,
+            // so only `buildWindow`'s underfill alignments can have clamped it, and those align onto
+            // exactly these edges (the pin slack included).
+            let naturalEdges = loadedEdgeRange(for: newWindow, originY: containerOriginY, includesHoldSlack: false)
+            var naturalMaximum = naturalEdges.max
+            if let minimum = naturalEdges.min, let rawMaximum = naturalMaximum, rawMaximum < minimum {
+                naturalMaximum = minimum
+            }
+            let hold: CoreListScrollHold
+            if newWindow.startIndex == 0,
+               let minimum = naturalEdges.min,
+               abs(newSettledOffset - minimum) <= 1e-6 {
+                hold = CoreListScrollHold(edge: .topInset) { _, _ in 0 }
+            } else if newWindow.endIndex == effectiveItems.count - 1,
+                      let maximum = naturalMaximum,
+                      abs(newSettledOffset - maximum) <= 1e-6 {
+                hold = CoreListScrollHold(edge: .bottomInset) { height, _ in height }
+            } else {
+                hold = requestedHold
+            }
+            // Measured from THIS pass's settled geometry, i.e. after `buildWindow`'s edge alignment:
+            // a scroll the edges clamped is held where it landed, not where it was asked to go.
+            let landedMinY = containerOriginY - newWindow.minY + landed.frame.minY - newSettledOffset
+            heldRow = HeldRow(identity: effectiveItems[scrollTo.index].identity,
+                              hold: hold,
+                              distance: landedMinY + hold.rowPoint(landed.frame.height, landed.view)
+                                  - holdEdgeY(hold.edge))
+        }
+        retireHoldSlack()
         if absorbsEdgeChangeIntoOverscroll {
             // Holding the engine offset is only half of holding the CONTENT. A drag in progress maps
             // finger travel to content through the rubber band, and this pass just moved an edge, so
@@ -2401,6 +2563,9 @@ public final class CoreVirtualListView: UIView {
             notifyVisibleRects()
             refreshReachedLoadedEdges()
         }
+        // A rebuild re-anchors at index 0, like a full replace: nothing it builds is held.
+        heldRow = nil
+        holdSlack = (0, 0)
         engine.haltMotionInPlace()
         resetViewportCarries()
         animationController.reset()
@@ -2450,6 +2615,7 @@ public final class CoreVirtualListView: UIView {
     }
 
     private func resolveAnchor(scrollTo: CoreListScrollTarget?,
+                               heldIndex: Int?,
                                anchorMode: CoreListAnchorMode,
                                isNoOverlapSwap: Bool,
                                diff: ItemDiff,
@@ -2497,6 +2663,23 @@ public final class CoreVirtualListView: UIView {
                 isPin: true
             )
         }
+        if let heldIndex, let held = heldRow {
+            // Below the pin latch, above `preserveVisibleContent`: loading history around a held row
+            // must not move it, and an explicit `scrollTo` (handled above) ends the hold anyway.
+            //
+            // `.resolved` reads the geometry this pass is building — new insets, new size, the row's
+            // new height — exactly as the pin latch's closure does; `resolveY` adds `viewportInsets.top`.
+            return ResolvedAnchor(
+                index: heldIndex,
+                offset: .resolved { [weak self] height, view in
+                    guard let self else { return 0 }
+                    return self.holdEdgeY(held.hold.edge) + held.distance
+                        - held.hold.rowPoint(height, view) - self.viewportInsets.top
+                },
+                preservesVisibleContent: false,
+                isHeld: true
+            )
+        }
         if anchorMode == .preserveVisibleContent,
            let preserved = resolvePreservedAnchor(
                diff: diff,
@@ -2513,9 +2696,16 @@ public final class CoreVirtualListView: UIView {
                                   pointOffset: 0,
                                   preservesVisibleContent: false)
         }
+        // The NATURAL edge, not the declared one: an offset resting on a released hold's extended
+        // minimum is not resting where index 0 belongs. That matters only when `pinsLoadedTop` declines
+        // this pass — a nonzero `additionalScrollDistance`; otherwise it reads the declared edge and
+        // translates the window onto `topEdge`, which carries the slack, whatever anchor this returns.
+        // Declined, matching the extended edge here would hand the anchor to index 0 at point offset 0,
+        // which ignores the slack and moves everything by it.
         let oldEdges = loadedEdgeRange(for: oldWindow,
                                        originY: oldContainerOriginY,
-                                       itemCount: oldItemCount)
+                                       itemCount: oldItemCount,
+                                       includesHoldSlack: false)
         if oldWindow.startIndex == 0,
            let minimum = oldEdges.min,
            abs(oldSettledOffset - minimum) <= 1e-6 {
@@ -2642,6 +2832,14 @@ public final class CoreVirtualListView: UIView {
         previousOffset = engine.offset
         onUserScrollDelta?(delta, timestamp)
         rebalanceActiveWindow()
+        // On frames the user drives, never on a flight's ticks: each retire re-declares the edge at the
+        // live offset, an edge on the remaining path, so `KeyframeFlight` would rebake every frame. A
+        // flight inside the slack plays against the extended edge and the slack retires once, when the
+        // flight ends (`engine.onFlightChanged`). Only `.keyframe` publishes flights; a stepped or UIKit
+        // deceleration keeps retiring here.
+        if activeScrollFlight == nil {
+            retireHoldSlack()
+        }
         refreshReachedLoadedEdges()
         // The floating clamp is viewport-dependent, and `rebalanceActiveWindow` runs `render()` only
         // when the window actually changed — so a scroll that leaves the window untouched would
@@ -2833,6 +3031,7 @@ public final class CoreVirtualListView: UIView {
                              resolveY: (CGFloat, UIView & CoreListItemView) -> CGFloat,
                              pinsLoadedTop: Bool = false,
                              pinSlackBaseline: CGFloat? = nil,
+                             holdsAnchor: Bool = false,
                              sourceWindow: Window?,
                              survivorMapNewToOld: [Int: Int]? = nil,
                              moveReuseNewToOld: [Int: Int]? = nil) -> Window {
@@ -2863,7 +3062,13 @@ public final class CoreVirtualListView: UIView {
         // the loaded-top pin, both underfill alignments, the whole-collection underfill test — uses
         // the same value.
         var topEdge = viewportInsets.top
-        let bottomEdge = logicalSize.height - viewportInsets.bottom
+        // A released hold's slack at the oldest edge, the counterpart of the `holdSlack.min` addend in
+        // `topEdge` below: a positive maximum slack means the oldest row may rest that far ABOVE the
+        // bottom inset edge, so it is subtracted. Inert on a held build (the bottom underfill block is
+        // skipped) and zero on every scroll and full-replace pass; after release it keeps a pass from
+        // aligning the oldest row onto the inset edge, which would move everything by the slack.
+        // `heldWindowSlack` measures against the unfolded edge, or the slack would feed itself.
+        let bottomEdge = logicalSize.height - viewportInsets.bottom - holdSlack.max
 
         func alignTopIfUnderfilled() -> Bool {
             guard window.startIndex == 0, window.minY > topEdge else { return false }
@@ -2938,7 +3143,15 @@ public final class CoreVirtualListView: UIView {
         // Ordering is safe in one direction only, and this is that direction: the slack pushes the
         // window DOWN, so the append below needs no more rows than it would have without it.
         let pinSlack = bottomEdgePinSlack(for: window)
-        topEdge = viewportInsets.top + pinSlack
+        // A released hold's slack is the third addend (spec §2: it folds in wherever the pin slack
+        // does). While held it is inert here — a held build skips both underfill alignments and never
+        // pins the loaded top — but after release it is what keeps a pass from closing the gap the
+        // user is looking at: `loadedEdgeRange` still declares the extended minimum, so without it the
+        // loaded-top pin and the top underfill alignment would place the newest row on the NATURAL
+        // edge, moving everything by the slack. Zero on every scroll and full-replace pass, which reset
+        // it before building. `heldWindowSlack` measures against its own edge without this addend, or
+        // the slack would feed itself.
+        topEdge = viewportInsets.top + pinSlack + holdSlack.min
         if pinsLoadedTop, window.startIndex == 0 {
             translate(&window, by: topEdge - window.minY)
         } else {
@@ -2961,11 +3174,14 @@ public final class CoreVirtualListView: UIView {
                 // movement still wants growth absorbed rather than pushed under its finger.
                 translate(&window, by: pinSlack - pinSlackBaseline)
             }
-            _ = alignTopIfUnderfilled()
+            if !holdsAnchor {
+                _ = alignTopIfUnderfilled()
+            }
         }
         appendUntilCoveredOrAtBottom()
 
-        if window.endIndex == _items.count - 1,
+        if !holdsAnchor,
+           window.endIndex == _items.count - 1,
            window.maxY < bottomEdge {
             let wholeCollectionIsUnderfilled = window.startIndex == 0
                 && window.height + viewportInsets.top + viewportInsets.bottom
@@ -3113,21 +3329,58 @@ public final class CoreVirtualListView: UIView {
                       - (viewportInsets.top + span))
     }
 
+    /// How far a held placement puts the window short of each loaded edge: the gap between the newest
+    /// row and the top edge (pin slack included), and between the oldest row and the bottom inset edge.
+    /// Zero for an edge that is not loaded, and clamped at zero, like the pin slack — never placement
+    /// leaking into the scroll range.
+    private func heldWindowSlack(_ window: Window) -> (min: CGFloat, max: CGFloat) {
+        let topEdge = viewportInsets.top + bottomEdgePinSlack(for: window)
+        let bottomEdge = logicalSize.height - viewportInsets.bottom
+        let minimum = window.startIndex == 0 ? max(0, window.minY - topEdge) : 0
+        let maximum = window.endIndex == _items.count - 1 ? max(0, bottomEdge - window.maxY) : 0
+        return (minimum, maximum)
+    }
+
+    /// After release, shrinks the hold's slack to what the current offset still needs, so content in
+    /// the slack region stays put and the extra room disappears only as the user scrolls back into the
+    /// natural range. Never grows it. Re-declares the engine edges when it changed; that never moves the
+    /// offset, because the shrunk edge lands exactly on it.
+    private func retireHoldSlack() {
+        guard heldRow == nil, holdSlack.min > 0 || holdSlack.max > 0, !activeWindow.isEmpty else { return }
+        let natural = loadedEdgeRange(for: activeWindow, originY: containerOriginY, includesHoldSlack: false)
+        var naturalMax = natural.max
+        if let minimum = natural.min, let maximum = naturalMax, maximum < minimum {
+            naturalMax = minimum
+        }
+        let offset = engine.offset
+        let neededMin = natural.min.map { max(0, $0 - offset) } ?? 0
+        let neededMax = naturalMax.map { max(0, offset - $0) } ?? 0
+        let retired = (min: min(holdSlack.min, neededMin), max: min(holdSlack.max, neededMax))
+        guard retired.min != holdSlack.min || retired.max != holdSlack.max else { return }
+        holdSlack = retired
+        let edges = loadedEdgeRange(for: activeWindow, originY: containerOriginY)
+        engine.setEdges(min: edges.min, max: edges.max)
+        declaredEdges = (edges.min, edges.max)
+    }
+
     private func loadedEdgeRange(for window: Window,
                                  originY: CGFloat,
-                                 itemCount: Int? = nil) -> (min: CGFloat?, max: CGFloat?) {
+                                 itemCount: Int? = nil,
+                                 includesHoldSlack: Bool = true) -> (min: CGFloat?, max: CGFloat?) {
         guard !window.isEmpty else { return (0, 0) }
         let count = itemCount ?? _items.count
+        let slack = includesHoldSlack ? holdSlack : (min: 0, max: 0)
         // The pin's slack rides the MINIMUM edge, which is what makes it stick: `render()` and
         // `refreshReachedLoadedEdges()` both come through here and `rebalanceActiveWindow()` re-renders,
-        // so user scrolling, momentum and self-update flushes all see it with no extra plumbing.
+        // so user scrolling, momentum and self-update flushes all see it with no extra plumbing. The
+        // scroll hold's slack rides both edges the same way.
         let minimum: CGFloat? = window.startIndex == 0
-            ? viewportGeometry.minimumOffset - bottomEdgePinSlack(for: window)
+            ? viewportGeometry.minimumOffset - bottomEdgePinSlack(for: window) - slack.min
             : nil
         let maximum: CGFloat? = window.endIndex == count - 1
             ? viewportGeometry.maximumOffset(
                 contentBottom: originY - window.minY + window.maxY
-            )
+            ) + slack.max
             : nil
         return (minimum, maximum)
     }

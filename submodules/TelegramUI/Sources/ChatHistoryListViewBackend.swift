@@ -103,6 +103,12 @@ public protocol ChatHistoryListViewBackend: ASDisplayNode {
     // and stub the other — which is exactly what happened: `CoreListChatHistoryBackend` stubbed both to
     // constants, silently disabling the chat's keyboard-dismissal snap-back rather than failing to build.
     var didInteractivelyDragFromTopOrigin: Bool { get }
+    /// Whether the list is holding a scrolled-to row where it landed (CoreList only; see
+    /// `docs/chat/corelist-chat-history-backend.md`, "Holding a scrolled-to message"). Scrolls the hold
+    /// already does the job of are skipped while it is true.
+    var isHoldingScrollTarget: Bool { get }
+    /// Ends the hold without scrolling.
+    func releaseScrollHold()
     var displayedItemRange: ListViewDisplayedItemRange { get }
     var opaqueTransactionState: Any? { get }
 
@@ -296,6 +302,13 @@ extension ListViewImpl: ChatHistoryListViewBackend {
     // This is the pair the chat used to sample separately, which on this backend is exactly equivalent.
     public func settledContentOffsets() -> (top: ListViewVisibleContentOffset, bottom: ListViewVisibleContentOffset) {
         return (self.visibleContentOffset(), self.visibleBottomContentOffset())
+    }
+
+    // `ListViewImpl` never holds a scroll target: `ListViewScrollToItem.holdsPosition` is ignored here.
+    public var isHoldingScrollTarget: Bool {
+        return false
+    }
+    public func releaseScrollHold() {
     }
 
     public func chatHistoryTransaction(

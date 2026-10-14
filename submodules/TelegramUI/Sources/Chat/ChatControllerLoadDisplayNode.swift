@@ -5396,7 +5396,9 @@ extension ChatControllerImpl {
                 return
             }
 
-            var minOffsetForNavigation: CGFloat = 40.0
+            // While a scroll target is held, an arrival below it lands under the input panel instead of
+            // pushing the chat up, so any hidden arrival shows the button; an ad alone still does not.
+            var minOffsetForNavigation: CGFloat = strongSelf.chatDisplayNode.historyNode.isHoldingScrollTarget ? 0.5 : 40.0
             strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
                 if let itemNode = itemNode as? ChatMessageBubbleItemNode {
                     if let message = itemNode.item?.content.firstMessage, let adAttribute = message.adAttribute {

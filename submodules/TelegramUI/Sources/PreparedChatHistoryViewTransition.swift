@@ -317,6 +317,28 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         }
     }
     
+    if let scrollPosition, let currentScrollToItem = scrollToItem {
+        // A scroll to a message holds it where it lands until the next touch or scroll (the CoreList
+        // backend honours this; ListViewImpl ignores it). Scrolls to either end of the history do not,
+        // and keep-in-place issues its own scroll (or none) in the history node.
+        let holds: Bool
+        switch scrollPosition {
+        case .unread, .positionRestoration, .pinnedAnchor:
+            holds = true
+        case let .index(subject, _, _, _, _, _, _):
+            if case .message = subject.index {
+                holds = true
+            } else {
+                holds = false
+            }
+        case .keepInPlace:
+            holds = false
+        }
+        if holds {
+            scrollToItem = currentScrollToItem.withHoldsPosition(true)
+        }
+    }
+    
     if updatedMessageSelection {
         options.insert(.Synchronous)
     }
