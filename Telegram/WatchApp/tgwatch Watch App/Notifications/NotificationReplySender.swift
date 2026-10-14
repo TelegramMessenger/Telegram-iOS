@@ -25,6 +25,10 @@ final class NotificationReplySender {
     /// False when the reply could not be sent: no logged-in account, a chat the notification
     /// does not name, or a send that failed or timed out.
     func send(_ text: String, userInfo: [AnyHashable: Any]) async -> Bool {
+        guard await NotificationChatRouter.waitIsForActiveAccount(userInfo) else {
+            logger.error("reply: notification is not for the logged-in account")
+            return false
+        }
         guard let chatId = NotificationChatRouter.chatId(fromUserInfo: userInfo) else {
             logger.error("reply: notification names no chat")
             return false
@@ -47,6 +51,22 @@ final class NotificationReplySender {
             logger.error("reply: not sent: \(String(describing: error), privacy: .public)")
             return false
         }
+    }
+
+    /// The logged-in account's user id, known once its session has fetched it (`TDClient.me`).
+    func activeUserId() -> Int64? {
+        accountManager?.activeClient?.me.map { Int64($0.id) }
+    }
+
+    func waitActiveUserId() async -> Int64? {
+        let deadline = Date().addingTimeInterval(Self.readyTimeout)
+        while Date() < deadline {
+            if let userId = activeUserId() {
+                return userId
+            }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        return nil
     }
 
     private func readyClient() async -> TDClient? {

@@ -42,6 +42,42 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     override func didDeactivate() {
         super.didDeactivate()
         model.voice.stop()
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    override func willActivate() {
+        super.willActivate()
+        startRefreshing()
+    }
+
+    /// Messages deleted or read elsewhere while the long look is open: the iPhone app removes
+    /// their notifications, so the list is re-read and drops those no longer delivered.
+    static let refreshInterval: TimeInterval = 3
+    private var refreshTimer: Timer?
+    private var threadIdentifier = ""
+    private var recipientUserId: Int64?
+
+    private func startRefreshing() {
+        guard refreshTimer == nil else { return }
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
+            guard let thread = self?.threadIdentifier else { return }
+            let recipient = self?.recipientUserId
+            UNUserNotificationCenter.current().getDeliveredNotifications { [weak self] delivered in
+                let ids = Set(delivered.filter { MessageNotificationEntry.isInThread(thread, recipient: recipient, $0) }.map(\.request.identifier))
+                // Nothing of the thread listed: the system may not list mirrored notifications to
+                // the app at all, so that is no reason to clear the list.
+                guard !ids.isEmpty else { return }
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    let latest = self.latestEntryId
+                    let kept = self.model.entries.filter { ids.contains($0.id) || $0.id == latest }
+                    if kept.count != self.model.entries.count {
+                        self.model.entries = kept
+                    }
+                }
+            }
+        }
     }
 
     /// With a custom interface the system asks this controller for the text responses of an
@@ -61,21 +97,34 @@ final class MessageNotificationController: WKUserNotificationHostingController<M
     override func didReceive(_ notification: UNNotification) {
         let received = MessageNotificationEntry(notification)
         let threadIdentifier = notification.request.content.threadIdentifier
+        let userInfo = notification.request.content.userInfo
+        let recipient = NotificationChatRouter.recipientUserId(fromUserInfo: userInfo)
+        self.threadIdentifier = threadIdentifier
+        self.recipientUserId = recipient
         latestEntryId = received.id
+
+        // Another account of the iPhone app (or none named): the app cannot reply as that account
+        // or open its chats, so Reply is removed and a tap does not open the chat. While the app
+        // does not know its own account yet, both stay; sending and opening check again.
+        let isActiveAccount = NotificationChatRouter.isForActiveAccount(userInfo)
+        model.opensChat = isActiveAccount != false
+        if isActiveAccount == false {
+            notificationActions = notificationActions.filter { $0.identifier != "reply" }
+        }
 
         // Preview privacy is the system's: watchOS does not expose the preview setting to apps,
         // and with notification privacy on it shows only a summary until the user taps, before
         // this interface is created. The content drawn here is what the iPhone app's extension
         // delivered, which already applies the app lock and preview settings.
         if let delivered = Self.deliveredNotifications(timeout: Self.deliveredWaitTimeout) {
-            let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, $0) } + [notification]
+            let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, recipient: recipient, $0) } + [notification]
             show(thread, latest: received)
             return
         }
         // The system did not answer in time: show this notification, add the thread when it does.
         show([notification], latest: received)
         UNUserNotificationCenter.current().getDeliveredNotifications { [weak self] delivered in
-            let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, $0) }
+            let thread = delivered.filter { MessageNotificationEntry.isInThread(threadIdentifier, recipient: recipient, $0) }
             DispatchQueue.main.async {
                 guard let self, self.latestEntryId == received.id else { return }
                 self.show(thread, latest: received)
@@ -192,6 +241,8 @@ final class MessageNotificationModel {
     var voiceWaveforms: [String: [Float]] = [:]
     @ObservationIgnored let voice = MessageNotificationVoicePlayer()
     @ObservationIgnored var openChat: () -> Void = {}
+    /// False for another account's notification (see `NotificationChatRouter.isForActiveAccount`).
+    @ObservationIgnored var opensChat = true
 
     init(entries: [MessageNotificationEntry] = [], thumbnails: [String: UIImage] = [:]) {
         self.entries = entries
@@ -263,28 +314,32 @@ final class MessageNotificationVoicePlayer {
         }
         guard let file = try? AVAudioFile(forReading: url),
               file.length > 0,
-              file.processingFormat.sampleRate > 0,
-              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
+              file.processingFormat.sampleRate > 0 else {
             return nil
         }
         let duration = Double(file.length) / file.processingFormat.sampleRate
-        guard (try? file.read(into: buffer)) != nil, let channel = buffer.floatChannelData?[0] else {
+        // Read in chunks so a long voice message is never decoded into memory whole: the
+        // notification interface runs with a small memory limit.
+        let chunkFrames: AVAudioFrameCount = 4096
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: chunkFrames) else {
             return (duration, [])
         }
-        let frames = Int(buffer.frameLength)
-        let sliceLength = max(1, frames / waveformSamples)
-        var peaks: [Float] = []
-        peaks.reserveCapacity(waveformSamples)
-        for slice in 0..<waveformSamples {
-            let start = slice * sliceLength
-            let end = min(frames, start + sliceLength)
-            var peak: Float = 0
-            if start < end {
-                for frame in start..<end {
-                    peak = max(peak, abs(channel[frame]))
-                }
+        let totalFrames = Int(file.length)
+        let sliceLength = max(1, totalFrames / waveformSamples)
+        var peaks = [Float](repeating: 0, count: waveformSamples)
+        var position = 0
+        while position < totalFrames {
+            buffer.frameLength = 0
+            guard (try? file.read(into: buffer, frameCount: chunkFrames)) != nil,
+                  buffer.frameLength > 0,
+                  let channel = buffer.floatChannelData?[0] else {
+                break
             }
-            peaks.append(peak)
+            for frame in 0..<Int(buffer.frameLength) {
+                let slice = min(waveformSamples - 1, (position + frame) / sliceLength)
+                peaks[slice] = max(peaks[slice], abs(channel[frame]))
+            }
+            position += Int(buffer.frameLength)
         }
         let loudest = peaks.max() ?? 0
         return (duration, loudest > 0 ? peaks.map { $0 / loudest } : [])
@@ -347,8 +402,13 @@ struct MessageNotificationEntry: Identifiable, Equatable {
 
     /// Whether a delivered notification belongs to the thread. A notification without a thread
     /// is shown alone.
-    static func isInThread(_ threadIdentifier: String, _ notification: UNNotification) -> Bool {
-        !threadIdentifier.isEmpty && notification.request.content.threadIdentifier == threadIdentifier
+    /// Two accounts can have a chat with the same peer, and so the same thread identifier: only
+    /// the notifications received on the same account are listed together.
+    static func isInThread(_ threadIdentifier: String, recipient: Int64?, _ notification: UNNotification) -> Bool {
+        let content = notification.request.content
+        return !threadIdentifier.isEmpty
+            && content.threadIdentifier == threadIdentifier
+            && NotificationChatRouter.recipientUserId(fromUserInfo: content.userInfo) == recipient
     }
 
     /// Unique by id, oldest first, capped to the newest `maxCount`.
@@ -388,7 +448,7 @@ struct MessageNotificationView: View {
                     voiceWaveform: model.voiceWaveforms[entry.id] ?? [],
                     voice: model.voice,
                     showsTitle: index == 0 || newestFirst[index - 1].title != entry.title,
-                    openChat: model.openChat
+                    openChat: model.opensChat ? model.openChat : {}
                 )
             }
         }
@@ -520,6 +580,8 @@ private struct MessageNotificationVoiceButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(L("Message.Audio"))
+        .accessibilityValue(Text(Duration.seconds(Int(shownSeconds.rounded(.down))), format: .time(pattern: .minuteSecond)))
         .accessibilityIdentifier("messageNotification.voice")
     }
 }

@@ -1292,6 +1292,9 @@ private final class NotificationServiceHandler {
 
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
                             content.userInfo["accountId"] = "\(recordId.int64)"
+                            // The account's user id, which the watch app compares with the account it is
+                            // logged in to before replying to or opening the chat (`accountId` is local here).
+                            content.userInfo["recipient_id"] = "\(accountPeerId.id._internalGetInt64Value())"
                             
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
