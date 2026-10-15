@@ -36,6 +36,39 @@ func navigationBarIsColumnItem(_ button: NavigationBarComponent.Button) -> Bool 
     }
 }
 
+/// Whether UIKit gives a bar button a section (a glass pill) of its own: `-[UIBarButtonItem _requiresOwnSection]`,
+/// asked of UIKit on iOS 27 (spec 2026-10-15-navbar-split-right-buttons-design.md): true for every text item and every
+/// prominent one (the Done checkmark included); false for image, system-image and custom-view items.
+func navigationBarButtonRequiresOwnSection(_ button: NavigationBarComponent.Button) -> Bool {
+    if case .text = button.content {
+        return true
+    }
+    return button.tint != .generic
+}
+
+/// The right side's pills, as `-[UINavigationItem _addImplicitTopBarSectionsFromItems:toSections:forPlacement:]` builds
+/// sections: walking the buttons outermost first, one that requires its own section closes the current pill and takes
+/// one alone; any other joins the current pill. Pills and their buttons are outermost first.
+func navigationBarRightSections(_ buttons: [NavigationBarComponent.Button]) -> [[NavigationBarComponent.Button]] {
+    var sections: [[NavigationBarComponent.Button]] = []
+    var current: [NavigationBarComponent.Button] = []
+    for button in buttons {
+        if navigationBarButtonRequiresOwnSection(button) {
+            if !current.isEmpty {
+                sections.append(current)
+                current = []
+            }
+            sections.append([button])
+        } else {
+            current.append(button)
+        }
+    }
+    if !current.isEmpty {
+        sections.append(current)
+    }
+    return sections
+}
+
 /// Where one content's buttons go: the row, or iPhone Duo's side column.
 struct NavigationBarButtonPlacement {
     /// Nil without a column, or when the column cannot hold what must stay; every button is then in the row.

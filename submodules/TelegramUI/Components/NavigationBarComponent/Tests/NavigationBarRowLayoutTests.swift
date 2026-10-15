@@ -2,6 +2,7 @@ import XCTest
 import UIKit
 import Display
 import ComponentFlow
+import AsyncDisplayKit
 @testable import NavigationBarComponent
 
 private final class TestButtonContentComponent: Component {
@@ -150,5 +151,51 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         let insets = navigationBarCenterContentInsets(leftExtent: 60.0, rightExtent: 104.0)
         XCTAssertEqual(insets.left, 48.0)
         XCTAssertEqual(insets.right, 108.0)
+    }
+
+    private func sectionIds(_ sections: [[NavigationBarComponent.Button]]) -> [[AnyHashable]] {
+        return sections.map { $0.map(\.id) }
+    }
+
+    // UIKit's sections (`_requiresOwnSection`, asked of UIKit on iOS 27, spec): a text button gets a pill of its own, so
+    // Channel Administrators' Edit and search are two pills, Edit outermost.
+    func test_rightSections_textBesideIcon_areTwoPills() {
+        let sections = navigationBarRightSections([self.button("edit", .text(title: "Edit", isBold: false)), self.button("search", .icon(imageName: "S"))])
+        XCTAssertEqual(self.sectionIds(sections), [["edit"], ["search"]])
+    }
+
+    // Neighbouring icon buttons share one pill.
+    func test_rightSections_icons_shareOnePill() {
+        let sections = navigationBarRightSections([self.button("search", .icon(imageName: "S")), self.button("add", .image(UIImage()))])
+        XCTAssertEqual(self.sectionIds(sections), [["search", "add"]])
+    }
+
+    // Chats: the accent compose button alone, story and proxy together, as today.
+    func test_rightSections_chats_areTheCircleAndTheCapsule() {
+        let sections = navigationBarRightSections([self.accent("compose"), self.button("story", .icon(imageName: "S")), self.button("proxy", .icon(imageName: "P"))])
+        XCTAssertEqual(self.sectionIds(sections), [["compose"], ["story", "proxy"]])
+    }
+
+    // Every prominent item gets a pill of its own (UIKit), a disabled Done included; a second one too.
+    func test_rightSections_everyAccentButton_isAlone() {
+        let sections = navigationBarRightSections([self.accent("a"), self.button("x", .icon(imageName: "X")), self.accent("b", tint: .accentDisabled)])
+        XCTAssertEqual(self.sectionIds(sections), [["a"], ["x"], ["b"]])
+    }
+
+    func test_rightSections_twoTexts_areTwoPills() {
+        let sections = navigationBarRightSections([self.button("select", .text(title: "Select", isBold: false)), self.button("edit", .text(title: "Edit", isBold: true))])
+        XCTAssertEqual(self.sectionIds(sections), [["select"], ["edit"]])
+    }
+
+    // Node, custom and more buttons join their neighbours like icons; a text button in the middle splits them.
+    func test_rightSections_nodeAndCustomJoin_textSplits() {
+        let node = self.button("node", .node(ASDisplayNode()))
+        let custom = NavigationBarComponent.Button(id: "custom", content: .custom(AnyComponent(TestButtonContentComponent())), action: { _ in })
+        let sections = navigationBarRightSections([node, custom, self.button("t", .text(title: "T", isBold: false)), self.button("more", .more)])
+        XCTAssertEqual(self.sectionIds(sections), [["node", "custom"], ["t"], ["more"]])
+    }
+
+    func test_rightSections_none() {
+        XCTAssertTrue(navigationBarRightSections([]).isEmpty)
     }
 }
