@@ -50,10 +50,23 @@ Filmed on the reference app, `-scenario oneTwo` (`[Edit]` <-> `[Edit, +]`, a new
 - **Insertion:** Edit first swells with its items blurred (~0.2 s), then `+` emerges from Edit's left edge on a neck,
   separates ~0.3 s after the change and settles at ~0.4 s.
 
-Whether Edit's swell before an insertion belongs to the merge or to UIKit swapping Edit's own item (the reference app
-creates a new Edit item each time) is not separated by that film. **Task 1 of the plan measures the exact
-Administrators case** (`[Edit, search]` <-> `[Done]`, see Verification) and its results are recorded in this spec
-before any animation code is written.
+**Measured, the Administrators case (2026-10-15).** Reference app `-scenario editDone -adminsRight 1` (right items
+`[Edit, search]` <-> `[the system Done item]`, new items each change), filmed at 60 fps on K2; times from the first
+changed frame:
+
+- **Edit -> Done (search sucked in).** 0 s: Edit's items swap (blur) and the Edit pill swells (its item-change pulse);
+  **both** pills cross-fade to the accent tint, the search pill included, fully blue by ~0.07 s. ~0.10 s: search starts
+  shrinking toward Done (SwiftUI's minimum delay, 0.083 s, plus a frame). ~0.15 s: a neck joins them. ~0.23 s: search is
+  absorbed. ~0.25 s: the Done circle is at rest.
+- **Done -> Edit (search ejected).** 0 s: Done's items swap and it swells. ~0.03-0.05 s: search already bulges out of
+  Done's left side: the insertion does not wait. It starts in Done's accent tint and both pills fade to the plain glass
+  by ~0.15 s. ~0.13 s: the magnifier is visible in the bulge. ~0.27 s: the neck breaks and search separates. ~0.30 s:
+  at rest, 12 pt apart.
+- `[Edit]` <-> `[Edit, +]` (`-scenario oneTwo`) showed `+` emerging only after Edit's ~0.2 s swell. With a different
+  partner item and the system add item, that case is not the Administrators one and is not reproduced; the measured
+  Administrators order above is what the bar implements.
+- **New finding:** a pill merging with its partner takes the partner's tint on the way (the leaving search pill turns
+  accent as it goes into Done; the arriving one starts accent and turns plain).
 
 ## Where the bar stands (master 8157d4300d)
 
@@ -145,8 +158,10 @@ The old and new right pills are compared by index from the edge, as UIKit compar
   when it lends the glass and continues it as its own spring (`NavigationBarGlassSettings.pressRelease`), multiplied
   with the pulse, as push/pop does with a bar's press. Task 5 films the case in the app and checks that UIKit's own
   press does not also carry on (a doubled press); if it does, the measured continuation is dropped.
-- The order and timings above are the starting point. Where Task 1's measurement of the Administrators case differs
-  (in particular whether the partner swells before an insertion), the measurement wins and this section is updated.
+- **Order and tint, as measured** ("How a pill comes and goes in place"): the partner's item swap and pulse start at
+  once; a leaving pill starts moving after the resolved delay and an arriving one at once; the moving pill cross-fades
+  to its partner's tint as it leaves, or from the partner's tint to its own as it arrives, on the in-place tint
+  spring, while the partner's own tint change runs as today.
 
 ### 3. Testing and verification
 
