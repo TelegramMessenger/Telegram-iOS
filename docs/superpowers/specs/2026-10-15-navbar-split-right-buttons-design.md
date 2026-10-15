@@ -274,11 +274,21 @@ mattered; native references are the reference app's films, the touch-driven one 
   Duo (its simulator renders nothing), the dark appearance and the clear glass style (the tint blend is unverified
   there).
 
-**Differences from native left as they are:**
+**Differences from native left as they are** (kept by decision, 2026-10-16, "prefer ours"):
 
-- Our pills join at the change, where native's neck forms ~0.15 s later.
-- For two or three frames after the change ours shows a neck between still-white pills.
-- Our tint fades in ~0.07 s; native's tapped Done takes ~0.2 s through pale blues.
+- Our pills join at the change, where native's join on the centre row ~0.2 s after its change starts.
+- For a frame or two after the change ours shows a neck between still-white pills.
+- Our tint fades about twice as fast as native's tapped one (native: white to accent through pale blues, a critically
+  damped curve of response ~0.28 s fitted to the film).
+- At Done -> Edit after a tap ours shows the plain accent for one frame; native holds it ~0.09 s.
+
+Measured why (2026-10-16, the reference app's `-probe 1` and both tapped films): UIKit starts an animated bar-item change
+~0.1 s after the action runs (one tap: touch up +0.008 s, action +0.009 s, label fade +0.105 s, glass pulse +0.122 s),
+items and glass together, so the press has had time to release and native's text pill (which does not grow on a short
+tap) is at rest when search starts toward it. Ours starts at once, over a pill UIKit's press has already grown (1.29x
+for a text pill after an 8 ms tap), 2 pt from search, so they join immediately. The held accent is that same ~0.1 s. A
+slower fade alone would only lengthen the white joined frames, so it is not done. (Note: `axe touch --delay 0.08`
+makes an 8 ms touch, not an 80 ms one.)
 
 **Survey** (`secondaryRightNavigationButton` / `rightBarButtonItems`):
 
@@ -294,7 +304,13 @@ The channel profile's [add story, Edit] capsule is PeerInfo's own header, not th
 
 **Whole-branch review** (Opus, fresh context): ready with fixes, no Critical. Fixed in `4280c582bd`: a relayout
 mid-merge sent the leaving pill toward its partner's old frame, and an item change on a still-lent pill went through
-UIKit's animated effect change. Ten minors are deferred (see the plan's ledger).
+UIKit's animated effect change. Ten minors were deferred, and fixed on 2026-10-16 (`fa790829b8`, `fd9620e6ea`,
+`c643afc56b`): a partner that only moves springs from where it is with its items (with three pills an insertion had
+left it at its old frame for good); a non-animated removal of a lent pill ends its merge; the press is read only by
+in-place layouts; a container that takes its glass back ends the loan; `renewGlass` waits out a context menu; a push
+mid-merge carries the bar's own press (no glow); a touch on a lent glass is sampled; the merging container follows the
+appearance; stale docs. The pulse anchor needed no refresh (it is a unit point), and the per-frame glass effect costs
+~14 us on the simulator and was already paid by every in-place frame (the shape is in the glass's params).
 
 **Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the final code (81 actions). `NavigationBarComponentTests` 180/180,
 `NavigationBarNodeTests` 77/77.
