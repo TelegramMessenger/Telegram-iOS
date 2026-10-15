@@ -83,8 +83,6 @@ private final class QrStudioScreenComponent: Component {
         private var didApplyCodeSettings = false
         private let card = ComponentView<Empty>()
         private let closeButton = QrStudioGlassButtonView()
-        private let dayNightButton = QrStudioDayNightButtonView()
-        private var isDayNightVisible = true
         private let shareButtonView = QrStudioGlassButtonView()
         private let scanButton = QrStudioGlassButtonView()
 
@@ -2106,37 +2104,6 @@ private final class QrStudioScreenComponent: Component {
                 }
             )
 
-            let dayNightFrame = CGRect(x: availableSize.width - 16.5 - environment.safeInsets.right - buttonSide, y: closeTop, width: buttonSide, height: buttonSide)
-            if self.dayNightButton.superview == nil {
-                self.presentationContainer.addSubview(self.dayNightButton)
-                self.dayNightButton.action = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.isLookModified = true
-                    self.look.emojiDark = !self.look.emojiDark
-                    self.requestUpdate(transition: .easeInOut(duration: 0.45))
-                }
-            }
-            var isEmojiBackdrop = false
-            if case .emoji = backdrop {
-                isEmojiBackdrop = true
-            }
-            transition.setBounds(view: self.dayNightButton, bounds: CGRect(origin: CGPoint(), size: dayNightFrame.size))
-            transition.setPosition(view: self.dayNightButton, position: CGPoint(x: dayNightFrame.midX, y: dayNightFrame.midY))
-            if isEmojiBackdrop || !self.isDayNightVisible {
-                self.dayNightButton.update(size: dayNightFrame.size, isNight: self.look.emojiDark, isDarkGlass: isDark, glassTint: glassTint, transition: isEmojiBackdrop && !self.isDayNightVisible ? .immediate : transition)
-            }
-            self.dayNightButton.isUserInteractionEnabled = isEmojiBackdrop
-            if self.isDayNightVisible != isEmojiBackdrop {
-                self.isDayNightVisible = isEmojiBackdrop
-                let animated = !transition.animation.isImmediate
-                let alphaTransition: ComponentTransition = animated ? .easeInOut(duration: 0.2) : .immediate
-                alphaTransition.setAlpha(view: self.dayNightButton, alpha: isEmojiBackdrop ? 1.0 : 0.0)
-                let blurTransition: ComponentTransition = animated ? .easeInOut(duration: 0.25) : .immediate
-                blurTransition.setBlur(layer: self.dayNightButton.layer, radius: isEmojiBackdrop ? 0.0 : 8.0)
-            }
-
             let bottomRowY = availableSize.height - bottomInset - buttonSide
             let sideInset = rowInset
             if self.shareButtonView.superview == nil {
@@ -2205,7 +2172,6 @@ private final class QrStudioScreenComponent: Component {
                 transition.setAlpha(view: self.codePill, alpha: 0.0)
             }
             self.presentationContainer.bringSubviewToFront(self.closeButton)
-            self.presentationContainer.bringSubviewToFront(self.dayNightButton)
             self.applySheetProgress()
             self.layoutToast()
 
