@@ -17130,6 +17130,7 @@ Error: %8$@";
 "News.Segment.ForYou" = "For you";
 "News.Segment.Added" = "Added";
 "News.MarkAllAsRead" = "Mark All as Read";
+"News.ReloadFeed" = "Reload Feed";
 "Channel.AddToNews" = "Add to News";
 "Channel.AddedToNews" = "Added to News";
 "Channel.AddToChats" = "Add to Chats";

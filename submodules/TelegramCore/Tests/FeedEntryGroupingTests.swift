@@ -94,6 +94,20 @@ final class FeedEntryGroupingTests: XCTestCase {
         XCTAssertEqual(prependingForYouBatch(list, batch).map(forYouTestDescription), ["3", "1"])
     }
 
+    // A refresh never moves the interests block: the feed's block stays where it was, below the posts it sat among,
+    // and the batch's marker is dropped. Only a feed without one takes the batch's, never between the new posts.
+    // A load-more keeps the server's placement.
+    func testPrependKeepsTheFeedsInterestsBlockWhereItWas() {
+        let list = forYouItems(from: [.message(self.message(self.channelA, 1, date: 1)), .interests, .message(self.message(self.channelA, 2, date: 2))])
+        let between = forYouItems(from: [.message(self.message(self.channelB, 3, date: 3)), .interests, .message(self.message(self.channelB, 4, date: 4))])
+        XCTAssertEqual(prependingForYouBatch(list, between).map(forYouTestDescription), ["3", "4", "1", "interests", "2"])
+        let above = forYouItems(from: [.interests, .message(self.message(self.channelB, 3, date: 3))])
+        XCTAssertEqual(prependingForYouBatch(list, above).map(forYouTestDescription), ["3", "1", "interests", "2"])
+        let noBlock = forYouItems(from: [.message(self.message(self.channelA, 1, date: 1))])
+        XCTAssertEqual(prependingForYouBatch(noBlock, between).map(forYouTestDescription), ["3", "4", "interests", "1"])
+        XCTAssertEqual(appendingForYouBatch(list, between).map(forYouTestDescription), ["1", "2", "3", "interests", "4"])
+    }
+
     func testPostCountIgnoresTheBlock() {
         XCTAssertEqual(forYouPostCount(forYouItems(from: [.interests, .message(self.message(self.channelA, 1, date: 1))])), 1)
     }

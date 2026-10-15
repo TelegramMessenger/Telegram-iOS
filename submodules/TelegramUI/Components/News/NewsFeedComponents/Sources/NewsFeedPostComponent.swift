@@ -94,9 +94,12 @@ public final class NewsFeedPostComponent: Component {
     /// The newest message's: the post's age is shown from it.
     public let timestamp: Int32
     public let loading: NewsFeedRowLoading
+    /// The post was just revealed by a pull to refresh: it sits on the new-posts block and lenses in (spec §4).
+    public let fresh: NewsFreshSegment?
+    public let reduceMotion: Bool
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, fresh: NewsFreshSegment? = nil, reduceMotion: Bool = false, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -106,6 +109,8 @@ public final class NewsFeedPostComponent: Component {
         self.messages = messages
         self.timestamp = timestamp
         self.loading = loading
+        self.fresh = fresh
+        self.reduceMotion = reduceMotion
         self.action = action
     }
 
@@ -137,6 +142,12 @@ public final class NewsFeedPostComponent: Component {
         if lhs.loading !== rhs.loading {
             return false
         }
+        if lhs.fresh != rhs.fresh {
+            return false
+        }
+        if lhs.reduceMotion != rhs.reduceMotion {
+            return false
+        }
         return true
     }
 
@@ -147,7 +158,21 @@ public final class NewsFeedPostComponent: Component {
         private let time = ComponentView<Empty>()
         private let text = ComponentView<Empty>()
         private let thumbnailView = TransformImageView()
+        private let videoLabel = UILabel()
         private let separatorLayer = SimpleLayer()
+        /// Our lists' full-width press highlight.
+        private let highlightView = UIView()
+        /// Everything but the highlight, the block and the separator. It carries a fresh row's clip and is never
+        /// transformed, so the clip stays the card while `lensView` inside it is magnified.
+        private let contentView = UIView()
+        /// What a fresh row lenses in.
+        private let lensView = UIView()
+        /// A row that existed before a reveal never lenses in when it turns fresh.
+        private let createdAt = CACurrentMediaTime()
+        private var freshBlockView: NewsFreshBlockView?
+        private var lensRevealTime: Double?
+        private var highlightTimer: SwiftSignalKit.Timer?
+        private var isHighlighted = false
         /// In a window and the app in the foreground: only then does the time need checking.
         private let hierarchyTrackingLayer = HierarchyTrackingLayer()
 
@@ -160,13 +185,29 @@ public final class NewsFeedPostComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.addSubview(self.thumbnailView)
+            self.highlightView.alpha = 0.0
+            self.highlightView.isUserInteractionEnabled = false
+            self.addSubview(self.highlightView)
+            self.addSubview(self.contentView)
+            self.contentView.addSubview(self.lensView)
+            // Continuous corners (Feed2 FeedRow.swift:430-445): the layer clips, the image is drawn without corners.
+            self.thumbnailView.layer.cornerRadius = NewsPostRowMetrics.thumbnailCornerRadius
+            self.thumbnailView.layer.cornerCurve = .continuous
+            self.thumbnailView.clipsToBounds = true
+            self.lensView.addSubview(self.thumbnailView)
+            // "▶ 0:12" on a video's thumbnail: no background, a soft shadow (Feed2 FeedRow.swift:436-442).
+            self.videoLabel.isHidden = true
+            self.videoLabel.isUserInteractionEnabled = false
+            self.lensView.addSubview(self.videoLabel)
             self.layer.addSublayer(self.separatorLayer)
             self.layer.addSublayer(self.hierarchyTrackingLayer)
             self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] _ in
                 self?.updateTimeTimer()
             }
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapped))
+            // The row still gets `touchesEnded`, so a quick tap flashes its highlight.
+            tapRecognizer.cancelsTouchesInView = false
+            self.addGestureRecognizer(tapRecognizer)
         }
 
         required init?(coder: NSCoder) {
@@ -175,6 +216,7 @@ public final class NewsFeedPostComponent: Component {
 
         deinit {
             self.timeTimer?.invalidate()
+            self.highlightTimer?.invalidate()
         }
 
         /// Where the last layout put the avatar, the channel name and each line of the text, in the row's own
@@ -187,6 +229,10 @@ public final class NewsFeedPostComponent: Component {
             return self.title.view?.frame ?? CGRect()
         }
 
+        public var textFrame: CGRect {
+            return self.text.view?.frame ?? CGRect()
+        }
+
         public var textLineFrames: [CGRect] {
             guard let textView = self.text.view as? MultilineTextWithEntitiesComponent.View, let layout = textView.textNode.cachedLayout else {
                 return []
@@ -196,6 +242,50 @@ public final class NewsFeedPostComponent: Component {
 
         @objc private func tapped() {
             self.component?.action()
+        }
+
+        /// As our lists highlight (`ListView`: shown 0.08 s after touch-down unless a scroll starts first;
+        /// `ItemListDisclosureItem`: faded out over 0.4 s).
+        private func setHighlighted(_ highlighted: Bool, animated: Bool) {
+            guard self.isHighlighted != highlighted else {
+                return
+            }
+            self.isHighlighted = highlighted
+            if highlighted {
+                self.highlightView.layer.removeAllAnimations()
+                self.highlightView.alpha = 1.0
+            } else {
+                self.highlightView.alpha = 0.0
+                if animated {
+                    self.highlightView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4)
+                }
+            }
+        }
+
+        override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesBegan(touches, with: event)
+            self.highlightTimer?.invalidate()
+            let timer = SwiftSignalKit.Timer(timeout: 0.08, repeat: false, completion: { [weak self] in
+                self?.setHighlighted(true, animated: false)
+            }, queue: Queue.mainQueue())
+            self.highlightTimer = timer
+            timer.start()
+        }
+
+        override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesEnded(touches, with: event)
+            self.highlightTimer?.invalidate()
+            self.highlightTimer = nil
+            // A quick tap still flashes, as in the chat list.
+            self.setHighlighted(true, animated: false)
+            self.setHighlighted(false, animated: true)
+        }
+
+        override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesCancelled(touches, with: event)
+            self.highlightTimer?.invalidate()
+            self.highlightTimer = nil
+            self.setHighlighted(false, animated: true)
         }
 
         /// While on screen, every 0.5 s: when the time reads differently now, the row asks to be updated.
@@ -229,17 +319,8 @@ public final class NewsFeedPostComponent: Component {
                 self.updateTimeTimer()
             }
 
-            let sideInset: CGFloat = 16.0
-            let topInset: CGFloat = 10.0
-            let bottomInset: CGFloat = 10.0
-            let thumbnailTopInset: CGFloat = 8.0
-            let thumbnailBottomInset: CGFloat = 8.0
-            let avatarSize: CGFloat = 16.0
-            let thumbnailSize: CGFloat = 82.0
-            let thumbnailSpacing: CGFloat = 12.0
-
             let thumbnail = newsPostThumbnail(component.messages)
-            let contentWidth = availableSize.width - sideInset * 2.0 - (thumbnail != nil ? (thumbnailSize + thumbnailSpacing) : 0.0)
+            let textWidth = newsPostTextWidth(width: availableSize.width, hasThumbnail: thumbnail != nil)
 
             let timeSize = self.time.update(
                 transition: .immediate,
@@ -265,7 +346,6 @@ public final class NewsFeedPostComponent: Component {
                 )
             }
 
-            let titleMaxWidth = contentWidth - avatarSize - 6.0 - (credibilitySize.width > 0.0 ? credibilitySize.width + 4.0 : 0.0) - 6.0 - timeSize.width
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -273,49 +353,8 @@ public final class NewsFeedPostComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, titleMaxWidth), height: 100.0)
+                containerSize: CGSize(width: newsPostTitleMaxWidth(textWidth: textWidth, credibilityWidth: credibilitySize.width, timeWidth: timeSize.width), height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: sideInset + avatarSize + 6.0, y: topInset), size: titleSize)
-
-            let avatarFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels(titleFrame.midY - avatarSize * 0.5)), size: CGSize(width: avatarSize, height: avatarSize))
-            let _ = self.avatar.update(
-                transition: .immediate,
-                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size, synchronousLoad: component.loading.isSynchronous)),
-                environment: {},
-                containerSize: avatarFrame.size
-            )
-            if let avatarView = self.avatar.view {
-                if avatarView.superview == nil {
-                    self.addSubview(avatarView)
-                }
-                transition.setFrame(view: avatarView, frame: avatarFrame)
-            }
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    self.addSubview(titleView)
-                }
-                transition.setFrame(view: titleView, frame: titleFrame)
-            }
-
-            var timeOriginX = titleFrame.maxX + 6.0
-            if let credibilityView = self.credibilityIcon.view {
-                if credibilitySize.width > 0.0 {
-                    if credibilityView.superview == nil {
-                        self.addSubview(credibilityView)
-                    }
-                    credibilityView.isHidden = false
-                    transition.setFrame(view: credibilityView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floor(titleFrame.midY - credibilitySize.height * 0.5)), size: credibilitySize))
-                    timeOriginX = titleFrame.maxX + 4.0 + credibilitySize.width + 6.0
-                } else {
-                    credibilityView.isHidden = true
-                }
-            }
-            if let timeView = self.time.view {
-                if timeView.superview == nil {
-                    self.addSubview(timeView)
-                }
-                transition.setFrame(view: timeView, frame: CGRect(origin: CGPoint(x: timeOriginX, y: floorToScreenPixels(titleFrame.midY - timeSize.height * 0.5)), size: timeSize))
-            }
 
             let textSize = self.text.update(
                 transition: .immediate,
@@ -326,27 +365,64 @@ public final class NewsFeedPostComponent: Component {
                     placeholderColor: theme.list.mediaPlaceholderColor,
                     // Three lines hold under one character per point of width (the narrowest glyphs are
                     // 3.5 pt wide); twice the width leaves room for characters of several UTF-16 units.
-                    text: .plain(newsPostText(component: component, maxLength: Int(contentWidth * 2.0))),
+                    text: .plain(newsPostText(component: component, maxLength: Int(textWidth * 2.0))),
                     maximumNumberOfLines: 3,
                     lineSpacing: 0.12
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, contentWidth), height: 1000.0)
+                containerSize: CGSize(width: textWidth, height: 1000.0)
             )
-            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + 4.0), size: textSize)
+
+            // Feed2's geometry (FeedRow.swift:379-460) with our fonts.
+            let layout = newsPostRowLayout(width: availableSize.width, titleSize: titleSize, credibilitySize: credibilitySize.width > 0.0 ? credibilitySize : nil, timeSize: timeSize, textSize: textSize, hasThumbnail: thumbnail != nil, screenScale: UIScreenScale)
+
+            let _ = self.avatar.update(
+                transition: .immediate,
+                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: layout.avatar.size, synchronousLoad: component.loading.isSynchronous)),
+                environment: {},
+                containerSize: layout.avatar.size
+            )
+            if let avatarView = self.avatar.view {
+                if avatarView.superview == nil {
+                    self.lensView.addSubview(avatarView)
+                }
+                transition.setFrame(view: avatarView, frame: layout.avatar)
+            }
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.lensView.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: layout.title)
+            }
+            if let credibilityView = self.credibilityIcon.view {
+                if let credibilityFrame = layout.credibility {
+                    if credibilityView.superview == nil {
+                        self.lensView.addSubview(credibilityView)
+                    }
+                    credibilityView.isHidden = false
+                    transition.setFrame(view: credibilityView, frame: credibilityFrame)
+                } else {
+                    credibilityView.isHidden = true
+                }
+            }
+            if let timeView = self.time.view {
+                if timeView.superview == nil {
+                    self.lensView.addSubview(timeView)
+                }
+                transition.setFrame(view: timeView, frame: layout.time)
+            }
             if let textView = self.text.view {
                 if textView.superview == nil {
-                    self.addSubview(textView)
+                    self.lensView.addSubview(textView)
                 }
-                transition.setFrame(view: textView, frame: textFrame)
+                transition.setFrame(view: textView, frame: layout.text)
             }
 
-            var contentBottom = textFrame.maxY + bottomInset
-            if let (message, media) = thumbnail {
-                let thumbnailFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - thumbnailSize, y: thumbnailTopInset), size: CGSize(width: thumbnailSize, height: thumbnailSize))
+            if let (message, media) = thumbnail, let thumbnailFrame = layout.thumbnail {
                 self.thumbnailView.isHidden = false
                 transition.setFrame(view: self.thumbnailView, frame: thumbnailFrame)
                 var dimensions = thumbnailFrame.size
+                var videoDuration: Double?
                 switch media {
                 case let .image(image):
                     if let largest = largestImageRepresentation(image.representations) {
@@ -360,6 +436,9 @@ public final class NewsFeedPostComponent: Component {
                     if let fileDimensions = file.dimensions {
                         dimensions = fileDimensions.cgSize
                     }
+                    if !file.isAnimated, let duration = file.duration, duration > 0.0 {
+                        videoDuration = duration
+                    }
                     if self.thumbnailMediaId != media.mediaId {
                         self.thumbnailMediaId = media.mediaId
                         // Not `mediaGridMessageVideo(postbox:)`: `PostboxImportCheck` rejects `.postbox` access here.
@@ -367,18 +446,125 @@ public final class NewsFeedPostComponent: Component {
                     }
                 }
                 let makeLayout = self.thumbnailView.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: 10.0), imageSize: dimensions.aspectFilled(thumbnailFrame.size), boundingSize: thumbnailFrame.size, intrinsicInsets: UIEdgeInsets()))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.aspectFilled(thumbnailFrame.size), boundingSize: thumbnailFrame.size, intrinsicInsets: UIEdgeInsets()))
                 apply()
-                contentBottom = max(contentBottom, thumbnailFrame.maxY + thumbnailBottomInset)
+
+                if let videoDuration {
+                    // A text shadow, not a layer shadow: no offscreen pass for every video row while scrolling.
+                    let shadow = NSShadow()
+                    shadow.shadowColor = UIColor(white: 0.0, alpha: 0.35)
+                    shadow.shadowBlurRadius = 3.0
+                    shadow.shadowOffset = CGSize()
+                    let string = NSMutableAttributedString()
+                    if let playImage = UIImage(systemName: "play.fill", withConfiguration: UIImage.SymbolConfiguration(font: Font.semibold(11.0)))?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+                        let attachment = NSTextAttachment()
+                        attachment.image = playImage
+                        string.append(NSAttributedString(attachment: attachment))
+                        string.append(NSAttributedString(string: " "))
+                    }
+                    string.append(NSAttributedString(string: stringForDuration(Int32(videoDuration)), font: Font.semibold(11.0), textColor: .white))
+                    string.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: string.length))
+                    self.videoLabel.attributedText = string
+                    let labelSize = self.videoLabel.sizeThatFits(CGSize(width: thumbnailFrame.width, height: 100.0))
+                    self.videoLabel.frame = CGRect(x: thumbnailFrame.minX + 6.0, y: thumbnailFrame.maxY - 6.0 - labelSize.height, width: labelSize.width, height: labelSize.height)
+                    self.videoLabel.isHidden = false
+                } else {
+                    self.videoLabel.isHidden = true
+                }
             } else {
                 self.thumbnailView.isHidden = true
                 self.thumbnailMediaId = nil
+                self.videoLabel.isHidden = true
             }
 
-            let height = contentBottom
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor
-            transition.setFrame(layer: self.separatorLayer, frame: CGRect(x: sideInset, y: height - UIScreenPixel, width: availableSize.width - sideInset * 2.0, height: UIScreenPixel))
-            return CGSize(width: availableSize.width, height: height)
+            transition.setFrame(layer: self.separatorLayer, frame: layout.separator)
+            self.highlightView.backgroundColor = theme.list.itemHighlightedBackgroundColor
+            self.highlightView.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: layout.height))
+            self.contentView.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: layout.height))
+            self.lensView.frame = self.contentView.bounds
+
+            if let fresh = component.fresh {
+                let blockView: NewsFreshBlockView
+                if let current = self.freshBlockView {
+                    blockView = current
+                } else {
+                    blockView = NewsFreshBlockView(frame: CGRect())
+                    self.insertSubview(blockView, at: 0)
+                    self.freshBlockView = blockView
+                }
+                let rowSize = CGSize(width: availableSize.width, height: layout.height)
+                blockView.frame = CGRect(origin: CGPoint(), size: rowSize)
+                blockView.update(size: rowSize, segment: fresh, accentColor: theme.list.itemAccentColor)
+
+                let clip = NewsFreshBlock.clipRect(bounds: CGRect(origin: CGPoint(), size: rowSize), isFirst: fresh.isFirst, isLast: fresh.isLast)
+                let mask = (self.contentView.layer.mask as? SimpleLayer) ?? SimpleLayer()
+                mask.backgroundColor = UIColor.black.cgColor
+                mask.frame = clip
+                mask.cornerRadius = NewsRefreshMetrics.cardCorner
+                mask.cornerCurve = .continuous
+                var corners: CACornerMask = []
+                if fresh.isFirst {
+                    corners.formUnion([.layerMinXMinYCorner, .layerMaxXMinYCorner])
+                }
+                if fresh.isLast {
+                    corners.formUnion([.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
+                }
+                mask.maskedCorners = corners
+                self.contentView.layer.mask = mask
+
+                if self.lensRevealTime != fresh.revealTime {
+                    self.lensRevealTime = fresh.revealTime
+                    if NewsFreshBlock.runsLens(createdAt: self.createdAt, segment: fresh) {
+                        self.playLens(segment: fresh, scales: !component.reduceMotion)
+                    }
+                }
+            } else {
+                self.freshBlockView?.removeFromSuperview()
+                self.freshBlockView = nil
+                self.contentView.layer.mask = nil
+                self.lensRevealTime = nil
+            }
+            self.separatorLayer.isHidden = component.fresh?.isLast == true
+            return CGSize(width: availableSize.width, height: layout.height)
+        }
+
+        /// Content seen through a lens: magnified, blurred and faded, settling on one critically damped spring
+        /// (`LensAppear`, `Motion.appear`; spec §4.3). Under Reduce Motion it does not scale.
+        private func playLens(segment: NewsFreshSegment, scales: Bool) {
+            let delay = NewsFreshBlock.lensDelay(now: CACurrentMediaTime(), segment: segment)
+            let steps = 42
+            var scale: [NSNumber] = []
+            var alpha: [NSNumber] = []
+            var blur: [NSNumber] = []
+            for i in 0 ... steps {
+                let p = NewsFreshBlock.lensProgress(NewsFreshBlock.lensSettle * Double(i) / Double(steps))
+                scale.append(NewsFreshBlock.lensScale(p) as NSNumber)
+                alpha.append(NewsFreshBlock.lensAlpha(p) as NSNumber)
+                blur.append(NewsFreshBlock.lensBlur(p) as NSNumber)
+            }
+            let layer = self.lensView.layer
+            func animation(_ keyPath: String, _ values: [NSNumber]) -> CAKeyframeAnimation {
+                let animation = CAKeyframeAnimation(keyPath: keyPath)
+                animation.values = values
+                animation.duration = NewsFreshBlock.lensSettle
+                animation.calculationMode = .linear
+                animation.beginTime = CACurrentMediaTime() + delay
+                animation.fillMode = .backwards
+                animation.isRemovedOnCompletion = true
+                return animation
+            }
+            if let filter = CALayer.blur() {
+                filter.setValue(0.0 as NSNumber, forKey: "inputRadius")
+                layer.filters = [filter]
+            }
+            if scales {
+                layer.add(animation("transform.scale", scale), forKey: "newsLensScale")
+            }
+            layer.add(animation("opacity", alpha), forKey: "newsLensAlpha")
+            let blurAnimation = animation("filters.gaussianBlur.inputRadius", blur)
+            blurAnimation.delegate = LensBlurCleanup(layer: layer)
+            layer.add(blurAnimation, forKey: "newsLensBlur")
         }
     }
 
@@ -388,5 +574,18 @@ public final class NewsFeedPostComponent: Component {
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
+    }
+}
+
+/// Removes the idle blur filter once the lens has settled, so the row stops rendering offscreen.
+private final class LensBlurCleanup: NSObject, CAAnimationDelegate {
+    private weak var layer: CALayer?
+
+    init(layer: CALayer) {
+        self.layer = layer
+    }
+
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        self.layer?.filters = nil
     }
 }

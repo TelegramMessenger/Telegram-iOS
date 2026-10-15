@@ -6,58 +6,85 @@ import ComponentFlow
 import AccountContext
 import TelegramPresentationData
 import GlassBackgroundComponent
+import LottieSettings
 import HorizontalTabsComponent
+import NewsFeedSupport
 
 /// The For you | Added tabs: the same glass `HorizontalTabsComponent` the Peer Info media tabs use
-/// (`PeerInfoPaneContainerNode`), on a `GlassBackgroundView` inside a `GlassBackgroundContainerView`,
-/// in its `.fill` layout so the capsule spans the width between the insets and each tab gets half.
-/// `ChatListNavigationBar`'s tabs slot takes an `ASDisplayNode` and gives it a full-width, 46 pt frame.
+/// (`PeerInfoPaneContainerNode`), on a `GlassBackgroundView` inside a `GlassBackgroundContainerView`, in its `.fill`
+/// layout so each tab gets half. The header sizes and places it as the mockup's island (Feed2 FeedScreen.swift:216-249).
 final class NewsSegmentNode: ASDisplayNode {
-    static let height: CGFloat = 46.0
-    private static let tabsHeight: CGFloat = 40.0
-
-    private let backgroundContainer = GlassBackgroundContainerView()
+    private let backgroundContainer = GlassBackgroundContainerView(spacing: NewsRefreshMetrics.pullSpacing)
     private let backgroundView = GlassBackgroundView()
+    /// The pull-to-refresh drop: in the same glass container as the island, so they merge on iOS 26.
+    let refreshDrop = NewsRefreshDrop()
+    /// Room below the island for the drop, so the container never clips it (spec §8.1).
+    static let dropRoom: CGFloat = 240.0
     private let tabs = ComponentView<Empty>()
+    /// Measures the tabs' natural width in the `.fit` layout; never shown.
+    private let measuringTabs = ComponentView<Empty>()
+    private var fittingWidthCache: (theme: PresentationTheme, strings: PresentationStrings, width: CGFloat)?
 
     override init() {
         super.init()
+        // Behind the island's glass: below iOS 26 the drop slides out from under it.
+        self.backgroundContainer.contentView.addSubview(self.refreshDrop.glassView)
         self.backgroundContainer.contentView.addSubview(self.backgroundView)
         self.view.addSubview(self.backgroundContainer)
+    }
+
+    private func tabsComponent(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, selectedIndex: Int, layout: HorizontalTabsComponent.Layout, liftWhileSwitching: Bool, action: @escaping (Int) -> Void) -> HorizontalTabsComponent {
+        let titles = [strings.News_Segment_ForYou, strings.News_Segment_Added]
+        return HorizontalTabsComponent(
+            context: context,
+            theme: theme,
+            tabs: titles.enumerated().map { index, title -> HorizontalTabsComponent.Tab in
+                return HorizontalTabsComponent.Tab(
+                    id: AnyHashable(index),
+                    content: .title(HorizontalTabsComponent.Tab.Title(text: title, entities: [], enableAnimations: false)),
+                    badge: nil,
+                    action: {
+                        action(index)
+                    }
+                )
+            },
+            selectedTab: AnyHashable(selectedIndex),
+            isEditing: false,
+            layout: layout,
+            liftWhileSwitching: liftWhileSwitching
+        )
+    }
+
+    /// The tabs' natural width (titles and the capsule's padding); the island is at least 228 and grows to this.
+    func fittingWidth(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) -> CGFloat {
+        if let cache = self.fittingWidthCache, cache.theme === theme, cache.strings === strings {
+            return cache.width
+        }
+        let size = self.measuringTabs.update(
+            transition: .immediate,
+            component: AnyComponent(self.tabsComponent(context: context, theme: theme, strings: strings, selectedIndex: 0, layout: .fit, liftWhileSwitching: false, action: { _ in })),
+            environment: {},
+            containerSize: CGSize(width: 1000.0, height: NewsHeaderMetrics.islandHeight)
+        )
+        self.fittingWidthCache = (theme, strings, size.width)
+        return size.width
     }
 
     /// `action` also fires for the already selected tab; the screen scrolls that list to the top.
     /// `tabSwitchFraction` is a swipe between the lists in progress, as a signed fraction of the width (negative
     /// towards the next tab): the selection follows it, as Peer Info's does.
-    func update(context: AccountContext, width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, selectedIndex: Int, tabSwitchFraction: CGFloat, isSwitchingByDragging: Bool, liftWhileSwitching: Bool, action: @escaping (Int) -> Void, transition: ComponentTransition) {
-        let titles = [strings.News_Segment_ForYou, strings.News_Segment_Added]
+    func update(context: AccountContext, size: CGSize, theme: PresentationTheme, strings: PresentationStrings, selectedIndex: Int, tabSwitchFraction: CGFloat, isSwitchingByDragging: Bool, liftWhileSwitching: Bool, action: @escaping (Int) -> Void, transition: ComponentTransition) {
         let tabsSize = self.tabs.update(
             transition: transition,
-            component: AnyComponent(HorizontalTabsComponent(
-                context: context,
-                theme: theme,
-                tabs: titles.enumerated().map { index, title -> HorizontalTabsComponent.Tab in
-                    return HorizontalTabsComponent.Tab(
-                        id: AnyHashable(index),
-                        content: .title(HorizontalTabsComponent.Tab.Title(text: title, entities: [], enableAnimations: false)),
-                        badge: nil,
-                        action: {
-                            action(index)
-                        }
-                    )
-                },
-                selectedTab: AnyHashable(selectedIndex),
-                isEditing: false,
-                layout: .fill,
-                liftWhileSwitching: liftWhileSwitching
-            )),
+            component: AnyComponent(self.tabsComponent(context: context, theme: theme, strings: strings, selectedIndex: selectedIndex, layout: .fill, liftWhileSwitching: liftWhileSwitching, action: action)),
             environment: {},
-            containerSize: CGSize(width: max(1.0, width - leftInset - rightInset), height: NewsSegmentNode.tabsHeight)
+            containerSize: size
         )
 
-        let frame = CGRect(origin: CGPoint(x: leftInset, y: floor((NewsSegmentNode.height - tabsSize.height) * 0.5)), size: tabsSize)
-        transition.setFrame(view: self.backgroundContainer, frame: frame)
-        self.backgroundContainer.update(size: frame.size, isDark: theme.overallDarkAppearance, transition: transition)
+        let frame = CGRect(origin: CGPoint(), size: tabsSize)
+        let containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: frame.width, height: frame.height + NewsSegmentNode.dropRoom))
+        transition.setFrame(view: self.backgroundContainer, frame: containerFrame)
+        self.backgroundContainer.update(size: containerFrame.size, isDark: theme.overallDarkAppearance, transition: transition)
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: frame.size))
         self.backgroundView.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: transition)
 
@@ -70,6 +97,11 @@ final class NewsSegmentNode: ASDisplayNode {
             transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(), size: frame.size))
         }
         self.updateTabSwitchFraction(tabSwitchFraction, isDragging: isSwitchingByDragging, transition: transition)
+    }
+
+    /// The refresh drop for `pose`, below the island (spec §2).
+    func updateRefreshDrop(pose: NewsRefreshDropPose, theme: PresentationTheme, lottieSettings: LottieRenderingSettings) {
+        self.refreshDrop.update(pose: pose, islandSize: self.bounds.size, theme: theme, lottieSettings: lottieSettings)
     }
 
     /// Mid-swipe, without laying the tabs out again.

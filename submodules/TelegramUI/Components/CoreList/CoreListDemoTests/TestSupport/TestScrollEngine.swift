@@ -41,6 +41,7 @@ final class TestScrollEngine: ScrollEngine {
     }
     var onWillBeginDragging: (() -> Void)?
     var onDidEndDragging: (() -> Void)?
+    var onDidEndDecelerating: (() -> Void)?
     var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
     /// Mirrors `PhysicsScrollEngine.offset`: the physics position, advanced once per frame, never a sample of
     /// the flight. See that property and the clock-free-mutation-pass spec.
@@ -228,6 +229,9 @@ final class TestScrollEngine: ScrollEngine {
             return
         }
         guard core.isDecelerating else { return }
-        _ = core.step(dtMs: CGFloat(dt * 1000))
+        if core.step(dtMs: CGFloat(dt * 1000)) {
+            // Parity with PhysicsScrollEngine.step: a stepped deceleration reports its own end.
+            onDidEndDecelerating?()
+        }
     }
 }

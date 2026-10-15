@@ -4,6 +4,7 @@ import Display
 import TelegramPresentationData
 import CoreList
 import CoreListComponentHost
+import NewsFeedSupport
 import NewsFeedComponents
 
 /// One feed list: a `CoreVirtualListView` of component rows, plus the offset reporting, edge loading and
@@ -31,18 +32,31 @@ final class NewsFeedListView: UIView {
     let rowLoading = NewsFeedRowLoading()
     private let skeletonView = NewsFeedSkeletonView()
     private var showsSkeleton = false
-    private var skeletonParameters: (theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout)?
+    private var skeletonParameters: (theme: PresentationTheme, rowLayout: NewsSkeletonModelRow)?
     private(set) var items: [CoreListComponentItem] = []
     private(set) var insets = UIEdgeInsets()
+    /// The refresh drop's hold (spec §1.4): extra top inset while it loads. `insets` stay the resting ones, so the
+    /// offsets this view reports, and the header that follows them, are measured from the resting edge.
+    private(set) var refreshHold: CGFloat = 0.0
+    private(set) var isDragging = false
 
-    var isPullToRefreshEnabled = false
+    private var coreListInsets: UIEdgeInsets {
+        var insets = self.insets
+        insets.top += self.refreshHold
+        return insets
+    }
+
+    var reduceMotion = false
+    /// Content just replaced the skeleton: the next pass cascades its rows in.
+    private var pendingCascade = false
+    private var cascadeStart: (time: Double, firstIndex: Int)?
+    private var cascadedViews = Set<ObjectIdentifier>()
     var onEdgeReached: ((CoreListLoadedEdge) -> Void)?
     /// The offset to follow and how to follow it: the presented offset, `.immediate`, while the user scrolls;
     /// after a programmatic pass, its settled offset with the pass's own transition, since CoreList reports
     /// nothing while that pass animates or when it lands.
     var onScrollOffsetChanged: ((ScrollOffset, CoreListTransition) -> Void)?
     var onVisibleRowsChanged: (() -> Void)?
-    var onPullToRefresh: (() -> Void)?
     var onScrollingEnded: (() -> Void)?
     var onWillBeginDragging: (() -> Void)?
     /// After a programmatic scroll (which fires no visible-window callback): re-read rows with settled geometry.
@@ -68,20 +82,24 @@ final class NewsFeedListView: UIView {
             self.onScrollOffsetChanged?(self.scrollOffset(settled: false), .immediate)
             self.onVisibleRowsChanged?()
             self.layoutSkeleton()
+            self.applyCascade()
         }
         self.coreList.didEndDragging = { [weak self] in
             guard let self else {
                 return
             }
-            // A pull while a refresh runs is ignored by the feed itself.
-            if self.isPullToRefreshEnabled, self.coreList.overscrollDistance <= -70.0 {
-                self.onPullToRefresh?()
+            self.isDragging = false
+            // A release without momentum is where scrolling ends; with momentum, `didEndScrolling` reports the
+            // end (a `.stepped` deceleration too). Snapping here mid-fling would halt it.
+            if !self.coreList.isScrollDecelerating {
+                self.onScrollingEnded?()
             }
         }
         self.coreList.didEndScrolling = { [weak self] in
             self?.onScrollingEnded?()
         }
         self.coreList.willBeginDragging = { [weak self] in
+            self?.isDragging = true
             self?.onWillBeginDragging?()
         }
     }
@@ -90,12 +108,12 @@ final class NewsFeedListView: UIView {
         preconditionFailure()
     }
 
-    func update(size: CGSize, insets: UIEdgeInsets, items: [CoreListComponentItem], scrollTo: CoreListScrollTarget?, anchorMode: CoreListAnchorMode, transition: CoreListTransition) {
+    func update(size: CGSize, insets: UIEdgeInsets, items: [CoreListComponentItem], scrollTo: CoreListScrollTarget?, anchorMode: CoreListAnchorMode, animatesInsertions: Bool = true, transition: CoreListTransition) {
         self.coreList.frame = CGRect(origin: CGPoint(), size: size)
         self.items = items
         self.insets = insets
         self.withSynchronousRowLoading {
-            self.coreList.applyChanges(items: items, newSize: size, newInsets: insets, scrollTo: scrollTo, anchorMode: anchorMode, transition: transition)
+            self.coreList.applyChanges(items: items, newSize: size, newInsets: self.coreListInsets, scrollTo: scrollTo, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: transition)
         }
         // A programmatic pass fires no scroll callback: report the settled offset.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
@@ -103,6 +121,7 @@ final class NewsFeedListView: UIView {
         if scrollTo != nil {
             self.onProgrammaticScroll?()
         }
+        self.applyCascade()
     }
 
     private func withSynchronousRowLoading(_ f: () -> Void) {
@@ -114,7 +133,7 @@ final class NewsFeedListView: UIView {
 
     /// Until the list's first content arrives a skeleton stands in for it, moving with the list's offset (an
     /// overscroll while there are no rows); when it arrives, the list fades in and the skeleton out.
-    func setShowsSkeleton(_ value: Bool, theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout) {
+    func setShowsSkeleton(_ value: Bool, theme: PresentationTheme, rowLayout: NewsSkeletonModelRow) {
         self.skeletonParameters = (theme, rowLayout)
         if value {
             if !self.showsSkeleton {
@@ -126,15 +145,53 @@ final class NewsFeedListView: UIView {
             self.layoutSkeleton()
         } else if self.showsSkeleton {
             self.showsSkeleton = false
-            let duration: Double = 0.25
-            self.coreList.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.pendingCascade = true
+            // Measured on the mockup's Reload: the skeleton is gone in about 0.1 s as the rows start.
             self.skeletonView.alpha = 0.0
-            self.skeletonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self] _ in
+            self.skeletonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
                 guard let self, !self.showsSkeleton else {
                     return
                 }
                 self.skeletonView.isHidden = true
             })
+        }
+    }
+
+    /// Rows present within 0.6 s of the content arriving fade and rise in, top to bottom, 45 ms apart (Feed2
+    /// FeedRow.swift:104-112). Positions count from the first row loaded when the content arrived (spec §11.4).
+    private func applyCascade() {
+        if self.pendingCascade {
+            self.pendingCascade = false
+            guard let range = self.coreList.loadedIndexRange else {
+                return
+            }
+            self.cascadeStart = (CACurrentMediaTime(), range.first)
+            self.cascadedViews.removeAll()
+        }
+        guard let start = self.cascadeStart else {
+            return
+        }
+        let now = CACurrentMediaTime()
+        guard now - start.time <= NewsCascade.window else {
+            self.cascadeStart = nil
+            self.cascadedViews.removeAll()
+            return
+        }
+        guard let range = self.coreList.loadedIndexRange else {
+            return
+        }
+        for index in range.first ... range.last {
+            guard let itemView = self.coreList.loadedItemView(at: index) as? CoreListComponentItemView, let content = itemView.componentView else {
+                continue
+            }
+            guard self.cascadedViews.insert(ObjectIdentifier(itemView)).inserted else {
+                continue
+            }
+            let delay = max(0.0, start.time + NewsCascade.delay(position: max(0, index - start.firstIndex)) - now)
+            content.layer.add(NewsSpring.appear.makeAnimation(keyPath: "opacity", from: 0.0 as NSNumber, to: 1.0 as NSNumber, delay: delay), forKey: "newsCascadeAlpha")
+            if !self.reduceMotion {
+                content.layer.add(NewsSpring.appear.makeAnimation(keyPath: "transform.translation.y", from: NewsCascade.offset as NSNumber, to: 0.0 as NSNumber, delay: delay), forKey: "newsCascadeOffset")
+            }
         }
     }
 
@@ -150,7 +207,55 @@ final class NewsFeedListView: UIView {
         self.skeletonView.update(size: size, theme: theme, rowLayout: rowLayout)
     }
 
+    /// As the chat's overscroll hold: engaging keeps the content under the finger (the band re-measures against
+    /// the moved edge); releasing keeps the band's magnitude, so the content rides back with the edge.
+    func setRefreshHold(_ hold: CGFloat) {
+        guard hold != self.refreshHold else {
+            return
+        }
+        let engaging = hold > self.refreshHold
+        self.refreshHold = hold
+        self.withSynchronousRowLoading {
+            self.coreList.applyChanges(newInsets: self.coreListInsets, compensatesInsetChange: false, absorbsEdgeChangeIntoOverscroll: engaging, transition: .immediate)
+        }
+        // CoreList reports nothing for a pass it ran itself.
+        self.onScrollOffsetChanged?(self.scrollOffset(settled: false), .immediate)
+        self.layoutSkeleton()
+    }
+
+    /// How far the list is pulled past its resting top, hold included; 0 when scrolled or unknown.
+    var pullDistance: CGFloat {
+        return max(0.0, -(self.scrollOffset(settled: false).knownValue ?? 0.0))
+    }
+
+    /// Resting at its current top edge, held or not (the mockup's `atEdge`).
+    var isAtTopEdge: Bool {
+        guard let offset = self.scrollOffset(settled: false).knownValue else {
+            return false
+        }
+        return abs(offset + self.refreshHold) < 1.5
+    }
+
+    /// Index 0's presented frame, if it is loaded.
+    var firstRowFrame: CGRect? {
+        guard let range = self.coreList.loadedIndexRange, range.first == 0, let view = self.coreList.loadedItemView(at: 0) else {
+            return nil
+        }
+        return self.coreList.presentedFrame(of: view)
+    }
+
+    /// The refreshed posts sliding in: `NewsSpring.spread`, run for its settling time (spec §3.4).
+    static var refreshInsertTransition: CoreListTransition {
+        let spring = NewsSpring.spread
+        return CoreListTransition(animation: .curve(duration: spring.settlingDuration, curve: .customSpring(mass: spring.mass, stiffness: spring.stiffness, damping: spring.damping, initialVelocity: 0.0)))
+    }
+
     func scrollOffset(settled: Bool) -> ScrollOffset {
+        if self.items.isEmpty {
+            // No rows (the skeleton stands in, or the page is empty): the list rests at its top and only an
+            // overscroll moves it, so the header shows its search as it would above a first row.
+            return .known(self.coreList.overscrollDistance - self.refreshHold)
+        }
         guard let range = self.coreList.loadedIndexRange, range.first == 0, let view = self.coreList.loadedItemView(at: 0) else {
             return .unknown
         }

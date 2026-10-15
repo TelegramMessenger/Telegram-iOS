@@ -3,14 +3,14 @@ import UIKit
 import Display
 import ComponentFlow
 import TelegramPresentationData
-import ShimmerEffect
+import NewsFeedSupport
 
-/// A shimmering stand-in for the post a load-more is fetching, shaped like the full-screen skeleton's rows.
+/// A shimmering stand-in for the post a load-more is fetching, shaped like the full-screen skeleton's first row.
 public final class NewsPlaceholderRowComponent: Component {
     public let theme: PresentationTheme
-    public let rowLayout: NewsFeedSkeletonRowLayout
+    public let rowLayout: NewsSkeletonModelRow
 
-    public init(theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout) {
+    public init(theme: PresentationTheme, rowLayout: NewsSkeletonModelRow) {
         self.theme = theme
         self.rowLayout = rowLayout
     }
@@ -20,11 +20,11 @@ public final class NewsPlaceholderRowComponent: Component {
     }
 
     public final class View: UIView {
-        private let shimmerNode = ShimmerEffectNode()
+        private let shapesView = NewsSkeletonShapesView()
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.addSubview(self.shimmerNode.view)
+            self.addSubview(self.shapesView)
         }
 
         required init?(coder: NSCoder) {
@@ -32,11 +32,9 @@ public final class NewsPlaceholderRowComponent: Component {
         }
 
         func update(component: NewsPlaceholderRowComponent, availableSize: CGSize) -> CGSize {
-            let theme = component.theme
             let size = CGSize(width: availableSize.width, height: component.rowLayout.height)
-            self.shimmerNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.shimmerNode.updateAbsoluteRect(CGRect(origin: CGPoint(), size: size), within: size)
-            self.shimmerNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: newsFeedSkeletonRowShapes(component.rowLayout, y: 0.0), size: size)
+            self.shapesView.frame = CGRect(origin: CGPoint(), size: size)
+            self.shapesView.update(size: size, shapes: newsSkeletonRowShapes(row: component.rowLayout, index: 0, y: 0.0, width: size.width, pixel: UIScreenPixel), theme: component.theme)
             return size
         }
     }

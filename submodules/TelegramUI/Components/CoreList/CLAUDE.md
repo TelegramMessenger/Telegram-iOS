@@ -336,6 +336,12 @@ edge transitions (above); `willBeginDragging` / `didEndDragging` fire on interac
 interval a host needs to reproduce `ListViewImpl.isTracking`); `shouldStopScrolling` forwards to
 `ScrollEngine.shouldStopScrollingOnRelease` so a host can decline the momentum of a release it has
 already spent elsewhere (above).
+`isScrollDecelerating` says, at `didEndDragging`, whether momentum follows the release in every
+deceleration mode (`ScrollEngine.isDecelerating`). `isScrollFlightActive` says it only for `.keyframe`,
+because `.stepped` and UIKit publish no flight. Likewise `didEndScrolling` fires when a `.keyframe` flight
+ends AND when a `.stepped` or UIKit deceleration comes to rest by itself (`ScrollEngine.onDidEndDecelerating`).
+Before that seam, a `.stepped` host (the News feeds) had no way to tell a fling from a still release, and
+`SteppedDecelerationEndTests` locks it.
 `init(forEmbedding:deceleration:)` picks how the `PhysicsScrollEngine` an embedding host gets plays a
 flick: `.keyframe` (the default, a render-server flight) or `.stepped` (main-thread physics); the engine
 type stays internal.
