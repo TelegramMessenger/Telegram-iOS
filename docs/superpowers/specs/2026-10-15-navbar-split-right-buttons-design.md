@@ -55,7 +55,8 @@ Filmed on the reference app, `-scenario oneTwo` (`[Edit]` <-> `[Edit, +]`, a new
 scenario's timer without a touch (for a real tap see below); times from the first changed frame:
 
 - **Edit -> Done (search sucked in).** 0 s: Edit's items swap (blur) and the Edit pill swells (its item-change pulse);
-  **both** pills cross-fade to the accent tint, the search pill included, fully blue by ~0.07 s. ~0.10 s: search starts
+  **both** pills cross-fade to the accent tint, the search pill included (re-measured 2026-10-16 at fixed points, not
+  ~0.07 s as first noted: white <-> accent takes ~0.25 s each way, on the glass transition spring; see Results). ~0.10 s: search starts
   shrinking toward Done (SwiftUI's minimum delay, 0.083 s, plus a frame). ~0.15 s: a neck joins them. ~0.23 s: search is
   absorbed. ~0.25 s: the Done circle is at rest.
 - **Done -> Edit (search ejected).** 0 s: Done's items swap and it swells. ~0.03-0.05 s: search already bulges out of
@@ -277,10 +278,17 @@ mattered; native references are the reference app's films, the touch-driven one 
 **Differences from native left as they are** (kept by decision, 2026-10-16, "prefer ours"):
 
 - Our pills join at the change, where native's join on the centre row ~0.2 s after its change starts.
-- For a frame or two after the change ours shows a neck between still-white pills.
-- Our tint fades about twice as fast as native's tapped one (native: white to accent through pale blues, a critically
-  damped curve of response ~0.28 s fitted to the film).
+- For a few frames after the change ours shows a neck between still-white pills.
 - At Done -> Edit after a tap ours shows the plain accent for one frame; native holds it ~0.09 s.
+
+**The tint's speed now matches** (user request, 2026-10-16): merging pills fade on the glass transition spring (duration
+0.416, bounce 0.25), which fits native's fade at fixed points of four reference films (Edit <-> Done, tapped and on a
+timer) within 0.012 of the way; the old 0.1 s critically damped spring was off by 0.19 (white <-> accent in ~0.07 s
+against native's ~0.25 s). Filmed after the change, at the same points: Done -> Edit follows native's curve frame for
+frame (its fitted start 0.013 s before the first changed frame, native's 0.012 s); Edit -> Done follows the same curve
+but starts ~0.057 s (three frames) later than native's relative to the first changed frame. The items' dematerializing
+is late by as much there, so the whole in-place animation starts late in that direction (not measured: likely the
+list's edit-mode work holding the main thread, since the animator's clock starts at its first display-link frame).
 
 Measured why (2026-10-16, the reference app's `-probe 1` and both tapped films): UIKit starts an animated bar-item change
 ~0.1 s after the action runs (one tap: touch up +0.008 s, action +0.009 s, label fade +0.105 s, glass pulse +0.122 s),
