@@ -55,7 +55,8 @@ Filmed on the reference app, `-scenario oneTwo` (`[Edit]` <-> `[Edit, +]`, a new
 scenario's timer without a touch (for a real tap see below); times from the first changed frame:
 
 - **Edit -> Done (search sucked in).** 0 s: Edit's items swap (blur) and the Edit pill swells (its item-change pulse);
-  **both** pills cross-fade to the accent tint, the search pill included, fully blue by ~0.07 s. ~0.10 s: search starts
+  **both** pills cross-fade to the accent tint, the search pill included (re-measured 2026-10-16 at fixed points, not
+  ~0.07 s as first noted: white <-> accent takes ~0.25 s each way, on the glass transition spring; see Results). ~0.10 s: search starts
   shrinking toward Done (SwiftUI's minimum delay, 0.083 s, plus a frame). ~0.15 s: a neck joins them. ~0.23 s: search is
   absorbed. ~0.25 s: the Done circle is at rest.
 - **Done -> Edit (search ejected).** 0 s: Done's items swap and it swells. ~0.03-0.05 s: search already bulges out of
@@ -274,11 +275,28 @@ mattered; native references are the reference app's films, the touch-driven one 
   Duo (its simulator renders nothing), the dark appearance and the clear glass style (the tint blend is unverified
   there).
 
-**Differences from native left as they are:**
+**Differences from native left as they are** (kept by decision, 2026-10-16, "prefer ours"):
 
-- Our pills join at the change, where native's neck forms ~0.15 s later.
-- For two or three frames after the change ours shows a neck between still-white pills.
-- Our tint fades in ~0.07 s; native's tapped Done takes ~0.2 s through pale blues.
+- Our pills join at the change, where native's join on the centre row ~0.2 s after its change starts.
+- For a few frames after the change ours shows a neck between still-white pills.
+- At Done -> Edit after a tap ours shows the plain accent for one frame; native holds it ~0.09 s.
+
+**The tint's speed now matches** (user request, 2026-10-16): merging pills fade on the glass transition spring (duration
+0.416, bounce 0.25), which fits native's fade at fixed points of four reference films (Edit <-> Done, tapped and on a
+timer) within 0.012 of the way; the old 0.1 s critically damped spring was off by 0.19 (white <-> accent in ~0.07 s
+against native's ~0.25 s). Filmed after the change, at the same points: Done -> Edit follows native's curve frame for
+frame (its fitted start 0.013 s before the first changed frame, native's 0.012 s); Edit -> Done follows the same curve
+but starts ~0.057 s (three frames) later than native's relative to the first changed frame. The items' dematerializing
+is late by as much there, so the whole in-place animation starts late in that direction (not measured: likely the
+list's edit-mode work holding the main thread, since the animator's clock starts at its first display-link frame).
+
+Measured why (2026-10-16, the reference app's `-probe 1` and both tapped films): UIKit starts an animated bar-item change
+~0.1 s after the action runs (one tap: touch up +0.008 s, action +0.009 s, label fade +0.105 s, glass pulse +0.122 s),
+items and glass together, so the press has had time to release and native's text pill (which does not grow on a short
+tap) is at rest when search starts toward it. Ours starts at once, over a pill UIKit's press has already grown (1.29x
+for a text pill after an 8 ms tap), 2 pt from search, so they join immediately. The held accent is that same ~0.1 s. A
+slower fade alone would only lengthen the white joined frames, so it is not done. (Note: `axe touch --delay 0.08`
+makes an 8 ms touch, not an 80 ms one.)
 
 **Survey** (`secondaryRightNavigationButton` / `rightBarButtonItems`):
 
@@ -294,7 +312,15 @@ The channel profile's [add story, Edit] capsule is PeerInfo's own header, not th
 
 **Whole-branch review** (Opus, fresh context): ready with fixes, no Critical. Fixed in `4280c582bd`: a relayout
 mid-merge sent the leaving pill toward its partner's old frame, and an item change on a still-lent pill went through
-UIKit's animated effect change. Ten minors are deferred (see the plan's ledger).
+UIKit's animated effect change. Nine minors were deferred (the tenth, b, was fixed before the merge) and were dealt
+with on 2026-10-16 (`fa790829b8`, `fd9620e6ea`, `c643afc56b`, and a review fix after them): a partner that only moves springs from where it is with its items (with three pills an insertion had
+left it at its old frame for good); a non-animated removal of a lent pill ends its merge; the press is read only by
+in-place layouts; a container that takes its glass back ends the loan; `renewGlass` waits out a context menu; a push
+mid-merge carries the bar's own press, once and with no glow; a touch on a lent glass is sampled; the merging container follows the
+appearance; stale docs. Measured rather than changed: the pulse anchor needs no refresh (it is a unit point), and the
+per-frame glass effect costs ~14 us on the simulator and was already paid by every in-place frame (the shape is in the
+glass's params).
 
-**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the final code (81 actions). `NavigationBarComponentTests` 180/180,
+**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the split-buttons branch tip (81 actions), not re-run
+after the 2026-10-16 follow-ups. `NavigationBarComponentTests` 190/190 (180 before the follow-ups),
 `NavigationBarNodeTests` 77/77.
