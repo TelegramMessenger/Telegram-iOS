@@ -5,9 +5,6 @@ import ComponentFlow
 import GlassBackgroundComponent
 import SideColumnLayout
 
-/// The navigation bar's 44pt row and iPhone Duo side column: title, back, left and right buttons in glass
-/// capsules, and the in-bar slide between a primary and a secondary content. Hosts own the backdrop, where the
-/// row sits, and the container the column hangs in (`sideColumnView`).
 /// One right pill of the row, index 0 outermost: the bar-level items container (it holds each content's items for this
 /// pill) and its glass. Pills are kept (without glass) when the row has fewer, so a content's items keep their host.
 final class NavigationBarRightPill {
@@ -23,6 +20,9 @@ final class NavigationBarRightPill {
     }
 }
 
+/// The navigation bar's 44pt row and iPhone Duo side column: title, back, left and right buttons in glass
+/// capsules, and the in-bar slide between a primary and a secondary content. Hosts own the backdrop, where the
+/// row sits, and the container the column hangs in (`sideColumnView`).
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -316,7 +316,7 @@ public final class NavigationBarComponent: Component {
         public var primaryLeftButtonsWidth: CGFloat {
             return self.primaryContentView?.leftButtonsWidth ?? 0.0
         }
-        /// The primary content's right side: the capsule and, beyond it with UIKit's gap, an accent circle.
+        /// The primary content's right side: every right pill and UIKit's gaps between them.
         public var primaryRightButtonsWidth: CGFloat {
             guard let contentView = self.primaryContentView else {
                 return 0.0
@@ -325,7 +325,7 @@ public final class NavigationBarComponent: Component {
         }
 
         /// Whether the primary content's row leaves a title pill a right platter slot in a transition: fewer than two right
-        /// platters (an accent circle and a capsule take both).
+        /// pills (two take both slots).
         public var primaryHasRoomForTitlePill: Bool {
             guard let contentView = self.primaryContentView else {
                 return true

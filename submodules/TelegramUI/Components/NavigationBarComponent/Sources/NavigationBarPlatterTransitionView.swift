@@ -157,8 +157,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var isLeaving = false
         /// SwiftUI's translation kick of a matched insertion or removal (`startMatchedMorph`).
         var kick: NavigationBarKickCurve?
-        /// A matched insertion or removal: it grows out of, or collapses into, the outermost platter, its glass merged
-        /// with that one's (`mergesGlass`).
+        /// A matched insertion or removal: it grows out of, or collapses into, its `partner` (the nearest platter of the
+        /// other bar nearer the edge), its glass merged with that one's (`mergesGlass`).
         var isMatched = false
         /// The platter a matched one collapses into or grows out of.
         var partner: Role?

@@ -5,7 +5,7 @@ import GlassBackgroundComponent
 import SideColumnLayout
 
 /// UIKit's gap between two platters of one side of the bar (`NavigationButtonBar.Layout.Metrics.interSectionSpacing`,
-/// read on iOS 27): the capsule and an accent button's circle beside it.
+/// read on iOS 27): between two right pills.
 let navigationBarInterSectionSpacing: CGFloat = 12.0
 
 /// One right pill of the row as laid out: its width, and its extent, how far it takes the pills inside it in from the
