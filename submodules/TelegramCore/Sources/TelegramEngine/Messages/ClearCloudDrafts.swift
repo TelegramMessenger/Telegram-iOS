@@ -57,7 +57,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                                 
                                 var innerFlags: Int32 = 0
                                 innerFlags |= 1 << 0
-                                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: 0, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: 0, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                             } else if let monoforumPeerId {
                                 flags |= (1 << 0)
                                 replyTo = .inputReplyToMonoForum(.init(monoforumPeerId: monoforumPeerId))

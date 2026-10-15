@@ -262,14 +262,14 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 innerFlags |= 1 << 7
             }
             if !discard {
-                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
+                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
             }
         } else if let topMsgId {
             flags |= 1 << 0
             
             var innerFlags: Int32 = 0
             innerFlags |= 1 << 0
-            replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+            replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
         } else if let monoforumPeerId {
             flags |= 1 << 0
             replyTo = .inputReplyToMonoForum(.init(monoforumPeerId: monoforumPeerId))
