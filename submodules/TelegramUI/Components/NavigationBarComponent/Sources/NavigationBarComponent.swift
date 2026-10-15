@@ -145,6 +145,10 @@ public final class NavigationBarComponent: Component {
         /// The press UIKit was drawing on each capsule as the layout began (by container), read before this layout's own
         /// changes touch the glass, for a merge or a retint to carry on.
         var inPlacePressAtChange: [ObjectIdentifier: NavigationBarCapsulePress] = [:]
+        /// Reads UIKit's press on a capsule for an in-place change (tests count the reads).
+        var inPlacePressReader: (GlassContextExtractableContainer) -> NavigationBarCapsulePress = { container in
+            return navigationBarCapsulePress(container)
+        }
         /// Whether this layout's in-place tint changes are cross-faded by the bar rather than by UIKit: in a layout where
         /// pills merge (`NavigationBarInPlaceCapsule.tintFade`).
         var inPlaceTintByHand = false
@@ -168,7 +172,11 @@ public final class NavigationBarComponent: Component {
                 if self.plattersDetached != oldValue {
                     if self.plattersDetached {
                         // The transition draws the capsules from the bar's layout: settle them there first. A press
-                        // UIKit is drawing on one (the button that started the transition) goes on in the transition.
+                        // UIKit is drawing on one (the button that started the transition) goes on in the transition, and
+                        // so does one the bar is continuing on a renewed glass (UIKit's ended with the old glass).
+                        let time = self.inPlaceTime
+                        let barLeftPress = self.leftButtonsBackgroundContainer.flatMap { self.inPlaceCapsule(for: $0)?.press?.value(at: time) } ?? 1.0
+                        let barRightPresses = self.rightPills.map { pill in pill.background.flatMap { self.inPlaceCapsule(for: $0)?.press?.value(at: time) } ?? 1.0 }
                         self.finishInPlaceAnimations()
                         let now = self.pressSamplerClock()
                         var leftScale = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
@@ -183,10 +191,11 @@ public final class NavigationBarComponent: Component {
                             }
                         }
                         self.lastPressSample = nil
-                        self.detachedLeftPressScale = leftScale
-                        self.detachedRightPressScales = rightScales
+                        // The glow is UIKit's alone: the bar draws none with the press it continues.
                         self.detachedLeftPressGlow = navigationBarCapsulePressGlow(self.leftButtonsBackgroundContainer, press: leftScale)
                         self.detachedRightPressGlows = zip(self.rightPills, rightScales).map { navigationBarCapsulePressGlow($0.background, press: $1) }
+                        self.detachedLeftPressScale = leftScale * barLeftPress
+                        self.detachedRightPressScales = zip(rightScales, barRightPresses).map { $0 * $1 }
                     } else {
                         self.detachedLeftPressScale = 1.0
                         self.detachedLeftPressGlow = 0.0
@@ -418,11 +427,12 @@ public final class NavigationBarComponent: Component {
                     continue
                 }
                 if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
-                    // A touch (not a pointer hovering) in a capsule: UIKit may be about to press it.
+                    // A touch (not a pointer hovering) in a capsule: UIKit may be about to press it. A pill's content
+                    // goes with its glass while the glass is lent to a merge.
                     if event.flatMap({ $0.type == .touches }) ?? true {
                         if let left = self.leftButtonsBackgroundContainer, result.isDescendant(of: left) {
                             self.beginPressSampling()
-                        } else if self.rightBackgroundContainers.contains(where: { result.isDescendant(of: $0) }) {
+                        } else if self.rightBackgroundContainers.contains(where: { result.isDescendant(of: $0) || result.isDescendant(of: $0.contentView) }) {
                             self.beginPressSampling()
                         }
                     }
@@ -484,7 +494,11 @@ public final class NavigationBarComponent: Component {
             }
             // The items swap at once inside their capsules, which animate the change (`startInPlaceChange`).
             let itemsTransition: ComponentTransition = (inPlaceLeft || !inPlaceRight.isEmpty) ? .immediate : transition
-            self.inPlacePressAtChange = Dictionary(([self.leftButtonsBackgroundContainer].compactMap { $0 } + self.rightBackgroundContainers).map { (ObjectIdentifier($0), navigationBarCapsulePress($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            // Read only for a change in place (reading walks each glass's layers, and a slide lays the bar out every frame); a
+            // later retint or merge reads it on demand.
+            if inPlaceLeft || !inPlaceRight.isEmpty {
+                self.inPlacePressAtChange = Dictionary(([self.leftButtonsBackgroundContainer].compactMap { $0 } + self.rightBackgroundContainers).map { (ObjectIdentifier($0), self.inPlacePressReader($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            }
             self.inPlaceTintByHand = inPlaceRightPillCountChanges && self.glassMergesShapes() && !self.inPlaceReduceMotion()
             // A glass UIKit is pressing keeps its own edge inside a merged shape, so in a layout where pills merge a pressed
             // pill's glass is renewed before the layout touches it; the merge carries the press's scale on
@@ -852,6 +866,8 @@ public final class NavigationBarComponent: Component {
             } else if inPlace {
                 self.startInPlaceRemoval(container: background, slot: .right(slot), tintColor: tintColor, isDark: isDark, leaving: leaving)
             } else {
+                // Taken away by a layout that does not animate in place: a merge it is in ends here.
+                self.finishInPlace(of: background)
                 background.update(size: background.bounds.size, cornerRadius: background.bounds.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: transition)
                 transition.attachAnimation(view: background, id: "remove", completion: { [weak background] _ in
                     background?.removeFromSuperview()

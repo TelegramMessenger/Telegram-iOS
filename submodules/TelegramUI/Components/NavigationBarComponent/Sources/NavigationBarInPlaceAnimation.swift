@@ -331,7 +331,7 @@ extension NavigationBarComponent.View {
             return
         }
         let id = ObjectIdentifier(capsule.container)
-        let press = self.inPlacePressAtChange[id] ?? navigationBarCapsulePress(capsule.container)
+        let press = self.inPlacePressAtChange[id] ?? self.inPlacePressReader(capsule.container)
         guard press.isPressed else {
             return
         }
@@ -613,7 +613,7 @@ extension NavigationBarComponent.View {
     /// Lends `capsule`'s glass to the merging container, carrying on a press UIKit is drawing on it as a spring (on top of
     /// one the bar is already releasing, when the glass was lent before: a tap before the last change settled).
     private func lendInPlaceGlass(_ capsule: NavigationBarInPlaceCapsule) {
-        let press = self.inPlacePressAtChange[ObjectIdentifier(capsule.container)] ?? navigationBarCapsulePress(capsule.container)
+        let press = self.inPlacePressAtChange[ObjectIdentifier(capsule.container)] ?? self.inPlacePressReader(capsule.container)
         if abs(press.scale - 1.0) > 0.0005 {
             let current = capsule.press?.value(at: self.inPlaceTime) ?? 1.0
             capsule.press = NavigationSpringCurve(startTime: self.inPlaceTime, from: current * press.scale, target: 1.0, spring: NavigationBarGlassSettings.pressRelease, rest: .glass(0.0005))
@@ -640,7 +640,7 @@ extension NavigationBarComponent.View {
     }
 
     /// After a layout: a pill going into a partner heads for the partner's frame as laid out now (a relayout mid-merge
-    /// moves the partner), and the merging container spans the bar.
+    /// moves the partner), and the merging container spans the bar in its appearance.
     func followInPlacePartners(barSize: CGSize, isDark: Bool) {
         for capsule in self.inPlaceCapsules {
             guard let matched = capsule.matched, matched.isRemoval, let partner = matched.partner, let partnerCapsule = self.inPlaceCapsule(for: partner), partnerCapsule.targetFrame != matched.target else {
@@ -649,7 +649,7 @@ extension NavigationBarComponent.View {
             matched.retarget(to: partnerCapsule.targetFrame, at: self.inPlaceTime, spring: self.inPlaceMotion.transition)
             capsule.setFrame(partnerCapsule.targetFrame)
         }
-        if let mergeContainer = self.inPlaceMergeContainer, mergeContainer.frame.size != barSize {
+        if let mergeContainer = self.inPlaceMergeContainer {
             mergeContainer.frame = CGRect(origin: CGPoint(), size: barSize)
             mergeContainer.update(size: barSize, isDark: isDark, transition: .immediate)
         }
@@ -664,6 +664,22 @@ extension NavigationBarComponent.View {
         if let mergeContainer = self.inPlaceMergeContainer, !self.inPlaceCapsules.contains(where: { $0.lentGlass != nil }) {
             mergeContainer.removeFromSuperview()
             self.inPlaceMergeContainer = nil
+        }
+    }
+
+    /// Ends the in-place animation of `container` and of every pill merging with it at once (a layout without animation
+    /// takes the pill away): its glass comes back and nothing of the merge stays in the merging container.
+    func finishInPlace(of container: GlassContextExtractableContainer) {
+        let ending = self.inPlaceCapsules.filter { $0.container === container || $0.matched?.partner === container }
+        guard !ending.isEmpty else {
+            return
+        }
+        self.inPlaceCapsules.removeAll(where: { capsule in ending.contains(where: { $0 === capsule }) })
+        for capsule in ending {
+            self.finishInPlace(capsule)
+        }
+        if self.inPlaceCapsules.isEmpty {
+            self.stopInPlaceLink()
         }
     }
 
@@ -704,6 +720,10 @@ extension NavigationBarComponent.View {
     }
 
     private func applyInPlace(_ capsule: NavigationBarInPlaceCapsule) {
+        if capsule.lentGlass != nil && !capsule.container.isGlassLent {
+            // The container took its glass back itself (a context menu extracting it): the loan is over.
+            self.reclaimInPlaceGlass(capsule)
+        }
         let time = self.inPlaceTime
         let frame = capsule.frame(at: time)
         let anchor = capsule.anchoredPulse?.anchor ?? CGPoint(x: 0.5, y: 0.5)

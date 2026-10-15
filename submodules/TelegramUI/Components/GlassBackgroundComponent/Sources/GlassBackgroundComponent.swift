@@ -1709,8 +1709,12 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
 
     /// Ends UIKit's press on the glass by putting a new effect view in place of the one it is drawn on
-    /// (`GlassBackgroundView.renewNativeView`).
+    /// (`GlassBackgroundView.renewNativeView`). Not while a context menu has the container extracted: the menu morphs the
+    /// effect view it took.
     public func renewGlass() {
+        guard case .normal = self.state else {
+            return
+        }
         self.glassView.renewNativeView()
     }
 
