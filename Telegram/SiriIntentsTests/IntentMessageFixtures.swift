@@ -86,9 +86,10 @@ enum IntentMessageFixtures {
 
     static let noTextAllowed = TelegramChatBannedRights(flags: [.banSendText], untilDate: Int32.max)
 
-    /// An incoming text message in `chat`, written by `author`, rendered the way the postbox
-    /// renders one: both the chat peer and the author are in `peers`.
-    static func message(id: Int32 = 100, in chat: Peer, author: Peer, text: String = "hello") -> Message {
+    /// A text message in `chat`, written by `author`, rendered the way the postbox renders
+    /// one: both the chat peer and the author are in `peers`. Incoming unless `flags` says
+    /// otherwise.
+    static func message(id: Int32 = 100, in chat: Peer, author: Peer, text: String = "hello", flags: MessageFlags = [.Incoming]) -> Message {
         var peers = SimpleDictionary<PeerId, Peer>()
         peers[chat.id] = chat
         peers[author.id] = author
@@ -101,7 +102,7 @@ enum IntentMessageFixtures {
             groupInfo: nil,
             threadId: nil,
             timestamp: 1_700_000_000,
-            flags: [.Incoming],
+            flags: flags,
             tags: [],
             globalTags: [],
             localTags: [],
