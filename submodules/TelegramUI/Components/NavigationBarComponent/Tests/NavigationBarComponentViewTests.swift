@@ -332,7 +332,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
     }
 
     // An animated change of a capsule's items (Edit -> Done) animates as iOS 27's glass does on the bar's own capsule:
-    // the same capsule (so UIKit's press state carries on), morphing from the old frame, pulsing, with the new items
+    // the same capsule (so its press carries on), morphing from the old frame, pulsing, with the new items
     // materializing; at rest it is at its new frame with no transform left.
     func test_inPlaceItemChange_keepsTheCapsule_andAnimatesNatively() {
         let bar = ComponentView<Empty>()
@@ -359,6 +359,58 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(capsule.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
         XCTAssertTrue(CATransform3DIsIdentity(capsule.layer.transform))
         XCTAssertEqual(view.rightPill(at: 0).itemsContainer.alpha, 1.0)
+    }
+
+    /// A one-pill bar [Edit] with UIKit's press on Edit faked by growing its effect view, and that effect view.
+    private func pressedEdit(_ bar: ComponentView<Empty>) -> (edit: GlassContextExtractableContainer, glass: UIView)? {
+        let before = self.updateBar(bar, back: .back, right: [NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })], transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            return nil
+        }
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: edit.bounds.width * 1.1, height: 44.0 * 1.1)
+        glass.center = center
+        return (edit, glass)
+    }
+
+    // A glass UIKit is pressing comes up white when its effect changes: tapped Edit -> Done on a one-pill bar
+    // (Subscribers) left Done white with a blue edge. Before the retint the pill gets a new effect view, and the press's
+    // scale goes on as the bar's own.
+    func test_inPlaceItemChange_pressedPill_retintsOnANewEffectView() {
+        let bar = ComponentView<Empty>()
+        guard let (edit, pressed) = self.pressedEdit(bar) else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertFalse(navigationBarTestGlassEffectView(content: edit.contentView, container: edit) === pressed)
+        XCTAssertNil(pressed.superview)
+        XCTAssertEqual(view.inPlaceStateForTesting(isLeft: false)?.press ?? 1.0, 1.1, accuracy: 0.01)
+    }
+
+    // A change that keeps the tint changes no effect, so UIKit's press stays on its glass.
+    func test_inPlaceItemChange_pressedPill_sameTint_keepsItsEffectView() {
+        let bar = ComponentView<Empty>()
+        guard let (edit, pressed) = self.pressedEdit(bar) else {
+            XCTFail("no pill")
+            return
+        }
+        _ = self.updateBar(bar, back: .back, right: [NavigationBarComponent.Button(id: "cancel", content: .text(title: "Cancel", isBold: false), action: { _ in })], transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(navigationBarTestGlassEffectView(content: edit.contentView, container: edit) === pressed)
+    }
+
+    // Unpressed, a retint keeps the effect view (UIKit cross-fades its tint).
+    func test_inPlaceItemChange_unpressedPill_keepsItsEffectView() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: [NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })], transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            XCTFail("no pill")
+            return
+        }
+        _ = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(navigationBarTestGlassEffectView(content: edit.contentView, container: edit) === glass)
     }
 
     // The new items take taps while the change animates (Edit -> Done, then Done tapped at once). The content view hit

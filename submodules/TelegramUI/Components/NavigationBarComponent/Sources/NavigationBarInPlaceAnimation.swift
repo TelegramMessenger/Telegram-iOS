@@ -312,6 +312,27 @@ extension NavigationBarComponent.View {
         return NavigationBarInPlaceCapsule.Items(view: view, frame: CGRect(origin: CGPoint(x: capsuleFrame.minX + source.frame.minX, y: capsuleFrame.minY + source.frame.minY), size: source.bounds.size), appearance: appearance, motion: self.inPlaceMotion)
     }
 
+    /// A glass UIKit is pressing comes up white when its effect changes (a tapped Edit -> Done on a one-pill bar left
+    /// Done white with a blue edge, seen on iOS 27), so before `capsule` is retinted to `tintColor` a pressed glass gets
+    /// a new effect view and the press's scale goes on as the bar's own spring. A layout where pills merge has renewed
+    /// its pressed pills already (`inPlaceTintByHand`).
+    private func renewPressedGlassBeforeRetint(_ capsule: NavigationBarInPlaceCapsule, to tintColor: GlassBackgroundView.TintColor) {
+        guard !self.inPlaceTintByHand, self.glassMergesShapes(), let current = capsule.container.glassTintColor, current != tintColor else {
+            return
+        }
+        let id = ObjectIdentifier(capsule.container)
+        let press = self.inPlacePressAtChange[id] ?? navigationBarCapsulePress(capsule.container)
+        guard press.isPressed else {
+            return
+        }
+        capsule.container.renewGlass()
+        if abs(press.scale - 1.0) > 0.0005 {
+            let running = capsule.press?.value(at: self.inPlaceTime) ?? 1.0
+            capsule.press = NavigationSpringCurve(startTime: self.inPlaceTime, from: running * press.scale, target: 1.0, spring: NavigationBarGlassSettings.pressRelease, rest: .glass(0.0005))
+        }
+        self.inPlacePressAtChange[id] = NavigationBarCapsulePress(scale: 1.0, glow: 0.0)
+    }
+
     /// Starts the bar's own cross-fade of `capsule`'s tint to `tintColor`, from what its glass shows now (`tintFade`).
     private func startInPlaceTintFade(_ capsule: NavigationBarInPlaceCapsule, to tintColor: GlassBackgroundView.TintColor) {
         let from = capsule.container.glassTintColor ?? tintColor
@@ -349,7 +370,8 @@ extension NavigationBarComponent.View {
             capsule.dematerialization.animate(to: 0.0, spring: NavigationBarGlassSettings.materialize)
         } else {
             capsule.animateFrame(to: frame, spring: motion.transition)
-            // The pulse multiplies with any press UIKit is still drawing on the glass, as on iOS 27. Native's change starts
+            // The pulse multiplies with any press still on the capsule (UIKit's, or the bar's continuation of it when a
+            // retint renewed the glass), as on iOS 27. Native's change starts
             // ~0.08 s after its items change, so after a tap its pulse peaks in the press release's undershoot (Edit ->
             // Done: 49 pt); ours starts at once and peaks over the press (62 pt). Kept so by decision (2026-10-14).
             capsule.pulse = motion.pulse(size: frame.size)
@@ -372,6 +394,9 @@ extension NavigationBarComponent.View {
         // The glass's tint (a cross-fade) and, for a new capsule, its appearing are UIKit's to animate, except the tint in
         // a layout where pills merge (`tintFade`).
         let tintByHand = self.inPlaceTintByHand && !isNew
+        if !isNew {
+            self.renewPressedGlassBeforeRetint(capsule, to: tintColor)
+        }
         if tintByHand {
             self.startInPlaceTintFade(capsule, to: tintColor)
         } else {
@@ -442,6 +467,7 @@ extension NavigationBarComponent.View {
             capsule.items?.frame = frame
         }
         if tintColor != capsule.tintColor || isDark != capsule.isDark {
+            self.renewPressedGlassBeforeRetint(capsule, to: tintColor)
             let tintByHand = !transition.animation.isImmediate && (self.inPlaceTintByHand || capsule.lentGlass != nil)
             if tintByHand {
                 self.startInPlaceTintFade(capsule, to: tintColor)

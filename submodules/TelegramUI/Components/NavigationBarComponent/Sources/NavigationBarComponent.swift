@@ -142,8 +142,8 @@ public final class NavigationBarComponent: Component {
         /// Where two pills' glass merges during an in-place matched morph, at the bar's platter smoothness; made on first
         /// use, below the pills, spanning the bar.
         var inPlaceMergeContainer: GlassBackgroundContainerView?
-        /// The press UIKit was drawing on each right pill as the layout began (by container), read before this layout's
-        /// own changes touch the glass, for a merge to carry on.
+        /// The press UIKit was drawing on each capsule as the layout began (by container), read before this layout's own
+        /// changes touch the glass, for a merge or a retint to carry on.
         var inPlacePressAtChange: [ObjectIdentifier: NavigationBarCapsulePress] = [:]
         /// Whether this layout's in-place tint changes are cross-faded by the bar rather than by UIKit: in a layout where
         /// pills merge (`NavigationBarInPlaceCapsule.tintFade`).
@@ -484,7 +484,7 @@ public final class NavigationBarComponent: Component {
             }
             // The items swap at once inside their capsules, which animate the change (`startInPlaceChange`).
             let itemsTransition: ComponentTransition = (inPlaceLeft || !inPlaceRight.isEmpty) ? .immediate : transition
-            self.inPlacePressAtChange = Dictionary(self.rightBackgroundContainers.map { (ObjectIdentifier($0), navigationBarCapsulePress($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            self.inPlacePressAtChange = Dictionary(([self.leftButtonsBackgroundContainer].compactMap { $0 } + self.rightBackgroundContainers).map { (ObjectIdentifier($0), navigationBarCapsulePress($0)) }, uniquingKeysWith: { lhs, _ in lhs })
             self.inPlaceTintByHand = inPlaceRightPillCountChanges && self.glassMergesShapes() && !self.inPlaceReduceMotion()
             // A glass UIKit is pressing keeps its own edge inside a merged shape, so in a layout where pills merge a pressed
             // pill's glass is renewed before the layout touches it; the merge carries the press's scale on
