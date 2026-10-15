@@ -237,3 +237,59 @@ release); the bar component and bar node suites.
 - Every bar groups its right buttons by UIKit's rule; Chats looks exactly as before.
 - Push and pop between bars with any number of right pills morph by index, with nothing sliding or popping.
 - The suites and both builds are green.
+
+## Results (2026-10-15)
+
+Filmed on the logged-in iPhone 18 Pro simulator with real taps (`axe touch`), frames sampled for colour where it
+mattered; native references are the reference app's films, the touch-driven one included.
+
+**Channel Administrators** (`t.me/qwefqwfeqwfqwe`, Administrators):
+
+- Search and Edit are two pills, 12 pt apart.
+- **Edit -> Done:** search goes into Done as one shape, and nothing is left inside Done. The first films showed a
+  dark band where the shapes met (0064c5 against 0083f9) and a dark disc in Done after the absorption. The causes
+  (probed, see "How glass behaves in a glass container") were UIKit's animated tint change and UIKit's press on the
+  tapped glass. Fixed in `95c1b8f8f1`; filmed since, the junction is within 4 levels of the body and Done settles on
+  the plain accent (0085fa) every time.
+- **Done -> Edit:** search comes out of Done as one shape. The pressed Done is native's exact colour (5ebcfd). At the
+  change it shows the plain accent for one frame before fading to white; native holds it for ~0.085 s.
+- **Two taps in a row:** even sent back to back, the second touch arrives ~0.55 s after the first change, once the
+  merge has ended, so a tap inside a running merge could not be filmed (unit-tested instead). The films did catch a
+  press on a pill still lent to a merge snapping back (fixed in `f2039f1601`).
+- **Push and pop** between the channel profile and Administrators, by tap and by a cancelled swipe: the bar moves with
+  its page (the profile draws its own header), with the pills intact.
+
+**Elsewhere:**
+
+- **Subscribers** (2 members): Edit alone (search joins at 200 members). Edit -> Done leaves Done **white with a blue
+  edge**: the stuck-pale Done seen on master too. Its mechanism is now known: UIKit's press and a change of effect on
+  the same glass. Renewing the glass cures it, but that is applied only where pills merge. Open; proposed fix: renew a
+  pressed pill's glass on any in-place retint and carry on its press's scale.
+- **Chats:** looks as before. Edit mode: the pills dematerialize and materialize in place. On the way in, the title
+  re-centres at once and overlaps the story/proxy capsule for ~0.07 s before it fades. That is also in the Task 5 film,
+  so it predates the merge fix; master not checked. Open.
+- **A chat** (Peter Isaac) and **a News "For you" post:** push and pop morph as before.
+- **Not filmed:** Removed Users (no entries on this channel), Members with 200+ (no such channel at hand), the iPhone
+  Duo (its simulator renders nothing), the dark appearance and the clear glass style (the tint blend is unverified
+  there).
+
+**Differences from native left as they are:**
+
+- Our pills join at the change, where native's neck forms ~0.15 s later.
+- For two or three frames after the change ours shows a neck between still-white pills.
+- Our tint fades in ~0.07 s; native's tapped Done takes ~0.2 s through pale blues.
+
+**Survey** (`secondaryRightNavigationButton` / `rightBarButtonItems`):
+
+| Screen | Right buttons | Look |
+|---|---|---|
+| Channel Administrators | search + Edit/Done | changes: two pills |
+| Channel Members / Subscribers | search (200+) + Edit/Done | changes at 200+ members |
+| Removed Users | search + Edit/Done | changes when it has entries |
+| Saved Messages chat | more + avatar | unchanged (one capsule) |
+
+The channel profile's [add story, Edit] capsule is PeerInfo's own header, not the bar component, and is unchanged
+(UIKit would split it).
+
+**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK (638 actions). `NavigationBarComponentTests` 175/175,
+`NavigationBarNodeTests` 77/77.
