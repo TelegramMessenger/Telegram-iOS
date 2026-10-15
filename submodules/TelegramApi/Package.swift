@@ -13,7 +13,8 @@ let package = Package(
             name: "TelegramApiObjC",
             path: "ObjC",
             // SwiftPMGenerated (and Sources/SwiftPMGenerated, Tests/SwiftPMGenerated) hold the
-            // generated sources, written by generate-swiftpm.sh. Bazel generates its own.
+            // generated sources, written by generate-swiftpm.sh and gitignored: run it before
+            // building. Bazel generates its own.
             sources: ["Sources", "SwiftPMGenerated"],
             publicHeadersPath: "PublicHeaders",
             // The TLObject root implements retain/release itself (MRC); SwiftPM defaults to ARC.

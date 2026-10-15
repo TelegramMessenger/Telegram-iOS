@@ -746,14 +746,16 @@ every build.** The `TelegramApiGenerated` genrule runs the host tool `//build-sy
 and declares a fixed file list: `Api0`…`Api43.swift` (`--swift-file-count`, types spread evenly),
 `TLApiSchemaData.m`, and the tests' `SchemaFixtures.swift`/`SchemaAccessorProbes.swift`. Nothing
 generated is checked in for Bazel; changing the schema is the whole change.
-- **SwiftPM reads a committed copy** in `Sources/`, `ObjC/` and `Tests/SwiftPMGenerated`
-  (TelegramCore's `Package.swift`, which Telegram-Mac builds, depends on TelegramApi's). After
-  changing the schema or the generator, run `submodules/TelegramApi/generate-swiftpm.sh` and
-  commit the result. Bazel's globs are non-recursive so it never compiles that copy; keep them so.
-  **Resolve a merge conflict there by rerunning the script, never file by file:** Swift and
-  `TLApiSchemaData.m` from different runs disagree on offsets and corrupt memory silently. Nothing
-  checks the pair at run time (one genrule action or one script run always writes both);
-  `SchemaTableTests.testHashesMatch` and `AccessorProbeTests` catch it in the tests.
+- **SwiftPM reads a locally generated copy** in `Sources/`, `ObjC/` and `Tests/SwiftPMGenerated`
+  (TelegramCore's `Package.swift`, which Telegram-Mac builds, depends on TelegramApi's). It is
+  gitignored (since 2026-10-15; Telegram-Mac ignores it too): `swift_scheme.tl` is the source of
+  truth, so run `submodules/TelegramApi/generate-swiftpm.sh` before a SwiftPM build or
+  `swift test`, and again after the schema or the generator changes. Bazel's globs are
+  non-recursive so it never compiles that copy; keep them so. **Only ever regenerate all three
+  directories together (the script does):** Swift and `TLApiSchemaData.m` from different runs
+  disagree on offsets and corrupt memory silently. Nothing checks the pair at run time (one genrule
+  action or one script run always writes both); `SchemaTableTests.testHashesMatch` and
+  `AccessorProbeTests` catch it in the tests.
 - **No header is generated.** `TLApiTypes.h` and the umbrella header are static, and the counts
   and hash are `extern const`s defined in the generated `TLApiSchemaData.m`. A generated public
   header would be on both Bazel's and SwiftPM's include paths, where either copy can shadow the
@@ -843,7 +845,7 @@ Compiler-invisible rules:
   `TelegramCore/Sources/State/Serialization.swift` — re-copy it when that file changes.
 - **Foreign reference types (C structs) were tried and rejected**: they need iOS 16.4
   (metadata kind 0x204), and multi-payload enums leak them on Swift 6.4.
-- Tests: `swift test --package-path submodules/TelegramApi` (and
+- Tests: `swift test --package-path submodules/TelegramApi` after `generate-swiftpm.sh` (and
   `-c release -Xswiftc -enable-testing`), `swift test --package-path build-system/SwiftTL`;
   Bazel: `Make.py test --target //submodules/TelegramApi:TelegramApiTests`.
 
