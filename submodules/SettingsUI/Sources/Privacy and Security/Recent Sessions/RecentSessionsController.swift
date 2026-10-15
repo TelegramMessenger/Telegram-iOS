@@ -717,8 +717,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         
         removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-        })
+        |> ignoreValues)
         |> deliverOnMainQueue).start(error: { _ in
         }, completed: {
             updateState {

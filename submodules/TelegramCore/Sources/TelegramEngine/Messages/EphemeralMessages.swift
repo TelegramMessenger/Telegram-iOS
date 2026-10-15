@@ -166,7 +166,7 @@ private func preparedEphemeralReply(replyTo replySubject: EngineMessageReplySubj
 
     let threadMessageId = topMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }
     return (
-        .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: nil, todoItemId: replyTodoItemId, pollOption: replyPollOption)),
+        .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: nil, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil)),
         ReplyMessageAttribute(messageId: replySubject.messageId, threadMessageId: threadMessageId, quote: replySubject.quote, isQuote: replySubject.quote != nil, innerSubject: replySubject.innerSubject)
     )
 }

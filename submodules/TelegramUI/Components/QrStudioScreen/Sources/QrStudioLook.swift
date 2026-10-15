@@ -44,6 +44,7 @@ struct QrStudioEmojiItem: Equatable {
 struct QrStudioGift: Equatable {
     let id: Int64
     let gift: StarGift.UniqueGift
+    let reference: StarGiftReference?
     let model: TelegramMediaFile
     let pattern: TelegramMediaFile
     let inner: QrStudioColor
@@ -170,7 +171,9 @@ struct QrStudioLook: Equatable {
 
     var kind: Kind = .color
     var palettes: [QrStudioPalette] = []
+    var backdrops: [QrStudioPalette] = []
     var colorId: Int32?
+    var backdropId: Int32?
     var emoji: [QrStudioEmojiItem] = []
     var gifts: [QrStudioGift] = []
     var giftId: Int64?
@@ -194,7 +197,10 @@ struct QrStudioLook: Equatable {
     var emojiInk: QrStudioColor?
 
     var palette: QrStudioPalette {
-        if let colorId = self.colorId, let palette = self.palettes.first(where: { $0.id == colorId }) {
+        if let backdropId = self.backdropId, let palette = self.backdrops.first(where: { $0.id == .backdrop(backdropId) }) {
+            return palette
+        }
+        if let colorId = self.colorId, let palette = self.palettes.first(where: { $0.id == .color(colorId) }) {
             return palette
         }
         return self.palettes.first ?? QrStudioPalette.fallback
@@ -250,7 +256,12 @@ struct QrStudioLook: Equatable {
     }
 
     var settings: QrStudioLookSettings {
-        return QrStudioLookSettings(kind: self.kind.rawValue, colorId: self.colorId, emoji: self.kind == .emoji ? self.emoji.map { $0.setting } : [], giftId: self.giftId, themeId: self.themeId)
+        var settings = QrStudioLookSettings(kind: self.kind.rawValue, colorId: self.colorId, emoji: self.kind == .emoji ? self.emoji.map { $0.setting } : [], giftId: self.giftId, themeId: self.themeId, backdropId: self.backdropId)
+        if let gift = self.selectedGift {
+            settings.gift = gift.gift
+            settings.giftReference = gift.reference
+        }
+        return settings
     }
 
     mutating func select(_ kind: Kind) {
@@ -263,8 +274,14 @@ struct QrStudioLook: Equatable {
         }
     }
 
-    mutating func selectPalette(id: Int32) {
-        self.colorId = id
+    mutating func selectPalette(id: QrStudioPaletteId) {
+        switch id {
+        case let .color(colorId):
+            self.colorId = colorId
+            self.backdropId = nil
+        case let .backdrop(backdropId):
+            self.backdropId = backdropId
+        }
         self.themeId = nil
         self.kind = .color
     }
@@ -307,6 +324,6 @@ struct QrStudioLook: Equatable {
     }
 
     static func ==(lhs: QrStudioLook, rhs: QrStudioLook) -> Bool {
-        return lhs.kind == rhs.kind && lhs.palettes == rhs.palettes && lhs.colorId == rhs.colorId && lhs.emoji == rhs.emoji && lhs.gifts == rhs.gifts && lhs.giftId == rhs.giftId && lhs.emojiInk == rhs.emojiInk && lhs.themes == rhs.themes && lhs.themeId == rhs.themeId && lhs.emojiDark == rhs.emojiDark
+        return lhs.kind == rhs.kind && lhs.palettes == rhs.palettes && lhs.backdrops == rhs.backdrops && lhs.colorId == rhs.colorId && lhs.backdropId == rhs.backdropId && lhs.emoji == rhs.emoji && lhs.gifts == rhs.gifts && lhs.giftId == rhs.giftId && lhs.emojiInk == rhs.emojiInk && lhs.themes == rhs.themes && lhs.themeId == rhs.themeId && lhs.emojiDark == rhs.emojiDark
     }
 }

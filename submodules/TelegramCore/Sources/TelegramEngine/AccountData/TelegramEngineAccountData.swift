@@ -11,14 +11,6 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func getShareTheme() -> Signal<TelegramShareTheme?, NoError> {
-            return _internal_getShareTheme(account: self.account)
-        }
-
-        public func setShareTheme(_ theme: TelegramShareThemeUpdate) -> Signal<Never, SetShareThemeError> {
-            return _internal_setShareTheme(account: self.account, theme: theme)
-        }
-
         public func acceptTermsOfService(id: String) -> Signal<Void, NoError> {
 		    return _internal_acceptTermsOfService(account: self.account, id: id)
 		}

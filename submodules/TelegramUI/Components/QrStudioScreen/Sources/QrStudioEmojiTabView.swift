@@ -28,6 +28,8 @@ final class QrStudioEmojiTabView: UIView {
     private let context: AccountContext
     private let keyboard = ComponentView<Empty>()
     private var emojiContent: EmojiPagerContentComponent?
+    private var sourceEmojiContent: EmojiPagerContentComponent?
+    private var filteredAnimatedCount = 0
     private var searchResult: SearchResult?
     private var emojiSearchContext: EmojiSearchContext?
     private let searchDisposable = MetaDisposable()
@@ -69,6 +71,8 @@ final class QrStudioEmojiTabView: UIView {
                 return
             }
             let emojiContent = QrStudioEmojiTabView.systemEmojiFirst(emojiContent)
+            self.sourceEmojiContent = emojiContent
+            self.filteredAnimatedCount = 0
             self.emojiContent = emojiContent
             emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] _, item, _, _, _, _ in
@@ -137,6 +141,44 @@ final class QrStudioEmojiTabView: UIView {
             return groups.filter(isSystem) + groups.filter { !isSystem($0) }
         }
         return content.withUpdatedItemGroups(panelItemGroups: reorder(content.panelItemGroups), contentItemGroups: reorder(content.contentItemGroups), itemContentUniqueId: content.itemContentUniqueId, emptySearchResults: content.emptySearchResults, searchState: content.searchState)
+    }
+
+    private func filterStaticEmoji(animatedCount: Int) {
+        guard animatedCount > 0, animatedCount != self.filteredAnimatedCount, let content = self.sourceEmojiContent, let isAnimatedUnicode = self.isAnimatedUnicode else {
+            return
+        }
+        self.filteredAnimatedCount = animatedCount
+        let groups = content.contentItemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
+            guard group.groupId == AnyHashable("static") else {
+                return group
+            }
+            let items = group.items.filter { item in
+                if case let .staticEmoji(emoji) = item.content {
+                    return isAnimatedUnicode(emoji)
+                }
+                return true
+            }
+            return EmojiPagerContentComponent.ItemGroup(
+                supergroupId: group.supergroupId,
+                groupId: group.groupId,
+                title: group.title,
+                subtitle: group.subtitle,
+                badge: group.badge,
+                actionButtonTitle: group.actionButtonTitle,
+                isFeatured: group.isFeatured,
+                isPremiumLocked: group.isPremiumLocked,
+                isEmbedded: group.isEmbedded,
+                hasClear: group.hasClear,
+                hasEdit: group.hasEdit,
+                collapsedLineCount: group.collapsedLineCount,
+                displayPremiumBadges: group.displayPremiumBadges,
+                headerItem: group.headerItem,
+                fillWithLoadingPlaceholders: group.fillWithLoadingPlaceholders,
+                customTintColor: group.customTintColor,
+                items: items
+            )
+        }
+        self.emojiContent = content.withUpdatedItemGroups(panelItemGroups: content.panelItemGroups, contentItemGroups: groups, itemContentUniqueId: content.itemContentUniqueId, emptySearchResults: content.emptySearchResults, searchState: content.searchState)
     }
 
     private static func searchGroup(_ items: [EmojiPagerContentComponent.Item], placeholders: Bool) -> EmojiPagerContentComponent.ItemGroup {
@@ -324,7 +366,8 @@ final class QrStudioEmojiTabView: UIView {
         return best
     }
 
-    func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, deviceMetrics: DeviceMetrics, selected: [QrStudioEmojiItem]) {
+    func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, deviceMetrics: DeviceMetrics, selected: [QrStudioEmojiItem], animatedCount: Int) {
+        self.filterStaticEmoji(animatedCount: animatedCount)
         guard var emojiContent = self.emojiContent, size.width > 0.0, size.height > 0.0 else {
             return
         }

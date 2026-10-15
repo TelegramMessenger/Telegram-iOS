@@ -1,4 +1,5 @@
 import Foundation
+import TelegramCore
 
 func qrStudioToggle<Id: Equatable>(_ ids: inout [Id], _ id: Id, limit: Int) -> Bool {
     if let index = ids.firstIndex(of: id) {
@@ -35,8 +36,12 @@ struct QrStudioLookSettings: Codable, Equatable {
     var codeRemoveFee: Bool?
     var codeExpires: Bool?
     var themeId: String?
+    var backdropId: Int32?
+    var gift: StarGift.UniqueGift?
+    var giftReference: StarGiftReference?
 
-    init(kind: Int32, colorId: Int32?, emoji: [Emoji], giftId: Int64?, themeId: String? = nil) {
+    init(kind: Int32, colorId: Int32?, emoji: [Emoji], giftId: Int64?, themeId: String? = nil, backdropId: Int32? = nil) {
+        self.backdropId = backdropId
         self.themeId = themeId
         self.kind = kind
         self.colorId = colorId

@@ -510,7 +510,7 @@ public final class WalletCardComponent: Component {
                         UIBezierPath(roundedRect: qrView.frame, cornerRadius: 8 * scale).fill(with: .clear, alpha: 1)
                     }
                     guard !self.stickerPlacements.isEmpty else { return }
-                    let views = [self.integralBalance.view, self.fractionalBalance.view, self.secondaryBalance.view, self.name.view, self.address.view]
+                    let views = [self.integralBalance.view, self.fractionalBalance.view, self.currency.view, self.secondaryBalance.view, self.name.view, self.address.view]
                     // Keep card labels legible by masking stickers beneath them.
                     for case let view? in views where !view.isHidden {
                         let origin = view.convert(CGPoint.zero, to: self.foregroundView)
