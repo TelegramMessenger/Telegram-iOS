@@ -1232,6 +1232,70 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0, 1.1, accuracy: 0.01)
     }
 
+    private func textButtons(_ titles: [String]) -> [NavigationBarComponent.Button] {
+        return titles.map { title in NavigationBarComponent.Button(id: title, content: .text(title: title, isBold: false), action: { _ in }) }
+    }
+
+    // Three pills, [Edit][Sort] -> [Done][Sort][Select]: Sort keeps its items but moves (Done is narrower than Edit), and
+    // Select grows out of it. Sort springs from where it was to its new place and settles there.
+    func test_inPlaceMerge_movingPartnerOfAnArrivingPill_springsToItsNewFrame() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.textButtons(["Edit", "Sort"]), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let sort = before.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("not two pills")
+            return
+        }
+        let oldFrame = sort.frame
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)] + self.textButtons(["Sort", "Select"]), transition: .easeInOut(duration: 0.3))
+        guard view.inPlaceStateForTesting(slot: .right(2))?.isMatched == true, let start = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("Select does not grow out of Sort")
+            return
+        }
+        XCTAssertEqual(start.frame, oldFrame)
+        // Its items go with it.
+        view.inPlaceTickForTesting(dt: 0.05)
+        guard let moving = view.inPlaceStateForTesting(slot: .right(1)), let sortButton = view.rightButtonViews["Sort"] else {
+            XCTFail("Sort settled early")
+            return
+        }
+        XCTAssertGreaterThan(moving.frame.minX, oldFrame.minX + 1.0)
+        // Centred in its glass (the pair's pulse moves the glass's centre off the frame's).
+        XCTAssertEqual(sortButton.convert(CGPoint(x: sortButton.bounds.midX, y: sortButton.bounds.midY), to: view).x, moving.glassFrame?.midX ?? moving.frame.midX, accuracy: 0.5)
+        self.settle(view)
+        guard let done = view.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no Done")
+            return
+        }
+        XCTAssertEqual(sort.frame.maxX, done.frame.minX - 12.0)
+        XCTAssertEqual(sort.frame.width, oldFrame.width)
+    }
+
+    // [Done][Sort][Select] -> [Edit][Sort]: Sort moves (Edit is wider than Done) and Select goes into it. Sort springs from
+    // where it was rather than jumping to its new place.
+    func test_inPlaceMerge_movingPartnerOfALeavingPill_springsFromWhereItWas() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)] + self.textButtons(["Sort", "Select"]), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let sort = before.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("not three pills")
+            return
+        }
+        let oldFrame = sort.frame
+        let view = self.updateBar(bar, back: .back, right: self.textButtons(["Edit", "Sort"]), transition: .easeInOut(duration: 0.3))
+        guard view.inPlaceStateForTesting(slot: .right(2))?.isMatched == true, let start = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("Select does not go into Sort")
+            return
+        }
+        XCTAssertEqual(start.frame, oldFrame)
+        self.settle(view)
+        guard let edit = view.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no Edit")
+            return
+        }
+        XCTAssertEqual(sort.frame.maxX, edit.frame.minX - 12.0)
+    }
+
     // A merge with no press on the partner keeps its effect view (renewing it would cut a tint change short).
     func test_inPlaceMerge_unpressedPartner_keepsItsEffectView() {
         let bar = ComponentView<Empty>()

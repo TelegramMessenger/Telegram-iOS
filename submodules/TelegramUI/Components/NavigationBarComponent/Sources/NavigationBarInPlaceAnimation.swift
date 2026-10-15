@@ -118,6 +118,9 @@ final class NavigationBarInPlaceCapsule {
     var press: NavigationSpringCurve?
     /// The glass view lent to the bar's merging container, while this capsule merges.
     var lentGlass: UIView?
+    /// Whether its items move with the shape, centred in it (a partner that only moves, its items unchanged), rather than
+    /// staying where they rest while the shape morphs around them (an item change).
+    var itemsTravelWithShape = false
     /// Its tint's change from `from` toward `tintColor` (0 to 1 on the in-place clock), when the bar cross-fades it frame
     /// by frame (`glassTint(at:)`); nil when UIKit animates it. The bar does where glass merges: UIKit's animated change of
     /// an effect draws a dark band where two merging shapes meet, and goes on doing so when an effect is set over it
@@ -370,6 +373,7 @@ extension NavigationBarComponent.View {
             container.layer.removeAllAnimations()
         }
         capsule.isDark = isDark
+        capsule.itemsTravelWithShape = false
         if isNew {
             capsule.setFrame(frame)
             capsule.maxScale = motion.materializeScale(size: frame.size)
@@ -495,8 +499,9 @@ extension NavigationBarComponent.View {
     /// items leaving into, or appearing from, the `.match` appearance; both pills pulse about the pair's anchor; the
     /// moving pill takes the partner's tint on the way (measured: the Administrators film); with native glass both glass
     /// views are lent to one container at smoothness 12 so the shapes merge. `source` is where an insertion starts when
-    /// it is not the partner's frame (a pill that was leaving and comes back).
-    func startInPlaceMatched(container: GlassContextExtractableContainer, slot: NavigationBarCapsuleSlot, isRemoval: Bool, frame: CGRect, source insertionSource: CGRect? = nil, partner: GlassContextExtractableContainer, partnerFrame: CGRect, partnerTintColor: GlassBackgroundView.TintColor, tintColor: GlassBackgroundView.TintColor, isDark: Bool, leaving: NavigationBarInPlaceCapsule.Items?) {
+    /// it is not the partner's frame (a pill that was leaving and comes back). `partnerMove` is where the partner is and
+    /// where this layout puts it: a partner with no change of its own springs between them, its items with it.
+    func startInPlaceMatched(container: GlassContextExtractableContainer, slot: NavigationBarCapsuleSlot, isRemoval: Bool, frame: CGRect, source insertionSource: CGRect? = nil, partner: GlassContextExtractableContainer, partnerFrame: CGRect, partnerMove: (from: CGRect, to: CGRect), partnerTintColor: GlassBackgroundView.TintColor, tintColor: GlassBackgroundView.TintColor, isDark: Bool, leaving: NavigationBarInPlaceCapsule.Items?) {
         let motion = self.inPlaceMotion
         let time = self.inPlaceTime
         let capsule: NavigationBarInPlaceCapsule
@@ -548,7 +553,7 @@ extension NavigationBarComponent.View {
 
         // Both pulse about the pair's anchor: the partner now, the moving pill when it starts moving.
         let anchor = NavigationBarGlassSettings.transitionAnchor(partner: partnerFrame, container: self.bounds)
-        let partnerCapsule = self.inPlaceCapsuleCreatingIfNeeded(for: partner, frame: partnerFrame, tintColor: partnerTintColor, isDark: isDark)
+        let partnerCapsule = self.inPlaceCapsuleCreatingIfNeeded(for: partner, from: partnerMove.from, to: partnerMove.to, tintColor: partnerTintColor, isDark: isDark)
         partnerCapsule.pulse = nil
         partnerCapsule.anchoredPulse = motion.pulseCurve(size: partnerFrame.size, startTime: time, anchor: anchor)
         capsule.anchoredPulse = motion.pulseCurve(size: own.size, startTime: start, anchor: anchor)
@@ -587,14 +592,19 @@ extension NavigationBarComponent.View {
         self.startInPlaceLinkIfNeeded()
     }
 
-    /// `container`'s in-place capsule, made at `frame` (resting there) when it has none.
-    func inPlaceCapsuleCreatingIfNeeded(for container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor, isDark: Bool) -> NavigationBarInPlaceCapsule {
+    /// `container`'s in-place capsule when it has none: made at `frame`, where it is, heading for `target` (its frame in
+    /// this layout) on the transition spring with its items.
+    func inPlaceCapsuleCreatingIfNeeded(for container: GlassContextExtractableContainer, from frame: CGRect, to target: CGRect, tintColor: GlassBackgroundView.TintColor, isDark: Bool) -> NavigationBarInPlaceCapsule {
         if let current = self.inPlaceCapsule(for: container) {
             return current
         }
         let slot: NavigationBarCapsuleSlot = self.rightPills.firstIndex(where: { $0.background === container }).map { .right($0) } ?? .left
         let capsule = NavigationBarInPlaceCapsule(slot: slot, container: container, frame: frame, tintColor: tintColor, isDark: isDark)
-        capsule.items = NavigationBarInPlaceCapsule.Items(view: self.inPlaceItemsView(slot), frame: frame, appearance: 0.0, motion: self.inPlaceMotion)
+        capsule.items = NavigationBarInPlaceCapsule.Items(view: self.inPlaceItemsView(slot), frame: target, appearance: 0.0, motion: self.inPlaceMotion)
+        if target != frame {
+            capsule.animateFrame(to: target, spring: self.inPlaceMotion.transition)
+            capsule.itemsTravelWithShape = true
+        }
         self.inPlaceCapsules.append(capsule)
         container.layer.removeAllAnimations()
         return capsule
@@ -734,9 +744,9 @@ extension NavigationBarComponent.View {
             allItems.append(items)
         }
         // The pill the items are placed in: a pill going into, or coming out of, its partner carries its items (they were
-        // laid out in the pill it leaves, or the pill it becomes); otherwise they stay where they rest while the shape
-        // morphs around them.
-        let itemsPill: CGRect = capsule.matched?.itemsPill ?? frame
+        // laid out in the pill it leaves, or the pill it becomes), and a partner that only moves carries them centred;
+        // otherwise they stay where they rest while the shape morphs around them.
+        let itemsPill: CGRect = capsule.matched?.itemsPill ?? (capsule.itemsTravelWithShape ? capsule.targetFrame : frame)
         for items in allItems {
             let a = max(0.0, min(1.0, items.appearance.value))
             // Where the items sit in the shape: their place in the pill, scaled with the shape about its centre.
