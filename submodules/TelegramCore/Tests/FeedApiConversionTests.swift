@@ -42,6 +42,40 @@ final class FeedApiConversionTests: XCTestCase {
         }
     }
 
+    func testForYouKeepsAMessageGroupAsOneElement() {
+        let album = [5, 6].map { Api.Message.messageEmpty(.init(flags: 1 << 0, id: $0, peerId: .peerChannel(.init(channelId: 77)))) }
+        let single = Api.Message.messageEmpty(.init(flags: 1 << 0, id: 7, peerId: .peerChannel(.init(channelId: 77))))
+        let result = Api.feed.ForYouFeed.forYouFeed(.init(flags: 0, items: [.feedItemMessageGroup(.init(messages: album)), .feedItemMessage(.init(message: single))], chats: [], users: []))
+        let parsed = parseForYouFeed(result)
+        XCTAssertEqual(parsed.elements.count, 2)
+        guard case let .messageGroup(messages) = parsed.elements[0], case .message = parsed.elements[1] else {
+            XCTFail("expected a group, then a message")
+            return
+        }
+        XCTAssertEqual(messages.compactMap { $0.id()?.id }, [5, 6])
+    }
+
+    func testForYouBatchTakesAGroupsStoredMessages() {
+        let peer = Api.Peer.peerChannel(.init(channelId: 77))
+        let elements: [ParsedForYouElement] = [
+            .messageGroup([5, 6, 8].map { Api.Message.messageEmpty(.init(flags: 1 << 0, id: $0, peerId: peer)) }),
+            .interests,
+            .messageGroup([9].map { Api.Message.messageEmpty(.init(flags: 1 << 0, id: $0, peerId: peer)) }),
+            .message(Api.Message.messageEmpty(.init(flags: 1 << 0, id: 7, peerId: peer)))
+        ]
+        var stored: [MessageId: FeedPageMessage] = [:]
+        for id: Int32 in [5, 6, 7] {
+            let messageId = MessageId(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: id)
+            stored[messageId] = FeedPageMessage(id: messageId, timestamp: 100, groupingKey: 1)
+        }
+        // 8 and 9 were not stored: the first group keeps what was, the second has nothing left and is dropped.
+        XCTAssertEqual(forYouBatchElements(elements, storedById: stored), [
+            .group([5, 6].map { stored[MessageId(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: $0)]! }),
+            .interests,
+            .message(stored[MessageId(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 7)]!)
+        ])
+    }
+
     func testInterestCategories() {
         let result = Api.feed.InterestCategories.interestCategories(.init(categories: [
             .interestCategory(.init(flags: 1 << 0, id: 3, title: "AI", emoji: "🤖", emojiDocumentId: nil)),

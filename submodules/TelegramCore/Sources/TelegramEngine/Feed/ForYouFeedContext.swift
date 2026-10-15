@@ -18,31 +18,23 @@ private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineF
         }
         let parsed = parseForYouFeed(result)
         return account.postbox.transaction { transaction -> [EngineForYouItem]? in
-            let apiMessages = parsed.elements.compactMap { element -> Api.Message? in
-                if case let .message(message) = element {
-                    return message
-                } else {
-                    return nil
+            let apiMessages = parsed.elements.flatMap { element -> [Api.Message] in
+                switch element {
+                case let .message(message):
+                    return [message]
+                case let .messageGroup(messages):
+                    return messages
+                case .interests:
+                    return []
                 }
             }
             let stored = storeFeedMessages(transaction: transaction, accountPeerId: account.peerId, messages: apiMessages, chats: parsed.chats, users: parsed.users)
-            Logger.shared.log("ForYouFeed", "getForYou(limit: \(limit)): \(parsed.elements.count) items (\(apiMessages.count) messages, \(parsed.elements.count - apiMessages.count) interests), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
+            Logger.shared.log("ForYouFeed", "getForYou(limit: \(limit)): \(parsed.elements.count) items (\(apiMessages.count) messages), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
             var storedById: [MessageId: FeedPageMessage] = [:]
             for message in stored {
                 storedById[message.id] = message
             }
-            var batch: [ForYouBatchElement] = []
-            for element in parsed.elements {
-                switch element {
-                case .interests:
-                    batch.append(.interests)
-                case let .message(message):
-                    if let id = message.id(), let storedMessage = storedById[id] {
-                        batch.append(.message(storedMessage))
-                    }
-                }
-            }
-            return forYouItems(from: batch)
+            return forYouItems(from: forYouBatchElements(parsed.elements, storedById: storedById))
         }
     }
 }
