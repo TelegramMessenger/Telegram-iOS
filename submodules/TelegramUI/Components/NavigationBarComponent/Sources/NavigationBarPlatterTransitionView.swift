@@ -344,9 +344,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
     /// Lays out both bars' capsules. Call when either bar's content changes; capsules on screen follow on their springs.
     public func setSides(bottom: Side, top: Side) {
         // The items a capsule shows are its bar's own button containers, which the layout below updates in place. When
-        // they change mid-transition (a list screen applies its buttons just after its push begins), a copy of what they
-        // showed leaves while the new ones arrive, as in a kept capsule whose items change.
-        var changedItems: [(role: Role, kind: SideKind, copy: UIView)] = []
+        // they change mid-transition (a list screen applies its buttons just after its push begins), the views they
+        // showed leave, handed over live by the content view, while the new ones arrive, as in a kept capsule whose
+        // items change.
+        var changedItems: [(role: Role, kind: SideKind, leaving: UIView)] = []
         if self.hasBegun {
             self.time = self.now
         }
@@ -358,7 +359,11 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     guard let previous, navigationBarCapsuleSignature(previous.content, role: role, columnLength: previous.columnFrame?.height, hidesColumnButtons: previous.hidesColumnButtons) != navigationBarCapsuleSignature(updated.content, role: role, columnLength: updated.columnFrame?.height, hidesColumnButtons: updated.hidesColumnButtons) else {
                         continue
                     }
-                    changedItems.append((role, items.side, navigationBarRenderedCopy(of: items.view)))
+                    let contentView = items.side == .bottom ? self.bottomContentView : self.topContentView
+                    guard let container = self.itemsContainer(of: items.view, kind: items.side, contentView: contentView) else {
+                        continue
+                    }
+                    changedItems.append((role, items.side, contentView.extractItems(of: container)))
                 }
             }
         }
@@ -372,7 +377,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             }
             let current = platter.items[index]
             let motion = self.motion
-            let leaving = Items(side: change.kind, view: change.copy, frame: current.frame, appearance: 0.0, motion: motion)
+            let leaving = Items(side: change.kind, view: change.leaving, frame: current.frame, appearance: 0.0, motion: motion)
             leaving.isLeaving = true
             leaving.maxScale = motion.matchScale
             leaving.appearance = leaving.appearance.retargeted(at: self.time, to: 1.0, spring: motion.transition)
@@ -437,9 +442,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
         }
         if let pill = side.titlePill, layout.frames[.trailingInner] == nil {
             // The title's glass pill (the chat header) is the bar's second right platter (asked 2026-10-15): it morphs
-            // with the other bar's platter at that index, a still copy of its contents as its items.
+            // with the other bar's platter at that index, its contents (lent live) as its items.
             layout.frames[.trailingInner] = pill.frame
-            layout.itemViews[.trailingInner] = pill.makeContentCopy()
+            layout.itemViews[.trailingInner] = pill.lendContent()
             layout.tints[.trailingInner] = navigationBarGlassTintColor(.generic, theme: side.theme)
             layout.signatures[.trailingInner] = ["titlePill", pill.signature]
         }
@@ -498,6 +503,17 @@ public final class NavigationBarPlatterTransitionView: UIView {
             badgeNode.removeFromSupernode()
         }
         return wrapper
+    }
+
+    /// The content view's container that a capsule's items view is (or, for iPhone Duo's back circle, wraps).
+    private func itemsContainer(of view: UIView, kind: SideKind, contentView: NavigationBarContentView) -> UIView? {
+        if view === self.columnBackWrappers[kind] {
+            return contentView.columnBackContainer
+        }
+        for container in [contentView.leftButtonsContainer, contentView.rightButtonsContainer, contentView.rightCircleContainer, contentView.columnButtonsContainer, contentView.columnTrailingContainer] where container === view {
+            return container
+        }
+        return nil
     }
 
     private func layout(_ side: SideKind) -> SideLayout {
@@ -1094,23 +1110,6 @@ public final class NavigationBarPlatterTransitionView: UIView {
             return ItemsState(isTop: items.side == .top, opacity: 1.0 - max(0.0, min(1.0, a)), scale: CGSize(width: 1.0 + a * (items.maxScale.width - 1.0), height: 1.0 + a * (items.maxScale.height - 1.0)), blur: items.blurRadius * max(0.0, min(1.0, a)))
         }
     }
-}
-
-/// A still copy of what `view` shows, to leave while the view itself changes. Rendered from the layer tree rather than
-/// snapshotted: a snapshot shows only what has been on screen, and a bar's items are swapped into a capsule the moment a
-/// transition begins, so items that change a frame later have never been drawn and their snapshot is blank.
-private func navigationBarRenderedCopy(of view: UIView) -> UIView {
-    let copy = UIImageView()
-    copy.isUserInteractionEnabled = false
-    let bounds = view.bounds
-    if bounds.width > 0.0 && bounds.height > 0.0 {
-        let format = UIGraphicsImageRendererFormat.preferred()
-        format.opaque = false
-        copy.image = UIGraphicsImageRenderer(bounds: bounds, format: format).image { context in
-            view.layer.render(in: context.cgContext)
-        }
-    }
-    return copy
 }
 
 /// What a capsule shows, to tell a change of its items, from where the bar places its buttons: the back button (with

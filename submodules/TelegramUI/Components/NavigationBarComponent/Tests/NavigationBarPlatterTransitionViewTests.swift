@@ -312,7 +312,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     // capsule (index 1) morphs into it as one shape, its icons swapping for the title, instead of collapsing into the
     // avatar.
     private func titlePill(_ frame: CGRect, contents: UIView) -> NavigationBarTransitionTitlePill {
-        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(contents), makeContentCopy: { contents })
+        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(contents), lendContent: { contents })
     }
 
     func test_titlePill_isTheSecondRightPlatter_theCapsuleMorphsIntoIt() {
@@ -761,10 +761,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(end.first?.opacity ?? 0.0, 1.0, accuracy: 0.001)
     }
 
-    // What leaves in that case is a copy of the items as they were. A bar's items are swapped into the capsule the moment
-    // the transition begins, so when they change a frame later they have never been drawn: a snapshot of them would be
-    // blank (on device the chevron vanished in one frame). The copy must show what the items showed.
-    func test_itemsChangingMidTransition_leaveAsTheyLooked() {
+    // What leaves in that case is the items as they were, live: their own views, handed over by the content view before
+    // it builds the new ones (never a still copy, which freezes what animates and, for items swapped in a frame earlier,
+    // shows nothing at all).
+    func test_itemsChangingMidTransition_leaveAsTheyWere_live() {
         let view = self.makeView(bottom: self.side(back: nil, left: self.button("first", color: .red), right: []), top: self.side(back: nil, left: self.button("first", color: .red), right: []))
         view.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 1.0 / 60.0)
@@ -773,25 +773,12 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
             XCTFail("nothing leaves")
             return
         }
-        let size = CGSize(width: 44.0, height: 44.0)
-        let format = UIGraphicsImageRendererFormat.preferred()
-        format.scale = 1.0
-        var pixel: [UInt8] = [0, 0, 0, 0]
-        // The copy's own image: its layer's model opacity is where it ends (gone), the motion being keyframes.
-        guard let copy = (leaving as? UIImageView)?.image else {
-            XCTFail("the copy has no image")
-            return
+        XCTAssertFalse(leaving is UIImageView)
+        func descendants(_ view: UIView) -> [UIView] {
+            return view.subviews + view.subviews.flatMap(descendants)
         }
-        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            copy.draw(in: CGRect(origin: CGPoint(), size: size))
-        }
-        if let cgImage = image.cgImage, let context = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
-            context.draw(cgImage, in: CGRect(x: -22.0, y: -22.0, width: 44.0, height: 44.0))
-        }
-        // The old (red) item, opaque.
-        XCTAssertGreaterThan(pixel[3], 200, "\(pixel)")
-        XCTAssertGreaterThan(pixel[0], 200, "\(pixel)")
-        XCTAssertLessThan(pixel[2], 50, "\(pixel)")
+        XCTAssertTrue(descendants(leaving).contains(where: { $0.backgroundColor == .red }), "the old (red) button's own view leaves")
+        XCTAssertFalse(descendants(leaving).contains(where: { $0.backgroundColor == .blue }))
     }
 
     // Under Reduce Motion SwiftUI's glass appears and disappears by opacity alone, with no scale or blur, for capsules and

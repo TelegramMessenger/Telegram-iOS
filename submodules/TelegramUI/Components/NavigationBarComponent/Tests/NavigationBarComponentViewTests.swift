@@ -520,6 +520,22 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertTrue(result?.isDescendant(of: done) ?? false, "\(String(describing: result))")
     }
 
+    // The items an in-place change replaces leave as themselves: the old button's own view, handed over by the content
+    // view (never a snapshot, which freezes what animates).
+    func test_inPlaceItemChange_oldItemsLeaveLive() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: nil, right: [self.fixedButton("edit")], transition: .immediate)
+        guard let edit = before.rightButtonViews["edit"] else {
+            XCTFail("no Edit button")
+            return
+        }
+        let view = self.updateBar(bar, back: nil, right: [self.fixedButton("search")], transition: .easeInOut(duration: 0.3))
+        let leaving = view.inPlaceLeavingViewsForTesting(slot: .right)
+        XCTAssertEqual(leaving.count, 1)
+        XCTAssertTrue(leaving.first.map { edit.isDescendant(of: $0) } ?? false, "\(leaving)")
+        XCTAssertFalse(view.rightButtonViews["search"]?.isDescendant(of: leaving.first ?? UIView()) ?? true)
+    }
+
     // A capsule the change removes (the back button entering edit mode) dematerializes, then leaves.
     func test_inPlaceCapsuleRemoval_dematerializes() {
         let bar = ComponentView<Empty>()

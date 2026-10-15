@@ -9,13 +9,15 @@ public struct NavigationBarTransitionTitlePill {
     public var frame: CGRect
     /// What it shows: two bars' pills with different signatures swap their contents.
     public var signature: AnyHashable
-    /// A still copy of its contents without the glass, at the pill's size.
-    public var makeContentCopy: () -> UIView
+    /// Its contents without the glass, at the pill's size: the live views, lent to the transition (the same view on
+    /// every call while the bar's glass is detached) and taken back by the bar. Never a still copy, which freezes what
+    /// animates (the chat title's emoji status) and is blank for a screen that is arriving.
+    public var lendContent: () -> UIView
 
-    public init(frame: CGRect, signature: AnyHashable, makeContentCopy: @escaping () -> UIView) {
+    public init(frame: CGRect, signature: AnyHashable, lendContent: @escaping () -> UIView) {
         self.frame = frame
         self.signature = signature
-        self.makeContentCopy = makeContentCopy
+        self.lendContent = lendContent
     }
 }
 

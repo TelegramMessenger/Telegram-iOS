@@ -36,13 +36,26 @@ private final class ExpansionContentNode: NavigationBarContentNode {
 /// A title on a glass pill, as the chat header draws one.
 private final class PillTitleView: UIView, NavigationBarGlassPillTitleView {
     var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
-    var isGlassPillDetached = false
+    /// What it has lent, until its pill is attached again.
+    private(set) var lentContent: UIView?
+    var isGlassPillDetached = false {
+        didSet {
+            if !self.isGlassPillDetached {
+                self.lentContent = nil
+            }
+        }
+    }
     let pillFrame = CGRect(x: 10.0, y: 6.0, width: 120.0, height: 44.0)
     var glassPillFrame: CGRect? {
         return self.pillFrame
     }
-    func makeGlassPillContentCopy() -> UIView? {
-        return UIView()
+    func lendGlassPillContent() -> UIView? {
+        if let lentContent = self.lentContent {
+            return lentContent
+        }
+        let view = UIView()
+        self.lentContent = view
+        return view
     }
     func animateLayoutTransition() {
     }
@@ -778,6 +791,21 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertTrue(titleView.isGlassPillDetached)
         let _ = node.holdGlass(false, interrupted: nil)
         XCTAssertFalse(titleView.isGlassPillDetached)
+    }
+
+    // The pill's contents are the title view's own, lent live while the transition draws the pill (a still copy froze the
+    // chat title's animated emoji status), the same view throughout, and given back when the transition ends.
+    func test_glassPillTitle_contentsAreLentLive() {
+        let (node, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
+        node.updateTransition(role: .top, fraction: 0.0, transition: .immediate)
+        let pill = node.componentTransitionState?.titlePill
+        let content = pill?.lendContent()
+        XCTAssertNotNil(titleView.lentContent)
+        XCTAssertTrue(content === titleView.lentContent)
+        XCTAssertTrue(pill?.lendContent() === content)
+        node.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
+        XCTAssertFalse(titleView.isGlassPillDetached)
+        XCTAssertNil(titleView.lentContent)
     }
 
     // With two right platters already (an accent circle and a capsule) the pill has no slot: not reported, never hidden.

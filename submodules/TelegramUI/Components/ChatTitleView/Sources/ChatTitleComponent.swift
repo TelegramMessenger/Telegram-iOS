@@ -91,7 +91,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
     }
 
     /// The header's glass pill: in a navigation transition it is the bar's second right platter, which the transition
-    /// draws (with a still copy of what it shows) while this view hides it.
+    /// draws (showing what it shows, lent live) while this view hides it.
     public var glassPillFrame: CGRect? {
         guard let titleView = self.title.view as? ChatTitleComponent.View, let frame = titleView.glassPillFrame else {
             return nil
@@ -105,8 +105,8 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         }
     }
 
-    public func makeGlassPillContentCopy() -> UIView? {
-        return (self.title.view as? ChatTitleComponent.View)?.makeGlassPillContentCopy()
+    public func lendGlassPillContent() -> UIView? {
+        return (self.title.view as? ChatTitleComponent.View)?.lendGlassPillContent()
     }
 
     public func prepareSnapshotState() -> ChatTitleView.SnapshotState? {
@@ -328,14 +328,20 @@ public final class ChatTitleComponent: Component {
     public final class View: UIView {
         private var backgroundView: GlassBackgroundView?
         private let contentContainer: UIView
-        /// While a navigation transition draws the pill, the pill and what it shows are hidden.
+        /// While a navigation transition draws the pill, the pill is hidden and what it shows is lent to the transition
+        /// (`lendGlassPillContent`); it is taken back when the pill is attached again.
         var isGlassPillDetached: Bool = false {
             didSet {
                 if self.isGlassPillDetached != oldValue {
                     self.backgroundView?.isHidden = self.isGlassPillDetached
+                    if !self.isGlassPillDetached {
+                        self.reclaimGlassPillContent()
+                    }
                 }
             }
         }
+        /// The wrapper the content container is lent in while the pill is detached.
+        private var lentContentWrapper: UIView?
 
         /// The pill's frame in this view, nil without one.
         var glassPillFrame: CGRect? {
@@ -345,20 +351,35 @@ public final class ChatTitleComponent: Component {
             return backgroundView.frame
         }
 
-        /// A still copy of what the pill shows, without its glass, at the pill's size.
-        func makeGlassPillContentCopy() -> UIView? {
-            guard let frame = self.glassPillFrame, frame.width > 0.0, frame.height > 0.0 else {
+        /// What the pill shows (the title, its icons, the status line), live, in a wrapper the transition places and
+        /// animates: the content container itself, so an animated emoji status or a typing indicator goes on moving. Only
+        /// while the pill is detached; the same wrapper for the whole detachment.
+        func lendGlassPillContent() -> UIView? {
+            guard self.isGlassPillDetached, let frame = self.glassPillFrame else {
                 return nil
             }
-            let format = UIGraphicsImageRendererFormat()
-            format.opaque = false
-            // The content container fills the pill; drawn from its own layer, whether or not the pill is hidden.
-            let image = UIGraphicsImageRenderer(size: frame.size, format: format).image { context in
-                self.contentContainer.layer.render(in: context.cgContext)
+            if let current = self.lentContentWrapper {
+                return current
             }
-            let view = UIImageView(image: image)
-            view.frame = CGRect(origin: CGPoint(), size: frame.size)
-            return view
+            let wrapper = UIView(frame: CGRect(origin: CGPoint(), size: frame.size))
+            wrapper.isUserInteractionEnabled = false
+            wrapper.addSubview(self.contentContainer)
+            self.contentContainer.frame = CGRect(origin: CGPoint(), size: frame.size)
+            self.lentContentWrapper = wrapper
+            return wrapper
+        }
+
+        private func reclaimGlassPillContent() {
+            guard self.lentContentWrapper != nil else {
+                return
+            }
+            self.lentContentWrapper = nil
+            if let backgroundView = self.backgroundView {
+                backgroundView.contentView.addSubview(self.contentContainer)
+                self.contentContainer.frame = CGRect(origin: CGPoint(), size: backgroundView.bounds.size)
+            } else {
+                self.addSubview(self.contentContainer)
+            }
         }
         private let title = ComponentView<Empty>()
         private var subtitleNode: ChatTitleActivityNode?
@@ -1281,22 +1302,29 @@ public final class ChatTitleComponent: Component {
                     backgroundView = GlassBackgroundView()
                     self.backgroundView = backgroundView
                     self.addSubview(backgroundView)
-                    backgroundView.contentView.addSubview(self.contentContainer)
+                    if self.lentContentWrapper == nil {
+                        backgroundView.contentView.addSubview(self.contentContainer)
+                    }
                     backgroundView.isHidden = self.isGlassPillDetached
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, transition: transition)
-                transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+                // Not while a transition has it (`lendGlassPillContent`): the transition places it.
+                if self.lentContentWrapper == nil {
+                    transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+                }
                 self.contentContainer.layer.cornerRadius = containerFrame.height * 0.5
             } else {
                 if let backgroundView = self.backgroundView {
                     self.backgroundView = nil
                     backgroundView.removeFromSuperview()
                 }
-                if self.contentContainer.superview !== self {
-                    self.addSubview(self.contentContainer)
+                if self.lentContentWrapper == nil {
+                    if self.contentContainer.superview !== self {
+                        self.addSubview(self.contentContainer)
+                    }
+                    transition.setFrame(view: self.contentContainer, frame: containerFrame)
                 }
-                transition.setFrame(view: self.contentContainer, frame: containerFrame)
                 self.contentContainer.layer.cornerRadius = 0.0
             }
             

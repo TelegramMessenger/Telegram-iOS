@@ -383,7 +383,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         guard !frame.isEmpty else {
             return nil
         }
-        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(self.segmentNode), makeContentCopy: { [weak self] in
+        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(self.segmentNode), lendContent: { [weak self] in
             // The live tabs, lent for as long as the transition draws the island (one wrapper per transition).
             guard let self, self.transitionRole != nil || self.glassHold.isHeld else {
                 return UIView()

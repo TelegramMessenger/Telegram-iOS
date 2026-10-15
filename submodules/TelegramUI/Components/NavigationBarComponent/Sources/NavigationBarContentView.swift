@@ -116,6 +116,26 @@ final class NavigationBarContentView: UIView {
         return nil
     }
 
+    /// Hands over what `container` shows now (its buttons, the back button), live, in a new view at the container's
+    /// frame, and forgets those views, so the next `update` builds the items anew: what leaves while a side's items
+    /// change. Never a still copy, which freezes what animates and shows nothing for items not drawn yet.
+    func extractItems(of container: UIView) -> UIView {
+        let extracted = UIView(frame: container.frame)
+        extracted.isUserInteractionEnabled = false
+        for view in container.subviews {
+            extracted.addSubview(view)
+        }
+        if let backButtonView = self.backButtonView, backButtonView.superview === extracted {
+            self.backButtonView = nil
+        }
+        self.leftButtonViews = self.leftButtonViews.filter { $0.value.view?.superview !== extracted }
+        self.rightButtonViews = self.rightButtonViews.filter { $0.value.view?.superview !== extracted }
+        if let overflowButtonView = self.overflowButtonView, overflowButtonView.view?.superview === extracted {
+            self.overflowButtonView = nil
+        }
+        return extracted
+    }
+
     /// The in-bar slide, as the content being covered: its buttons fade and blur, its title slides out left.
     func updateTransitionAsPrevious(width: CGFloat, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
         let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)

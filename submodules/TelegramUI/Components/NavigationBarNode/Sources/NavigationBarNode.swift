@@ -282,8 +282,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         }
         // The title host and the row host share a frame, so the title view's frame is in the row's coordinates.
         let frame = titleView.convert(pillFrame, to: self.titleHost)
-        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(titleView), makeContentCopy: { [weak titleView] in
-            return titleView?.makeGlassPillContentCopy() ?? UIView()
+        // Its contents are lent live while the bar's glass is detached; the title view takes them back when it is not.
+        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(titleView), lendContent: { [weak titleView] in
+            return titleView?.lendGlassPillContent() ?? UIView()
         })
     }
 

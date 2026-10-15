@@ -202,8 +202,9 @@ extension NavigationBarComponent.View {
         return CGRect(x: layer.position.x - layer.bounds.width * 0.5, y: layer.position.y - layer.bounds.height * 0.5, width: layer.bounds.width, height: layer.bounds.height)
     }
 
-    /// What a side shows now, as a snapshot at its resting frame: what leaves when the side's items change in place.
-    /// Call before the content view takes the new items.
+    /// What a side shows now, its own views handed over by the content view (never a snapshot, which freezes what
+    /// animates), at its resting frame: what leaves when the side's items change in place. Call before the content view
+    /// takes the new items.
     func inPlaceLeavingItems(slot: NavigationBarCapsuleSlot) -> NavigationBarInPlaceCapsule.Items? {
         guard let container = self.inPlaceContainer(slot), let contentView = self.primaryContentView else {
             return nil
@@ -217,8 +218,7 @@ extension NavigationBarComponent.View {
         case .rightCircle:
             source = contentView.rightCircleContainer
         }
-        let view = source.snapshotView(afterScreenUpdates: false) ?? UIView()
-        view.isUserInteractionEnabled = false
+        let view = contentView.extractItems(of: source)
         let capsule = self.inPlaceCapsule(for: container)
         let capsuleFrame = capsule?.targetFrame ?? container.frame
         // Items still materializing leave from where they got to.
@@ -447,6 +447,11 @@ extension NavigationBarComponent.View {
             return nil
         }
         return InPlaceState(frame: capsule.frame, pulse: capsule.pulse?.scale ?? CGSize(width: 1.0, height: 1.0), itemsAlpha: capsule.items.map { 1.0 - max(0.0, min(1.0, $0.appearance.value)) })
+    }
+
+    /// The views of the items leaving `slot`'s capsule.
+    func inPlaceLeavingViewsForTesting(slot: NavigationBarCapsuleSlot) -> [UIView] {
+        return self.inPlaceCapsules.first(where: { $0.slot == slot })?.leaving.map { $0.view } ?? []
     }
 
     func inPlaceStateForTesting(isLeft: Bool) -> InPlaceState? {
