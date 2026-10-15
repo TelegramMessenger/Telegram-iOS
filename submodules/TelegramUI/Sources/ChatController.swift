@@ -110,7 +110,6 @@ import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
-import ChatSideColumnLayout
 import WebsiteType
 import PeerInfoScreen
 import MediaEditor
@@ -241,11 +240,6 @@ struct ScrolledToMessageId: Equatable {
 }
 
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
-    /// iPhone Duo: this screen lays out its own side column, back button included.
-    override public var placesNavigationButtonInSideColumn: Bool {
-        return false
-    }
-    
     var validLayout: ContainerViewLayout?
     
     public weak var parentController: ViewController?
@@ -745,7 +739,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .inline, .standard(.embedded):
             navigationBarPresentationData = nil
         default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: false, hideBadge: false, style: .glass, glassStyle: .default)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: false, hideBadge: false, glassStyle: .default)
         }
         
         self.moreBarButton = MoreHeaderButton(color: self.presentationData.theme.chat.inputPanel.panelControlColor)
@@ -6043,19 +6037,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.walletTransferAnimation?.cancelArrival(id)
         }
         
-        self.navigationBar?.allowsCustomTransition = { [weak self] in
-            guard let strongSelf = self else {
-                return false
-            }
-            if strongSelf.navigationBar?.userInfo == nil {
-                return false
-            }
-            if strongSelf.navigationBar?.contentNode != nil {
-                return false
-            }
-            return true
-        }
-        
         self.chatTitleView = ChatNavigationBarTitleView(frame: CGRect())
         
         self.navigationItem.titleView = self.chatTitleView
@@ -7219,17 +7200,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             transition.updateCornerRadius(layer: self.view.layer, cornerRadius: 0.0)
         }
         
-        if let navigationBar = self.navigationBar {
-            let nodes = [
-                navigationBar.backButtonNode,
-                navigationBar.backButtonArrow,
-                navigationBar.badgeNode,
-                navigationBar.rightButtonNode
-            ]
-            for node in nodes {
-                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            }
-        }
+        self.navigationBar?.animateButtonsIn(duration: 0.3)
         
         self.canReadHistory.set(true)
         
@@ -7306,10 +7277,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let presentationTheme: PresentationTheme
         if let forcedNavigationBarTheme = self.forcedNavigationBarTheme {
             presentationTheme = forcedNavigationBarTheme
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: forcedNavigationBarTheme, hideBackground: false, hideBadge: true, edgeEffectColor: .clear, style: .glass, glassStyle: self.presentationInterfaceState.preferredGlassType == .clear ? .clear : .default)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: forcedNavigationBarTheme, hideBadge: true, edgeEffectColor: .clear, glassStyle: self.presentationInterfaceState.preferredGlassType == .clear ? .clear : .default)
         } else {
             presentationTheme = self.presentationData.theme
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: false, hideBadge: false, edgeEffectColor: .clear, style: .glass, glassStyle: self.presentationInterfaceState.preferredGlassType == .clear ? .clear : .default)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBadge: false, edgeEffectColor: .clear, glassStyle: self.presentationInterfaceState.preferredGlassType == .clear ? .clear : .default)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), transition: .immediate)
@@ -7745,10 +7716,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if !chatNavigationStack.isEmpty, let backButtonNode = self.chatDisplayNode.navigationBar?.backButtonNode as? ContextControllerSourceNode {
-            backButtonNode.isGestureEnabled = true
-            backButtonNode.activated = { [weak self] gesture, _ in
-                guard let strongSelf = self, let backButtonNode = strongSelf.chatDisplayNode.navigationBar?.backButtonNode, let navigationController = strongSelf.effectiveNavigationController else {
+        if !chatNavigationStack.isEmpty {
+            self.chatDisplayNode.navigationBar?.backButtonContextAction = { [weak self] sourceView, gesture in
+                guard let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController else {
                     gesture.cancel()
                     return
                 }
@@ -7758,7 +7728,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     chatNavigationStack: chatNavigationStack,
                     nextFolderId: nextFolderId,
                     parentController: strongSelf,
-                    backButtonView: backButtonNode.view,
+                    backButtonView: sourceView,
                     navigationController: navigationController,
                     gesture: gesture
                 )
@@ -8416,18 +8386,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var suspendedNavigationBarLayout: ContainerViewLayout?
     var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
     var additionalNavigationBarHitTestSlop: CGFloat = 0.0
-    var additionalNavigationBarCutout: CGSize?
-    /// iPhone Duo: the side strip the chat's column goes in and its bar sits beside (nil elsewhere).
-    var sideColumnStripEdge: ContainerViewLayoutSideEdge?
-    /// Set while `containerLayoutUpdated` updates the column, which it lays out right after.
-    var isUpdatingSideColumnInLayout = false
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
             self.suspendedNavigationBarLayout = layout
             return
         }
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
     }
     
     override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
@@ -8453,21 +8418,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.validLayout = layout
         
-        // iPhone Duo: the column and the bar follow the side strip.
-        let sideColumnStripEdge = chatSideColumnStripEdge(layout)
-        self.isUpdatingSideColumnInLayout = true
-        defer {
-            self.isUpdatingSideColumnInLayout = false
-        }
-        if sideColumnStripEdge != self.sideColumnStripEdge {
-            self.sideColumnStripEdge = sideColumnStripEdge
-            self.navigationItem.setLeftBarButton(self.barLeftItem(), animated: false)
-            self.updateRightNavigationButtons(presentationInterfaceState: self.presentationInterfaceState, transition: .immediate)
-        } else {
-            // The previous item (back or close) is set by the navigation container around layout.
-            self.updateSideColumn()
-        }
-        
         switch self.presentationInterfaceState.mode {
         case .standard, .inline:
             break
@@ -8490,11 +8440,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, cutout, extraNavigationTransition in
+        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, extraNavigationTransition in
             navigationBarTransition = extraNavigationTransition
             self.additionalNavigationBarBackgroundHeight = value
             self.additionalNavigationBarHitTestSlop = hitTestSlop
-            self.additionalNavigationBarCutout = cutout
         })
         
         if case .compact = layout.metrics.widthClass {
@@ -8513,7 +8462,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: navigationBarTransition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
     }

@@ -44,7 +44,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerSelectionController",
         "//submodules/TelegramUI/Components/ContextMenuScreen",
         "//submodules/TelegramUI/Components/ContextControllerImpl",
-        "//submodules/TelegramUI/Components/NavigationBarImpl",
+        "//submodules/TelegramUI/Components/NavigationBarNode",
     ],
     visibility = [
         "//visibility:public",

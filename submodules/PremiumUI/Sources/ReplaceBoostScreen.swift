@@ -381,7 +381,7 @@ public class ReplaceBoostScreen: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -412,7 +412,7 @@ public class ReplaceBoostScreen: ViewController {
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = self.scrollView.contentOffset.y
-            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
             
             self.updateFooterAlpha()
         }
@@ -979,7 +979,7 @@ public class ReplaceBoostScreen: ViewController {
         
         layout.statusBarHeight = nil
         
-        self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, additionalCutout: nil, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, transition: transition)
     }
     
     /// The bar is moved into the sheet and moves with it, so its close button stays in it rather than in a side strip

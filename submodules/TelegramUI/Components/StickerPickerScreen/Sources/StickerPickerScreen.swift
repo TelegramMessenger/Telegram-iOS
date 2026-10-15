@@ -1588,7 +1588,7 @@ public class StickerPickerScreen: ViewController {
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
             if let controller = self.controller {
-                controller.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+                controller.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
             }
         }
         

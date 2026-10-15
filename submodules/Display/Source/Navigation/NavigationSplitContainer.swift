@@ -58,7 +58,7 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.detailContainer.clipsToBounds = true
         
         self.separator = ASDisplayNode()
-        self.separator.backgroundColor = theme.navigationBar.separatorColor
+        self.separator.backgroundColor = theme.separatorColor
         
         super.init()
         
@@ -78,7 +78,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     }
     
     func updateTheme(theme: NavigationControllerTheme) {
-        self.separator.backgroundColor = theme.navigationBar.separatorColor
+        self.separator.backgroundColor = theme.separatorColor
     }
     
     /// The master controllers highlight the chat the detail pane shows (`updateNavigationCustomData`);

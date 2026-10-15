@@ -169,9 +169,45 @@ public final class KeyboardViewManager {
         guard let keyboardWindow = self.host.keyboardWindow else {
             return
         }
-        let t = keyboardWindow.layer.sublayerTransform
-        let currentOffset = CGPoint(x: t.m41, y: t.m42)
-        transition.updateSublayerTransformOffset(layer: keyboardWindow.layer, offset: CGPoint(x: leftEdge, y: currentOffset.y), completion: { _ in
-        })
+        applyNavigationKeyboardLeftEdge(layer: keyboardWindow.layer, leftEdge: leftEdge, transition: transition)
     }
+
+    /// The keyboard follows a transition's screen on the render server: `leftEdges` at `timing`'s samples.
+    public func animate(leftEdges: [CGFloat], timing: NavigationKeyframeTiming) {
+        guard let keyboardWindow = self.host.keyboardWindow else {
+            return
+        }
+        applyNavigationKeyboardLeftEdges(layer: keyboardWindow.layer, leftEdges: leftEdges, timing: timing)
+    }
+
+}
+
+/// The key of a navigation transition's keyboard keyframes on the keyboard window's layer.
+let navigationKeyboardTransitionKey = "navigationTransition.sublayerTransform"
+
+/// Puts the keyboard's left edge at `leftEdge`; a new edge supersedes a transition's keyboard keyframes (a forced ending
+/// lays the screens out at their end, and the keyboard goes with them).
+func applyNavigationKeyboardLeftEdge(layer: CALayer, leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
+    layer.removeAnimation(forKey: navigationKeyboardTransitionKey)
+    let current = layer.sublayerTransform
+    transition.updateSublayerTransformOffset(layer: layer, offset: CGPoint(x: leftEdge, y: current.m42), completion: { _ in
+    })
+}
+
+/// The keyboard's left edge along `leftEdges` at `timing`'s samples, on the render server; the model is the last edge.
+func applyNavigationKeyboardLeftEdges(layer: CALayer, leftEdges: [CGFloat], timing: NavigationKeyframeTiming) {
+    guard let last = leftEdges.last else {
+        return
+    }
+    let current = layer.sublayerTransform
+    func transform(_ edge: CGFloat) -> CATransform3D {
+        var result = current
+        result.m41 = edge
+        return result
+    }
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    layer.sublayerTransform = transform(last)
+    CATransaction.commit()
+    addNavigationKeyframes(to: layer, key: navigationKeyboardTransitionKey, keyPath: "sublayerTransform", values: leftEdges.map { NSValue(caTransform3D: transform($0)) }, timing: timing)
 }

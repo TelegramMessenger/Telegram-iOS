@@ -18,6 +18,7 @@ import ItemListUI
 import ChatListUI
 import QuickReplyNameAlertController
 import ChatListHeaderComponent
+import NavigationBarComponent
 import PlainButtonComponent
 import MultilineTextComponent
 import AttachmentUI
@@ -513,6 +514,11 @@ final class QuickReplySetupScreenComponent: Component {
         private var emptySearchState: ComponentView<Empty>?
         
         private let navigationBarView = ComponentView<Empty>()
+
+        /// The chat-list-style header, for navigation transitions.
+        var navigationTransitionHeader: ChatListNavigationBar.View? {
+            return self.navigationBarView.view as? ChatListNavigationBar.View
+        }
         private var navigationHeight: CGFloat?
         
         private var searchBarNode: SearchBarNode?
@@ -736,12 +742,12 @@ final class QuickReplySetupScreenComponent: Component {
             transition: ComponentTransition,
             deferScrollApplication: Bool
         ) -> CGFloat {
-            var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            var rightButtons: [NavigationBarComponent.Button] = []
             if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
                 if self.isEditing {
-                    rightButtons.append(AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                    rightButtons.append(NavigationBarComponent.Button(id: "done",
                         content: .text(title: strings.Common_Done, isBold: true),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             guard let self else {
                                 return
                             }
@@ -749,18 +755,18 @@ final class QuickReplySetupScreenComponent: Component {
                             self.selectedIds.removeAll()
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }
-                    ))))
+                    ))
                 } else {
-                    rightButtons.append(AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                    rightButtons.append(NavigationBarComponent.Button(id: "edit",
                         content: .text(title: strings.Common_Edit, isBold: false),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             guard let self else {
                                 return
                             }
                             self.isEditing = true
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }
-                    ))))
+                    ))
                 }
             }
             
@@ -773,12 +779,11 @@ final class QuickReplySetupScreenComponent: Component {
             
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
                 title: titleText,
-                navigationBackTitle: nil,
                 titleComponent: nil,
                 chatListTitle: nil,
-                leftButton: isModal ? AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                leftButton: isModal ? NavigationBarComponent.Button(id: "close",
                     content: .icon(imageName: "Navigation/Close"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         guard let self else {
                             return
                         }
@@ -786,7 +791,7 @@ final class QuickReplySetupScreenComponent: Component {
                             self.environment?.controller()?.dismiss()
                         }
                     }
-                ))) : nil,
+                ) : nil,
                 rightButtons: rightButtons,
                 backPressed: isModal ? nil :{ [weak self] in
                     guard let self else {
@@ -1293,6 +1298,14 @@ final class QuickReplySetupScreenComponent: Component {
 }
 
 public final class QuickReplySetupScreen: ViewControllerComponentContainer, AttachmentContainable {
+
+    /// Draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? QuickReplySetupScreenComponent.View)?.navigationTransitionHeader
+    }
     public final class InitialData: QuickReplySetupScreenInitialData {
         let accountPeer: EnginePeer?
         let shortcutMessageList: ShortcutMessageList

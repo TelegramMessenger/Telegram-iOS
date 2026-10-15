@@ -24,6 +24,7 @@ import AlertUI
 import UndoUI
 import ChatListUI
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import ContextUI
 import SearchUI
@@ -1866,6 +1867,11 @@ private final class CommunityViewScreenComponent: Component {
         private let fullscreenBottomItem = ComponentView<Empty>()
         private let bottomEdgeEffectView = EdgeEffectView()
         private let navigationBarView = ComponentView<Empty>()
+
+        /// The chat-list-style header, for navigation transitions.
+        var navigationTransitionHeader: ChatListNavigationBar.View? {
+            return self.navigationBarView.view as? ChatListNavigationBar.View
+        }
         private let searchOverlayNode = ASDisplayNode()
         private let sheetBoundsUpdated = ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>()
         /// iPhone Duo: how far the sheet's navigation bar moves its trailing buttons to clear a top-right corner block it
@@ -2831,34 +2837,29 @@ private final class CommunityViewScreenComponent: Component {
 
             let title = self.community?.title ?? environment.strings.Community_View_Title
                         
-            let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
+            let leftButton: NavigationBarComponent.Button?
             let backPressed: (() -> Void)?
-            let navigationBackTitle: String?
             if component.mode.isPreview {
                 leftButton = nil
                 backPressed = nil
-                navigationBackTitle = nil
             } else {
                 switch component.mode {
                 case .sheet:
-                    leftButton = AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                    leftButton = NavigationBarComponent.Button(id: "close",
                         content: .icon(imageName: "Navigation/Close"),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             self?.dismiss(animated: true)
                         }
-                    )))
+                    )
                     backPressed = nil
-                    navigationBackTitle = nil
                 case .fullscreen:
                     leftButton = nil
                     backPressed = { [weak self] in
                         self?.dismiss(animated: true)
                     }
-                    navigationBackTitle = environment.strings.Common_Back
                 case .preview:
                     leftButton = nil
                     backPressed = nil
-                    navigationBackTitle = nil
                 }
             }
 
@@ -2873,27 +2874,26 @@ private final class CommunityViewScreenComponent: Component {
                 )), at: 0)
             }
             
-            var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            var rightButtons: [NavigationBarComponent.Button] = []
             if component.mode.usesSheetPresentation && !component.mode.isPreview && component.selectionOptions == nil {
-                rightButtons.append(AnyComponentWithIdentity(id: "search", component: AnyComponent(NavigationButtonComponent(
+                rightButtons.append(NavigationBarComponent.Button(id: "search",
                     content: .icon(imageName: "Navigation/Search"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.activateSearch(searchContentNode: nil)
                     }
-                ))))
+                ))
             }
             if self.isAdmin && !component.mode.isPreview && component.selectionOptions == nil {
-                rightButtons.append(AnyComponentWithIdentity(id: "settings", component: AnyComponent(NavigationButtonComponent(
+                rightButtons.append(NavigationBarComponent.Button(id: "settings",
                     content: .icon(imageName: "Media Editor/Adjustments"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.openEdit()
                     }
-                ))))
+                ))
             }
 
             let primaryContent = ChatListHeaderComponent.Content(
                 title: title,
-                navigationBackTitle: navigationBackTitle,
                 titleComponent: AnyComponent(
                     HStack(titleItems, spacing: 7.0)
                 ),
@@ -3425,6 +3425,14 @@ private final class CommunityViewScreenComponent: Component {
 }
 
 public final class CommunityViewScreenImpl: ViewControllerComponentContainer, CommunityViewScreen {
+
+    /// Draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? CommunityViewScreenComponent.View)?.navigationTransitionHeader
+    }
     public init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions? = nil) {
         super.init(
             context: context,

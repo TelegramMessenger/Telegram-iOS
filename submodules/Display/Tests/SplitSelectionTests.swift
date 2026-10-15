@@ -36,8 +36,8 @@ final class SplitSelectionTests: XCTestCase {
     }
 
     private func makeSplitContainer() -> NavigationSplitContainer {
-        let navigationBar = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .blue, disabledButtonColor: .gray, primaryTextColor: .black, backgroundColor: .white, enableBackgroundBlur: false, separatorColor: .gray, badgeBackgroundColor: .red, badgeStrokeColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white)
-        return NavigationSplitContainer(theme: NavigationControllerTheme(statusBar: .black, navigationBar: navigationBar, emptyAreaColor: .white), controllerRemoved: { _ in })
+        let navigationBar = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .blue, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white)
+        return NavigationSplitContainer(theme: NavigationControllerTheme(statusBar: .black, navigationBar: navigationBar, emptyAreaColor: .white, separatorColor: .gray, opaqueBackgroundColor: .white), controllerRemoved: { _ in })
     }
 
     private var unfoldedLandscape: ContainerViewLayout {

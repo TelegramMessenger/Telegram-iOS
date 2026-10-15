@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import Display
-import ChatSideColumnLayout
+import SideColumnLayout
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -305,7 +305,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         
     let navigateButtons: ChatHistoryNavigationButtons
-    let sideColumnNode = ChatSideColumnNode()
     
     private var ignoreUpdateHeight = false
     private var overrideUpdateTextInputHeightTransition: ContainedViewLayoutTransition?
@@ -947,7 +946,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.wrappingNode.contentNode.addSubnode(self.messageTransitionNode.overlayContainerNode)
 
         self.contentContainerNode.contentNode.addSubnode(self.navigateButtons)
-        self.contentContainerNode.contentNode.addSubnode(self.sideColumnNode)
         self.wrappingNode.contentNode.addSubnode(self.presentationContextMarker)
         self.contentContainerNode.contentNode.addSubnode(self.contentDimNode)
         
@@ -1202,7 +1200,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.wrappingNode.update(size: layout.size, cornerRadius: layout.deviceMetrics.screenCornerRadius, transition: .immediate)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, CGFloat, CGSize?, ContainedViewLayoutTransition) -> Void) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, CGFloat, ContainedViewLayoutTransition) -> Void) {
         let transition: ContainedViewLayoutTransition
         if let _ = self.scheduledAnimateInAsOverlayFromNode {
             transition = .immediate
@@ -1877,12 +1875,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let inputPanelBottomInset = max(insets.bottom, inputPanelBottomInsetTerm)
         
-        // iPhone Duo: the column's frames, and the input panel's side insets for its band (it runs into
-        // the strip where the bottom corner has no block, never under the column).
-        let sideColumnFrames = layout.sideColumnFrames(itemSize: CGSize(width: 48.0, height: 48.0), spacing: 12.0, count: self.sideColumnNode.itemCount, minY: (layout.statusBarHeight ?? 0.0) + 8.0)
+        // iPhone Duo: the input panel's side insets for its band: it runs into the strip where the bottom corner has no
+        // block, never under the bar's side column.
+        let sideColumnExtent = self.controller?.navigationBarSideColumnExtent(layout: layout).map { (edge: $0.edge, maxY: $0.frame.maxY) }
         let inputPanelBandMaxY = layout.size.height - inputPanelBottomInset
         let inputPanelBandMinY = inputPanelBandMaxY - max(44.0, self.inputPanelNode?.frame.height ?? 0.0)
-        let inputPanelSideInsets = chatInputPanelSideInsets(layout: layout, bandMinY: inputPanelBandMinY, bandMaxY: inputPanelBandMaxY, column: sideColumnFrames)
+        let inputPanelSideInsets = sideColumnBandInsets(layout: layout, bandMinY: inputPanelBandMinY, bandMaxY: inputPanelBandMaxY, column: sideColumnExtent)
         
         if let inputPanelNode = inputPanelNodes.primary, !previewing {
             if inputPanelNode !== self.inputPanelNode {
@@ -2105,7 +2103,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
 
-        updateExtraNavigationBarBackgroundHeight(0.0, 0.0, nil, transition)
+        updateExtraNavigationBarBackgroundHeight(0.0, 0.0, transition)
         
         var sidePanelTopInset: CGFloat = insets.top - 4.0
         
@@ -2723,7 +2721,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         let navigateButtonsMinY = layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 20.0
         // iPhone Duo: beside a free bottom corner the input panel runs into the strip; the buttons follow it
         // (and keep the strip beside the column). Without corner blocks this is the plain safe inset.
-        let navigateButtonsRightInset = chatInputPanelSideInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnFrames).right
+        let navigateButtonsRightInset = sideColumnBandInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnExtent).right
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsRightInset - navigateButtonsSize.width - 8.0, y: navigateButtonsMinY), size: navigateButtonsSize)
         if containerInsets.bottom <= 32.0 {
             navigateButtonsFrame.origin.x -= 18.0
@@ -2732,8 +2730,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
         
-        transition.updateFrame(node: self.sideColumnNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.sideColumnNode.updateLayout(containerSize: layout.size, frames: sideColumnFrames?.frames ?? [], isHidden: self.chatPresentationInterfaceState.search != nil, transition: transition)
         
         var apparentInputPanelFrame = inputPanelFrame
         let apparentSecondaryInputPanelFrame = secondaryInputPanelFrame
@@ -4588,7 +4584,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
                 self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-            }, updateExtraNavigationBarBackgroundHeight: { _, _, _, _ in
+            }, updateExtraNavigationBarBackgroundHeight: { _, _, _ in
             })
         }
     }
@@ -5699,7 +5695,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         let avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
         let titleAccessoryPanelSnapshot: UIView?
-        let navigationBarHeight: CGFloat
         let inputPanelNodeSnapshot: UIView?
 
         fileprivate init(
@@ -5709,7 +5704,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
             titleAccessoryPanelSnapshot: UIView?,
-            navigationBarHeight: CGFloat,
             inputPanelNodeSnapshot: UIView?
         ) {
             self.backgroundNode = backgroundNode
@@ -5718,7 +5712,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.avatarSnapshotState = avatarSnapshotState
             self.navigationButtonsSnapshotState = navigationButtonsSnapshotState
             self.titleAccessoryPanelSnapshot = titleAccessoryPanelSnapshot
-            self.navigationBarHeight = navigationBarHeight
             self.inputPanelNodeSnapshot = inputPanelNodeSnapshot
         }
     }
@@ -5740,7 +5733,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             avatarSnapshotState: avatarSnapshotState,
             navigationButtonsSnapshotState: self.navigateButtons.prepareSnapshotState(),
             titleAccessoryPanelSnapshot: titleAccessoryPanelSnapshot,
-            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0,
             inputPanelNodeSnapshot: inputPanelNodeSnapshot
         )
     }
@@ -5761,16 +5753,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -titleAccessoryPanelSnapshot.bounds.height), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak titleAccessoryPanelSnapshot] _ in
                 titleAccessoryPanelSnapshot?.removeFromSuperview()
             })
-        }
-
-        if let navigationBar = self.navigationBar {
-            let currentFrame = navigationBar.backgroundNode.frame
-            var previousFrame = currentFrame
-            previousFrame.size.height = snapshotState.navigationBarHeight
-            if previousFrame != currentFrame {
-                navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
-                navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
-            }
         }
 
         if let inputPanelNode = self.inputPanelNode, let inputPanelNodeSnapshot = snapshotState.inputPanelNodeSnapshot {

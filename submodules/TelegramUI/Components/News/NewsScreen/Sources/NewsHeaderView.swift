@@ -7,6 +7,7 @@ import AccountContext
 import TelegramPresentationData
 import SearchUI
 import ChatListHeaderComponent
+import NavigationBarComponent
 import GlassBackgroundComponent
 import EdgeEffect
 import NewsFeedSupport
@@ -18,8 +19,11 @@ import NewsFeedSupport
 /// - the mockup's static header gradient;
 /// - the top row (the tabs island and "…"), which never moves.
 ///
-/// The view covers the screen and takes only its children's touches.
-final class NewsHeaderView: UIView {
+/// The view covers the screen and takes only its children's touches. In a navigation transition the top row is the
+/// bar: it is lifted above both screens, its "…" capsule drawn by the transition's glass and its island taking part as
+/// the bar's title pill (it morphs with the other screen's, a chat's header), while the search block, the shutter and
+/// the edges ride this screen.
+final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
     struct Params {
         let context: AccountContext
         let theme: PresentationTheme
@@ -63,8 +67,17 @@ final class NewsHeaderView: UIView {
     let shutterView = UIView()
     private let softEdgeView = EdgeEffectView()
     private let gradientView = EdgeEffectView()
+    /// The top row's content: what a navigation transition lifts.
+    private let rowContentView = UIView()
     private let buttonsContainer = GlassBackgroundContainerView()
     private let buttons = ComponentView<Empty>()
+    private var isContentLifted = false
+    private var transitionRole: NavigationBarTransitionRole?
+    private let glassHold = NavigationBarGlassHold()
+    /// The island's tabs lent to the transition that draws the island (`NewsSegmentNode.lendTabs`), in a wrapper the
+    /// transition animates.
+    private var lentIslandContent: UIView?
+    var transitionContentFrameUpdated: ((CGRect) -> Void)?
     private(set) var searchContentNode: NavigationBarSearchContentNode?
     private(set) var geometry: NewsHeaderGeometry?
     private(set) var blockOffset: CGFloat = 0.0
@@ -86,9 +99,13 @@ final class NewsHeaderView: UIView {
         self.addSubview(self.softEdgeView)
         self.gradientView.isUserInteractionEnabled = false
         self.addSubview(self.gradientView)
+        self.addSubview(self.rowContentView)
         self.buttonsContainer.layer.anchorPoint = CGPoint()
-        self.addSubview(self.buttonsContainer)
-        self.addSubview(self.segmentNode.view)
+        self.rowContentView.addSubview(self.buttonsContainer)
+        self.rowContentView.addSubview(self.segmentNode.view)
+        self.glassHold.changed = { [weak self] in
+            self?.applyGlassVisibility()
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -96,6 +113,11 @@ final class NewsHeaderView: UIView {
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.glassHold.isHeld, event.flatMap({ $0.type == .touches }) ?? true, let geometry = self.geometry, newsHeaderTopBandContains(y: point.y, geometry: geometry) {
+            // A touch on the top row while the transition's glass finishes above it: it hands over now, so the touch
+            // finds the row's own capsule.
+            self.glassHold.interrupt()
+        }
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
@@ -107,7 +129,7 @@ final class NewsHeaderView: UIView {
             }
             return self
         }
-        if result === self || result === self.shutterView || result === self.softEdgeView || result === self.gradientView {
+        if result === self || result === self.shutterView || result === self.softEdgeView || result === self.gradientView || result === self.rowContentView {
             return nil
         }
         return result
@@ -169,23 +191,22 @@ final class NewsHeaderView: UIView {
                 trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 primaryContent: ChatListHeaderComponent.Content(
                     title: "",
-                    navigationBackTitle: nil,
                     titleComponent: nil,
                     chatListTitle: nil,
                     leftButton: nil,
                     rightButtons: [
-                        AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
+                        NavigationBarComponent.Button(
+                            id: "more",
                             content: .more,
-                            pressed: { [weak self] sourceView in
+                            action: { [weak self] sourceView in
                                 self?.openMoreMenu?(sourceView)
                             }
-                        )))
+                        )
                     ],
                     backPressed: nil
                 ),
                 secondaryContent: nil,
                 secondaryTransition: 0.0,
-                networkStatus: nil,
                 storySubscriptions: nil,
                 storiesIncludeHidden: true,
                 storiesFraction: 0.0,
@@ -267,7 +288,147 @@ final class NewsHeaderView: UIView {
             }
         }
 
+        // The top row's content spans the view, so its children keep this view's coordinates. While a transition holds
+        // it, the transition places it and is told where it now goes.
+        let rowContentFrame = CGRect(origin: CGPoint(), size: layout.size)
+        if self.isContentLifted {
+            self.transitionContentFrameUpdated?(rowContentFrame)
+        } else {
+            self.rowContentView.frame = rowContentFrame
+        }
+        self.glassHold.barLaidOut(content: self.transitionContent, rowFrame: self.transitionRowFrame)
+        self.applyGlassVisibility()
+
         return geometry
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if self.window == nil {
+            self.glassHold.barLeftHierarchy()
+        } else {
+            self.glassHold.barEnteredHierarchy()
+        }
+    }
+
+    // MARK: Navigation transitions
+
+    private var headerComponentView: ChatListHeaderComponent.View? {
+        return self.buttons.view as? ChatListHeaderComponent.View
+    }
+
+    private var transitionContent: NavigationBarComponent.Content? {
+        return self.headerComponentView?.transitionContent
+    }
+
+    /// The "…" row's frame in the top row's content.
+    private var transitionRowFrame: CGRect {
+        guard let barView = self.headerComponentView?.navigationBarComponentView else {
+            return CGRect()
+        }
+        return barView.convert(barView.bounds, to: self.rowContentView)
+    }
+
+    func takeView() -> NavigationBarTransitionTakeViewInfo? {
+        guard !self.isContentLifted, self.params != nil, self.alpha >= 1.0, !self.isHidden, self.rowContentView.superview === self else {
+            return nil
+        }
+        self.isContentLifted = true
+        return NavigationBarTransitionTakeViewInfo(containingView: self, contentView: self.rowContentView)
+    }
+
+    func putBack() {
+        guard self.isContentLifted else {
+            return
+        }
+        self.isContentLifted = false
+        self.transitionContentFrameUpdated = nil
+        self.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
+        self.insertSubview(self.rowContentView, aboveSubview: self.gradientView)
+        self.rowContentView.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        // An open search field stays above the row, as `update` puts it.
+        if let params = self.params, params.isSearchActive, let searchContentNode = self.searchContentNode, searchContentNode.view.superview === self {
+            self.bringSubviewToFront(searchContentNode.view)
+        }
+    }
+
+    func updateTransition(role: NavigationBarTransitionRole?, fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        // In a role the transition draws the "…" capsule and the island.
+        self.transitionRole = role
+        self.applyGlassVisibility()
+    }
+
+    func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {
+        self.glassHold.hold(held, interrupted: interrupted, content: self.transitionContent, rowFrame: self.transitionRowFrame)
+        self.applyGlassVisibility()
+        return true
+    }
+
+    private func applyGlassVisibility() {
+        let detached = self.transitionRole != nil || self.glassHold.isHeld
+        self.headerComponentView?.navigationBarComponentView?.plattersDetached = detached
+        self.segmentNode.isIslandDetached = detached && self.transitionTitlePill != nil
+        if !detached {
+            self.segmentNode.reclaimTabs()
+            self.lentIslandContent = nil
+        }
+    }
+
+    /// The island as the bar's title pill, in the top row's content; none while an open search hides the row.
+    private var transitionTitlePill: NavigationBarTransitionTitlePill? {
+        guard self.params != nil, self.buttonsContainer.alpha >= 0.5, self.segmentNode.view.superview === self.rowContentView else {
+            return nil
+        }
+        let frame = self.segmentNode.view.convert(self.segmentNode.islandFrame, to: self.rowContentView)
+        guard !frame.isEmpty else {
+            return nil
+        }
+        return NavigationBarTransitionTitlePill(frame: frame, signature: ObjectIdentifier(self.segmentNode), makeContentCopy: { [weak self] in
+            // The live tabs, lent for as long as the transition draws the island (one wrapper per transition).
+            guard let self, self.transitionRole != nil || self.glassHold.isHeld else {
+                return UIView()
+            }
+            if let current = self.lentIslandContent {
+                return current
+            }
+            let view = UIView(frame: CGRect(origin: CGPoint(), size: frame.size))
+            view.isUserInteractionEnabled = false
+            self.segmentNode.lendTabs(to: view)
+            self.lentIslandContent = view
+            return view
+        })
+    }
+
+    var componentTransitionState: NavigationBarComponentTransitionState? {
+        guard let params = self.params, let geometry = self.geometry, let headerView = self.headerComponentView, let content = headerView.transitionContent, let theme = headerView.navigationBarThemeValue, let strings = headerView.navigationBarStringsValue, let barView = headerView.navigationBarComponentView else {
+            return nil
+        }
+        let layout = params.layout
+        // The header's edges ride its screen with the search block, so it hands the transition no backdrop; an open
+        // search hides the row (no capsules then).
+        return NavigationBarComponentTransitionState(
+            content: content,
+            theme: theme,
+            strings: strings,
+            rowFrame: self.transitionRowFrame,
+            rowAlpha: self.buttonsContainer.alpha,
+            leftInset: layout.safeInsets.left + 16.0,
+            rightInset: layout.safeInsets.right + 16.0,
+            trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
+            sideColumnFrame: nil,
+            hidesSideColumnButtons: false,
+            backdropHeight: max(0.0, geometry.edgeEffectHeight - 24.0),
+            backdropColor: nil,
+            backdropAlpha: 0.0,
+            backdropExtension: 0.0,
+            leadingPressScale: barView.detachedPressScale(isLeft: true),
+            trailingPressScale: barView.detachedPressScale(isLeft: false),
+            leadingPressGlow: barView.detachedPressGlow(isLeft: true),
+            trailingPressGlow: barView.detachedPressGlow(isLeft: false),
+            trailingInnerPressScale: barView.detachedInnerPressScale,
+            trailingInnerPressGlow: barView.detachedInnerPressGlow,
+            titlePill: self.transitionTitlePill
+        )
     }
 
     /// Moves the search block for the list's scroll offset (0 at rest, positive scrolled, negative overscrolled).

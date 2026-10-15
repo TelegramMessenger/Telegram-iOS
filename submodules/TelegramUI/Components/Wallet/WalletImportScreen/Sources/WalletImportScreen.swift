@@ -1460,8 +1460,7 @@ private final class WalletImportScreenComponent: Component {
             }
 
             if let controller = environment.controller(),
-               let navigationBar = controller.navigationBar,
-               let edgeEffectView = navigationBar.edgeEffectView {
+               let navigationBar = controller.navigationBar {
                 let alphaDistance = max(
                     1.0,
                     self.titleTransformContainer.center.y - titleCenterY
@@ -1470,7 +1469,7 @@ private final class WalletImportScreenComponent: Component {
                     0.0,
                     min(1.0, self.scrollView.contentOffset.y / alphaDistance)
                 )
-                transition.setAlpha(view: edgeEffectView, alpha: alpha)
+                navigationBar.setBackdropAlpha(alpha, transition: transition.containedViewLayoutTransition)
             }
         }
 

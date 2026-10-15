@@ -215,6 +215,14 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open var transitionNavigationBar: NavigationBar? {
         return self.navigationBar
     }
+    /// The bar a navigation push or pop morphs into the other screen's (`NavigationBarTransitionSource`); nil keeps
+    /// today's slide. A screen with its own header returns nil.
+    open var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.displayNavigationBar, let navigationBar = self.navigationBar, !navigationBar.isHidden else {
+            return nil
+        }
+        return navigationBar
+    }
     public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
@@ -222,14 +230,27 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         return true
     }
     
-    /// iPhone Duo: whether the navigation bar's back or close button moves into the side strip
-    /// (docs/iphone-duo-layout.md). A screen that lays out its own
-    /// side column returns false.
+    /// iPhone Duo: whether the navigation bar lays out its side column (back or close, icon buttons, overflow) in the side strip (docs/iphone-duo-layout.md). A screen that lays out its own side column returns false.
     open var placesNavigationButtonInSideColumn: Bool {
         return true
     }
-    private var sideColumnNavigationButtonNode: NavigationSideColumnButtonNode?
-    private var isUpdatingSideColumnNavigationButton = false
+
+    /// iPhone Duo: where the bar puts its side column for `layout`, or nil while it puts none there.
+    private func navigationBarSideColumnPlacement(layout: ContainerViewLayout) -> NavigationBarSideColumnPlacement? {
+        guard self.placesNavigationButtonInSideColumn && self.displayNavigationBar else {
+            return nil
+        }
+        return NavigationBarSideColumnPlacement(layout: layout, reservedBelow: (self.parent as? TabBarController)?.verticalTabBarFrame(for: layout))
+    }
+
+    /// iPhone Duo: the side column the bar lays out for `layout` (nil without one), for a screen whose content keeps
+    /// clear of it.
+    public final func navigationBarSideColumnExtent(layout: ContainerViewLayout) -> NavigationBarSideColumnExtent? {
+        guard let navigationBar = self.navigationBar, let placement = self.navigationBarSideColumnPlacement(layout: layout) else {
+            return nil
+        }
+        return navigationBar.sideColumnExtent(placement: placement)
+    }
 
     public struct TabBarSearchState: Equatable {
         public var isActive: Bool
@@ -419,13 +440,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
                 }
             }
         }
-        self.navigationBar?.item = self.navigationItem
-        self.navigationBar?.navigationButtonForSideColumnUpdated = { [weak self] in
-            guard let self, self.isNodeLoaded, let validLayout = self.validLayout else {
-                return
-            }
-            self.updateSideColumnNavigationButton(layout: validLayout, transition: .immediate)
+        self.navigationBar?.sideColumnExtentUpdated = { [weak self] transition in
+            self?.requestLayout(transition: transition)
         }
+        self.navigationBar?.item = self.navigationItem
         //self.automaticallyAdjustsScrollViewInsets = false
         
         self.scrollToTopWithTabBar = { [weak self] in
@@ -442,10 +460,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     }
 
     open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: 0.0, additionalCutout: nil, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: 0.0, transition: transition)
     }
     
-    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, navigationLayout: NavigationLayout, additionalBackgroundHeight: CGFloat, additionalCutout: CGSize?, transition: ContainedViewLayoutTransition) {
+    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, navigationLayout: NavigationLayout, additionalBackgroundHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
 
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: navigationLayout.navigationFrame.maxY))
@@ -456,10 +474,6 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         
         self.navigationBarOrigin = navigationBarFrame.origin.y
 
-        var isLandscape = layout.size.width > layout.size.height
-        if case .regular = layout.metrics.widthClass {
-            isLandscape = false
-        }
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight + statusBarHeight
@@ -485,76 +499,14 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
             
             navigationBar.trailingButtonsInset = layout.navigationBarTrailingButtonsInset
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: additionalTopHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, additionalCutout: additionalCutout, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
+            navigationBar.sideColumnPlacement = self.navigationBarSideColumnPlacement(layout: layout)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: additionalTopHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.removeAnimation(forKey: "bounds")
                 navigationBar.layer.removeAnimation(forKey: "position")
             }
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
-        }
-        
-        self.updateSideColumnNavigationButton(layout: layout, transition: transition)
-    }
-    
-    /// iPhone Duo: shows the bar's back or close button as a circle at the top of the side strip, and hides it
-    /// in the bar's top row, while the layout has a strip that holds it, the bar is shown, and the bar would
-    /// show such a button. Otherwise the button stays in the bar.
-    private func updateSideColumnNavigationButton(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        // Setting the bar's flag below reports back through `navigationButtonForSideColumnUpdated`; the
-        // layout this pass was given wins over the stored one.
-        guard let navigationBar = self.navigationBar, !self.isUpdatingSideColumnNavigationButton else {
-            return
-        }
-        self.isUpdatingSideColumnNavigationButton = true
-        defer {
-            self.isUpdatingSideColumnNavigationButton = false
-        }
-        var placement: (kind: NavigationSideColumnButtonKind, frame: CGRect)?
-        // The button mirrors the bar's alpha and isHidden itself (screens fade the bar outside layout passes).
-        if self.placesNavigationButtonInSideColumn, self.displayNavigationBar, let kind = navigationBar.navigationButtonForSideColumn, let frame = layout.sideColumnNavigationButtonFrame {
-            placement = (kind, frame)
-        }
-        
-        if let placement, self.isNodeLoaded {
-            let buttonNode: NavigationSideColumnButtonNode
-            var buttonTransition = transition
-            if let current = self.sideColumnNavigationButtonNode {
-                buttonNode = current
-            } else {
-                buttonNode = navigationBar.makeSideColumnNavigationButtonNode()
-                buttonNode.pressed = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    // A left item in the strip (a back-styled one, or the bar's close X) runs its own action;
-                    // otherwise the bar's back or close.
-                    if let leftBarButtonItem = self.navigationItem.leftBarButtonItem {
-                        leftBarButtonItem.performActionOnTarget()
-                    } else {
-                        let _ = self.navigationBar?.executeBack()
-                    }
-                }
-                self.sideColumnNavigationButtonNode = buttonNode
-                buttonTransition = .immediate
-            }
-            if buttonNode.supernode !== self.displayNode {
-                if navigationBar.supernode === self.displayNode {
-                    self.displayNode.insertSubnode(buttonNode, aboveSubnode: navigationBar)
-                } else {
-                    self.displayNode.addSubnode(buttonNode)
-                }
-                buttonTransition = .immediate
-            }
-            buttonNode.update(kind: placement.kind, size: placement.frame.size, transition: buttonTransition)
-            buttonTransition.updateFrame(node: buttonNode, frame: placement.frame)
-            navigationBar.displaysNavigationButtonInSideColumn = true
-        } else {
-            if let buttonNode = self.sideColumnNavigationButtonNode {
-                self.sideColumnNavigationButtonNode = nil
-                buttonNode.removeFromSupernode()
-            }
-            navigationBar.displaysNavigationButtonInSideColumn = false
         }
     }
     

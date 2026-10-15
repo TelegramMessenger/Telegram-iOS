@@ -887,7 +887,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private func updateNavigationBarAlpha(transition: ContainedViewLayoutTransition) {
             let contentOffset = self.webView?.scrollView.contentOffset.y ?? 0.0
             let backgroundAlpha = min(30.0, contentOffset) / 30.0
-            self.controller?.navigationBar?.updateBackgroundAlpha(backgroundAlpha, transition: transition)
+            self.controller?.navigationBar?.setBackdropAlpha(backgroundAlpha, transition: transition)
         }
         
         private var targetContentOffset: CGPoint?
@@ -3698,7 +3698,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: "", more: ""))
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -3914,22 +3914,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     buttonColor: textColor,
                     disabledButtonColor: textColor,
                     primaryTextColor: textColor,
-                    backgroundColor: backgroundColor,
-                    enableBackgroundBlur: true,
-                    separatorColor: UIColor(rgb: 0x000000, alpha: 0.25),
                     badgeBackgroundColor: .clear,
-                    badgeStrokeColor: .clear,
                     badgeTextColor: .clear,
+                    edgeEffectColor: backgroundColor,
                     accentButtonColor: self.presentationData.theme.list.itemCheckColors.fillColor,
                     accentDisabledButtonColor: self.presentationData.theme.chat.inputPanel.panelControlDisabledColor,
                     accentForegroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor
                 ),
-                strings: NavigationBarStrings(back: "", close: "")
+                strings: NavigationBarStrings(back: "", close: "", more: "")
             )
         } else {
             navigationBarPresentationData = NavigationBarPresentationData(
                 theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme),
-                strings: NavigationBarStrings(back: "", close: "")
+                strings: NavigationBarStrings(back: "", close: "", more: "")
             )
         }
         self.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
@@ -4173,7 +4170,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     override public func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self)
         
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
         self.updateTabBarAlpha(1.0, .immediate)
     }
     

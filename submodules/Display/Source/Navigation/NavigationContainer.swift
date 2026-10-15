@@ -57,6 +57,8 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         let type: PendingChild.TransitionType
         let previous: Child
         let coordinator: NavigationTransitionCoordinator
+        /// A push a swipe back caught: its screens were told the top one is leaving and the previous one coming back.
+        var isSteeredBack = false
         
         init(type: PendingChild.TransitionType, previous: Child, coordinator: NavigationTransitionCoordinator) {
             self.type = type
@@ -127,6 +129,16 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     
     
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
+    /// The swipe back steering the transition, while it does: its statistics (UIKit's rules,
+    /// `NavigationInteractivePopTracker`), the pop progress its translation counts from, and its last target.
+    private struct InteractivePop {
+        /// The transition the swipe started or caught: a stack change that replaces it ends the swipe's hold.
+        let transition: TopTransition
+        var tracker: NavigationInteractivePopTracker
+        var base: CGFloat
+        var target: CGFloat
+    }
+    private var interactivePop: InteractivePop?
     
     public init(isFlat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.isFlat = isFlat
@@ -152,6 +164,9 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         }*/
         if #available(iOS 13.4, *) {
             panRecognizer.allowedScrollTypesMask = .continuous
+        }
+        panRecognizer.gestureRestrictionsHitTest = { [weak self] point, event in
+            return self?.gestureRestrictionsHitTest(point, with: event)
         }
         panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
@@ -210,117 +225,229 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        let translation = recognizer.translation(in: self.view).x
+        let velocity = recognizer.velocity(in: self.view).x
         switch recognizer.state {
         case .began:
-            guard let layout = self.state.layout else {
-                return
-            }
-            guard self.state.transition == nil else {
-                return
-            }
-            
-            let beginGesture = self.controllers.count > 1
-            
-            if beginGesture {
-                let topController = self.controllers[self.controllers.count - 1]
-                let bottomController = self.controllers[self.controllers.count - 2]
-                
-                if !topController.attemptNavigation({ [weak self, weak topController] in
-                    if let self, let topController {
-                        self.requestFilterController(topController)
-                    }
-                }) {
-                    return
-                }
-                
-                topController.viewWillDisappear(true)
-                let topNode = topController.displayNode
-                var bottomControllerLayout = layout
-                if bottomController.view.disableAutomaticKeyboardHandling.isEmpty {
-                    if let minimizedContainer = self.minimizedContainer, (bottomControllerLayout.inputHeight ?? 0.0) > 0.0 {
-                        var updatedSize = bottomControllerLayout.size
-                        var updatedIntrinsicInsets = bottomControllerLayout.intrinsicInsets
-                        updatedSize.height -= minimizedContainer.collapsedHeight(layout: layout)
-                        updatedIntrinsicInsets.bottom = 0.0
-                        bottomControllerLayout = bottomControllerLayout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
-                    }
-                    bottomControllerLayout = bottomControllerLayout.withUpdatedInputHeight(nil)
-                }
-                bottomController.containerLayoutUpdated(bottomControllerLayout, transition: .immediate)
-                bottomController.viewWillAppear(true)
-                let bottomNode = bottomController.displayNode
-                
-                let screenCornerRadii = self.minimizedContainer == nil && self.state.canBeClosed != true ? layout.screenCornerRadii : CornerRadii(uniform: 0.0)
-                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, isFlat: self.isFlat, container: self, topNode: topNode, topNavigationBar: topController.transitionNavigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.transitionNavigationBar, screenCornerRadii: screenCornerRadii, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
-                    if let strongSelf = self {
-                        if let top = strongSelf.state.top {
-                            strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
-                            
-                            var updatedStatusBarStyle = strongSelf.statusBarStyle
-                            if let bottomController = bottomController, progress >= 0.3 {
-                                updatedStatusBarStyle = bottomController.statusBar.statusBarStyle
-                            } else {
-                                updatedStatusBarStyle = top.value.statusBar.statusBarStyle
-                            }
-                            if strongSelf.statusBarStyle != updatedStatusBarStyle {
-                                strongSelf.statusBarStyle = updatedStatusBarStyle
-                                strongSelf.statusBarStyleUpdated?(.animated(duration: 0.3, curve: .easeInOut))
-                            }
-                        }
-                    }
-                })
-                bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                self.state.transition = TopTransition(type: .pop, previous: Child(value: bottomController, layout: layout), coordinator: navigationTransitionCoordinator)
-            }
+            self.interactivePopBegan(translation: translation, velocity: velocity)
         case .changed:
-            if let navigationTransitionCoordinator = self.state.transition?.coordinator, !navigationTransitionCoordinator.animatingCompletion {
-                let translation = recognizer.translation(in: self.view).x
-                let progress = max(0.0, min(1.0, translation / self.view.frame.width))
-                navigationTransitionCoordinator.updateProgress(progress, transition: .immediate, completion: {})
-            }
+            self.interactivePopChanged(translation: translation, velocity: velocity)
         case .ended, .cancelled:
-            if let navigationTransitionCoordinator = self.state.transition?.coordinator, !navigationTransitionCoordinator.animatingCompletion {
-                let velocity = recognizer.velocity(in: self.view).x
-                
-                if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
-                    self.state.top?.value.viewWillLeaveNavigation()
-                    navigationTransitionCoordinator.animateCompletion(velocity, completion: { [weak self] in
-                        guard let strongSelf = self, let _ = strongSelf.state.layout, let _ = strongSelf.state.transition, let top = strongSelf.state.top else {
-                            return
-                        }
-                        
-                        let topController = top.value
-                        
-                        if viewTreeContainsFirstResponder(view: top.value.view) {
-                            strongSelf.ignoreInputHeight = true
-                        }
-                        strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topController.view)
-                        
-                        strongSelf.state.transition = nil
-                        
-                        strongSelf.controllerRemoved(top.value)
-                        strongSelf.ignoreInputHeight = false
-                    })
-                } else {
-                    navigationTransitionCoordinator.animateCancel({ [weak self] in
-                        guard let strongSelf = self, let top = strongSelf.state.top, let transition = strongSelf.state.transition else {
-                            return
-                        }
-                        strongSelf.state.transition = nil
-                            
-                        top.value.viewDidAppear(true)
-                        transition.previous.value.viewDidDisappear(true)
-                    })
-                }
-            }
+            self.interactivePopEnded(translation: translation, velocity: velocity, isCancelled: recognizer.state == .cancelled)
         default:
             break
         }
     }
+
+    /// A swipe back begins (`translation` and `velocity` along the pop, in points and points per second).
+    func interactivePopBegan(translation: CGFloat, velocity: CGFloat, time: Double = CACurrentMediaTime()) {
+        guard let layout = self.state.layout else {
+            return
+        }
+        if let transition = self.state.transition {
+            self.catchTransitionBySwipe(transition, translation: translation, velocity: velocity, time: time)
+            return
+        }
+        guard self.controllers.count > 1 else {
+            return
+        }
+        let topController = self.controllers[self.controllers.count - 1]
+        let bottomController = self.controllers[self.controllers.count - 2]
+        
+        if !topController.attemptNavigation({ [weak self, weak topController] in
+            if let self, let topController {
+                self.requestFilterController(topController)
+            }
+        }) {
+            return
+        }
+        
+        topController.viewWillDisappear(true)
+        let topNode = topController.displayNode
+        var bottomControllerLayout = layout
+        if bottomController.view.disableAutomaticKeyboardHandling.isEmpty {
+            if let minimizedContainer = self.minimizedContainer, (bottomControllerLayout.inputHeight ?? 0.0) > 0.0 {
+                var updatedSize = bottomControllerLayout.size
+                var updatedIntrinsicInsets = bottomControllerLayout.intrinsicInsets
+                updatedSize.height -= minimizedContainer.collapsedHeight(layout: layout)
+                updatedIntrinsicInsets.bottom = 0.0
+                bottomControllerLayout = bottomControllerLayout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
+            }
+            bottomControllerLayout = bottomControllerLayout.withUpdatedInputHeight(nil)
+        }
+        bottomController.containerLayoutUpdated(bottomControllerLayout, transition: .immediate)
+        bottomController.viewWillAppear(true)
+        let bottomNode = bottomController.displayNode
+        
+        let screenCornerRadii = self.minimizedContainer == nil && self.state.canBeClosed != true ? layout.screenCornerRadii : CornerRadii(uniform: 0.0)
+        let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, isFlat: self.isFlat, container: self, topNode: topNode, topNavigationBar: topController.transitionNavigationBar, topTransitionSource: topController.navigationBarTransitionSource, bottomNode: bottomNode, bottomNavigationBar: bottomController.transitionNavigationBar, bottomTransitionSource: bottomController.navigationBarTransitionSource, screenCornerRadii: screenCornerRadii, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
+            if let strongSelf = self {
+                if let top = strongSelf.state.top {
+                    strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
+                    if let bottomController {
+                        strongSelf.updateSwipeStatusBarStyle(top: top.value, beneath: bottomController, popProgress: progress)
+                    } else {
+                        strongSelf.updateSwipeStatusBarStyle(top: top.value, beneath: top.value, popProgress: progress)
+                    }
+                }
+            }
+        }, didStartProgressAnimation: { [weak self, weak bottomController] timeline in
+            guard let self, let top = self.state.top else {
+                return
+            }
+            self.animateKeyboard(timeline: timeline, leftEdge: { topFrame, _ in
+                return topFrame.minX
+            })
+            if let bottomController {
+                self.scheduleSwipeStatusBarStyle(timeline: timeline, top: top.value, beneath: bottomController)
+            }
+        })
+        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+        let transition = TopTransition(type: .pop, previous: Child(value: bottomController, layout: layout), coordinator: navigationTransitionCoordinator)
+        self.state.transition = transition
+
+        var tracker = NavigationInteractivePopTracker(totalDistance: self.view.bounds.width)
+        tracker.addSample(time: time, translation: translation, velocity: velocity, isChange: false)
+        self.interactivePop = InteractivePop(transition: transition, tracker: tracker, base: 0.0, target: 0.0)
+    }
+
+    /// A swipe back that begins while a transition runs takes it over where UIKit's interruptible transitions do
+    /// (`NavigationTransitionCoordinator.canBeCaughtBySwipe`; measured against the native reference app, 2026-10-14).
+    private func catchTransitionBySwipe(_ transition: TopTransition, translation: CGFloat, velocity: CGFloat, time: Double) {
+        let coordinator = transition.coordinator
+        guard coordinator.canBeCaughtBySwipe, let top = self.state.top else {
+            return
+        }
+        let topController = top.value
+        // Only when the screen the swipe would show is the one beneath in the stack: a push that replaced the top (or
+        // pushed several screens at once) came from a screen that is no longer there.
+        guard self.controllers.count >= 2, self.controllers[self.controllers.count - 1] === topController, self.controllers[self.controllers.count - 2] === transition.previous.value else {
+            return
+        }
+        if !topController.attemptNavigation({ [weak self, weak topController] in
+            if let self, let topController {
+                self.requestFilterController(topController)
+            }
+        }) {
+            return
+        }
+        let base: CGFloat
+        switch transition.type {
+        case .push:
+            // UIKit pre-empts the push with a pop whose progress counts from 0: the pushed screen's card goes on toward
+            // where it was heading at the speed it had, then follows the finger.
+            base = 0.0
+            if !transition.isSteeredBack {
+                transition.isSteeredBack = true
+                topController.viewWillDisappear(true)
+                transition.previous.value.viewWillAppear(true)
+            }
+        case .pop:
+            // A pop springing back is paused where it is (RE §1.2). Its screens are still leaving and coming back.
+            base = coordinator.popProgress
+        }
+        coordinator.catchBySwipe(popTarget: base)
+        var tracker = NavigationInteractivePopTracker(totalDistance: self.view.bounds.width)
+        tracker.addSample(time: time, translation: translation, velocity: velocity, isChange: false)
+        self.interactivePop = InteractivePop(transition: transition, tracker: tracker, base: base, target: base)
+    }
+
+    func interactivePopChanged(translation: CGFloat, velocity: CGFloat, time: Double = CACurrentMediaTime()) {
+        guard var pop = self.interactivePop, let transition = self.state.transition, transition === pop.transition else {
+            self.interactivePop = nil
+            return
+        }
+        let coordinator = transition.coordinator
+        // Translation over width from where the swipe took over, chased by the tracking spring. UIKit rubber-bands it
+        // past either end; it stops at them here (a decision, 2026-10-14).
+        pop.target = NavigationInteractivePopTracker.targetProgress(pop.base + translation / max(1.0, self.view.bounds.width))
+        pop.tracker.addSample(time: time, translation: translation, velocity: velocity, isChange: true)
+        self.interactivePop = pop
+        coordinator.trackInteractivePop(pop.target)
+    }
+
+    func interactivePopEnded(translation: CGFloat, velocity: CGFloat, isCancelled: Bool, time: Double = CACurrentMediaTime()) {
+        guard var pop = self.interactivePop, let transition = self.state.transition, transition === pop.transition else {
+            self.interactivePop = nil
+            return
+        }
+        self.interactivePop = nil
+        let navigationTransitionCoordinator = transition.coordinator
+        pop.tracker.addSample(time: time, translation: translation, velocity: velocity, isChange: false)
+        // UIKit's decision; a swipe the system cancelled springs back from rest.
+        let decision = isCancelled ? (finish: false, velocity: 0.0) : pop.tracker.release(percent: pop.target, velocity: velocity)
+        
+        switch transition.type {
+        case .pop:
+            if decision.finish {
+                self.state.top?.value.viewWillLeaveNavigation()
+                navigationTransitionCoordinator.animateCompletion(decision.velocity, completion: { [weak self] in
+                    guard let strongSelf = self, let _ = strongSelf.state.layout, let _ = strongSelf.state.transition, let top = strongSelf.state.top else {
+                        return
+                    }
+                
+                    let topController = top.value
+                
+                    if viewTreeContainsFirstResponder(view: top.value.view) {
+                        strongSelf.ignoreInputHeight = true
+                    }
+                    strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topController.view)
+                
+                    strongSelf.state.transition = nil
+                
+                    strongSelf.controllerRemoved(top.value)
+                    strongSelf.ignoreInputHeight = false
+                })
+            } else {
+                let spring: NavigationTransitionSpring = isCancelled ? .noninteractive : .interactive
+                navigationTransitionCoordinator.animateCancel(velocity: decision.velocity / max(1.0, self.view.bounds.width), spring: spring, { [weak self] in
+                    guard let strongSelf = self, let top = strongSelf.state.top, let transition = strongSelf.state.transition else {
+                        return
+                    }
+                    strongSelf.state.transition = nil
+                    
+                    top.value.viewDidAppear(true)
+                    transition.previous.value.viewDidDisappear(true)
+                })
+            }
+        case .push:
+            // A push a swipe caught: the pop it became finishes by running the push back to its start, or the push runs
+            // on to its end. Velocities are along the pop.
+            let width = max(1.0, self.view.bounds.width)
+            if decision.finish {
+                self.state.top?.value.viewWillLeaveNavigation()
+                navigationTransitionCoordinator.animateCancel(velocity: -decision.velocity / width, spring: .interactive, { [weak self, weak transition] in
+                    guard let strongSelf = self, let transition, strongSelf.state.transition === transition, let top = strongSelf.state.top else {
+                        return
+                    }
+                    let topController = top.value
+                    if viewTreeContainsFirstResponder(view: topController.view) {
+                        strongSelf.ignoreInputHeight = true
+                    }
+                    strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topController.view)
+                    strongSelf.state.transition = nil
+                    strongSelf.controllerRemoved(topController)
+                    strongSelf.ignoreInputHeight = false
+                })
+            } else {
+                navigationTransitionCoordinator.animateCompletion(-decision.velocity, completion: { [weak self, weak transition] in
+                    guard let strongSelf = self, let transition, strongSelf.state.transition === transition else {
+                        return
+                    }
+                    strongSelf.completeTopTransition(transition)
+                })
+            }
+        }
+    }
     
     public func update(layout: ContainerViewLayout, canBeClosed: Bool, controllers: [ViewController], transition: ContainedViewLayoutTransition) {
+        let previousLayout = self.state.layout
         self.state.layout = layout
         self.state.canBeClosed = canBeClosed
+        if let previousLayout, previousLayout.size != layout.size {
+            // A rotation or a fold mid-transition: its keyframes go on, on their phase, for the new size.
+            self.state.transition?.coordinator.containerSizeUpdated()
+        }
         
         var controllersUpdated = false
         if self.controllers.count != controllers.count {
@@ -434,10 +561,11 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             if let childTransition = self.state.transition, childTransition.coordinator.isInteractive {
                 switch childTransition.type {
                 case .push:
-                    if childTransition.coordinator.progress >= 0.3 {
-                        updatedStatusBarStyle = top.value.statusBar.statusBarStyle
-                    } else {
+                    // A push a swipe caught, steered as a pop.
+                    if childTransition.coordinator.popProgress >= 0.3 {
                         updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
+                    } else {
+                        updatedStatusBarStyle = top.value.statusBar.statusBarStyle
                     }
                 case .pop:
                     if childTransition.coordinator.progress >= 0.3 {
@@ -463,6 +591,8 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     private func topTransition(from fromValue: Child?, to toValue: Child?, transitionType: PendingChild.TransitionType, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if case .animated = transition, let fromValue = fromValue, let toValue = toValue {
             if let currentTransition = self.state.transition {
+                // A finger steering it lets go of it: the new transition runs on its own.
+                self.interactivePop = nil
                 currentTransition.coordinator.performCompletion(completion: {
                 })
             }
@@ -492,22 +622,44 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             toValue.value.setIgnoreAppearanceMethodInvocations(false)
             
             let screenCornerRadii = self.minimizedContainer == nil && self.state.canBeClosed != true ? layout.screenCornerRadii : CornerRadii(uniform: 0.0)
-            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, isInteractive: false, isFlat: self.isFlat, container: self, topNode: topController.displayNode, topNavigationBar: topController.transitionNavigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.transitionNavigationBar, screenCornerRadii: screenCornerRadii, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
-                guard let strongSelf = self else {
-                    return
+            // Where the keyboard's left edge goes with the screens (nil: it stays).
+            // Where the keyboard goes for a pair of screen frames (nil: it stays). Decided once per use: the question walks
+            // the top screen's view tree, and a bake's samples share one answer.
+            let keyboardLeftEdge: () -> ((CGRect, CGRect) -> CGFloat)? = { [weak self] in
+                guard let self else {
+                    return nil
                 }
                 switch transitionType {
                 case .push:
-                    if let _ = strongSelf.state.transition, let top = strongSelf.state.top, viewTreeContainsFirstResponder(view: top.value.view) {
-                        strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
+                    if let _ = self.state.transition, let top = self.state.top, viewTreeContainsFirstResponder(view: top.value.view) {
+                        return { topFrame, _ in topFrame.minX }
+                    } else if let hasActiveInput = self.state.top?.value.hasActiveInput, hasActiveInput {
+                        return nil
                     } else {
-                        if let hasActiveInput = strongSelf.state.top?.value.hasActiveInput, hasActiveInput {
-                        } else {
-                            strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
-                        }
+                        return { topFrame, bottomFrame in topFrame.minX - bottomFrame.width }
                     }
                 case .pop:
-                    strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
+                    return { topFrame, _ in topFrame.minX }
+                }
+            }
+            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, isInteractive: false, isFlat: self.isFlat, container: self, topNode: topController.displayNode, topNavigationBar: topController.transitionNavigationBar, topTransitionSource: topController.navigationBarTransitionSource, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.transitionNavigationBar, bottomTransitionSource: bottomController.navigationBarTransitionSource, screenCornerRadii: screenCornerRadii, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
+                guard let strongSelf = self else {
+                    return
+                }
+                if transitionType == .push, let currentTransition = strongSelf.state.transition, currentTransition.type == .push, currentTransition.coordinator.isInteractive, let top = strongSelf.state.top {
+                    // A push a swipe caught: the status bar follows it as a swipe back's does.
+                    strongSelf.updateSwipeStatusBarStyle(top: top.value, beneath: currentTransition.previous.value, popProgress: currentTransition.coordinator.popProgress)
+                }
+                if let leftEdge = keyboardLeftEdge() {
+                    strongSelf.syncKeyboard(leftEdge: leftEdge(topFrame, bottomFrame), transition: transition)
+                }
+            }, didStartProgressAnimation: { [weak self] timeline in
+                guard let self else {
+                    return
+                }
+                self.animateKeyboard(timeline: timeline, leftEdge: keyboardLeftEdge())
+                if transitionType == .push, let currentTransition = self.state.transition, currentTransition.type == .push, currentTransition.coordinator.isInteractive, let top = self.state.top {
+                    self.scheduleSwipeStatusBarStyle(timeline: timeline, top: top.value, beneath: currentTransition.previous.value)
                 }
             }))
             self.state.transition = topTransition
@@ -516,32 +668,7 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                 guard let strongSelf = self, let topTransition = topTransition, strongSelf.state.transition === topTransition else {
                     return
                 }
-                
-                if viewTreeContainsFirstResponder(view: topTransition.previous.value.view) {
-                    strongSelf.ignoreInputHeight = true
-                }
-                strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topTransition.previous.value.view)
-                strongSelf.state.transition = nil
-                
-                if strongSelf.shouldAnimateDisappearance {
-                    let displayNode = topTransition.previous.value.displayNode
-                    displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak displayNode] _ in
-                        displayNode?.removeFromSupernode()
-                        displayNode?.layer.removeAllAnimations()
-                    })
-                } else {
-                    topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)
-                    topTransition.previous.value.displayNode.removeFromSupernode()
-                    topTransition.previous.value.setIgnoreAppearanceMethodInvocations(false)
-                }
-                topTransition.previous.value.viewDidDisappear(true)
-                if let toValue = strongSelf.state.top, let layout = strongSelf.state.layout {
-                    toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    strongSelf.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
-                    toValue.value.viewDidAppear(true)
-                }
-                
-                strongSelf.ignoreInputHeight = false
+                strongSelf.completeTopTransition(topTransition)
             })
         } else {
             if let fromValue = fromValue {
@@ -569,8 +696,47 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                 toValue.value.displayNode.recursivelyEnsureDisplaySynchronously(true)
                 toValue.value.viewDidAppear(false)
             }
+            if let lingering = self.lingeringNavigationBarTransitionLayer {
+                if let toValue, lingering.isLingering(above: toValue.value.navigationBarTransitionSource) {
+                    // A finished swipe back ends here, adding the screen beneath again, which brings it to the front:
+                    // the glass still animating above its bar goes back over it.
+                    self.addSubnode(lingering)
+                } else {
+                    self.endLingeringNavigationBarTransition()
+                }
+            }
             self.ignoreInputHeight = false
         }
+    }
+    
+    /// A tap push or pop has run to its end (or a push a swipe caught was let go and ran on to it): the previous screen
+    /// leaves.
+    private func completeTopTransition(_ topTransition: TopTransition) {
+        if viewTreeContainsFirstResponder(view: topTransition.previous.value.view) {
+            self.ignoreInputHeight = true
+        }
+        self.keyboardViewManager?.dismissEditingWithoutAnimation(view: topTransition.previous.value.view)
+        self.state.transition = nil
+        
+        if self.shouldAnimateDisappearance {
+            let displayNode = topTransition.previous.value.displayNode
+            displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak displayNode] _ in
+                displayNode?.removeFromSupernode()
+                displayNode?.layer.removeAllAnimations()
+            })
+        } else {
+            topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)
+            topTransition.previous.value.displayNode.removeFromSupernode()
+            topTransition.previous.value.setIgnoreAppearanceMethodInvocations(false)
+        }
+        topTransition.previous.value.viewDidDisappear(true)
+        if let toValue = self.state.top, let layout = self.state.layout {
+            toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+            self.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
+            toValue.value.viewDidAppear(true)
+        }
+        
+        self.ignoreInputHeight = false
     }
     
     private func makeChild(layout: ContainerViewLayout, value: ViewController) -> Child {
@@ -651,6 +817,104 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     
     var isTransitioning: Bool {
         return self.state.transition != nil
+    }
+
+    /// The view a swipe's restrictions are read from: the one under `point` in the screens, as `hitTest` finds it when no
+    /// transition runs. During a transition the container takes every touch itself, so a swipe that begins then would
+    /// otherwise skip the restrictions of the screen under the finger (horizontal content, a screen that disables it).
+    func gestureRestrictionsHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
+        // UIView's own search over the subviews: `super.hitTest` cannot be used from here, because AsyncDisplayKit sends
+        // a view's hit test back through the node (`_ASDisplayView`), which would land in the override that takes every
+        // touch.
+        for subview in self.view.subviews.reversed() {
+            // A screen running on keyframes is drawn away from its model frame: follow where it is drawn.
+            let displacement = self.state.transition?.coordinator.presentedDisplacement(of: subview) ?? CGPoint()
+            var subviewPoint = self.view.convert(point, to: subview)
+            subviewPoint.x -= displacement.x
+            subviewPoint.y -= displacement.y
+            if let result = subview.hitTest(subviewPoint, with: event) {
+                return result
+            }
+        }
+        return self.view
+    }
+
+    /// While a swipe steers a transition the status bar is the leaving screen's until 0.3 of the way, then the one coming
+    /// back's.
+    private func updateSwipeStatusBarStyle(top: ViewController, beneath: ViewController, popProgress: CGFloat) {
+        let updatedStatusBarStyle = popProgress >= 0.3 ? beneath.statusBar.statusBarStyle : top.statusBar.statusBarStyle
+        if self.statusBarStyle != updatedStatusBarStyle {
+            self.statusBarStyle = updatedStatusBarStyle
+            self.statusBarStyleUpdated?(.animated(duration: 0.3, curve: .easeInOut))
+        }
+    }
+
+    /// A swipe was let go and the transition runs on the render server: the status bar flips where its timeline crosses
+    /// 0.3 of the pop (`popProgress = 1 - fraction`), scheduled on the transition's clock.
+    private func scheduleSwipeStatusBarStyle(timeline: NavigationTransitionTimeline, top: ViewController, beneath: ViewController) {
+        let showsBeneathAtStart = 1.0 - (timeline.fractions.first ?? 0.0) >= 0.3
+        guard let index = timeline.fractions.firstIndex(where: { (1.0 - $0 >= 0.3) != showsBeneathAtStart }) else {
+            return
+        }
+        let popProgress = 1.0 - timeline.fractions[index]
+        timeline.schedule(timeline.timing.sampleTimes[index], { [weak self, weak top, weak beneath] in
+            guard let self, let top, let beneath else {
+                return
+            }
+            self.updateSwipeStatusBarStyle(top: top, beneath: beneath, popProgress: popProgress)
+        })
+    }
+
+    /// The keyboard follows the screens on the render server, along `timeline`; `leftEdge` gives its edge for a pair of
+    /// screen frames (nil: the keyboard stays where it is).
+    private func animateKeyboard(timeline: NavigationTransitionTimeline, leftEdge: ((CGRect, CGRect) -> CGFloat)?) {
+        guard let leftEdge else {
+            return
+        }
+        let edges = zip(timeline.topFrames, timeline.bottomFrames).map { leftEdge($0, $1) }
+        guard let last = edges.last else {
+            return
+        }
+        self.currentKeyboardLeftEdge = last
+        self.keyboardViewManager?.animate(leftEdges: edges.map { self.additionalKeyboardLeftEdgeOffset + $0 }, timing: timeline.timing)
+    }
+
+    /// The transition glass still animating above the bar a finished transition ended on
+    /// (`NavigationBarTransitionLayer.putBack(lingering:)`).
+    private var lingeringNavigationBarTransitionLayer: NavigationBarTransitionLayer?
+
+    func beginLingering(_ layer: NavigationBarTransitionLayer) {
+        self.endLingeringNavigationBarTransition()
+        self.lingeringNavigationBarTransitionLayer = layer
+        layer.lingerEnded = { [weak self, weak layer] in
+            guard let self, let layer, self.lingeringNavigationBarTransitionLayer === layer else {
+                return
+            }
+            self.lingeringNavigationBarTransitionLayer = nil
+        }
+    }
+
+    /// The lingering glass hands over to its bar at once.
+    func endLingeringNavigationBarTransition() {
+        if let layer = self.lingeringNavigationBarTransitionLayer {
+            self.lingeringNavigationBarTransitionLayer = nil
+            layer.endLingering()
+        }
+    }
+
+    var lingeringNavigationBarTransitionLayerForTesting: NavigationBarTransitionLayer? {
+        return self.lingeringNavigationBarTransitionLayer
+    }
+
+    // Tests.
+    var transitionCoordinatorForTesting: NavigationTransitionCoordinator? {
+        return self.state.transition?.coordinator
+    }
+    var topControllerForTesting: ViewController? {
+        return self.state.top?.value
     }
 
     public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

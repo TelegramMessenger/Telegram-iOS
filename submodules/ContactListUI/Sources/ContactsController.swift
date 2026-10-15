@@ -105,6 +105,14 @@ private final class SortHeaderButton: HighlightableButtonNode {
 public class ContactsController: ViewController {
     private let context: AccountContext
     
+    /// The contact list draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return self.contactsNode.navigationBarView.view as? ChatListNavigationBar.View
+    }
+
     private var contactsNode: ContactsControllerNode {
         return self.displayNode as! ContactsControllerNode
     }

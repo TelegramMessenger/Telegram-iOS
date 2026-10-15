@@ -1231,7 +1231,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 self.requirementsBackgroundNode?.isHidden = true
                 self.requirementsTextNode?.isHidden = true
                 self.requirementsSeparatorNode?.isHidden = true
-                self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
 
                 var emptyTitle: String
                 var emptyText: String

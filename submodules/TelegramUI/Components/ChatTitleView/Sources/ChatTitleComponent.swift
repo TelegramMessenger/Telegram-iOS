@@ -15,7 +15,7 @@ import EmojiStatusComponent
 import GlassBackgroundComponent
 import NewsFeedSupport
 
-public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
+public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTitleView {
     private final class ContentData: Equatable {
         let context: AccountContext
         let theme: PresentationTheme
@@ -89,7 +89,26 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
     
     public func animateLayoutTransition() {
     }
-    
+
+    /// The header's glass pill: in a navigation transition it is the bar's second right platter, which the transition
+    /// draws (with a still copy of what it shows) while this view hides it.
+    public var glassPillFrame: CGRect? {
+        guard let titleView = self.title.view as? ChatTitleComponent.View, let frame = titleView.glassPillFrame else {
+            return nil
+        }
+        return titleView.convert(frame, to: self)
+    }
+
+    public var isGlassPillDetached: Bool = false {
+        didSet {
+            (self.title.view as? ChatTitleComponent.View)?.isGlassPillDetached = self.isGlassPillDetached
+        }
+    }
+
+    public func makeGlassPillContentCopy() -> UIView? {
+        return (self.title.view as? ChatTitleComponent.View)?.makeGlassPillContentCopy()
+    }
+
     public func prepareSnapshotState() -> ChatTitleView.SnapshotState? {
         //return titleView.contentView?.snapshotView(afterScreenUpdates: false)
         return nil
@@ -200,6 +219,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
                     }
                     self.addSubview(titleView)
                 }
+                (titleView as? ChatTitleComponent.View)?.isGlassPillDetached = self.isGlassPillDetached
                 transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(), size: titleSize))
             }
             return titleSize
@@ -308,6 +328,38 @@ public final class ChatTitleComponent: Component {
     public final class View: UIView {
         private var backgroundView: GlassBackgroundView?
         private let contentContainer: UIView
+        /// While a navigation transition draws the pill, the pill and what it shows are hidden.
+        var isGlassPillDetached: Bool = false {
+            didSet {
+                if self.isGlassPillDetached != oldValue {
+                    self.backgroundView?.isHidden = self.isGlassPillDetached
+                }
+            }
+        }
+
+        /// The pill's frame in this view, nil without one.
+        var glassPillFrame: CGRect? {
+            guard let backgroundView = self.backgroundView, !backgroundView.frame.isEmpty else {
+                return nil
+            }
+            return backgroundView.frame
+        }
+
+        /// A still copy of what the pill shows, without its glass, at the pill's size.
+        func makeGlassPillContentCopy() -> UIView? {
+            guard let frame = self.glassPillFrame, frame.width > 0.0, frame.height > 0.0 else {
+                return nil
+            }
+            let format = UIGraphicsImageRendererFormat()
+            format.opaque = false
+            // The content container fills the pill; drawn from its own layer, whether or not the pill is hidden.
+            let image = UIGraphicsImageRenderer(size: frame.size, format: format).image { context in
+                self.contentContainer.layer.render(in: context.cgContext)
+            }
+            let view = UIImageView(image: image)
+            view.frame = CGRect(origin: CGPoint(), size: frame.size)
+            return view
+        }
         private let title = ComponentView<Empty>()
         private var subtitleNode: ChatTitleActivityNode?
         private var activityMeasureSubtitleNode: ChatTitleActivityNode?
@@ -1230,6 +1282,7 @@ public final class ChatTitleComponent: Component {
                     self.backgroundView = backgroundView
                     self.addSubview(backgroundView)
                     backgroundView.contentView.addSubview(self.contentContainer)
+                    backgroundView.isHidden = self.isGlassPillDetached
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, transition: transition)

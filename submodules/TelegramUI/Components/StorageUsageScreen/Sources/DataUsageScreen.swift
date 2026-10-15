@@ -443,10 +443,6 @@ final class DataUsageScreenComponent: Component {
                 
                 headerOffset = min(headerOffset, minOffset)
                 
-                let animatedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
-                
-                let navigationButtonAlpha: CGFloat = scrollBounds.minY >= navigationMetrics.navigationHeight ? 0.0 : 1.0
-                
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
                 
                 let headerContentsAlpha: CGFloat
@@ -454,10 +450,6 @@ final class DataUsageScreenComponent: Component {
                 headerContentsAlpha = min(1.0, max(0.0, offsetFraction))
                 
                 transition.setAlpha(view: self.headerContentContainer, alpha: headerContentsAlpha)
-                
-                if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
-                    backButtonNode.updateManualAlpha(alpha: navigationButtonAlpha, transition: animatedTransition.containedViewLayoutTransition)
-                }
             }
         }
         

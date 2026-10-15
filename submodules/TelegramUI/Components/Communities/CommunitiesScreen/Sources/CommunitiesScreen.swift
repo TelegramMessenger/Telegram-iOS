@@ -145,10 +145,10 @@ private final class CommunitiesScreenComponent: Component {
                 transition.setScale(view: navigationTitleView, scale: titleScale)
             }
 
-            if let controller = environment.controller(), let navigationBar = controller.navigationBar, let edgeEffectView = navigationBar.edgeEffectView {
+            if let controller = environment.controller(), let navigationBar = controller.navigationBar {
                 let edgeEffectAlphaDistance = max(1.0, self.titleTransformContainer.center.y - titleCenterY)
                 let edgeEffectAlpha = max(0.0, min(1.0, self.scrollView.contentOffset.y / edgeEffectAlphaDistance))
-                transition.setAlpha(view: edgeEffectView, alpha: edgeEffectAlpha)
+                navigationBar.setBackdropAlpha(edgeEffectAlpha, transition: transition.containedViewLayoutTransition)
             }
         }
 

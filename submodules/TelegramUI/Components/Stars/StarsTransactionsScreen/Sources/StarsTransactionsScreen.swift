@@ -556,7 +556,7 @@ final class StarsTransactionsScreenComponent: Component {
             if let titleView = self.titleView.view {
                 if titleView.superview == nil {
                     if let navigationBar = environment.controller()?.navigationBar {
-                        navigationBar.view.insertSubview(titleView, aboveSubview: navigationBar.backgroundView)
+                        navigationBar.customOverBackgroundContentView.insertSubview(titleView, at: 0)
                     }
                 }
                 starTransition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
@@ -615,9 +615,9 @@ final class StarsTransactionsScreenComponent: Component {
                     topBalanceTitleView.alpha = 0.0
                     if let navigationBar = environment.controller()?.navigationBar {
                         if let titleView = self.titleView.view, titleView.superview != nil {
-                            navigationBar.view.insertSubview(topBalanceTitleView, aboveSubview: titleView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceTitleView, aboveSubview: titleView)
                         } else {
-                            navigationBar.view.insertSubview(topBalanceTitleView, aboveSubview: navigationBar.backgroundView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceTitleView, at: 0)
                         }
                     }
                 }
@@ -630,9 +630,9 @@ final class StarsTransactionsScreenComponent: Component {
                     topBalanceValueView.alpha = 0.0
                     if let navigationBar = environment.controller()?.navigationBar {
                         if let titleView = self.titleView.view, titleView.superview != nil {
-                            navigationBar.view.insertSubview(topBalanceValueView, aboveSubview: titleView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceValueView, aboveSubview: titleView)
                         } else {
-                            navigationBar.view.insertSubview(topBalanceValueView, aboveSubview: navigationBar.backgroundView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceValueView, at: 0)
                         }
                     }
                 }
@@ -648,9 +648,9 @@ final class StarsTransactionsScreenComponent: Component {
                     topBalanceIconView.alpha = 0.0
                     if let navigationBar = environment.controller()?.navigationBar {
                         if let titleView = self.titleView.view, titleView.superview != nil {
-                            navigationBar.view.insertSubview(topBalanceIconView, aboveSubview: titleView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceIconView, aboveSubview: titleView)
                         } else {
-                            navigationBar.view.insertSubview(topBalanceIconView, aboveSubview: navigationBar.backgroundView)
+                            navigationBar.customOverBackgroundContentView.insertSubview(topBalanceIconView, at: 0)
                         }
                     }
                 }

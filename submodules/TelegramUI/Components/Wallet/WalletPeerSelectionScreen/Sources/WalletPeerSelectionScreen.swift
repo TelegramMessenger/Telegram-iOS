@@ -17,6 +17,7 @@ import ContextUI
 import ComponentFlow
 import ViewControllerComponent
 import ChatListHeaderComponent
+import NavigationBarComponent
 import GlassBackgroundComponent
 import SearchBarNode
 import QrCodeUI
@@ -479,6 +480,11 @@ private final class WalletPeerSelectionScreenComponent: Component {
         private let suggestionsContainerView = UIView()
         private let navigationGlassContainer = GlassBackgroundContainerView()
         private let navigationBarView = ComponentView<Empty>()
+
+        /// The chat-list-style header, for navigation transitions.
+        var navigationTransitionHeader: ChatListNavigationBar.View? {
+            return self.navigationBarView.view as? ChatListNavigationBar.View
+        }
         private var navigationHeight: CGFloat?
         private var searchBarNode: SearchBarNode?
         private var activeSearch: ChatListNavigationBar.ActiveSearch?
@@ -1212,7 +1218,6 @@ private final class WalletPeerSelectionScreenComponent: Component {
         ) -> CGFloat {
             let headerContent = ChatListHeaderComponent.Content(
                 title: "",
-                navigationBackTitle: nil,
                 titleComponent: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: strings.Wallet_Recipient_Title,
@@ -1222,12 +1227,12 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 chatListTitle: nil,
-                leftButton: isModal ? AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                leftButton: isModal ? NavigationBarComponent.Button(id: "close",
                     content: .icon(imageName: "Navigation/Close"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.environment?.controller()?.dismiss()
                     }
-                ))) : nil,
+                ) : nil,
                 rightButtons: [],
                 backPressed: isModal ? nil : { [weak self] in
                     self?.environment?.controller()?.dismiss()
@@ -2070,6 +2075,14 @@ private final class WalletPeerSelectionScreenComponent: Component {
 }
 
 public final class WalletPeerSelectionScreen: ViewControllerComponentContainer {
+
+    /// Draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? WalletPeerSelectionScreenComponent.View)?.navigationTransitionHeader
+    }
     public init(
         context: AccountContext,
         walletContext: WalletContext,

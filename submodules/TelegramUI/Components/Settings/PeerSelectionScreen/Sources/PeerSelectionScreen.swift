@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import ChatListHeaderComponent
+import NavigationBarComponent
 import SearchBarNode
 import ContactsPeerItem
 import ViewControllerComponent
@@ -288,6 +289,11 @@ final class PeerSelectionScreenComponent: Component {
         private var loadingView: PeerSelectionLoadingView?
         
         private let navigationBarView = ComponentView<Empty>()
+
+        /// The chat-list-style header, for navigation transitions.
+        var navigationTransitionHeader: ChatListNavigationBar.View? {
+            return self.navigationBarView.view as? ChatListNavigationBar.View
+        }
         private var navigationHeight: CGFloat?
         
         private var searchBarNode: SearchBarNode?
@@ -432,7 +438,7 @@ final class PeerSelectionScreenComponent: Component {
             transition: ComponentTransition,
             deferScrollApplication: Bool
         ) -> CGFloat {
-            let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            let rightButtons: [NavigationBarComponent.Button] = []
             
             let title: String
             let subtitle: String
@@ -447,7 +453,6 @@ final class PeerSelectionScreenComponent: Component {
             
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
                 title: "",
-                navigationBackTitle: nil,
                 titleComponent: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: title, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor))
@@ -457,9 +462,9 @@ final class PeerSelectionScreenComponent: Component {
                     )))
                 ], spacing: 2.0)),
                 chatListTitle: nil,
-                leftButton: isModal ? AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                leftButton: isModal ? NavigationBarComponent.Button(id: "close",
                     content: .icon(imageName: "Navigation/Close"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         guard let self else {
                             return
                         }
@@ -467,7 +472,7 @@ final class PeerSelectionScreenComponent: Component {
                             self.environment?.controller()?.dismiss()
                         }
                     }
-                ))) : nil,
+                ) : nil,
                 rightButtons: rightButtons,
                 backPressed: isModal ? nil : { [weak self] in
                     guard let self else {
@@ -874,6 +879,14 @@ final class PeerSelectionScreenComponent: Component {
 }
 
 public final class PeerSelectionScreen: ViewControllerComponentContainer {
+
+    /// Draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? PeerSelectionScreenComponent.View)?.navigationTransitionHeader
+    }
     public enum Mode {
         case personalChannel
         case community

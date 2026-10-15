@@ -11,6 +11,7 @@ import TelegramPresentationData
 import SearchUI
 import SearchBarNode
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import EdgeEffect
 import CoreList

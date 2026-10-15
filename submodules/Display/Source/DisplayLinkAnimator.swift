@@ -27,6 +27,12 @@ private let isIpad: Bool = {
 }()
 
 public final class SharedDisplayLinkDriver {
+    /// The last frame's target timestamp and duration, for code that must land a change on a frame (a caught
+    /// transition's swap). Nil before the first frame.
+    public private(set) var lastTargetTimestamp: Double?
+    public private(set) var frameDuration: Double = 1.0 / Double(max(60, UIScreen.main.maximumFramesPerSecond))
+
+
     public enum FramesPerSecond: Comparable {
         case fps(Int)
         case max
@@ -197,6 +203,11 @@ public final class SharedDisplayLinkDriver {
         self.isProcessingEvent = true
         
         let duration = displayLink.targetTimestamp - displayLink.timestamp
+        self.lastTargetTimestamp = displayLink.targetTimestamp
+        if duration > 0.0 {
+            self.frameDuration = duration
+        }
+
         
         var removeIndices: [Int]?
         loop: for i in 0 ..< self.requests.count {

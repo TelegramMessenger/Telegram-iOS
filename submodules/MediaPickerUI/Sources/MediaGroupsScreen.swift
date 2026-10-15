@@ -391,9 +391,9 @@ public final class MediaGroupsScreen: ViewController, AttachmentContainable {
                 } else {
                     transition = .immediate
                 }
-                self.controller?.navigationBar?.updateBackgroundAlpha(min(2.0, value) / 2.0, transition: transition)
+                self.controller?.navigationBar?.setBackdropAlpha(min(2.0, value) / 2.0, transition: transition)
             case .unknown, .none:
-                self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                self.controller?.navigationBar?.setBackdropAlpha(1.0, transition: .immediate)
             }
         }
     }

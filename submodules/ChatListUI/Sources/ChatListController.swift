@@ -42,6 +42,7 @@ import ChatTitleView
 import PeerInfoUI
 import ComponentDisplayAdapters
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import InviteLinksUI
 import ChatFolderLinkPreviewScreen
@@ -112,6 +113,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
     
+    /// The chat list draws its own header (no Display bar); it takes part in navigation transitions itself. During a search too:
+    /// `displayNavigationBar` doubles as the search flag here, so it is not consulted.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View
+    }
+
     private var chatListDisplayNode: ChatListControllerNode {
         return super.displayNode as! ChatListControllerNode
     }
@@ -349,19 +359,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         self.tabBarItem.animationOffset = CGPoint(x: 0.0, y: UIScreenPixel)
                     }
                     
-                    self.primaryContext?.leftButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                    self.primaryContext?.leftButton = NavigationBarComponent.Button(id: "edit",
                         content: .text(title: self.presentationData.strings.Common_Edit, isBold: false),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             self?.editPressed()
                         }
-                    )))
+                    )
                     
-                    self.primaryContext?.rightButton = AnyComponentWithIdentity(id: "compose", component: AnyComponent(NavigationButtonComponent(
+                    self.primaryContext?.rightButton = NavigationBarComponent.Button(id: "compose",
                         content: .icon(imageName: "Chat List/ComposeIcon"),
-                        pressed: { [weak self] _ in
+                        tint: .accent,
+                        action: { [weak self] _ in
                             self?.composePressed()
                         }
-                    )))
+                    )
                     
                     //let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
                     //backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
@@ -369,12 +380,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 } else {
                     switch self.location {
                     case .chatList:
-                        self.primaryContext?.rightButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                        self.primaryContext?.rightButton = NavigationBarComponent.Button(id: "edit",
                             content: .text(title: self.presentationData.strings.Common_Edit, isBold: false),
-                            pressed: { [weak self] _ in
+                            action: { [weak self] _ in
                                 self?.editPressed()
                             }
-                        )))
+                        )
                     case .forum:
                         break
                     case .savedMessagesChats:
@@ -829,25 +840,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         switch currentContext.location {
         case .chatList:
             self.navigationBar?.userInfo = nil
-            self.navigationBar?.allowsCustomTransition = {
-                return false
-            }
         case let .forum(peerId):
             self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId, threadId: nil)
-            self.navigationBar?.allowsCustomTransition = { [weak self] in
-                guard let strongSelf = self else {
-                    return false
-                }
-                if strongSelf.navigationBar?.userInfo == nil {
-                    return false
-                }
-                return true
-            }
         case .savedMessagesChats:
             self.navigationBar?.userInfo = nil
-            self.navigationBar?.allowsCustomTransition = {
-                return false
-            }
         }
     }
     
@@ -2895,13 +2891,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if self.previousItem != nil {
                 displayBackButton = true
             }
-            var navigationBackTitle: String?
-            if case .chatList(.archive) = self.location {
-                navigationBackTitle = self.presentationData.strings.Common_Back
-            }
             primaryContent = ChatListHeaderComponent.Content(
                 title: self.plainTitle,
-                navigationBackTitle: navigationBackTitle,
                 titleComponent: primaryContext.chatTitleComponent.flatMap { AnyComponent<Empty>($0) },
                 chatListTitle: primaryContext.chatListTitle,
                 leftButton: primaryContext.leftButton,
@@ -2919,7 +2910,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let secondaryContext = self.secondaryContext {
             secondaryContent = ChatListHeaderComponent.Content(
                 title: self.plainTitle,
-                navigationBackTitle: nil,
                 titleComponent: secondaryContext.chatTitleComponent.flatMap { AnyComponent<Empty>($0) },
                 chatListTitle: secondaryContext.chatListTitle,
                 leftButton: secondaryContext.leftButton,
@@ -3592,20 +3582,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     @objc func editPressed() {
         if self.secondaryContext == nil {
             if case .chatList(.root) = self.chatListDisplayNode.effectiveContainerNode.location {
-                self.effectiveContext?.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                self.effectiveContext?.leftButton = NavigationBarComponent.Button(id: "done",
                     content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.donePressed()
                     }
-                )))
+                )
                 (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.details, transition: .animated(duration: 0.5, curve: .spring))
             } else {
-                self.effectiveContext?.rightButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                self.effectiveContext?.rightButton = NavigationBarComponent.Button(id: "done",
                     content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.donePressed()
                     }
-                )))
+                )
                 (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.master, transition: .animated(duration: 0.5, curve: .spring))
             }
         }
@@ -4023,7 +4013,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     /// iPhone Duo: the side column's "…" menu, the buttons that did not fit; each runs its own action
     /// from the "…" button.
-    func openSideColumnOverflowMenu(sourceView: UIView, items: [ChatListHeaderComponent.OverflowItem]) {
+    func openSideColumnOverflowMenu(sourceView: UIView, items: [NavigationBarComponent.OverflowItem]) {
         let presentationData = self.presentationData
         let menuItems: [ContextMenuItem] = items.map { item in
             return .action(ContextMenuActionItem(text: item.title, icon: { theme in
@@ -6810,12 +6800,12 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
 
 /// iPhone Duo: titles, menu icons and overflow priorities of the chat list's header buttons in the
 /// side column (spec 2026-10-06): compose stays longest, then proxy (it shows status), then story.
-private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHashable: ChatListHeaderComponent.OverflowInfo] {
+private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHashable: NavigationBarComponent.OverflowInfo] {
     return [
-        "compose": ChatListHeaderComponent.OverflowInfo(title: strings.Compose_NewMessage, iconName: "Chat List/ComposeIcon", priority: 3),
-        "proxy": ChatListHeaderComponent.OverflowInfo(title: strings.SocksProxySetup_Title, iconName: "Chat List/ProxyShieldIcon", priority: 2),
-        "story": ChatListHeaderComponent.OverflowInfo(title: strings.StoryFeed_AddStory, iconName: "Chat List/AddStoryIcon", priority: 1),
-        "more": ChatListHeaderComponent.OverflowInfo(title: strings.Common_More, iconName: nil, priority: nil)
+        "compose": NavigationBarComponent.OverflowInfo(title: strings.Compose_NewMessage, iconName: "Chat List/ComposeIcon", priority: 3),
+        "proxy": NavigationBarComponent.OverflowInfo(title: strings.SocksProxySetup_Title, iconName: "Chat List/ProxyShieldIcon", priority: 2),
+        "story": NavigationBarComponent.OverflowInfo(title: strings.StoryFeed_AddStory, iconName: "Chat List/AddStoryIcon", priority: 1),
+        "more": NavigationBarComponent.OverflowInfo(title: strings.Common_More, iconName: nil, priority: nil)
     ]
 }
 
@@ -6833,13 +6823,13 @@ private final class ChatListLocationContext {
     private(set) var chatTitleComponent: ChatTitleComponent?
     private(set) var chatListTitle: NetworkStatusTitle?
     
-    var leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
-    var rightButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
-    var proxyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
-    var storyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
+    var leftButton: NavigationBarComponent.Button?
+    var rightButton: NavigationBarComponent.Button?
+    var proxyButton: NavigationBarComponent.Button?
+    var storyButton: NavigationBarComponent.Button?
     
-    var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] {
-        var result: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+    var rightButtons: [NavigationBarComponent.Button] {
+        var result: [NavigationBarComponent.Button] = []
         if let rightButton = self.rightButton {
             result.append(rightButton)
         }
@@ -7243,12 +7233,12 @@ private final class ChatListLocationContext {
                 self.storyButton = nil
                 self.proxyButton = nil
             }
-            self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+            self.leftButton = NavigationBarComponent.Button(id: "done",
                 content: .text(title: presentationData.strings.Common_Done, isBold: true),
-                pressed: { [weak self] _ in
+                action: { [weak self] _ in
                     let _ = self?.parentController?.reorderingDonePressed()
                 }
-            )))
+            )
             
             let (_, connectsViaProxy) = proxy
             
@@ -7273,50 +7263,51 @@ private final class ChatListLocationContext {
                 isRoot = true
                 
                 if isReorderingTabs {
-                    self.rightButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                    self.rightButton = NavigationBarComponent.Button(id: "done",
                         content: .text(title: presentationData.strings.Common_Done, isBold: true),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             self?.parentController?.editPressed()
                         }
-                    )))
+                    )
                 } else {
-                    self.rightButton = AnyComponentWithIdentity(id: "compose", component: AnyComponent(NavigationButtonComponent(
+                    self.rightButton = NavigationBarComponent.Button(id: "compose",
                         content: .icon(imageName: "Chat List/ComposeIcon"),
-                        pressed: { [weak self] _ in
+                        tint: .accent,
+                        action: { [weak self] _ in
                             self?.parentController?.composePressed()
                         }
-                    )))
+                    )
                 }
                 
                 if isReorderingTabs {
-                    self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                    self.leftButton = NavigationBarComponent.Button(id: "done",
                         content: .text(title: presentationData.strings.Common_Done, isBold: true),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             let _ = self?.parentController?.reorderingDonePressed()
                         }
-                    )))
+                    )
                 } else {
                     if stateAndFilterId.state.editing {
-                        self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                        self.leftButton = NavigationBarComponent.Button(id: "done",
                             content: .text(title: presentationData.strings.Common_Done, isBold: true),
-                            pressed: { [weak self] _ in
+                            action: { [weak self] _ in
                                 self?.parentController?.donePressed()
                             }
-                        )))
+                        )
                     } else {
-                        self.leftButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                        self.leftButton = NavigationBarComponent.Button(id: "edit",
                             content: .text(title: presentationData.strings.Common_Edit, isBold: false),
-                            pressed: { [weak self] _ in
+                            action: { [weak self] _ in
                                 self?.parentController?.editPressed()
                             }
-                        )))
+                        )
                     }
                 }
                 
                 if storyPostingAvailable {
-                    self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
+                    self.storyButton = NavigationBarComponent.Button(id: "story",
                         content: .icon(imageName: "Chat List/AddStoryIcon"),
-                        pressed: { [weak self] sourceView in
+                        action: { [weak self] sourceView in
                             guard let self, let parentController = self.parentController else {
                                 return
                             }
@@ -7327,15 +7318,15 @@ private final class ChatListLocationContext {
                                 parentController.openStoryCamera(fromList: false, sourceView: sourceView)
                             }
                         }
-                    )))
+                    )
                 } else {
                     self.storyButton = nil
                 }
             } else {
                 let parentController = self.parentController
-                self.rightButton = AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
+                self.rightButton = NavigationBarComponent.Button(id: "more",
                     content: .more,
-                    pressed: { [weak parentController] sourceView in
+                    action: { [weak parentController] sourceView in
                         if let primaryContext = parentController?.primaryContext {
                             primaryContext.performMoreAction(sourceView: sourceView)
                         }
@@ -7346,7 +7337,7 @@ private final class ChatListLocationContext {
                         }
                         parentController.openArchiveMoreMenu(sourceView: sourceView, gesture: gesture)
                     }
-                )))
+                )
             }
             
             let (hasProxy, connectsViaProxy) = proxy
@@ -7375,15 +7366,15 @@ private final class ChatListLocationContext {
                     proxyStatus = .available
                 }
                 
-                self.proxyButton = AnyComponentWithIdentity(id: "proxy", component: AnyComponent(NavigationButtonComponent(
-                    content: .proxy(status: proxyStatus),
-                    pressed: { [weak self] _ in
+                self.proxyButton = NavigationBarComponent.Button(id: "proxy",
+                    content: .custom(AnyComponent(ChatListProxyButtonComponent(theme: presentationData.theme, status: proxyStatus))),
+                    action: { [weak self] _ in
                         guard let self, let parentController = self.parentController else {
                             return
                         }
                         (parentController.navigationController as? NavigationController)?.pushViewController(self.context.sharedContext.makeProxySettingsController(context: self.context))
                     }
-                )))
+                )
                 
                 titleContent.hasProxy = false
                 titleContent.connectsViaProxy = false
@@ -7494,17 +7485,17 @@ private final class ChatListLocationContext {
         }
         
         if stateAndFilterId.state.editing {
-            self.rightButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+            self.rightButton = NavigationBarComponent.Button(id: "done",
                 content: .text(title: presentationData.strings.Common_Done, isBold: true),
-                pressed: { [weak self] _ in
+                action: { [weak self] _ in
                     self?.parentController?.donePressed()
                 }
-            )))
+            )
         } else {
             let parentController = self.parentController
-            self.rightButton = AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
+            self.rightButton = NavigationBarComponent.Button(id: "more",
                 content: .more,
-                pressed: { [weak parentController] sourceView in
+                action: { [weak parentController] sourceView in
                     if let secondaryContext = parentController?.secondaryContext {
                         secondaryContext.performMoreAction(sourceView: sourceView)
                     } else if let primaryContext = parentController?.primaryContext {
@@ -7517,7 +7508,7 @@ private final class ChatListLocationContext {
                     }
                     ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: gesture)
                 }
-            )))
+            )
         }
         
         if !self.didSetReady {

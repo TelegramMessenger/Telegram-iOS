@@ -859,7 +859,21 @@ public final class GlassBackgroundContainerView: UIView {
         }
     }
     
+    /// How close two shapes come before they merge (`UIGlassContainerEffect.spacing`, which UIKit passes on unchanged as
+    /// the container's SDF smoothness: measured on iOS 27). Only native glass merges (`mergesShapes`).
+    public let spacing: CGFloat
+
+    /// Whether containers merge the glass shapes in them: native glass does, the custom implementation (before iOS 26, or
+    /// `GlassBackgroundView.useCustomGlassImpl`) only stacks them.
+    public static var mergesShapes: Bool {
+        if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
+            return true
+        }
+        return false
+    }
+
     public init(spacing: CGFloat = 7.0) {
+        self.spacing = spacing
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             let effect = UIGlassContainerEffect()
             effect.spacing = spacing
@@ -1757,5 +1771,74 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
                 }
             }
         }
+    }
+}
+
+/// Keyframes for a view whose frame is `frame(size)` at each of `sizes`, keeping its bounds origin and anchor point.
+private func glassShapeKeyframes(_ view: UIView?, sizes: [CGSize], timing: NavigationKeyframeTiming, frame: (CGSize) -> CGRect) {
+    guard let view else {
+        return
+    }
+    let origin = view.bounds.origin
+    let anchor = view.layer.anchorPoint
+    let frames = sizes.map(frame)
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.bounds", keyPath: "bounds", values: frames.map { NSValue(cgRect: CGRect(origin: origin, size: $0.size)) }, timing: timing)
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.position", keyPath: "position", values: frames.map { NSValue(cgPoint: CGPoint(x: $0.minX + $0.width * anchor.x, y: $0.minY + $0.height * anchor.y)) }, timing: timing)
+}
+
+private func glassCornerRadiusKeyframes(_ view: UIView?, sizes: [CGSize], timing: NavigationKeyframeTiming, radius: (CGSize) -> CGFloat) {
+    guard let view else {
+        return
+    }
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: sizes.map { NSNumber(value: Float(radius($0))) }, timing: timing)
+}
+
+extension GlassBackgroundView {
+    /// Changes the glass's size along `width`/`height` (animation time from `timing`'s origin; corner radius half the
+    /// shorter side) on the render server. The model takes the final size, and every view the glass lays out by its size
+    /// gets keyframes: Core Animation keyframes on the effect view resize native glass correctly (measured on iOS 27,
+    /// docs/superpowers/specs/2026-10-14-navbar-keyframed-transitions-design.md §6 results).
+    public func animateShape(width: NavigationSpringCurve, height: NavigationSpringCurve, timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        self.animateShape(sizes: timing.sampleTimes.map { CGSize(width: max(0.0, width.value(at: $0)), height: max(0.0, height.value(at: $0))) }, timing: timing, isDark: isDark, tintColor: tintColor)
+    }
+
+    /// The same, from a size per sample of `timing`.
+    public func animateShape(sizes: [CGSize], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        guard let last = sizes.last else {
+            return
+        }
+        self.update(size: last, cornerRadius: min(last.width, last.height) * 0.5, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        let shadowInset: CGFloat = 32.0
+        let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
+        glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
+        glassCornerRadiusKeyframes(self.nativeView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 })
+        glassShapeKeyframes(self.maskContainerView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: CGSize(width: $0.width + shadowInset * 2.0, height: $0.height + shadowInset * 2.0)) })
+        glassShapeKeyframes(self.maskContentView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: $0) })
+        glassShapeKeyframes(self.contentContainer, sizes: sizes, timing: timing, frame: filling)
+        if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
+            let inset = tintColor.innerInset
+            glassShapeKeyframes(innerBackgroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: inset, dy: inset) })
+            glassCornerRadiusKeyframes(innerBackgroundView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 - inset })
+        }
+        glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.legacyHighlightContainerView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.foregroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })
+        glassShapeKeyframes(self.shadowView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })
+    }
+}
+
+extension GlassBackgroundContainerView {
+    /// Changes the container's size along `width`/`height` on the render server, as `GlassBackgroundView.animateShape`.
+    public func animateSize(width: NavigationSpringCurve, height: NavigationSpringCurve, timing: NavigationKeyframeTiming, isDark: Bool) {
+        let sizes = timing.sampleTimes.map { CGSize(width: max(0.0, width.value(at: $0)), height: max(0.0, height.value(at: $0))) }
+        guard let last = sizes.last else {
+            return
+        }
+        self.update(size: last, isDark: isDark, transition: .immediate)
+        let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
+        glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
     }
 }

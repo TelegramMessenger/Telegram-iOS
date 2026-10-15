@@ -23,6 +23,7 @@ swift_library(
         "//submodules/SearchBarNode",
         "//submodules/LocalizedPeerData",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/TelegramUI/Components/NavigationBarComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/TelegramUI/Components/HorizontalTabsComponent",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
