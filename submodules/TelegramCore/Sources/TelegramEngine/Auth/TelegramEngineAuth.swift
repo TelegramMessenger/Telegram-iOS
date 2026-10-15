@@ -227,7 +227,7 @@ public extension TelegramEngine {
             return _internal_requestCreatePasskey(network: self.account.network, id: id, clientData: clientData, attestationObject: attestationObject)
         }
         
-        public func deletePasskey(id: String) -> Signal<Never, NoError> {
+        public func deletePasskey(id: String) -> Signal<Bool, NoError> {
             return _internal_deletePasskey(network: self.account.network, id: id)
         }
     }
