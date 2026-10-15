@@ -1009,6 +1009,46 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertFalse(done.isGlassLent)
     }
 
+    // A relayout while search is sucked into Done: search heads for Done's new frame, not where Done was, and the merging
+    // container spans the new bar.
+    func test_inPlaceMerge_relayoutMidMerge_leavingPillFollowsItsPartner() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let _ = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        before.inPlaceTickForTesting(dt: 0.05)
+        let content = NavigationBarComponent.Content(title: .text("Private Chats"), back: .back, leftButton: nil, rightButtons: self.doneOnly(), backPressed: {})
+        let _ = bar.update(transition: .easeInOut(duration: 0.3), component: AnyComponent(NavigationBarComponent(theme: self.makeTheme(), strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, primaryContent: content, secondaryContent: nil, secondaryTransition: 0.0)), environment: {}, containerSize: CGSize(width: 430.0, height: 44.0))
+        let view = bar.view as! NavigationBarComponent.View
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 430.0, height: 44.0)
+        XCTAssertEqual(view.inPlaceMergeContainer?.frame.width ?? 430.0, 430.0)
+        view.inPlaceTickForTesting(dt: 0.3)
+        guard let leaving = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("the leaving pill settled early")
+            return
+        }
+        // Done was centred at 352 in the 390 pt bar and is at 392 in the 430 pt one.
+        XCTAssertGreaterThan(leaving.frame.midX, 372.0)
+    }
+
+    // An item change on a pill still lent to a merge (the pill count unchanged) is cross-faded by the bar too: UIKit's
+    // animated effect change would band the merged shape.
+    func test_inPlaceMerge_itemChangeOnALentPill_crossFadesFrameByFrame() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.05)
+        guard let done = view.rightPillBackgroundContainer(at: 0), done.isGlassLent, let from = done.glassTintColor else {
+            XCTFail("Done is not merging")
+            return
+        }
+        let _ = self.updateBar(bar, back: .back, right: [self.fixedButton("save")], transition: .easeInOut(duration: 0.3))
+        XCTAssertEqual(done.glassTintColor, from)
+        self.settle(view)
+        XCTAssertEqual(done.glassTintColor, navigationBarGlassTintColor(.generic, theme: self.makeTheme()))
+    }
+
     // A press UIKit was drawing on the partner when its glass was lent goes on as the animator's own release.
     func test_inPlaceMerge_partnerPress_continuesAsASpring() {
         let bar = ComponentView<Empty>()

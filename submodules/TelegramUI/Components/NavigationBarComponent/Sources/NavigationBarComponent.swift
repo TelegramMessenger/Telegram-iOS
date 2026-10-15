@@ -813,6 +813,8 @@ public final class NavigationBarComponent: Component {
                 }
                 self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], partner: partner, tintColor: navigationBarGlassTintColor(pill.appliedTint, theme: component.theme), isDark: isDark, transition: transition)
             }
+            // A pill going into its partner heads for where the partner is now (a relayout mid-merge moves it).
+            self.followInPlacePartners(barSize: availableSize, isDark: isDark)
             // A secondary content sliding out: its items fade where they are, right-aligned in the pill they leave.
             if let removedSecondaryContentView {
                 for (index, container) in removedSecondaryContentView.rightPillContainers.enumerated() where index < removedSecondaryContentView.rightPillWidths.count {

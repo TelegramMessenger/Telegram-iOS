@@ -63,6 +63,8 @@ final class NavigationBarInPlaceCapsule {
         var dematerialization: NavigationSpringCurve
         var kick: NavigationBarKickCurve?
         let isRemoval: Bool
+        /// Where it is heading: its partner's frame for a removal, its own for an insertion.
+        var target: CGRect
         /// The pill its items are laid out in, which it carries as it moves: the one it leaves, or the one it becomes.
         var itemsPill: CGRect
         /// The partner's glass container.
@@ -79,6 +81,7 @@ final class NavigationBarInPlaceCapsule {
             self.dematerialization = curve(dematerializationFrom, isRemoval ? 1.0 : 0.0, .glass(0.001))
             self.kick = kick
             self.isRemoval = isRemoval
+            self.target = target
             self.itemsPill = isRemoval ? source : target
             self.partner = partner
         }
@@ -88,13 +91,17 @@ final class NavigationBarInPlaceCapsule {
             return CGRect(x: self.x.value(at: time) + kick.width, y: self.y.value(at: time) + kick.height, width: max(0.0, self.width.value(at: time)), height: max(0.0, self.height.value(at: time)))
         }
 
-        /// Heads an insertion for `frame` from where it is now (a relayout while it grows out).
+        /// Heads for `frame` from where it is now: an insertion's new place, or a removal's partner moved by a relayout
+        /// (a removal keeps the items in the pill it leaves).
         func retarget(to frame: CGRect, at time: Double, spring: NavigationTransitionSpring) {
             self.x = self.x.retargeted(at: time, to: frame.minX, spring: spring)
             self.y = self.y.retargeted(at: time, to: frame.minY, spring: spring)
             self.width = self.width.retargeted(at: time, to: frame.width, spring: spring)
             self.height = self.height.retargeted(at: time, to: frame.height, spring: spring)
-            self.itemsPill = frame
+            self.target = frame
+            if !self.isRemoval {
+                self.itemsPill = frame
+            }
         }
 
         func isAtRest(at time: Double) -> Bool {
@@ -393,7 +400,7 @@ extension NavigationBarComponent.View {
 
         // The glass's tint (a cross-fade) and, for a new capsule, its appearing are UIKit's to animate, except the tint in
         // a layout where pills merge (`tintFade`).
-        let tintByHand = self.inPlaceTintByHand && !isNew
+        let tintByHand = (self.inPlaceTintByHand || capsule.lentGlass != nil) && !isNew
         if !isNew {
             self.renewPressedGlassBeforeRetint(capsule, to: tintColor)
         }
@@ -620,6 +627,22 @@ extension NavigationBarComponent.View {
         let glass = capsule.container.lendGlass()
         mergeContainer.contentView.addSubview(glass)
         capsule.lentGlass = glass
+    }
+
+    /// After a layout: a pill going into a partner heads for the partner's frame as laid out now (a relayout mid-merge
+    /// moves the partner), and the merging container spans the bar.
+    func followInPlacePartners(barSize: CGSize, isDark: Bool) {
+        for capsule in self.inPlaceCapsules {
+            guard let matched = capsule.matched, matched.isRemoval, let partner = matched.partner, let partnerCapsule = self.inPlaceCapsule(for: partner), partnerCapsule.targetFrame != matched.target else {
+                continue
+            }
+            matched.retarget(to: partnerCapsule.targetFrame, at: self.inPlaceTime, spring: self.inPlaceMotion.transition)
+            capsule.setFrame(partnerCapsule.targetFrame)
+        }
+        if let mergeContainer = self.inPlaceMergeContainer, mergeContainer.frame.size != barSize {
+            mergeContainer.frame = CGRect(origin: CGPoint(), size: barSize)
+            mergeContainer.update(size: barSize, isDark: isDark, transition: .immediate)
+        }
     }
 
     /// Gives `capsule`'s glass back; the merging container goes when nothing is lent to it.
