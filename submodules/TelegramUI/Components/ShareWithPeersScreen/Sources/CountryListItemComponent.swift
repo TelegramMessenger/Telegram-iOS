@@ -11,6 +11,7 @@ import AvatarNode
 import TelegramPresentationData
 import CheckNode
 import BundleIconComponent
+import CountrySelectionUI
 
 final class CountryListItemComponent: Component {
     enum SelectionState: Equatable {
@@ -20,6 +21,7 @@ final class CountryListItemComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
+    let countryId: String?
     let title: String
     let selectionState: SelectionState
     let hasNext: Bool
@@ -28,6 +30,7 @@ final class CountryListItemComponent: Component {
     init(
         context: AccountContext,
         theme: PresentationTheme,
+        countryId: String?,
         title: String,
         selectionState: SelectionState,
         hasNext: Bool,
@@ -35,6 +38,7 @@ final class CountryListItemComponent: Component {
     ) {
         self.context = context
         self.theme = theme
+        self.countryId = countryId
         self.title = title
         self.selectionState = selectionState
         self.hasNext = hasNext
@@ -46,6 +50,9 @@ final class CountryListItemComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.countryId != rhs.countryId {
             return false
         }
         if lhs.title != rhs.title {
@@ -64,6 +71,7 @@ final class CountryListItemComponent: Component {
         private let containerButton: HighlightTrackingButton
         
         private let title = ComponentView<Empty>()
+        private let flagAnimations = CountryFlagTextAnimations()
         private let separatorLayer: SimpleLayer
         
         private var checkLayer: CheckLayer?
@@ -167,10 +175,17 @@ final class CountryListItemComponent: Component {
                 previousTitleContents = self.title.view?.snapshotView(afterScreenUpdates: false)
             }
             
+            let titleFont = Font.regular(17.0)
+            let titleString = NSMutableAttributedString()
+            if let countryId = component.countryId {
+                titleString.append(countryFlagAttributedString(countryId: countryId, font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
+                titleString.append(NSAttributedString(string: "     ", font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
+            }
+            titleString.append(NSAttributedString(string: component.title, font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor))
+                    text: .plain(titleString)
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
@@ -185,6 +200,7 @@ final class CountryListItemComponent: Component {
                     self.containerButton.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
+                self.flagAnimations.update(layout: (titleView as? ImmediateTextView)?.cachedLayout, in: titleView)
                 if let previousTitleFrame, previousTitleFrame.origin.x != titleFrame.origin.x {
                     transition.animatePosition(view: titleView, from: CGPoint(x: previousTitleFrame.origin.x - titleFrame.origin.x, y: 0.0), to: CGPoint(), additive: true)
                 }

@@ -132,7 +132,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let countryButton: ASButtonNode
+    private let countryButton: CountryButtonNode
     private let phoneBackground: ASImageNode
     private let phoneInputNode: PhoneInputNode
     
@@ -158,7 +158,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
-        self.countryButton = ASButtonNode()
+        self.countryButton = CountryButtonNode()
         
         self.phoneBackground = ASImageNode()
         self.phoneBackground.displaysAsynchronously = false
@@ -183,9 +183,8 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                 return false
             }
             if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
-                let flagString = emojiFlagForISOCountryCode(country.id)
                 let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: item.strings) ?? country.name
-                strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+                strongSelf.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
                 
                 let maskFont = Font.with(size: 17.0, design: .regular, traits: [.monospacedNumbers])
                 if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: item.theme.list.itemPlaceholderTextColor) }) {

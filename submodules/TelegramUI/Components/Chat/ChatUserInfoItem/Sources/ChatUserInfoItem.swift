@@ -122,6 +122,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
     private let phoneCountryTitleTextNode: TextNode
     private let phoneCountryValueTextNode: TextNode
     private var phoneCountryText: String?
+    private let phoneCountryFlagAnimations = CountryFlagTextAnimations()
     
     private let groupsTitleTextNode: TextNode
     private let groupsValueTextNode: TextNode
@@ -321,10 +322,10 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                     } else if phoneCountry == "TS" {
                         countryName = "Test"
                     }
-                    phoneCountryText = emojiFlagForISOCountryCode(phoneCountry) + " " + countryName
+                    phoneCountryText = countryName
                 }
                 phoneCountryTitleLayoutAndApply = makePhoneCountryTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Chat_NonContactUser_PhoneNumber, font: Font.regular(13.0), textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: infoConstrainedSize, alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-                phoneCountryValueLayoutAndApply = makePhoneCountryValueLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: phoneCountryText ?? "", font: Font.semibold(13.0), textColor: primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: infoConstrainedSize, alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                phoneCountryValueLayoutAndApply = makePhoneCountryValueLayout(TextNodeLayoutArguments(attributedString: countryFlagAndNameAttributedString(countryId: phoneCountry, name: phoneCountryText ?? "", font: Font.semibold(13.0), textColor: primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: infoConstrainedSize, alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 backgroundSize.height += verticalSpacing
                 backgroundSize.height += phoneCountryValueLayoutAndApply?.0.size.height ?? 0
                 
@@ -563,6 +564,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                         titleLayoutAndApply: phoneCountryTitleLayoutAndApply,
                         valueLayoutAndApply: phoneCountryValueLayoutAndApply
                     )
+                    strongSelf.phoneCountryFlagAnimations.update(layout: phoneCountryValueLayoutAndApply?.0, in: strongSelf.phoneCountryValueTextNode.view)
                     positionAttributeNodes(
                         titleTextNode: strongSelf.registrationDateTitleTextNode,
                         valueTextNode: strongSelf.registrationDateValueTextNode,

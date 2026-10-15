@@ -468,6 +468,12 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             }
             self.commit(); self.sync()
         } else {
+            guard self.placements.count < Self.maxStickers else {
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                self.card?.shake()
+                self.limitReached?()
+                return
+            }
             guard let host, let rect = self.grid?.stickerFrame(address: gift.address, in: host),
                   let from = self.gridPose(address: gift.address, rect: rect),
                   let spot = self.solver(excluding: gift.address)?.spread(aim: nil, scale: 1) else {
@@ -569,12 +575,18 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                     edit.mode = .move
                     edit.anchor = local[0]; edit.center = center
                 }
-                if !surface.bounds.insetBy(dx: -28, dy: -28).contains(local[0]) {
+                center = CGPoint(x: edit.center.x + local[0].x - edit.anchor.x, y: edit.center.y + local[0].y - edit.anchor.y)
+                let width = size.width * CGFloat(WalletContext.CardSticker.widthFraction) * scale
+                let height = width * CGFloat(sticker.aspectRatio ?? 1)
+                let overhang = max(max(width * 0.5 - center.x, center.x + width * 0.5 - size.width) / width,
+                    max(height * 0.5 - center.y, center.y + height * 0.5 - size.height) / height)
+                if overhang >= 0.3 {
+                    self.placements[index] = sticker.updated(x: Double(center.x / size.width), y: Double(center.y / size.height),
+                        angle: Double(angle), scale: Double(scale), geometryVersion: 1)
                     self.edit = edit
                     self.detachEdit(at: first)
                     return
                 }
-                center = CGPoint(x: edit.center.x + local[0].x - edit.anchor.x, y: edit.center.y + local[0].y - edit.anchor.y)
             }
         }
         center.x = min(size.width, max(0, center.x))
@@ -1264,7 +1276,7 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
     func placeSticker(collectible: WalletContext.Collectible, color: Bool, sourceView: UIView) -> Bool {
         guard self.canEdit, collectible.kind == .gift, let host, host.window != nil,
               !self.placements.contains(where: { $0.gift.address == collectible.address }),
-              self.drag == nil, self.pending == nil, self.edit == nil, self.flights[collectible.address] == nil else { return false }
+              self.placements.count < Self.maxStickers, self.drag == nil, self.pending == nil, self.edit == nil, self.flights[collectible.address] == nil else { return false }
         self.prepare([collectible])
         guard let media = self.media[collectible.address], media.first != nil, !color || media.style != nil,
               let spot = self.solver(excluding: collectible.address)?.spread(aim: nil, scale: 1) else { return false }
