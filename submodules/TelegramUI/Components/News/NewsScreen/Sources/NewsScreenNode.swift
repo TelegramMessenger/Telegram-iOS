@@ -174,8 +174,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             self.headerView.segmentNode.updateRefreshDrop(pose: pose, theme: self.presentationData.theme, lottieSettings: self.context.lottieRenderingSettings)
         }
-        self.refreshController.onInsertRows = { [weak self] page, unfolded in
-            self?.revealPullRefresh(page: page, unfolded: unfolded)
+        self.refreshController.onInsertRows = { [weak self] page, slides in
+            self?.revealPullRefresh(page: page, slides: slides)
         }
         self.forYou.onPullRefreshEnded = { [weak self] outcome in
             self?.refreshController.fetchEnded(outcome)
@@ -728,21 +728,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             atEdge: list.isAtTopEdge,
             canPull: canPull,
             islandFrame: geometry.island,
-            restingListTop: geometry.topRow.maxY + NewsHeaderMetrics.headerBottomPadding,
+            restingSearchFieldTop: geometry.topRow.maxY + NewsHeaderMetrics.searchFieldGap,
             firstPostTop: firstPostTop
         )
     }
 
-    /// The drop landed (or retracted): the held-back posts become rows and lens in. After a landing they go in at the
-    /// top under the drop while the old posts slide down on `NewsSpring.spread`; after a retract they arrive without
+    /// The refresh's result may be shown: the held-back posts become rows and lens in. `slides`: the list rests at its
+    /// top, and they go in there while the old posts slide down on `NewsSpring.spread`; otherwise they arrive without
     /// moving what is being read (spec §1.6-1.7, §3).
-    private func revealPullRefresh(page: Int, unfolded: Bool) {
+    private func revealPullRefresh(page: Int, slides: Bool) {
         let now = CACurrentMediaTime()
-        let transition: CoreListTransition = unfolded ? NewsFeedListView.refreshInsertTransition : .immediate
+        let transition: CoreListTransition = slides ? NewsFeedListView.refreshInsertTransition : .immediate
         // At the top the new posts go above the old first one and stay in view; scrolled into the list, they arrive
         // above without moving what is being read.
         let list = page == 0 ? self.forYouList : self.addedList
-        let anchorMode: CoreListAnchorMode = unfolded || list.isAtTopEdge ? .automatic : .preserveVisibleContent
+        let anchorMode: CoreListAnchorMode = slides || list.isAtTopEdge ? .automatic : .preserveVisibleContent
         if page == 0 {
             self.forYou.revealPullRefresh(now: now)
             self.updateForYouList(transition: transition, anchorMode: anchorMode, animatesInsertions: false)

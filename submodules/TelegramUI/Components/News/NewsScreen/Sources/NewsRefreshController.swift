@@ -74,18 +74,14 @@ final class NewsRefreshController {
                 self.refreshPage = page
                 self.haptic.impact(.medium, intensity: 0.9)
                 self.onBegin?(page)
-            case let .impact(unfolds):
-                if unfolds {
-                    self.haptic.impact(.soft, intensity: 0.45)
-                }
-            case let .insertRows(unfolded):
-                self.onInsertRows?(page, unfolded)
+            case let .insertRows(slides):
+                self.onInsertRows?(page, slides)
             }
         }
         self.onPose?(page, self.model.dropPose(now: now, input: input))
 
         let isLive = self.model.isLive(now: now, gap: input.gap)
-        if !isLive, case .idle = self.model.phase, self.model.unfold == nil {
+        if !isLive, case .idle = self.model.phase, !self.model.isRevealPending {
             self.refreshPage = nil
         }
         if isLive && self.isScreenVisible {

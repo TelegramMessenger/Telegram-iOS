@@ -21,7 +21,7 @@ public struct NewsFreshSegment: Equatable {
 /// The new-posts block and the lens-in (FeedRow.swift:42-376; spec §4).
 public enum NewsFreshBlock {
     public static let contentDelay: Double = 0.14
-    /// The block's fade-in after `contentDelay`. The landed drop shrinks and fades over the same span.
+    /// The block's fade-in after `contentDelay`.
     public static let inDuration: Double = 0.35
     public static let duration: Double = 5.6
     /// When the binding drops the marks (FeedStore.swift:577).
