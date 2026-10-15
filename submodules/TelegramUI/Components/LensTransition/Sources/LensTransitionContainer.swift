@@ -18,6 +18,7 @@ public final class LensTransitionContainer: UIView {
     private var pendingLayout: (CGSize, CGFloat, Bool)?
     private var cornerRadius: CGFloat = 30.0
     private var sourceLease: ContextMenuSourceLease?
+    private var replacementVisibilityAssertion: AnyObject?
 
     public static var isMorphSupported: Bool {
         if #available(iOS 26.0, *) {
@@ -69,16 +70,7 @@ public final class LensTransitionContainer: UIView {
             self.fadeIn(alongsideAnimations: alongsideAnimations)
             return
         }
-        let parameters = UIPreviewParameters()
-        parameters.backgroundColor = .clear
-        // Explicit source paths are in source-view bounds coordinates. Otherwise
-        // UIKit infers UIButton/glass geometry; insets describe a cropped source.
-        if let sourcePath {
-            parameters.visiblePath = sourcePath
-            parameters.shadowPath = sourcePath
-        } else if sourceRect != sourceView.bounds {
-            parameters.visiblePath = UIBezierPath(rect: sourceRect)
-        }
+        let parameters = Self.previewParameters(sourceView: sourceView, sourceRect: sourceRect, sourcePath: sourcePath)
         self.originalSourceView = sourceView
         self.sourceSizeAtOpen = (sourceView as? ContextExtractableContainer)?.normalState.size
         self.sourceLease = ContextMenuSourceLease(source: sourceView, decorations: ContextReferenceContentNode.additionalSourceViews(for: sourceView), makeContent: ContextReferenceContentNode.makeSourceContent(for: sourceView))
@@ -116,17 +108,26 @@ public final class LensTransitionContainer: UIView {
         }
     }
 
-    public func animateOut(alongsideAnimations: @escaping () -> Void = {}, completion: @escaping () -> Void) {
+    /// `currentSource` is the source resolved now, as `animateIn` was given it at opening. The menu closes into it, so a
+    /// source whose size changed while the menu was open (an action applied before its menu closes) takes the menu back
+    /// at its new size, not the one it opened from. It can also be a different view: a source may hand its contents to
+    /// a new view while the menu is open, and the menu then closes into that view.
+    public func animateOut(currentSource: (view: UIView, sourceRect: CGRect, sourcePath: UIBezierPath?)? = nil, alongsideAnimations: @escaping () -> Void = {}, completion: @escaping () -> Void) {
         // A close requested while the menu is still opening starts now and takes over the
         // running morph. UIKit reports an opening complete about a second after the menu
         // looks open, so waiting for it left an open menu that ignored taps until then.
         let interruptsPresentation = self.isPresenting
         self.isPresenting = false
         self.sourceLease?.content?.updateGeometry()
+        // A close that takes over a running opening keeps the morph item UIKit holds for the
+        // opening's source: keyed by that view's identity, it lands where the opening recorded
+        // the view, and UIKit keeps the view hidden until the morph ends. A replacement view is a
+        // destination the morph has not seen, so the close lands on it as it is now.
+        let replacement = currentSource.flatMap { $0.view !== self.originalSourceView && $0.view.window != nil ? $0.view : nil }
         if #available(iOS 26.0, *), let morph = self.morph as? LiquidMorphTransition,
-           let originalSourceView = self.originalSourceView, originalSourceView.window != nil,
+           let originalSourceView = self.originalSourceView, (replacement ?? originalSourceView).window != nil,
            let source = self.sourcePreview, self.backgroundView.window != nil,
-           let destination = LiquidMorphTransition.sourcePreview(for: source.view, parameters: self.dismissalParameters(source.parameters), usePresentationTransform: true) {
+           let destination = LiquidMorphTransition.sourcePreview(for: replacement ?? source.view, parameters: self.closingParameters(source.parameters, sourceView: replacement ?? originalSourceView, currentSource: currentSource), usePresentationTransform: true) {
             // Resolve the visible shape in its current parent, including any live
             // source transform, as UIKit does for its dismissal preview.
             let attachment = destination.target.container.convert(destination.target.center, to: self)
@@ -137,6 +138,10 @@ public final class LensTransitionContainer: UIView {
                 // a main-queue turn later; a frame in between showed the open menu once. Hold
                 // it hidden until then, as opening holds the button for the menu's lifetime.
                 self?.menuVisibilityAssertion = LiquidMorphTransition.sourceVisibilityAssertion(for: menu.view)
+                if let replacement {
+                    // As the opening holds its source hidden, until the menu has closed into it.
+                    self?.replacementVisibilityAssertion = LiquidMorphTransition.sourceVisibilityAssertion(for: replacement)
+                }
                 alongsideAnimations()
             }, completion: { [weak self] in
                 self?.finishDismissal()
@@ -154,6 +159,29 @@ public final class LensTransitionContainer: UIView {
             self?.finishDismissal()
             completion()
         })
+    }
+
+    /// Explicit source paths are in source-view bounds coordinates. Otherwise UIKit infers UIButton/glass geometry;
+    /// insets describe a cropped source.
+    private static func previewParameters(sourceView: UIView, sourceRect: CGRect, sourcePath: UIBezierPath?) -> UIPreviewParameters {
+        let parameters = UIPreviewParameters()
+        parameters.backgroundColor = .clear
+        if let sourcePath {
+            parameters.visiblePath = sourcePath
+            parameters.shadowPath = sourcePath
+        } else if sourceRect != sourceView.bounds {
+            parameters.visiblePath = UIBezierPath(rect: sourceRect)
+        }
+        return parameters
+    }
+
+    /// The opening's parameters hold the source's outline at opening, so they are re-resolved from the source as it is
+    /// now. An extractable container keeps its own rule: its bounds while the menu is open are not its normal state.
+    private func closingParameters(_ parameters: UIPreviewParameters, sourceView: UIView, currentSource: (view: UIView, sourceRect: CGRect, sourcePath: UIBezierPath?)?) -> UIPreviewParameters {
+        if let currentSource, currentSource.view === sourceView, !(sourceView is ContextExtractableContainer), !currentSource.sourceRect.isEmpty {
+            return Self.previewParameters(sourceView: sourceView, sourceRect: currentSource.sourceRect, sourcePath: currentSource.sourcePath)
+        }
+        return self.dismissalParameters(parameters)
     }
 
     private func dismissalParameters(_ parameters: UIPreviewParameters) -> UIPreviewParameters {
@@ -181,6 +209,7 @@ public final class LensTransitionContainer: UIView {
 
     private func finishDismissal() {
         self.sourceVisibilityAssertion = nil
+        self.replacementVisibilityAssertion = nil
         self.restoreSourceViews()
         self.backgroundView.alpha = 0.0
         self.menuVisibilityAssertion = nil

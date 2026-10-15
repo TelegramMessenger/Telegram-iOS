@@ -2122,7 +2122,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             if self.hasActiveLiquidMorph {
-                self.actionsStackNode.animateOut(alongsideAnimations: { [weak self] in
+                // The source resolved in this pass, as the opening resolved it: an action applied before the menu
+                // closes can have resized it.
+                let currentSource = liquidMorphSource.map { (view: $0.container, sourceRect: $0.sourceRect, sourcePath: $0.sourcePath) }
+                self.actionsStackNode.animateOut(currentSource: currentSource, alongsideAnimations: { [weak self] in
                     self?.additionalActionsStackNode.alpha = 0.0
                 }, completion: { [weak self] in
                     self?.hasActiveLiquidMorph = false

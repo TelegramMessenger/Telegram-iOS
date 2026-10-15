@@ -1556,8 +1556,8 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             self.contentContainer.animateIn(from: sourceView, sourceRect: sourceRect, sourcePath: sourcePath, alongsideAnimations: alongsideAnimations)
         }
 
-        func animateOut(alongsideAnimations: @escaping () -> Void, completion: @escaping () -> Void) {
-            self.contentContainer.animateOut(alongsideAnimations: alongsideAnimations, completion: completion)
+        func animateOut(currentSource: (view: UIView, sourceRect: CGRect, sourcePath: UIBezierPath?)?, alongsideAnimations: @escaping () -> Void, completion: @escaping () -> Void) {
+            self.contentContainer.animateOut(currentSource: currentSource, alongsideAnimations: alongsideAnimations, completion: completion)
         }
 
         func update(presentationData: PresentationData, presentation: Presentation, size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -2236,9 +2236,10 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         })
     }
 
-    func animateOut(alongsideAnimations: @escaping () -> Void, completion: @escaping () -> Void) {
+    /// `currentSource` is the morph source's outline resolved for this close, as `animateIn` was given it at opening.
+    func animateOut(currentSource: (view: UIView, sourceRect: CGRect, sourcePath: UIBezierPath?)?, alongsideAnimations: @escaping () -> Void, completion: @escaping () -> Void) {
         let accessories = self.subnodes?.filter { $0 !== self.navigationContainer } ?? []
-        self.navigationContainer.animateOut(alongsideAnimations: {
+        self.navigationContainer.animateOut(currentSource: currentSource, alongsideAnimations: {
             for node in accessories {
                 node.alpha = 0.0
             }
