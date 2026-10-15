@@ -63,6 +63,17 @@ final class NewsChannelBarTests: XCTestCase {
         XCTAssertEqual(self.action(.left, pending: NewsChannelBarPending(isAddingToNews: true, isJoining: true)), .addedToChats(muted: true))
     }
 
+    func testRemovingFromNewsShowsAddToNewsAtOnce() {
+        XCTAssertEqual(self.action(inNews: true, .left, pending: NewsChannelBarPending(isRemovingFromNews: true)), .addToNews)
+        XCTAssertEqual(self.action(inNews: true, .left, feature: false, pending: NewsChannelBarPending(isRemovingFromNews: true)), .existing)
+    }
+
+    func testAMuteChoiceShowsAtOnce() {
+        XCTAssertEqual(self.action(.member, muted: false, pending: NewsChannelBarPending(muted: true)), .addedToChats(muted: true))
+        XCTAssertEqual(self.action(.member, muted: true, pending: NewsChannelBarPending(muted: false)), .addedToChats(muted: false))
+        XCTAssertEqual(self.action(inNews: true, .left, pending: NewsChannelBarPending(isJoining: true, muted: false)), .addedToChats(muted: false))
+    }
+
     func testATapIsIgnoredWhileARequestRuns() {
         XCTAssertTrue(NewsChannelBarPending().acceptsTap)
         XCTAssertTrue(NewsChannelBarPending(isRemovingFromChats: true).acceptsTap)

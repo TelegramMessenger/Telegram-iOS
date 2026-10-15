@@ -41,9 +41,34 @@ public final class NewsChannelIslandView: UIView {
 
     public var action: (() -> Void)?
 
-    /// The capsule: it carries the press, and the menu is anchored on it.
+    /// The capsule: it carries the press.
     public let capsuleView = UIView()
-    private let glassView = GlassBackgroundView()
+
+    /// The menu's source: the native glass itself, so UIKit's liquid morph (iOS 26+) grows the menu out of the island
+    /// with its backdrop and contents, as the navigation bar's single-button capsules do. Targeting a wrapper leaves
+    /// the glass behind on screen.
+    public var menuSourceView: UIView {
+        return self.glassView.transitionView
+    }
+
+    /// The menu is about to morph out of the island: its own motion (the press's bounce, a width change, a paint, a
+    /// roll) finishes at once, so the morph reads the island at rest. UIKit takes the source's geometry, transform
+    /// included, when the menu opens and again when it closes back into the island; a spring still running at either
+    /// moment made the menu close into a slightly wrong size.
+    public func settleForMenu() {
+        let now = CACurrentMediaTime()
+        self.press = nil
+        if let width = self.width {
+            self.width = (width.to, width.to, now)
+        }
+        self.dye = nil
+        self.rollStart = nil
+        self.outgoing?.layer.removeFromSuperlayer()
+        self.outgoing = nil
+        self.layoutCapsule(now: now)
+        self.updateLink(now: now)
+    }
+    private var glassView = GlassBackgroundView()
     private let paintLayer = SimpleLayer()
     private let shineLayer = SimpleLayer()
     private let shineMaskLayer = SimpleShapeLayer()
@@ -119,7 +144,9 @@ public final class NewsChannelIslandView: UIView {
         self.layoutCapsule(now: CACurrentMediaTime())
     }
 
-    public func update(content: Content, labels: Labels, theme: PresentationTheme, preferClearGlass: Bool, leftLimit: CGFloat, rightLimit: CGFloat) {
+    /// `animated: false` puts a changed content in place at once, without the paint, the roll or the width spring: a
+    /// menu item is applied before its menu closes, and the menu morphs back into the island already showing it.
+    public func update(content: Content, labels: Labels, theme: PresentationTheme, preferClearGlass: Bool, leftLimit: CGFloat, rightLimit: CGFloat, animated: Bool = true) {
         let now = CACurrentMediaTime()
         let previous = self.content
         let labelsChanged = self.labels != labels
@@ -129,7 +156,15 @@ public final class NewsChannelIslandView: UIView {
         self.leftLimit = leftLimit
         self.rightLimit = rightLimit
 
-        if let previous, previous != content {
+        if let previous, previous != content, !animated {
+            self.press = nil
+            self.dye = nil
+            self.rollStart = nil
+            self.outgoing?.layer.removeFromSuperlayer()
+            self.outgoing = nil
+            self.incoming?.layer.removeFromSuperlayer()
+            self.incoming = self.makeLabel(content: content, labels: labels)
+        } else if let previous, previous != content {
             if previous.isPaint != content.isPaint {
                 self.dye = (now, content.isPaint)
                 DispatchQueue.main.asyncAfter(deadline: .now() + NewsIslandMetrics.settleHapticDelay, execute: { [weak self] in
@@ -148,7 +183,10 @@ public final class NewsChannelIslandView: UIView {
         self.content = content
 
         let target = newsIslandWidth(labelWidth: self.incoming?.size.width ?? 0.0, available: rightLimit - leftLimit)
-        if previous == nil {
+        if let previous, previous != content, !animated, let width = self.width, abs(width.to - target) >= 0.5 {
+            self.moveToNewGlassView()
+        }
+        if previous == nil || !animated {
             self.width = (target, target, now)
         } else if let width = self.width, width.to != target {
             self.width = (self.currentWidth(now: now), target, now)
@@ -168,6 +206,24 @@ public final class NewsChannelIslandView: UIView {
 
         self.layoutCapsule(now: now)
         self.updateLink(now: now)
+    }
+
+    /// A width change applied while the menu is open (`animated: false`) moves the island's contents into a new glass
+    /// view. The menu closes by morphing into the island's glass, and a close that takes over the still-running opening
+    /// keeps UIKit's morph item for the glass the opening started from: it lands where that glass was, at its old width,
+    /// and UIKit keeps that glass hidden until the morph ends. A new glass is a destination the morph has not seen.
+    /// Nothing is copied: the paint, the shine, the label and the button move.
+    private func moveToNewGlassView() {
+        let previous = self.glassView
+        let glassView = GlassBackgroundView()
+        self.capsuleView.insertSubview(glassView, aboveSubview: previous)
+        let contentView = glassView.contentView
+        contentView.layer.addSublayer(self.paintLayer)
+        contentView.layer.addSublayer(self.shineLayer)
+        contentView.layer.addSublayer(self.labelContainer)
+        contentView.addSubview(self.button)
+        previous.removeFromSuperview()
+        self.glassView = glassView
     }
 
     private func makeLabel(content: Content, labels: Labels) -> NewsIslandLabel {
@@ -273,6 +329,8 @@ public final class NewsChannelIslandView: UIView {
         self.capsuleView.transform = scale == 1.0 ? .identity : CGAffineTransform(scaleX: scale, y: scale)
         self.glassView.frame = CGRect(origin: CGPoint(), size: size)
         self.glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: self.preferClearGlass ? .clear : .panel), isInteractive: true, transition: .immediate)
+        // Set on every layout: the glass may replace its native view.
+        self.glassView.transitionView.morphsIntoContextMenu = true
         self.button.frame = CGRect(origin: CGPoint(), size: size)
 
         let dye: NewsIslandDye

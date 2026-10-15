@@ -47,8 +47,6 @@ public enum NewsIslandMetrics {
     public static let bellBaselineOffset: CGFloat = -3.5
     /// The shine's tilt.
     public static let shineAngle: CGFloat = 22.0 * CGFloat.pi / 180.0
-    /// A menu item acts once the menu is gone (`Motion.afterMenu`).
-    public static let menuDelay: Double = 0.25
     public static let changeHapticIntensity: CGFloat = 0.8
     public static let settleHapticDelay: Double = 0.25
     public static let settleHapticIntensity: CGFloat = 0.45

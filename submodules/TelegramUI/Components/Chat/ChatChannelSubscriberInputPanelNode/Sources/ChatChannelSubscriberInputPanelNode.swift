@@ -182,16 +182,21 @@ private let badgeFont = Font.regular(14.0)
 
 private final class ChannelNewsContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceView: UIView
+    private weak var island: NewsChannelIslandView?
+    private let initialSourceView: UIView
 
-    init(controller: ViewController, sourceView: UIView) {
+    init(controller: ViewController, island: NewsChannelIslandView) {
         self.controller = controller
-        self.sourceView = sourceView
+        self.island = island
+        self.initialSourceView = island.menuSourceView
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        // The bar is at the bottom: open the menu above it.
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
+        // The bar is at the bottom: open the menu above it. The island opts in to the liquid morph, so on iOS 26+ the
+        // menu grows out of it, centred on it, as the mockup's system menu does.
+        // The island's current glass: a width change while the menu is open moves the island into a new one, and the
+        // menu closes into that.
+        return ContextControllerReferenceViewInfo(referenceView: self.island?.menuSourceView ?? self.initialSourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top, centersMorphedActions: true)
     }
 }
 
@@ -225,6 +230,15 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     /// answer: see `NewsChannelBarRequest`.
     private var addToNewsRequest: NewsChannelBarRequest?
     private var addToChatsRequest: NewsChannelBarRequest?
+    /// Remove from News and Notify / Do Not Notify only change Postbox: they too show at once and hold until the
+    /// stored channel shows them, so a menu item is applied before its menu closes.
+    private var removeFromNewsRequest: NewsChannelBarRequest?
+    private var muteRequest: NewsChannelBarRequest?
+    /// Set from a menu item's tap until its menu is dismissed: the island puts every change in place without its own
+    /// transition, and the closing menu morphs into it.
+    private var islandAppliesChangesImmediately = false
+    /// A menu item is applying itself; a second tap on the menu is ignored until the menu is dismissed.
+    private var isApplyingMenuItem = false
     private var islandView: NewsChannelIslandView?
     /// Remove from Chats waiting for its toast (spec §1.4).
     private var pendingRemoval: NewsDeferredAction?
@@ -232,7 +246,11 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let haptic = HapticFeedback()
 
     private var pending: NewsChannelBarPending {
-        return NewsChannelBarPending(isAddingToNews: self.addToNewsRequest != nil, isJoining: self.isJoining || self.addToChatsRequest != nil, isRemovingFromChats: self.pendingRemoval != nil)
+        var muted: Bool?
+        if case let .setMuted(value)? = self.muteRequest?.kind {
+            muted = value
+        }
+        return NewsChannelBarPending(isAddingToNews: self.addToNewsRequest != nil, isJoining: self.isJoining || self.addToChatsRequest != nil, isRemovingFromChats: self.pendingRemoval != nil, isRemovingFromNews: self.removeFromNewsRequest != nil, muted: muted)
     }
 
     /// A request's answer came back (marked by the caller): the bar keeps showing its outcome until the stored channel
@@ -423,9 +441,11 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
 
     /// Join, Join Group, Apply to Join, and Add to Chats in the News menu: one path, so the menu gets the same
     /// joining state, error alerts and join web view as the button.
-    private func startJoin(context: AccountContext, peer: EnginePeer, muteAfterJoin: Bool = false, onJoined: (() -> Void)? = nil) {
+    /// `isAddToChats`: the News menu's Add to Chats, which the bar shows at once and holds until the channel is stored
+    /// joined, and which closing the chat does not cancel. `muteAfterJoin` mutes the channel once joined.
+    private func startJoin(context: AccountContext, peer: EnginePeer, isAddToChats: Bool = false, muteAfterJoin: Bool = false, onJoined: (() -> Void)? = nil) {
         self.isJoining = true
-        if muteAfterJoin {
+        if isAddToChats {
             self.addToChatsRequest = NewsChannelBarRequest(kind: .addToChats)
         }
         if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, isSecondary, metrics, deviceMetrics) = self.layoutData, let presentationInterfaceState = self.presentationInterfaceState {
@@ -465,7 +485,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             switch result {
             case .joined:
                 didJoin = true
-                if muteAfterJoin {
+                if isAddToChats {
                     // The answer arrives before the joined channel is stored.
                     strongSelf.addToChatsRequest?.answer(at: CACurrentMediaTime())
                     strongSelf.settleAnsweredRequest()
@@ -487,7 +507,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             self.addToChatsRequest = nil
             self.relayoutPanel()
             self.presentJoinError(error, context: context, retry: { [weak self] in
-                self?.startJoin(context: context, peer: peer, muteAfterJoin: muteAfterJoin, onJoined: onJoined)
+                self?.startJoin(context: context, peer: peer, isAddToChats: isAddToChats, muteAfterJoin: muteAfterJoin, onJoined: onJoined)
             })
         }
         let onCompleted: () -> Void = { [weak self] in
@@ -520,7 +540,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 }
             }
         }
-        if muteAfterJoin {
+        if isAddToChats {
             // Add to Chats is not owned by the bar: closing the chat must not cancel a join the server may already
             // have done, or the mute that follows it.
             let _ = observedJoin.startStandalone(next: onNext, error: onError, completed: onCompleted)
@@ -548,15 +568,34 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         for item in newsChannelMenuItems(for: barAction, isArchived: presentationInterfaceState.isArchived) {
             items.append(.action(ContextMenuActionItem(text: self.menuTitle(item, strings: presentationData.strings), textColor: item.isDestructive ? .destructive : .primary, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: item.iconName), color: item.isDestructive ? theme.contextMenu.destructiveColor : theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                f(.default)
-                // After the menu is gone, so the island's change is not hidden under it (`Motion.afterMenu`).
-                Queue.mainQueue().after(NewsIslandMetrics.menuDelay) {
-                    self?.performMenuItem(item, context: context, peer: enginePeer)
+            }, action: { [weak self] c, _ in
+                guard let self else {
+                    c?.dismiss(completion: nil)
+                    return
                 }
+                if self.isApplyingMenuItem {
+                    return
+                }
+                // Applied first, and the menu dismissed once the change has landed, so the menu morphs back into the
+                // island already showing it. Until then the island puts every change in place without its own
+                // transition.
+                self.isApplyingMenuItem = true
+                self.islandAppliesChangesImmediately = true
+                self.performMenuItem(item, context: context, peer: enginePeer, landed: { [weak self] in
+                    // One more main-queue turn for the chat to integrate what landed in Postbox.
+                    DispatchQueue.main.async {
+                        c?.dismiss(completion: nil)
+                        self?.islandAppliesChangesImmediately = false
+                        self?.isApplyingMenuItem = false
+                    }
+                })
             })))
         }
-        let contextController = makeContextController(presentationData: presentationData, source: .reference(ChannelNewsContextReferenceContentSource(controller: chatController, sourceView: islandView.capsuleView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        islandView.settleForMenu()
+        // No outline of our own: the menu resolves the glass's shape (its corner radius) when it opens and again when
+        // it closes, so an item that changes the island's width (Remove from Chats, Add to Chats) closes the menu into
+        // the island's new size.
+        let contextController = makeContextController(presentationData: presentationData, source: .reference(ChannelNewsContextReferenceContentSource(controller: chatController, island: islandView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         interfaceInteraction.presentController(contextController, nil)
     }
 
@@ -579,38 +618,52 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
 
-    private func performMenuItem(_ item: NewsChannelMenuItem, context: AccountContext, peer: EnginePeer) {
+    /// `landed` runs once the item's change is in place: a Postbox write when it completes (on the main queue), the
+    /// bar's own state (Add to Chats, whose join goes to the server; Remove from Chats, deferred behind its toast)
+    /// right away. Called exactly once on every path.
+    private func performMenuItem(_ item: NewsChannelMenuItem, context: AccountContext, peer: EnginePeer, landed: @escaping () -> Void) {
         let peerId = peer.id
         let title = peer.compactDisplayTitle
         switch item {
         case .addToChats:
             // A plain join on a light-joined channel adds it to Chats.
             if !self.pending.acceptsTap {
+                landed()
                 return
             }
             self.haptic.impact(.light, intensity: NewsIslandMetrics.changeHapticIntensity)
-            self.startJoin(context: context, peer: peer, muteAfterJoin: !(self.presentationInterfaceState?.peerIsMuted ?? false), onJoined: { [weak self] in
+            self.startJoin(context: context, peer: peer, isAddToChats: true, muteAfterJoin: !(self.presentationInterfaceState?.peerIsMuted ?? false), onJoined: { [weak self] in
                 self?.presentBarToast(.addedToChats, title: title)
             })
+            landed()
         case .removeFromNews:
             // Leaving is right only for a light join. A channel joined since the menu opened (Add to Chats on
             // another device, say) keeps its membership.
             if let channel = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramChannel, case .member = channel.participationStatus {
+                landed()
                 return
             }
             self.haptic.impact(.light, intensity: NewsIslandMetrics.changeHapticIntensity)
+            self.removeFromNewsRequest = NewsChannelBarRequest(kind: .removeFromNews)
+            self.removeFromNewsRequest?.answer(at: CACurrentMediaTime())
+            self.settleAnsweredRequest()
             // A light-joined channel has no chat-list entry to lose, so there is no confirmation.
             let _ = (context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false)
             |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                 self?.presentBarToast(.removedFromNews, title: title)
+                landed()
             })
         case .notify, .doNotNotify:
             self.haptic.impact(.light, intensity: NewsIslandMetrics.changeHapticIntensity)
             let mute = item == .doNotNotify
+            self.muteRequest = NewsChannelBarRequest(kind: .setMuted(mute))
+            self.muteRequest?.answer(at: CACurrentMediaTime())
+            self.settleAnsweredRequest()
             // Explicit, not a toggle, so a repeated tap cannot flip it back. 0 is "unmuted", nil would be "default".
             let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: nil, muteInterval: mute ? Int32.max : 0)
             |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                 self?.presentBarToast(mute ? .notificationsOff : .notificationsOn, title: title)
+                landed()
             })
         case .archive, .unarchive:
             self.haptic.impact(.light, intensity: NewsIslandMetrics.changeHapticIntensity)
@@ -618,10 +671,12 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let _ = (context.engine.peers.updatePeersGroupIdInteractively(peerIds: [peerId], groupId: archive ? .archive : .root)
             |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                 self?.presentBarToast(archive ? .archived : .unarchived, title: title)
+                landed()
             })
         case .removeFromChats:
             self.haptic.impact(.light, intensity: NewsIslandMetrics.changeHapticIntensity)
             self.beginRemovalFromChats(context: context, peerId: peerId, title: title)
+            landed()
         }
     }
 
@@ -814,11 +869,18 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             }
             let isInNews = channel.flags.contains(.isInNews)
             let now = CACurrentMediaTime()
-            if let request = self.addToNewsRequest, !request.isPending(isInNews: isInNews, participation: participation, now: now) {
+            let isMuted = interfaceState.peerIsMuted
+            if let request = self.addToNewsRequest, !request.isPending(isInNews: isInNews, participation: participation, isMuted: isMuted, now: now) {
                 self.addToNewsRequest = nil
             }
-            if let request = self.addToChatsRequest, !request.isPending(isInNews: isInNews, participation: participation, now: now) {
+            if let request = self.addToChatsRequest, !request.isPending(isInNews: isInNews, participation: participation, isMuted: isMuted, now: now) {
                 self.addToChatsRequest = nil
+            }
+            if let request = self.removeFromNewsRequest, !request.isPending(isInNews: isInNews, participation: participation, isMuted: isMuted, now: now) {
+                self.removeFromNewsRequest = nil
+            }
+            if let request = self.muteRequest, !request.isPending(isInNews: isInNews, participation: participation, isMuted: isMuted, now: now) {
+                self.muteRequest = nil
             }
         }
         
@@ -990,7 +1052,8 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 theme: interfaceState.theme,
                 preferClearGlass: interfaceState.preferredGlassType == .clear,
                 leftLimit: leftLimit,
-                rightLimit: rightLimit
+                rightLimit: rightLimit,
+                animated: !self.islandAppliesChangesImmediately
             )
         } else if let islandView = self.islandView {
             self.islandView = nil
