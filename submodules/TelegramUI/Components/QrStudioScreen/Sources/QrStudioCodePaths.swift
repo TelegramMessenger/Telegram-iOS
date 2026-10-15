@@ -46,7 +46,9 @@ struct QrStudioCodePaths {
             guard x >= 0, y >= 0, x < size, y < size else {
                 return false
             }
-            if matrix.isEye(x: x, y: y) || QrStudioCodePaths.isInLogo(x: x, y: y, size: size) {
+            // Not `matrix.isEye(x:y:)`: with that inlined, Swift 6.4's SimplifyCFG crashes on this
+            // init at -Osize ("cannot get borrow introducers for unknown guaranteed value").
+            if QrCodeMatrix.isEye(x: x, y: y, size: size) || QrStudioCodePaths.isInLogo(x: x, y: y, size: size) {
                 return false
             }
             return matrix[x, y]

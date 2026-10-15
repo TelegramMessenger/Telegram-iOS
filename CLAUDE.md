@@ -649,6 +649,25 @@ In a binary the fingerprint is a weak/unowned `…Init` whose stack slot gets `�
 first call to a closure specialized as `Arg[n] = Stack Promoted from Box`; a scan of every binary in
 the 2026-10-02 debug build found no other site.
 
+## Swift 6.4: SimplifyCFG crash in release builds only
+
+`BorrowUtils.swift:551: Fatal error: cannot get borrow introducers for unknown guaranteed value`,
+in pass `SimplifyCFG` (jump threading), crashes `swift-frontend` at `-Osize` while debug builds of the
+same source compile, so it first shows up on CI. Seen 2026-10-15 in `QrStudioCodePaths.init`: a
+nested function called from loops, with the cross-module-inlined `QrCodeMatrix.isEye(x:y:)` (an
+`&&`/`||` chain reading `self.size` of the borrowed matrix, a struct holding an array). Calling a
+static `QrCodeMatrix.isEye(x:y:size:)` with a local `size` avoids it; removing any other construct of
+the function on its own did not.
+
+To reproduce, replay the frontend command from the CI log in the bazel execroot. A single file only
+reproduces with a caller added, because WMO deletes an internal function nothing calls before
+optimizing it. Give the replay its own `-module-cache-path`: the default relative
+`bazel-out/…/_swift_module_cache`, run from the workspace instead of the execroot, writes pcms into
+bazel's shared cache under a second path (the `bazel-out` symlink), and the next build fails with
+"module '_DarwinFoundation1' is defined in both". Delete the hash directory it wrote to recover.
+Also, `Make.py build --target` on a bare `swift_library` builds it for the host (`no such module
+'UIKit'`); a library gets its iOS configuration only through the app's transition.
+
 ## Per-module `-O` and pixel loops
 
 Almost every submodule builds `-Onone` under `--configuration=debug_*`. Exactly **two** override it with

@@ -19,7 +19,11 @@ public struct QrCodeMatrix: Equatable {
     }
 
     public func isEye(x: Int, y: Int) -> Bool {
-        return (x < 7 && y < 7) || (x >= self.size - 7 && y < 7) || (x < 7 && y >= self.size - 7)
+        return QrCodeMatrix.isEye(x: x, y: y, size: self.size)
+    }
+
+    public static func isEye(x: Int, y: Int, size: Int) -> Bool {
+        return (x < 7 && y < 7) || (x >= size - 7 && y < 7) || (x < 7 && y >= size - 7)
     }
 
     public var eyes: [(x: Int, y: Int)] {
