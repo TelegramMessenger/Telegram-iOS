@@ -567,14 +567,18 @@ extension NavigationBarComponent.View {
         return capsule
     }
 
-    /// Lends `capsule`'s glass to the merging container, carrying on a press UIKit is drawing on it as a spring.
+    /// Lends `capsule`'s glass to the merging container, carrying on a press UIKit is drawing on it as a spring (on top of
+    /// one the bar is already releasing, when the glass was lent before: a tap before the last change settled).
     private func lendInPlaceGlass(_ capsule: NavigationBarInPlaceCapsule) {
-        guard capsule.lentGlass == nil else {
-            return
-        }
         let press = self.inPlacePressAtChange[ObjectIdentifier(capsule.container)] ?? navigationBarCapsulePress(capsule.container)
         if abs(press.scale - 1.0) > 0.0005 {
-            capsule.press = NavigationSpringCurve(startTime: self.inPlaceTime, from: press.scale, target: 1.0, spring: NavigationBarGlassSettings.pressRelease, rest: .glass(0.0005))
+            let current = capsule.press?.value(at: self.inPlaceTime) ?? 1.0
+            capsule.press = NavigationSpringCurve(startTime: self.inPlaceTime, from: current * press.scale, target: 1.0, spring: NavigationBarGlassSettings.pressRelease, rest: .glass(0.0005))
+            // Carried on once: a partner of two pills is lent twice in one layout.
+            self.inPlacePressAtChange[ObjectIdentifier(capsule.container)] = NavigationBarCapsulePress(scale: 1.0, glow: 0.0)
+        }
+        guard capsule.lentGlass == nil else {
+            return
         }
         let mergeContainer: GlassBackgroundContainerView
         if let current = self.inPlaceMergeContainer {

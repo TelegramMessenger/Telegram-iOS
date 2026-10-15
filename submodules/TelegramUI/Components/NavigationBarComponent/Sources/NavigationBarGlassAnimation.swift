@@ -314,28 +314,33 @@ func navigationBarGlassMaterializeScale(size: CGSize) -> CGSize {
 }
 
 /// The scale UIKit is drawing a capsule's press at (1 at rest): the on-screen height of the glass effect view the
-/// capsule's content sits in, over the capsule's own height. UIKit's `_UIFlexInteraction` grows that glass around the
-/// content, by its bounds on a short tap (measured in the app, 2026-10-14: every transform between the content and the
-/// capsule read 1 while the glass was 61 pt) or by a transform, so the content's own size says nothing about it.
-/// Read from the presentation layers when both are there.
+/// capsule's content sits in, over the height the glass is laid out at (the effect view's superview; the capsule's own
+/// height at rest, the merge's shape while the glass is lent, so the merge's own scaling is not read as a press).
+/// UIKit's `_UIFlexInteraction` grows that glass around the content, by its bounds on a short tap (measured in the app,
+/// 2026-10-14: every transform between the content and the capsule read 1 while the glass was 61 pt) or by a transform,
+/// so the content's own size says nothing about it. Read from the presentation layers when both are there.
 func navigationBarCapsulePressScale(_ container: GlassContextExtractableContainer) -> CGFloat {
     var current: UIView? = container.contentView.superview
     while let view = current, view !== container, !(view is UIVisualEffectView) {
         current = view.superview
     }
-    guard let glass = current as? UIVisualEffectView, container.bounds.height > 0.0 else {
+    guard let glass = current as? UIVisualEffectView else {
+        return 1.0
+    }
+    let layout: UIView = glass.superview ?? container
+    guard layout.bounds.height > 0.0 else {
         return 1.0
     }
     let glassLayer: CALayer
-    let containerLayer: CALayer
-    if let glassPresentation = glass.layer.presentation(), let containerPresentation = container.layer.presentation() {
+    let layoutLayer: CALayer
+    if let glassPresentation = glass.layer.presentation(), let layoutPresentation = layout.layer.presentation() {
         glassLayer = glassPresentation
-        containerLayer = containerPresentation
+        layoutLayer = layoutPresentation
     } else {
         glassLayer = glass.layer
-        containerLayer = container.layer
+        layoutLayer = layout.layer
     }
-    let scale = glassLayer.convert(glassLayer.bounds, to: containerLayer).height / container.bounds.height
+    let scale = glassLayer.convert(glassLayer.bounds, to: layoutLayer).height / layout.bounds.height
     return scale.isFinite && scale > 0.0 ? scale : 1.0
 }
 
