@@ -4000,6 +4000,27 @@ public final class WalletScreen: ViewControllerComponentContainer {
         super.containerLayoutUpdated(layout, transition: transition)
     }
 
+    override public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+        if controller is UndoOverlayController {
+            self.dismissAllTooltips()
+        }
+        super.present(controller, in: context, with: arguments, blockInteraction: blockInteraction, completion: completion)
+    }
+
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+            return true
+        })
+    }
+
     override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
         guard layout.metrics.widthClass == .regular else {
             return nil
@@ -4024,6 +4045,11 @@ public final class WalletScreen: ViewControllerComponentContainer {
         componentView.setTransferAnimationsVisible(true)
         componentView.refreshTwoStepAuth()
         componentView.reloadPreviousWallets()
+    }
+
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        (self.node.hostView.componentView as? WalletScreenComponent.View)?.setTransferAnimationsVisible(true)
     }
 
     override public func viewWillDisappear(_ animated: Bool) {

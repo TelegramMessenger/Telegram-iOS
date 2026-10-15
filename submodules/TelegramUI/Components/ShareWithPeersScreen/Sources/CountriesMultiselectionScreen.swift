@@ -442,7 +442,8 @@ final class CountriesMultiselectionScreenComponent: Component {
                         component: AnyComponent(CountryListItemComponent(
                             context: component.context,
                             theme: environment.theme,
-                            title: "\(country.flag)     \(country.name)",
+                            countryId: country.id,
+                            title: country.name,
                             selectionState: .editing(isSelected: isSelected, isTinted: false),
                             hasNext: true,
                             action: { [weak self] in
@@ -731,7 +732,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                     id: AnyHashable(countryId),
                     title: tokenCountry.name,
                     fixedPosition: nil,
-                    content: .emoji(tokenCountry.flag)
+                    content: .countryFlag(tokenCountry.id)
                 ))
             }
             
@@ -790,6 +791,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 component: AnyComponent(CountryListItemComponent(
                     context: component.context,
                     theme: environment.theme,
+                    countryId: nil,
                     title: "Title",
                     selectionState: .editing(isSelected: false, isTinted: false),
                     hasNext: true,
@@ -1126,7 +1128,6 @@ public class CountriesMultiselectionScreen: ViewControllerComponentContainer {
 public extension CountriesMultiselectionScreen {
     struct CountryItem {
         let id: String
-        let flag: String
         let name: String
     }
     
@@ -1203,7 +1204,6 @@ public extension CountriesMultiselectionScreen {
                     
                     currentCountries.append(CountryItem(
                         id: country.1,
-                        flag: flagEmoji(countryCode: country.1),
                         name: country.0.1
                     ))
                 }
@@ -1230,7 +1230,6 @@ public extension CountriesMultiselectionScreen {
                     }
                     resultCountries.append(CountryItem(
                         id: country.1,
-                        flag: flagEmoji(countryCode: country.1),
                         name: country.0.1
                     ))
                     existingIds.insert(country.1)

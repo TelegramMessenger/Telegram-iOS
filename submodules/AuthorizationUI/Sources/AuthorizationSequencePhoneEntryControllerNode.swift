@@ -21,7 +21,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     let strings: PresentationStrings
     let theme: PresentationTheme
     
-    let countryButton: ASButtonNode
+    let countryButton: CountryButtonNode
     let countryButtonArrow: ASImageNode
     let phoneBackground: ASImageNode
     let phoneInputNode: PhoneInputNode
@@ -85,7 +85,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.strokePath()
         })?.stretchableImage(withLeftCapWidth: 95, topCapHeight: 2)
         
-        self.countryButton = ASButtonNode()
+        self.countryButton = CountryButtonNode()
         self.countryButton.displaysAsynchronously = false
         self.countryButton.setBackgroundImage(countryButtonBackground, for: [])
         self.countryButton.titleNode.maximumNumberOfLines = 1
@@ -153,24 +153,22 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                                 
                 if strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
-                    let flagString = emojiFlagForISOCountryCode(name)
                     var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
                     if name == "FT" {
                         localizedName = strongSelf.strings.Login_AnonymousNumbers
                     }
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.countryButton.setCountryTitle(countryId: name, name: localizedName, font: Font.regular(20.0), color: theme.list.itemAccentColor)
                     strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
                         strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                     }
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
-                    let flagString = emojiFlagForISOCountryCode(countryId)
                     var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     if countryId == "FT" {
                         localizedName = strongSelf.strings.Login_AnonymousNumbers
                     }
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.countryButton.setCountryTitle(countryId: countryId, name: localizedName, font: Font.regular(20.0), color: theme.list.itemAccentColor)
                     strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
@@ -214,12 +212,11 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     
     func processNumberChange(number: String) -> Bool {
         if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: self.preferredCountryIdForCode) {
-            let flagString = emojiFlagForISOCountryCode(country.id)
             var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: self.strings) ?? country.name
             if country.id == "FT" {
                 localizedName = self.strings.Login_AnonymousNumbers
             }
-            self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: self.theme.list.itemAccentColor, for: [])
+            self.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(20.0), color: self.theme.list.itemAccentColor)
             self.hasCountry = true
             
             let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])

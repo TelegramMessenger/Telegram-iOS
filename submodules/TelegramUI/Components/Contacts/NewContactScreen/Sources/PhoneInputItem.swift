@@ -141,7 +141,7 @@ final class PhoneInputItem: ListViewItem, ItemListItem, ListItemComponentAdaptor
 }
 
 final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
-    private let countryButton: ASButtonNode
+    private let countryButton: CountryButtonNode
     private let arrowNode: ASImageNode
     private let phoneBackground: ASImageNode
     private let phoneInputNode: PhoneInputNode
@@ -159,7 +159,7 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     init() {
-        self.countryButton = ASButtonNode()
+        self.countryButton = CountryButtonNode()
         self.arrowNode = ASImageNode()
         self.arrowNode.displaysAsynchronously = false
         self.arrowNode.isLayerBacked = true
@@ -204,19 +204,17 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
             
             if self.processNumberChange(self.phoneInputNode.number) {
             } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
-                let flagString = emojiFlagForISOCountryCode(name)
                 var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: item.strings) ?? countryName
                 if name == "FT" {
                     localizedName = item.strings.Login_AnonymousNumbers
                 }
-                self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+                self.countryButton.setCountryTitle(countryId: name, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
             } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
-                let flagString = emojiFlagForISOCountryCode(countryId)
                 var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: item.strings) ?? countryName
                 if countryId == "FT" {
                     localizedName = item.strings.Login_AnonymousNumbers
                 }
-                self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+                self.countryButton.setCountryTitle(countryId: countryId, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
             } else {
                 self.countryButton.setTitle(item.strings.Login_SelectCountry, with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
             }
@@ -251,9 +249,8 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
             return false
         }
         if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: self.preferredCountryIdForCode) {
-            let flagString = emojiFlagForISOCountryCode(country.id)
             let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: item.strings) ?? country.name
-            self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+            self.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
             
             let maskFont = Font.with(size: 17.0, design: .regular, traits: [.monospacedNumbers])
             var rawMask = ""
