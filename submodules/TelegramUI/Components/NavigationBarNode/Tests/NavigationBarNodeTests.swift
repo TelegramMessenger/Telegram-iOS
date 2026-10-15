@@ -503,17 +503,35 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertEqual(state?.rowFrame.height, 44.0)
     }
 
-    // A regular screen whose right items are the Done checkmark beside another item gets the accent circle, as every bar
-    // with an accent button beside others does (UIKit gives the prominent item its own section).
-    func test_doneBesideAnotherItem_takesTheAccentCircle() {
+    // A regular screen whose right items are the Done checkmark beside another item gives the checkmark a pill of its own
+    // (UIKit gives the prominent item its own section). The items [Done, Edit] are drawn Done leftmost, so Edit is the
+    // outermost pill and Done the one inside it.
+    func test_doneBesideAnotherItem_isAPillOfItsOwn() {
         let node = self.makeNode()
         let item = UINavigationItem(title: "Info")
         item.rightBarButtonItems = [UIBarButtonItem(title: "___done", style: .done, target: nil, action: nil), UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)]
         node.item = item
         node.previousItem = .item(UINavigationItem())
         self.layout(node)
-        XCTAssertNotNil(node.rowViewForTesting?.rightCircleBackgroundContainer)
-        XCTAssertEqual(node.rowViewForTesting?.rightCircleBackgroundContainer?.frame.width, 44.0)
+        XCTAssertNotNil(node.rowViewForTesting?.rightPillBackgroundContainer(at: 1))
+        XCTAssertEqual(node.rowViewForTesting?.rightPillBackgroundContainer(at: 1)?.frame.width, 44.0)
+    }
+
+    // ItemListController's right items are [secondary, primary] (search, Edit): the bar draws them as two pills, Edit
+    // outermost, as UIKit does.
+    func test_itemListPair_searchAndEdit_areTwoPills() {
+        let node = self.makeNode()
+        let item = UINavigationItem(title: "Administrators")
+        item.rightBarButtonItems = [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil), UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)]
+        node.item = item
+        node.previousItem = .item(UINavigationItem())
+        self.layout(node)
+        guard let rowView = node.rowViewForTesting, let edit = rowView.rightPillBackgroundContainer(at: 0), let search = rowView.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("not two pills")
+            return
+        }
+        XCTAssertGreaterThan(edit.frame.minX, search.frame.maxX)
+        XCTAssertEqual(edit.frame.minX - search.frame.maxX, 12.0)
     }
 
     private func makeLaidOutNode(title: String, rightItem: UIBarButtonItem? = nil) -> NavigationBarNode {
@@ -1054,7 +1072,7 @@ final class NavigationBarNodeTests: XCTestCase {
         node.previousItem = .item(UINavigationItem())
         self.layout(node)
         XCTAssertNil(node.rowViewForTesting?.inPlaceStateForTesting(isLeft: false))
-        let capsule = node.rowViewForTesting?.rightButtonsBackgroundContainer
+        let capsule = node.rowViewForTesting?.rightPillBackgroundContainer(at: 0)
 
         item.setRightBarButton(UIBarButtonItem(title: "Done", style: .done, target: nil, action: nil), animated: true)
         node.layout()
@@ -1063,7 +1081,7 @@ final class NavigationBarNodeTests: XCTestCase {
             return
         }
         XCTAssertFalse(rowView.plattersDetached)
-        XCTAssertTrue(rowView.rightButtonsBackgroundContainer === capsule)
+        XCTAssertTrue(rowView.rightPillBackgroundContainer(at: 0) === capsule)
         XCTAssertTrue(capsule?.superview === rowView)
         rowView.inPlaceTickForTesting(dt: 0.05)
         XCTAssertGreaterThan(rowView.inPlaceStateForTesting(isLeft: false)?.pulse.height ?? 1.0, 1.0)

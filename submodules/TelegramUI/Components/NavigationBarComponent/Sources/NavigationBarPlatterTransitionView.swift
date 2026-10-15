@@ -420,24 +420,21 @@ public final class NavigationBarPlatterTransitionView: UIView {
             layout.signatures[.leading] = navigationBarCapsuleSignature(side.content, role: .leading, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
         }
         let rowMaxX = side.rowFrame.minX + size.width - side.rightInset - side.trailingButtonsInset
-        let circleWidth = contentView.rightCircleWidth
-        if circleWidth > 0.0 {
-            layout.frames[.trailing] = CGRect(x: rowMaxX - circleWidth, y: side.rowFrame.minY, width: circleWidth, height: 44.0)
-            contentView.rightCircleContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: circleWidth, height: 44.0))
-            layout.itemViews[.trailing] = contentView.rightCircleContainer
-            layout.tints[.trailing] = navigationBarGlassTintColor(contentView.rightCircleTint, theme: side.theme)
-            layout.signatures[.trailing] = navigationBarCapsuleSignature(side.content, role: .trailing, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
-        }
-        if contentView.rightButtonsWidth > 0.0 {
-            // Beside a circle the capsule is UIKit's section 1, ending its 12 pt gap before the circle; alone it is the
-            // outermost platter.
-            let role: Role = circleWidth > 0.0 ? .trailingInner : .trailing
-            let maxX = circleWidth > 0.0 ? rowMaxX - circleWidth - navigationBarInterSectionSpacing : rowMaxX
-            let width = max(44.0, contentView.rightButtonsWidth)
-            layout.frames[role] = CGRect(x: maxX - width, y: side.rowFrame.minY, width: width, height: 44.0)
-            contentView.rightButtonsContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0))
-            layout.itemViews[role] = contentView.rightButtonsContainer
-            layout.tints[role] = navigationBarGlassTintColor(contentView.rightCapsuleTint, theme: side.theme)
+        // UIKit's sections 0 and 1 (Task 4 gives every pill a role).
+        let rightPills = navigationBarRightPillMetrics(widths: contentView.rightPillWidths)
+        var outerExtent: CGFloat = 0.0
+        for (index, pill) in rightPills.enumerated() {
+            let maxX = rowMaxX - outerExtent
+            outerExtent += pill.extent
+            guard index < 2 else {
+                continue
+            }
+            let role: Role = index == 0 ? .trailing : .trailingInner
+            layout.frames[role] = CGRect(x: maxX - pill.width, y: side.rowFrame.minY, width: pill.width, height: 44.0)
+            let container = contentView.rightPillContainer(at: index)
+            container.frame = CGRect(origin: CGPoint(), size: CGSize(width: pill.width, height: 44.0))
+            layout.itemViews[role] = container
+            layout.tints[role] = navigationBarGlassTintColor(contentView.rightPillTints[index], theme: side.theme)
             layout.signatures[role] = navigationBarCapsuleSignature(side.content, role: role, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
         }
         if let pill = side.titlePill, layout.frames[.trailingInner] == nil {
@@ -510,7 +507,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         if view === self.columnBackWrappers[kind] {
             return contentView.columnBackContainer
         }
-        for container in [contentView.leftButtonsContainer, contentView.rightButtonsContainer, contentView.rightCircleContainer, contentView.columnButtonsContainer, contentView.columnTrailingContainer] where container === view {
+        for container in [contentView.leftButtonsContainer, contentView.columnButtonsContainer, contentView.columnTrailingContainer] + contentView.rightPillContainers where container === view {
             return container
         }
         return nil
@@ -1143,15 +1140,9 @@ private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Con
         }
         return signature.isEmpty ? nil : signature
     case .trailing:
-        if let circle = placement.rowCircleItem {
-            return [circle.id]
-        }
-        return placement.rowRightButtons.isEmpty ? nil : placement.rowRightButtons.map { $0.id }
+        return placement.rowRightSections.first.map { $0.map { $0.id } }
     case .trailingInner:
-        guard placement.rowCircleItem != nil, !placement.rowRightButtons.isEmpty else {
-            return nil
-        }
-        return placement.rowRightButtons.map { $0.id }
+        return placement.rowRightSections.count > 1 ? placement.rowRightSections[1].map { $0.id } : nil
     case .columnBack:
         guard backInColumn, let backSignature else {
             return nil

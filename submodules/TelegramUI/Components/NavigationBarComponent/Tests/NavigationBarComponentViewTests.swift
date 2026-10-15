@@ -120,8 +120,8 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let view = self.makeBar(content: NavigationBarComponent.Content(title: .text("Chats"), back: nil, leftButton: nil, rightButtons: [self.fixedButton("compose", tint: .accent), self.fixedButton("story"), self.fixedButton("proxy")], backPressed: {}))
         XCTAssertEqual(view.primaryRightButtonsWidth, 88.0 + 12.0 + 44.0)
         XCTAssertEqual(view.primaryCenterContentInsets.right, 16.0 + 88.0 + 12.0 + 44.0 + 4.0)
-        XCTAssertEqual(view.primaryContentView?.rightCircleWidth, 44.0)
-        XCTAssertTrue(view.rightButtonViews["compose"]?.isDescendant(of: view.primaryContentView!.rightCircleContainer) ?? false)
+        XCTAssertEqual(view.primaryContentView?.rightPillWidths.first, 44.0)
+        XCTAssertTrue(view.rightButtonViews["compose"]?.isDescendant(of: view.primaryContentView!.rightPillContainer(at: 0)) ?? false)
     }
 
     private func makeBar(content: NavigationBarComponent.Content, sideColumnLength: CGFloat?, hidesSideColumnButtons: Bool = false) -> NavigationBarComponent.View {
@@ -306,15 +306,15 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let titleFrame = title.convert(title.bounds, to: view)
         view.plattersDetached = true
         XCTAssertNil(view.leftButtonsBackgroundContainer?.superview)
-        XCTAssertNil(view.rightButtonsBackgroundContainer?.superview)
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 0)?.superview)
         XCTAssertTrue(title.isDescendant(of: view))
         XCTAssertEqual(title.convert(title.bounds, to: view), titleFrame)
         // A layout while detached keeps them out.
         let _ = update(rightButtons: [self.fixedButton("x"), self.fixedButton("y")])
-        XCTAssertNil(view.rightButtonsBackgroundContainer?.superview)
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 0)?.superview)
         view.plattersDetached = false
         XCTAssertTrue(view.leftButtonsBackgroundContainer?.superview === view)
-        XCTAssertTrue(view.rightButtonsBackgroundContainer?.superview === view)
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0)?.superview === view)
     }
 
     private func updateBar(_ bar: ComponentView<Empty>, back: NavigationBarComponent.Back?, right: [NavigationBarComponent.Button], transition: ComponentTransition) -> NavigationBarComponent.View {
@@ -336,13 +336,13 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_inPlaceItemChange_keepsTheCapsule_andAnimatesNatively() {
         let bar = ComponentView<Empty>()
         let before = self.updateBar(bar, back: .back, right: [NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })], transition: .immediate)
-        guard let capsule = before.rightButtonsBackgroundContainer else {
+        guard let capsule = before.rightPillBackgroundContainer(at: 0) else {
             XCTFail("no capsule")
             return
         }
         let oldFrame = capsule.frame
         let view = self.updateBar(bar, back: nil, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
-        XCTAssertTrue(view.rightButtonsBackgroundContainer === capsule)
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === capsule)
         guard let start = view.inPlaceStateForTesting(isLeft: false) else {
             XCTFail("no in-place animation")
             return
@@ -357,7 +357,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
         XCTAssertEqual(capsule.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
         XCTAssertTrue(CATransform3DIsIdentity(capsule.layer.transform))
-        XCTAssertEqual(view.rightButtonsContainer.alpha, 1.0)
+        XCTAssertEqual(view.rightPill(at: 0).itemsContainer.alpha, 1.0)
     }
 
     // The new items take taps while the change animates (Edit -> Done, then Done tapped at once). The content view hit
@@ -446,7 +446,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_detachingPlatters_measuresThePressGlow() {
         let bar = ComponentView<Empty>()
         let view = self.updateBar(bar, back: .back, right: [NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })], transition: .immediate)
-        guard let back = view.leftButtonsBackgroundContainer, let backGlass = navigationBarTestGlassEffectView(content: back.contentView, container: back), let edit = view.rightButtonsBackgroundContainer, let editGlass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+        guard let back = view.leftButtonsBackgroundContainer, let backGlass = navigationBarTestGlassEffectView(content: back.contentView, container: back), let edit = view.rightPillBackgroundContainer(at: 0), let editGlass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
             XCTFail("no capsules")
             return
         }
@@ -530,7 +530,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
             return
         }
         let view = self.updateBar(bar, back: nil, right: [self.fixedButton("search")], transition: .easeInOut(duration: 0.3))
-        let leaving = view.inPlaceLeavingViewsForTesting(slot: .right)
+        let leaving = view.inPlaceLeavingViewsForTesting(slot: .right(0))
         XCTAssertEqual(leaving.count, 1)
         XCTAssertTrue(leaving.first.map { edit.isDescendant(of: $0) } ?? false, "\(leaving)")
         XCTAssertFalse(view.rightButtonViews["search"]?.isDescendant(of: leaving.first ?? UIView()) ?? true)
@@ -563,9 +563,9 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_accentCircle_isOutermost_twelvePointsAfterTheCapsule() {
         let bar = ComponentView<Empty>()
         let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
-        XCTAssertEqual(view.rightCircleBackgroundContainer?.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
-        XCTAssertEqual(view.rightButtonsBackgroundContainer?.frame, CGRect(x: 390.0 - 16.0 - 44.0 - 12.0 - 88.0, y: 0.0, width: 88.0, height: 44.0))
-        guard let circle = view.rightCircleBackgroundContainer, let compose = view.rightButtonViews["compose"] else {
+        XCTAssertEqual(view.rightPillBackgroundContainer(at: 0)?.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(view.rightPillBackgroundContainer(at: 1)?.frame, CGRect(x: 390.0 - 16.0 - 44.0 - 12.0 - 88.0, y: 0.0, width: 88.0, height: 44.0))
+        guard let circle = view.rightPillBackgroundContainer(at: 0), let compose = view.rightButtonViews["compose"] else {
             XCTFail("no circle")
             return
         }
@@ -578,10 +578,10 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let bar = ComponentView<Empty>()
         let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
         view.plattersDetached = true
-        XCTAssertNotNil(view.rightCircleBackgroundContainer)
-        XCTAssertNil(view.rightCircleBackgroundContainer?.superview)
+        XCTAssertNotNil(view.rightPillBackgroundContainer(at: 0))
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 0)?.superview)
         view.plattersDetached = false
-        XCTAssertTrue(view.rightCircleBackgroundContainer?.superview === view)
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0)?.superview === view)
     }
 
     // Chats entering Edit mode takes its right buttons away in place: the circle and the capsule each dematerialize
@@ -589,13 +589,13 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_editMode_circleAndCapsuleDematerializeInPlace() {
         let bar = ComponentView<Empty>()
         let before = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
-        guard let circle = before.rightCircleBackgroundContainer, let capsule = before.rightButtonsBackgroundContainer else {
+        guard let circle = before.rightPillBackgroundContainer(at: 0), let capsule = before.rightPillBackgroundContainer(at: 1) else {
             XCTFail("no right platters")
             return
         }
         let view = self.updateBar(bar, back: nil, right: [], transition: .easeInOut(duration: 0.3))
-        XCTAssertNotNil(view.inPlaceStateForTesting(slot: .rightCircle))
-        XCTAssertNotNil(view.inPlaceStateForTesting(slot: .right))
+        XCTAssertNotNil(view.inPlaceStateForTesting(slot: .right(0)))
+        XCTAssertNotNil(view.inPlaceStateForTesting(slot: .right(1)))
         view.inPlaceTickForTesting(dt: 0.1)
         XCTAssertGreaterThan(circle.layer.transform.m11, 1.0)
         XCTAssertGreaterThan(capsule.layer.transform.m11, 1.0)
@@ -611,14 +611,14 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_editModeToggledBack_newCircleMaterializes_oldOneLeaves() {
         let bar = ComponentView<Empty>()
         let before = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
-        guard let oldCircle = before.rightCircleBackgroundContainer else {
+        guard let oldCircle = before.rightPillBackgroundContainer(at: 0) else {
             XCTFail("no circle")
             return
         }
         let _ = self.updateBar(bar, back: nil, right: [], transition: .easeInOut(duration: 0.3))
         before.inPlaceTickForTesting(dt: 0.05)
         let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .easeInOut(duration: 0.3))
-        guard let newCircle = view.rightCircleBackgroundContainer else {
+        guard let newCircle = view.rightPillBackgroundContainer(at: 0) else {
             XCTFail("no new circle")
             return
         }
@@ -636,7 +636,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_detachingPlatters_measuresTheCircleAndTheCapsuleBesideIt() {
         let bar = ComponentView<Empty>()
         let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
-        guard let circle = view.rightCircleBackgroundContainer, let circleGlass = navigationBarTestGlassEffectView(content: circle.contentView, container: circle), let capsule = view.rightButtonsBackgroundContainer, let capsuleGlass = navigationBarTestGlassEffectView(content: capsule.contentView, container: capsule) else {
+        guard let circle = view.rightPillBackgroundContainer(at: 0), let circleGlass = navigationBarTestGlassEffectView(content: circle.contentView, container: circle), let capsule = view.rightPillBackgroundContainer(at: 1), let capsuleGlass = navigationBarTestGlassEffectView(content: capsule.contentView, container: capsule) else {
             XCTFail("no right platters")
             return
         }
@@ -673,8 +673,8 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let _ = update(nil, 0.0)
         let view = update(secondary, 0.5)
         // Circle: 44 -> 0 is 22; extent: 56 -> 0 is 28. Capsule: 88 -> 44 is 66 wide, ending 28 pt from the edge.
-        XCTAssertEqual(view.rightCircleBackgroundContainer?.frame, CGRect(x: 390.0 - 16.0 - 22.0, y: 0.0, width: 22.0, height: 44.0))
-        XCTAssertEqual(view.rightButtonsBackgroundContainer?.frame, CGRect(x: 390.0 - 16.0 - 28.0 - 66.0, y: 0.0, width: 66.0, height: 44.0))
+        XCTAssertEqual(view.rightPillBackgroundContainer(at: 0)?.frame, CGRect(x: 390.0 - 16.0 - 22.0, y: 0.0, width: 22.0, height: 44.0))
+        XCTAssertEqual(view.rightPillBackgroundContainer(at: 1)?.frame, CGRect(x: 390.0 - 16.0 - 28.0 - 66.0, y: 0.0, width: 66.0, height: 44.0))
     }
 
     // The circle keeps the tint of the content it belongs to: sliding to a forum (which has no circle), Chats' compose
@@ -695,9 +695,9 @@ final class NavigationBarComponentViewTests: XCTestCase {
             view.frame = CGRect(origin: CGPoint(), size: size)
             return view
         }
-        XCTAssertEqual(update(nil, 0.0).appliedRightCircleTint, .accent)
-        XCTAssertEqual(update(secondary, 0.2).appliedRightCircleTint, .accent)
-        XCTAssertEqual(update(secondary, 0.9).appliedRightCircleTint, .accent)
+        XCTAssertEqual(update(nil, 0.0).appliedRightPillTint(at: 0), .accent)
+        XCTAssertEqual(update(secondary, 0.2).appliedRightPillTint(at: 0), .accent)
+        XCTAssertEqual(update(secondary, 0.9).appliedRightPillTint(at: 0), .accent)
     }
 
     // A change made without animation is applied as is.
@@ -707,6 +707,67 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let view = self.updateBar(bar, back: nil, right: [self.fixedButton("done", tint: .accent)], transition: .immediate)
         XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
         XCTAssertNil(view.inPlaceStateForTesting(isLeft: true))
+    }
+
+    private func editAndSearch() -> [NavigationBarComponent.Button] {
+        return [NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in }), self.fixedButton("search")]
+    }
+
+    // Channel Administrators: Edit and search are two pills, Edit outermost at the right inset and search 12 pt before it.
+    func test_rightPills_editAndSearch_areTwoPillsTwelvePointsApart() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        guard let edit = view.rightPillBackgroundContainer(at: 0), let search = view.rightPillBackgroundContainer(at: 1), let editButton = view.rightButtonViews["edit"], let searchButton = view.rightButtonViews["search"] else {
+            XCTFail("not two pills")
+            return
+        }
+        XCTAssertEqual(edit.frame.maxX, 390.0 - 16.0)
+        XCTAssertEqual(search.frame, CGRect(x: edit.frame.minX - 12.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertTrue(editButton.isDescendant(of: edit))
+        XCTAssertTrue(searchButton.isDescendant(of: search))
+        // Each pill holds one button, so each morphs into its button's context menu.
+        XCTAssertTrue(edit.morphsIntoContextMenu)
+        XCTAssertTrue(search.morphsIntoContextMenu)
+        XCTAssertTrue(view.navigationButtonContextContainer(sourceView: searchButton) === search)
+    }
+
+    // The title clears both pills and the gap between them.
+    func test_rightPills_titleBand_clearsEveryPill() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        guard let edit = view.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no pill")
+            return
+        }
+        XCTAssertEqual(view.primaryRightButtonsWidth, edit.frame.width + 12.0 + 44.0)
+        XCTAssertFalse(view.primaryHasRoomForTitlePill)
+    }
+
+    // Review focus 4 (guard): Done toggling enabled keeps the same two pills, only retinting.
+    func test_rightPills_doneEnabledToggle_keepsThePills() {
+        let bar = ComponentView<Empty>()
+        let enabled = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent), self.fixedButton("search")], transition: .immediate)
+        guard let done = enabled.rightPillBackgroundContainer(at: 0), let search = enabled.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("not two pills")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accentDisabled), self.fixedButton("search")], transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === done)
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 1) === search)
+        XCTAssertNil(view.inPlaceStateForTesting(slot: .right(0)))
+        XCTAssertNil(view.inPlaceStateForTesting(slot: .right(1)))
+        XCTAssertEqual(view.appliedRightPillTint(at: 0), .accentDisabled)
+    }
+
+    // A transition takes every pill and gives them back.
+    func test_rightPills_leaveWithThePlatters_andComeBack() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        view.plattersDetached = true
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 0)?.superview)
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 1)?.superview)
+        view.plattersDetached = false
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 1)?.superview === view)
     }
 }
 

@@ -4,11 +4,10 @@ import Display
 import ComponentFlow
 import GlassBackgroundComponent
 
-/// A glass container of the bar's row: the left capsule, the right one, and the accent circle outermost on the right.
-enum NavigationBarCapsuleSlot {
+/// A glass container of the bar's row: the left capsule, or a right pill by index from the edge (0: the outermost).
+enum NavigationBarCapsuleSlot: Hashable {
     case left
-    case right
-    case rightCircle
+    case right(Int)
 }
 
 /// A bar capsule animating an in-place change of its items (Edit <-> Done, the back button giving way to edit mode) as
@@ -47,7 +46,7 @@ final class NavigationBarInPlaceCapsule {
     /// `isVisible` (UIKit's own materialization): alpha does not hide native glass.
     var dematerialization = NavigationBarGlassSpring(0.0, restThreshold: 0.001)
     var maxScale = CGSize(width: 1.0, height: 1.0)
-    /// The bar's live items (its `leftButtonsContainer` or `rightButtonsContainer`); nil while the capsule leaves.
+    /// The bar's live items (its `leftButtonsContainer` or a right pill's `itemsContainer`); nil while the capsule leaves.
     var items: Items?
     var leaving: [Items] = []
     var isRemoved = false
@@ -170,10 +169,8 @@ extension NavigationBarComponent.View {
         switch slot {
         case .left:
             return self.leftButtonsBackgroundContainer
-        case .right:
-            return self.rightButtonsBackgroundContainer
-        case .rightCircle:
-            return self.rightCircleBackgroundContainer
+        case let .right(index):
+            return self.rightPillBackgroundContainer(at: index)
         }
     }
 
@@ -182,10 +179,8 @@ extension NavigationBarComponent.View {
         switch slot {
         case .left:
             return self.leftButtonsContainer
-        case .right:
-            return self.rightButtonsContainer
-        case .rightCircle:
-            return self.rightCircleContainer
+        case let .right(index):
+            return self.rightPill(at: index).itemsContainer
         }
     }
 
@@ -213,10 +208,8 @@ extension NavigationBarComponent.View {
         switch slot {
         case .left:
             source = contentView.leftButtonsContainer
-        case .right:
-            source = contentView.rightButtonsContainer
-        case .rightCircle:
-            source = contentView.rightCircleContainer
+        case let .right(index):
+            source = contentView.rightPillContainer(at: index)
         }
         let view = contentView.extractItems(of: source)
         let capsule = self.inPlaceCapsule(for: container)
@@ -455,7 +448,7 @@ extension NavigationBarComponent.View {
     }
 
     func inPlaceStateForTesting(isLeft: Bool) -> InPlaceState? {
-        return self.inPlaceStateForTesting(slot: isLeft ? .left : .right)
+        return self.inPlaceStateForTesting(slot: isLeft ? .left : .right(0))
     }
 
     func inPlaceTickForTesting(dt: CGFloat) {

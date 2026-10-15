@@ -38,38 +38,35 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         return NavigationBarComponent.Button(id: id, content: .icon(imageName: id), tint: tint, action: { _ in })
     }
 
-    // Chats: new message is accent, beside story and proxy. It takes a circle of its own; the rest keep the capsule.
+    // Chats: new message is accent, beside story and proxy. It takes a pill of its own; the rest share one.
     func test_accentButtonWithOthers_takesTheRowCircle() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.accent("compose"), self.button("story", .icon(imageName: "S")), self.button("proxy", .icon(imageName: "P"))], hasBack: false, columnLength: nil)
-        XCTAssertEqual(placement.rowCircleItem?.id, AnyHashable("compose"))
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["story", "proxy"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["compose"], ["story", "proxy"]])
     }
 
     // A disabled accent button takes the circle as well (its glass is the disabled accent).
     func test_disabledAccentButtonWithOthers_takesTheRowCircle() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.accent("done", tint: .accentDisabled), self.button("a", .icon(imageName: "A"))], hasBack: false, columnLength: nil)
-        XCTAssertEqual(placement.rowCircleItem?.id, AnyHashable("done"))
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["a"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["done"], ["a"]])
     }
 
     // Alone, the accent button stays the capsule's only item: that capsule is its circle.
     func test_loneAccentButton_staysTheCapsule() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.accent("done")], hasBack: true, columnLength: nil)
-        XCTAssertNil(placement.rowCircleItem)
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["done"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["done"]])
     }
 
-    // Only the first accent button takes the circle (spec ruling 1); a second one stays in the capsule.
-    func test_secondAccentButton_staysInTheCapsule() {
+    // UIKit gives every prominent item a section of its own: a second accent button gets its own pill too (this
+    // supersedes the accent-circle spec's ruling 1, by the user's choice of UIKit's rule, 2026-10-15).
+    func test_secondAccentButton_getsItsOwnPill() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.accent("a"), self.button("x", .icon(imageName: "X")), self.accent("b")], hasBack: false, columnLength: nil)
-        XCTAssertEqual(placement.rowCircleItem?.id, AnyHashable("a"))
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["x", "b"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["a"], ["x"], ["b"]])
     }
 
     // iPhone Duo: the accent button goes into the column's trailing circle, as before; the row has no circle.
     func test_column_keepsTheAccentButtonInItsTrailingCircle() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.accent("compose"), self.button("story", .icon(imageName: "S"))], hasBack: false, columnLength: 400.0)
-        XCTAssertNil(placement.rowCircleItem)
+        XCTAssertTrue(placement.rowRightSections.isEmpty)
         XCTAssertEqual(placement.trailingCircleItem?.id, AnyHashable("compose"))
     }
 
@@ -78,7 +75,7 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertNil(placement.columnLayout)
         XCTAssertFalse(placement.leftButtonInColumn)
         XCTAssertEqual(placement.rowLeftButton?.id, AnyHashable("left"))
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["a", "b"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["a"], ["b"]])
     }
 
     func test_column_iconButtonsMove_textStaysInTheRow() {
@@ -86,7 +83,7 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertNotNil(placement.columnLayout)
         XCTAssertTrue(placement.leftButtonInColumn)
         XCTAssertNil(placement.rowLeftButton)
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["b"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["b"]])
         XCTAssertEqual(self.ids(placement.columnItems), ["left", "a"])
         XCTAssertEqual(placement.columnLayout?.visibleItems, [0, 1])
     }
@@ -96,20 +93,20 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertFalse(placement.leftButtonInColumn)
         XCTAssertEqual(placement.rowLeftButton?.id, AnyHashable("done"))
         XCTAssertEqual(self.ids(placement.columnItems), ["a"])
-        XCTAssertTrue(placement.rowRightButtons.isEmpty)
+        XCTAssertTrue(placement.rowRightSections.isEmpty)
     }
 
     func test_column_customButtonGoesToTheColumn() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.button("proxy", .custom(AnyComponent(TestButtonContentComponent())))], hasBack: false, columnLength: 400.0)
         XCTAssertEqual(self.ids(placement.columnItems), ["proxy"])
-        XCTAssertTrue(placement.rowRightButtons.isEmpty)
+        XCTAssertTrue(placement.rowRightSections.isEmpty)
     }
 
     func test_columnTooShort_keepsEverythingInTheRow() {
         // 80pt cannot hold the back circle (48) + spacing (12) + one 48pt cell.
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.button("a", .icon(imageName: "A"))], hasBack: true, columnLength: 80.0)
         XCTAssertNil(placement.columnLayout)
-        XCTAssertEqual(self.ids(placement.rowRightButtons), ["a"])
+        XCTAssertEqual(self.sectionIds(placement.rowRightSections), [["a"]])
     }
 
     func test_overflowItems_runTheirButtonsOwnActions() {
