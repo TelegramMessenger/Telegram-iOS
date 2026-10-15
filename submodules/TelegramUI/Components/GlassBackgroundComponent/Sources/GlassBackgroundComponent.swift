@@ -1612,6 +1612,9 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     private let glassView: GlassBackgroundView
+    /// Whether the glass view is lent out (`lendGlass`).
+    public private(set) var isGlassLent = false
+    private var glassFrameBeforeLending = CGRect()
     
     private var state: State = .normal
     private var normalParams: NormalParams?
@@ -1654,6 +1657,28 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         return nil
     }
     
+    /// The glass view, its content (the items) included, lent to another container while it merges with a neighbour's
+    /// (the navigation bar's in-place merge): it leaves this view's hierarchy until `reclaimGlass()`. Updates still
+    /// reach it; the borrower places it. Hit testing still finds the content (`normalContentView`).
+    public func lendGlass() -> UIView {
+        if !self.isGlassLent {
+            self.isGlassLent = true
+            self.glassFrameBeforeLending = self.glassView.frame
+        }
+        return self.glassView
+    }
+
+    /// Takes the lent glass view back, where it was.
+    public func reclaimGlass() {
+        guard self.isGlassLent else {
+            return
+        }
+        self.isGlassLent = false
+        self.glassView.transform = .identity
+        self.extractableContentView.addSubview(self.glassView)
+        self.glassView.frame = self.glassFrameBeforeLending
+    }
+
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
         let normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
         self.normalParams = normalParams
@@ -1664,6 +1689,8 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     public func updateState(state: State, transition: Transition, completion: ((Bool) -> Void)?) {
+        // A context menu extracts the glass where this view has it.
+        self.reclaimGlass()
         let previousState = self.state
         self.state = state
         self.applyState(previousState: previousState, transition: transition, completion: completion)

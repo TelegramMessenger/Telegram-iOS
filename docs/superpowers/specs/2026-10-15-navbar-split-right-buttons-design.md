@@ -131,7 +131,7 @@ The old and new right pills are compared by index from the edge, as UIKit compar
 - **A pill that goes** (search, when Edit becomes Done): it collapses into the nearest remaining pill on that side, after
   SwiftUI's resolved delay, kicked away from its partner; its items leave into the partner; its glass and the
   partner's share one container at smoothness 12 until it is gone, then the partner's glass goes back to its own
-  container; the partner pulses anchored on the side facing it (`transitionAnchor`). This is the "sucked in".
+  container; both pulse about SwiftUI's transition anchor (`transitionAnchor`: a right pill's trailing edge, so the partner swells toward the leaving pill). This is the "sucked in".
 - **A pill that comes** (search, when Done becomes Edit): it grows out of the nearest pill, kicked outward, its glass
   merged with the partner's until they separate, its items materializing. This is the "ejected".
 - **No pill left on that side** (Chats entering Edit mode takes both right pills away): dematerialize in place, as today.
@@ -178,7 +178,7 @@ unless noted):
 - **Layout:** pill frames with 12 pt gaps, the title's available width, each pill's tint, a single-button pill morphing
   into its context menu; the inline-forum slide's existing tests stay unchanged and pass (pairing from the inner end).
 - **In place:** a leaving pill's frame converges on the nearest pill; both glass views are in one merging container
-  while it collapses and each is back in its own after; the partner's pulse is anchored on the side facing it; an
+  while it collapses and each is back in its own after; the pair's pulse is anchored at the right pills' trailing edge (`transitionAnchor`); an
   arriving pill starts at its partner and separates; a pill that comes back while leaving is the same pill; without
   native merging the leaving pill fades in its own container; Reduce Motion is opacity only; the arriving pill takes a
   tap at once.

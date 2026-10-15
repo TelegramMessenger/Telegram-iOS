@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ComponentFlow
+import GlassBackgroundComponent
 @testable import NavigationBarComponent
 
 /// A title whose view, like any plain UIView, would answer hitTest for its whole row-sized frame.
@@ -723,6 +724,236 @@ final class NavigationBarComponentViewTests: XCTestCase {
         view.plattersDetached = true
         XCTAssertEqual(view.detachedRightPressScales.count, 3)
         XCTAssertEqual(view.detachedRightPressScales.count > 2 ? view.detachedRightPressScales[2] : 1.0, 55.0 / 44.0, accuracy: 0.001)
+    }
+
+    private func doneOnly() -> [NavigationBarComponent.Button] {
+        return [self.fixedButton("done", tint: .accent)]
+    }
+
+    private func settle(_ view: NavigationBarComponent.View) {
+        for _ in 0 ..< 360 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+    }
+
+    // Edit -> Done: the search pill is sucked into Done (its nearest remaining pill), its glass merged with Done's in one
+    // container while it collapses, then gone; Done's glass is its own again.
+    func test_inPlaceMerge_leavingPill_collapsesIntoTheNearestPill() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let search = before.rightPillBackgroundContainer(at: 1), let edit = before.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("not two pills")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        guard let start = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("no merge")
+            return
+        }
+        XCTAssertTrue(start.isMatched)
+        XCTAssertTrue(search.isGlassLent)
+        XCTAssertTrue(edit.isGlassLent)
+        view.inPlaceTickForTesting(dt: 0.3)
+        guard let mid = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("merge ended early")
+            return
+        }
+        XCTAssertGreaterThan(mid.frame.midX, start.frame.midX)
+        self.settle(view)
+        XCTAssertNil(search.superview)
+        XCTAssertFalse(edit.isGlassLent)
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === edit)
+    }
+
+    // The pair pulses about SwiftUI's transition anchor (`transitionAnchor`, shared with push/pop): a right pill's
+    // trailing edge, so the partner swells toward the leaving pill.
+    func test_inPlaceMerge_partnerPulse_isAnchoredAtTheTrailingEdge() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        guard let partner = view.inPlaceStateForTesting(slot: .right(0)) else {
+            XCTFail("no partner")
+            return
+        }
+        XCTAssertEqual(partner.pulseAnchor.x, 1.0)
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(1))?.pulseAnchor.x, 1.0)
+    }
+
+    // Native (the Administrators film): the leaving search pill takes Done's accent tint as it goes into it.
+    func test_inPlaceMerge_movingPill_takesItsPartnersTint() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        guard let leaving = view.inPlaceStateForTesting(slot: .right(1)), let partner = view.inPlaceStateForTesting(slot: .right(0)) else {
+            XCTFail("no merge")
+            return
+        }
+        XCTAssertEqual(leaving.tintColor, partner.tintColor)
+    }
+
+    // Done -> Edit: search grows out of the Edit pill (its nearest previous pill) and separates to its own frame.
+    func test_inPlaceMerge_arrivingPill_growsOutOfItsPartner() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let done = before.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no pill")
+            return
+        }
+        let doneFrame = done.frame
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .easeInOut(duration: 0.3))
+        guard let start = view.inPlaceStateForTesting(slot: .right(1)), let search = view.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("no eject")
+            return
+        }
+        XCTAssertTrue(start.isMatched)
+        XCTAssertEqual(start.frame.midX, doneFrame.midX, accuracy: 0.5)
+        self.settle(view)
+        XCTAssertFalse(search.isGlassLent)
+        XCTAssertEqual(search.frame.maxX, (view.rightPillBackgroundContainer(at: 0)?.frame.minX ?? 0.0) - 12.0)
+    }
+
+    // Edit -> Done -> Edit before the merge ends: the search pill that was leaving is the one that comes back.
+    func test_inPlaceMerge_pillComingBack_isReused() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let search = before.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("no pill")
+            return
+        }
+        let _ = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        before.inPlaceTickForTesting(dt: 0.1)
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 1) === search)
+        self.settle(view)
+        XCTAssertTrue(search.superview === view)
+        XCTAssertFalse(search.isGlassLent)
+    }
+
+    // Without native glass merging the leaving pill keeps its own container and fades with it.
+    func test_inPlaceMerge_withoutNativeMerging_fadesInItsOwnContainer() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { false }
+        guard let search = before.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertFalse(search.isGlassLent)
+        self.settle(view)
+        XCTAssertNil(search.superview)
+    }
+
+    // Reduce Motion: the leaving pill dematerializes where it is, no merge.
+    func test_inPlaceMerge_underReduceMotion_dematerializesInPlace() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        before.inPlaceReduceMotion = { true }
+        guard let search = before.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("no pill")
+            return
+        }
+        let frame = search.frame
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(1))?.isMatched, false)
+        view.inPlaceTickForTesting(dt: 0.2)
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(1))?.frame ?? .zero, frame)
+        XCTAssertFalse(search.isGlassLent)
+    }
+
+    // Review focus 5: the arriving search pill takes a tap at once, while its glass is lent.
+    func test_inPlaceMerge_arrivingPill_takesTapsAtOnce() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        testWindow.addSubview(before)
+        defer {
+            before.removeFromSuperview()
+        }
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.05)
+        guard let search = view.rightPillBackgroundContainer(at: 1), let searchButton = view.rightButtonViews["search"] else {
+            XCTFail("no pill")
+            return
+        }
+        XCTAssertTrue(search.isGlassLent)
+        let point = searchButton.convert(CGPoint(x: searchButton.bounds.midX, y: searchButton.bounds.midY), to: view)
+        XCTAssertTrue(view.hitTest(point, with: nil)?.isDescendant(of: searchButton) ?? false)
+    }
+
+    // Review focus 1: a transition taking the platters mid-merge gets every glass back in its pill and no merging
+    // container left in the bar.
+    func test_inPlaceMerge_platterDetachMidMerge_reclaimsTheGlass() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.05)
+        view.plattersDetached = true
+        XCTAssertFalse(edit.isGlassLent)
+        XCTAssertFalse(view.subviews.contains(where: { $0 is GlassBackgroundContainerView }))
+    }
+
+    // Review focus 2: a long press on the partner mid-merge finishes the merge before the menu extracts its container.
+    func test_inPlaceMerge_contextMenuMidMerge_reclaimsTheGlass() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.05)
+        guard let doneButton = view.rightButtonViews["done"], let container = view.navigationButtonContextContainer(sourceView: doneButton) as? GlassContextExtractableContainer else {
+            XCTFail("no context container")
+            return
+        }
+        XCTAssertFalse(container.isGlassLent)
+        XCTAssertNil(view.inPlaceStateForTesting(slot: .right(1)))
+    }
+
+    // Review focus 3: a relayout mid-merge (a wider bar) settles every pill at its new frame with its glass reclaimed.
+    func test_inPlaceMerge_relayoutMidMerge_settlesAtTheNewFrames() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let _ = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        before.inPlaceTickForTesting(dt: 0.05)
+        let content = NavigationBarComponent.Content(title: .text("Private Chats"), back: .back, leftButton: nil, rightButtons: self.doneOnly(), backPressed: {})
+        let _ = bar.update(transition: .easeInOut(duration: 0.3), component: AnyComponent(NavigationBarComponent(theme: self.makeTheme(), strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, primaryContent: content, secondaryContent: nil, secondaryTransition: 0.0)), environment: {}, containerSize: CGSize(width: 430.0, height: 44.0))
+        let view = bar.view as! NavigationBarComponent.View
+        self.settle(view)
+        guard let done = view.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no pill")
+            return
+        }
+        XCTAssertEqual(done.frame, CGRect(x: 430.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertFalse(done.isGlassLent)
+    }
+
+    // A press UIKit was drawing on the partner when its glass was lent goes on as the animator's own release.
+    func test_inPlaceMerge_partnerPress_continuesAsASpring() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            XCTFail("no pill")
+            return
+        }
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: edit.bounds.width * 1.1, height: 44.0 * 1.1)
+        glass.center = center
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0, 1.1, accuracy: 0.01)
+        self.settle(view)
+        XCTAssertNil(view.inPlaceStateForTesting(slot: .right(0)))
     }
 
     private func editAndSearch() -> [NavigationBarComponent.Button] {

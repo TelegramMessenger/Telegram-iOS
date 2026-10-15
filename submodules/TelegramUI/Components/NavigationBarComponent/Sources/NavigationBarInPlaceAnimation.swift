@@ -53,6 +53,61 @@ final class NavigationBarInPlaceCapsule {
     var tintColor: GlassBackgroundView.TintColor
     var isDark: Bool
 
+    /// A matched removal or insertion (spec, animation): the shape follows curves on the in-place clock, collapsing
+    /// into, or growing out of, its partner.
+    final class Matched {
+        var x: NavigationSpringCurve
+        var y: NavigationSpringCurve
+        var width: NavigationSpringCurve
+        var height: NavigationSpringCurve
+        var dematerialization: NavigationSpringCurve
+        var kick: NavigationBarKickCurve?
+        let isRemoval: Bool
+        /// The partner's glass container.
+        weak var partner: GlassContextExtractableContainer?
+
+        init(source: CGRect, target: CGRect, start: Double, spring: NavigationTransitionSpring, dematerializationFrom: CGFloat, isRemoval: Bool, kick: NavigationBarKickCurve?, partner: GlassContextExtractableContainer) {
+            func curve(_ from: CGFloat, _ to: CGFloat, _ rest: NavigationSpringRest) -> NavigationSpringCurve {
+                return NavigationSpringCurve(startTime: start, from: from, target: to, spring: spring, rest: rest)
+            }
+            self.x = curve(source.minX, target.minX, .glass(0.01))
+            self.y = curve(source.minY, target.minY, .glass(0.01))
+            self.width = curve(source.width, target.width, .glass(0.01))
+            self.height = curve(source.height, target.height, .glass(0.01))
+            self.dematerialization = curve(dematerializationFrom, isRemoval ? 1.0 : 0.0, .glass(0.001))
+            self.kick = kick
+            self.isRemoval = isRemoval
+            self.partner = partner
+        }
+
+        func frame(at time: Double) -> CGRect {
+            let kick = self.kick?.translation(at: time) ?? CGSize()
+            return CGRect(x: self.x.value(at: time) + kick.width, y: self.y.value(at: time) + kick.height, width: max(0.0, self.width.value(at: time)), height: max(0.0, self.height.value(at: time)))
+        }
+
+        /// Heads an insertion for `frame` from where it is now (a relayout while it grows out).
+        func retarget(to frame: CGRect, at time: Double, spring: NavigationTransitionSpring) {
+            self.x = self.x.retargeted(at: time, to: frame.minX, spring: spring)
+            self.y = self.y.retargeted(at: time, to: frame.minY, spring: spring)
+            self.width = self.width.retargeted(at: time, to: frame.width, spring: spring)
+            self.height = self.height.retargeted(at: time, to: frame.height, spring: spring)
+        }
+
+        func isAtRest(at time: Double) -> Bool {
+            let rest = max(self.x.restTime, self.y.restTime, self.width.restTime, self.height.restTime, self.dematerialization.restTime, self.kick?.restTime ?? 0.0)
+            return time >= rest
+        }
+    }
+
+    var matched: Matched?
+    /// SwiftUI's pulse of a matched pair, about the pair's anchor (on the in-place clock); while it runs it replaces
+    /// `pulse`.
+    var anchoredPulse: NavigationBarGlassPulseCurve?
+    /// A press UIKit was drawing when this capsule's glass was lent, continued (nil: none).
+    var press: NavigationSpringCurve?
+    /// The glass view lent to the bar's merging container, while this capsule merges.
+    var lentGlass: UIView?
+
     init(slot: NavigationBarCapsuleSlot, container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor, isDark: Bool) {
         self.slot = slot
         self.container = container
@@ -65,8 +120,14 @@ final class NavigationBarInPlaceCapsule {
         self.isDark = isDark
     }
 
-    var frame: CGRect {
+    /// The frame its springs have reached.
+    var springFrame: CGRect {
         return CGRect(x: self.x.value, y: self.y.value, width: max(0.0, self.width.value), height: max(0.0, self.height.value))
+    }
+
+    /// Where the shape is at in-place time `time`: on its matched curves while it merges, else on its springs.
+    func frame(at time: Double) -> CGRect {
+        return self.matched?.frame(at: time) ?? self.springFrame
     }
 
     func animateFrame(to frame: CGRect, spring: NavigationTransitionSpring) {
@@ -107,8 +168,20 @@ final class NavigationBarInPlaceCapsule {
         self.leaving.removeAll(where: { $0.appearance.isAtRest })
     }
 
-    var isAtRest: Bool {
-        return self.x.isAtRest && self.y.isAtRest && self.width.isAtRest && self.height.isAtRest && self.dematerialization.isAtRest && self.pulse == nil && (self.items?.appearance.isAtRest ?? true) && self.leaving.isEmpty
+    func isAtRest(at time: Double) -> Bool {
+        if !(self.x.isAtRest && self.y.isAtRest && self.width.isAtRest && self.height.isAtRest && self.dematerialization.isAtRest && self.pulse == nil && (self.items?.appearance.isAtRest ?? true) && self.leaving.isEmpty) {
+            return false
+        }
+        if let matched = self.matched, !matched.isAtRest(at: time) {
+            return false
+        }
+        if let anchoredPulse = self.anchoredPulse, time < anchoredPulse.restTime {
+            return false
+        }
+        if let press = self.press, time < press.restTime {
+            return false
+        }
+        return true
     }
 }
 
@@ -191,7 +264,7 @@ extension NavigationBarComponent.View {
     /// Where a capsule is now: its in-place spring frame, or the frame Core Animation is drawing it at.
     private func currentFrame(of container: GlassContextExtractableContainer) -> CGRect {
         if let capsule = self.inPlaceCapsule(for: container) {
-            return capsule.frame
+            return capsule.frame(at: self.inPlaceTime)
         }
         let layer = container.layer.presentation() ?? container.layer
         return CGRect(x: layer.position.x - layer.bounds.width * 0.5, y: layer.position.y - layer.bounds.height * 0.5, width: layer.bounds.width, height: layer.bounds.height)
@@ -227,6 +300,12 @@ extension NavigationBarComponent.View {
         let capsule: NavigationBarInPlaceCapsule
         if let current = self.inPlaceCapsule(for: container) {
             capsule = current
+            if capsule.matched != nil {
+                // A pill still growing out of its partner whose items change: its springs take over where it is.
+                let now = capsule.frame(at: self.inPlaceTime)
+                capsule.matched = nil
+                capsule.setFrame(now)
+            }
         } else {
             capsule = NavigationBarInPlaceCapsule(slot: slot, container: container, frame: isNew ? frame : self.currentFrame(of: container), tintColor: tintColor, isDark: isDark)
             self.inPlaceCapsules.append(capsule)
@@ -264,7 +343,8 @@ extension NavigationBarComponent.View {
         // The glass's tint (a cross-fade) and, for a new capsule, its appearing are UIKit's to animate.
         capsule.tintColor = tintColor
         let glassTransition = NavigationBarGlassSettings.uikitTransition(for: isNew ? NavigationBarGlassSettings.materialize : NavigationBarGlassSettings.inPlaceTint)
-        container.update(size: capsule.frame.size, cornerRadius: capsule.frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: true, transition: glassTransition)
+        let currentFrame = capsule.frame(at: self.inPlaceTime)
+        container.update(size: currentFrame.size, cornerRadius: currentFrame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: true, transition: glassTransition)
 
         self.applyInPlace(capsule)
         self.startInPlaceLinkIfNeeded()
@@ -275,6 +355,11 @@ extension NavigationBarComponent.View {
         let capsule: NavigationBarInPlaceCapsule
         if let current = self.inPlaceCapsule(for: container) {
             capsule = current
+            if capsule.matched != nil {
+                let now = capsule.frame(at: self.inPlaceTime)
+                capsule.matched = nil
+                capsule.setFrame(now)
+            }
         } else {
             capsule = NavigationBarInPlaceCapsule(slot: slot, container: container, frame: self.currentFrame(of: container), tintColor: tintColor, isDark: isDark)
             self.inPlaceCapsules.append(capsule)
@@ -299,7 +384,8 @@ extension NavigationBarComponent.View {
         }
         capsule.maxScale = self.inPlaceMotion.materializeScale(size: capsule.targetFrame.size)
         capsule.dematerialization.animate(to: 1.0, spring: NavigationBarGlassSettings.materialize)
-        container.update(size: capsule.frame.size, cornerRadius: capsule.frame.height * 0.5, isDark: capsule.isDark, tintColor: capsule.tintColor, isInteractive: true, isVisible: false, transition: NavigationBarGlassSettings.uikitTransition(for: NavigationBarGlassSettings.materialize))
+        let currentFrame = capsule.frame(at: self.inPlaceTime)
+        container.update(size: currentFrame.size, cornerRadius: currentFrame.height * 0.5, isDark: capsule.isDark, tintColor: capsule.tintColor, isInteractive: true, isVisible: false, transition: NavigationBarGlassSettings.uikitTransition(for: NavigationBarGlassSettings.materialize))
 
         self.applyInPlace(capsule)
         self.startInPlaceLinkIfNeeded()
@@ -308,7 +394,11 @@ extension NavigationBarComponent.View {
     /// A layout while a capsule animates in place: it heads for `frame` instead of being placed there.
     func retargetInPlace(_ capsule: NavigationBarInPlaceCapsule, frame: CGRect, tintColor: GlassBackgroundView.TintColor, isDark: Bool, transition: ComponentTransition) {
         if frame != capsule.targetFrame {
-            if transition.animation.isImmediate {
+            if let matched = capsule.matched, !matched.isRemoval {
+                // Growing out of its partner: it heads for its new place from where it is.
+                matched.retarget(to: frame, at: self.inPlaceTime, spring: self.inPlaceMotion.transition)
+                capsule.setFrame(frame)
+            } else if transition.animation.isImmediate {
                 capsule.setFrame(frame)
             } else {
                 capsule.animateFrame(to: frame, spring: self.inPlaceMotion.transition)
@@ -318,9 +408,147 @@ extension NavigationBarComponent.View {
         if tintColor != capsule.tintColor || isDark != capsule.isDark {
             capsule.tintColor = tintColor
             capsule.isDark = isDark
-            capsule.container.update(size: capsule.frame.size, cornerRadius: capsule.frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: !capsule.isRemoved, transition: transition.animation.isImmediate ? .immediate : NavigationBarGlassSettings.uikitTransition(for: NavigationBarGlassSettings.inPlaceTint))
+            let currentFrame = capsule.frame(at: self.inPlaceTime)
+            capsule.container.update(size: currentFrame.size, cornerRadius: currentFrame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: !capsule.isRemoved, transition: transition.animation.isImmediate ? .immediate : NavigationBarGlassSettings.uikitTransition(for: NavigationBarGlassSettings.inPlaceTint))
         }
         self.applyInPlace(capsule)
+    }
+
+    /// A pill that goes collapses into `partner`'s pill, or one that comes grows out of it (SwiftUI's matched removal and
+    /// insertion, `Resolver.adjustMatchedEntry`, spec): after the resolved delay (`minDelay` for a removal, none for an
+    /// insertion) the shape springs between its frame and the partner's on the transition spring with the kick, its
+    /// items leaving into, or appearing from, the `.match` appearance; both pills pulse about the pair's anchor; the
+    /// moving pill takes the partner's tint on the way (measured: the Administrators film); with native glass both glass
+    /// views are lent to one container at smoothness 12 so the shapes merge. `source` is where an insertion starts when
+    /// it is not the partner's frame (a pill that was leaving and comes back).
+    func startInPlaceMatched(container: GlassContextExtractableContainer, slot: NavigationBarCapsuleSlot, isRemoval: Bool, frame: CGRect, source insertionSource: CGRect? = nil, partner: GlassContextExtractableContainer, partnerFrame: CGRect, partnerTintColor: GlassBackgroundView.TintColor, tintColor: GlassBackgroundView.TintColor, isDark: Bool, leaving: NavigationBarInPlaceCapsule.Items?) {
+        let motion = self.inPlaceMotion
+        let time = self.inPlaceTime
+        let capsule: NavigationBarInPlaceCapsule
+        if let current = self.inPlaceCapsule(for: container) {
+            capsule = current
+        } else {
+            capsule = NavigationBarInPlaceCapsule(slot: slot, container: container, frame: isRemoval ? self.currentFrame(of: container) : (insertionSource ?? partnerFrame), tintColor: tintColor, isDark: isDark)
+            self.inPlaceCapsules.append(capsule)
+            container.layer.removeAllAnimations()
+        }
+        let source = isRemoval ? capsule.frame(at: time) : (insertionSource ?? partnerFrame)
+        let target = isRemoval ? partnerFrame : frame
+        let own = isRemoval ? source : target
+        let delta = CGSize(width: own.midX - partnerFrame.midX, height: own.midY - partnerFrame.midY)
+        let disjoint = !source.intersects(target)
+        let resolved = NavigationBarGlassSettings.resolvedMatchedOffset(disjoint ? delta : nil, isRemoval: isRemoval)
+        let start = time + (resolved.map { NavigationBarGlassSettings.matchedDelay(offset: $0, containerWidth: self.bounds.width) } ?? 0.0)
+        let kick = disjoint ? NavigationBarKickCurve(offset: CGSize(width: delta.width / NavigationBarGlassSettings.kickFactor, height: delta.height / NavigationBarGlassSettings.kickFactor), startTime: start) : nil
+        let fromDematerialization: CGFloat = capsule.matched?.dematerialization.value(at: time) ?? (isRemoval ? capsule.dematerialization.value : 1.0)
+        capsule.matched = NavigationBarInPlaceCapsule.Matched(source: source, target: target, start: start, spring: motion.transition, dematerializationFrom: fromDematerialization, isRemoval: isRemoval, kick: kick, partner: partner)
+        capsule.setFrame(target)
+        capsule.dematerialization.set(0.0)
+        capsule.pulse = nil
+        capsule.maxScale = motion.matchScale
+        capsule.isRemoved = isRemoval
+        capsule.isDark = isDark
+        container.isUserInteractionEnabled = !isRemoval
+
+        // Items: the leaving ones go into the partner (`.match`), the new ones appear from it.
+        if isRemoval {
+            if let items = capsule.items {
+                capsule.items = nil
+                Self.resetInPlaceItems(items.view, size: items.frame.size)
+            }
+            if let leaving {
+                container.contentView.addSubview(leaving.view)
+                leaving.maxScale = motion.matchScale
+                leaving.appearance.animate(to: 1.0, spring: motion.transition)
+                capsule.leaving.append(leaving)
+            }
+        } else {
+            let itemsView = self.inPlaceItemsView(slot)
+            itemsView.layer.removeAllAnimations()
+            let items = NavigationBarInPlaceCapsule.Items(view: itemsView, frame: frame, appearance: capsule.items?.appearance.value ?? 1.0, motion: motion)
+            items.maxScale = motion.matchScale
+            items.appearance.animate(to: 0.0, spring: motion.transition)
+            capsule.items = items
+        }
+
+        // Both pulse about the pair's anchor: the partner now, the moving pill when it starts moving.
+        let anchor = NavigationBarGlassSettings.transitionAnchor(partner: partnerFrame, container: self.bounds)
+        let partnerCapsule = self.inPlaceCapsuleCreatingIfNeeded(for: partner, frame: partnerFrame, tintColor: partnerTintColor, isDark: isDark)
+        partnerCapsule.pulse = nil
+        partnerCapsule.anchoredPulse = motion.pulseCurve(size: partnerFrame.size, startTime: time, anchor: anchor)
+        capsule.anchoredPulse = motion.pulseCurve(size: own.size, startTime: start, anchor: anchor)
+
+        // The moving pill's tint: into the partner's as it goes, from the partner's to its own as it comes.
+        let merges = self.glassMergesShapes()
+        if merges {
+            self.lendInPlaceGlass(partnerCapsule)
+            self.lendInPlaceGlass(capsule)
+        }
+        let current = capsule.frame(at: time)
+        if isRemoval {
+            capsule.tintColor = partnerTintColor
+            container.update(size: current.size, cornerRadius: current.height * 0.5, isDark: isDark, tintColor: partnerTintColor, isInteractive: true, isVisible: merges, transition: NavigationBarGlassSettings.uikitTransition(for: merges ? NavigationBarGlassSettings.inPlaceTint : NavigationBarGlassSettings.materialize))
+        } else {
+            if insertionSource == nil {
+                // A new pill starts as part of its partner: in the partner's tint, its glass already there when merging.
+                container.update(size: current.size, cornerRadius: current.height * 0.5, isDark: isDark, tintColor: partnerTintColor, isInteractive: true, isVisible: merges, transition: .immediate)
+            }
+            capsule.tintColor = tintColor
+            container.update(size: current.size, cornerRadius: current.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: true, transition: NavigationBarGlassSettings.uikitTransition(for: merges ? NavigationBarGlassSettings.inPlaceTint : NavigationBarGlassSettings.materialize))
+        }
+        self.applyInPlace(capsule)
+        self.applyInPlace(partnerCapsule)
+        self.startInPlaceLinkIfNeeded()
+    }
+
+    /// `container`'s in-place capsule, made at `frame` (resting there) when it has none.
+    func inPlaceCapsuleCreatingIfNeeded(for container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor, isDark: Bool) -> NavigationBarInPlaceCapsule {
+        if let current = self.inPlaceCapsule(for: container) {
+            return current
+        }
+        let slot: NavigationBarCapsuleSlot = self.rightPills.firstIndex(where: { $0.background === container }).map { .right($0) } ?? .left
+        let capsule = NavigationBarInPlaceCapsule(slot: slot, container: container, frame: frame, tintColor: tintColor, isDark: isDark)
+        capsule.items = NavigationBarInPlaceCapsule.Items(view: self.inPlaceItemsView(slot), frame: frame, appearance: 0.0, motion: self.inPlaceMotion)
+        self.inPlaceCapsules.append(capsule)
+        container.layer.removeAllAnimations()
+        return capsule
+    }
+
+    /// Lends `capsule`'s glass to the merging container, carrying on a press UIKit is drawing on it as a spring.
+    private func lendInPlaceGlass(_ capsule: NavigationBarInPlaceCapsule) {
+        guard capsule.lentGlass == nil else {
+            return
+        }
+        let press = self.inPlacePressAtChange[ObjectIdentifier(capsule.container)] ?? navigationBarCapsulePressScale(capsule.container)
+        if abs(press - 1.0) > 0.0005 {
+            capsule.press = NavigationSpringCurve(startTime: self.inPlaceTime, from: press, target: 1.0, spring: NavigationBarGlassSettings.pressRelease, rest: .glass(0.0005))
+        }
+        let mergeContainer: GlassBackgroundContainerView
+        if let current = self.inPlaceMergeContainer {
+            mergeContainer = current
+        } else {
+            mergeContainer = GlassBackgroundContainerView(spacing: NavigationBarGlassSettings.platterSmoothness)
+            mergeContainer.isUserInteractionEnabled = false
+            self.inPlaceMergeContainer = mergeContainer
+            self.insertSubview(mergeContainer, aboveSubview: self.underButtonsView)
+        }
+        mergeContainer.frame = self.bounds
+        mergeContainer.update(size: self.bounds.size, isDark: capsule.isDark, transition: .immediate)
+        let glass = capsule.container.lendGlass()
+        mergeContainer.contentView.addSubview(glass)
+        capsule.lentGlass = glass
+    }
+
+    /// Gives `capsule`'s glass back; the merging container goes when nothing is lent to it.
+    private func reclaimInPlaceGlass(_ capsule: NavigationBarInPlaceCapsule) {
+        if capsule.lentGlass != nil {
+            capsule.lentGlass = nil
+            capsule.container.reclaimGlass()
+        }
+        if let mergeContainer = self.inPlaceMergeContainer, !self.inPlaceCapsules.contains(where: { $0.lentGlass != nil }) {
+            mergeContainer.removeFromSuperview()
+            self.inPlaceMergeContainer = nil
+        }
     }
 
     /// Puts every capsule animating in place where it ends up (a navigation transition is taking the bar over).
@@ -334,6 +562,7 @@ extension NavigationBarComponent.View {
     }
 
     private func finishInPlace(_ capsule: NavigationBarInPlaceCapsule) {
+        self.reclaimInPlaceGlass(capsule)
         for items in capsule.leaving {
             items.view.removeFromSuperview()
         }
@@ -359,15 +588,33 @@ extension NavigationBarComponent.View {
     }
 
     private func applyInPlace(_ capsule: NavigationBarInPlaceCapsule) {
-        let frame = capsule.frame
-        let pulse = capsule.pulse?.scale ?? CGSize(width: 1.0, height: 1.0)
-        let d = capsule.dematerialization.value
-        let scale = CGSize(width: (1.0 + d * (capsule.maxScale.width - 1.0)) * pulse.width, height: (1.0 + d * (capsule.maxScale.height - 1.0)) * pulse.height)
+        let time = self.inPlaceTime
+        let frame = capsule.frame(at: time)
+        let anchor = capsule.anchoredPulse?.anchor ?? CGPoint(x: 0.5, y: 0.5)
+        let pulse = capsule.anchoredPulse.map { $0.scale(at: time) } ?? capsule.pulse?.scale ?? CGSize(width: 1.0, height: 1.0)
+        let d = capsule.matched?.dematerialization.value(at: time) ?? capsule.dematerialization.value
+        let press = capsule.press?.value(at: time) ?? 1.0
+        let base = CGSize(width: (1.0 + d * (capsule.maxScale.width - 1.0)) * press, height: (1.0 + d * (capsule.maxScale.height - 1.0)) * press)
+        let scale = CGSize(width: base.width * pulse.width, height: base.height * pulse.height)
+        // The pulse holds its anchor still (`ScalePulse.anchor`): the shape's centre moves by the anchor's offset times
+        // the pulse's growth (none for the centred pulse of an item change).
+        let centre = CGPoint(x: frame.midX + (anchor.x - 0.5) * frame.width * base.width * (1.0 - pulse.width), y: frame.midY + (anchor.y - 0.5) * frame.height * base.height * (1.0 - pulse.height))
         let container = capsule.container
         container.bounds = CGRect(origin: CGPoint(), size: frame.size)
-        container.center = CGPoint(x: frame.midX, y: frame.midY)
-        container.transform = CGAffineTransform(scaleX: scale.width, y: scale.height)
-        container.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: capsule.isDark, tintColor: capsule.tintColor, isInteractive: true, isVisible: !capsule.isRemoved, transition: .immediate)
+        if let glass = capsule.lentGlass {
+            // The merging container draws the glass: the pill's own view stays at rest, so its items take taps.
+            container.center = CGPoint(x: frame.midX, y: frame.midY)
+            container.transform = .identity
+            glass.bounds = CGRect(origin: CGPoint(), size: frame.size)
+            glass.center = centre
+            glass.transform = CGAffineTransform(scaleX: scale.width, y: scale.height)
+        } else {
+            container.center = centre
+            container.transform = CGAffineTransform(scaleX: scale.width, y: scale.height)
+        }
+        // A merging pill that goes keeps its glass (it shrinks into its partner's); one in its own container fades.
+        let isVisible = !capsule.isRemoved || (capsule.matched != nil && capsule.lentGlass != nil)
+        container.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: capsule.isDark, tintColor: capsule.tintColor, isInteractive: true, isVisible: isVisible, transition: .immediate)
         var allItems = capsule.leaving
         if let items = capsule.items {
             allItems.append(items)
@@ -408,12 +655,18 @@ extension NavigationBarComponent.View {
 
     /// One frame, `dt` seconds of animation time.
     func tickInPlace(dt: CGFloat) {
+        self.inPlaceTime += Double(dt)
+        let time = self.inPlaceTime
         for capsule in self.inPlaceCapsules {
             capsule.step(dt)
         }
         var settled: [NavigationBarInPlaceCapsule] = []
         for capsule in self.inPlaceCapsules {
-            if capsule.isAtRest {
+            // A partner keeps merging (its glass lent) while a matched pill still moves into or out of it.
+            let isHeldAsPartner = self.inPlaceCapsules.contains(where: { other in
+                return other !== capsule && other.matched?.partner === capsule.container && !other.isAtRest(at: time)
+            })
+            if capsule.isAtRest(at: time) && !isHeldAsPartner {
                 settled.append(capsule)
             } else {
                 self.applyInPlace(capsule)
@@ -433,13 +686,19 @@ extension NavigationBarComponent.View {
         var pulse: CGSize
         /// The new items' opacity; nil for a capsule that is leaving.
         var itemsAlpha: CGFloat?
+        var isMatched = false
+        var isGlassLent = false
+        var pulseAnchor = CGPoint(x: 0.5, y: 0.5)
+        var press: CGFloat = 1.0
+        var tintColor: GlassBackgroundView.TintColor? = nil
     }
 
     func inPlaceStateForTesting(slot: NavigationBarCapsuleSlot) -> InPlaceState? {
         guard let capsule = self.inPlaceCapsules.first(where: { $0.slot == slot }) else {
             return nil
         }
-        return InPlaceState(frame: capsule.frame, pulse: capsule.pulse?.scale ?? CGSize(width: 1.0, height: 1.0), itemsAlpha: capsule.items.map { 1.0 - max(0.0, min(1.0, $0.appearance.value)) })
+        let time = self.inPlaceTime
+        return InPlaceState(frame: capsule.frame(at: time), pulse: capsule.anchoredPulse.map { $0.scale(at: time) } ?? capsule.pulse?.scale ?? CGSize(width: 1.0, height: 1.0), itemsAlpha: capsule.items.map { 1.0 - max(0.0, min(1.0, $0.appearance.value)) }, isMatched: capsule.matched != nil, isGlassLent: capsule.lentGlass != nil, pulseAnchor: capsule.anchoredPulse?.anchor ?? CGPoint(x: 0.5, y: 0.5), press: capsule.press?.value(at: time) ?? 1.0, tintColor: capsule.tintColor)
     }
 
     /// The views of the items leaving `slot`'s capsule.

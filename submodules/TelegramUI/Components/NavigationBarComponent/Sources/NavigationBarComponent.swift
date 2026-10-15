@@ -133,6 +133,18 @@ public final class NavigationBarComponent: Component {
         private var rightBackgroundContainers: [GlassContextExtractableContainer] {
             return self.rightPills.compactMap(\.background)
         }
+        /// Whether a glass container merges the shapes in it (native glass), read as each in-place merge starts.
+        var glassMergesShapes: () -> Bool = {
+            return GlassBackgroundContainerView.mergesShapes
+        }
+        /// The in-place animator's clock (animation seconds since the bar was made), for its matched morphs' curves.
+        var inPlaceTime: Double = 0.0
+        /// Where two pills' glass merges during an in-place matched morph, at the bar's platter smoothness; made on first
+        /// use, below the pills, spanning the bar.
+        var inPlaceMergeContainer: GlassBackgroundContainerView?
+        /// The press UIKit was drawing on each right pill as the layout began (by container), read before this layout's
+        /// own changes touch the glass, for a merge to carry on.
+        var inPlacePressAtChange: [ObjectIdentifier: CGFloat] = [:]
         /// Capsules animating an in-place change of their items, as iOS 27's glass does (see `startInPlace…`).
         var inPlaceCapsules: [NavigationBarInPlaceCapsule] = []
         var inPlaceLink: SharedDisplayLinkDriver.Link?
@@ -384,6 +396,10 @@ public final class NavigationBarComponent: Component {
         }
 
         public func navigationButtonContextContainer(sourceView: UIView) -> ContextExtractableContainer? {
+            if self.inPlaceCapsules.contains(where: { $0.lentGlass != nil }) {
+                // A context menu extracts a pill's own glass: a merge in progress ends first.
+                self.finishInPlaceAnimations()
+            }
             if let leftButtonsBackgroundContainer = self.leftButtonsBackgroundContainer, sourceView.isDescendant(of: leftButtonsBackgroundContainer) {
                 return leftButtonsBackgroundContainer
             }
@@ -471,6 +487,17 @@ public final class NavigationBarComponent: Component {
             }
             // The items swap at once inside their capsules, which animate the change (`startInPlaceChange`).
             let itemsTransition: ComponentTransition = (inPlaceLeft || !inPlaceRight.isEmpty) ? .immediate : transition
+            self.inPlacePressAtChange = Dictionary(self.rightBackgroundContainers.map { (ObjectIdentifier($0), navigationBarCapsulePressScale($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            defer {
+                self.inPlacePressAtChange = [:]
+            }
+            // Where each right pill is now and its tint, for a pill that grows out of one of them.
+            let previousRightPills: [(frame: CGRect, tint: NavigationBarComponent.Button.Tint)?] = self.rightPills.map { pill in
+                guard let background = pill.background else {
+                    return nil
+                }
+                return (self.inPlaceCapsule(for: background)?.frame(at: self.inPlaceTime) ?? background.frame, pill.appliedTint)
+            }
 
             var primaryContentTransition = transition
             if let primaryContent = component.primaryContent {
@@ -659,6 +686,7 @@ public final class NavigationBarComponent: Component {
             let rightEdge = availableSize.width - component.rightInset - component.trailingButtonsInset
             let isDark = component.theme.overallDarkAppearance
             var outerExtent: CGFloat = 0.0
+            var rightPillTargets: [(slot: Int, frame: CGRect, tint: NavigationBarComponent.Button.Tint)] = []
             for (slot, metrics) in rightPillMetrics.enumerated() {
                 let pill = self.rightPill(at: slot)
                 let frame = CGRect(x: rightEdge - outerExtent - metrics.width, y: 0.0, width: metrics.width, height: 44.0)
@@ -714,14 +742,28 @@ public final class NavigationBarComponent: Component {
                 let tintColor = navigationBarGlassTintColor(tint, theme: component.theme)
 
                 guard metrics.width != 0.0 else {
-                    self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], tintColor: tintColor, isDark: isDark, transition: transition)
+                    self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], partner: nil, tintColor: tintColor, isDark: isDark, transition: transition)
                     continue
                 }
+                rightPillTargets.append((slot, frame, tint))
                 let background: GlassContextExtractableContainer
                 var backgroundTransition = transition
                 var isNew = false
+                // A pill that was leaving and comes back is the same pill, as SwiftUI's resolver reuses a removed entry.
+                let returning = pill.background == nil && inPlaceRight.contains(slot) && !self.inPlaceReduceMotion() ? self.inPlaceCapsules.first(where: { $0.slot == .right(slot) && $0.isRemoved && $0.matched?.partner != nil }) : nil
                 if let current = pill.background {
                     background = current
+                } else if let returning, let partner = returning.matched?.partner {
+                    background = returning.container
+                    pill.background = background
+                    if pill.itemsContainer.superview !== background.contentView {
+                        background.contentView.addSubview(pill.itemsContainer)
+                    }
+                    let partnerFrame = self.inPlaceCapsule(for: partner)?.frame(at: self.inPlaceTime) ?? partner.frame
+                    let partnerTint = self.rightPills.first(where: { $0.background === partner }).map { navigationBarGlassTintColor($0.appliedTint, theme: component.theme) } ?? tintColor
+                    self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, source: returning.frame(at: self.inPlaceTime), partner: partner, partnerFrame: partnerFrame, partnerTintColor: partnerTint, tintColor: tintColor, isDark: isDark, leaving: nil)
+                    background.morphsIntoContextMenu = buttonCount == 1
+                    continue
                 } else {
                     isNew = true
                     backgroundTransition = backgroundTransition.withAnimation(.none)
@@ -731,7 +773,17 @@ public final class NavigationBarComponent: Component {
                     background.contentView.addSubview(pill.itemsContainer)
                     background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
-                if inPlaceRight.contains(slot) {
+                // A pill that comes grows out of the nearest previous pill nearer the edge (UIKit's sections are
+                // contiguous, so that is every one).
+                let previousPartners: [(slot: Int, frame: CGRect, tint: NavigationBarComponent.Button.Tint)] = previousRightPills.enumerated().compactMap { index, previous in
+                    guard let previous, index < slot else {
+                        return nil
+                    }
+                    return (index, previous.frame, previous.tint)
+                }
+                if isNew, inPlaceRight.contains(slot), !self.inPlaceReduceMotion(), let nearest = navigationBarNearestPartner(of: frame, among: previousPartners.map(\.frame)), let partner = self.rightPillBackgroundContainer(at: previousPartners[nearest].slot) {
+                    self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, partner: partner, partnerFrame: previousPartners[nearest].frame, partnerTintColor: navigationBarGlassTintColor(previousPartners[nearest].tint, theme: component.theme), tintColor: tintColor, isDark: isDark, leaving: nil)
+                } else if inPlaceRight.contains(slot) {
                     self.startInPlaceChange(container: background, slot: .right(slot), isNew: isNew, frame: frame, tintColor: tintColor, isDark: isDark, leaving: leavingRight[slot])
                 } else if let inPlace = self.inPlaceCapsule(for: background) {
                     self.retargetInPlace(inPlace, frame: frame, tintColor: tintColor, isDark: isDark, transition: transition)
@@ -745,7 +797,14 @@ public final class NavigationBarComponent: Component {
             // Pills the row no longer has.
             for slot in rightPillMetrics.count ..< self.rightPills.count {
                 let pill = self.rightPills[slot]
-                self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], tintColor: navigationBarGlassTintColor(pill.appliedTint, theme: component.theme), isDark: isDark, transition: transition)
+                // A pill that goes collapses into the nearest remaining pill nearer the edge.
+                var partner: (container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor)?
+                let ownFrame = slot < previousRightPills.count ? previousRightPills[slot]?.frame : nil
+                let candidates = rightPillTargets.filter { $0.slot < slot }
+                if let ownFrame, !self.inPlaceReduceMotion(), let nearest = navigationBarNearestPartner(of: ownFrame, among: candidates.map(\.frame)), let container = self.rightPillBackgroundContainer(at: candidates[nearest].slot) {
+                    partner = (container, candidates[nearest].frame, navigationBarGlassTintColor(candidates[nearest].tint, theme: component.theme))
+                }
+                self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], partner: partner, tintColor: navigationBarGlassTintColor(pill.appliedTint, theme: component.theme), isDark: isDark, transition: transition)
             }
             // A secondary content sliding out: its items fade where they are, right-aligned in the pill they leave.
             if let removedSecondaryContentView {
@@ -767,12 +826,14 @@ public final class NavigationBarComponent: Component {
         }
 
         /// A right pill's glass goes: dematerializing in place for an in-place change, else fading out with the layout.
-        private func removeRightPillGlass(_ pill: NavigationBarRightPill, slot: Int, inPlace: Bool, leaving: NavigationBarInPlaceCapsule.Items?, tintColor: GlassBackgroundView.TintColor, isDark: Bool, transition: ComponentTransition) {
+        private func removeRightPillGlass(_ pill: NavigationBarRightPill, slot: Int, inPlace: Bool, leaving: NavigationBarInPlaceCapsule.Items?, partner: (container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor)?, tintColor: GlassBackgroundView.TintColor, isDark: Bool, transition: ComponentTransition) {
             guard let background = pill.background else {
                 return
             }
             pill.background = nil
-            if inPlace {
+            if inPlace, let partner {
+                self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: true, frame: background.frame, partner: partner.container, partnerFrame: partner.frame, partnerTintColor: partner.tintColor, tintColor: tintColor, isDark: isDark, leaving: leaving)
+            } else if inPlace {
                 self.startInPlaceRemoval(container: background, slot: .right(slot), tintColor: tintColor, isDark: isDark, leaving: leaving)
             } else {
                 background.update(size: background.bounds.size, cornerRadius: background.bounds.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: transition)
