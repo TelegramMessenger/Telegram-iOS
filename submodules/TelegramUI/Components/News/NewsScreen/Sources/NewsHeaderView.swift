@@ -12,6 +12,15 @@ import GlassBackgroundComponent
 import EdgeEffect
 import NewsFeedSupport
 
+/// The top row's content. It spans the header, above the search block, so its children keep the header's coordinates;
+/// it takes no touch of its own, so a touch it does not give a child reaches the search block under it.
+private final class NewsHeaderRowContentView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result === self ? nil : result
+    }
+}
+
 /// The News header, one instance over both pages (Feed2 FeedScreen.swift:203-272). Back to front:
 /// - the search block, which scrolls with the active list (above everything while search is open);
 /// - the tab-switch shutter;
@@ -68,7 +77,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
     private let softEdgeView = EdgeEffectView()
     private let gradientView = EdgeEffectView()
     /// The top row's content: what a navigation transition lifts.
-    private let rowContentView = UIView()
+    private let rowContentView = NewsHeaderRowContentView()
     private let buttonsContainer = GlassBackgroundContainerView()
     private let buttons = ComponentView<Empty>()
     private var isContentLifted = false
@@ -129,7 +138,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             }
             return self
         }
-        if result === self || result === self.shutterView || result === self.softEdgeView || result === self.gradientView || result === self.rowContentView {
+        if result === self || result === self.shutterView || result === self.softEdgeView || result === self.gradientView {
             return nil
         }
         return result
