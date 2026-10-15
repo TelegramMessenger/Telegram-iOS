@@ -467,3 +467,19 @@ private func navigationBarVibrantColorMatrixFilter(_ matrix: [Float32]) -> NSObj
     return filter
 }
 
+/// The partner SwiftUI's resolver gives a matched insertion or removal (`sourceElement(target:otherElements:config:context:)`,
+/// SwiftUICore 27 0x1c6ea55d8, the best `Entry.geometryResult(to:context:)`: the distance between the glass shapes): the
+/// candidate nearest `frame`, by the gap between the two shapes, then by their centres. Nil without candidates.
+func navigationBarNearestPartner(of frame: CGRect, among candidates: [CGRect]) -> Int? {
+    func gap(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        let dx = max(0.0, max(a.minX - b.maxX, b.minX - a.maxX))
+        let dy = max(0.0, max(a.minY - b.maxY, b.minY - a.maxY))
+        return (dx * dx + dy * dy).squareRoot()
+    }
+    func centres(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        return hypot(a.midX - b.midX, a.midY - b.midY)
+    }
+    return candidates.indices.min(by: { lhs, rhs in
+        return (gap(frame, candidates[lhs]), centres(frame, candidates[lhs])) < (gap(frame, candidates[rhs]), centres(frame, candidates[rhs]))
+    })
+}

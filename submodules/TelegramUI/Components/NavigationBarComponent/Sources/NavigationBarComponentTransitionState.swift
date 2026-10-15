@@ -45,13 +45,11 @@ public struct NavigationBarComponentTransitionState {
     /// The press UIKit was drawing on each capsule when the bar gave them to the transition (1: none): the button that
     /// started it is still releasing, and the transition's capsule goes on with that release.
     public var leadingPressScale: CGFloat
-    public var trailingPressScale: CGFloat
-    /// UIKit's press glow on each capsule at that moment (0: none), carried on as the press is.
+    /// UIKit's press glow on the leading capsule at that moment (0: none), carried on as the press is.
     public var leadingPressGlow: CGFloat
-    public var trailingPressGlow: CGFloat
-    /// The same for the capsule beside the bar's accent circle (1 / 0 without one).
-    public var trailingInnerPressScale: CGFloat
-    public var trailingInnerPressGlow: CGFloat
+    /// The press and glow on each right platter (index from the edge; missing: none), likewise.
+    public var trailingPressScales: [CGFloat]
+    public var trailingPressGlows: [CGFloat]
     /// The edge effect's tint opacity (`EdgeEffectView.update(alpha:)`): 0.75 on the regular bar, 0.85 on the chat-list
     /// header.
     public var backdropTintAlpha: CGFloat
@@ -65,7 +63,7 @@ public struct NavigationBarComponentTransitionState {
     /// The title's glass pill when the bar has one and room for it (fewer than two right platters).
     public var titlePill: NavigationBarTransitionTitlePill?
 
-    public init(content: NavigationBarComponent.Content, theme: NavigationBarTheme, strings: NavigationBarStrings, rowFrame: CGRect, rowAlpha: CGFloat, leftInset: CGFloat, rightInset: CGFloat, trailingButtonsInset: CGFloat, sideColumnFrame: CGRect?, hidesSideColumnButtons: Bool, backdropHeight: CGFloat, backdropColor: UIColor?, backdropAlpha: CGFloat, backdropExtension: CGFloat, leadingPressScale: CGFloat = 1.0, trailingPressScale: CGFloat = 1.0, leadingPressGlow: CGFloat = 0.0, trailingPressGlow: CGFloat = 0.0, trailingInnerPressScale: CGFloat = 1.0, trailingInnerPressGlow: CGFloat = 0.0, backdropTintAlpha: CGFloat = 0.75, backdropEdgeLength: CGFloat = 64.0, keepsLoneBackdrop: Bool = false, titlePill: NavigationBarTransitionTitlePill? = nil) {
+    public init(content: NavigationBarComponent.Content, theme: NavigationBarTheme, strings: NavigationBarStrings, rowFrame: CGRect, rowAlpha: CGFloat, leftInset: CGFloat, rightInset: CGFloat, trailingButtonsInset: CGFloat, sideColumnFrame: CGRect?, hidesSideColumnButtons: Bool, backdropHeight: CGFloat, backdropColor: UIColor?, backdropAlpha: CGFloat, backdropExtension: CGFloat, leadingPressScale: CGFloat = 1.0, leadingPressGlow: CGFloat = 0.0, trailingPressScales: [CGFloat] = [], trailingPressGlows: [CGFloat] = [], backdropTintAlpha: CGFloat = 0.75, backdropEdgeLength: CGFloat = 64.0, keepsLoneBackdrop: Bool = false, titlePill: NavigationBarTransitionTitlePill? = nil) {
         self.titlePill = titlePill
         self.content = content
         self.theme = theme
@@ -82,11 +80,9 @@ public struct NavigationBarComponentTransitionState {
         self.backdropAlpha = backdropAlpha
         self.backdropExtension = backdropExtension
         self.leadingPressScale = leadingPressScale
-        self.trailingPressScale = trailingPressScale
         self.leadingPressGlow = leadingPressGlow
-        self.trailingPressGlow = trailingPressGlow
-        self.trailingInnerPressScale = trailingInnerPressScale
-        self.trailingInnerPressGlow = trailingInnerPressGlow
+        self.trailingPressScales = trailingPressScales
+        self.trailingPressGlows = trailingPressGlows
         self.backdropTintAlpha = backdropTintAlpha
         self.backdropEdgeLength = backdropEdgeLength
         self.keepsLoneBackdrop = keepsLoneBackdrop

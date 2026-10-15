@@ -756,7 +756,7 @@ final class NavigationBarNodeTests: XCTestCase {
         }
         XCTAssertEqual(platterView.layer.opacity, 1.0)
         renderer.beginTransition(isInteractive: false, toTop: true)
-        for role in [NavigationBarPlatterTransitionView.Role.leading, .trailing] {
+        for role in [NavigationBarPlatterTransitionView.Role.leading, .trailing(0)] {
             let state = platterView.platterStateForTesting(role)
             XCTAssertEqual(state?.opacity ?? 1.0, 0.0, accuracy: 0.001, "\(role) materializes")
             XCTAssertGreaterThan(state?.scale.height ?? 0.0, 1.0, "\(role) materializes in place")
@@ -846,7 +846,7 @@ final class NavigationBarNodeTests: XCTestCase {
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 1.5)
-        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailingInner)?.frame, titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY))
+        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing(1))?.frame, titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY))
     }
 
     // The bar reports a layout while lifted only once it has finished it, so the renderer reads the new row, not the
@@ -886,7 +886,7 @@ final class NavigationBarNodeTests: XCTestCase {
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), topFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: true)
         XCTAssertEqual(bottom.rowViewForTesting?.primaryRightButtonsWidth ?? 0.0, 44.0)
-        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing)?.frame.width ?? 0.0, bottom.rowViewForTesting?.primaryRightButtonsWidth ?? -1.0)
+        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, bottom.rowViewForTesting?.primaryRightButtonsWidth ?? -1.0)
     }
 
     // A tap on Back pops while UIKit is still drawing the back capsule's press: the transition's capsule starts at that
@@ -916,7 +916,7 @@ final class NavigationBarNodeTests: XCTestCase {
         bottom.updateTransition(role: .bottom, fraction: 1.0, transition: .immediate)
         top.updateTransition(role: .top, fraction: 1.0, transition: .immediate)
         XCTAssertEqual(top.componentTransitionState?.leadingPressScale ?? 0.0, 60.0 / 44.0, accuracy: 0.001)
-        XCTAssertEqual(top.componentTransitionState?.trailingPressScale ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual((top.componentTransitionState.map { $0.trailingPressScales.first ?? 1.0 } ?? 0.0), 1.0, accuracy: 0.001)
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 1.0, bottomFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), topFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: false)
         XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.leading)?.press ?? 0.0, 60.0 / 44.0, accuracy: 0.001)
@@ -939,7 +939,7 @@ final class NavigationBarNodeTests: XCTestCase {
         top.updateTransition(role: .top, fraction: 1.0, transition: .immediate)
         renderer.update(size: size, fraction: 1.0, bottomFrame: barFrame, topFrame: barFrame, transition: .immediate)
         renderer.beginTransition(isInteractive: true, toTop: false)
-        guard let platterView = renderer.platterViewForTesting, let start = platterView.platterStateForTesting(.trailing)?.frame else {
+        guard let platterView = renderer.platterViewForTesting, let start = platterView.platterStateForTesting(.trailing(0))?.frame else {
             XCTFail("no trailing capsule")
             return
         }
@@ -950,13 +950,13 @@ final class NavigationBarNodeTests: XCTestCase {
             fraction -= 0.05
             renderer.update(size: size, fraction: fraction, bottomFrame: barFrame, topFrame: barFrame, transition: .immediate)
             self.time.advance(by: 1.0 / 30.0)
-            XCTAssertEqual(platterView.platterStateForTesting(.trailing)?.frame.width ?? 0.0, start.width, accuracy: 0.001)
+            XCTAssertEqual(platterView.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, start.width, accuracy: 0.001)
         }
         renderer.endInteraction(towardTop: false)
         for _ in 0 ..< 240 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        XCTAssertEqual(platterView.platterStateForTesting(.trailing)?.frame.width ?? 0.0, bottomWidth, accuracy: 0.01)
+        XCTAssertEqual(platterView.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, bottomWidth, accuracy: 0.01)
     }
 
     /// A push from a bar without a right button to one whose right button is a screen's node, begun as the coordinator

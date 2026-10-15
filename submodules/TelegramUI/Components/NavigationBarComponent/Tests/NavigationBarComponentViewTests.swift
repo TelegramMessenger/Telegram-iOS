@@ -378,10 +378,10 @@ final class NavigationBarComponentViewTests: XCTestCase {
         glass.bounds = CGRect(x: 0.0, y: 0.0, width: 60.0, height: 60.0)
         glass.center = center
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressScale(isLeft: true), 60.0 / 44.0, accuracy: 0.001)
-        XCTAssertEqual(view.detachedPressScale(isLeft: false), 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.detachedLeftPressScale, 60.0 / 44.0, accuracy: 0.001)
+        XCTAssertEqual((view.detachedRightPressScales.first ?? 1.0), 1.0, accuracy: 0.001)
         view.plattersDetached = false
-        XCTAssertEqual(view.detachedPressScale(isLeft: true), 1.0)
+        XCTAssertEqual(view.detachedLeftPressScale, 1.0)
     }
 
     // UIKit draws a short tap's press only as a running animation on the glass, and takes it off when the touch ends,
@@ -405,8 +405,8 @@ final class NavigationBarComponentViewTests: XCTestCase {
         glass.bounds = restBounds
         glass.center = center
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressScale(isLeft: true), 60.0 / 44.0, accuracy: 0.001)
-        XCTAssertEqual(view.detachedPressScale(isLeft: false), 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.detachedLeftPressScale, 60.0 / 44.0, accuracy: 0.001)
+        XCTAssertEqual((view.detachedRightPressScales.first ?? 1.0), 1.0, accuracy: 0.001)
     }
 
     // A press held longer than the sampler's first window (filmed in the app, 2026-10-14: Back held ~1.6 s snapped
@@ -438,7 +438,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
         glass.bounds = restBounds
         glass.center = center
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressScale(isLeft: true), 60.0 / 44.0, accuracy: 0.001)
+        XCTAssertEqual(view.detachedLeftPressScale, 60.0 / 44.0, accuracy: 0.001)
     }
 
     // UIKit's press glow on a capsule when the bar hands it to a transition: the opacity of its BigGlow layer
@@ -457,16 +457,16 @@ final class NavigationBarComponentViewTests: XCTestCase {
         backGlass.transform = CGAffineTransform(scaleX: 60.0 / 44.0, y: 60.0 / 44.0)
         editGlass.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressGlow(isLeft: true), 0.7, accuracy: 0.001)
-        XCTAssertEqual(view.detachedPressGlow(isLeft: false), 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.detachedLeftPressGlow, 0.7, accuracy: 0.001)
+        XCTAssertEqual((view.detachedRightPressGlows.first ?? 0.0), 1.0, accuracy: 0.001)
         view.plattersDetached = false
-        XCTAssertEqual(view.detachedPressGlow(isLeft: true), 0.0)
+        XCTAssertEqual(view.detachedLeftPressGlow, 0.0)
         glow.removeFromSuperlayer()
         backGlass.transform = .identity
         editGlass.transform = .identity
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressGlow(isLeft: true), 0.0)
-        XCTAssertEqual(view.detachedPressGlow(isLeft: false), 0.0)
+        XCTAssertEqual(view.detachedLeftPressGlow, 0.0)
+        XCTAssertEqual((view.detachedRightPressGlows.first ?? 0.0), 0.0)
     }
 
     // Under Reduce Motion an in-place change does not pulse and its shape does not bounce (glass RE §2.2, §3.2).
@@ -647,10 +647,10 @@ final class NavigationBarComponentViewTests: XCTestCase {
         capsuleGlass.bounds = CGRect(x: 0.0, y: 0.0, width: 110.0, height: 55.0)
         capsuleGlass.center = capsuleCenter
         view.plattersDetached = true
-        XCTAssertEqual(view.detachedPressScale(isLeft: false), 60.0 / 44.0, accuracy: 0.001)
-        XCTAssertEqual(view.detachedInnerPressScale, 55.0 / 44.0, accuracy: 0.001)
+        XCTAssertEqual((view.detachedRightPressScales.first ?? 1.0), 60.0 / 44.0, accuracy: 0.001)
+        XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 55.0 / 44.0, accuracy: 0.001)
         view.plattersDetached = false
-        XCTAssertEqual(view.detachedInnerPressScale, 1.0)
+        XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 1.0)
     }
 
     // The inline forum slides in over Chats: the circle narrows with Chats' right side and the capsule follows it, so
@@ -707,6 +707,22 @@ final class NavigationBarComponentViewTests: XCTestCase {
         let view = self.updateBar(bar, back: nil, right: [self.fixedButton("done", tint: .accent)], transition: .immediate)
         XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
         XCTAssertNil(view.inPlaceStateForTesting(isLeft: true))
+    }
+
+    // A transition carries on the press UIKit draws on every right pill, by index from the edge.
+    func test_detachingPlatters_measuresEveryRightPill() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: nil, right: [self.fixedButton("a", tint: .accent), self.fixedButton("b", tint: .accent), self.fixedButton("c")], transition: .immediate)
+        guard let third = view.rightPillBackgroundContainer(at: 2), let glass = navigationBarTestGlassEffectView(content: third.contentView, container: third) else {
+            XCTFail("no third pill")
+            return
+        }
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: 55.0, height: 55.0)
+        glass.center = center
+        view.plattersDetached = true
+        XCTAssertEqual(view.detachedRightPressScales.count, 3)
+        XCTAssertEqual(view.detachedRightPressScales.count > 2 ? view.detachedRightPressScales[2] : 1.0, 55.0 / 44.0, accuracy: 0.001)
     }
 
     private func editAndSearch() -> [NavigationBarComponent.Button] {

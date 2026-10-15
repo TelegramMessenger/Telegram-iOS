@@ -192,11 +192,14 @@ public final class NavigationBarComponent: Component {
             }
         }
 
-        private var detachedLeftPressScale: CGFloat = 1.0
-        private var detachedLeftPressGlow: CGFloat = 0.0
-        /// The press UIKit was drawing on each right pill (index from the edge) when the platters were detached.
-        private(set) var detachedRightPressScales: [CGFloat] = []
-        private(set) var detachedRightPressGlows: [CGFloat] = []
+        /// The press UIKit was drawing on the left capsule when the platters were detached (1: none, or not detached), and
+        /// its glow (0: none).
+        public private(set) var detachedLeftPressScale: CGFloat = 1.0
+        public private(set) var detachedLeftPressGlow: CGFloat = 0.0
+        /// The press UIKit was drawing on each right pill (index from the edge) when the platters were detached, and its
+        /// glow; empty while not detached.
+        public private(set) var detachedRightPressScales: [CGFloat] = []
+        public private(set) var detachedRightPressGlows: [CGFloat] = []
 
         /// UIKit draws a capsule's press (on a short tap) only as a running animation on its glass, which it takes off
         /// when the touch ends, before the button's action runs (measured 2026-10-14): when that action starts a
@@ -244,28 +247,6 @@ public final class NavigationBarComponent: Component {
                 return
             }
             self.samplePress()
-        }
-
-        /// The press UIKit was drawing on a capsule when the platters were detached (1: none, or not detached); on the right,
-        /// the outermost platter's (the accent circle when there is one).
-        public func detachedPressScale(isLeft: Bool) -> CGFloat {
-            return isLeft ? self.detachedLeftPressScale : (self.detachedRightPressScales.first ?? 1.0)
-        }
-
-        /// The press UIKit was drawing on the right capsule beside an accent circle when the platters were detached
-        /// (1: none, no circle, or not detached). `detachedPressScale(isLeft: false)` is the outermost right platter's.
-        public var detachedInnerPressScale: CGFloat {
-            return self.detachedRightPressScales.count > 1 ? self.detachedRightPressScales[1] : 1.0
-        }
-
-        /// UIKit's press glow on that capsule when the platters were detached (0: none).
-        public var detachedInnerPressGlow: CGFloat {
-            return self.detachedRightPressGlows.count > 1 ? self.detachedRightPressGlows[1] : 0.0
-        }
-
-        /// UIKit's press glow on a capsule when the platters were detached (0: none, or not detached).
-        public func detachedPressGlow(isLeft: Bool) -> CGFloat {
-            return isLeft ? self.detachedLeftPressGlow : (self.detachedRightPressGlows.first ?? 0.0)
         }
 
         private func applyPlattersDetached() {
