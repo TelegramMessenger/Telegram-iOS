@@ -278,8 +278,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     // Rich-input configuration from the server flag `ios_rich_input_mode` (Double): 0 / absent (default) is the
     // dual-field switch — the composer defaults to the legacy field and latches to native only when content
     // becomes legacy-non-representable; 1 is always-native; 2 is legacy-only. The `useInputDecEngine` experimental
-    // flag (Debug Settings ▸ "Text Field v2: InputDec ENGINE editor") forces always-native regardless of
-    // `ios_rich_input_mode`. `enableRichTextInput` = native is permitted at all (false only in legacy-only mode);
+    // flag (Debug Settings ▸ "Input V3") forces always-native regardless of `ios_rich_input_mode`.
+    // `enableRichTextInput` = native is permitted at all (false only in legacy-only mode);
     // `alwaysUseNativeInput` = native from the start (mode 1 or `useInputDecEngine`). See `desiredUseNative(for:)`.
     private var enableRichTextInput: Bool = false
     private var alwaysUseNativeInput: Bool = false
@@ -288,7 +288,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     // "Text Field v2: InputDec backend" (`inputDecTextBackend`) selects `.inputDecIfSupported`, which
     // itself falls back to legacy on a runtime the InputDec backend cannot drive.
     private var richTextInputBackendPreference: RichTextEditorInputBackendPreference = .legacy
-    /// Debug Settings ▸ "Text Field v2: InputDec ENGINE editor". Selects the engine-backed editor
+    /// Debug Settings ▸ "Input V3". Selects the engine-backed editor
     /// rather than a backend of the legacy one — a different type, read once at panel setup.
     private var useInputDecEngineEditor: Bool = false
     
