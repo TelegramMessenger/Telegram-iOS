@@ -89,7 +89,13 @@ before any animation code is written.
 - **The row draws any number of right pills**, index 0 outermost, `navigationBarInterSectionSpacing` (12 pt) apart, each
   its own glass container with its own items container, replacing the fixed capsule and circle. A pill takes a
   non-generic tint only when all its buttons share it (`navigationBarCapsuleTint`, unchanged). The title's room is
-  measured from the innermost pill's leading edge (`navigationBarRightButtonsExtent` over all pills).
+  measured from the innermost pill's leading edge (`navigationBarRightButtonsExtent` over all pills). A pill with a
+  single button morphs into that button's context menu (`morphsIntoContextMenu`), decided per pill from its own buttons.
+- **An inline forum sliding over Chats keeps today's slide.** While the bar shows two contents (`secondaryContent`),
+  each content's pills are paired **from the inner end** and their widths interpolated by `secondaryTransition`, each
+  pill's tint that of the content it mostly belongs to. That is exactly today's slide: Chats' story/proxy capsule turns
+  into the forum's capsule while Chats' compose circle narrows away at the edge, keeping its accent glass. (Pairing from
+  the edge instead would morph the compose circle into the forum's "…" and change a shipping animation.)
 - **Screens change nothing.** `ItemListController` keeps passing `[secondary, primary]` bar items; the bar applies the
   rule, so Channel Administrators, Members and Removed Users split by themselves, as does every other screen with the
   same mix of items.
@@ -127,6 +133,18 @@ The old and new right pills are compared by index from the edge, as UIKit compar
 - **Shared rules, not copies.** The delay, kick, anchored pulse and partner choice come from the functions push/pop
   uses; the partner choice moves out of the transition view into `NavigationBarGlassAnimation.swift` so both call it.
   Only the time model differs: push/pop bakes keyframes, the in-place animator steps live springs on a display link.
+- **How two bar pills merge.** Unlike push/pop's platters (bare glass shapes with the items in a separate host), a bar
+  pill (`GlassContextExtractableContainer`) keeps its items inside its own glass view. So for the duration of a merge
+  the container **lends its glass view, items included**, to a merging `GlassBackgroundContainerView` at smoothness 12
+  in the bar view (a new `lendGlass()` / `reclaimGlass()` pair on the container), and takes it back once the leaving
+  pill is gone or the arriving one has separated. While lent, the animator places the glass views at the pills'
+  frames; the items stay live, so the arriving pill takes taps and the partner keeps its buttons. Both pills' glass is
+  lent, the leaving or arriving one and its partner, since only shapes in one container merge.
+- **A press on the partner.** Moving the partner's glass may end the press UIKit is drawing on it (the tap on Edit
+  that started the change is still releasing). The animator therefore reads that press (`navigationBarCapsulePressScale`)
+  when it lends the glass and continues it as its own spring (`NavigationBarGlassSettings.pressRelease`), multiplied
+  with the pulse, as push/pop does with a bar's press. Task 5 films the case in the app and checks that UIKit's own
+  press does not also carry on (a doubled press); if it does, the measured continuation is dropped.
 - The order and timings above are the starting point. Where Task 1's measurement of the Administrators case differs
   (in particular whether the partner swells before an insertion), the measurement wins and this section is updated.
 
@@ -142,7 +160,8 @@ unless noted):
 
 - **Rule:** `[Edit, search]` -> two pills; `[search, +]` -> one; an accent button alone in its pill; `[text, text]` ->
   two; node and custom buttons join their neighbours; outermost first; Chats' buttons -> today's two pills.
-- **Layout:** pill frames with 12 pt gaps, the title's available width, each pill's tint.
+- **Layout:** pill frames with 12 pt gaps, the title's available width, each pill's tint, a single-button pill morphing
+  into its context menu; the inline-forum slide's existing tests stay unchanged and pass (pairing from the inner end).
 - **In place:** a leaving pill's frame converges on the nearest pill; both glass views are in one merging container
   while it collapses and each is back in its own after; the partner's pulse is anchored on the side facing it; an
   arriving pill starts at its partner and separates; a pill that comes back while leaving is the same pill; without
