@@ -34,6 +34,24 @@ private final class PlatterTestButtonComponent: Component {
     }
 }
 
+/// One window for the whole file: a test process traps after the suite if a window it made is freed.
+private let platterTestWindow = UIWindow(frame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 844.0))
+
+/// Hears what Core Animation tells a layer about entering and leaving the visible layer tree, as an animated emoji layer
+/// does to start and stop playing.
+private final class OrderProbeLayer: CALayer {
+    private(set) var isOrderedIn = false
+
+    override func action(forKey event: String) -> CAAction? {
+        if event == kCAOnOrderIn {
+            self.isOrderedIn = true
+        } else if event == kCAOnOrderOut {
+            self.isOrderedIn = false
+        }
+        return nil
+    }
+}
+
 /// The capsules of a navigation transition as iOS 27 animates them (SwiftUI GlassContainer under the bar's v2 platter
 /// container; docs/superpowers/specs/2026-10-13-native-navigation-glass-platters-ios27-re.md).
 final class NavigationBarPlatterTransitionViewTests: XCTestCase {
@@ -331,6 +349,37 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(view.platterIdentityForTesting(.trailingInner), identity)
         XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, pillFrame)
         XCTAssertNotNil(contents.superview)
+    }
+
+    // Lent contents are told they are back on screen. An animated emoji layer (`InlineStickerItemLayer`) plays only
+    // between Core Animation's `onOrderIn` and `onOrderOut`; lending moves the contents out of the window (`onOrderOut`),
+    // so the platter must take them in where Core Animation asks for `onOrderIn`, which it skips while actions are
+    // disabled. Otherwise the chat title's emoji status stood still for the whole transition.
+    func test_titlePill_lentContents_hearTheyAreOnScreenAgain() {
+        let probe = OrderProbeLayer()
+        let contents = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 170.0, height: 44.0))
+        contents.layer.addSublayer(probe)
+        let title = UIView(frame: CGRect(x: 110.0, y: 0.0, width: 170.0, height: 44.0))
+        title.addSubview(contents)
+        platterTestWindow.addSubview(title)
+        defer {
+            title.removeFromSuperview()
+        }
+        XCTAssertTrue(probe.isOrderedIn, "precondition: the window orders layers in")
+        let wrapper = UIView(frame: contents.frame)
+        var chat = self.chatSide()
+        chat.titlePill = NavigationBarTransitionTitlePill(frame: title.frame, signature: ObjectIdentifier(contents), lendContent: {
+            wrapper.addSubview(contents)
+            return wrapper
+        })
+        let view = self.makeView(bottom: self.chatsSide(), top: chat)
+        platterTestWindow.addSubview(view)
+        defer {
+            view.removeFromSuperview()
+        }
+        view.beginTransition(isInteractive: false, toTop: true)
+        XCTAssertTrue(wrapper.window != nil, "the lent contents are in the transition")
+        XCTAssertTrue(probe.isOrderedIn)
     }
 
     // Chat -> chat: pill to pill as one shape, the titles swapping inside it.

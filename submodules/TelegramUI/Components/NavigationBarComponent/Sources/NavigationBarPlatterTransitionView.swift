@@ -846,6 +846,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         let times = timing.sampleTimes
         let time = self.time
         self.time = timing.duration
+        self.attachItems(platter)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         self.apply(platter)
@@ -966,8 +967,22 @@ public final class NavigationBarPlatterTransitionView: UIView {
 
     private func applyAll() {
         for platter in self.platters.values {
+            self.attachItems(platter)
             self.apply(platter)
         }
+    }
+
+    /// Takes a capsule's items into its host where Core Animation tells their layers they are on screen (`onOrderIn`),
+    /// which it skips while actions are disabled. Lent live contents heard they left (`onOrderOut`) when their bar
+    /// handed them over, and an animated emoji status (`InlineStickerItemLayer`) plays only between the two: in a
+    /// disabled-actions transaction it stood still until it was given back.
+    private func attachItems(_ platter: Platter) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(false)
+        for items in platter.items where items.view.superview !== platter.itemsHost {
+            platter.itemsHost.addSubview(items.view)
+        }
+        CATransaction.commit()
     }
 
     private func apply(_ platter: Platter) {
@@ -1008,9 +1023,6 @@ public final class NavigationBarPlatterTransitionView: UIView {
         }
         ComponentTransition.immediate.setBlur(layer: platter.itemsHost.layer, radius: platter.blurRadius * d)
         for items in platter.items {
-            if items.view.superview !== platter.itemsHost {
-                platter.itemsHost.addSubview(items.view)
-            }
             // Each bar's items stay where that bar has them while the shape morphs around them.
             let a = max(0.0, min(1.0, items.appearance.value(at: self.time)))
             items.view.bounds = CGRect(origin: CGPoint(), size: items.frame.size)
