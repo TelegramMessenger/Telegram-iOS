@@ -125,4 +125,34 @@ final class MessageOfInterestHolesViewTests: XCTestCase {
         XCTAssertEqual(views.last?.closestHole?.hole, self.expectedHole)
         XCTAssertEqual(self.coveredIds(views.last?.closestHole?.direction), 1 ... 9, "\(String(describing: views.last?.closestHole))")
     }
+
+    func testZeroReadAnchorDoesNotWalkBackwardsAfterFillingHistory() {
+        self.checkMissingReadAnchorDoesNotWalkBackwards(readId: 0)
+    }
+
+    func testDeletedReadAnchorDoesNotWalkBackwardsAfterFillingHistory() {
+        self.checkMissingReadAnchorDoesNotWalkBackwards(readId: 100)
+    }
+
+    private func checkMissingReadAnchorDoesNotWalkBackwards(readId: Int32) {
+        self.fixture.transaction { transaction in
+            let _ = transaction.addMessages((1000 ... 1060).map(self.message), location: .Random)
+            transaction.removeHole(peerId: self.peer, threadId: nil, namespace: self.namespace, space: .everywhere, range: 1000 ... (Int32.max - 1))
+            if readId > 0 {
+                transaction.removeHole(peerId: self.peer, threadId: nil, namespace: self.namespace, space: .everywhere, range: 1 ... readId)
+            }
+            transaction.resetIncomingReadStates([self.peer: [self.namespace: .idBased(maxIncomingReadId: readId, maxOutgoingReadId: readId, maxKnownId: 1060, count: 1060 - readId, markedUnread: false)]])
+        }
+        let recorder = self.observeHoles()
+        let initial = recorder.waitForValues(count: 1)
+        XCTAssertEqual(self.coveredIds(initial.last?.closestHole?.direction), 1 ... 999)
+
+        self.fixture.transaction { transaction in
+            let _ = transaction.addMessages((940 ... 999).map(self.message), location: .Random)
+            transaction.removeHole(peerId: self.peer, threadId: nil, namespace: self.namespace, space: .everywhere, range: 940 ... 999)
+        }
+
+        let views = recorder.waitForValues(count: 2)
+        XCTAssertNil(views.last?.closestHole)
+    }
 }

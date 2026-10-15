@@ -4126,7 +4126,10 @@ public final class GroupCallMessagesContext {
             self.pollTopStarsDisposable?.dispose()
             self.pollTopStarsDisposable = ((self.account.network.request(Api.functions.phone.getGroupCallStars(call: self.reference.apiInputGroupCall))
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.phone.GroupCallStars?, NoError> in
+            |> `catch` { error -> Signal<Api.phone.GroupCallStars?, NoError> in
+                if error.errorDescription == "GROUPCALL_INVALID" {
+                    return .never()
+                }
                 return .single(nil)
             }
             |> then(Signal<Api.phone.GroupCallStars?, NoError>.complete() |> delay(30.0, queue: self.queue))) |> restart
