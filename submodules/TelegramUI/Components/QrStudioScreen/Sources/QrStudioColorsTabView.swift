@@ -40,7 +40,7 @@ private final class QrStudioSwatchCache {
 }
 
 enum QrStudioColorsSelection: Equatable {
-    case palette(Int32)
+    case palette(QrStudioPaletteId)
     case theme(String)
 }
 
@@ -51,7 +51,7 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
     }
 
     let scrollView = UIScrollView()
-    var selected: ((Int32) -> Void)?
+    var selected: ((QrStudioPaletteId) -> Void)?
     var selectedTheme: ((String) -> Void)?
     var themeImage: ((QrStudioTheme, Int) -> Signal<CGImage?, NoError>)?
 
@@ -62,21 +62,20 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
             self.vibrantHeaders.attach(to: self.tintMaskContainer)
         }
     }
-    private var paletteLayers: [Int32: CALayer] = [:]
-    private var paletteNames: [Int32: String] = [:]
-    private var paletteIds: [Int32] = []
+    private var paletteLayers: [QrStudioPaletteId: CALayer] = [:]
+    private var paletteNames: [QrStudioPaletteId: String] = [:]
+    private var paletteIds: [QrStudioPaletteId] = []
     private var themeLayers: [String: CALayer] = [:]
     private var themeDisposables: [String: Disposable] = [:]
     private var themeIds: [String] = []
     private var cells: [Cell] = []
-    private var rings: [Int32: QrStudioPressRing] = [:]
-    private var paletteFrames: [Int32: CGRect] = [:]
-    private var paletteColors: [Int32: UIColor] = [:]
+    private var rings: [QrStudioPaletteId: QrStudioPressRing] = [:]
+    private var paletteFrames: [QrStudioPaletteId: CGRect] = [:]
+    private var paletteColors: [QrStudioPaletteId: UIColor] = [:]
     private var didApplySelection = false
     private let fadeMask = CAGradientLayer()
 
     private var size = CGSize()
-    private var didScrollToSelection = false
     private let hapticFeedback = HapticFeedback()
 
     private static let swatchSide: CGFloat = 48.0
@@ -199,7 +198,7 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
         }
     }
 
-    func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, themes: [QrStudioTheme], palettes: [QrStudioPalette], selection: QrStudioColorsSelection?) {
+    func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, themes: [QrStudioTheme], palettes: [QrStudioPalette], selection: QrStudioColorsSelection?, revealSelection: Bool) {
         let sizeChanged = self.size != size
         let themesChanged = themes.map { $0.id } != self.themeIds || palettes.compactMap({ $0.id }) != self.paletteIds
         self.size = size
@@ -287,7 +286,7 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
                 self.paletteColors[id] = color.uiColor
             }
         }
-        var selectedPaletteId: Int32?
+        var selectedPaletteId: QrStudioPaletteId?
         if case let .palette(id) = selection {
             selectedPaletteId = id
         }
@@ -302,22 +301,17 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
                 self.rings.removeValue(forKey: id)
                 continue
             }
-            ring.update(frame: frame, cornerRadius: nil, color: self.paletteColors[id] ?? theme.list.itemAccentColor, isSelected: id == selectedPaletteId, target: swatchLayer, animated: self.didApplySelection)
+            ring.update(frame: frame, cornerRadius: nil, color: self.paletteColors[id] ?? theme.list.itemAccentColor, isSelected: id == selectedPaletteId, target: swatchLayer, animated: self.didApplySelection && !revealSelection)
         }
         self.didApplySelection = true
 
-        if let selection, let cell = self.cells.first(where: { $0.selection == selection }) {
+        if revealSelection, size.height > 0.0, !self.scrollView.isTracking, let selection, let cell = self.cells.first(where: { $0.selection == selection }) {
             let frame = cell.frame
-
-            if !self.didScrollToSelection && size.height > 0.0 && self.scrollView.contentOffset.y <= 0.0 && !self.scrollView.isTracking {
-                if frame.maxY > size.height - 40.0 {
-                    let maxOffset = max(0.0, self.scrollView.contentSize.height - size.height)
-                    self.scrollView.contentOffset = CGPoint(x: 0.0, y: min(maxOffset, max(0.0, frame.midY - size.height * 0.5)))
-                }
+            let offset = self.scrollView.contentOffset.y
+            if frame.minY < offset + 14.0 || frame.maxY > offset + size.height - 40.0 {
+                let maxOffset = max(0.0, self.scrollView.contentSize.height - size.height)
+                self.scrollView.setContentOffset(CGPoint(x: 0.0, y: min(maxOffset, max(0.0, frame.midY - size.height * 0.5))), animated: false)
             }
-        }
-        if size.height > 0.0 {
-            self.didScrollToSelection = true
         }
         CATransaction.commit()
     }

@@ -1451,6 +1451,18 @@ public extension TelegramEngine {
             return _internal_exportContactToken(account: self.account)
         }
 
+        public func getShareTheme(peerId: EnginePeer.Id) -> Signal<TelegramShareTheme?, NoError> {
+            return _internal_getShareTheme(account: self.account, peerId: peerId)
+        }
+
+        public func setShareTheme(peerId: EnginePeer.Id, theme: TelegramShareThemeUpdate) -> Signal<Never, SetShareThemeError> {
+            return _internal_setShareTheme(account: self.account, peerId: peerId, theme: theme)
+        }
+
+        public func shareThemeBackdrops() -> Signal<[TelegramShareThemeBackdrop], NoError> {
+            return _internal_shareThemeBackdrops(account: self.account)
+        }
+
         public func exportNoPaidMessagesToken(revoke: Bool, temporary: Bool) -> Signal<ExportedNoPaidMessagesToken?, NoError> {
             return _internal_exportNoPaidMessagesToken(account: self.account, revoke: revoke, temporary: temporary)
         }

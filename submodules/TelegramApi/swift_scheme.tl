@@ -2378,6 +2378,12 @@ shareThemeEmoji#3ab4430a emojis:Vector<Reaction> = ShareTheme;
 shareThemeColor#1f48bc20 color_id:int = ShareTheme;
 shareThemeGift#ebece66d stargift:StarGift = ShareTheme;
 inputShareThemeGift#3fb92b5b stargift:InputSavedStarGift = ShareTheme;
+shareThemeBackdrop#fd62fbd1 backdrop_id:int = ShareTheme;
+
+shareThemeBackdropOption#45c1d652 backdrop_id:int name:string center_color:int edge_color:int pattern_color:int text_color:int = ShareThemeBackdropOption;
+
+shareThemeBackdropsNotModified#7a3f6dff = ShareThemeBackdrops;
+shareThemeBackdrops#aaeadce0 hash:int backdrops:Vector<ShareThemeBackdropOption> = ShareThemeBackdrops;
 
 inputWalletCardSticker#57df45a7 coordinates:MediaAreaCoordinates nft_address:string = InputWalletCardSticker;
 
@@ -2560,8 +2566,6 @@ account.getWebBrowserSettings#56655768 hash:long = account.WebBrowserSettings;
 account.updateWebBrowserSettings#9adf82fe flags:# open_external_browser:flags.0?true display_close_button:flags.1?true = account.WebBrowserSettings;
 account.toggleWebBrowserSettingsException#60ed4229 flags:# delete:flags.1?true open_external_browser:flags.0?Bool url:string = Updates;
 account.deleteWebBrowserSettingsExceptions#86a0765d = account.WebBrowserSettings;
-account.getShareTheme#a3455427 = ShareTheme;
-account.setShareTheme#82bab396 theme:ShareTheme = Bool;
 
 users.getUsers#d91a548 id:Vector<InputUser> = Vector<User>;
 users.getFullUser#b60f5918 id:InputUser = users.UserFull;
@@ -2861,6 +2865,9 @@ messages.getRichMessage#501569cf peer:InputPeer id:int = messages.Messages;
 messages.translateRichMessage#1a542004 flags:# peer:flags.0?InputPeer id:flags.0?Vector<int> text:flags.1?Vector<InputRichMessage> to_lang:string tone:flags.2?string = messages.TranslatedRichMessage;
 messages.composeRichMessageWithAI#8d7ae6af flags:# proofread:flags.0?true emojify:flags.3?true text:flags.4?InputRichMessage translate_to_lang:flags.1?string tone:flags.2?InputAiComposeTone = messages.ComposedRichMessageWithAI;
 messages.requestChatJoinWebView#ba9ee679 flags:# query_id:long theme_params:flags.0?DataJSON platform:string = WebViewResult;
+messages.getShareTheme#761b1c73 peer:InputPeer = ShareTheme;
+messages.setShareTheme#698a9b1a peer:InputPeer theme:ShareTheme = Bool;
+messages.getShareThemeBackdrops#f4599ef2 hash:int = ShareThemeBackdrops;
 
 updates.getState#edd4882a = updates.State;
 updates.getDifference#19c2f763 flags:# pts:int pts_limit:flags.1?int pts_total_limit:flags.0?int date:int qts:int qts_limit:flags.2?int = updates.Difference;

@@ -1069,7 +1069,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
             let contact = flight.thrown ? 0.5 : 0.18
             let travel = flight.peelFirst ? 0.5 : (flight.fast ? 0.32 : 0.44)
             let lead = flight.peelFirst ? 0.225 : 0
-            let duration = flight.sticking ? contact + 0.42 + (flight.rejected != nil ? 0.6 : 0.08) : (flight.trash ? 0.34 : (flight.returning ? lead + travel : 0.25))
+            let duration = flight.sticking ? contact + 0.42 + (flight.rejected != nil ? 0.6 : 0.3) : (flight.trash ? 0.34 : (flight.returning ? lead + travel : 0.25))
             var target = flight.to
             if flight.sticking, let sticker = self.placements.first(where: { $0.gift.address == id }), let projected = self.pose(sticker) {
                 target = projected
@@ -1101,6 +1101,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 }
                 pose.front = Self.ease((elapsed - contact) / 0.42)
                 if elapsed >= contact + 0.42 { pose.bend = 0; pose.shade = 0 }
+                if flight.rejected == nil && elapsed > contact + 0.42 { pose.opacity = 1 - CGFloat(Self.ease((elapsed - contact - 0.42) / 0.3)) }
                 if elapsed >= contact && !flight.contacted {
                     flight.contacted = true
                     self.flights[id] = flight

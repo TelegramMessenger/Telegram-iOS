@@ -31,6 +31,7 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
     private var items: [Int64: ComponentView<Empty>] = [:]
     private let fadeMask = CAGradientLayer()
     private var params: Params?
+    private var isRevealingSelection = false
 
     private static let sideInset: CGFloat = 16.0
     private static let spacing: CGFloat = 10.0
@@ -77,7 +78,7 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         return CGRect(x: QrStudioGiftsTabView.sideInset + CGFloat(column) * (itemSide + QrStudioGiftsTabView.spacing), y: QrStudioGiftsTabView.top + CGFloat(row) * (itemSide + QrStudioGiftsTabView.spacing), width: itemSide, height: itemSide)
     }
 
-    func update(size: CGSize, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, gifts: [QrStudioGift], selectedId: Int64?) {
+    func update(size: CGSize, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, gifts: [QrStudioGift], selectedId: Int64?, revealSelection: Bool, scrollsToSelection: Bool) {
         self.params = Params(size: size, context: context, theme: theme, strings: strings, gifts: gifts, selectedId: selectedId)
         self.scrollView.frame = CGRect(origin: CGPoint(), size: size)
 
@@ -107,6 +108,19 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         let contentSize = CGSize(width: size.width, height: contentHeight)
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
+        }
+
+        self.isRevealingSelection = revealSelection
+        defer {
+            self.isRevealingSelection = false
+        }
+        if revealSelection, scrollsToSelection, size.height > 0.0, !self.scrollView.isTracking, let selectedId, let index = gifts.firstIndex(where: { $0.id == selectedId }) {
+            let frame = self.itemFrame(index: index, itemSide: itemSide)
+            let offset = self.scrollView.contentOffset.y
+            if frame.minY < offset + 14.0 || frame.maxY > offset + size.height - 40.0 {
+                let maxOffset = max(0.0, contentHeight - size.height)
+                self.scrollView.setContentOffset(CGPoint(x: 0.0, y: min(maxOffset, max(0.0, frame.midY - size.height * 0.5))), animated: false)
+            }
         }
 
         self.updateVisibleItems()
@@ -145,7 +159,7 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
                 }
             }
             let _ = item.update(
-                transition: isNew ? .immediate : .easeInOut(duration: 0.2),
+                transition: isNew || self.isRevealingSelection ? .immediate : .easeInOut(duration: 0.2),
                 component: AnyComponent(GiftItemComponent(
                     context: params.context,
                     style: .glass,

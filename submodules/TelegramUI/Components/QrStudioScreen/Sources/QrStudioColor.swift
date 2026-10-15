@@ -133,13 +133,18 @@ struct QrStudioColor: Equatable {
     }
 }
 
+enum QrStudioPaletteId: Hashable {
+    case color(Int32)
+    case backdrop(Int32)
+}
+
 struct QrStudioPalette: Equatable {
-    let id: Int32?
+    let id: QrStudioPaletteId?
     let name: String
     let colors: [QrStudioColor]
     let ink: QrStudioColor
 
-    init(id: Int32?, name: String, colors: [QrStudioColor], ink: QrStudioColor) {
+    init(id: QrStudioPaletteId?, name: String, colors: [QrStudioColor], ink: QrStudioColor) {
         self.id = id
         self.name = name
         self.colors = colors
@@ -157,7 +162,23 @@ struct QrStudioPalette: Equatable {
         let glow = mix(center, text, 0.1)
         let corner = mix(center, edge, 0.85)
         let low = mix(edge, pattern, 0.12)
-        return QrStudioPalette(id: id, name: "profile-\(id)-\(center.rgb)-\(edge.rgb)", colors: [
+        return QrStudioPalette(id: .color(id), name: "profile-\(id)-\(center.rgb)-\(edge.rgb)", colors: [
+            corner, mix(center, edge, 0.35), corner,
+            mix(center, edge, 0.5), glow, mix(center, edge, 0.5),
+            low, mix(center, edge, 0.62), low,
+        ], ink: QrStudioColor.ink(center: center, edge: edge))
+    }
+
+    static func backdrop(id: Int32, center: UInt32, edge: UInt32, pattern: UInt32, text: UInt32) -> QrStudioPalette {
+        let center = QrStudioColor(rgb: center)
+        let edge = QrStudioColor(rgb: edge)
+        let pattern = QrStudioColor(rgb: pattern)
+        let text = QrStudioColor(rgb: text)
+        let mix = QrStudioColor.mix
+        let glow = mix(center, text, 0.1)
+        let corner = mix(center, edge, 0.85)
+        let low = mix(edge, pattern, 0.12)
+        return QrStudioPalette(id: .backdrop(id), name: "backdrop-\(id)-\(center.rgb)-\(edge.rgb)", colors: [
             corner, mix(center, edge, 0.35), corner,
             mix(center, edge, 0.5), glow, mix(center, edge, 0.5),
             low, mix(center, edge, 0.62), low,
