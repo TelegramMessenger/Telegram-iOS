@@ -13,12 +13,14 @@ final class NavigationBarContentView: UIView {
 
     let leftButtonsContainer: UIView
     private(set) var leftButtonViews: [AnyHashable: ComponentView<NavigationButtonEnvironment>] = [:]
-    let rightButtonsContainer: UIView
     private(set) var rightButtonViews: [AnyHashable: ComponentView<NavigationButtonEnvironment>] = [:]
-    /// The row's accent circle (`NavigationBarButtonPlacement.rowCircleItem`); the bar view hosts it outermost.
-    let rightCircleContainer: UIView
-    private(set) var rightCircleWidth: CGFloat = 0.0
-    private(set) var rightCircleTint: NavigationBarComponent.Button.Tint = .generic
+    /// The row's right pills (`NavigationBarButtonPlacement.rowRightSections`), outermost first: each one's items, in a
+    /// container the bar view hosts in that pill's glass. Containers are kept (emptied) when the pills get fewer.
+    private(set) var rightPillContainers: [UIView] = []
+    /// Width (at least 44 pt), tint and number of buttons of each pill shown, outermost first.
+    private(set) var rightPillWidths: [CGFloat] = []
+    private(set) var rightPillTints: [NavigationBarComponent.Button.Tint] = []
+    private(set) var rightPillButtonCounts: [Int] = []
     private(set) var backButtonView: NavigationBarBackButtonView?
     /// Morph only: whether the last update held the back button steady (`updateMorphTransition`).
     /// iPhone Duo: this content's part of the side column; the bar view hosts them.
@@ -29,7 +31,6 @@ final class NavigationBarContentView: UIView {
     let columnTrailingContainer: UIView
     private(set) var trailingCircleTint: NavigationBarComponent.Button.Tint = .generic
     private(set) var leftCapsuleTint: NavigationBarComponent.Button.Tint = .generic
-    private(set) var rightCapsuleTint: NavigationBarComponent.Button.Tint = .generic
     private(set) var columnLayout: SideColumnItemsLayout?
     private var overflowButtonView: ComponentView<NavigationButtonEnvironment>?
     private var overflowItems: [NavigationBarComponent.OverflowItem] = []
@@ -45,7 +46,6 @@ final class NavigationBarContentView: UIView {
     private(set) var centerContentRightInset: CGFloat = 0.0
 
     private(set) var leftButtonsWidth: CGFloat = 0.0
-    private(set) var rightButtonsWidth: CGFloat = 0.0
 
     var leftButtonCount: Int {
         var count = self.leftButtonViews.values.filter { $0.view?.superview === self.leftButtonsContainer }.count
@@ -54,21 +54,26 @@ final class NavigationBarContentView: UIView {
         }
         return count
     }
-    var rightButtonCount: Int {
-        return self.rightButtonViews.values.filter { $0.view?.superview === self.rightButtonsContainer }.count
+    /// Pill `index`'s items container, made on first use.
+    func rightPillContainer(at index: Int) -> UIView {
+        while self.rightPillContainers.count <= index {
+            self.rightPillContainers.append(UIView())
+        }
+        return self.rightPillContainers[index]
     }
 
     /// Whether a button view is in the row (the side column is hit-tested by its host).
     private func isInRow(_ view: UIView) -> Bool {
-        return view.superview === self.leftButtonsContainer || view.superview === self.rightButtonsContainer || view.superview === self.rightCircleContainer
+        if view.superview === self.leftButtonsContainer {
+            return true
+        }
+        return self.rightPillContainers.contains(where: { $0 === view.superview })
     }
 
     init(backPressed: @escaping () -> Void) {
         self.backPressed = backPressed
 
         self.leftButtonsContainer = UIView()
-        self.rightButtonsContainer = UIView()
-        self.rightCircleContainer = UIView()
         self.columnBackContainer = UIView()
         self.columnButtonsContainer = UIView()
         self.columnTrailingContainer = UIView()
@@ -141,10 +146,10 @@ final class NavigationBarContentView: UIView {
         let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
         alphaTransition.setAlpha(view: self.leftButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
         alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: fraction * 10.0)
-        alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
-        alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: fraction * 10.0)
-        alphaTransition.setAlpha(view: self.rightCircleContainer, alpha: pow(1.0 - fraction, 2.0))
-        alphaTransition.setBlur(layer: self.rightCircleContainer.layer, radius: fraction * 10.0)
+        for container in self.rightPillContainers {
+            alphaTransition.setAlpha(view: container, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: container.layer, radius: fraction * 10.0)
+        }
         alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(1.0 - fraction, 2.0))
         alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
         alphaTransition.setAlpha(view: self.columnTrailingContainer, alpha: pow(1.0 - fraction, 2.0))
@@ -170,12 +175,12 @@ final class NavigationBarContentView: UIView {
         transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -(1.0 - fraction) * self.bounds.width, y: 0.0), size: self.titleOffsetContainer.bounds.size), completion: { _ in
             completion()
         })
-        alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(fraction, 2.0))
-        alphaTransition.setAlpha(view: self.rightCircleContainer, alpha: pow(fraction, 2.0))
-        alphaTransition.setBlur(layer: self.rightCircleContainer.layer, radius: (1.0 - fraction) * 10.0)
+        for container in self.rightPillContainers {
+            alphaTransition.setAlpha(view: container, alpha: pow(fraction, 2.0))
+            alphaTransition.setBlur(layer: container.layer, radius: (1.0 - fraction) * 10.0)
+        }
 
         alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
-        alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
         alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(fraction, 2.0))
         alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(fraction, 2.0))
         alphaTransition.setAlpha(view: self.columnTrailingContainer, alpha: pow(fraction, 2.0))
@@ -312,28 +317,25 @@ final class NavigationBarContentView: UIView {
             nextLeftButtonX += buttonSize.width
         }
 
-        var nextRightButtonX: CGFloat = 0.0
         var validRightButtons = Set<AnyHashable>()
-        for rightButton in placement.rowRightButtons.reversed() {
-            validRightButtons.insert(rightButton.id)
-            let originX = nextRightButtonX
-            let buttonSize = self.updateButtonView(rightButton, isLeft: false, container: self.rightButtonsContainer, theme: theme, rowWidth: size.width, availableHeight: size.height, transition: itemsTransition, alphaTransition: alphaTransition, frame: { buttonSize in
-                return CGRect(origin: CGPoint(x: originX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
-            })
-            nextRightButtonX += buttonSize.width
+        var rightPillWidths: [CGFloat] = []
+        for (index, section) in placement.rowRightSections.enumerated() {
+            let container = self.rightPillContainer(at: index)
+            var nextX: CGFloat = 0.0
+            // Laid out left to right: the pill's innermost button first.
+            for button in section.reversed() {
+                validRightButtons.insert(button.id)
+                let originX = nextX
+                let buttonSize = self.updateButtonView(button, isLeft: false, container: container, theme: theme, rowWidth: size.width, availableHeight: size.height, transition: itemsTransition, alphaTransition: alphaTransition, frame: { buttonSize in
+                    return CGRect(origin: CGPoint(x: originX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+                })
+                nextX += buttonSize.width
+            }
+            rightPillWidths.append(max(44.0, nextX))
         }
-
-        var rightCircleWidth: CGFloat = 0.0
-        if let circleItem = placement.rowCircleItem {
-            validRightButtons.insert(circleItem.id)
-            let buttonSize = self.updateButtonView(circleItem, isLeft: false, container: self.rightCircleContainer, theme: theme, rowWidth: size.width, availableHeight: size.height, transition: itemsTransition, alphaTransition: alphaTransition, frame: { buttonSize in
-                let width = max(44.0, buttonSize.width)
-                return CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
-            })
-            rightCircleWidth = max(44.0, buttonSize.width)
-        }
-        self.rightCircleWidth = rightCircleWidth
-        self.rightCircleTint = placement.rowCircleItem?.tint ?? .generic
+        self.rightPillWidths = rightPillWidths
+        self.rightPillTints = placement.rowRightSections.map(navigationBarCapsuleTint)
+        self.rightPillButtonCounts = placement.rowRightSections.map(\.count)
 
         if let columnLayout {
             for (cellIndex, itemIndex) in columnLayout.visibleItems.enumerated() {
@@ -439,16 +441,14 @@ final class NavigationBarContentView: UIView {
         }
 
         self.leftButtonsWidth = nextLeftButtonX
-        self.rightButtonsWidth = nextRightButtonX
 
         // The old glass bar tinted the left capsule from its left button only; a back button (alone or with a left
         // button) keeps the panel glass.
         let backInRow = displayBackButton && columnLayout?.backFrame == nil
         self.leftCapsuleTint = backInRow ? .generic : navigationBarCapsuleTint(placement.rowLeftButton.map { [$0] } ?? [])
-        self.rightCapsuleTint = navigationBarCapsuleTint(placement.rowRightButtons)
 
         let leftExtent = leftInset + nextLeftButtonX
-        let rightExtent = rightInset + navigationBarRightButtonsExtent(capsuleWidth: nextRightButtonX, circleWidth: rightCircleWidth)
+        let rightExtent = rightInset + navigationBarRightButtonsExtent(navigationBarRightPillMetrics(widths: rightPillWidths))
         let remainingWidth = navigationBarTitleAvailableWidth(rowWidth: size.width, leftExtent: leftExtent, rightExtent: rightExtent)
 
         let titleTextSize = self.titleTextView.updateLayout(CGSize(width: remainingWidth, height: size.height))

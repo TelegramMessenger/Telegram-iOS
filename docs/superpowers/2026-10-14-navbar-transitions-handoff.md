@@ -293,9 +293,11 @@ mechanism); responder restore is a separate plan with an audit of `ChatControlle
    apply. The transition draws the pill and a still copy of its contents while the title view hides them; on a swipe
    back the pill stays put until release, like the buttons (user's choice). Without an avatar the pill is still second
    right (user's choice). The story grids' older `ChatTitleView` is not included.
-8. **Next (asked 2026-10-15):** split Edit and Search into two glass pills on `ChannelAdminsController`-like screens,
-   with the Search pill sucked into / ejected out of the Edit/Done pill (SwiftUI glass matched geometry, glass RE S1-S2).
-   Not designed yet.
+8. ~~**Split Edit and Search into two glass pills**~~ (asked 2026-10-15). Done on branch `navbar/split-buttons`: right
+   buttons group by UIKit's rule, and a pill that comes or goes merges with its neighbour as one shape. See
+   `docs/superpowers/specs/2026-10-15-navbar-split-right-buttons-design.md`, "Results", for what was filmed, the
+   two fixes it led to (the stuck-pale Done on single-pill changes, the Chats title snapping in Edit mode) and what was
+   not filmed (iPhone Duo, Removed Users, dark and clear glass).
 9. **Deferred minors** (next section), then the merge decision for both branches.
 
 ## Deferred minors (known, not fixed)

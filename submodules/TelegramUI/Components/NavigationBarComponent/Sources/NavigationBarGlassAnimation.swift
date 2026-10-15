@@ -314,28 +314,33 @@ func navigationBarGlassMaterializeScale(size: CGSize) -> CGSize {
 }
 
 /// The scale UIKit is drawing a capsule's press at (1 at rest): the on-screen height of the glass effect view the
-/// capsule's content sits in, over the capsule's own height. UIKit's `_UIFlexInteraction` grows that glass around the
-/// content, by its bounds on a short tap (measured in the app, 2026-10-14: every transform between the content and the
-/// capsule read 1 while the glass was 61 pt) or by a transform, so the content's own size says nothing about it.
-/// Read from the presentation layers when both are there.
+/// capsule's content sits in, over the height the glass is laid out at (the effect view's superview; the capsule's own
+/// height at rest, the merge's shape while the glass is lent, so the merge's own scaling is not read as a press).
+/// UIKit's `_UIFlexInteraction` grows that glass around the content, by its bounds on a short tap (measured in the app,
+/// 2026-10-14: every transform between the content and the capsule read 1 while the glass was 61 pt) or by a transform,
+/// so the content's own size says nothing about it. Read from the presentation layers when both are there.
 func navigationBarCapsulePressScale(_ container: GlassContextExtractableContainer) -> CGFloat {
     var current: UIView? = container.contentView.superview
     while let view = current, view !== container, !(view is UIVisualEffectView) {
         current = view.superview
     }
-    guard let glass = current as? UIVisualEffectView, container.bounds.height > 0.0 else {
+    guard let glass = current as? UIVisualEffectView else {
+        return 1.0
+    }
+    let layout: UIView = glass.superview ?? container
+    guard layout.bounds.height > 0.0 else {
         return 1.0
     }
     let glassLayer: CALayer
-    let containerLayer: CALayer
-    if let glassPresentation = glass.layer.presentation(), let containerPresentation = container.layer.presentation() {
+    let layoutLayer: CALayer
+    if let glassPresentation = glass.layer.presentation(), let layoutPresentation = layout.layer.presentation() {
         glassLayer = glassPresentation
-        containerLayer = containerPresentation
+        layoutLayer = layoutPresentation
     } else {
         glassLayer = glass.layer
-        containerLayer = container.layer
+        layoutLayer = layout.layer
     }
-    let scale = glassLayer.convert(glassLayer.bounds, to: containerLayer).height / container.bounds.height
+    let scale = glassLayer.convert(glassLayer.bounds, to: layoutLayer).height / layout.bounds.height
     return scale.isFinite && scale > 0.0 ? scale : 1.0
 }
 
@@ -363,6 +368,31 @@ func navigationBarCapsulePressGlow(_ container: GlassContextExtractableContainer
         current = layer.superlayer
     }
     return max(0.0, min(1.0, opacity))
+}
+
+/// UIKit's press glow on a capsule it is pressing to `press`. A glow is always there with a press: when the glow layer
+/// cannot be found (a UIKit change), a press alone stands for a full one. A press passes 1.03 within ~20 ms, so 1.01
+/// tells it from a reading that is merely not exactly 1.
+func navigationBarCapsulePressGlow(_ container: GlassContextExtractableContainer?, press: CGFloat) -> CGFloat {
+    if let container, let glow = navigationBarCapsulePressGlow(container) {
+        return glow
+    }
+    return press > 1.01 ? 1.0 : 0.0
+}
+
+/// UIKit's press on a capsule: how far it has grown the capsule's glass, and its glow.
+struct NavigationBarCapsulePress {
+    var scale: CGFloat
+    var glow: CGFloat
+
+    var isPressed: Bool {
+        return abs(self.scale - 1.0) > 0.0005 || self.glow > 0.001
+    }
+}
+
+func navigationBarCapsulePress(_ container: GlassContextExtractableContainer) -> NavigationBarCapsulePress {
+    let scale = navigationBarCapsulePressScale(container)
+    return NavigationBarCapsulePress(scale: scale, glow: navigationBarCapsulePressGlow(container, press: scale))
 }
 
 /// UIKit's press glow, drawn over a transition's capsule as `_UIFlexInteraction` draws it over a pressed one (measured
@@ -467,3 +497,19 @@ private func navigationBarVibrantColorMatrixFilter(_ matrix: [Float32]) -> NSObj
     return filter
 }
 
+/// The partner SwiftUI's resolver gives a matched insertion or removal (`sourceElement(target:otherElements:config:context:)`,
+/// SwiftUICore 27 0x1c6ea55d8, the best `Entry.geometryResult(to:context:)`: the distance between the glass shapes): the
+/// candidate nearest `frame`, by the gap between the two shapes, then by their centres. Nil without candidates.
+func navigationBarNearestPartner(of frame: CGRect, among candidates: [CGRect]) -> Int? {
+    func gap(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        let dx = max(0.0, max(a.minX - b.maxX, b.minX - a.maxX))
+        let dy = max(0.0, max(a.minY - b.maxY, b.minY - a.maxY))
+        return (dx * dx + dy * dy).squareRoot()
+    }
+    func centres(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        return hypot(a.midX - b.midX, a.midY - b.midY)
+    }
+    return candidates.indices.min(by: { lhs, rhs in
+        return (gap(frame, candidates[lhs]), centres(frame, candidates[lhs])) < (gap(frame, candidates[rhs]), centres(frame, candidates[rhs]))
+    })
+}

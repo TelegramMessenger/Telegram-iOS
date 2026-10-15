@@ -421,12 +421,10 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             backdropColor: nil,
             backdropAlpha: 0.0,
             backdropExtension: 0.0,
-            leadingPressScale: barView.detachedPressScale(isLeft: true),
-            trailingPressScale: barView.detachedPressScale(isLeft: false),
-            leadingPressGlow: barView.detachedPressGlow(isLeft: true),
-            trailingPressGlow: barView.detachedPressGlow(isLeft: false),
-            trailingInnerPressScale: barView.detachedInnerPressScale,
-            trailingInnerPressGlow: barView.detachedInnerPressGlow,
+            leadingPressScale: barView.detachedLeftPressScale,
+            leadingPressGlow: barView.detachedLeftPressGlow,
+            trailingPressScales: barView.detachedRightPressScales,
+            trailingPressGlows: barView.detachedRightPressGlows,
             titlePill: self.transitionTitlePill
         )
     }

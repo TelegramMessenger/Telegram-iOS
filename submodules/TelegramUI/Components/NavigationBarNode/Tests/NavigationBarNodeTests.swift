@@ -503,17 +503,35 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertEqual(state?.rowFrame.height, 44.0)
     }
 
-    // A regular screen whose right items are the Done checkmark beside another item gets the accent circle, as every bar
-    // with an accent button beside others does (UIKit gives the prominent item its own section).
-    func test_doneBesideAnotherItem_takesTheAccentCircle() {
+    // A regular screen whose right items are the Done checkmark beside another item gives the checkmark a pill of its own
+    // (UIKit gives the prominent item its own section). The items [Done, Edit] are drawn Done leftmost, so Edit is the
+    // outermost pill and Done the one inside it.
+    func test_doneBesideAnotherItem_isAPillOfItsOwn() {
         let node = self.makeNode()
         let item = UINavigationItem(title: "Info")
         item.rightBarButtonItems = [UIBarButtonItem(title: "___done", style: .done, target: nil, action: nil), UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)]
         node.item = item
         node.previousItem = .item(UINavigationItem())
         self.layout(node)
-        XCTAssertNotNil(node.rowViewForTesting?.rightCircleBackgroundContainer)
-        XCTAssertEqual(node.rowViewForTesting?.rightCircleBackgroundContainer?.frame.width, 44.0)
+        XCTAssertNotNil(node.rowViewForTesting?.rightPillBackgroundContainer(at: 1))
+        XCTAssertEqual(node.rowViewForTesting?.rightPillBackgroundContainer(at: 1)?.frame.width, 44.0)
+    }
+
+    // ItemListController's right items are [secondary, primary] (search, Edit): the bar draws them as two pills, Edit
+    // outermost, as UIKit does.
+    func test_itemListPair_searchAndEdit_areTwoPills() {
+        let node = self.makeNode()
+        let item = UINavigationItem(title: "Administrators")
+        item.rightBarButtonItems = [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil), UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)]
+        node.item = item
+        node.previousItem = .item(UINavigationItem())
+        self.layout(node)
+        guard let rowView = node.rowViewForTesting, let edit = rowView.rightPillBackgroundContainer(at: 0), let search = rowView.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("not two pills")
+            return
+        }
+        XCTAssertGreaterThan(edit.frame.minX, search.frame.maxX)
+        XCTAssertEqual(edit.frame.minX - search.frame.maxX, 12.0)
     }
 
     private func makeLaidOutNode(title: String, rightItem: UIBarButtonItem? = nil) -> NavigationBarNode {
@@ -738,7 +756,7 @@ final class NavigationBarNodeTests: XCTestCase {
         }
         XCTAssertEqual(platterView.layer.opacity, 1.0)
         renderer.beginTransition(isInteractive: false, toTop: true)
-        for role in [NavigationBarPlatterTransitionView.Role.leading, .trailing] {
+        for role in [NavigationBarPlatterTransitionView.Role.leading, .trailing(0)] {
             let state = platterView.platterStateForTesting(role)
             XCTAssertEqual(state?.opacity ?? 1.0, 0.0, accuracy: 0.001, "\(role) materializes")
             XCTAssertGreaterThan(state?.scale.height ?? 0.0, 1.0, "\(role) materializes in place")
@@ -828,7 +846,7 @@ final class NavigationBarNodeTests: XCTestCase {
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 1.5)
-        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailingInner)?.frame, titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY))
+        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing(1))?.frame, titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY))
     }
 
     // The bar reports a layout while lifted only once it has finished it, so the renderer reads the new row, not the
@@ -868,7 +886,7 @@ final class NavigationBarNodeTests: XCTestCase {
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), topFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: true)
         XCTAssertEqual(bottom.rowViewForTesting?.primaryRightButtonsWidth ?? 0.0, 44.0)
-        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing)?.frame.width ?? 0.0, bottom.rowViewForTesting?.primaryRightButtonsWidth ?? -1.0)
+        XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, bottom.rowViewForTesting?.primaryRightButtonsWidth ?? -1.0)
     }
 
     // A tap on Back pops while UIKit is still drawing the back capsule's press: the transition's capsule starts at that
@@ -898,7 +916,7 @@ final class NavigationBarNodeTests: XCTestCase {
         bottom.updateTransition(role: .bottom, fraction: 1.0, transition: .immediate)
         top.updateTransition(role: .top, fraction: 1.0, transition: .immediate)
         XCTAssertEqual(top.componentTransitionState?.leadingPressScale ?? 0.0, 60.0 / 44.0, accuracy: 0.001)
-        XCTAssertEqual(top.componentTransitionState?.trailingPressScale ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual((top.componentTransitionState.map { $0.trailingPressScales.first ?? 1.0 } ?? 0.0), 1.0, accuracy: 0.001)
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 1.0, bottomFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), topFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0), transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: false)
         XCTAssertEqual(renderer.platterViewForTesting?.platterStateForTesting(.leading)?.press ?? 0.0, 60.0 / 44.0, accuracy: 0.001)
@@ -921,7 +939,7 @@ final class NavigationBarNodeTests: XCTestCase {
         top.updateTransition(role: .top, fraction: 1.0, transition: .immediate)
         renderer.update(size: size, fraction: 1.0, bottomFrame: barFrame, topFrame: barFrame, transition: .immediate)
         renderer.beginTransition(isInteractive: true, toTop: false)
-        guard let platterView = renderer.platterViewForTesting, let start = platterView.platterStateForTesting(.trailing)?.frame else {
+        guard let platterView = renderer.platterViewForTesting, let start = platterView.platterStateForTesting(.trailing(0))?.frame else {
             XCTFail("no trailing capsule")
             return
         }
@@ -932,13 +950,13 @@ final class NavigationBarNodeTests: XCTestCase {
             fraction -= 0.05
             renderer.update(size: size, fraction: fraction, bottomFrame: barFrame, topFrame: barFrame, transition: .immediate)
             self.time.advance(by: 1.0 / 30.0)
-            XCTAssertEqual(platterView.platterStateForTesting(.trailing)?.frame.width ?? 0.0, start.width, accuracy: 0.001)
+            XCTAssertEqual(platterView.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, start.width, accuracy: 0.001)
         }
         renderer.endInteraction(towardTop: false)
         for _ in 0 ..< 240 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        XCTAssertEqual(platterView.platterStateForTesting(.trailing)?.frame.width ?? 0.0, bottomWidth, accuracy: 0.01)
+        XCTAssertEqual(platterView.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, bottomWidth, accuracy: 0.01)
     }
 
     /// A push from a bar without a right button to one whose right button is a screen's node, begun as the coordinator
@@ -1054,7 +1072,7 @@ final class NavigationBarNodeTests: XCTestCase {
         node.previousItem = .item(UINavigationItem())
         self.layout(node)
         XCTAssertNil(node.rowViewForTesting?.inPlaceStateForTesting(isLeft: false))
-        let capsule = node.rowViewForTesting?.rightButtonsBackgroundContainer
+        let capsule = node.rowViewForTesting?.rightPillBackgroundContainer(at: 0)
 
         item.setRightBarButton(UIBarButtonItem(title: "Done", style: .done, target: nil, action: nil), animated: true)
         node.layout()
@@ -1063,7 +1081,7 @@ final class NavigationBarNodeTests: XCTestCase {
             return
         }
         XCTAssertFalse(rowView.plattersDetached)
-        XCTAssertTrue(rowView.rightButtonsBackgroundContainer === capsule)
+        XCTAssertTrue(rowView.rightPillBackgroundContainer(at: 0) === capsule)
         XCTAssertTrue(capsule?.superview === rowView)
         rowView.inPlaceTickForTesting(dt: 0.05)
         XCTAssertGreaterThan(rowView.inPlaceStateForTesting(isLeft: false)?.pulse.height ?? 1.0, 1.0)

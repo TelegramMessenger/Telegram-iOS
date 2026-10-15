@@ -8,17 +8,44 @@ import SideColumnLayout
 /// read on iOS 27): the capsule and an accent button's circle beside it.
 let navigationBarInterSectionSpacing: CGFloat = 12.0
 
-/// How far an accent circle of `width` takes the capsule in from the edge: the circle and UIKit's gap (0 without one).
-func navigationBarRightCircleExtent(_ width: CGFloat) -> CGFloat {
-    return width > 0.0 ? width + navigationBarInterSectionSpacing : 0.0
+/// One right pill of the row as laid out: its width, and its extent, how far it takes the pills inside it in from the
+/// edge (its width and UIKit's gap before the next pill; the innermost pill's extent is its width).
+struct NavigationBarRightPillMetrics: Equatable {
+    var width: CGFloat
+    var extent: CGFloat
 }
 
-/// How far a content's right platters reach from its inset: the capsule, and beyond it the accent circle with the gap.
-func navigationBarRightButtonsExtent(capsuleWidth: CGFloat, circleWidth: CGFloat) -> CGFloat {
-    if capsuleWidth == 0.0 {
-        return circleWidth
+/// The metrics of pills `widths` wide, outermost first.
+func navigationBarRightPillMetrics(widths: [CGFloat]) -> [NavigationBarRightPillMetrics] {
+    return widths.enumerated().map { index, width in
+        return NavigationBarRightPillMetrics(width: width, extent: index == widths.count - 1 ? width : width + navigationBarInterSectionSpacing)
     }
-    return capsuleWidth + navigationBarRightCircleExtent(circleWidth)
+}
+
+/// How far a content's right pills reach from its inset.
+func navigationBarRightButtonsExtent(_ pills: [NavigationBarRightPillMetrics]) -> CGFloat {
+    return pills.reduce(0.0, { $0 + $1.extent })
+}
+
+/// The slots two contents' pills share while one slides over the other (an inline forum over Chats), outermost first,
+/// paired from the inner end: each slot's pill index in either content, nil where that content has no pill there.
+func navigationBarRightPillSlots(primaryCount: Int, secondaryCount: Int) -> [(primary: Int?, secondary: Int?)] {
+    let count = max(primaryCount, secondaryCount)
+    return (0 ..< count).map { slot in
+        let primary = slot - (count - primaryCount)
+        let secondary = slot - (count - secondaryCount)
+        return (primary >= 0 ? primary : nil, secondary >= 0 ? secondary : nil)
+    }
+}
+
+/// The pills of a slide `fraction` of the way from `primary` to `secondary`: each slot's width and extent interpolated,
+/// a pill only one content has growing from, or narrowing to, nothing at its place.
+func navigationBarInterpolatedRightPills(primary: [NavigationBarRightPillMetrics], secondary: [NavigationBarRightPillMetrics], fraction: CGFloat) -> [NavigationBarRightPillMetrics] {
+    return navigationBarRightPillSlots(primaryCount: primary.count, secondaryCount: secondary.count).map { slot in
+        let from = slot.primary.map { primary[$0] } ?? NavigationBarRightPillMetrics(width: 0.0, extent: 0.0)
+        let to = slot.secondary.map { secondary[$0] } ?? NavigationBarRightPillMetrics(width: 0.0, extent: 0.0)
+        return NavigationBarRightPillMetrics(width: from.width * (1.0 - fraction) + to.width * fraction, extent: from.extent * (1.0 - fraction) + to.extent * fraction)
+    }
 }
 
 /// iPhone Duo: whether a button goes into the side column. Icon, image, more and custom buttons do; text buttons stay
@@ -36,6 +63,39 @@ func navigationBarIsColumnItem(_ button: NavigationBarComponent.Button) -> Bool 
     }
 }
 
+/// Whether UIKit gives a bar button a section (a glass pill) of its own: `-[UIBarButtonItem _requiresOwnSection]`,
+/// asked of UIKit on iOS 27 (spec 2026-10-15-navbar-split-right-buttons-design.md): true for every text item and every
+/// prominent one (the Done checkmark included); false for image, system-image and custom-view items.
+func navigationBarButtonRequiresOwnSection(_ button: NavigationBarComponent.Button) -> Bool {
+    if case .text = button.content {
+        return true
+    }
+    return button.tint != .generic
+}
+
+/// The right side's pills, as `-[UINavigationItem _addImplicitTopBarSectionsFromItems:toSections:forPlacement:]` builds
+/// sections: walking the buttons outermost first, one that requires its own section closes the current pill and takes
+/// one alone; any other joins the current pill. Pills and their buttons are outermost first.
+func navigationBarRightSections(_ buttons: [NavigationBarComponent.Button]) -> [[NavigationBarComponent.Button]] {
+    var sections: [[NavigationBarComponent.Button]] = []
+    var current: [NavigationBarComponent.Button] = []
+    for button in buttons {
+        if navigationBarButtonRequiresOwnSection(button) {
+            if !current.isEmpty {
+                sections.append(current)
+                current = []
+            }
+            sections.append([button])
+        } else {
+            current.append(button)
+        }
+    }
+    if !current.isEmpty {
+        sections.append(current)
+    }
+    return sections
+}
+
 /// Where one content's buttons go: the row, or iPhone Duo's side column.
 struct NavigationBarButtonPlacement {
     /// Nil without a column, or when the column cannot hold what must stay; every button is then in the row.
@@ -46,12 +106,8 @@ struct NavigationBarButtonPlacement {
     var trailingCircleItem: NavigationBarComponent.Button?
     var leftButtonInColumn: Bool
     var rowLeftButton: NavigationBarComponent.Button?
-    var rowRightButtons: [NavigationBarComponent.Button]
-    /// The first accent right button, in a glass circle of its own outermost in the row (UIKit gives a prominent item a
-    /// section of its own: spec 2026-10-15-accent-right-button-circle-design.md). Nil with a column, and when it is the
-    /// row's only right button: the capsule is then that circle already, and Edit -> Done stays one capsule, as UIKit's
-    /// section 0 does.
-    var rowCircleItem: NavigationBarComponent.Button?
+    /// The row's right pills by UIKit's rule (`navigationBarRightSections`), outermost first.
+    var rowRightSections: [[NavigationBarComponent.Button]]
 }
 
 func navigationBarButtonPlacement(leftButton: NavigationBarComponent.Button?, rightButtons: [NavigationBarComponent.Button], hasBack: Bool, columnLength: CGFloat?) -> NavigationBarButtonPlacement {
@@ -78,19 +134,14 @@ func navigationBarButtonPlacement(leftButton: NavigationBarComponent.Button?, ri
         leftButtonInColumn = false
         trailingCircleItem = nil
     }
-    var rowRightButtons = columnLayout != nil ? rightButtons.filter { !navigationBarIsColumnItem($0) } : rightButtons
-    var rowCircleItem: NavigationBarComponent.Button?
-    if columnLayout == nil, rowRightButtons.count > 1, let index = rowRightButtons.firstIndex(where: { $0.tint != .generic }) {
-        rowCircleItem = rowRightButtons.remove(at: index)
-    }
+    let rowRightButtons = columnLayout != nil ? rightButtons.filter { !navigationBarIsColumnItem($0) } : rightButtons
     return NavigationBarButtonPlacement(
         columnLayout: columnLayout,
         columnItems: columnItems,
         trailingCircleItem: trailingCircleItem,
         leftButtonInColumn: leftButtonInColumn,
         rowLeftButton: leftButtonInColumn ? nil : leftButton,
-        rowRightButtons: rowRightButtons,
-        rowCircleItem: rowCircleItem
+        rowRightSections: navigationBarRightSections(rowRightButtons)
     )
 }
 

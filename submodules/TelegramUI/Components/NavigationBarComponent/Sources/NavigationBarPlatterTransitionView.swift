@@ -40,17 +40,16 @@ public final class NavigationBarPlatterTransitionView: UIView {
         public var trailingButtonsInset: CGFloat
         /// The bar's row in this view.
         public var rowFrame: CGRect
-        /// The press UIKit was drawing on each capsule when the bar gave its capsules to the transition (1: none), as
-        /// the bar measured it (`NavigationBarComponent.View.detachedPressScale(isLeft:)`).
+        /// The press UIKit was drawing on the leading capsule when the bar gave its capsules to the transition (1: none), as
+        /// the bar measured it (`NavigationBarComponent.View.detachedLeftPressScale`).
         public var leadingPressScale: CGFloat
-        public var trailingPressScale: CGFloat
-        /// UIKit's press glow on each capsule at that moment (its BigGlow's opacity, 0: none), as the bar measured it
-        /// (`NavigationBarComponent.View.detachedPressGlow(isLeft:)`).
+        /// UIKit's press glow on the leading capsule at that moment (its BigGlow's opacity, 0: none), as the bar measured
+        /// it (`NavigationBarComponent.View.detachedLeftPressGlow`).
         public var leadingPressGlow: CGFloat
-        public var trailingPressGlow: CGFloat
-        /// The same for the capsule beside the bar's accent circle (`detachedInnerPressScale`, `detachedInnerPressGlow`).
-        public var trailingInnerPressScale: CGFloat
-        public var trailingInnerPressGlow: CGFloat
+        /// The press and glow on each right platter, index from the edge (`detachedRightPressScales`,
+        /// `detachedRightPressGlows`; missing: none).
+        public var trailingPressScales: [CGFloat]
+        public var trailingPressGlows: [CGFloat]
         /// iPhone Duo: the bar's side column region in this view (its capsules are drawn like the row's); nil without one.
         public var columnFrame: CGRect?
         /// The bar hides its column's buttons (a replacement content, such as an active search).
@@ -58,7 +57,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         /// The title's glass pill (the chat header), its frame in this view: the bar's second right platter.
         public var titlePill: NavigationBarTransitionTitlePill?
 
-        public init(content: NavigationBarComponent.Content, theme: NavigationBarTheme, strings: NavigationBarStrings, leftInset: CGFloat, rightInset: CGFloat, trailingButtonsInset: CGFloat, rowFrame: CGRect, leadingPressScale: CGFloat = 1.0, trailingPressScale: CGFloat = 1.0, leadingPressGlow: CGFloat = 0.0, trailingPressGlow: CGFloat = 0.0, trailingInnerPressScale: CGFloat = 1.0, trailingInnerPressGlow: CGFloat = 0.0, columnFrame: CGRect? = nil, hidesColumnButtons: Bool = false, titlePill: NavigationBarTransitionTitlePill? = nil) {
+        public init(content: NavigationBarComponent.Content, theme: NavigationBarTheme, strings: NavigationBarStrings, leftInset: CGFloat, rightInset: CGFloat, trailingButtonsInset: CGFloat, rowFrame: CGRect, leadingPressScale: CGFloat = 1.0, leadingPressGlow: CGFloat = 0.0, trailingPressScales: [CGFloat] = [], trailingPressGlows: [CGFloat] = [], columnFrame: CGRect? = nil, hidesColumnButtons: Bool = false, titlePill: NavigationBarTransitionTitlePill? = nil) {
             self.titlePill = titlePill
             self.content = content
             self.theme = theme
@@ -68,27 +67,35 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.trailingButtonsInset = trailingButtonsInset
             self.rowFrame = rowFrame
             self.leadingPressScale = leadingPressScale
-            self.trailingPressScale = trailingPressScale
             self.leadingPressGlow = leadingPressGlow
-            self.trailingPressGlow = trailingPressGlow
-            self.trailingInnerPressScale = trailingInnerPressScale
-            self.trailingInnerPressGlow = trailingInnerPressGlow
+            self.trailingPressScales = trailingPressScales
+            self.trailingPressGlows = trailingPressGlows
             self.columnFrame = columnFrame
             self.hidesColumnButtons = hidesColumnButtons
         }
     }
 
-    /// A capsule's place: the row's leading and trailing capsules, and iPhone Duo's column back circle, buttons capsule
-    /// and trailing circle.
-    enum Role: CaseIterable {
+    /// A capsule's place: the row's leading capsule, a right platter by index from the edge (UIKit's
+    /// `SectionID(index, owner)`: 0 the outermost), and iPhone Duo's column back circle, buttons capsule and trailing
+    /// circle.
+    enum Role: Hashable {
         case leading
-        case trailing
-        /// The capsule beside a bar's accent circle (UIKit's section 1). `.trailing` is always the outermost right platter
-        /// (section 0): the circle when the bar has one, else the capsule.
-        case trailingInner
+        case trailing(Int)
         case columnBack
         case columnButtons
         case columnTrailing
+
+        /// Every role, with right platters up to `rightCount`.
+        static func all(rightCount: Int) -> [Role] {
+            return [.leading] + (0 ..< rightCount).map { .trailing($0) } + [.columnBack, .columnButtons, .columnTrailing]
+        }
+
+        var rightIndex: Int? {
+            if case let .trailing(index) = self {
+                return index
+            }
+            return nil
+        }
     }
 
     private enum SideKind {
@@ -153,6 +160,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         /// A matched insertion or removal: it grows out of, or collapses into, the outermost platter, its glass merged
         /// with that one's (`mergesGlass`).
         var isMatched = false
+        /// The platter a matched one collapses into or grows out of.
+        var partner: Role?
 
         init(role: Role, frame: CGRect, tint: GlassBackgroundView.TintColor, isDark: Bool) {
             self.role = role
@@ -420,33 +429,27 @@ public final class NavigationBarPlatterTransitionView: UIView {
             layout.signatures[.leading] = navigationBarCapsuleSignature(side.content, role: .leading, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
         }
         let rowMaxX = side.rowFrame.minX + size.width - side.rightInset - side.trailingButtonsInset
-        let circleWidth = contentView.rightCircleWidth
-        if circleWidth > 0.0 {
-            layout.frames[.trailing] = CGRect(x: rowMaxX - circleWidth, y: side.rowFrame.minY, width: circleWidth, height: 44.0)
-            contentView.rightCircleContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: circleWidth, height: 44.0))
-            layout.itemViews[.trailing] = contentView.rightCircleContainer
-            layout.tints[.trailing] = navigationBarGlassTintColor(contentView.rightCircleTint, theme: side.theme)
-            layout.signatures[.trailing] = navigationBarCapsuleSignature(side.content, role: .trailing, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
-        }
-        if contentView.rightButtonsWidth > 0.0 {
-            // Beside a circle the capsule is UIKit's section 1, ending its 12 pt gap before the circle; alone it is the
-            // outermost platter.
-            let role: Role = circleWidth > 0.0 ? .trailingInner : .trailing
-            let maxX = circleWidth > 0.0 ? rowMaxX - circleWidth - navigationBarInterSectionSpacing : rowMaxX
-            let width = max(44.0, contentView.rightButtonsWidth)
-            layout.frames[role] = CGRect(x: maxX - width, y: side.rowFrame.minY, width: width, height: 44.0)
-            contentView.rightButtonsContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0))
-            layout.itemViews[role] = contentView.rightButtonsContainer
-            layout.tints[role] = navigationBarGlassTintColor(contentView.rightCapsuleTint, theme: side.theme)
+        // Every pill is a right platter, by UIKit's section index from the edge.
+        let rightPills = navigationBarRightPillMetrics(widths: contentView.rightPillWidths)
+        var outerExtent: CGFloat = 0.0
+        for (index, pill) in rightPills.enumerated() {
+            let maxX = rowMaxX - outerExtent
+            outerExtent += pill.extent
+            let role: Role = .trailing(index)
+            layout.frames[role] = CGRect(x: maxX - pill.width, y: side.rowFrame.minY, width: pill.width, height: 44.0)
+            let container = contentView.rightPillContainer(at: index)
+            container.frame = CGRect(origin: CGPoint(), size: CGSize(width: pill.width, height: 44.0))
+            layout.itemViews[role] = container
+            layout.tints[role] = navigationBarGlassTintColor(contentView.rightPillTints[index], theme: side.theme)
             layout.signatures[role] = navigationBarCapsuleSignature(side.content, role: role, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
         }
-        if let pill = side.titlePill, layout.frames[.trailingInner] == nil {
+        if let pill = side.titlePill, layout.frames[.trailing(1)] == nil, layout.frames.keys.filter({ $0.rightIndex != nil }).count <= 1 {
             // The title's glass pill (the chat header) is the bar's second right platter (asked 2026-10-15): it morphs
             // with the other bar's platter at that index, its contents (lent live) as its items.
-            layout.frames[.trailingInner] = pill.frame
-            layout.itemViews[.trailingInner] = pill.lendContent()
-            layout.tints[.trailingInner] = navigationBarGlassTintColor(.generic, theme: side.theme)
-            layout.signatures[.trailingInner] = ["titlePill", pill.signature]
+            layout.frames[.trailing(1)] = pill.frame
+            layout.itemViews[.trailing(1)] = pill.lendContent()
+            layout.tints[.trailing(1)] = navigationBarGlassTintColor(.generic, theme: side.theme)
+            layout.signatures[.trailing(1)] = ["titlePill", pill.signature]
         }
         if let columnFrame = side.columnFrame, let columnLayout = contentView.columnLayout {
             let roles: [(Role, CGRect?, UIView, GlassBackgroundView.TintColor)] = [
@@ -510,10 +513,16 @@ public final class NavigationBarPlatterTransitionView: UIView {
         if view === self.columnBackWrappers[kind] {
             return contentView.columnBackContainer
         }
-        for container in [contentView.leftButtonsContainer, contentView.rightButtonsContainer, contentView.rightCircleContainer, contentView.columnButtonsContainer, contentView.columnTrailingContainer] where container === view {
+        for container in [contentView.leftButtonsContainer, contentView.columnButtonsContainer, contentView.columnTrailingContainer] + contentView.rightPillContainers where container === view {
             return container
         }
         return nil
+    }
+
+    /// The right platters the two layouts and the current platters hold.
+    private var rightRoleCount: Int {
+        let indices = [self.bottomLayout, self.topLayout].flatMap { $0.frames.keys.compactMap(\.rightIndex) } + self.platters.keys.compactMap(\.rightIndex)
+        return (indices.max() ?? -1) + 1
     }
 
     private func layout(_ side: SideKind) -> SideLayout {
@@ -535,7 +544,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         // The outgoing bar's capsules, as they are, a press UIKit was drawing on one included: it goes on releasing.
         let from = self.layout(self.fromSide)
         let fromSide = self.fromSide == .bottom ? self.bottomSide : self.topSide
-        for role in Role.allCases {
+        for role in Role.all(rightCount: self.rightRoleCount) {
             guard let frame = from.frames[role], let itemView = from.itemViews[role], let tint = from.tints[role] else {
                 continue
             }
@@ -547,12 +556,11 @@ public final class NavigationBarPlatterTransitionView: UIView {
             case .leading:
                 pressScale = fromSide?.leadingPressScale ?? 1.0
                 pressGlow = fromSide?.leadingPressGlow ?? 0.0
-            case .trailing:
-                pressScale = fromSide?.trailingPressScale ?? 1.0
-                pressGlow = fromSide?.trailingPressGlow ?? 0.0
-            case .trailingInner:
-                pressScale = fromSide?.trailingInnerPressScale ?? 1.0
-                pressGlow = fromSide?.trailingInnerPressGlow ?? 0.0
+            case let .trailing(index):
+                let scales = fromSide?.trailingPressScales ?? []
+                let glows = fromSide?.trailingPressGlows ?? []
+                pressScale = index < scales.count ? scales[index] : 1.0
+                pressGlow = index < glows.count ? glows[index] : 0.0
             case .columnBack, .columnButtons, .columnTrailing:
                 pressScale = 1.0
                 pressGlow = 0.0
@@ -605,10 +613,15 @@ public final class NavigationBarPlatterTransitionView: UIView {
         let motion = self.motion
         let rowFrame = (side == .bottom ? self.bottomSide : self.topSide)?.rowFrame ?? self.bounds
         let containerWidth = rowFrame.width
-        // What an inserted inner platter can grow out of: the outermost right platter the other bar had, not one this
-        // switch creates (UIKit matches an inserted entry to an old one only).
-        let oldOutermost = self.platters[.trailing].flatMap { $0.isLeaving ? nil : $0 }
-        for role in Role.allCases {
+        // What an inserted right platter can grow out of: the other bar's right platters, not ones this switch creates
+        // (UIKit matches an inserted entry to an old one only).
+        let oldRight: [(role: Role, platter: Platter)] = self.platters.compactMap { role, platter in
+            return role.rightIndex != nil && !platter.isLeaving ? (role, platter) : nil
+        }
+        let targetRight: [(role: Role, frame: CGRect)] = target.frames.compactMap { role, frame in
+            return role.rightIndex != nil ? (role, frame) : nil
+        }
+        for role in Role.all(rightCount: self.rightRoleCount) {
             let existing = self.platters[role]
             if let frame = target.frames[role], let itemView = target.itemViews[role], let tint = target.tints[role] {
                 if let platter = existing {
@@ -657,10 +670,16 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     // Only this bar has it: it materializes in place, on the transition spring (bouncy; measured on
                     // iOS 27, glass RE §2.2: not the critically damped `.materialize` resolution).
                     let platter = Platter(role: role, frame: frame, tint: tint, isDark: target.isDark)
-                    if role == .trailingInner, !motion.reduce, let outermost = oldOutermost {
-                        // Grows out of the other bar's outermost platter, as UIKit's inserted section matched to an old one.
-                        let start = self.startMatchedMorph(platter, source: outermost.frame(at: self.time), target: frame, appearing: true, containerWidth: containerWidth)
-                        self.pulseMatchedPair(platter, ownSize: frame.size, start: start, outermost: outermost, outermostFrame: target.frames[.trailing] ?? outermost.frame(at: self.time), rowFrame: rowFrame)
+                    let oldPartners = oldRight.filter { ($0.role.rightIndex ?? 0) < (role.rightIndex ?? 0) }
+                    if role.rightIndex != nil, !motion.reduce, let partnerIndex = navigationBarNearestPartner(of: frame, among: oldPartners.map { $0.platter.frame(at: self.time) }) {
+                        // Grows out of the other bar's nearest platter nearer the edge, as UIKit's inserted section matched
+                        // to an old one (UIKit's sections are contiguous, so an inserted one's partners are all nearer the
+                        // edge; a title pill in the second slot beside no button keeps the outermost platter partnerless).
+                        let partner = oldPartners[partnerIndex]
+                        let partnerTarget = target.frames[partner.role] ?? partner.platter.frame(at: self.time)
+                        let start = self.startMatchedMorph(platter, source: partner.platter.frame(at: self.time), target: frame, appearing: true, containerWidth: containerWidth)
+                        platter.partner = partner.role
+                        self.pulseMatchedPair(platter, ownSize: frame.size, start: start, partner: partner.platter, partnerFrame: partnerTarget, rowFrame: rowFrame)
                     } else {
                         platter.maxScale = motion.materializeScale(size: frame.size)
                         platter.blurRadius = motion.blurRadius
@@ -671,16 +690,21 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     self.addViews(of: platter)
                 }
             } else if let platter = existing, !platter.isLeaving {
-                if role == .trailingInner, !motion.reduce, let outermostFrame = target.frames[.trailing] {
-                    // Collapses into this bar's outermost platter, as UIKit's removed section matched to a new one.
+                let targetPartners = targetRight.filter { ($0.role.rightIndex ?? 0) < (role.rightIndex ?? 0) }
+                if role.rightIndex != nil, !motion.reduce, let partnerIndex = navigationBarNearestPartner(of: platter.frame(at: self.time), among: targetPartners.map(\.frame)) {
+                    // Collapses into this bar's nearest platter nearer the edge, as UIKit's removed section matched to a
+                    // new one.
+                    let partner = targetPartners[partnerIndex]
                     let own = platter.frame(at: self.time)
-                    let start = self.startMatchedMorph(platter, source: own, target: outermostFrame, appearing: false, containerWidth: containerWidth)
-                    if let outermost = self.platters[.trailing] {
-                        self.pulseMatchedPair(platter, ownSize: own.size, start: start, outermost: outermost, outermostFrame: outermostFrame, rowFrame: rowFrame)
+                    let start = self.startMatchedMorph(platter, source: own, target: partner.frame, appearing: false, containerWidth: containerWidth)
+                    platter.partner = partner.role
+                    if let partnerPlatter = self.platters[partner.role] {
+                        self.pulseMatchedPair(platter, ownSize: own.size, start: start, partner: partnerPlatter, partnerFrame: partner.frame, rowFrame: rowFrame)
                     }
                 } else {
                     // Only the other bar has it: it dematerializes in place, on the transition spring as well.
                     platter.isMatched = false
+                    platter.partner = nil
                     platter.isLeaving = true
                     platter.maxScale = motion.materializeScale(size: platter.frame(at: self.time).size)
                     platter.blurRadius = motion.blurRadius
@@ -723,18 +747,22 @@ public final class NavigationBarPlatterTransitionView: UIView {
         return start
     }
 
-    /// Whether `platter`'s glass is drawn in the merged container: both right platters' are while the inner one collapses
-    /// into, or grows out of, the outermost one, unless the outermost fades in place, which only a container of its own
-    /// can draw (a glass shape's own opacity does not hide it). Without native glass nothing merges, so the inner one keeps
-    /// its own container and fades with it.
+    /// Whether `platter`'s glass is drawn in the merged container: a matched platter's and its partner's are while the
+    /// first collapses into, or grows out of, the second, unless the partner fades in place, which only a container of
+    /// its own can draw (a glass shape's own opacity does not hide it). Without native glass nothing merges, so the
+    /// matched one keeps its own container and fades with it.
     private func mergesGlass(_ platter: Platter) -> Bool {
-        guard self.glassMergesShapes(), platter.role == .trailing || platter.role == .trailingInner else {
+        guard self.glassMergesShapes(), platter.role.rightIndex != nil else {
             return false
         }
-        guard let inner = self.platters[.trailingInner], inner.isMatched, let outermost = self.platters[.trailing] else {
-            return false
+        func materialized(_ partner: Platter) -> Bool {
+            return !partner.isLeaving && partner.dematerialization.target == 0.0 && partner.dematerialization.value(at: self.time) < 0.001
         }
-        return !outermost.isLeaving && outermost.dematerialization.target == 0.0 && outermost.dematerialization.value(at: self.time) < 0.001
+        if platter.isMatched, let role = platter.partner, let partner = self.platters[role] {
+            return materialized(partner)
+        }
+        // The partner of a matched platter, while that one merges with it.
+        return materialized(platter) && self.platters.values.contains(where: { $0.isMatched && $0.partner == platter.role })
     }
 
     /// Puts `platter`'s glass into the merged container or its own, as `mergesGlass` decides.
@@ -769,10 +797,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
     /// (`adjustMatchedEntry` writes one to the entry's state at 0x1c6ea2848 and one to its partner's at 0x1c6ea3568),
     /// about the pair's `transitionAnchor`. The partner's starts now, replacing the centred pulse of its own item change;
     /// the entry's starts with its morph (on a push its capsule holds still through the delay: filmed on iOS 27).
-    private func pulseMatchedPair(_ platter: Platter, ownSize: CGSize, start: Double, outermost: Platter, outermostFrame: CGRect, rowFrame: CGRect) {
+    private func pulseMatchedPair(_ platter: Platter, ownSize: CGSize, start: Double, partner: Platter, partnerFrame: CGRect, rowFrame: CGRect) {
         let motion = self.motion
-        let anchor = NavigationBarGlassSettings.transitionAnchor(partner: outermostFrame, container: rowFrame)
-        outermost.pulse = motion.pulseCurve(size: outermostFrame.size, startTime: self.time, anchor: anchor)
+        let anchor = NavigationBarGlassSettings.transitionAnchor(partner: partnerFrame, container: rowFrame)
+        partner.pulse = motion.pulseCurve(size: partnerFrame.size, startTime: self.time, anchor: anchor)
         platter.pulse = motion.pulseCurve(size: ownSize, startTime: start, anchor: anchor)
     }
 
@@ -1142,16 +1170,8 @@ private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Con
             signature.append(leftButton.id)
         }
         return signature.isEmpty ? nil : signature
-    case .trailing:
-        if let circle = placement.rowCircleItem {
-            return [circle.id]
-        }
-        return placement.rowRightButtons.isEmpty ? nil : placement.rowRightButtons.map { $0.id }
-    case .trailingInner:
-        guard placement.rowCircleItem != nil, !placement.rowRightButtons.isEmpty else {
-            return nil
-        }
-        return placement.rowRightButtons.map { $0.id }
+    case let .trailing(index):
+        return index < placement.rowRightSections.count ? placement.rowRightSections[index].map { $0.id } : nil
     case .columnBack:
         guard backInColumn, let backSignature else {
             return nil

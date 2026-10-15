@@ -355,6 +355,11 @@ public final class StoryPeerListComponent: Component {
         
         private var animationState: AnimationState?
         private var animator: ConstantDisplayLinkAnimator?
+        /// `maxTitleX` while it moves: a change in an animated update eases there on a spring as long as the update's
+        /// animation (the chat list's right buttons going or coming in Edit mode move it), where the title used to jump.
+        private var maxTitleXCurve: NavigationSpringCurve?
+        /// The `maxTitleX` beyond which the title and its avatars sit centred, as last laid out.
+        private var titleBoundLimit: CGFloat?
         
         private var currentFraction: CGFloat = 0.0
         private var currentTitleWidth: CGFloat = 0.0
@@ -897,7 +902,9 @@ public final class StoryPeerListComponent: Component {
             
             collapsedContentOrigin = (itemLayout.containerSize.width - centralContentWidth) * 0.5
             
-            collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
+            self.titleBoundLimit = collapsedContentOrigin + centralContentWidth + 4.0
+            let maxTitleX = self.maxTitleXCurve?.value(at: CACurrentMediaTime()) ?? component.maxTitleX
+            collapsedContentOrigin = min(collapsedContentOrigin, maxTitleX - centralContentWidth - 4.0)
             
             let collapsedContentOriginOffset: CGFloat = 0.0
             collapsedContentOrigin -= collapsedContentOriginOffset
@@ -1572,10 +1579,29 @@ public final class StoryPeerListComponent: Component {
         }
         
         func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let incomingAnimation = transition.animation
             var transition = transition
             transition.animation = .none
             
             let animationHint = transition.userData(AnimationHint.self)
+
+            let now = CACurrentMediaTime()
+            if let previousComponent = self.component, previousComponent.maxTitleX != component.maxTitleX {
+                if case let .curve(duration, _) = incomingAnimation, duration > 0.0, !(animationHint?.disableAnimations ?? false) {
+                    // Past `titleBoundLimit` the bound no longer moves the title: both ends are taken there, so the
+                    // whole spring is motion rather than its first few frames.
+                    let limit = self.titleBoundLimit ?? .greatestFiniteMagnitude
+                    let from = min(self.maxTitleXCurve?.value(at: now) ?? previousComponent.maxTitleX, limit)
+                    let to = min(component.maxTitleX, limit)
+                    self.maxTitleXCurve = from == to ? nil : NavigationSpringCurve(startTime: now, from: from, velocity: self.maxTitleXCurve?.velocity(at: now) ?? 0.0, target: to, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+                } else {
+                    self.maxTitleXCurve = nil
+                }
+            }
+            if let maxTitleXCurve = self.maxTitleXCurve, now >= maxTitleXCurve.restTime {
+                self.maxTitleXCurve = nil
+            }
+
             var useAnimation = false
             if let previousComponent = self.component, component.unlocked != previousComponent.unlocked {
                 useAnimation = true
@@ -1668,7 +1694,7 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty {
+            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.maxTitleXCurve != nil {
                 if self.animator == nil {
                     let animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                         guard let self else {

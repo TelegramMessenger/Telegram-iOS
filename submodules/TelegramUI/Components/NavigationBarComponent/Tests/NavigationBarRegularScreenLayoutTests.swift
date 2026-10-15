@@ -31,14 +31,14 @@ final class NavigationBarRegularScreenLayoutTests: XCTestCase {
     func test_nodeButton_goesIntoTheColumn() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.button("node", .node(SizedNode(size: CGSize(width: 44.0, height: 44.0))))], hasBack: true, columnLength: 400.0)
         XCTAssertEqual(placement.columnItems.map(\.id), [AnyHashable("node")])
-        XCTAssertTrue(placement.rowRightButtons.isEmpty)
+        XCTAssertTrue(placement.rowRightSections.isEmpty)
     }
 
     // A node that draws text (Calls' "Delete All", a mini app's "Close") would be cut by the 48pt column: it stays in the row.
     func test_wideNodeButton_staysInTheRow() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.button("deleteAll", .node(SizedNode(size: CGSize(width: 95.0, height: 44.0))))], hasBack: true, columnLength: 400.0)
         XCTAssertTrue(placement.columnItems.isEmpty)
-        XCTAssertEqual(placement.rowRightButtons.map(\.id), [AnyHashable("deleteAll")])
+        XCTAssertEqual(placement.rowRightSections.flatMap { $0 }.map(\.id), [AnyHashable("deleteAll")])
     }
 
     func test_imageButton_goesToTheColumn() {
@@ -51,7 +51,7 @@ final class NavigationBarRegularScreenLayoutTests: XCTestCase {
         XCTAssertEqual(placement.trailingCircleItem?.id, AnyHashable("done"))
         XCTAssertEqual(placement.columnItems.map(\.id), [AnyHashable("a")])
         XCTAssertNotNil(placement.columnLayout?.trailingFrame)
-        XCTAssertTrue(placement.rowRightButtons.isEmpty)
+        XCTAssertTrue(placement.rowRightSections.isEmpty)
     }
 
     // Without a column the accent button stays in the row, in the row's own circle beside the capsule (spec
@@ -59,8 +59,7 @@ final class NavigationBarRegularScreenLayoutTests: XCTestCase {
     func test_noColumn_accentButtonStaysInTheRow() {
         let placement = navigationBarButtonPlacement(leftButton: nil, rightButtons: [self.button("a", .icon(imageName: "A")), self.button("done", .icon(imageName: "Navigation/Done"), tint: .accent)], hasBack: true, columnLength: nil)
         XCTAssertNil(placement.trailingCircleItem)
-        XCTAssertEqual(placement.rowCircleItem?.id, AnyHashable("done"))
-        XCTAssertEqual(placement.rowRightButtons.map(\.id), [AnyHashable("a")])
+        XCTAssertEqual(placement.rowRightSections.map { $0.map(\.id) }, [[AnyHashable("a")], [AnyHashable("done")]])
     }
 
     func test_capsuleTint_isSharedOrGeneric() {

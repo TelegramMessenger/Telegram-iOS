@@ -90,6 +90,36 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         return view
     }
 
+    private func text(_ id: String) -> NavigationBarComponent.Button {
+        return NavigationBarComponent.Button(id: id, content: .text(title: id, isBold: false), action: { _ in })
+    }
+
+    // UIKit pairs every section by index from the edge: a bar with three right pills morphs each into the other bar's
+    // pill at the same index, the innermost one included.
+    func test_threeRightPills_pairByIndex() {
+        let view = self.makeView(bottom: self.side(right: [self.text("a"), self.text("b"), self.button("c")]), top: self.side(right: [self.text("x"), self.text("y"), self.button("z")]))
+        view.beginTransition(isInteractive: false, toTop: true)
+        let identity = view.platterIdentityForTesting(.trailing(2))
+        XCTAssertNotNil(identity)
+        self.time.advance(by: 1.5)
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(2)), identity)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(2))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+    }
+
+    // A leftover pill merges into the other bar's nearest platter (SwiftUI's resolver), not always the outermost: the
+    // third pill of three collapses into the second of two.
+    func test_leftoverPill_collapsesIntoTheNearestPlatter() {
+        let top = self.side(right: [self.text("x"), self.text("y")])
+        let view = self.makeView(bottom: self.side(right: [self.text("a"), self.text("b"), self.button("c")]), top: top)
+        view.beginTransition(isInteractive: false, toTop: true)
+        self.time.advance(by: 0.6)
+        guard let leftover = view.platterStateForTesting(.trailing(2)), let inner = view.platterStateForTesting(.trailing(1)), let outer = view.platterStateForTesting(.trailing(0)) else {
+            XCTFail("missing platters")
+            return
+        }
+        XCTAssertLessThan(abs(leftover.frame.midX - inner.frame.midX), abs(leftover.frame.midX - outer.frame.midX))
+    }
+
     // The pulse as curves: SwiftUI's formula on a rising curve and two falling ones that start after their delays, at
     // rest exactly at scale 1.
     func test_pulseCurve_isTheStepPulseOnExactDelays() {
@@ -111,7 +141,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
 
     private func chatsSide(innerPressScale: CGFloat = 1.0) -> NavigationBarPlatterTransitionView.Side {
         var side = self.side(back: nil, right: [self.button("compose", tint: .accent), self.button("story"), self.button("proxy")])
-        side.trailingInnerPressScale = innerPressScale
+        side.trailingPressScales = [1.0, innerPressScale]
         return side
     }
 
@@ -125,30 +155,30 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_outermostRightPlatters_areOneShape_acrossAnAccentCircle() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, CGRect(x: 390.0 - 16.0 - 44.0 - 12.0 - 88.0, y: 0.0, width: 88.0, height: 44.0))
-        let identity = view.platterIdentityForTesting(.trailing)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame, CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 390.0 - 16.0 - 44.0 - 12.0 - 88.0, y: 0.0, width: 88.0, height: 44.0))
+        let identity = view.platterIdentityForTesting(.trailing(0))
         self.time.advance(by: 0.05)
-        XCTAssertNotNil(view.platterStateForTesting(.trailing)?.fadingTintAlpha)
-        XCTAssertEqual(view.itemsStateForTesting(.trailing).count, 2)
+        XCTAssertNotNil(view.platterStateForTesting(.trailing(0))?.fadingTintAlpha)
+        XCTAssertEqual(view.itemsStateForTesting(.trailing(0)).count, 2)
         self.time.advance(by: 1.0)
-        XCTAssertEqual(view.platterIdentityForTesting(.trailing), identity)
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(0)), identity)
     }
 
     // Two bars without a circle pair their capsules as before: the capsule is the outermost platter, nothing is inner.
     func test_withoutACircle_theCapsuleIsTheOutermostPlatter() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit")]), top: self.side(right: [self.button("a"), self.button("b")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNotNil(view.platterStateForTesting(.trailing))
-        XCTAssertNil(view.platterStateForTesting(.trailingInner))
+        XCTAssertNotNil(view.platterStateForTesting(.trailing(0)))
+        XCTAssertNil(view.platterStateForTesting(.trailing(1)))
     }
 
     // The press UIKit was drawing on the capsule beside the circle carries on, on the inner platter.
     func test_innerCapsulePress_isCarriedOn() {
         let view = self.makeView(bottom: self.chatsSide(innerPressScale: 1.3), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.press ?? 0.0, 1.3, accuracy: 0.0001)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.press ?? 0.0, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.press ?? 0.0, 1.3, accuracy: 0.0001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.press ?? 0.0, 1.0, accuracy: 0.0001)
     }
 
     // The kick: no motion before 0.05 s, out toward the target, taken back from 0.15 s, at rest at 0.
@@ -178,28 +208,28 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let source = CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0)
         let delay = NavigationBarGlassSettings.matchedMinDelay
         self.time.advance(by: delay - 0.01)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, source)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, source)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
         self.time.advance(by: 0.04)
-        XCTAssertGreaterThan(view.platterStateForTesting(.trailingInner)?.frame.midX ?? 0.0, source.midX)
+        XCTAssertGreaterThan(view.platterStateForTesting(.trailing(1))?.frame.midX ?? 0.0, source.midX)
         self.time.advance(by: 0.07)
-        let moving = view.platterStateForTesting(.trailingInner)
+        let moving = view.platterStateForTesting(.trailing(1))
         XCTAssertGreaterThan(moving?.frame.midX ?? 0.0, source.midX)
         XCTAssertLessThan(moving?.opacity ?? 1.0, 1.0)
         XCTAssertLessThan(moving?.scale.width ?? 1.0, 1.0)
         self.time.advance(by: 1.5)
-        XCTAssertNil(view.platterStateForTesting(.trailingInner))
+        XCTAssertNil(view.platterStateForTesting(.trailing(1)))
     }
 
     // The pop: the capsule waits invisible on the avatar platter, then grows out of it into its place.
     func test_leftoverInnerCapsule_growsOutOfTheOutermostPlatter() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: false)
-        let start = view.platterStateForTesting(.trailingInner)
+        let start = view.platterStateForTesting(.trailing(1))
         XCTAssertEqual(start?.frame, CGRect(x: 330.0, y: 0.0, width: 44.0, height: 44.0))
         XCTAssertEqual(start?.opacity ?? 1.0, 0.0, accuracy: 0.001)
         self.time.advance(by: 1.5)
-        let end = view.platterStateForTesting(.trailingInner)
+        let end = view.platterStateForTesting(.trailing(1))
         XCTAssertEqual(end?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
         XCTAssertEqual(end?.opacity ?? 0.0, 1.0, accuracy: 0.001)
     }
@@ -209,9 +239,9 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: true, toTop: false)
         self.time.advance(by: 0.3)
-        XCTAssertNil(view.platterStateForTesting(.trailingInner))
+        XCTAssertNil(view.platterStateForTesting(.trailing(1)))
         view.endInteraction(towardTop: false)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, CGRect(x: 330.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 330.0, y: 0.0, width: 44.0, height: 44.0))
     }
 
     private func assertRect(_ rect: CGRect?, _ expected: CGRect, accuracy: CGFloat = 0.01, file: StaticString = #filePath, line: UInt = #line) {
@@ -233,15 +263,15 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_leftoverInnerCapsule_mergesIntoTheOutermostPlattersGlass_whileCollapsing() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
-        let container = view.glassContainerForTesting(.trailingInner)
+        let container = view.glassContainerForTesting(.trailing(1))
         XCTAssertNotNil(container)
-        XCTAssertTrue(container === view.glassContainerForTesting(.trailing))
+        XCTAssertTrue(container === view.glassContainerForTesting(.trailing(0)))
         XCTAssertEqual(container?.spacing, 12.0)
         // The glass view's own size is the end state, 0.2 x the 44 pt circle (a transform would leave it 44 x 44).
-        XCTAssertEqual(view.glassViewForTesting(.trailingInner)?.bounds.width ?? 0.0, 8.8, accuracy: 0.01)
-        XCTAssertEqual(view.glassViewForTesting(.trailingInner)?.bounds.height ?? 0.0, 8.8, accuracy: 0.01)
+        XCTAssertEqual(view.glassViewForTesting(.trailing(1))?.bounds.width ?? 0.0, 8.8, accuracy: 0.01)
+        XCTAssertEqual(view.glassViewForTesting(.trailing(1))?.bounds.height ?? 0.0, 8.8, accuracy: 0.01)
         self.time.advance(by: NavigationBarGlassSettings.matchedMinDelay + 0.1)
-        let moving = view.platterStateForTesting(.trailingInner)
+        let moving = view.platterStateForTesting(.trailing(1))
         XCTAssertLessThan(moving?.opacity ?? 1.0, 1.0)
         XCTAssertEqual(moving?.glassOpacity ?? 0.0, 1.0, accuracy: 0.001)
         XCTAssertLessThan(moving?.glassFrame.height ?? 44.0, 44.0)
@@ -252,9 +282,9 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_leftoverInnerCapsule_growsOutOfTheOutermostPlattersGlass() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: false)
-        XCTAssertNotNil(view.glassContainerForTesting(.trailingInner))
-        XCTAssertTrue(view.glassContainerForTesting(.trailingInner) === view.glassContainerForTesting(.trailing))
-        let start = view.platterStateForTesting(.trailingInner)
+        XCTAssertNotNil(view.glassContainerForTesting(.trailing(1)))
+        XCTAssertTrue(view.glassContainerForTesting(.trailing(1)) === view.glassContainerForTesting(.trailing(0)))
+        let start = view.platterStateForTesting(.trailing(1))
         XCTAssertEqual(start?.opacity ?? 1.0, 0.0, accuracy: 0.001)
         XCTAssertEqual(start?.glassOpacity ?? 0.0, 1.0, accuracy: 0.001)
         self.assertRect(start?.glassFrame, CGRect(x: 352.0 - 4.4, y: 22.0 - 4.4, width: 8.8, height: 8.8))
@@ -267,7 +297,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: false)
         self.time.advance(by: 0.03)
-        XCTAssertGreaterThan(view.platterStateForTesting(.trailingInner)?.glassFrame.width ?? 0.0, 8.8 + 1.0)
+        XCTAssertGreaterThan(view.platterStateForTesting(.trailing(1))?.glassFrame.width ?? 0.0, 8.8 + 1.0)
     }
 
     // The kick's offset is the platter's own centre minus its partner's (SwiftUICore 27: `partner.geometryResult(to:
@@ -277,11 +307,11 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let push = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         push.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: NavigationBarGlassSettings.matchedMinDelay + 0.15)
-        XCTAssertLessThan(push.platterStateForTesting(.trailingInner)?.kick.width ?? 0.0, -1.0)
+        XCTAssertLessThan(push.platterStateForTesting(.trailing(1))?.kick.width ?? 0.0, -1.0)
         let pop = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         pop.beginTransition(isInteractive: false, toTop: false)
         self.time.advance(by: 0.15)
-        XCTAssertLessThan(pop.platterStateForTesting(.trailingInner)?.kick.width ?? 0.0, -1.0)
+        XCTAssertLessThan(pop.platterStateForTesting(.trailing(1))?.kick.width ?? 0.0, -1.0)
     }
 
     // SwiftUI pulses both shapes of a matched insertion or removal (`adjustMatchedEntry` writes a scale pulse to the
@@ -296,22 +326,22 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let pop = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         pop.beginTransition(isInteractive: false, toTop: false)
         self.time.advance(by: 0.1)
-        let circle = pop.platterStateForTesting(.trailing)
+        let circle = pop.platterStateForTesting(.trailing(0))
         XCTAssertGreaterThan(circle?.pulse.width ?? 1.0, 1.01)
         XCTAssertEqual(circle?.glassFrame.maxX ?? 0.0, circle.map(unpulsedMaxX) ?? 1.0, accuracy: 0.01)
-        let capsule = pop.platterStateForTesting(.trailingInner)
+        let capsule = pop.platterStateForTesting(.trailing(1))
         XCTAssertGreaterThan(capsule?.pulse.width ?? 1.0, 1.01)
         XCTAssertEqual(capsule?.glassFrame.maxX ?? 0.0, capsule.map(unpulsedMaxX) ?? 1.0, accuracy: 0.01)
 
         let push = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         push.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: NavigationBarGlassSettings.matchedMinDelay - 0.01)
-        XCTAssertEqual(push.platterStateForTesting(.trailingInner)?.pulse.width ?? 0.0, 1.0, accuracy: 0.0001)
-        let pushCircle = push.platterStateForTesting(.trailing)
+        XCTAssertEqual(push.platterStateForTesting(.trailing(1))?.pulse.width ?? 0.0, 1.0, accuracy: 0.0001)
+        let pushCircle = push.platterStateForTesting(.trailing(0))
         XCTAssertGreaterThan(pushCircle?.pulse.width ?? 1.0, 1.01)
         XCTAssertEqual(pushCircle?.glassFrame.maxX ?? 0.0, pushCircle.map(unpulsedMaxX) ?? 1.0, accuracy: 0.01)
         self.time.advance(by: 0.08)
-        XCTAssertGreaterThan(push.platterStateForTesting(.trailingInner)?.pulse.width ?? 1.0, 1.01)
+        XCTAssertGreaterThan(push.platterStateForTesting(.trailing(1))?.pulse.width ?? 1.0, 1.01)
     }
 
     // Without native glass (before iOS 26, or the custom glass setting) a container merges nothing, so the collapsing
@@ -320,10 +350,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.glassMergesShapes = { false }
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNotNil(view.glassContainerForTesting(.trailingInner))
-        XCTAssertFalse(view.glassContainerForTesting(.trailingInner) === view.glassContainerForTesting(.trailing))
+        XCTAssertNotNil(view.glassContainerForTesting(.trailing(1)))
+        XCTAssertFalse(view.glassContainerForTesting(.trailing(1)) === view.glassContainerForTesting(.trailing(0)))
         self.time.advance(by: NavigationBarGlassSettings.matchedMinDelay + 0.1)
-        XCTAssertLessThan(view.platterStateForTesting(.trailingInner)?.glassOpacity ?? 1.0, 1.0)
+        XCTAssertLessThan(view.platterStateForTesting(.trailing(1))?.glassOpacity ?? 1.0, 1.0)
     }
 
     // The chat header's glass pill is its bar's second right platter in a transition (asked 2026-10-15). Chats' story/proxy
@@ -340,14 +370,14 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         chat.titlePill = self.titlePill(pillFrame, contents: contents)
         let view = self.makeView(bottom: self.chatsSide(), top: chat)
         view.beginTransition(isInteractive: false, toTop: true)
-        let identity = view.platterIdentityForTesting(.trailingInner)
+        let identity = view.platterIdentityForTesting(.trailing(1))
         XCTAssertNotNil(identity)
-        XCTAssertEqual(view.itemsStateForTesting(.trailingInner).count, 2)
+        XCTAssertEqual(view.itemsStateForTesting(.trailing(1)).count, 2)
         self.time.advance(by: 0.2)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
         self.time.advance(by: 1.5)
-        XCTAssertEqual(view.platterIdentityForTesting(.trailingInner), identity)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, pillFrame)
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(1)), identity)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, pillFrame)
         XCTAssertNotNil(contents.superview)
     }
 
@@ -391,13 +421,13 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         to.titlePill = self.titlePill(toFrame, contents: UIView())
         let view = self.makeView(bottom: from, top: to)
         view.beginTransition(isInteractive: false, toTop: true)
-        let identity = view.platterIdentityForTesting(.trailingInner)
+        let identity = view.platterIdentityForTesting(.trailing(1))
         XCTAssertNotNil(identity)
-        XCTAssertEqual(view.itemsStateForTesting(.trailingInner).count, 2)
+        XCTAssertEqual(view.itemsStateForTesting(.trailing(1)).count, 2)
         self.time.advance(by: 1.5)
-        XCTAssertEqual(view.platterIdentityForTesting(.trailingInner), identity)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, toFrame)
-        XCTAssertEqual(view.itemsStateForTesting(.trailingInner).count, 1)
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(1)), identity)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, toFrame)
+        XCTAssertEqual(view.itemsStateForTesting(.trailing(1)).count, 1)
     }
 
     // The pop: the pill morphs back into Chats' capsule.
@@ -407,10 +437,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         chat.titlePill = self.titlePill(pillFrame, contents: UIView())
         let view = self.makeView(bottom: self.chatsSide(), top: chat)
         view.beginTransition(isInteractive: false, toTop: false)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, pillFrame)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, pillFrame)
         self.time.advance(by: 1.5)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
     }
 
     // Without a right button the pill is still the second right platter: Chats' compose circle (index 0) has no partner
@@ -421,13 +451,13 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         chat.titlePill = self.titlePill(pillFrame, contents: UIView())
         let view = self.makeView(bottom: self.chatsSide(), top: chat)
         view.beginTransition(isInteractive: false, toTop: true)
-        let circle = view.platterStateForTesting(.trailing)?.frame
+        let circle = view.platterStateForTesting(.trailing(0))?.frame
         self.time.advance(by: 0.2)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame, circle)
-        XCTAssertLessThan(view.platterStateForTesting(.trailing)?.opacity ?? 1.0, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame, circle)
+        XCTAssertLessThan(view.platterStateForTesting(.trailing(0))?.opacity ?? 1.0, 1.0)
         self.time.advance(by: 1.5)
-        XCTAssertNil(view.platterStateForTesting(.trailing))
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, pillFrame)
+        XCTAssertNil(view.platterStateForTesting(.trailing(0)))
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, pillFrame)
     }
 
     // A bar with two right platters already (circle and capsule) has no slot for its pill: the capsule stays the second
@@ -437,17 +467,17 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         chats.titlePill = self.titlePill(CGRect(x: 110.0, y: 0.0, width: 170.0, height: 44.0), contents: UIView())
         let view = self.makeView(bottom: chats, top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
     }
 
     // Once it has collapsed, the capsule's glass leaves the container it merged in.
     func test_leftoverInnerCapsule_collapsed_leavesTheContainerItMergedIn() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
-        let glass = view.glassViewForTesting(.trailingInner)
+        let glass = view.glassViewForTesting(.trailing(1))
         XCTAssertNotNil(glass?.superview)
         self.time.advance(by: 1.5)
-        XCTAssertNil(view.platterStateForTesting(.trailingInner))
+        XCTAssertNil(view.platterStateForTesting(.trailing(1)))
         XCTAssertNil(glass?.superview)
     }
 
@@ -456,10 +486,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_innerCapsuleDematerializingInPlace_keepsAGlassContainerOfItsOwn() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNotNil(view.glassContainerForTesting(.trailingInner))
-        XCTAssertFalse(view.glassContainerForTesting(.trailingInner) === view.glassContainerForTesting(.trailing))
+        XCTAssertNotNil(view.glassContainerForTesting(.trailing(1)))
+        XCTAssertFalse(view.glassContainerForTesting(.trailing(1)) === view.glassContainerForTesting(.trailing(0)))
         self.time.advance(by: 0.1)
-        XCTAssertLessThan(view.platterStateForTesting(.trailingInner)?.glassOpacity ?? 1.0, 1.0)
+        XCTAssertLessThan(view.platterStateForTesting(.trailing(1))?.glassOpacity ?? 1.0, 1.0)
     }
 
     // A pop to Chats from a bar with no right platter: there is no old platter for the capsule to grow out of (UIKit's
@@ -467,7 +497,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_innerCapsule_materializesInPlace_whenTheOtherBarHadNoRightPlatter() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: false)
-        let start = view.platterStateForTesting(.trailingInner)
+        let start = view.platterStateForTesting(.trailing(1))
         XCTAssertEqual(start?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
         XCTAssertGreaterThan(start?.scale.width ?? 0.0, 1.0)
     }
@@ -478,10 +508,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
         view.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 0.2)
-        let before = view.platterStateForTesting(.trailingInner)?.frame
+        let before = view.platterStateForTesting(.trailing(1))?.frame
         view.setSides(bottom: self.chatsSide(), top: self.side(right: [self.button("avatar"), self.button("call")]))
         self.time.advance(by: 0.01)
-        XCTAssertGreaterThan(view.platterStateForTesting(.trailingInner)?.frame.midX ?? 0.0, before?.midX ?? 0.0)
+        XCTAssertGreaterThan(view.platterStateForTesting(.trailing(1))?.frame.midX ?? 0.0, before?.midX ?? 0.0)
     }
 
     // With nothing on the other bar to go to it dematerializes in place, as before.
@@ -489,7 +519,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.chatsSide(), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 0.1)
-        let state = view.platterStateForTesting(.trailingInner)
+        let state = view.platterStateForTesting(.trailing(1))
         XCTAssertEqual(state?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
         XCTAssertGreaterThan(state?.scale.width ?? 0.0, 1.0)
     }
@@ -500,8 +530,8 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.isReduceMotionEnabled = { true }
         view.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 0.1)
-        XCTAssertEqual(view.platterStateForTesting(.trailingInner)?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
-        XCTAssertLessThan(view.platterStateForTesting(.trailingInner)?.opacity ?? 1.0, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
+        XCTAssertLessThan(view.platterStateForTesting(.trailing(1))?.opacity ?? 1.0, 1.0)
     }
 
     // A capsule only the incoming screen has materializes in place: scale 1.2 (at most 16 pt larger), opacity 0 and blur
@@ -510,7 +540,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_oneSidedCapsule_materializesInPlace() {
         let view = self.makeView(bottom: self.side(right: []), top: self.side(right: [self.button("edit")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        guard let start = view.platterStateForTesting(.trailing) else {
+        guard let start = view.platterStateForTesting(.trailing(0)) else {
             XCTFail("no trailing capsule")
             return
         }
@@ -521,9 +551,9 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         var minScale: CGFloat = 2.0
         for _ in 0 ..< 240 {
             self.time.advance(by: 1.0 / 120.0)
-            minScale = min(minScale, view.platterStateForTesting(.trailing)?.scale.width ?? 2.0)
+            minScale = min(minScale, view.platterStateForTesting(.trailing(0))?.scale.width ?? 2.0)
         }
-        let end = view.platterStateForTesting(.trailing)
+        let end = view.platterStateForTesting(.trailing(0))
         XCTAssertEqual(end?.opacity ?? 0.0, 1.0, accuracy: 0.001)
         XCTAssertEqual(end?.scale.width ?? 0.0, 1.0, accuracy: 0.001)
         XCTAssertEqual(end?.blur ?? 10.0, 0.0, accuracy: 0.01)
@@ -543,34 +573,34 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         for _ in 0 ..< 12 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        XCTAssertEqual(appearing.platterStateForTesting(.trailing)?.opacity ?? 0.0, 0.5185, accuracy: 0.002)
-        XCTAssertEqual(appearing.platterStateForTesting(.trailing)?.scale.width ?? 0.0, 1.0 + 0.2 * (1.0 - 0.5185), accuracy: 0.0005)
-        XCTAssertEqual(leaving.platterStateForTesting(.trailing)?.opacity ?? 0.0, 1.0 - 0.5185, accuracy: 0.002)
-        XCTAssertEqual(leaving.platterStateForTesting(.trailing)?.scale.width ?? 0.0, 1.0 + 0.2 * 0.5185, accuracy: 0.0005)
+        XCTAssertEqual(appearing.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 0.5185, accuracy: 0.002)
+        XCTAssertEqual(appearing.platterStateForTesting(.trailing(0))?.scale.width ?? 0.0, 1.0 + 0.2 * (1.0 - 0.5185), accuracy: 0.0005)
+        XCTAssertEqual(leaving.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 1.0 - 0.5185, accuracy: 0.002)
+        XCTAssertEqual(leaving.platterStateForTesting(.trailing(0))?.scale.width ?? 0.0, 1.0 + 0.2 * 0.5185, accuracy: 0.0005)
         for _ in 0 ..< 12 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        XCTAssertEqual(appearing.platterStateForTesting(.trailing)?.opacity ?? 0.0, 0.9359, accuracy: 0.002)
-        XCTAssertEqual(leaving.platterStateForTesting(.trailing)?.opacity ?? 0.0, 1.0 - 0.9359, accuracy: 0.002)
+        XCTAssertEqual(appearing.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 0.9359, accuracy: 0.002)
+        XCTAssertEqual(leaving.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 1.0 - 0.9359, accuracy: 0.002)
     }
 
     // The scale is capped so the capsule grows by at most 16 pt per axis: a 100 pt capsule starts at 1.16 wide.
     func test_materializeScale_isCappedAtSixteenPoints() {
         let view = self.makeView(bottom: self.side(right: []), top: self.side(right: [self.button("wide", width: 100.0)]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.scale.width ?? 0.0, 116.0 / 100.0, accuracy: 0.0001)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.scale.height ?? 0.0, 1.2, accuracy: 0.0001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.scale.width ?? 0.0, 116.0 / 100.0, accuracy: 0.0001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.scale.height ?? 0.0, 1.2, accuracy: 0.0001)
     }
 
     // A capsule only the outgoing screen has dematerializes in place and is gone at the end.
     func test_oneSidedCapsule_dematerializesInPlace() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit")]), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.opacity, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.opacity, 1.0)
         for _ in 0 ..< 240 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        XCTAssertNil(view.platterStateForTesting(.trailing))
+        XCTAssertNil(view.platterStateForTesting(.trailing(0)))
     }
 
     // A capsule both screens have is one glass shape: it morphs to its new frame on Spring(0.416, bounce 0.25), so a
@@ -578,14 +608,14 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_matchedCapsule_morphsOnTheBouncyTransitionSpring() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit", width: 80.0)]), top: self.side(right: [self.button("done", tint: .accent)]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.opacity, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.opacity, 1.0)
         var minWidth: CGFloat = 1000.0
         for _ in 0 ..< 240 {
             self.time.advance(by: 1.0 / 120.0)
-            minWidth = min(minWidth, view.platterStateForTesting(.trailing)?.frame.width ?? 1000.0)
+            minWidth = min(minWidth, view.platterStateForTesting(.trailing(0))?.frame.width ?? 1000.0)
         }
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
         XCTAssertLessThan(minWidth, 43.5)
     }
 
@@ -608,12 +638,12 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         let view = self.makeView(bottom: self.side(right: [self.button("search", width: 44.0)]), top: self.side(right: [self.button("edit", width: 80.0)]))
         // A pop: the top screen leaves.
         view.beginTransition(isInteractive: true, toTop: false)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
         self.run(view, seconds: 2.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 80.0, accuracy: 0.001)
         view.endInteraction(towardTop: false)
         self.run(view, seconds: 2.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
     }
 
     // A swipe back that takes a running push over does not touch the capsules either: they carry on to the top bar's,
@@ -624,10 +654,10 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         self.run(view, seconds: 0.1)
         view.beginInteraction()
         self.run(view, seconds: 2.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 80.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 80.0, accuracy: 0.01)
         view.endInteraction(towardTop: false)
         self.run(view, seconds: 2.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
     }
 
     // A swipe let go toward the top bar ends there: a bar change after that heads the capsules for the top bar's new
@@ -639,7 +669,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.endInteraction(towardTop: true)
         view.setSides(bottom: bottom, top: self.side(right: [self.button("edit", width: 100.0)]))
         self.run(view, seconds: 2.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 100.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 100.0, accuracy: 0.01)
     }
 
     private func run(_ view: NavigationBarPlatterTransitionView, seconds: CGFloat, step: CGFloat = 1.0 / 240.0, sample: (CGFloat) -> Void = { _ in }) {
@@ -662,7 +692,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         var timeOfMaxY: CGFloat = 0.0
         var timeOfMaxX: CGFloat = 0.0
         self.run(view, seconds: 1.0, sample: { time in
-            guard let pulse = view.platterStateForTesting(.trailing)?.pulse else {
+            guard let pulse = view.platterStateForTesting(.trailing(0))?.pulse else {
                 return
             }
             if pulse.height > maxPulseY {
@@ -680,8 +710,8 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         // The width falls later (0.142 s), while the bouncy rise overshoots, so it peaks a little higher.
         XCTAssertGreaterThan(maxPulseX, 1.2)
         XCTAssertLessThan(maxPulseX, 1.25)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.pulse.width ?? 0.0, 1.0, accuracy: 0.001)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.pulse.height ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.pulse.width ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.pulse.height ?? 0.0, 1.0, accuracy: 0.001)
     }
 
     // The same capsule with the same items does not pulse.
@@ -690,7 +720,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.beginTransition(isInteractive: false, toTop: true)
         var maxPulse: CGFloat = 1.0
         self.run(view, seconds: 0.5, sample: { _ in
-            maxPulse = max(maxPulse, view.platterStateForTesting(.trailing)?.pulse.height ?? 1.0)
+            maxPulse = max(maxPulse, view.platterStateForTesting(.trailing(0))?.pulse.height ?? 1.0)
         })
         XCTAssertEqual(maxPulse, 1.0)
     }
@@ -703,7 +733,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_itemChange_newItemsEnterMaterialized() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit", width: 64.0)]), top: self.side(right: [self.button("done", width: 76.0, tint: .accent)]))
         view.beginTransition(isInteractive: false, toTop: true)
-        guard let incoming = view.itemsStateForTesting(.trailing).first(where: { $0.isTop }) else {
+        guard let incoming = view.itemsStateForTesting(.trailing(0)).first(where: { $0.isTop }) else {
             XCTFail("no incoming items")
             return
         }
@@ -714,7 +744,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         for _ in 0 ..< 12 {
             self.time.advance(by: 1.0 / 120.0)
         }
-        guard let arrived = view.itemsStateForTesting(.trailing).first(where: { $0.isTop }), let left = view.itemsStateForTesting(.trailing).first(where: { !$0.isTop }) else {
+        guard let arrived = view.itemsStateForTesting(.trailing(0)).first(where: { $0.isTop }), let left = view.itemsStateForTesting(.trailing(0)).first(where: { !$0.isTop }) else {
             XCTFail("no items")
             return
         }
@@ -730,11 +760,11 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_tintChange_crossFades() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit", width: 64.0)]), top: self.side(right: [self.button("done", width: 76.0, tint: .accent)]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.fadingTintAlpha ?? 0.0, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.fadingTintAlpha ?? 0.0, 1.0)
         self.run(view, seconds: 0.082)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.fadingTintAlpha ?? 0.0, 0.46, accuracy: 0.06)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.fadingTintAlpha ?? 0.0, 0.46, accuracy: 0.06)
         self.run(view, seconds: 1.0)
-        XCTAssertNil(view.platterStateForTesting(.trailing)?.fadingTintAlpha)
+        XCTAssertNil(view.platterStateForTesting(.trailing(0))?.fadingTintAlpha)
     }
 
     // Edit -> the checkmark circle (44 pt): native peaks at 1.2 in height too (measured 45 -> 54.3 pt with the edge),
@@ -744,7 +774,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.beginTransition(isInteractive: false, toTop: true)
         var maxPulseY: CGFloat = 1.0
         self.run(view, seconds: 0.6, sample: { _ in
-            maxPulseY = max(maxPulseY, view.platterStateForTesting(.trailing)?.pulse.height ?? 1.0)
+            maxPulseY = max(maxPulseY, view.platterStateForTesting(.trailing(0))?.pulse.height ?? 1.0)
         })
         XCTAssertEqual(maxPulseY, 1.2, accuracy: 0.02)
     }
@@ -754,16 +784,16 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_capsuleArrivingMidTransition_materializes() {
         let view = self.makeView(bottom: self.side(right: []), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNil(view.platterStateForTesting(.trailing))
+        XCTAssertNil(view.platterStateForTesting(.trailing(0)))
         self.time.advance(by: 0.01)
         view.setSides(bottom: self.side(right: []), top: self.side(right: [self.button("edit")]))
-        guard let start = view.platterStateForTesting(.trailing) else {
+        guard let start = view.platterStateForTesting(.trailing(0)) else {
             XCTFail("the arriving capsule is not shown")
             return
         }
         XCTAssertEqual(start.opacity, 0.0)
         self.run(view, seconds: 1.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
     }
 
     // A list screen's buttons arrive just after its push begins (ItemListController applies its first state after the list
@@ -773,22 +803,22 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_capsuleArrivingMidTransition_takesOverTheLeavingCapsule() {
         let view = self.makeView(bottom: self.side(right: [self.button("edit", width: 64.0)]), top: self.side(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        let leaving = view.platterIdentityForTesting(.trailing)
+        let leaving = view.platterIdentityForTesting(.trailing(0))
         XCTAssertNotNil(leaving)
         self.time.advance(by: 1.0 / 60.0)
         view.setSides(bottom: self.side(right: [self.button("edit", width: 64.0)]), top: self.side(right: [self.button("done", width: 44.0, tint: .accent)]))
-        XCTAssertEqual(view.platterIdentityForTesting(.trailing), leaving)
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(0)), leaving)
         // Still (almost) fully there: it barely began to leave.
-        XCTAssertGreaterThan(view.platterStateForTesting(.trailing)?.opacity ?? 0.0, 0.9)
+        XCTAssertGreaterThan(view.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 0.9)
         // Edit's items leave and Done's arrive, and the tint cross-fades on the one shape.
-        let items = view.itemsStateForTesting(.trailing)
+        let items = view.itemsStateForTesting(.trailing(0))
         XCTAssertTrue(items.contains(where: { !$0.isTop && $0.opacity > 0.9 }), "\(items)")
         XCTAssertTrue(items.contains(where: { $0.isTop && $0.opacity < 0.1 }), "\(items)")
-        XCTAssertNotNil(view.platterStateForTesting(.trailing)?.fadingTintAlpha)
+        XCTAssertNotNil(view.platterStateForTesting(.trailing(0))?.fadingTintAlpha)
         self.run(view, seconds: 1.0)
-        XCTAssertEqual(view.platterIdentityForTesting(.trailing), leaving)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame ?? CGRect(), CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(view.platterIdentityForTesting(.trailing(0)), leaving)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame ?? CGRect(), CGRect(x: 390.0 - 16.0 - 44.0, y: 0.0, width: 44.0, height: 44.0))
     }
 
     // The same late arrival on the leading side: the incoming bar starts with a back button (the default), so the back
@@ -846,7 +876,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(leading.scale.width, 1.0)
         XCTAssertEqual(leading.blur, 0.0)
         // Done's items arrive in Edit's capsule.
-        guard let incoming = view.itemsStateForTesting(.trailing).first(where: { $0.isTop }) else {
+        guard let incoming = view.itemsStateForTesting(.trailing(0)).first(where: { $0.isTop }) else {
             XCTFail("no incoming items")
             return
         }
@@ -865,12 +895,12 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         var maxPulse: CGFloat = 1.0
         var minWidth: CGFloat = 1000.0
         self.run(view, seconds: 1.0, sample: { _ in
-            maxPulse = max(maxPulse, view.platterStateForTesting(.trailing)?.pulse.height ?? 1.0)
-            minWidth = min(minWidth, view.platterStateForTesting(.trailing)?.frame.width ?? 1000.0)
+            maxPulse = max(maxPulse, view.platterStateForTesting(.trailing(0))?.pulse.height ?? 1.0)
+            minWidth = min(minWidth, view.platterStateForTesting(.trailing(0))?.frame.width ?? 1000.0)
         })
         XCTAssertEqual(maxPulse, 1.0)
         XCTAssertGreaterThanOrEqual(minWidth, 44.0 - 0.01)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 44.0, accuracy: 0.01)
     }
 
     // A push or pop started from a bar button: UIKit is still drawing the press on that capsule (at most 16 pt larger,
@@ -924,7 +954,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 0.5)
         // Spring(0.416, bounce 0.25) is 0.1935 of the way at 0.05 s.
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.opacity ?? -1.0, 0.1935, accuracy: 0.002)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.opacity ?? -1.0, 0.1935, accuracy: 0.002)
     }
 
     // The capsules play on the render server: a materializing capsule's scale and opacity are keyframes sampled from
@@ -932,7 +962,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_materializingCapsule_isKeyframed() {
         let view = self.makeView(bottom: self.side(right: []), top: self.side(right: [self.button("edit", width: 80.0)]))
         view.beginTransition(isInteractive: false, toTop: true)
-        guard let container = view.containerViewForTesting(.trailing), let transform = container.layer.animation(forKey: "navigationGlass.transform") as? CAKeyframeAnimation, let opacity = container.layer.animation(forKey: "navigationGlass.opacity") as? CAKeyframeAnimation else {
+        guard let container = view.containerViewForTesting(.trailing(0)), let transform = container.layer.animation(forKey: "navigationGlass.transform") as? CAKeyframeAnimation, let opacity = container.layer.animation(forKey: "navigationGlass.opacity") as? CAKeyframeAnimation else {
             XCTFail("no keyframes")
             return
         }
@@ -949,14 +979,14 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.beginTransition(isInteractive: false, toTop: true)
         self.advance(view, by: 0.1)
         view.setSides(bottom: self.side(right: [self.button("a", width: 80.0)]), top: self.side(right: [self.button("a", width: 120.0)]))
-        guard let container = view.containerViewForTesting(.trailing), let position = container.layer.animation(forKey: "navigationGlass.position") as? CAKeyframeAnimation else {
+        guard let container = view.containerViewForTesting(.trailing(0)), let position = container.layer.animation(forKey: "navigationGlass.position") as? CAKeyframeAnimation else {
             XCTFail("no keyframes")
             return
         }
         XCTAssertEqual(position.beginTime, container.layer.convertTime(self.time.now, from: nil), accuracy: 1e-9)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 80.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 80.0, accuracy: 0.01)
         self.advance(view, by: 1.0)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.frame.width ?? 0.0, 120.0, accuracy: 0.01)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.frame.width ?? 0.0, 120.0, accuracy: 0.01)
     }
 
     // Rest is the clock's deadline: leaving capsules are removed and the view reports settled once.
@@ -972,7 +1002,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(settled, 0)
         self.advance(view, by: 1.5)
         XCTAssertFalse(view.isAnimating)
-        XCTAssertNil(view.platterStateForTesting(.trailing))
+        XCTAssertNil(view.platterStateForTesting(.trailing(0)))
         XCTAssertEqual(settled, 1)
     }
 
@@ -981,7 +1011,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         self.time.factor = 10.0
         let view = self.makeView(bottom: self.side(right: []), top: self.side(right: [self.button("edit")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.containerViewForTesting(.trailing)?.layer.animation(forKey: "navigationGlass.opacity")?.speed ?? 0.0, 0.1, accuracy: 1e-6)
+        XCTAssertEqual(view.containerViewForTesting(.trailing(0))?.layer.animation(forKey: "navigationGlass.opacity")?.speed ?? 0.0, 0.1, accuracy: 1e-6)
     }
 
     private func duoSide(back: NavigationBarComponent.Back? = .back, right: [NavigationBarComponent.Button], hidesColumnButtons: Bool = false) -> NavigationBarPlatterTransitionView.Side {
@@ -1052,12 +1082,12 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_rowPress_staysOnTheRowCapsule_besideAColumn() {
         let done = NavigationBarComponent.Button(id: "done", content: .text(title: "Done", isBold: true), action: { _ in })
         var bottom = self.duoSide(right: [done, self.iconButton("search")])
-        bottom.trailingPressScale = 60.0 / 44.0
-        bottom.trailingPressGlow = 1.0
+        bottom.trailingPressScales = [60.0 / 44.0]
+        bottom.trailingPressGlows = [1.0]
         let view = self.makeView(bottom: bottom, top: self.duoSide(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.press ?? 0.0, 60.0 / 44.0, accuracy: 1e-6)
-        XCTAssertEqual(view.platterStateForTesting(.trailing)?.glow ?? 0.0, 1.0, accuracy: 1e-6)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.press ?? 0.0, 60.0 / 44.0, accuracy: 1e-6)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.glow ?? 0.0, 1.0, accuracy: 1e-6)
         XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.press ?? 0.0, 1.0)
         XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.glow ?? 1.0, 0.0)
         XCTAssertEqual(view.platterStateForTesting(.columnBack)?.press ?? 0.0, 1.0)

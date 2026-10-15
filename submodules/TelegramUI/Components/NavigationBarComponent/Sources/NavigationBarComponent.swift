@@ -8,6 +8,21 @@ import SideColumnLayout
 /// The navigation bar's 44pt row and iPhone Duo side column: title, back, left and right buttons in glass
 /// capsules, and the in-bar slide between a primary and a secondary content. Hosts own the backdrop, where the
 /// row sits, and the container the column hangs in (`sideColumnView`).
+/// One right pill of the row, index 0 outermost: the bar-level items container (it holds each content's items for this
+/// pill) and its glass. Pills are kept (without glass) when the row has fewer, so a content's items keep their host.
+final class NavigationBarRightPill {
+    let itemsContainer: UIView
+    var background: GlassContextExtractableContainer?
+    /// The tint the last layout gave the glass.
+    var appliedTint: NavigationBarComponent.Button.Tint = .generic
+
+    init() {
+        self.itemsContainer = UIView()
+        // As the bar's single right container was: a width change keeps the pill's trailing edge.
+        self.itemsContainer.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+    }
+}
+
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -95,14 +110,44 @@ public final class NavigationBarComponent: Component {
         private(set) var secondaryContentView: NavigationBarContentView?
 
         let leftButtonsContainer: UIView
-        let rightButtonsContainer: UIView
         private(set) var leftButtonsBackgroundContainer: GlassContextExtractableContainer?
-        private(set) var rightButtonsBackgroundContainer: GlassContextExtractableContainer?
-        /// The accent circle outermost on the right (`NavigationBarButtonPlacement.rowCircleItem`) and its glass.
-        let rightCircleContainer: UIView
-        private(set) var rightCircleBackgroundContainer: GlassContextExtractableContainer?
-        /// The tint the last layout gave the circle's glass.
-        private(set) var appliedRightCircleTint: NavigationBarComponent.Button.Tint = .generic
+        /// The row's right pills, outermost first (see `NavigationBarRightPill`).
+        private(set) var rightPills: [NavigationBarRightPill] = []
+
+        /// Pill `index`, made on first use.
+        func rightPill(at index: Int) -> NavigationBarRightPill {
+            while self.rightPills.count <= index {
+                self.rightPills.append(NavigationBarRightPill())
+            }
+            return self.rightPills[index]
+        }
+
+        func rightPillBackgroundContainer(at index: Int) -> GlassContextExtractableContainer? {
+            return index < self.rightPills.count ? self.rightPills[index].background : nil
+        }
+
+        func appliedRightPillTint(at index: Int) -> NavigationBarComponent.Button.Tint {
+            return index < self.rightPills.count ? self.rightPills[index].appliedTint : .generic
+        }
+
+        private var rightBackgroundContainers: [GlassContextExtractableContainer] {
+            return self.rightPills.compactMap(\.background)
+        }
+        /// Whether a glass container merges the shapes in it (native glass), read as each in-place merge starts.
+        var glassMergesShapes: () -> Bool = {
+            return GlassBackgroundContainerView.mergesShapes
+        }
+        /// The in-place animator's clock (animation seconds since the bar was made), for its matched morphs' curves.
+        var inPlaceTime: Double = 0.0
+        /// Where two pills' glass merges during an in-place matched morph, at the bar's platter smoothness; made on first
+        /// use, below the pills, spanning the bar.
+        var inPlaceMergeContainer: GlassBackgroundContainerView?
+        /// The press UIKit was drawing on each capsule as the layout began (by container), read before this layout's own
+        /// changes touch the glass, for a merge or a retint to carry on.
+        var inPlacePressAtChange: [ObjectIdentifier: NavigationBarCapsulePress] = [:]
+        /// Whether this layout's in-place tint changes are cross-faded by the bar rather than by UIKit: in a layout where
+        /// pills merge (`NavigationBarInPlaceCapsule.tintFade`).
+        var inPlaceTintByHand = false
         /// Capsules animating an in-place change of their items, as iOS 27's glass does (see `startInPlace…`).
         var inPlaceCapsules: [NavigationBarInPlaceCapsule] = []
         var inPlaceLink: SharedDisplayLinkDriver.Link?
@@ -126,57 +171,41 @@ public final class NavigationBarComponent: Component {
                         // UIKit is drawing on one (the button that started the transition) goes on in the transition.
                         self.finishInPlaceAnimations()
                         let now = self.pressSamplerClock()
-                        var pressScales = (
-                            left: self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0,
-                            right: self.rightOuterBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0,
-                            rightInner: self.rightInnerBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
-                        )
+                        var leftScale = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
+                        var rightScales = self.rightPills.map { $0.background.flatMap(navigationBarCapsulePressScale) ?? 1.0 }
                         // A press UIKit has already taken off (the touch just ended) is in the last sample.
                         if let sample = self.lastPressSample, now - sample.time < 0.1 {
-                            if abs(pressScales.left - 1.0) < 0.0005 {
-                                pressScales.left = sample.left
+                            if abs(leftScale - 1.0) < 0.0005 {
+                                leftScale = sample.left
                             }
-                            if abs(pressScales.right - 1.0) < 0.0005 {
-                                pressScales.right = sample.right
-                            }
-                            if abs(pressScales.rightInner - 1.0) < 0.0005 {
-                                pressScales.rightInner = sample.rightInner
+                            for index in rightScales.indices where abs(rightScales[index] - 1.0) < 0.0005 && index < sample.right.count {
+                                rightScales[index] = sample.right[index]
                             }
                         }
                         self.lastPressSample = nil
-                        self.detachedPressScales = pressScales
-                        // A glow is always there with a press: when the glow layer cannot be found (a UIKit change), a
-                        // press alone stands for a full one. A press passes 1.03 within ~20 ms, so 1.01 tells it from a
-                        // reading that is merely not exactly 1.
-                        func glow(_ container: GlassContextExtractableContainer?, press: CGFloat) -> CGFloat {
-                            if let container, let glow = navigationBarCapsulePressGlow(container) {
-                                return glow
-                            }
-                            return press > 1.01 ? 1.0 : 0.0
-                        }
-                        self.detachedPressGlows = (
-                            left: glow(self.leftButtonsBackgroundContainer, press: self.detachedPressScales.left),
-                            right: glow(self.rightOuterBackgroundContainer, press: self.detachedPressScales.right),
-                            rightInner: glow(self.rightInnerBackgroundContainer, press: self.detachedPressScales.rightInner)
-                        )
+                        self.detachedLeftPressScale = leftScale
+                        self.detachedRightPressScales = rightScales
+                        self.detachedLeftPressGlow = navigationBarCapsulePressGlow(self.leftButtonsBackgroundContainer, press: leftScale)
+                        self.detachedRightPressGlows = zip(self.rightPills, rightScales).map { navigationBarCapsulePressGlow($0.background, press: $1) }
                     } else {
-                        self.detachedPressScales = (1.0, 1.0, 1.0)
-                        self.detachedPressGlows = (0.0, 0.0, 0.0)
+                        self.detachedLeftPressScale = 1.0
+                        self.detachedLeftPressGlow = 0.0
+                        self.detachedRightPressScales = []
+                        self.detachedRightPressGlows = []
                     }
                     self.applyPlattersDetached()
                 }
             }
         }
 
-        private var detachedPressScales: (left: CGFloat, right: CGFloat, rightInner: CGFloat) = (1.0, 1.0, 1.0)
-
-        /// The outermost right platter (the accent circle when there is one) and the capsule beside it.
-        private var rightOuterBackgroundContainer: GlassContextExtractableContainer? {
-            return self.rightCircleBackgroundContainer ?? self.rightButtonsBackgroundContainer
-        }
-        private var rightInnerBackgroundContainer: GlassContextExtractableContainer? {
-            return self.rightCircleBackgroundContainer != nil ? self.rightButtonsBackgroundContainer : nil
-        }
+        /// The press UIKit was drawing on the left capsule when the platters were detached (1: none, or not detached), and
+        /// its glow (0: none).
+        public private(set) var detachedLeftPressScale: CGFloat = 1.0
+        public private(set) var detachedLeftPressGlow: CGFloat = 0.0
+        /// The press UIKit was drawing on each right pill (index from the edge) when the platters were detached, and its
+        /// glow; empty while not detached.
+        public private(set) var detachedRightPressScales: [CGFloat] = []
+        public private(set) var detachedRightPressGlows: [CGFloat] = []
 
         /// UIKit draws a capsule's press (on a short tap) only as a running animation on its glass, which it takes off
         /// when the touch ends, before the button's action runs (measured 2026-10-14): when that action starts a
@@ -184,7 +213,7 @@ public final class NavigationBarComponent: Component {
         /// and detaching takes the last pressed sample.
         private var pressSamplerLink: SharedDisplayLinkDriver.Link?
         private var pressSamplerDeadline: Double = 0.0
-        private var lastPressSample: (left: CGFloat, right: CGFloat, rightInner: CGFloat, time: Double)?
+        private var lastPressSample: (left: CGFloat, right: [CGFloat], time: Double)?
         /// The press sampler's clock (tests replace it).
         var pressSamplerClock: () -> Double = {
             return CACurrentMediaTime()
@@ -193,9 +222,8 @@ public final class NavigationBarComponent: Component {
         private func samplePress() {
             let now = self.pressSamplerClock()
             let left = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
-            let right = self.rightOuterBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
-            let rightInner = self.rightInnerBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
-            if abs(left - 1.0) < 0.0005 && abs(right - 1.0) < 0.0005 && abs(rightInner - 1.0) < 0.0005 {
+            let right = self.rightPills.map { $0.background.flatMap(navigationBarCapsulePressScale) ?? 1.0 }
+            if abs(left - 1.0) < 0.0005 && right.allSatisfy({ abs($0 - 1.0) < 0.0005 }) {
                 if let sample = self.lastPressSample, now - sample.time < 0.1 {
                     // The press was just taken off: keep the last pressed sample for the hand-over.
                     return
@@ -204,7 +232,7 @@ public final class NavigationBarComponent: Component {
                 // A press held past the first window: its end is what the hand-over needs.
                 self.pressSamplerDeadline = max(self.pressSamplerDeadline, now + 0.5)
             }
-            self.lastPressSample = (left, right, rightInner, now)
+            self.lastPressSample = (left, right, now)
         }
 
         private func beginPressSampling() {
@@ -227,32 +255,8 @@ public final class NavigationBarComponent: Component {
             self.samplePress()
         }
 
-        /// The press UIKit was drawing on a capsule when the platters were detached (1: none, or not detached); on the right,
-        /// the outermost platter's (the accent circle when there is one).
-        public func detachedPressScale(isLeft: Bool) -> CGFloat {
-            return isLeft ? self.detachedPressScales.left : self.detachedPressScales.right
-        }
-
-        private var detachedPressGlows: (left: CGFloat, right: CGFloat, rightInner: CGFloat) = (0.0, 0.0, 0.0)
-
-        /// The press UIKit was drawing on the right capsule beside an accent circle when the platters were detached
-        /// (1: none, no circle, or not detached). `detachedPressScale(isLeft: false)` is the outermost right platter's.
-        public var detachedInnerPressScale: CGFloat {
-            return self.detachedPressScales.rightInner
-        }
-
-        /// UIKit's press glow on that capsule when the platters were detached (0: none).
-        public var detachedInnerPressGlow: CGFloat {
-            return self.detachedPressGlows.rightInner
-        }
-
-        /// UIKit's press glow on a capsule when the platters were detached (0: none, or not detached).
-        public func detachedPressGlow(isLeft: Bool) -> CGFloat {
-            return isLeft ? self.detachedPressGlows.left : self.detachedPressGlows.right
-        }
-
         private func applyPlattersDetached() {
-            let containers: [UIView] = [self.leftButtonsBackgroundContainer, self.rightButtonsBackgroundContainer, self.rightCircleBackgroundContainer].compactMap { $0 }
+            let containers: [UIView] = ([self.leftButtonsBackgroundContainer].compactMap { $0 } as [UIView]) + self.rightBackgroundContainers
             for container in containers {
                 if self.plattersDetached {
                     container.removeFromSuperview()
@@ -308,7 +312,7 @@ public final class NavigationBarComponent: Component {
             guard let contentView = self.primaryContentView else {
                 return 0.0
             }
-            return navigationBarRightButtonsExtent(capsuleWidth: contentView.rightButtonsWidth, circleWidth: contentView.rightCircleWidth)
+            return navigationBarRightButtonsExtent(navigationBarRightPillMetrics(widths: contentView.rightPillWidths))
         }
 
         /// Whether the primary content's row leaves a title pill a right platter slot in a transition: fewer than two right
@@ -317,7 +321,7 @@ public final class NavigationBarComponent: Component {
             guard let contentView = self.primaryContentView else {
                 return true
             }
-            return contentView.rightCircleWidth == 0.0 || contentView.rightButtonsWidth == 0.0
+            return contentView.rightPillWidths.count < 2
         }
 
         /// iPhone Duo: whether the primary content's back (or close) button is in the side column.
@@ -334,8 +338,9 @@ public final class NavigationBarComponent: Component {
                 return
             }
             contentView.backButtonView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-            contentView.rightButtonsContainer.layer.animateAlpha(from: 0.0, to: contentView.rightButtonsContainer.alpha, duration: duration)
-            contentView.rightCircleContainer.layer.animateAlpha(from: 0.0, to: contentView.rightCircleContainer.alpha, duration: duration)
+            for container in contentView.rightPillContainers {
+                container.layer.animateAlpha(from: 0.0, to: container.alpha, duration: duration)
+            }
         }
 
         public var leadingAccessibilityElements: [UIView] {
@@ -368,9 +373,6 @@ public final class NavigationBarComponent: Component {
 
         override init(frame: CGRect) {
             self.leftButtonsContainer = UIView()
-            self.rightButtonsContainer = UIView()
-            self.rightButtonsContainer.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
-            self.rightCircleContainer = UIView()
             self.sideColumnView = SparseContainerView()
             self.columnBackContainer = UIView()
             self.columnButtonsContainer = UIView()
@@ -388,14 +390,15 @@ public final class NavigationBarComponent: Component {
         }
 
         public func navigationButtonContextContainer(sourceView: UIView) -> ContextExtractableContainer? {
+            if self.inPlaceCapsules.contains(where: { $0.lentGlass != nil }) {
+                // A context menu extracts a pill's own glass: a merge in progress ends first.
+                self.finishInPlaceAnimations()
+            }
             if let leftButtonsBackgroundContainer = self.leftButtonsBackgroundContainer, sourceView.isDescendant(of: leftButtonsBackgroundContainer) {
                 return leftButtonsBackgroundContainer
             }
-            if let rightButtonsBackgroundContainer = self.rightButtonsBackgroundContainer, sourceView.isDescendant(of: rightButtonsBackgroundContainer) {
-                return rightButtonsBackgroundContainer
-            }
-            if let rightCircleBackgroundContainer = self.rightCircleBackgroundContainer, sourceView.isDescendant(of: rightCircleBackgroundContainer) {
-                return rightCircleBackgroundContainer
+            for container in self.rightBackgroundContainers where sourceView.isDescendant(of: container) {
+                return container
             }
             if let columnButtonsBackgroundContainer = self.columnButtonsBackgroundContainer, sourceView.isDescendant(of: columnButtonsBackgroundContainer) {
                 return columnButtonsBackgroundContainer
@@ -419,9 +422,7 @@ public final class NavigationBarComponent: Component {
                     if event.flatMap({ $0.type == .touches }) ?? true {
                         if let left = self.leftButtonsBackgroundContainer, result.isDescendant(of: left) {
                             self.beginPressSampling()
-                        } else if let right = self.rightButtonsBackgroundContainer, result.isDescendant(of: right) {
-                            self.beginPressSampling()
-                        } else if let circle = self.rightCircleBackgroundContainer, result.isDescendant(of: circle) {
+                        } else if self.rightBackgroundContainers.contains(where: { result.isDescendant(of: $0) }) {
                             self.beginPressSampling()
                         }
                     }
@@ -453,16 +454,23 @@ public final class NavigationBarComponent: Component {
             // mode) animates as iOS 27's glass does, on the bar's own capsules: see `startInPlaceChange`.
             // A badge is not an item change: the back button animates its own.
             var inPlaceLeft = false
-            var inPlaceRight = false
-            var inPlaceCircle = false
+            var inPlaceRight = Set<Int>()
+            // Whether a right pill comes or goes in place, merging with its neighbour.
+            var inPlaceRightPillCountChanges = false
             if let previousPrimary = previousComponent?.primaryContent, let primary = component.primaryContent, component.secondaryContent == nil, previousComponent?.secondaryContent == nil, component.sideColumnLength == nil, previousComponent?.sideColumnLength == nil, !self.plattersDetached {
                 if !transition.animation.isImmediate {
                     inPlaceLeft = previousPrimary.back != primary.back || navigationBarCapsuleItemsDiffer(previousPrimary.leftButton.map { [$0] } ?? [], primary.leftButton.map { [$0] } ?? [])
-                    // UIKit's sections: the capsule's items and the circle's item change apart.
-                    let previousPlacement = navigationBarButtonPlacement(leftButton: previousPrimary.leftButton, rightButtons: previousPrimary.rightButtons, hasBack: previousPrimary.back != nil, columnLength: nil)
-                    let placement = navigationBarButtonPlacement(leftButton: primary.leftButton, rightButtons: primary.rightButtons, hasBack: primary.back != nil, columnLength: nil)
-                    inPlaceRight = navigationBarCapsuleItemsDiffer(previousPlacement.rowRightButtons, placement.rowRightButtons)
-                    inPlaceCircle = navigationBarCapsuleItemsDiffer(previousPlacement.rowCircleItem.map { [$0] } ?? [], placement.rowCircleItem.map { [$0] } ?? [])
+                    // UIKit's sections change apart, compared by index from the edge.
+                    let previousSections = navigationBarButtonPlacement(leftButton: previousPrimary.leftButton, rightButtons: previousPrimary.rightButtons, hasBack: previousPrimary.back != nil, columnLength: nil).rowRightSections
+                    let sections = navigationBarButtonPlacement(leftButton: primary.leftButton, rightButtons: primary.rightButtons, hasBack: primary.back != nil, columnLength: nil).rowRightSections
+                    inPlaceRightPillCountChanges = previousSections.count != sections.count
+                    for index in 0 ..< max(previousSections.count, sections.count) {
+                        let previous = index < previousSections.count ? previousSections[index] : []
+                        let current = index < sections.count ? sections[index] : []
+                        if navigationBarCapsuleItemsDiffer(previous, current) {
+                            inPlaceRight.insert(index)
+                        }
+                    }
                 }
             } else {
                 // Another kind of change (a secondary content, iPhone Duo's column) lays the capsules out.
@@ -470,10 +478,33 @@ public final class NavigationBarComponent: Component {
             }
             // The items leaving, as they are now.
             let leavingLeft = inPlaceLeft ? self.inPlaceLeavingItems(slot: .left) : nil
-            let leavingRight = inPlaceRight ? self.inPlaceLeavingItems(slot: .right) : nil
-            let leavingCircle = inPlaceCircle ? self.inPlaceLeavingItems(slot: .rightCircle) : nil
+            var leavingRight: [Int: NavigationBarInPlaceCapsule.Items] = [:]
+            for index in inPlaceRight {
+                leavingRight[index] = self.inPlaceLeavingItems(slot: .right(index))
+            }
             // The items swap at once inside their capsules, which animate the change (`startInPlaceChange`).
-            let itemsTransition: ComponentTransition = (inPlaceLeft || inPlaceRight || inPlaceCircle) ? .immediate : transition
+            let itemsTransition: ComponentTransition = (inPlaceLeft || !inPlaceRight.isEmpty) ? .immediate : transition
+            self.inPlacePressAtChange = Dictionary(([self.leftButtonsBackgroundContainer].compactMap { $0 } + self.rightBackgroundContainers).map { (ObjectIdentifier($0), navigationBarCapsulePress($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            self.inPlaceTintByHand = inPlaceRightPillCountChanges && self.glassMergesShapes() && !self.inPlaceReduceMotion()
+            // A glass UIKit is pressing keeps its own edge inside a merged shape, so in a layout where pills merge a pressed
+            // pill's glass is renewed before the layout touches it; the merge carries the press's scale on
+            // (`lendInPlaceGlass`).
+            if self.inPlaceTintByHand {
+                for container in self.rightBackgroundContainers where self.inPlacePressAtChange[ObjectIdentifier(container)]?.isPressed == true {
+                    container.renewGlass()
+                }
+            }
+            defer {
+                self.inPlacePressAtChange = [:]
+                self.inPlaceTintByHand = false
+            }
+            // Where each right pill is now and its tint, for a pill that grows out of one of them.
+            let previousRightPills: [(frame: CGRect, tint: NavigationBarComponent.Button.Tint)?] = self.rightPills.map { pill in
+                guard let background = pill.background else {
+                    return nil
+                }
+                return (self.inPlaceCapsule(for: background)?.frame(at: self.inPlaceTime) ?? background.frame, pill.appliedTint)
+            }
 
             var primaryContentTransition = transition
             if let primaryContent = component.primaryContent {
@@ -491,8 +522,6 @@ public final class NavigationBarComponent: Component {
                     self.primaryContentView = primaryContentView
                     self.insertSubview(primaryContentView, belowSubview: self.underButtonsView)
                     self.leftButtonsContainer.addSubview(primaryContentView.leftButtonsContainer)
-                    self.rightButtonsContainer.addSubview(primaryContentView.rightButtonsContainer)
-                    self.rightCircleContainer.addSubview(primaryContentView.rightCircleContainer)
                     self.columnBackContainer.addSubview(primaryContentView.columnBackContainer)
                     self.columnButtonsContainer.addSubview(primaryContentView.columnButtonsContainer)
                     self.columnTrailingContainer.addSubview(primaryContentView.columnTrailingContainer)
@@ -504,8 +533,9 @@ public final class NavigationBarComponent: Component {
                 self.primaryContentView = nil
                 primaryContentView.removeFromSuperview()
                 primaryContentView.leftButtonsContainer.removeFromSuperview()
-                primaryContentView.rightButtonsContainer.removeFromSuperview()
-                primaryContentView.rightCircleContainer.removeFromSuperview()
+                for container in primaryContentView.rightPillContainers {
+                    container.removeFromSuperview()
+                }
                 primaryContentView.columnBackContainer.removeFromSuperview()
                 primaryContentView.columnButtonsContainer.removeFromSuperview()
                 primaryContentView.columnTrailingContainer.removeFromSuperview()
@@ -534,8 +564,6 @@ public final class NavigationBarComponent: Component {
                         self.insertSubview(secondaryContentView, belowSubview: self.underButtonsView)
                     }
                     self.leftButtonsContainer.addSubview(secondaryContentView.leftButtonsContainer)
-                    self.rightButtonsContainer.addSubview(secondaryContentView.rightButtonsContainer)
-                    self.rightCircleContainer.addSubview(secondaryContentView.rightCircleContainer)
                     self.columnBackContainer.addSubview(secondaryContentView.columnBackContainer)
                     self.columnButtonsContainer.addSubview(secondaryContentView.columnButtonsContainer)
                     self.columnTrailingContainer.addSubview(secondaryContentView.columnTrailingContainer)
@@ -560,8 +588,9 @@ public final class NavigationBarComponent: Component {
                     primaryContentView.updateTransitionAsPrevious(width: availableSize.width, fraction: 0.0, transition: transition, completion: {})
                     secondaryContentView.updateTransitionAsNext(fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
                         secondaryContentView?.leftButtonsContainer.removeFromSuperview()
-                        secondaryContentView?.rightButtonsContainer.removeFromSuperview()
-                        secondaryContentView?.rightCircleContainer.removeFromSuperview()
+                        for container in secondaryContentView?.rightPillContainers ?? [] {
+                            container.removeFromSuperview()
+                        }
                         secondaryContentView?.columnBackContainer.removeFromSuperview()
                         secondaryContentView?.columnButtonsContainer.removeFromSuperview()
                         secondaryContentView?.columnTrailingContainer.removeFromSuperview()
@@ -569,8 +598,9 @@ public final class NavigationBarComponent: Component {
                     })
                 } else {
                     secondaryContentView.leftButtonsContainer.removeFromSuperview()
-                    secondaryContentView.rightButtonsContainer.removeFromSuperview()
-                    secondaryContentView.rightCircleContainer.removeFromSuperview()
+                    for container in secondaryContentView.rightPillContainers {
+                        container.removeFromSuperview()
+                    }
                     secondaryContentView.columnBackContainer.removeFromSuperview()
                     secondaryContentView.columnButtonsContainer.removeFromSuperview()
                     secondaryContentView.columnTrailingContainer.removeFromSuperview()
@@ -581,44 +611,18 @@ public final class NavigationBarComponent: Component {
             // From here to the end of the function: `ChatListHeaderComponent.swift:1341-1439` at c8b4277abe, copied
             // verbatim (component.theme.overallDarkAppearance now reads NavigationBarTheme's field of the same name).
             var leftButtonsEffectiveWidth: CGFloat = 0.0
-            var rightButtonsEffectiveWidth: CGFloat = 0.0
-            // The accent circle outermost on the right, and how far in it takes the capsule (circle and UIKit's gap).
-            var rightCircleEffectiveWidth: CGFloat = 0.0
-            var rightCircleEffectiveExtent: CGFloat = 0.0
             if let primaryContentView = self.primaryContentView, let secondaryContentView = self.secondaryContentView {
 
                 leftButtonsEffectiveWidth = primaryContentView.leftButtonsWidth * (1.0 - component.secondaryTransition) + secondaryContentView.leftButtonsWidth * component.secondaryTransition
-                rightButtonsEffectiveWidth = primaryContentView.rightButtonsWidth * (1.0 - component.secondaryTransition) + secondaryContentView.rightButtonsWidth * component.secondaryTransition
 
                 primaryContentTransition.setFrame(view: primaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.leftButtonsWidth), height: 44.0)))
                 secondaryContentTransition.setFrame(view: secondaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.leftButtonsWidth), height: 44.0)))
 
-                primaryContentTransition.setFrame(view: primaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - primaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.rightButtonsWidth), height: 44.0)))
-
-                if secondaryContentIsAnimatingIn {
-                    secondaryContentView.rightButtonsContainer.frame = CGRect(origin: CGPoint(x: self.rightButtonsContainer.bounds.width - secondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.rightButtonsWidth), height: 44.0))
-                }
-                transition.setFrame(view: secondaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - secondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.rightButtonsWidth), height: 44.0)))
-
-                rightCircleEffectiveWidth = primaryContentView.rightCircleWidth * (1.0 - component.secondaryTransition) + secondaryContentView.rightCircleWidth * component.secondaryTransition
-                rightCircleEffectiveExtent = navigationBarRightCircleExtent(primaryContentView.rightCircleWidth) * (1.0 - component.secondaryTransition) + navigationBarRightCircleExtent(secondaryContentView.rightCircleWidth) * component.secondaryTransition
-                primaryContentTransition.setFrame(view: primaryContentView.rightCircleContainer, frame: CGRect(x: rightCircleEffectiveWidth - primaryContentView.rightCircleWidth, y: 0.0, width: primaryContentView.rightCircleWidth, height: 44.0))
-                transition.setFrame(view: secondaryContentView.rightCircleContainer, frame: CGRect(x: rightCircleEffectiveWidth - secondaryContentView.rightCircleWidth, y: 0.0, width: secondaryContentView.rightCircleWidth, height: 44.0))
             } else if let primaryContentView = self.primaryContentView {
                 leftButtonsEffectiveWidth = primaryContentView.leftButtonsWidth
-                rightButtonsEffectiveWidth = primaryContentView.rightButtonsWidth
 
                 let primaryItemsTransition = primaryContentTransition.animation.isImmediate ? primaryContentTransition : itemsTransition
                 primaryItemsTransition.setFrame(view: primaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.leftButtonsWidth), height: 44.0)))
-                primaryItemsTransition.setFrame(view: primaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - primaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.rightButtonsWidth), height: 44.0)))
-
-                rightCircleEffectiveWidth = primaryContentView.rightCircleWidth
-                rightCircleEffectiveExtent = navigationBarRightCircleExtent(primaryContentView.rightCircleWidth)
-                primaryItemsTransition.setFrame(view: primaryContentView.rightCircleContainer, frame: CGRect(x: 0.0, y: 0.0, width: primaryContentView.rightCircleWidth, height: 44.0))
-
-                if let removedSecondaryContentView {
-                    transition.setFrame(view: removedSecondaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - removedSecondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, removedSecondaryContentView.rightButtonsWidth), height: 44.0)))
-                }
             }
 
             var visibleContentViews: [NavigationBarContentView] = []
@@ -629,10 +633,8 @@ public final class NavigationBarComponent: Component {
                 visibleContentViews.append(secondaryContentView)
             }
             let leftButtonCount = visibleContentViews.reduce(0, { $0 + $1.leftButtonCount })
-            let rightButtonCount = visibleContentViews.reduce(0, { $0 + $1.rightButtonCount })
 
             let leftCapsuleTintColor = navigationBarGlassTintColor(self.effectiveContentView?.leftCapsuleTint ?? .generic, theme: component.theme)
-            let rightCapsuleTintColor = navigationBarGlassTintColor(self.effectiveContentView?.rightCapsuleTint ?? .generic, theme: component.theme)
 
             if leftButtonsEffectiveWidth != 0.0 {
                 let leftButtonsBackgroundContainer: GlassContextExtractableContainer
@@ -675,98 +677,151 @@ public final class NavigationBarComponent: Component {
                 }
             }
 
-            if rightButtonsEffectiveWidth != 0.0 {
-                let rightButtonsBackgroundContainer: GlassContextExtractableContainer
-                var rightButtonsBackgroundContainerTransition = transition
-                var isNewCapsule = false
-                
-                let rightEdge = availableSize.width - component.rightInset - component.trailingButtonsInset
-                let rightButtonsContainerFrame = CGRect(origin: CGPoint(x: rightEdge - rightCircleEffectiveExtent - max(44.0, rightButtonsEffectiveWidth), y: 0.0), size: CGSize(width: max(44.0, rightButtonsEffectiveWidth), height: 44.0))
-                
-                if let current = self.rightButtonsBackgroundContainer {
-                    rightButtonsBackgroundContainer = current
-                } else {
-                    isNewCapsule = true
-                    rightButtonsBackgroundContainerTransition = rightButtonsBackgroundContainerTransition.withAnimation(.none)
-                    rightButtonsBackgroundContainer = GlassContextExtractableContainer()
-                    self.rightButtonsBackgroundContainer = rightButtonsBackgroundContainer
-                    self.addSubview(rightButtonsBackgroundContainer)
-                    rightButtonsBackgroundContainer.contentView.addSubview(self.rightButtonsContainer)
-                    
-                    rightButtonsBackgroundContainer.update(size: rightButtonsContainerFrame.size, cornerRadius: rightButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCapsuleTintColor, isInteractive: true, isVisible: false, transition: .immediate)
-                }
-                if inPlaceRight {
-                    self.startInPlaceChange(container: rightButtonsBackgroundContainer, slot: .right, isNew: isNewCapsule, frame: rightButtonsContainerFrame, tintColor: rightCapsuleTintColor, isDark: component.theme.overallDarkAppearance, leaving: leavingRight)
-                } else if let inPlace = self.inPlaceCapsule(for: rightButtonsBackgroundContainer) {
-                    self.retargetInPlace(inPlace, frame: rightButtonsContainerFrame, tintColor: rightCapsuleTintColor, isDark: component.theme.overallDarkAppearance, transition: transition)
-                } else {
-                    rightButtonsBackgroundContainerTransition.setFrame(view: rightButtonsBackgroundContainer, frame: rightButtonsContainerFrame)
-                    rightButtonsBackgroundContainer.update(size: rightButtonsContainerFrame.size, cornerRadius: rightButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCapsuleTintColor, isInteractive: true, transition: transition)
-                    rightButtonsBackgroundContainerTransition.setFrame(view: self.rightButtonsContainer, frame: CGRect(origin: CGPoint(), size: rightButtonsContainerFrame.size))
-                }
-                rightButtonsBackgroundContainer.morphsIntoContextMenu = rightButtonCount == 1
+            // The right pills. While two contents slide (an inline forum over Chats) their pills are paired from the
+            // inner end, so today's slide is kept (spec, structure).
+            let primaryPills = self.primaryContentView.map { navigationBarRightPillMetrics(widths: $0.rightPillWidths) } ?? []
+            let secondaryPills = self.secondaryContentView.map { navigationBarRightPillMetrics(widths: $0.rightPillWidths) }
+            let rightPillMetrics: [NavigationBarRightPillMetrics]
+            let rightPillSlots: [(primary: Int?, secondary: Int?)]
+            if let secondaryPills {
+                rightPillMetrics = navigationBarInterpolatedRightPills(primary: primaryPills, secondary: secondaryPills, fraction: component.secondaryTransition)
+                rightPillSlots = navigationBarRightPillSlots(primaryCount: primaryPills.count, secondaryCount: secondaryPills.count)
             } else {
-                if let rightButtonsBackgroundContainer = self.rightButtonsBackgroundContainer {
-                    self.rightButtonsBackgroundContainer = nil
-                    if inPlaceRight {
-                        self.startInPlaceRemoval(container: rightButtonsBackgroundContainer, slot: .right, tintColor: rightCapsuleTintColor, isDark: component.theme.overallDarkAppearance, leaving: leavingRight)
-                    } else {
-                        rightButtonsBackgroundContainer.update(size: rightButtonsBackgroundContainer.bounds.size, cornerRadius: rightButtonsBackgroundContainer.bounds.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCapsuleTintColor, isInteractive: true, isVisible: false, transition: transition)
-                        transition.attachAnimation(view: rightButtonsBackgroundContainer, id: "remove", completion: { [weak rightButtonsBackgroundContainer] _ in
-                            rightButtonsBackgroundContainer?.removeFromSuperview()
-                        })
+                rightPillMetrics = primaryPills
+                rightPillSlots = primaryPills.indices.map { ($0, nil) }
+            }
+            let rightEdge = availableSize.width - component.rightInset - component.trailingButtonsInset
+            let isDark = component.theme.overallDarkAppearance
+            var outerExtent: CGFloat = 0.0
+            var rightPillTargets: [(slot: Int, frame: CGRect, tint: NavigationBarComponent.Button.Tint)] = []
+            for (slot, metrics) in rightPillMetrics.enumerated() {
+                let pill = self.rightPill(at: slot)
+                let frame = CGRect(x: rightEdge - outerExtent - metrics.width, y: 0.0, width: metrics.width, height: 44.0)
+                outerExtent += metrics.extent
+                let owners = rightPillSlots[slot]
+
+                // Each content's items for this pill, right-aligned in it.
+                var buttonCount = 0
+                var primaryWeight: CGFloat = 0.0
+                var secondaryWeight: CGFloat = 0.0
+                var primaryTint: NavigationBarComponent.Button.Tint = .generic
+                var secondaryTint: NavigationBarComponent.Button.Tint = .generic
+                if let index = owners.primary, let contentView = self.primaryContentView {
+                    let container = contentView.rightPillContainer(at: index)
+                    if container.superview !== pill.itemsContainer {
+                        pill.itemsContainer.addSubview(container)
                     }
+                    let width = contentView.rightPillWidths[index]
+                    let itemsFrame = CGRect(x: metrics.width - width, y: 0.0, width: width, height: 44.0)
+                    if secondaryPills == nil {
+                        (primaryContentTransition.animation.isImmediate ? primaryContentTransition : itemsTransition).setFrame(view: container, frame: itemsFrame)
+                    } else {
+                        primaryContentTransition.setFrame(view: container, frame: itemsFrame)
+                    }
+                    if self.secondaryContentView == nil || component.secondaryTransition < 1.0 {
+                        buttonCount += contentView.rightPillButtonCounts[index]
+                    }
+                    primaryWeight = width * (secondaryPills == nil ? 1.0 : 1.0 - component.secondaryTransition)
+                    primaryTint = contentView.rightPillTints[index]
                 }
+                if let index = owners.secondary, let contentView = self.secondaryContentView {
+                    let container = contentView.rightPillContainer(at: index)
+                    let width = contentView.rightPillWidths[index]
+                    let itemsFrame = CGRect(x: metrics.width - width, y: 0.0, width: width, height: 44.0)
+                    if container.superview !== pill.itemsContainer {
+                        pill.itemsContainer.addSubview(container)
+                        container.frame = itemsFrame
+                    }
+                    if secondaryContentIsAnimatingIn {
+                        container.frame = CGRect(x: pill.itemsContainer.bounds.width - width, y: 0.0, width: width, height: 44.0)
+                    }
+                    transition.setFrame(view: container, frame: itemsFrame)
+                    if component.secondaryTransition > 0.0 {
+                        buttonCount += contentView.rightPillButtonCounts[index]
+                    }
+                    secondaryWeight = width * component.secondaryTransition
+                    secondaryTint = contentView.rightPillTints[index]
+                }
+                // The tint of the content the pill mostly belongs to (a forum sliding over Chats has no compose circle,
+                // so Chats' keeps its accent glass while it narrows).
+                let tint = secondaryWeight > primaryWeight ? secondaryTint : primaryTint
+                pill.appliedTint = tint
+                let tintColor = navigationBarGlassTintColor(tint, theme: component.theme)
+
+                guard metrics.width != 0.0 else {
+                    self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], partner: nil, tintColor: tintColor, isDark: isDark, transition: transition)
+                    continue
+                }
+                rightPillTargets.append((slot, frame, tint))
+                let background: GlassContextExtractableContainer
+                var backgroundTransition = transition
+                var isNew = false
+                // A pill that was leaving and comes back is the same pill, as SwiftUI's resolver reuses a removed entry.
+                let returning = pill.background == nil && inPlaceRight.contains(slot) && !self.inPlaceReduceMotion() ? self.inPlaceCapsules.first(where: { $0.slot == .right(slot) && $0.isRemoved && $0.matched?.partner != nil }) : nil
+                if let current = pill.background {
+                    background = current
+                } else if let returning, let partner = returning.matched?.partner {
+                    background = returning.container
+                    pill.background = background
+                    if pill.itemsContainer.superview !== background.contentView {
+                        background.contentView.addSubview(pill.itemsContainer)
+                    }
+                    let partnerFrame = self.inPlaceCapsule(for: partner)?.frame(at: self.inPlaceTime) ?? partner.frame
+                    let partnerTint = self.rightPills.first(where: { $0.background === partner }).map { navigationBarGlassTintColor($0.appliedTint, theme: component.theme) } ?? tintColor
+                    self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, source: returning.frame(at: self.inPlaceTime), partner: partner, partnerFrame: partnerFrame, partnerTintColor: partnerTint, tintColor: tintColor, isDark: isDark, leaving: nil)
+                    background.morphsIntoContextMenu = buttonCount == 1
+                    continue
+                } else {
+                    isNew = true
+                    backgroundTransition = backgroundTransition.withAnimation(.none)
+                    background = GlassContextExtractableContainer()
+                    pill.background = background
+                    self.addSubview(background)
+                    background.contentView.addSubview(pill.itemsContainer)
+                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
+                }
+                // A pill that comes grows out of the nearest previous pill nearer the edge (UIKit's sections are
+                // contiguous, so that is every one).
+                let previousPartners: [(slot: Int, frame: CGRect, tint: NavigationBarComponent.Button.Tint)] = previousRightPills.enumerated().compactMap { index, previous in
+                    guard let previous, index < slot else {
+                        return nil
+                    }
+                    return (index, previous.frame, previous.tint)
+                }
+                if isNew, inPlaceRight.contains(slot), !self.inPlaceReduceMotion(), let nearest = navigationBarNearestPartner(of: frame, among: previousPartners.map(\.frame)), let partner = self.rightPillBackgroundContainer(at: previousPartners[nearest].slot) {
+                    self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, partner: partner, partnerFrame: previousPartners[nearest].frame, partnerTintColor: navigationBarGlassTintColor(previousPartners[nearest].tint, theme: component.theme), tintColor: tintColor, isDark: isDark, leaving: nil)
+                } else if inPlaceRight.contains(slot) {
+                    self.startInPlaceChange(container: background, slot: .right(slot), isNew: isNew, frame: frame, tintColor: tintColor, isDark: isDark, leaving: leavingRight[slot])
+                } else if let inPlace = self.inPlaceCapsule(for: background) {
+                    self.retargetInPlace(inPlace, frame: frame, tintColor: tintColor, isDark: isDark, transition: transition)
+                } else {
+                    backgroundTransition.setFrame(view: background, frame: frame)
+                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
+                    backgroundTransition.setFrame(view: pill.itemsContainer, frame: CGRect(origin: CGPoint(), size: frame.size))
+                }
+                background.morphsIntoContextMenu = buttonCount == 1
             }
-            
-            // The circle's tint is its owner's: the content whose circle it mostly is (a forum sliding over Chats has no
-            // circle, so Chats' compose circle keeps its accent glass while it narrows).
-            let rightCircleTint: NavigationBarComponent.Button.Tint
-            if let primaryContentView = self.primaryContentView, let secondaryContentView = self.secondaryContentView {
-                let secondaryWeight = secondaryContentView.rightCircleWidth * component.secondaryTransition
-                let primaryWeight = primaryContentView.rightCircleWidth * (1.0 - component.secondaryTransition)
-                rightCircleTint = secondaryWeight > primaryWeight ? secondaryContentView.rightCircleTint : primaryContentView.rightCircleTint
-            } else {
-                rightCircleTint = self.effectiveContentView?.rightCircleTint ?? .generic
+            // Pills the row no longer has.
+            for slot in rightPillMetrics.count ..< self.rightPills.count {
+                let pill = self.rightPills[slot]
+                // A pill that goes collapses into the nearest remaining pill nearer the edge.
+                var partner: (container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor)?
+                let ownFrame = slot < previousRightPills.count ? previousRightPills[slot]?.frame : nil
+                let candidates = rightPillTargets.filter { $0.slot < slot }
+                if let ownFrame, !self.inPlaceReduceMotion(), let nearest = navigationBarNearestPartner(of: ownFrame, among: candidates.map(\.frame)), let container = self.rightPillBackgroundContainer(at: candidates[nearest].slot) {
+                    partner = (container, candidates[nearest].frame, navigationBarGlassTintColor(candidates[nearest].tint, theme: component.theme))
+                }
+                self.removeRightPillGlass(pill, slot: slot, inPlace: inPlaceRight.contains(slot), leaving: leavingRight[slot], partner: partner, tintColor: navigationBarGlassTintColor(pill.appliedTint, theme: component.theme), isDark: isDark, transition: transition)
             }
-            self.appliedRightCircleTint = rightCircleTint
-            let rightCircleTintColor = navigationBarGlassTintColor(rightCircleTint, theme: component.theme)
-            if rightCircleEffectiveWidth != 0.0 {
-                let rightEdge = availableSize.width - component.rightInset - component.trailingButtonsInset
-                let circleFrame = CGRect(x: rightEdge - rightCircleEffectiveWidth, y: 0.0, width: rightCircleEffectiveWidth, height: 44.0)
-                let circleContainer: GlassContextExtractableContainer
-                var circleTransition = transition
-                var isNewCircle = false
-                if let current = self.rightCircleBackgroundContainer {
-                    circleContainer = current
-                } else {
-                    isNewCircle = true
-                    circleTransition = circleTransition.withAnimation(.none)
-                    circleContainer = GlassContextExtractableContainer()
-                    self.rightCircleBackgroundContainer = circleContainer
-                    self.addSubview(circleContainer)
-                    circleContainer.contentView.addSubview(self.rightCircleContainer)
-                    circleContainer.update(size: circleFrame.size, cornerRadius: circleFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCircleTintColor, isInteractive: true, isVisible: false, transition: .immediate)
-                }
-                if inPlaceCircle {
-                    self.startInPlaceChange(container: circleContainer, slot: .rightCircle, isNew: isNewCircle, frame: circleFrame, tintColor: rightCircleTintColor, isDark: component.theme.overallDarkAppearance, leaving: leavingCircle)
-                } else if let inPlace = self.inPlaceCapsule(for: circleContainer) {
-                    self.retargetInPlace(inPlace, frame: circleFrame, tintColor: rightCircleTintColor, isDark: component.theme.overallDarkAppearance, transition: transition)
-                } else {
-                    circleTransition.setFrame(view: circleContainer, frame: circleFrame)
-                    circleContainer.update(size: circleFrame.size, cornerRadius: circleFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCircleTintColor, isInteractive: true, transition: transition)
-                    circleTransition.setFrame(view: self.rightCircleContainer, frame: CGRect(origin: CGPoint(), size: circleFrame.size))
-                }
-                circleContainer.morphsIntoContextMenu = true
-            } else if let circleContainer = self.rightCircleBackgroundContainer {
-                self.rightCircleBackgroundContainer = nil
-                if inPlaceCircle {
-                    self.startInPlaceRemoval(container: circleContainer, slot: .rightCircle, tintColor: rightCircleTintColor, isDark: component.theme.overallDarkAppearance, leaving: leavingCircle)
-                } else {
-                    circleContainer.update(size: circleContainer.bounds.size, cornerRadius: circleContainer.bounds.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: rightCircleTintColor, isInteractive: true, isVisible: false, transition: transition)
-                    transition.attachAnimation(view: circleContainer, id: "remove", completion: { [weak circleContainer] _ in
-                        circleContainer?.removeFromSuperview()
-                    })
+            // A pill going into its partner heads for where the partner is now (a relayout mid-merge moves it).
+            self.followInPlacePartners(barSize: availableSize, isDark: isDark)
+            // A secondary content sliding out: its items fade where they are, right-aligned in the pill they leave.
+            if let removedSecondaryContentView {
+                for (index, container) in removedSecondaryContentView.rightPillContainers.enumerated() where index < removedSecondaryContentView.rightPillWidths.count {
+                    if let slot = self.rightPills.firstIndex(where: { $0.itemsContainer === container.superview }), slot < rightPillMetrics.count {
+                        let width = removedSecondaryContentView.rightPillWidths[index]
+                        transition.setFrame(view: container, frame: CGRect(x: rightPillMetrics[slot].width - width, y: 0.0, width: width, height: 44.0))
+                    }
                 }
             }
 
@@ -777,6 +832,24 @@ public final class NavigationBarComponent: Component {
             }
             
             return availableSize
+        }
+
+        /// A right pill's glass goes: dematerializing in place for an in-place change, else fading out with the layout.
+        private func removeRightPillGlass(_ pill: NavigationBarRightPill, slot: Int, inPlace: Bool, leaving: NavigationBarInPlaceCapsule.Items?, partner: (container: GlassContextExtractableContainer, frame: CGRect, tintColor: GlassBackgroundView.TintColor)?, tintColor: GlassBackgroundView.TintColor, isDark: Bool, transition: ComponentTransition) {
+            guard let background = pill.background else {
+                return
+            }
+            pill.background = nil
+            if inPlace, let partner {
+                self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: true, frame: background.frame, partner: partner.container, partnerFrame: partner.frame, partnerTintColor: partner.tintColor, tintColor: tintColor, isDark: isDark, leaving: leaving)
+            } else if inPlace {
+                self.startInPlaceRemoval(container: background, slot: .right(slot), tintColor: tintColor, isDark: isDark, leaving: leaving)
+            } else {
+                background.update(size: background.bounds.size, cornerRadius: background.bounds.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: transition)
+                transition.attachAnimation(view: background, id: "remove", completion: { [weak background] _ in
+                    background?.removeFromSuperview()
+                })
+            }
         }
 
         /// Lays out the side column from the contents' column layouts: crossfading contents (a forum
