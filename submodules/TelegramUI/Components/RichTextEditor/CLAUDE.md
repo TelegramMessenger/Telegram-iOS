@@ -182,7 +182,8 @@ analog), no loupe, no inline predictions — everything else (editing, tables, l
 IME, edit menu) works. Full SwiftPM suite is green on both engines (TK1 via the DEBUG `forceTextKit1`). The
 app-side consumers (`RichTextEditorChatInputNode`, `RichTextAttachmentScreen` + its helpers,
 `StandaloneInstantPageImageView`) are also lowered to iOS 13; the editor is the native chat-composer backend,
-**opted into** via the `forceNewTextInput` ("Force Text Field v2") experimental flag. By default the composer is a
+native from the start with `ios_rich_input_mode = 1` or the `useInputDecEngine` experimental flag (which also selects
+the engine editor; "Force Text Field v2", `forceNewTextInput`, was removed 2026-10-15). By default the composer is a
 dual-field switch — the legacy input, latching to the native editor only when content becomes legacy-non-representable
 (`ChatTextInputPanelNode`; `ios_rich_input_mode` server flag). (Inverted the earlier default + `forceLegacyTextInput` opt-out.)
 
@@ -1114,7 +1115,7 @@ flagged). Full Bazel build green; SwiftPM suite green (1392, incl. `NativeTextCh
 in-app:** grammar checking did NOT fire in the unit-test host (OS-grammar-service-dependent/async), and corrections
 are keyboard-driven — both are ready infrastructure, to confirm **on-device**. Also **the sim test account's chat
 composer is the LEGACY `UITextView` input** (RTE not active there), so there is no in-composer visual confirmation
-yet — verify via an RTE-active composer (`forceNewTextInput` ON — Debug Settings ▸ "Force Text Field v2") or the attachment editor.
+yet — verify via an RTE-active composer (`ios_rich_input_mode = 1`, or content the legacy field cannot hold) or the attachment editor.
 
 - **Exclusions** (`isExcludedSpellRange`, applied in `clampedSpellRegionLocal`): a flagged range overlapping a `.link` / `.rtInlineCode` / **`.rtSpoiler`**
   run, the active IME `markedRange` (clamped to the region), or the caret's in-progress word is dropped. Emoji/
@@ -2805,7 +2806,7 @@ free; raw enum value appended, optional Codable back-compat), threaded through `
 (both directions) and BOTH `Document→InstantPage` builders (`ChatInputContentInstantPage` for the composer +
 `RichTextEditorMessageConversion/InstantPageBuilder` for the attachment-screen send) into `InstantPageListItem.checked`.
 Recipient checkboxes are display-only/static; the SENDER can re-edit (falls out of the reverse bridge). No
-strikethrough on checked text (matches the InstantPage rendering). Active when the native composer is (opt-in via `forceNewTextInput`); runtime-verified.
+strikethrough on checked text (matches the InstantPage rendering). Active when the native composer is (`ios_rich_input_mode = 1`, or latched by content); runtime-verified.
 
 **Quote + list combine as a container (added 2026-07-02).** A paragraph can be BOTH `style == .quote` AND a
 list item (`setParagraphStyle`/`setList` never clear each other), i.e. a list *inside* a quote. Two subsystems
@@ -2873,7 +2874,7 @@ the folded preview + a corner expand glyph; `collapseQuoteRun(atIndex:)` folds a
 atom, `expandCollapsedQuote(atIndex:)` restores them — caret relocation on collapse/expand is conditional (only a
 caret that was INSIDE the run moves). Composer round-trip: one flat char + `ChatTextInputTextQuoteAttribute(
 isCollapsed: true)` via `ComposerDocumentBridge`, sent through the InstantPage builder. Available in both hosts
-(the native composer is opt-in via `forceNewTextInput`). Runtime-verified.
+(the native composer: `ios_rich_input_mode = 1`, or latched by content). Runtime-verified.
 
 **Collapsed-quote atom — caret/nav/delete invariants (compiler-invisible, device-log-verified).** The collapsed
 quote behaves like a caption-less media atom: it owns NO leaf region (`leafRegions() == []`), so it routes through

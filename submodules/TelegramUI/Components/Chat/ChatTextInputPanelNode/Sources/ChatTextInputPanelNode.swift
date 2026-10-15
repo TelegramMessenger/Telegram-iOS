@@ -277,10 +277,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var enableBounceAnimations: Bool = false
     // Rich-input configuration from the server flag `ios_rich_input_mode` (Double): 0 / absent (default) is the
     // dual-field switch — the composer defaults to the legacy field and latches to native only when content
-    // becomes legacy-non-representable; 1 is always-native; 2 is legacy-only. The `forceNewTextInput` experimental
-    // flag (Debug Settings ▸ "Force Text Field v2") forces always-native regardless of `ios_rich_input_mode`.
-    // `enableRichTextInput` = native is permitted at all (false only in legacy-only mode);
-    // `alwaysUseNativeInput` = native from the start (mode 1 or `forceNewTextInput`). See `desiredUseNative(for:)`.
+    // becomes legacy-non-representable; 1 is always-native; 2 is legacy-only. The `useInputDecEngine` experimental
+    // flag (Debug Settings ▸ "Text Field v2: InputDec ENGINE editor") forces always-native regardless of
+    // `ios_rich_input_mode`. `enableRichTextInput` = native is permitted at all (false only in legacy-only mode);
+    // `alwaysUseNativeInput` = native from the start (mode 1 or `useInputDecEngine`). See `desiredUseNative(for:)`.
     private var enableRichTextInput: Bool = false
     private var alwaysUseNativeInput: Bool = false
     // Which input backend a NATIVE composer is built for — orthogonal to the two flags above, which
@@ -288,7 +288,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     // "Text Field v2: InputDec backend" (`inputDecTextBackend`) selects `.inputDecIfSupported`, which
     // itself falls back to legacy on a runtime the InputDec backend cannot drive.
     private var richTextInputBackendPreference: RichTextEditorInputBackendPreference = .legacy
-    /// Debug Settings ▸ "Use InputDec Engine (Experimental)". Selects the engine-backed editor
+    /// Debug Settings ▸ "Text Field v2: InputDec ENGINE editor". Selects the engine-backed editor
     /// rather than a backend of the legacy one — a different type, read once at panel setup.
     private var useInputDecEngineEditor: Bool = false
     
@@ -810,8 +810,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }*/
         
         // `ios_rich_input_mode` (Double): 0 / absent = dual-field switch (legacy default, latch to native on
-        // non-representable content); 1 = always native; 2 = legacy only. The `forceNewTextInput` experimental
-        // flag (Debug Settings ▸ "Force Text Field v2") forces always-native (enableRichTextInput + alwaysUseNativeInput).
+        // non-representable content); 1 = always native; 2 = legacy only. The `useInputDecEngine` experimental
+        // flag, below, forces always-native (enableRichTextInput + alwaysUseNativeInput) with the engine editor.
         self.enableRichTextInput = true
         self.alwaysUseNativeInput = false
         if let data = self.context?.currentAppConfiguration.with({ $0 }).data, let mode = data["ios_rich_input_mode"] as? Double {
@@ -820,10 +820,6 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else if mode == 2.0 {
                 self.enableRichTextInput = false
             }
-        }
-        if context.sharedContext.immediateExperimentalUISettings.forceNewTextInput {
-            self.enableRichTextInput = true
-            self.alwaysUseNativeInput = true
         }
         if context.sharedContext.immediateExperimentalUISettings.inputDecTextBackend {
             self.richTextInputBackendPreference = .inputDecIfSupported
@@ -1115,7 +1111,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     /// Decide which backend the given content requires. One-way latch: once the native rich-text backend is
     /// active it stays active for the panel's lifetime (never switches back to legacy). Legacy-only mode
     /// (`ios_rich_input_mode == 2`) always uses legacy; always-native mode (`ios_rich_input_mode == 1` or the
-    /// `forceNewTextInput` experimental flag) always uses native; otherwise (dual-field switch) native is used
+    /// `useInputDecEngine` experimental flag) always uses native; otherwise (dual-field switch) native is used
     /// only once the content is not representable in the legacy backend.
     private func desiredUseNative(for content: ChatInputContent) -> Bool {
         if self.richTextInputNode?.usesNativeRichTextEngine == true {

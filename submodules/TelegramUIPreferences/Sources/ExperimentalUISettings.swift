@@ -82,7 +82,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var enablePWA: Bool
     public var forceClearGlass: Bool
     public var debugRipple: Bool
-    public var forceNewTextInput: Bool
     public var useInputDecEngine: Bool
     public var coreListChatBackend: Bool
     public var inputDecTextBackend: Bool
@@ -141,7 +140,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enablePWA: false,
             forceClearGlass: false,
             debugRipple: false,
-            forceNewTextInput: false,
             useInputDecEngine: false,
             coreListChatBackend: false,
             inputDecTextBackend: false,
@@ -200,7 +198,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enablePWA: Bool,
         forceClearGlass: Bool,
         debugRipple: Bool,
-        forceNewTextInput: Bool,
         useInputDecEngine: Bool,
         coreListChatBackend: Bool,
         inputDecTextBackend: Bool,
@@ -257,7 +254,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enablePWA = enablePWA
         self.forceClearGlass = forceClearGlass
         self.debugRipple = debugRipple
-        self.forceNewTextInput = forceNewTextInput
         self.useInputDecEngine = useInputDecEngine
         self.coreListChatBackend = coreListChatBackend
         self.inputDecTextBackend = inputDecTextBackend
@@ -318,7 +314,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enablePWA = try container.decodeIfPresent(Bool.self, forKey: "enablePWA") ?? false
         self.forceClearGlass = try container.decodeIfPresent(Bool.self, forKey: "forceClearGlass") ?? false
         self.debugRipple = try container.decodeIfPresent(Bool.self, forKey: "debugRipple") ?? false
-        self.forceNewTextInput = try container.decodeIfPresent(Bool.self, forKey: "forceNewTextInput") ?? false
         // `?? false` like its neighbours: an existing settings blob predates this key, and a
         // decode failure here would reset every other experimental flag the user has set.
         self.useInputDecEngine = try container.decodeIfPresent(Bool.self, forKey: "useInputDecEngine") ?? false
@@ -381,7 +376,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.enablePWA, forKey: "enablePWA")
         try container.encodeIfPresent(self.forceClearGlass, forKey: "forceClearGlass")
         try container.encodeIfPresent(self.debugRipple, forKey: "debugRipple")
-        try container.encodeIfPresent(self.forceNewTextInput, forKey: "forceNewTextInput")
         try container.encodeIfPresent(self.useInputDecEngine, forKey: "useInputDecEngine")
         try container.encodeIfPresent(self.coreListChatBackend, forKey: "coreListChatBackend")
         try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")

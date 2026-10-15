@@ -730,7 +730,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case fakeGlass(Bool)
     case forceClearGlass(Bool)
     case debugRipple(Bool)
-    case debugRichText(Bool)
     case inputDecTextBackend(Bool)
     case inputDecEngineEditor(Bool)
     case coreListChatBackend(Bool)
@@ -785,9 +784,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .experimentsHeader, .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
+        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .inputDecEngineEditor:
+        case .inputDecTextBackend:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -894,7 +893,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 48
         case .debugRipple:
             return 49
-        case .debugRichText:
+        case .inputDecEngineEditor:
             return 50
         case .browserExperiment:
             return 51
@@ -935,13 +934,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .enableUpdates:
             return 67
         case .inputDecTextBackend:
-            // After `enableUpdates`, where they are appended. ItemList asserts its entries are in
+            // After `enableUpdates`, where it is appended. ItemList asserts its entries are in
             // strictly increasing order (`<`: section, then `sortIndex`, which is the stableId here;
             // ItemListControllerNode.swift), so an id must match the position the entry is appended
             // at, or the list traps at runtime inside its own state closure.
             return 72
-        case .inputDecEngineEditor:
-            return 73
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1398,16 +1395,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.debugRipple = value
-                        return EnginePreferencesEntry(settings)
-                    })
-                }).start()
-            })
-        case let .debugRichText(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Force Text Field v2", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.forceNewTextInput = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -1922,7 +1909,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.fakeGlass(experimentalSettings.fakeGlass))
         entries.append(.forceClearGlass(experimentalSettings.forceClearGlass))
         entries.append(.debugRipple(experimentalSettings.debugRipple))
-        entries.append(.debugRichText(experimentalSettings.forceNewTextInput))
+        entries.append(.inputDecEngineEditor(experimentalSettings.useInputDecEngine))
         #if DEBUG
         entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         #else
@@ -1964,11 +1951,9 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.enableUpdates(experimentalSettings.enableUpdates))
         #if DEBUG
         entries.append(.inputDecTextBackend(experimentalSettings.inputDecTextBackend))
-        entries.append(.inputDecEngineEditor(experimentalSettings.useInputDecEngine))
         #else
         if sharedContext.applicationBindings.appBuildType == .internal {
             entries.append(.inputDecTextBackend(experimentalSettings.inputDecTextBackend))
-            entries.append(.inputDecEngineEditor(experimentalSettings.useInputDecEngine))
         }
         #endif
         
