@@ -777,6 +777,20 @@ public class GalleryController: ViewController, StandalonePresentableController,
     public var useSimpleAnimation: Bool = false
     
     public var navigateToMessageContext: ((EngineMessage) -> Void)?
+
+    public var chatLocation: ChatLocation? {
+        if case let .peerMessagesAtId(_, chatLocation, _, _) = self.source {
+            return chatLocation
+        }
+        return nil
+    }
+
+    public var chatLocationContextHolder: Atomic<ChatLocationContextHolder?>? {
+        if case let .peerMessagesAtId(_, _, _, chatLocationContextHolder) = self.source {
+            return chatLocationContextHolder
+        }
+        return nil
+    }
     
     private var initialOrientation: UIInterfaceOrientation?
     
