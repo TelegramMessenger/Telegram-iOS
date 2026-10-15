@@ -124,7 +124,8 @@ final class NavigationBarInPlaceCapsule {
     /// Its tint's change from `from` toward `tintColor` (0 to 1 on the in-place clock), when the bar cross-fades it frame
     /// by frame (`glassTint(at:)`); nil when UIKit animates it. The bar does where glass merges: UIKit's animated change of
     /// an effect draws a dark band where two merging shapes meet, and goes on doing so when an effect is set over it
-    /// (both probed on iOS 27); an effect set every frame does not.
+    /// (both probed on iOS 27); an effect set every frame does not. It runs on the shapes' transition spring, as native's
+    /// does (`startInPlaceTintFade`).
     var tintFade: (from: GlassBackgroundView.TintColor, fraction: NavigationSpringCurve)?
 
     /// The tint the glass shows at `time` while the bar draws its cross-fade.
@@ -216,9 +217,10 @@ final class NavigationBarInPlaceCapsule {
 }
 
 extension NavigationBarGlassSettings {
-    /// An in-place tint change, as UIKit is handed it. Measured against iOS 27 (a pressed Edit -> checkmark, both
-    /// filmed): the native capsule is fully tinted ~0.13 s after the change starts; UIKit starts drawing our change ~30
-    /// ms late, and a 0.3 s response (the navigation transition's frame-driven cross-fade) took ~0.25 s.
+    /// An in-place tint change UIKit animates (a pill that merges with none). Measured against iOS 27 (a pressed Edit ->
+    /// checkmark, both filmed): the native capsule is fully tinted ~0.13 s after the change starts; UIKit starts drawing
+    /// our change ~30 ms late, and a 0.3 s response (the navigation transition's frame-driven cross-fade) took ~0.25 s.
+    /// Pills that merge fade by hand on the transition spring instead (`startInPlaceTintFade`).
     static let inPlaceTint = NavigationTransitionSpring(dampingRatio: 1.0, response: 0.1)
 
     /// UIKit animates a glass's tint and its appearing and disappearing itself, on the curve of the animation block it
@@ -343,12 +345,16 @@ extension NavigationBarComponent.View {
         self.inPlacePressAtChange[id] = NavigationBarCapsulePress(scale: 1.0, glow: 0.0)
     }
 
-    /// Starts the bar's own cross-fade of `capsule`'s tint to `tintColor`, from what its glass shows now (`tintFade`).
+    /// Starts the bar's own cross-fade of `capsule`'s tint to `tintColor`, from what its glass shows now (`tintFade`), on
+    /// the transition spring the shapes move on: native's merging pills fade so (measured 2026-10-16 at fixed points of
+    /// four reference-app films, Edit <-> Done with and without a tap: white <-> accent in ~0.25 s; the transition spring
+    /// fits all four within 0.012, the best free fit, response 0.404 and damping 0.75, within 0.010). Its overshoot past
+    /// the new tint reads as the new tint (`TintColor.blended`).
     private func startInPlaceTintFade(_ capsule: NavigationBarInPlaceCapsule, to tintColor: GlassBackgroundView.TintColor) {
         let from = capsule.container.glassTintColor ?? tintColor
         capsule.tintFade = nil
         if from != tintColor {
-            capsule.tintFade = (from, NavigationSpringCurve(startTime: self.inPlaceTime, from: 0.0, target: 1.0, spring: NavigationBarGlassSettings.inPlaceTint, rest: .glass(0.001)))
+            capsule.tintFade = (from, NavigationSpringCurve(startTime: self.inPlaceTime, from: 0.0, target: 1.0, spring: self.inPlaceMotion.transition, rest: .glass(0.001)))
         }
     }
 

@@ -1143,6 +1143,53 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(edit.glassTintColor, navigationBarGlassTintColor(.accent, theme: self.makeTheme()))
     }
 
+    /// How far a merging pill's tint has gone from `from` to `to`, read from the glass's tint alpha (the blend mixes it).
+    private func tintFraction(_ container: GlassContextExtractableContainer?, from: CGFloat, to: CGFloat) -> CGFloat? {
+        guard case let .custom(_, color)? = container?.glassTintColor?.kind else {
+            return nil
+        }
+        var alpha: CGFloat = 0.0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        return (alpha - from) / (to - from)
+    }
+
+    // Native's tint fades as its shapes move, on the glass transition spring (measured 2026-10-16, four reference films,
+    // tapped and not: white <-> accent takes ~0.25 s, about half way at 0.1 s), not at once.
+    func test_inPlaceMerge_partnerTint_fadesOnTheTransitionSpring() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let edit = before.rightPillBackgroundContainer(at: 0)
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        for _ in 0 ..< 12 {
+            view.inPlaceTickForTesting(dt: 0.1 / 12.0)
+        }
+        // The panel tint's alpha is 0.1, the accent's 1.
+        guard let fraction = self.tintFraction(edit, from: 0.1, to: 1.0) else {
+            XCTFail("not cross-fading: \(String(describing: edit?.glassTintColor))")
+            return
+        }
+        XCTAssertGreaterThan(fraction, 0.4)
+        XCTAssertLessThan(fraction, 0.7)
+    }
+
+    // Done -> Edit: search, growing out of Done, fades from Done's accent to the plain glass on the same spring.
+    func test_inPlaceMerge_arrivingPillTint_fadesOnTheTransitionSpring() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .easeInOut(duration: 0.3))
+        for _ in 0 ..< 12 {
+            view.inPlaceTickForTesting(dt: 0.1 / 12.0)
+        }
+        guard let fraction = self.tintFraction(view.rightPillBackgroundContainer(at: 1), from: 1.0, to: 0.1) else {
+            XCTFail("not cross-fading: \(String(describing: view.rightPillBackgroundContainer(at: 1)?.glassTintColor))")
+            return
+        }
+        XCTAssertGreaterThan(fraction, 0.4)
+        XCTAssertLessThan(fraction, 0.7)
+    }
+
     // A pill growing out of its partner starts in the partner's tint and cross-fades to its own, frame by frame too.
     func test_inPlaceMerge_arrivingPill_crossFadesFromItsPartnersTint() {
         let bar = ComponentView<Empty>()
