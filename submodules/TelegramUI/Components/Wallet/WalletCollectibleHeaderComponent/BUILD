@@ -22,6 +22,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/Wallet/WalletCollectibleImageComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
     ],
     visibility = [
         "//visibility:public",

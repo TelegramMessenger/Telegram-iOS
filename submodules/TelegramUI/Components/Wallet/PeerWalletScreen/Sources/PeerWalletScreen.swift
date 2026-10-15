@@ -4,6 +4,7 @@ import Display
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import PresentationDataUtils
 import SwiftSignalKit
 import ComponentFlow
 import ViewControllerComponent
@@ -12,23 +13,49 @@ import WalletContext
 import WalletCardComponent
 import WalletGiftStickerMediaComponent
 
+private final class PeerWalletTransitionSource {
+    weak var view: UIView?
+    weak var window: UIWindow?
+    let frame: CGRect
+    let snapshot: UIView?
+
+    init?(view: UIView?) {
+        guard let view, let window = view.window else { return nil }
+        self.view = view
+        self.window = window
+        self.frame = view.convert(view.bounds, to: window)
+        if let composite = window.resizableSnapshotView(from: self.frame, afterScreenUpdates: false, withCapInsets: .zero) {
+            let container = UIView(frame: CGRect(origin: .zero, size: self.frame.size))
+            container.clipsToBounds = true
+            container.layer.cornerRadius = self.frame.height * 0.5
+            composite.frame = container.bounds
+            container.addSubview(composite)
+            self.snapshot = container
+        } else {
+            self.snapshot = view.snapshotView(afterScreenUpdates: false)
+        }
+    }
+}
+
 private final class PeerWalletOverlayComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
     let context: AccountContext
     let peer: EnginePeer
     let card: WalletCard?
+    let sourceBackgroundColor: UIColor?
     let sendMoney: (PeerWalletScreen) -> Void
 
-    init(context: AccountContext, peer: EnginePeer, card: WalletCard?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    init(context: AccountContext, peer: EnginePeer, card: WalletCard?, sourceBackgroundColor: UIColor?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
         self.context = context
         self.peer = peer
         self.card = card
+        self.sourceBackgroundColor = sourceBackgroundColor
         self.sendMoney = sendMoney
     }
 
     static func ==(lhs: PeerWalletOverlayComponent, rhs: PeerWalletOverlayComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.card == rhs.card
+        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.card == rhs.card && lhs.sourceBackgroundColor == rhs.sourceBackgroundColor
     }
 
     final class State: ComponentState {
@@ -107,17 +134,60 @@ private final class PeerWalletOverlayComponent: Component {
         return State(context: self.context, peer: self.peer, card: self.card)
     }
 
-    final class View: UIView {
+    final class View: UIView, UIGestureRecognizerDelegate {
+        private let blurView = UIVisualEffectView()
+        private var blurIsLight: Bool?
+        private var blurAnimator: UIViewPropertyAnimator?
+        private var backgroundProgress: CGFloat = 0.0
+        private var defaultButtonTheme: PresentationTheme?
+        private var walletAccentColor: (theme: PresentationTheme, color: UIColor)?
         private let dimView = UIControl()
+        private let cardContainer = UIView()
+        private let cardMask = CAShapeLayer()
+        private let slotView = UIView()
+        private var shutterView: UIView?
+        private weak var sourceView: UIView?
+        private var initialSource: PeerWalletTransitionSource?
+        private var pendingAnimateIn = false
+        private var sourceWasHidden = false
+        private var sourceFrame: CGRect?
+        private var cardFrame = CGRect.zero
+        private var buttonFrame = CGRect.zero
+        private var animationSize = CGSize.zero
+        private var animator: DisplayLinkAnimator?
+        private var progress: CGFloat = 0.0
+        private var usesFlight = false
+        private var backgroundHidden = false
+        private var isDismissing = false
         private let card = ComponentView<Empty>()
         private let sendButton = ComponentView<Empty>()
         private var dismissAction: (() -> Void)?
+        private weak var state: State?
+        private let stickerPlayback = WalletGiftStickerPlayback()
+        private let stickerTap = UITapGestureRecognizer()
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.dimView.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+            self.stickerTap.addTarget(self, action: #selector(self.stickerTapped(_:)))
+            self.stickerTap.delegate = self
+            self.stickerPlayback.updated = { [weak self] frames in
+                guard let self, let card = self.card.view as? WalletCardComponent.View else { return }
+                let stickers = self.state?.stickers ?? []
+                card.setStickerLive(frames.reduce(into: [:]) { result, item in
+                    guard let sticker = stickers.first(where: { $0.gift.address == item.key }) else { return }
+                    result[item.key] = WalletCardComponent.View.StickerLive(angle: CGFloat(sticker.angle), press: 0, grow: item.value.grow, image: item.value.image)
+                })
+            }
+            self.slotView.isUserInteractionEnabled = false
+            self.slotView.alpha = 0.0
+            self.addSubview(self.slotView)
+            self.blurView.isUserInteractionEnabled = false
+            self.addSubview(self.blurView)
             self.dimView.addTarget(self, action: #selector(self.dimPressed), for: .touchUpInside)
             self.addSubview(self.dimView)
+            self.addSubview(self.cardContainer)
+            self.cardMask.fillColor = UIColor.black.cgColor
+            self.alpha = 0.0
         }
 
         required init?(coder: NSCoder) {
@@ -128,51 +198,295 @@ private final class PeerWalletOverlayComponent: Component {
             self.dismissAction?()
         }
 
-        func setDimHidden() {
-            self.dimView.alpha = 0.0
-            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+        private func tappedSticker(_ recognizer: UIGestureRecognizer) -> WalletContext.CardSticker? {
+            guard let card = self.card.view as? WalletCardComponent.View else { return nil }
+            return card.sticker(at: recognizer.location(in: card.stickerSurface))
         }
 
-        func animateIn(sourceView: UIView?) {
-            self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-            guard !UIAccessibility.isReduceMotionEnabled else {
-                self.card.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                self.sendButton.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                return
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer === self.stickerTap { return self.tappedSticker(gestureRecognizer) != nil }
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+
+        @objc private func stickerTapped(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended, let sticker = self.tappedSticker(recognizer),
+                  let media = self.state?.stickerMedia[sticker.gift.address] else { return }
+            self.stickerPlayback.play(sticker.gift.address, media: media, enlarge: true)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+
+        deinit {
+            self.blurAnimator?.stopAnimation(true)
+            self.animator?.invalidate()
+            self.restoreSource()
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if self.window == nil {
+                self.animator?.invalidate()
+                self.animator = nil
+                self.restoreSource()
+            } else {
+                self.beginPendingAnimation()
             }
-            if let card = self.card.view, let parent = card.superview {
-                if let sourceView, sourceView.window === self.window, self.window != nil {
-                    let sourceRect = sourceView.convert(sourceView.bounds, to: parent)
-                    let sourceCenter = CGPoint(x: sourceRect.midX, y: sourceRect.midY)
-                    let scale = max(0.05, min(1.0, min(sourceRect.width / max(1.0, card.bounds.width), sourceRect.height / max(1.0, card.bounds.height))))
-                    card.layer.animateSpring(from: NSValue(cgPoint: sourceCenter), to: NSValue(cgPoint: card.center), keyPath: "position", duration: 0.65, damping: 65.0)
-                    card.layer.animateSpring(from: scale, to: 1.0, keyPath: "transform.scale", duration: 0.65, damping: 65.0)
-                } else {
-                    card.layer.animateSpring(from: 0.85, to: 1.0, keyPath: "transform.scale", duration: 0.65, damping: 65.0)
+        }
+
+        private func restoreSource() {
+            if self.shutterView != nil {
+                self.sourceView?.isHidden = self.sourceWasHidden
+            }
+            self.shutterView?.removeFromSuperview()
+            self.shutterView = nil
+            self.slotView.alpha = 0.0
+        }
+
+        private func prepareShutter(initialSource: PeerWalletTransitionSource? = nil) -> Bool {
+            let frame: CGRect
+            let snapshot: UIView?
+            if let initialSource, let window = initialSource.window {
+                frame = self.convert(initialSource.frame, from: window)
+                snapshot = initialSource.snapshot
+            } else {
+                guard let source = self.sourceView, source.window != nil, self.window != nil,
+                      !source.isHidden || self.shutterView != nil, source.alpha > 0.01 else { return false }
+                frame = source.convert(source.bounds, to: self)
+                snapshot = self.shutterView == nil ? source.snapshotView(afterScreenUpdates: false) : nil
+            }
+            guard !frame.isEmpty, self.bounds.intersects(frame) else { return false }
+            if self.shutterView == nil, let snapshot {
+                self.sourceWasHidden = self.sourceView?.isHidden ?? false
+                snapshot.isUserInteractionEnabled = false
+                snapshot.bounds = CGRect(origin: .zero, size: frame.size)
+                snapshot.layer.anchorPoint = CGPoint(x: 0.5, y: 0.0)
+                snapshot.layer.position = CGPoint(x: frame.midX, y: frame.minY)
+                self.addSubview(snapshot)
+                self.shutterView = snapshot
+            }
+            guard let shutterView = self.shutterView else { return false }
+            shutterView.bounds = CGRect(origin: .zero, size: frame.size)
+            shutterView.layer.position = CGPoint(x: frame.midX, y: frame.minY)
+            self.sourceView?.isHidden = true
+            self.sourceFrame = frame
+            self.slotView.frame = frame
+            self.slotView.layer.cornerRadius = frame.height * 0.5
+            return true
+        }
+
+        private func applyProgress() {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            defer { CATransaction.commit() }
+            let p = max(0.0, min(1.0, self.progress))
+            let motion = !UIAccessibility.isReduceMotionEnabled
+            let dismissing = self.isDismissing
+            let backgroundAlpha = self.backgroundHidden ? 0.0 : self.backgroundProgress
+            self.blurView.alpha = backgroundAlpha
+            self.dimView.alpha = backgroundAlpha
+            guard let card = self.card.view as? WalletCardComponent.View else { return }
+            var transform = CATransform3DIdentity
+            var center = self.cardFrame.center
+            self.cardContainer.alpha = 1.0
+            func smooth(_ value: CGFloat) -> CGFloat {
+                let value = max(0.0, min(1.0, value))
+                return value * value * (3.0 - 2.0 * value)
+            }
+            let impact: CGFloat = dismissing ? 1.0 : 0.5
+            let ringRate: CGFloat = 14.0
+            let ringDamping: CGFloat = 6.0
+            let tail = 1.0 - smooth((p - 0.88) / 0.12)
+            func flight(_ time: CGFloat, start: CGFloat, arrival: CGFloat, lag: CGFloat = 1.0, hold: CGFloat = 0.0) -> CGFloat {
+                let arrival = dismissing ? 0.0 : arrival
+                let hold = hold * impact
+                if time < impact {
+                    let t = pow(max(0.0, time - hold) / (impact - hold), lag)
+                    return (t * t * t - 2 * t * t + t) * start + (-2 * t * t * t + 3 * t * t) + (t * t * t - t * t) * arrival
                 }
-                card.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                let elapsed = time - impact
+                return 1.0 + arrival * lag / ((impact - hold) * ringRate) * exp(-ringDamping * elapsed) * sin(ringRate * elapsed) * tail
             }
-            if let button = self.sendButton.view, let parent = button.superview {
-                let bottom = self.convert(CGPoint(x: 0.0, y: self.bounds.maxY), to: parent).y
-                button.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: bottom - button.frame.minY + 8.0)), to: NSValue(cgPoint: .zero), keyPath: "position", duration: 0.5, damping: 85.0, additive: true)
+            if motion, self.usesFlight, let source = self.sourceFrame {
+                let halfWidth = self.cardFrame.width * 0.5
+                let halfHeight = self.cardFrame.height * 0.5
+                let corners = [CGPoint(x: -halfWidth, y: -halfHeight), CGPoint(x: halfWidth, y: -halfHeight), CGPoint(x: halfWidth, y: halfHeight), CGPoint(x: -halfWidth, y: halfHeight)]
+                let cameraDistance = max(280.0, self.cardFrame.width * 1.2)
+                func pose(pitch: CGFloat, yaw: CGFloat, roll: CGFloat, scale: CGFloat, camera: CGFloat) -> CATransform3D {
+                    var transform = CATransform3DIdentity
+                    transform.m34 = -tail / camera
+                    transform = CATransform3DRotate(transform, pitch, 1.0, 0.0, 0.0)
+                    transform = CATransform3DRotate(transform, yaw, 0.0, 1.0, 0.0)
+                    transform = CATransform3DRotate(transform, roll, 0.0, 0.0, 1.0)
+                    return CATransform3DScale(transform, scale, scale, 1.0)
+                }
+                func project(_ transform: CATransform3D) -> [CGPoint] {
+                    return corners.map { point -> CGPoint in
+                        let w = max(0.001, point.x * transform.m14 + point.y * transform.m24 + transform.m44)
+                        return CGPoint(x: (point.x * transform.m11 + point.y * transform.m21 + transform.m41) / w,
+                            y: (point.x * transform.m12 + point.y * transform.m22 + transform.m42) / w)
+                    }
+                }
+
+                let slotPitch: CGFloat = 50.0 * .pi / 180
+                let slotScale = min(1.0, source.width / max(1.0, self.cardFrame.height))
+                let slotReach = project(pose(pitch: slotPitch, yaw: 0.0, roll: -.pi / 2, scale: slotScale, camera: cameraDistance)).map { abs($0.x) }.max() ?? halfHeight
+                let startScale = slotScale * min(1.0, source.width * 0.45 / max(1.0, slotReach))
+
+                let slotLine = source.midY
+                let straddlesSlot = self.cardFrame.minY < slotLine
+                let sidewaysHold: CGFloat = straddlesSlot && !dismissing ? 0.6 : 0.45
+                func cardPose(_ time: CGFloat) -> (pitch: CGFloat, yaw: CGFloat, roll: CGFloat, scale: CGFloat, travel: CGFloat, sideTravel: CGFloat, velocity: CGFloat) {
+                    let travel = flight(time, start: 1.2, arrival: 0.16, hold: 0.1)
+                    let twist = smooth((time / impact - sidewaysHold + 0.05) / 0.3)
+                    let velocity = (flight(time + 0.004, start: 1.2, arrival: 0.16, hold: 0.1) - flight(time - 0.004, start: 1.2, arrival: 0.16, hold: 0.1)) / 0.008 * impact / 1.5 * twist
+                    return (
+                        pitch: slotPitch * (1.0 - flight(time, start: 0.0, arrival: 0.16, hold: 0.38)),
+                        yaw: velocity * 9.0 * .pi / 180,
+                        roll: -(1.0 - flight(time, start: 0.0, arrival: 0.18, hold: 0.4)) * .pi / 2,
+                        scale: startScale + (1.0 - startScale) * flight(time, start: 0.0, arrival: 0.13, hold: 0.4),
+                        travel: travel,
+                        sideTravel: flight(time, start: 0.0, arrival: 0.16, hold: sidewaysHold),
+                        velocity: velocity
+                    )
+                }
+                func baseCenterY(_ projected: [CGPoint], travel: CGFloat) -> CGFloat {
+                    let hiddenEdge = projected.map { $0.y }.max() ?? halfHeight
+                    let startY = slotLine - hiddenEdge
+                    return startY + (self.cardFrame.midY - startY) * travel
+                }
+
+                let peak: CGFloat = dismissing ? 0.42 : 0.6 * impact
+                let peakPose = cardPose(peak)
+                let peakProjected = project(pose(pitch: peakPose.pitch, yaw: peakPose.yaw, roll: peakPose.roll, scale: peakPose.scale, camera: cameraDistance))
+                let peakCenterY = baseCenterY(peakProjected, travel: peakPose.travel)
+                let clearance = max(0.0, slotLine + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
+
+                let current = cardPose(p)
+                let peakTravel = max(0.001, peakPose.travel)
+                let dip: CGFloat
+                if p < peak {
+                    dip = current.travel / peakTravel
+                } else {
+                    let fallSpan = dismissing ? 1.0 - peak : 0.8 * impact
+                    let peakSlope = (cardPose(peak + 0.004).travel - cardPose(peak - 0.004).travel) / 0.008 / peakTravel
+                    let t = min(1.0, (p - peak) / fallSpan)
+                    dip = (2.0 * t * t * t - 3.0 * t * t + 1.0) + (t * t * t - 2.0 * t * t + t) * peakSlope * fallSpan
+                }
+                transform = pose(pitch: current.pitch, yaw: current.yaw, roll: current.roll, scale: current.scale, camera: cameraDistance)
+                let projected = project(transform)
+                let reach = WalletCardComponent.View.projectionReach - 4.0
+                let fit = projected.reduce(CGFloat(1.0)) { min($0, (halfWidth + reach) / max(1.0, abs($1.x)), (halfHeight + reach) / max(1.0, abs($1.y))) }
+                if fit < 1.0 {
+                    transform = pose(pitch: current.pitch, yaw: current.yaw, roll: current.roll, scale: current.scale * fit, camera: cameraDistance * fit)
+                }
+                self.cardContainer.layer.transform = CATransform3DMakeScale(1.0 / fit, 1.0 / fit, 1.0)
+
+                let sideways = self.cardFrame.width * 0.055 * current.velocity
+                center = CGPoint(x: source.midX + (self.cardFrame.midX - source.midX) * current.sideTravel + sideways,
+                    y: baseCenterY(projected, travel: current.travel) + clearance * dip)
+                self.cardContainer.center = center
+                self.cardContainer.alpha = smooth(p / 0.045)
+                self.cardMask.frame = self.cardContainer.bounds
+                let edge = halfHeight + (slotLine - center.y) * fit
+                let span = max(self.animationSize.width, self.animationSize.height) * 3.0
+                self.cardMask.path = CGPath(rect: CGRect(x: -span, y: edge, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
+                self.cardContainer.layer.mask = p < (clearance > 0.0 ? peak : (dismissing ? 0.75 : impact)) ? self.cardMask : nil
+
+                let shutterLift = smooth(p / (dismissing ? 0.42 : 0.16))
+                self.shutterView?.layer.transform = CATransform3DMakeScale(1.0, 1.0 - shutterLift * 0.5, 1.0)
+                self.shutterView?.alpha = 1.0 - smooth((p - (dismissing ? 0.08 : 0.03)) / (dismissing ? 0.45 : 0.17))
+                self.shutterView?.isHidden = false
+                self.slotView.alpha = shutterLift
+            } else {
+                self.cardContainer.layer.mask = nil
+                self.cardContainer.layer.transform = CATransform3DIdentity
+                self.cardContainer.center = center
+                self.cardContainer.alpha = p
             }
+            card.isUserInteractionEnabled = p >= (self.usesFlight ? 0.6 : 1.0)
+            card.updateScrollTransform(transform)
+            if let button = self.sendButton.view {
+                let buttonProgress = self.usesFlight ? flight(p - (dismissing ? 0.0 : 0.06), start: 2.4, arrival: 0.25) : 1.0 - pow(1.0 - min(1.0, p / 0.77), 3.0)
+                button.center = CGPoint(x: self.buttonFrame.midX, y: self.buttonFrame.midY + (motion ? (self.animationSize.height - self.buttonFrame.minY + 8.0) * (1.0 - buttonProgress) : 0.0))
+                button.alpha = motion ? 1.0 : p
+            }
+        }
+
+        private func animate(to target: CGFloat, duration: Double, completion: @escaping () -> Void) {
+            self.animator?.invalidate()
+            let from = self.progress
+            let initialBackground = self.backgroundProgress
+            self.animator = DisplayLinkAnimator(duration: duration, from: from, to: target, update: { [weak self] value in
+                guard let self else { return }
+                self.progress = value
+                let elapsed = abs(value - from) / max(0.0001, abs(target - from)) * CGFloat(duration)
+                let backgroundFraction = min(1.0, elapsed / (target == 0.0 ? min(0.32, CGFloat(duration)) : 0.25))
+                self.backgroundProgress = initialBackground + (target - initialBackground) * backgroundFraction
+                self.applyProgress()
+            }, completion: { [weak self] in
+                guard let self else { return }
+                self.animator = nil
+                if target == 0.0 {
+                    self.restoreSource()
+                }
+                completion()
+            })
+        }
+
+        func setDimHidden() {
+            self.animator?.invalidate()
+            self.animator = nil
+            self.restoreSource()
+            let backgroundAlpha = self.blurView.alpha
+            self.backgroundHidden = true
+            self.blurView.alpha = 0.0
+            self.blurView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
+            self.dimView.alpha = 0.0
+            self.dimView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
+        }
+
+        func animateIn(source: PeerWalletTransitionSource?) {
+            self.sourceView = source?.view
+            self.initialSource = source
+            self.pendingAnimateIn = true
+            self.beginPendingAnimation()
+        }
+
+        private func beginPendingAnimation() {
+            guard self.pendingAnimateIn, self.window != nil, !self.bounds.isEmpty, !self.cardFrame.isEmpty else { return }
+            self.pendingAnimateIn = false
+            self.usesFlight = !UIAccessibility.isReduceMotionEnabled && self.prepareShutter(initialSource: self.initialSource)
+            self.initialSource = nil
+            self.applyProgress()
+            self.alpha = 1.0
+            self.isDismissing = false
+            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: {})
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            self.beginPendingAnimation()
         }
 
         func animateOut(completion: @escaping () -> Void) {
+            self.pendingAnimateIn = false
+            self.initialSource = nil
             self.isUserInteractionEnabled = false
-            guard !UIAccessibility.isReduceMotionEnabled, let button = self.sendButton.view, let parent = button.superview else {
+            if !UIAccessibility.isReduceMotionEnabled && self.prepareShutter() {
+                self.usesFlight = true
+                self.isDismissing = self.progress >= 1.0
+                self.applyProgress()
+                self.animate(to: 0.0, duration: max(0.08, 0.4 * Double(self.progress)), completion: completion)
+            } else {
+                // Preserve the current pose if the source disappeared during the flight.
+                self.animator?.invalidate()
+                self.animator = nil
+                self.restoreSource()
+                if !UIAccessibility.isReduceMotionEnabled, let button = self.sendButton.view {
+                    button.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: self.animationSize.height - button.frame.minY + 8.0), duration: 0.15, removeOnCompletion: false, additive: true)
+                }
                 self.alpha = 0.0
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in completion() })
-                return
+                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in completion() })
             }
-            self.dimView.alpha = 0.0
-            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-            if let card = self.card.view {
-                card.alpha = 0.0
-                card.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-            }
-            let bottom = self.convert(CGPoint(x: 0.0, y: self.bounds.maxY), to: parent).y
-            button.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: bottom - button.frame.minY + 8.0), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, additive: true, completion: { _ in completion() })
         }
 
         func update(component: PeerWalletOverlayComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -181,14 +495,31 @@ private final class PeerWalletOverlayComponent: Component {
             self.dismissAction = {
                 (controller() as? PeerWalletScreen)?.finish(animated: true)
             }
+            let blurIsLight = environment.theme.rootController.keyboardColor == .light
+            if self.blurIsLight != blurIsLight {
+                self.blurIsLight = blurIsLight
+                self.blurAnimator?.stopAnimation(true)
+                self.blurView.effect = nil
+                let effect = makeCustomZoomBlurEffect(isLight: blurIsLight)
+                let blurAnimator = UIViewPropertyAnimator(duration: 1.0, curve: .linear, animations: { [weak blurView = self.blurView] in
+                    blurView?.effect = effect
+                })
+                blurAnimator.startAnimation()
+                blurAnimator.pauseAnimation()
+                blurAnimator.fractionComplete = 2.0 / 3.0
+                self.blurAnimator = blurAnimator
+            }
+            self.slotView.backgroundColor = component.sourceBackgroundColor?.mixedWith(.black, alpha: 0.3) ?? environment.theme.list.blocksBackgroundColor
+            self.dimView.backgroundColor = environment.theme.contextMenu.dimColor
+            transition.setFrame(view: self.blurView, frame: CGRect(origin: .zero, size: availableSize))
             transition.setFrame(view: self.dimView, frame: CGRect(origin: .zero, size: availableSize))
             let openQr: () -> Void = { [weak state] in
                 guard let address = state?.address, !address.isEmpty, let controller = controller() else { return }
-                controller.push(component.context.sharedContext.makeWalletReceiveScreen(context: component.context, address: address, isOwnWallet: false))
+                controller.push(component.context.sharedContext.makeWalletReceiveScreen(context: component.context, address: address, isOwnWallet: component.peer.id == component.context.account.peerId))
             }
             let contentWidth = max(1.0, availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
             let centerX = environment.safeInsets.left + contentWidth * 0.5
-            let buttonBottomInset = max(16.0, environment.safeInsets.bottom)
+            let buttonBottomInset: CGFloat = 30.0
             let buttonTop = availableSize.height - buttonBottomInset - 52.0
             let cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
             let cardHeightLimit = max(1.0, buttonTop - 24.0 - cardTopLimit)
@@ -213,16 +544,52 @@ private final class PeerWalletOverlayComponent: Component {
             let cardCenterY = max(cardTopLimit + cardSize.height * 0.5, min(availableSize.height * 0.5, buttonTop - 24.0 - cardSize.height * 0.5))
             if let cardView = self.card.view {
                 if cardView.superview == nil {
-                    self.addSubview(cardView)
+                    self.cardContainer.addSubview(cardView)
                 }
-                transition.setFrame(view: cardView, frame: CGRect(x: centerX - cardSize.width * 0.5, y: cardCenterY - cardSize.height * 0.5, width: cardSize.width, height: cardSize.height))
+                self.cardFrame = CGRect(x: centerX - cardSize.width * 0.5, y: cardCenterY - cardSize.height * 0.5, width: cardSize.width, height: cardSize.height)
+                self.cardContainer.bounds = CGRect(origin: .zero, size: cardSize)
+                transition.setFrame(view: cardView, frame: CGRect(origin: .zero, size: cardSize))
             }
 
+            let defaultButtonTheme: PresentationTheme
+            if let current = self.defaultButtonTheme, current.referenceTheme == environment.theme.referenceTheme {
+                defaultButtonTheme = current
+            } else {
+                defaultButtonTheme = makeDefaultPresentationTheme(reference: environment.theme.referenceTheme, serviceBackgroundColor: nil)
+                self.defaultButtonTheme = defaultButtonTheme
+            }
+            var buttonColor = defaultButtonTheme.list.itemCheckColors.fillColor
+            var buttonForegroundColor = defaultButtonTheme.list.itemCheckColors.foregroundColor
+            if environment.theme.overallDarkAppearance {
+                buttonColor = defaultDarkColorPresentationTheme.list.itemAccentColor
+                buttonForegroundColor = .white
+            }
             if let cardView = self.card.view as? WalletCardComponent.View {
+                let walletAccentColor: UIColor
+                if let current = self.walletAccentColor, current.theme === environment.theme {
+                    walletAccentColor = current.color
+                } else {
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: environment.theme)
+                    walletAccentColor = presentationDataWithDefaultAccent((initial: presentationData, signal: .never())).initial.theme.list.itemCheckColors.fillColor
+                    self.walletAccentColor = (environment.theme, walletAccentColor)
+                }
+                cardView.giftButtonDefaultColor = walletAccentColor
+                // Reuse the card's color mapping, as in WalletScreen. setGiftStyle
+                // resolves the destination color synchronously for this static style.
+                let styled = state.stickers.contains(where: { $0.style != nil })
+                cardView.giftStyleUpdated = { _, to, _, _, _, _ in
+                    if styled {
+                        buttonColor = to
+                        buttonForegroundColor = .white
+                    }
+                }
                 cardView.setCardStickers(state.stickers, images: state.stickerMedia.compactMapValues { $0.first?.image }, hidden: [])
+                self.state = state
+                if self.stickerTap.view !== cardView { cardView.addGestureRecognizer(self.stickerTap) }
                 let source = state.stickers.last(where: { $0.style != nil })
                 cardView.setGiftStyle(from: source?.style, to: source?.style, origin: .zero, progress: 1,
                     pattern: source.flatMap { state.stickerMedia[$0.gift.address]?.patternImage })
+                cardView.giftStyleUpdated = nil
             }
 
             let buttonSize = self.sendButton.update(
@@ -230,31 +597,35 @@ private final class PeerWalletOverlayComponent: Component {
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
                         style: .glass,
-                        color: environment.theme.list.itemCheckColors.fillColor,
-                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
-                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                        color: buttonColor,
+                        foreground: buttonForegroundColor,
+                        pressedColor: buttonColor.withMultipliedAlpha(0.9),
                         cornerRadius: 26.0
                     ),
                     content: AnyComponentWithIdentity(id: "send", component: AnyComponent(Text(
-                        text: environment.strings.Wallet_SendMoney,
+                        text: component.peer.id == component.context.account.peerId ? environment.strings.Wallet_Transaction_OpenWallet : environment.strings.Wallet_SendMoney,
                         font: Font.semibold(17.0),
-                        color: environment.theme.list.itemCheckColors.foregroundColor
+                        color: buttonForegroundColor
                     ))),
-                    isEnabled: component.context.walletContext != nil && state.card != nil,
+                    isEnabled: component.peer.id == component.context.account.peerId || (component.context.walletContext != nil && state.card != nil),
                     action: {
                         guard let controller = controller() as? PeerWalletScreen else { return }
                         component.sendMoney(controller)
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: min(406.0, max(1.0, contentWidth - 72.0)), height: 52.0)
+                containerSize: CGSize(width: max(1.0, availableSize.width - 60.0), height: 52.0)
             )
             if let buttonView = self.sendButton.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                transition.setFrame(view: buttonView, frame: CGRect(x: centerX - buttonSize.width * 0.5, y: buttonTop, width: buttonSize.width, height: buttonSize.height))
+                self.buttonFrame = CGRect(x: 30.0, y: buttonTop, width: buttonSize.width, height: buttonSize.height)
+                transition.setFrame(view: buttonView, frame: self.buttonFrame)
             }
+            self.animationSize = availableSize
+            self.applyProgress()
+            self.beginPendingAnimation()
             return availableSize
         }
     }
@@ -271,13 +642,13 @@ private final class PeerWalletOverlayComponent: Component {
 public final class PeerWalletScreen: ViewControllerComponentContainer {
     private var isFinishing = false
     private var didAnimateIn = false
-    private weak var sourceView: UIView?
+    private var transitionSource: PeerWalletTransitionSource?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, card: WalletCard?, sourceView: UIView? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
-        self.sourceView = sourceView
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, card: WalletCard?, sourceView: UIView? = nil, sourceBackgroundColor: UIColor? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+        self.transitionSource = PeerWalletTransitionSource(view: sourceView)
         super.init(
             context: context,
-            component: PeerWalletOverlayComponent(context: context, peer: peer, card: card, sendMoney: sendMoney),
+            component: PeerWalletOverlayComponent(context: context, peer: peer, card: card, sourceBackgroundColor: sourceBackgroundColor, sendMoney: sendMoney),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
             theme: .default,
@@ -297,13 +668,14 @@ public final class PeerWalletScreen: ViewControllerComponentContainer {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if !self.didAnimateIn {
+        if !self.didAnimateIn, let componentView = self.node.hostView.componentView as? PeerWalletOverlayComponent.View {
             self.didAnimateIn = true
-            (self.node.hostView.componentView as? PeerWalletOverlayComponent.View)?.animateIn(sourceView: self.sourceView)
+            componentView.animateIn(source: self.transitionSource)
+            self.transitionSource = nil
         }
     }
 
-    public func openSendMoney(_ controller: ViewController) {
+    public func openScreen(_ controller: ViewController) {
         guard !self.isFinishing, let navigationController = self.navigationController as? NavigationController else { return }
         self.isFinishing = true
         (self.node.hostView.componentView as? PeerWalletOverlayComponent.View)?.setDimHidden()

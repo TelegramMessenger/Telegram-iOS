@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import Postbox
 internal import TelegramApi
 
 public struct WalletNftFile: Codable, Equatable, Sendable {
@@ -35,7 +36,24 @@ public struct WalletNftAttribute: Codable, Equatable, Sendable {
     }
 }
 
-public struct WalletNftItem: Codable, Equatable, Sendable {
+public struct WalletNftItem: Codable, Equatable, @unchecked Sendable {
+    private enum CodingKeys: String, CodingKey {
+        case collectionAddress
+        case address
+        case ownerAddress
+        case index
+        case name
+        case description
+        case image
+        case imageSmall
+        case contentUrl
+        case lottie
+        case attributes
+        case extra
+        case gift
+        case giftData
+    }
+
     public let collectionAddress: String?
     public let address: String
     public let ownerAddress: String
@@ -48,12 +66,7 @@ public struct WalletNftItem: Codable, Equatable, Sendable {
     public let lottie: WalletNftFile?
     public let attributes: [WalletNftAttribute]?
     public let extra: String?
-    /// Stable Codable storage also keeps the actor-facing NFT value Sendable.
-    public let giftData: Data?
-    public var gift: StarGift.UniqueGift? {
-        guard let giftData else { return nil }
-        return try? JSONDecoder().decode(StarGift.UniqueGift.self, from: giftData)
-    }
+    public let gift: StarGift.UniqueGift?
 
     public init(collectionAddress: String?, address: String, ownerAddress: String, index: String, name: String?, description: String?, image: WalletNftFile?, imageSmall: WalletNftFile?, contentUrl: WalletNftFile?, lottie: WalletNftFile?, attributes: [WalletNftAttribute]?, extra: String?, gift: StarGift.UniqueGift? = nil) {
         self.collectionAddress = collectionAddress
@@ -68,9 +81,51 @@ public struct WalletNftItem: Codable, Equatable, Sendable {
         self.lottie = lottie
         self.attributes = attributes
         self.extra = extra
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        self.giftData = gift.flatMap { try? encoder.encode($0) }
+        self.gift = gift
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.collectionAddress = try container.decodeIfPresent(String.self, forKey: .collectionAddress)
+        self.address = try container.decode(String.self, forKey: .address)
+        self.ownerAddress = try container.decode(String.self, forKey: .ownerAddress)
+        self.index = try container.decode(String.self, forKey: .index)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.image = try container.decodeIfPresent(WalletNftFile.self, forKey: .image)
+        self.imageSmall = try container.decodeIfPresent(WalletNftFile.self, forKey: .imageSmall)
+        self.contentUrl = try container.decodeIfPresent(WalletNftFile.self, forKey: .contentUrl)
+        self.lottie = try container.decodeIfPresent(WalletNftFile.self, forKey: .lottie)
+        self.attributes = try container.decodeIfPresent([WalletNftAttribute].self, forKey: .attributes)
+        self.extra = try container.decodeIfPresent(String.self, forKey: .extra)
+        if let data = try container.decodeIfPresent(Data.self, forKey: .gift) {
+            self.gift = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeObjectForKey("_", decoder: { StarGift.UniqueGift(decoder: $0) }) as? StarGift.UniqueGift
+        } else if let data = try container.decodeIfPresent(Data.self, forKey: .giftData) {
+            self.gift = try? JSONDecoder().decode(StarGift.UniqueGift.self, from: data)
+        } else {
+            self.gift = nil
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(self.collectionAddress, forKey: .collectionAddress)
+        try container.encode(self.address, forKey: .address)
+        try container.encode(self.ownerAddress, forKey: .ownerAddress)
+        try container.encode(self.index, forKey: .index)
+        try container.encodeIfPresent(self.name, forKey: .name)
+        try container.encodeIfPresent(self.description, forKey: .description)
+        try container.encodeIfPresent(self.image, forKey: .image)
+        try container.encodeIfPresent(self.imageSmall, forKey: .imageSmall)
+        try container.encodeIfPresent(self.contentUrl, forKey: .contentUrl)
+        try container.encodeIfPresent(self.lottie, forKey: .lottie)
+        try container.encodeIfPresent(self.attributes, forKey: .attributes)
+        try container.encodeIfPresent(self.extra, forKey: .extra)
+        if let gift = self.gift {
+            let giftEncoder = PostboxEncoder()
+            giftEncoder.encodeObject(gift, forKey: "_")
+            try container.encode(giftEncoder.makeData(), forKey: .gift)
+        }
     }
 
     init(apiItem: Api.wallet.NftItem) {

@@ -10,6 +10,7 @@ public final class LensTransitionContainer: UIView {
     private let backgroundView = GlassBackgroundView()
     private var morph: AnyObject?
     private var sourcePreview: UITargetedPreview?
+    private var sourceSizeAtOpen: CGSize?
     private var sourceVisibilityAssertion: AnyObject?
     private var menuVisibilityAssertion: AnyObject?
     private weak var originalSourceView: UIView?
@@ -79,6 +80,7 @@ public final class LensTransitionContainer: UIView {
             parameters.visiblePath = UIBezierPath(rect: sourceRect)
         }
         self.originalSourceView = sourceView
+        self.sourceSizeAtOpen = (sourceView as? ContextExtractableContainer)?.normalState.size
         self.sourceLease = ContextMenuSourceLease(source: sourceView, decorations: ContextReferenceContentNode.additionalSourceViews(for: sourceView), makeContent: ContextReferenceContentNode.makeSourceContent(for: sourceView))
         let previewView = self.sourceLease?.content?.view ?? (sourceView as? GlassContextExtractableContainer)?.transitionView ?? sourceView
         guard let source = LiquidMorphTransition.sourcePreview(for: previewView, parameters: parameters) else {
@@ -124,7 +126,7 @@ public final class LensTransitionContainer: UIView {
         if #available(iOS 26.0, *), let morph = self.morph as? LiquidMorphTransition,
            let originalSourceView = self.originalSourceView, originalSourceView.window != nil,
            let source = self.sourcePreview, self.backgroundView.window != nil,
-           let destination = LiquidMorphTransition.sourcePreview(for: source.view, parameters: source.parameters, usePresentationTransform: true) {
+           let destination = LiquidMorphTransition.sourcePreview(for: source.view, parameters: self.dismissalParameters(source.parameters), usePresentationTransform: true) {
             // Resolve the visible shape in its current parent, including any live
             // source transform, as UIKit does for its dismissal preview.
             let attachment = destination.target.container.convert(destination.target.center, to: self)
@@ -154,6 +156,22 @@ public final class LensTransitionContainer: UIView {
         })
     }
 
+    private func dismissalParameters(_ parameters: UIPreviewParameters) -> UIPreviewParameters {
+        guard let extractable = self.originalSourceView as? ContextExtractableContainer, let sizeAtOpen = self.sourceSizeAtOpen else {
+            return parameters
+        }
+        let normalState = extractable.normalState
+        guard normalState.size != sizeAtOpen, normalState.size.width > 0.0, normalState.size.height > 0.0 else {
+            return parameters
+        }
+        let updated = UIPreviewParameters()
+        updated.backgroundColor = parameters.backgroundColor
+        let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: normalState.size), cornerRadius: normalState.cornerRadius)
+        updated.visiblePath = path
+        updated.shadowPath = path
+        return updated
+    }
+
     private func makeMenuPreview() -> UITargetedPreview {
         let parameters = UIPreviewParameters()
         parameters.backgroundColor = .clear
@@ -168,6 +186,7 @@ public final class LensTransitionContainer: UIView {
         self.menuVisibilityAssertion = nil
         self.morph = nil
         self.sourcePreview = nil
+        self.sourceSizeAtOpen = nil
         self.originalSourceView = nil
     }
 

@@ -195,6 +195,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var backgroundAlpha: CGFloat = 1.0
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
+    private(set) var walletSourceBackgroundColor: UIColor?
     private(set) var contentButtonBackgroundColor: UIColor?
     
     let animationCache: AnimationCache
@@ -600,8 +601,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 currentSavedMusic = cachedUserData.savedMusic
             }
         }
-        // A public card is present even when its cached balance is zero.
-        let currentWalletBalance = self.isSettings ? nil : (screenData?.cachedData as? CachedUserData)?.walletCard?.balance
+        let currentWalletBalance: Int64?
+        if !self.isSettings, let balance = (screenData?.cachedData as? CachedUserData)?.walletCard?.balance, balance >= 100_000_000 {
+            currentWalletBalance = balance
+        } else {
+            currentWalletBalance = nil
+        }
         let musicHeight: CGFloat = hasBackground || self.isAvatarExpanded ? 24.0 : 16.0
         let bottomInset: CGFloat = currentSavedMusic != nil ? musicHeight : 0.0
         let balanceInset: CGFloat = currentWalletBalance != nil ? 32.0 : 0.0
@@ -683,11 +688,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
         let expandedAvatarContentButtonForegroundColor: UIColor = .white
         
+        self.walletSourceBackgroundColor = nil
         var hasCoverColor = false
         let regularNavigationContentsSecondaryColor: UIColor
         if let emojiStatus = peer?.emojiStatus, case let .starGift(_, _, _, _, _, innerColor, outerColor, _, _) = emojiStatus.content {
             let mainColor = UIColor(rgb: UInt32(bitPattern: innerColor))
             let secondaryColor = UIColor(rgb: UInt32(bitPattern: outerColor))
+            self.walletSourceBackgroundColor = secondaryColor.mixedWith(mainColor, alpha: 0.1)
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(mainColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -702,6 +709,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             hasCoverColor = true
         } else if let profileColor = peer?.effectiveProfileColor {
             let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance)
+            self.walletSourceBackgroundColor = backgroundColors.main
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -2650,13 +2658,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.walletBalance = componentView
                 return componentView
             }()
-            var formattedBalance = formatTonAmountText(currentWalletBalance, dateTimeFormat: presentationData.dateTimeFormat, maxDecimalPositions: 2)
+            let formattedBalance = formatTonAmountText(currentWalletBalance, dateTimeFormat: presentationData.dateTimeFormat, maxDecimalPositions: 2)
             let decimalSeparator = presentationData.dateTimeFormat.decimalSeparator
-            if let decimalRange = formattedBalance.range(of: decimalSeparator) {
-                formattedBalance += String(repeating: "0", count: max(0, 2 - formattedBalance[decimalRange.upperBound...].count))
-            } else {
-                formattedBalance += decimalSeparator + "00"
-            }
             let isOverlay = self.isAvatarExpanded || hasBackground
             let primaryColor = isOverlay ? UIColor.white : presentationData.theme.list.itemPrimaryTextColor
             let iconColor = isOverlay ? navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45) : presentationData.theme.list.itemAccentColor

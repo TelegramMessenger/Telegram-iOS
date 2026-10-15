@@ -238,8 +238,14 @@ final class WalletCardStickersTests: XCTestCase {
         XCTAssertEqual(collectible.giftSlug, "Cake-42")
         XCTAssertEqual(WalletContext.Transaction.CollectibleTransfer(collectible: collectible).nft, nft)
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(nft)) as? [String: Any])
-        old.removeValue(forKey: "giftData")
+        old.removeValue(forKey: "gift")
         XCTAssertNil(try JSONDecoder().decode(WalletNftItem.self, from: JSONSerialization.data(withJSONObject: old)).gift)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        old["giftData"] = try encoder.encode(XCTUnwrap(nft.gift)).base64EncodedString()
+        let legacy = try XCTUnwrap(JSONDecoder().decode(WalletNftItem.self, from: JSONSerialization.data(withJSONObject: old)).gift)
+        XCTAssertEqual(legacy.slug, nft.gift?.slug)
+        XCTAssertEqual(legacy.attributes, nft.gift?.attributes)
     }
 
     func testProfileCachePreservesCardDuringOtherUpdates() throws {

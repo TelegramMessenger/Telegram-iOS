@@ -442,6 +442,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen",
         "//submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatQrCodeScreen",
+        "//submodules/TelegramUI/Components/QrStudioScreen",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramUI/Components/SavedMessages/SavedMessagesScreen",
         "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",

@@ -254,6 +254,33 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
         }
     }
 
+    private final class ChipState: ComputeState {
+        let render: MTLRenderPipelineState
+        let blur: MTLComputePipelineState
+
+        required init?(device: MTLDevice) {
+            guard let library = walletCardMetalLibrary(device: device),
+                  let vertex = library.makeFunction(name: "walletChipVertex"),
+                  let fragment = library.makeFunction(name: "walletChipFragment"),
+                  let blur = library.makeFunction(name: "walletChipBlur") else { return nil }
+            let descriptor = MTLRenderPipelineDescriptor()
+            descriptor.vertexFunction = vertex
+            descriptor.fragmentFunction = fragment
+            descriptor.colorAttachments[0].pixelFormat = .rgba16Float
+            guard let render = try? device.makeRenderPipelineState(descriptor: descriptor),
+                  let compute = try? device.makeComputePipelineState(function: blur) else { return nil }
+            self.render = render
+            self.blur = compute
+        }
+    }
+
+    private struct ChipFrame {
+        let texture: MTLTexture
+        let rect: SIMD4<Float>
+    }
+
+    private var chipTextures: [MTLTexture] = []
+
     var internalData: MetalEngineSubjectInternalData?
 
     private var starsTexture: MTLTexture?
@@ -390,6 +417,64 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
         let currentFragmentUniforms = self.fragmentUniforms
         let qrTexture = self.qrTexture ?? noiseTexture
 
+        let chipFrame = context.compute(state: ChipState.self, commands: { [weak self] commandBuffer, state -> ChipFrame? in
+            guard let self, currentFragmentUniforms.qrEffects.x > 0,
+                  currentFragmentUniforms.qrEffects.y > 0.01,
+                  currentFragmentUniforms.qrRect.z > 0, currentFragmentUniforms.qrRect.w > 0 else {
+                self?.chipTextures.removeAll()
+                return nil
+            }
+            let scale: Float = 2
+            let padding = ceil(max(8, currentFragmentUniforms.qrEffects.y) * 3) + 2
+            let width = Int(ceil((currentFragmentUniforms.qrRect.z + padding * 2) * scale))
+            let height = Int(ceil((currentFragmentUniforms.qrRect.w + padding * 2) * scale))
+            if self.chipTextures.count != 3 || self.chipTextures.first?.width != width || self.chipTextures.first?.height != height {
+                let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float,
+                    width: width, height: height, mipmapped: false)
+                descriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
+                descriptor.storageMode = .private
+                self.chipTextures = (0..<3).compactMap { _ in MetalEngine.shared.device.makeTexture(descriptor: descriptor) }
+            }
+            guard self.chipTextures.count == 3 else { return nil }
+            let textures = self.chipTextures
+            var rect = SIMD4<Float>(currentFragmentUniforms.qrRect.x - padding,
+                currentFragmentUniforms.qrRect.y - padding, Float(width) / scale, Float(height) / scale)
+            let pass = MTLRenderPassDescriptor()
+            pass.colorAttachments[0].texture = textures[0]
+            pass.colorAttachments[0].loadAction = .clear
+            pass.colorAttachments[0].storeAction = .store
+            pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0)
+            guard let render = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return nil }
+            render.label = "Wallet chip texture"
+            render.setRenderPipelineState(state.render)
+            var uniforms = currentFragmentUniforms
+            var style = currentGiftStyle
+            render.setFragmentBytes(&uniforms, length: MemoryLayout<FragmentUniforms>.stride, index: 0)
+            render.setFragmentBytes(&style, length: MemoryLayout<WalletCardStyleUniforms>.stride, index: 1)
+            render.setFragmentBytes(&rect, length: MemoryLayout<SIMD4<Float>>.stride, index: 2)
+            render.setFragmentTexture(noiseTexture, index: 0)
+            render.setFragmentTexture(qrTexture, index: 1)
+            render.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            render.endEncoding()
+            for index in 0..<2 {
+                guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return nil }
+                encoder.label = index == 0 ? "Wallet chip horizontal blur" : "Wallet chip vertical blur"
+                encoder.setComputePipelineState(state.blur)
+                encoder.setTexture(textures[index], index: 0)
+                encoder.setTexture(textures[index + 1], index: 1)
+                var sigma = currentFragmentUniforms.qrEffects.y * scale
+                var direction = index == 0 ? SIMD2<Int32>(1, 0) : SIMD2<Int32>(0, 1)
+                encoder.setBytes(&sigma, length: MemoryLayout<Float>.size, index: 0)
+                encoder.setBytes(&direction, length: MemoryLayout<SIMD2<Int32>>.stride, index: 1)
+                let w = state.blur.threadExecutionWidth
+                let h = max(1, min(8, state.blur.maxTotalThreadsPerThreadgroup / w))
+                encoder.dispatchThreadgroups(MTLSize(width: (width + w - 1) / w, height: (height + h - 1) / h, depth: 1),
+                    threadsPerThreadgroup: MTLSize(width: w, height: h, depth: 1))
+                encoder.endEncoding()
+            }
+            return ChipFrame(texture: textures[2], rect: rect)
+        })
+
         context.renderToLayer(
             spec: RenderLayerSpec(
                 size: RenderSize(
@@ -399,7 +484,8 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
             ),
             state: RenderState.self,
             layer: self,
-            commands: { encoder, placement in
+            inputs: chipFrame,
+            commands: { encoder, placement, chipFrame in
                 let effectiveRect = placement.effectiveRect
                 var rect = SIMD4<Float>(
                     Float(effectiveRect.minX),
@@ -462,6 +548,9 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
                 encoder.setFragmentTexture(starsTexture, index: 0)
                 encoder.setFragmentTexture(noiseTexture, index: 1)
                 encoder.setFragmentTexture(qrTexture, index: 2)
+                encoder.setFragmentTexture(chipFrame?.texture ?? qrTexture, index: 3)
+                var chipRect = chipFrame?.rect ?? .zero
+                encoder.setFragmentBytes(&chipRect, length: MemoryLayout<SIMD4<Float>>.stride, index: 4)
                 encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4,
                     instanceCount: Int(vertexUniforms.slices) + 1)
             }

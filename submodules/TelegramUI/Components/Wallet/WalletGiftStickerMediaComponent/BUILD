@@ -5,9 +5,10 @@ swift_library(
     srcs = glob(["Sources/**/*.swift"]),
     copts = ["-warnings-as-errors"],
     deps = [
-        "//submodules/AccountContext", "//submodules/LottieBinding",
+        "//submodules/AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit", "//submodules/TelegramCore", "//submodules/WalletContext",
-        "//submodules/TelegramUI/Components/Wallet/WalletCollectibleHeaderComponent",
+        "//submodules/TelegramUI/Components/AnimationCache",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
     ],
     visibility = ["//visibility:public"],
 )

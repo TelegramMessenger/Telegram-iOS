@@ -1986,6 +1986,13 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupViaCommunity(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }
+            case .noPaidMessagesTokenUsed:
+                let peerName = message.peers[message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                if message.author?.id == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_NoPaidMessagesTokenUsedYou(peerName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.id.peerId)]))
+                } else {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_NoPaidMessagesTokenUsed(peerName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.id.peerId)]))
+                }
             case .unknown:
                 attributedString = nil
             }

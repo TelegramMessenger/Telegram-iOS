@@ -33,6 +33,11 @@ public final class GiftItemComponent: Component {
         case preview(attributes: [StarGift.UniqueGift.Attribute], rarity: StarGift.UniqueGift.Attribute.Rarity?)
     }
     
+    public enum SelectionStyle: Equatable {
+        case inner
+        case trimmedBackground(color: UIColor)
+    }
+
     public struct Ribbon: Equatable {
         public enum Color: Equatable {
             case red
@@ -173,6 +178,7 @@ public final class GiftItemComponent: Component {
     let mode: Mode
     let cornerRadius: CGFloat?
     let allowAnimations: Bool
+    let selectionStyle: SelectionStyle
     let action: (() -> Void)?
     let contextAction: ((UIView, ContextGesture) -> Void)?
     
@@ -202,6 +208,7 @@ public final class GiftItemComponent: Component {
         mode: Mode = .generic,
         cornerRadius: CGFloat? = nil,
         allowAnimations: Bool = true,
+        selectionStyle: SelectionStyle = .inner,
         action: (() -> Void)? = nil,
         contextAction: ((UIView, ContextGesture) -> Void)? = nil
     ) {
@@ -229,6 +236,7 @@ public final class GiftItemComponent: Component {
         self.animateChanges = animateChanges
         self.mode = mode
         self.cornerRadius = cornerRadius
+        self.selectionStyle = selectionStyle
         self.allowAnimations = allowAnimations
         self.action = action
         self.contextAction = contextAction
@@ -310,6 +318,9 @@ public final class GiftItemComponent: Component {
         if lhs.allowAnimations != rhs.allowAnimations {
             return false
         }
+        if lhs.selectionStyle != rhs.selectionStyle {
+            return false
+        }
         if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
             return false
         }
@@ -342,7 +353,63 @@ public final class GiftItemComponent: Component {
         private let ribbonText = ComponentView<Empty>()
         
         private var animationLayer: InlineStickerItemLayer?
+        private var modelHidden = false
+
+        public func setModelHidden(_ hidden: Bool) {
+            self.modelHidden = hidden
+            self.animationLayer?.isHidden = hidden
+        }
+
+        private func updateBackgroundTrim(isTrimmed: Bool, backgroundSize: CGSize, cornerRadius: CGFloat, inset: CGFloat, animated: Bool) {
+            let wasTrimmed = self.isBackgroundTrimmed
+            self.isBackgroundTrimmed = isTrimmed
+            let bounds = CGRect(origin: CGPoint(), size: backgroundSize)
+            let fullPath = CGPath(roundedRect: bounds, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+            let trimmedPath = CGPath(roundedRect: bounds.insetBy(dx: inset, dy: inset), cornerWidth: max(0.0, cornerRadius - inset), cornerHeight: max(0.0, cornerRadius - inset), transform: nil)
+            let path = isTrimmed ? trimmedPath : fullPath
+
+            var targets: [(CALayer, CAShapeLayer)] = []
+            let backgroundMask: CAShapeLayer
+            if let current = self.backgroundTrimMask {
+                backgroundMask = current
+            } else {
+                backgroundMask = CAShapeLayer()
+                self.backgroundTrimMask = backgroundMask
+                self.backgroundLayer.mask = backgroundMask
+            }
+            targets.append((self.backgroundLayer, backgroundMask))
+            if let patternView = self.patternView.view {
+                let patternMask: CAShapeLayer
+                if let current = self.patternTrimMask {
+                    patternMask = current
+                } else {
+                    patternMask = CAShapeLayer()
+                    self.patternTrimMask = patternMask
+                    patternView.layer.mask = patternMask
+                }
+                targets.append((patternView.layer, patternMask))
+            }
+            for (_, mask) in targets {
+                let previousPath = mask.presentation()?.path ?? mask.path
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                mask.frame = bounds
+                mask.path = path
+                CATransaction.commit()
+                if animated, wasTrimmed != isTrimmed, let previousPath {
+                    mask.animate(from: previousPath, to: path, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                }
+            }
+        }
+
+        public func playModelOnce() {
+            self.animationLayer?.playOnce()
+        }
+
         private var selectionLayer: SimpleShapeLayer?
+        private var backgroundTrimMask: CAShapeLayer?
+        private var patternTrimMask: CAShapeLayer?
+        private var isBackgroundTrimmed = false
         private var checkLayer: CheckLayer?
         private var outlineLayer: SimpleLayer?
         private var outlineRenderState: OutlineRenderState?
@@ -792,6 +859,7 @@ public final class GiftItemComponent: Component {
             
             let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : (floorToScreenPixels((size.height - iconSize.height) / 2.0) + explicitAnimationOffset)), size: iconSize)
             if let animationLayer = self.animationLayer {
+                animationLayer.isHidden = self.modelHidden
                 animationTransition.setFrame(layer: animationLayer, frame: animationFrame)
             }
             
@@ -1509,7 +1577,7 @@ public final class GiftItemComponent: Component {
             switch component.mode {
             case .generic, .grid, .upgradePreview:
                 let lineWidth: CGFloat = 2.0
-                let selectionFrame = backgroundFrame.insetBy(dx: 2.0, dy: 2.0)
+                var selectionFrame = backgroundFrame.insetBy(dx: 2.0, dy: 2.0)
                 
                 var cornerRadius: CGFloat
                 switch component.style {
@@ -1525,6 +1593,12 @@ public final class GiftItemComponent: Component {
                 var selectionColor = UIColor.white
                 if case .upgradePreview = component.mode, case let .preview(attributes, _) = component.subject, attributes.count == 1 {
                     selectionColor = component.theme.list.itemAccentColor
+                }
+                if case let .trimmedBackground(color) = component.selectionStyle {
+                    selectionFrame = backgroundFrame
+                    cornerRadius = self.backgroundLayer.cornerRadius - lineWidth * 0.5
+                    selectionColor = color
+                    self.updateBackgroundTrim(isTrimmed: component.isSelected, backgroundSize: backgroundFrame.size, cornerRadius: self.backgroundLayer.cornerRadius, inset: lineWidth * 2.0, animated: !transition.animation.isImmediate)
                 }
                 
                 if component.isSelected {

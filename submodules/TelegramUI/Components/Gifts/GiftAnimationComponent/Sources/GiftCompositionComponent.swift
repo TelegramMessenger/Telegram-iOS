@@ -182,6 +182,13 @@ public final class GiftCompositionComponent: Component {
             self.previewTimer?.invalidate()
         }
         
+        private var modelHidden = false
+
+        public func setModelHidden(_ hidden: Bool) {
+            self.modelHidden = hidden
+            self.animationNode?.view.isHidden = hidden
+        }
+
         @objc private func handleTap() {
             guard let animationNode = animationNode as? DefaultAnimatedStickerNodeImpl else { return }
             if case .once = animationNode.playbackMode, !animationNode.isPlaying {
@@ -987,6 +994,7 @@ public final class GiftCompositionComponent: Component {
                     size: size
                 )
                 animationNode.layer.bounds = CGRect(origin: .zero, size: iconSize)
+                animationNode.view.isHidden = self.modelHidden
                 animationTransition.setPosition(layer: animationNode.layer, position: animationFrame.center)
                 animationTransition.setScale(layer: animationNode.layer, scale: size.width / iconSize.width)
                 

@@ -40,6 +40,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let contentHeight: CGFloat
     let maximumBubbleBottom: CGFloat?
     let action: (() -> Void)?
+    let activateInput: (() -> Void)?
     
     init(
         context: AccountContext,
@@ -62,7 +63,8 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         bottomInset: CGFloat = 0.0,
         contentHeight: CGFloat = 370.0,
         maximumBubbleBottom: CGFloat? = nil,
-        action: (() -> Void)? = nil
+        action: (() -> Void)? = nil,
+        activateInput: (() -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -85,6 +87,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.contentHeight = contentHeight
         self.maximumBubbleBottom = maximumBubbleBottom
         self.action = action
+        self.activateInput = activateInput
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -177,6 +180,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
+            return false
+        }
+        if (lhs.activateInput == nil) != (rhs.activateInput == nil) {
             return false
         }
         return true
@@ -306,7 +312,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 let message = EngineRawMessage(stableId: 1, stableVersion: 0, id: EngineMessage.Id(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: messageFlags, tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [EngineMessage(message)], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: item.action.map { action in
                     return { _ in action() }
-                }, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: item.action == nil ? nil : peers[authorPeerId].flatMap(EnginePeer.init), isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: item.action != nil))
+                }, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: item.action == nil ? nil : peers[authorPeerId].flatMap(EnginePeer.init), isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: item.action != nil, activateGiftMessageInput: item.activateInput))
             }
             
             var nodes: [ListViewItemNode] = []

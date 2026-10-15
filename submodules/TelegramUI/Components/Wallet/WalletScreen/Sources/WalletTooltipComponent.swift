@@ -5,14 +5,18 @@ import ComponentFlow
 import MultilineTextComponent
 
 final class WalletTooltipComponent: Component {
-    let text: String
+    static let defaultColors = (UIColor(rgb: 0x47bafe), UIColor(rgb: 0x44b5ff))
 
-    init(text: String) {
+    let text: String
+    let colors: (UIColor, UIColor)
+
+    init(text: String, colors: (UIColor, UIColor) = WalletTooltipComponent.defaultColors) {
         self.text = text
+        self.colors = colors
     }
 
     static func ==(lhs: WalletTooltipComponent, rhs: WalletTooltipComponent) -> Bool {
-        return lhs.text == rhs.text
+        return lhs.text == rhs.text && lhs.colors.0 == rhs.colors.0 && lhs.colors.1 == rhs.colors.1
     }
 
     final class View: UIView {
@@ -41,7 +45,6 @@ final class WalletTooltipComponent: Component {
             self.backgroundView.layer.addSublayer(self.backgroundGradientLayer)
             self.arrowView.layer.addSublayer(self.arrowGradientLayer)
             for layer in [self.backgroundGradientLayer, self.arrowGradientLayer] {
-                layer.colors = [UIColor(rgb: 0x47bafe).cgColor, UIColor(rgb: 0x44b5ff).cgColor]
                 layer.startPoint = CGPoint(x: 0.0, y: 0.0)
                 layer.endPoint = CGPoint(x: 1.0, y: 0.0)
             }
@@ -102,6 +105,9 @@ final class WalletTooltipComponent: Component {
         }
 
         func update(component: WalletTooltipComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            for layer in [self.backgroundGradientLayer, self.arrowGradientLayer] {
+                layer.colors = [component.colors.0.cgColor, component.colors.1.cgColor]
+            }
             let textSize = self.text.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(

@@ -65,6 +65,9 @@ public final class EmojiStatusSelectionComponent: Component {
     public let hideTopPanel: Bool
     public let disableTopPanel: Bool
     public let hideTopPanelUpdated: (Bool, ComponentTransition) -> Void
+    public let externalTintMaskContainer: UIView?
+    public let contentFadeHeight: CGFloat?
+    public let keepsTopPanelVisible: Bool
     
     public init(
         theme: PresentationTheme,
@@ -76,7 +79,10 @@ public final class EmojiStatusSelectionComponent: Component {
         separatorColor: UIColor,
         hideTopPanel: Bool,
         disableTopPanel: Bool,
-        hideTopPanelUpdated: @escaping (Bool, ComponentTransition) -> Void
+        hideTopPanelUpdated: @escaping (Bool, ComponentTransition) -> Void,
+        externalTintMaskContainer: UIView? = nil,
+        contentFadeHeight: CGFloat? = nil,
+        keepsTopPanelVisible: Bool = false
     ) {
         self.theme = theme
         self.strings = strings
@@ -88,6 +94,9 @@ public final class EmojiStatusSelectionComponent: Component {
         self.hideTopPanel = hideTopPanel
         self.disableTopPanel = disableTopPanel
         self.hideTopPanelUpdated = hideTopPanelUpdated
+        self.externalTintMaskContainer = externalTintMaskContainer
+        self.contentFadeHeight = contentFadeHeight
+        self.keepsTopPanelVisible = keepsTopPanelVisible
     }
     
     public static func ==(lhs: EmojiStatusSelectionComponent, rhs: EmojiStatusSelectionComponent) -> Bool {
@@ -118,12 +127,19 @@ public final class EmojiStatusSelectionComponent: Component {
         if lhs.disableTopPanel != rhs.disableTopPanel {
             return false
         }
+        if lhs.contentFadeHeight != rhs.contentFadeHeight {
+            return false
+        }
+        if lhs.keepsTopPanelVisible != rhs.keepsTopPanelVisible {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private let keyboardView: ComponentView<Empty>
         private let keyboardClippingView: UIView
+        private var contentFadeMask: CAGradientLayer?
         private let panelHostView: PagerExternalTopPanelContainer
         private let panelBackgroundView: BlurredBackgroundView
         private let panelSeparatorView: UIView
@@ -186,7 +202,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     defaultToEmojiTab: true,
                     externalTopPanelContainer: self.panelHostView,
                     externalBottomPanelContainer: nil,
-                    externalTintMaskContainer: nil,
+                    externalTintMaskContainer: component.externalTintMaskContainer,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
                     topPanelScrollingOffset: { _, _ in },
@@ -210,7 +226,8 @@ public final class EmojiStatusSelectionComponent: Component {
                     clipContentToTopPanel: false,
                     useExternalSearchContainer: false,
                     hidePanels: component.disableTopPanel,
-                    customTintColor: component.color
+                    customTintColor: component.color,
+                    alwaysShowsTopPanel: component.keepsTopPanelVisible
                 )),
                 environment: {},
                 forceUpdate: forceUpdate, 
@@ -221,10 +238,31 @@ public final class EmojiStatusSelectionComponent: Component {
                     self.keyboardClippingView.addSubview(keyboardComponentView)
                 }
                 
-                if panelBackgroundColor.alpha < 0.01 {
-                    self.keyboardClippingView.clipsToBounds = true
-                } else {
+                if panelBackgroundColor.alpha < 0.01, let fadeHeight = component.contentFadeHeight {
                     self.keyboardClippingView.clipsToBounds = false
+                    let fadeMask: CAGradientLayer
+                    if let current = self.contentFadeMask {
+                        fadeMask = current
+                    } else {
+                        fadeMask = CAGradientLayer()
+                        fadeMask.colors = [UIColor.clear.cgColor, UIColor.black.cgColor, UIColor.black.cgColor]
+                        fadeMask.startPoint = CGPoint(x: 0.5, y: 0.0)
+                        fadeMask.endPoint = CGPoint(x: 0.5, y: 1.0)
+                        self.contentFadeMask = fadeMask
+                        self.keyboardClippingView.layer.mask = fadeMask
+                    }
+                    let maskHeight = max(1.0, availableSize.height - topPanelHeight)
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    fadeMask.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: maskHeight))
+                    fadeMask.locations = [0.0, NSNumber(value: Double(min(1.0, fadeHeight / maskHeight))), 1.0]
+                    CATransaction.commit()
+                } else {
+                    if self.contentFadeMask != nil {
+                        self.contentFadeMask = nil
+                        self.keyboardClippingView.layer.mask = nil
+                    }
+                    self.keyboardClippingView.clipsToBounds = panelBackgroundColor.alpha < 0.01
                 }
                 
                 transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight)))

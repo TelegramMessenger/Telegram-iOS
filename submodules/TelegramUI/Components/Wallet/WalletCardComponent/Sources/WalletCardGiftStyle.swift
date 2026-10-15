@@ -121,7 +121,7 @@ struct WalletCardTint: Equatable {
             let a = WalletOklch(accent)
             return WalletOklch(l: a.l * 0.8, c: a.c, h: a.h).uiColor
         }
-        return WalletOklch(l: s - 0.115, c: Self.stockAddress.c * chroma * 1.1, h: hue).uiColor
+        return WalletOklch(l: s - 0.22, c: Self.stockAddress.c * chroma * 1.1, h: hue).uiColor
     }
 
     var darkCard: Bool { WalletOklch(hex: outerColor).l < 0.2 }

@@ -118,6 +118,8 @@ public final class WalletCardComponent: Component {
         private let foregroundView = UIControl()
         private let stickerContainer = UIView()
         private var stickerViews: [String: WalletCardStickerView] = [:]
+        private let stickerSelectionView = WalletCardStickerSelectionView()
+        private var selectedStickerId: String?
         private var stickerMaskKey = ""
         private var stickerPlacements: [WalletContext.CardSticker] = []
         public var stickerSurface: UIView { self.foregroundView }
@@ -138,7 +140,15 @@ public final class WalletCardComponent: Component {
             return self.diamondClipView.hitTest(diamondPoint, with: nil) == nil
         }
 
+        public var giftStyleWaveSize: CGSize?
+        public var giftButtonDefaultColor = UIColor(rgb: 0x008aff)
+        public var giftStyleUpdated: ((UIColor, UIColor, CGPoint, CGFloat, CGFloat, Bool) -> Void)?
+
         private var giftStyle: WalletContext.CardGiftStyle?
+
+        public func giftStyled(_ color: UIColor) -> UIColor? {
+            return self.giftStyle.map { WalletCardTint($0).tint(WalletOklch(color)).uiColor }
+        }
         private var giftAccentColor = UIColor(rgb: 0x6ddcff)
         private var giftAddressColor = UIColor(rgb: 0x055ac4, alpha: 0.8)
         private let giftPatternLayer = CALayer()
@@ -168,7 +178,11 @@ public final class WalletCardComponent: Component {
             }
             let size = self.foregroundView.bounds.size
             let frame = WalletCardStyleTransition(fraction: progress, removing: to == nil)
-            let radius = frame.radius(origin: origin, size: size)
+            let radius = frame.radius(origin: origin, size: self.giftStyleWaveSize ?? size)
+            self.giftStyleUpdated?(
+                from.map { WalletCardTint($0).tint(WalletOklch(self.giftButtonDefaultColor)).uiColor } ?? self.giftButtonDefaultColor,
+                to.map { WalletCardTint($0).tint(WalletOklch(self.giftButtonDefaultColor)).uiColor } ?? self.giftButtonDefaultColor,
+                origin, radius, frame.progress, to == nil)
             if progress < 1, to != nil, !self.styleWaveHit {
                 let gem = self.primaryBalanceContainerView.convert(self.gramIconContentFrame.center, to: self.foregroundView)
                 if radius >= hypot(gem.x - origin.x, gem.y - origin.y) {
@@ -190,6 +204,11 @@ public final class WalletCardComponent: Component {
                 to.map { WalletCardTint($0).address.withAlphaComponent(0.8) } ?? UIColor(rgb: 0x055ac4, alpha: 0.8), frame.textMix)
             let textChanged = self.giftAccentColor != accent || self.giftAddressColor != address
             self.giftAccentColor = accent; self.giftAddressColor = address
+            let tintAmount = (from == nil ? 0.0 : 1.0) * (1.0 - frame.textMix) + (to == nil ? 0.0 : 1.0) * frame.textMix
+            (self.gramDiamond.view as? InteractiveDiamondComponent.View)?.setTint(
+                (to ?? from).map { _ in Self.mixStyleColor(from.map { WalletCardTint($0).accent } ?? to.map { WalletCardTint($0).accent } ?? accent,
+                    to.map { WalletCardTint($0).accent } ?? from.map { WalletCardTint($0).accent } ?? accent, frame.textMix) },
+                amount: tintAmount * 0.7)
             if textChanged, let component = self.component {
                 _ = self.update(component: component, availableSize: self.currentSize, state: EmptyComponentState(),
                     environment: .value, transition: .immediate)
@@ -262,10 +281,54 @@ public final class WalletCardComponent: Component {
             }
         }
         private var liveStickers: [String: StickerLive] = [:]
+        private var stickerImages: [String: UIImage] = [:]
+        public func sticker(at point: CGPoint) -> WalletContext.CardSticker? {
+            let size = self.foregroundView.bounds.size
+            guard CGRect(origin: .zero, size: size).contains(point), self.stickerPointIsInteractive(point) else { return nil }
+            for sticker in self.stickerPlacements.reversed() {
+                guard let view = self.stickerViews[sticker.gift.address], !view.isHidden, view.image != nil else { continue }
+                let geometry = self.stickerGeometry(sticker)
+                if hypot(point.x - geometry.center.x, point.y - geometry.center.y) < geometry.side * 0.42 { return sticker }
+            }
+            return nil
+        }
         private var smoothedStickerShine: Double = 0
         public func setStickerLive(_ values: [String: StickerLive]) {
             self.liveStickers = values
             self.layoutCardStickers()
+        }
+
+        public struct StickerSelection {
+            public let center: CGPoint
+            public let radius: CGFloat
+            public let left: CGPoint
+            public let right: CGPoint
+        }
+        public func setStickerSelection(_ id: String?, animated: Bool) {
+            if let id { self.selectedStickerId = id }
+            self.foregroundView.bringSubviewToFront(self.stickerSelectionView)
+            self.stickerSelectionView.setShown(id != nil && self.stickerSelection != nil, animated: animated)
+            self.layoutCardStickers()
+        }
+        public var stickerSelection: StickerSelection? {
+            guard let id = self.selectedStickerId, let sticker = self.stickerPlacements.first(where: { $0.gift.address == id }) else { return nil }
+            let geometry = self.stickerGeometry(sticker)
+            let radius = Self.stickerSelectionRadius(side: geometry.side * max(1, CGFloat(sticker.aspectRatio ?? 1)), width: self.foregroundView.bounds.width)
+            let axis = CGPoint(x: cos(geometry.angle) * radius, y: sin(geometry.angle) * radius)
+            return StickerSelection(center: geometry.center, radius: radius,
+                left: CGPoint(x: geometry.center.x - axis.x, y: geometry.center.y - axis.y),
+                right: CGPoint(x: geometry.center.x + axis.x, y: geometry.center.y + axis.y))
+        }
+        private static func stickerSelectionRadius(side: CGFloat, width: CGFloat) -> CGFloat {
+            return side * 0.62 + 6 * width / 361
+        }
+        private func stickerGeometry(_ sticker: WalletContext.CardSticker) -> (center: CGPoint, side: CGFloat, angle: CGFloat) {
+            let size = self.foregroundView.bounds.size
+            let live = self.liveStickers[sticker.gift.address]
+            return (center: CGPoint(x: CGFloat(sticker.x) * size.width + self.currentCardY * 5,
+                    y: CGFloat(sticker.y) * size.height - self.currentCardX * 5),
+                side: size.width * CGFloat(sticker.renderedWidthFraction) * (live?.grow ?? 1),
+                angle: live?.angle ?? CGFloat(sticker.angle))
         }
         public var stickerObstacles: [CGRect] {
             let views = [self.integralBalance.view, self.fractionalBalance.view, self.secondaryBalance.view,
@@ -291,6 +354,23 @@ public final class WalletCardComponent: Component {
         private let stickerKickV = WalletStickerSpring(0, 170, 0.42)
         private let stickerSquash = WalletStickerSpring(1, 420, 0.38)
         private var stickerYaw: Double { self.currentCardY + Double(self.stickerKickH.value) * .pi / 18 }
+
+        public static func makeShakeAnimation() -> CAAnimation {
+            let animation = CAKeyframeAnimation(keyPath: "position.x")
+            animation.values = [0.0, -8.0, 7.0, -5.0, 3.0, -1.5, 0.0].map { NSNumber(value: Double($0)) }
+            animation.keyTimes = [0.0, 0.14, 0.32, 0.5, 0.68, 0.84, 1.0].map { NSNumber(value: $0) }
+            animation.duration = 0.45
+            animation.isAdditive = true
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            return animation
+        }
+
+        public func shake() {
+            self.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            if self.balanceTransitionView.superview != nil && !self.balanceTransitionView.isDescendant(of: self) {
+                self.balanceTransitionView.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            }
+        }
 
         public func stickerImpact(at point: CGPoint, thrown: Bool) {
             guard !UIAccessibility.isReduceMotionEnabled else { return }
@@ -388,6 +468,7 @@ public final class WalletCardComponent: Component {
 
         public func setCardStickers(_ stickers: [WalletContext.CardSticker], images: [String: UIImage], hidden: Set<String>) {
             self.stickerPlacements = stickers
+            self.stickerImages = images
             let valid = Set(stickers.map { $0.gift.address })
             for id in Array(self.stickerViews.keys) where !valid.contains(id) {
                 self.stickerViews.removeValue(forKey: id)?.removeFromSuperview()
@@ -396,7 +477,11 @@ public final class WalletCardComponent: Component {
                 let id = sticker.gift.address
                 let view = self.stickerViews[id] ?? WalletCardStickerView(frame: .zero)
                 self.stickerViews[id] = view
+                let appeared = view.image == nil && images[id] != nil
                 view.image = images[id]
+                if appeared && self.window != nil && !hidden.contains(id) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
                 view.isHidden = hidden.contains(id)
                 self.stickerContainer.addSubview(view)
             }
@@ -407,6 +492,7 @@ public final class WalletCardComponent: Component {
             guard !self.stickerPlacements.isEmpty else {
                 self.stickerContainer.layer.mask = nil
                 self.stickerMaskKey = ""
+                self.stickerSelectionView.setShown(false, animated: false)
                 return
             }
             let size = self.foregroundView.bounds.size
@@ -449,14 +535,20 @@ public final class WalletCardComponent: Component {
             for sticker in self.stickerPlacements {
                 guard let view = self.stickerViews[sticker.gift.address] else { continue }
                 let live = self.liveStickers[sticker.gift.address]
-                let side = size.width * CGFloat(sticker.renderedWidthFraction) * (live?.grow ?? 1)
-                view.bounds = CGRect(x: 0, y: 0, width: side, height: side * CGFloat(sticker.aspectRatio ?? 1))
-                view.center = CGPoint(x: CGFloat(sticker.x) * size.width + self.currentCardY * 5,
-                    y: CGFloat(sticker.y) * size.height - self.currentCardX * 5)
-                let angle = live?.angle ?? CGFloat(sticker.angle)
-                view.transform = CGAffineTransform(rotationAngle: angle)
-                if let image = live?.image { view.image = image }
-                view.update(press: live?.press ?? 0, angle: angle, shine: 0.5 + CGFloat(sin(self.smoothedStickerShine)) * 0.35)
+                let geometry = self.stickerGeometry(sticker)
+                view.bounds = CGRect(x: 0, y: 0, width: geometry.side, height: geometry.side * CGFloat(sticker.aspectRatio ?? 1))
+                view.center = geometry.center
+                view.transform = CGAffineTransform(rotationAngle: geometry.angle)
+                view.image = live?.image ?? self.stickerImages[sticker.gift.address]
+                view.update(press: live?.press ?? 0, shine: 0.5 + CGFloat(sin(self.smoothedStickerShine)) * 0.35)
+            }
+            if self.stickerSelectionView.isShown {
+                if let selection = self.stickerSelection {
+                    self.stickerSelectionView.update(center: selection.center, radius: selection.radius,
+                        angle: self.stickerPlacements.first(where: { $0.gift.address == self.selectedStickerId }).map { self.stickerGeometry($0).angle } ?? 0)
+                } else {
+                    self.stickerSelectionView.setShown(false, animated: false)
+                }
             }
         }
 
@@ -568,6 +660,7 @@ public final class WalletCardComponent: Component {
             self.addSubview(self.foregroundView)
             self.stickerContainer.isUserInteractionEnabled = false
             self.foregroundView.addSubview(self.stickerContainer)
+            self.foregroundView.addSubview(self.stickerSelectionView)
 
             self.scrollShadingLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
             self.scrollShadingLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
@@ -1336,6 +1429,10 @@ public final class WalletCardComponent: Component {
                 self.component?.isVisible == true && self.isAnimationVisible && self.isScrollVisible && self.balanceTransitionFraction == 0.0
         }
 
+        public static var projectionReach: CGFloat {
+            return WalletCardBackgroundView.projectionPadding
+        }
+
         public func updateScrollTransform(_ transform: CATransform3D) {
             guard !CATransform3DEqualToTransform(self.scrollTransform, transform) else {
                 return
@@ -1584,7 +1681,7 @@ public final class WalletCardComponent: Component {
             let detailsAlpha = 1.0 - easedDetailsFraction
             self.qrAlpha = detailsAlpha
             self.qrBlurRadius = easedDetailsFraction * 8.0
-            for view in [self.name.view, self.qrButton.view, self.address.view, self.addressOutline.view] {
+            for view in [self.name.view, self.qrButton.view, self.address.view, self.addressOutline.view, self.stickerContainer, self.stickerSelectionView] {
                 if let view {
                     ComponentTransition.immediate.setAlpha(view: view, alpha: detailsAlpha)
                     view.layer.removeAnimation(forKey: "filters.gaussianBlur.inputRadius")
