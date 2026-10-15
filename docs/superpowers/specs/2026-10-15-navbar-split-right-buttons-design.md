@@ -261,13 +261,14 @@ mattered; native references are the reference app's films, the touch-driven one 
 
 **Elsewhere:**
 
-- **Subscribers** (2 members): Edit alone (search joins at 200 members). Edit -> Done leaves Done **white with a blue
-  edge**: the stuck-pale Done seen on master too. Its mechanism is now known: UIKit's press and a change of effect on
-  the same glass. Renewing the glass cures it, but that is applied only where pills merge. Open; proposed fix: renew a
-  pressed pill's glass on any in-place retint and carry on its press's scale.
-- **Chats:** looks as before. Edit mode: the pills dematerialize and materialize in place. On the way in, the title
-  re-centres at once and overlaps the story/proxy capsule for ~0.07 s before it fades. That is also in the Task 5 film,
-  so it predates the merge fix; master not checked. Open.
+- **Subscribers** (2 members): Edit alone (search joins at 200 members). Edit -> Done left Done **white with a blue
+  edge**: the stuck-pale Done seen on master too, caused by UIKit's press and a change of effect on the same glass.
+  Fixed in `692a6aa217`: before any in-place retint, a pressed pill gets a new effect view and its press's scale goes
+  on as the bar's own. Filmed three times since, Done settles on the accent (0085fa, was f7f7fc).
+- **Chats:** looks as before. Edit mode: the pills dematerialize and materialize in place. The title beside the story
+  avatars used to snap across as the right buttons went (it overlapped the story/proxy capsule for ~0.07 s); the
+  story list now eases its title bound on a spring of the update's duration (`503f5448e5`). Filmed: the title glides
+  388 -> 446 px over 0.4 s and back, in step with the buttons.
 - **A chat** (Peter Isaac) and **a News "For you" post:** push and pop morph as before.
 - **Not filmed:** Removed Users (no entries on this channel), Members with 200+ (no such channel at hand), the iPhone
   Duo (its simulator renders nothing), the dark appearance and the clear glass style (the tint blend is unverified
@@ -291,5 +292,9 @@ mattered; native references are the reference app's films, the touch-driven one 
 The channel profile's [add story, Edit] capsule is PeerInfo's own header, not the bar component, and is unchanged
 (UIKit would split it).
 
-**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK (638 actions). `NavigationBarComponentTests` 175/175,
+**Whole-branch review** (Opus, fresh context): ready with fixes, no Critical. Fixed in `4280c582bd`: a relayout
+mid-merge sent the leaving pill toward its partner's old frame, and an item change on a still-lent pill went through
+UIKit's animated effect change. Ten minors are deferred (see the plan's ledger).
+
+**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the final code (81 actions). `NavigationBarComponentTests` 180/180,
 `NavigationBarNodeTests` 77/77.

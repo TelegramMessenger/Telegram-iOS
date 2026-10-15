@@ -295,8 +295,9 @@ mechanism); responder restore is a separate plan with an audit of `ChatControlle
    right (user's choice). The story grids' older `ChatTitleView` is not included.
 8. ~~**Split Edit and Search into two glass pills**~~ (asked 2026-10-15). Done on branch `navbar/split-buttons`: right
    buttons group by UIKit's rule, and a pill that comes or goes merges with its neighbour as one shape. See
-   `docs/superpowers/specs/2026-10-15-navbar-split-right-buttons-design.md`, "Results", for what was filmed and what is
-   open: the stuck-pale Done on single-pill changes, and the Chats title overlap on entering Edit mode.
+   `docs/superpowers/specs/2026-10-15-navbar-split-right-buttons-design.md`, "Results", for what was filmed, the
+   two fixes it led to (the stuck-pale Done on single-pill changes, the Chats title snapping in Edit mode) and what was
+   not filmed (iPhone Duo, Removed Users, dark and clear glass).
 9. **Deferred minors** (next section), then the merge decision for both branches.
 
 ## Deferred minors (known, not fixed)
