@@ -31,6 +31,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
+        "//submodules/TelegramUI/Components/News/NewsChannelIsland",
     ],
     visibility = [
         "//visibility:public",

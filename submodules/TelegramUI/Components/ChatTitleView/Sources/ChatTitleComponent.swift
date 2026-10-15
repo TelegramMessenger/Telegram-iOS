@@ -13,6 +13,7 @@ import PhoneNumberFormat
 import TelegramStringFormatting
 import EmojiStatusComponent
 import GlassBackgroundComponent
+import NewsFeedSupport
 
 public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
     private final class ContentData: Equatable {
@@ -364,12 +365,14 @@ public final class ChatTitleComponent: Component {
             let rightTitleIconSpacing: CGFloat = 3.0
             let containerSideInset: CGFloat = 14.0
             
+            let isUpdate = self.component != nil
             self.component = component
             self.state = state
             
             var titleSegments: [AnimatedTextComponent.Item] = []
             var titleLeftIcon: TitleIconComponent.Kind?
             var titleRightIcon: TitleIconComponent.Kind?
+            var animatesBadgeWithNewsSpring = false
             var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
             var titleVerifiedIcon: ChatTitleCredibilityIcon = .none
             var titleStatusIcon: ChatTitleCredibilityIcon = .none
@@ -470,11 +473,30 @@ public final class ChatTitleComponent: Component {
                         }
                     } else {
                         if let notificationSettings = peerView.notificationSettings {
+                            var isMutedNow = false
                             if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                                if titleCredibilityIcon != .verified {
-                                    titleRightIcon = .mute
+                                isMutedNow = true
+                            }
+                            var isBroadcast = false
+                            var participation: NewsChannelParticipation = .left
+                            if let channel = peerView.peer as? TelegramChannel {
+                                if case .broadcast = channel.info {
+                                    isBroadcast = true
+                                }
+                                switch channel.participationStatus {
+                                case .member:
+                                    participation = .member
+                                case .left:
+                                    participation = .left
+                                case .kicked:
+                                    participation = .kicked
                                 }
                             }
+                            let featureEnabled = isNewsFeedEnabled(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                            if newsChatTitleShowsMuteIcon(isBroadcast: isBroadcast, participation: participation, isMuted: isMutedNow, isVerified: titleCredibilityIcon == .verified, featureEnabled: featureEnabled) {
+                                titleRightIcon = .mute
+                            }
+                            animatesBadgeWithNewsSpring = isBroadcast && featureEnabled
                         }
                     }
                     if peerView.peerId.isVerificationCodes {
@@ -860,10 +882,22 @@ public final class ChatTitleComponent: Component {
             } else if let rightIcon = self.rightIcon {
                 self.rightIcon = nil
                 if let rightIconView = rightIcon.view {
-                    transition.setScale(view: rightIconView, scale: 0.001)
-                    transition.setAlpha(view: rightIconView, alpha: 0.0, completion: { [weak rightIconView] _ in
-                        rightIconView?.removeFromSuperview()
-                    })
+                    if animatesBadgeWithNewsSpring && isUpdate {
+                        // `Motion.content`: the badge shrinks to half and fades.
+                        let spring = NewsSpring.titleBadge
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "transform.scale", from: 1.0 as NSNumber, to: 0.5 as NSNumber), forKey: "newsBadgeScale")
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "opacity", from: 1.0 as NSNumber, to: 0.0 as NSNumber), forKey: "newsBadgeOpacity")
+                        rightIconView.layer.transform = CATransform3DMakeScale(0.5, 0.5, 1.0)
+                        rightIconView.alpha = 0.0
+                        DispatchQueue.main.asyncAfter(deadline: .now() + spring.settlingDuration, execute: { [weak rightIconView] in
+                            rightIconView?.removeFromSuperview()
+                        })
+                    } else {
+                        transition.setScale(view: rightIconView, scale: 0.001)
+                        transition.setAlpha(view: rightIconView, alpha: 0.0, completion: { [weak rightIconView] _ in
+                            rightIconView?.removeFromSuperview()
+                        })
+                    }
                 }
             }
             
@@ -1170,8 +1204,15 @@ public final class ChatTitleComponent: Component {
                     rightIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(rightIconView)
                     rightIconView.frame = rightIconFrame
-                    ComponentTransition.immediate.setScale(view: rightIconView, scale: 0.001)
-                    rightIconView.alpha = 0.0
+                    if animatesBadgeWithNewsSpring && isUpdate {
+                        // `Motion.content`: the badge grows from half and fades in.
+                        let spring = NewsSpring.titleBadge
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "transform.scale", from: 0.5 as NSNumber, to: 1.0 as NSNumber), forKey: "newsBadgeScale")
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "opacity", from: 0.0 as NSNumber, to: 1.0 as NSNumber), forKey: "newsBadgeOpacity")
+                    } else {
+                        ComponentTransition.immediate.setScale(view: rightIconView, scale: 0.001)
+                        rightIconView.alpha = 0.0
+                    }
                 }
                 transition.setPosition(view: rightIconView, position: rightIconFrame.center)
                 transition.setBounds(view: rightIconView, bounds: CGRect(origin: CGPoint(), size: rightIconFrame.size))
