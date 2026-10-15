@@ -126,6 +126,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
 
     /// Published only in `.keyframe` mode, where the render server plays the trajectory.
     var onFlightChanged: ((ScrollFlight?) -> Void)?
+    var onDidEndDecelerating: (() -> Void)?
     var onWillBeginDragging: (() -> Void)?
     var onDidEndDragging: (() -> Void)?
     var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
@@ -391,6 +392,8 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
                 + "totalTravel=\(core.offset - flightLaunchOffset)")
             FlightTrace.shared.flush()
             stopDisplayLink()
+            // A stepped deceleration publishes no flight, so its end is reported here.
+            onDidEndDecelerating?()
         }
     }
 

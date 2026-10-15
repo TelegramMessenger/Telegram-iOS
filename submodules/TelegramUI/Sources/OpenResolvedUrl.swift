@@ -95,6 +95,50 @@ func openResolvedUrlImpl(
             requestMessageActionUrlAuth?(.url(url: url, inAppOrigin: nil))
             dismissInput()
             break
+        case let .noPaidMessagesToken(peer, token):
+            dismissInput()
+            
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                progress?.set(.single(true))
+                return ActionDisposable {
+                    Queue.mainQueue().async() {
+                        progress?.set(.single(false))
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.1, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.startStrict()
+            
+            let _ = (context.engine.peers.importNoPaidMessagesToken(peerId: peer.id, token: token)
+            |> map(Optional.init)
+            |> `catch` { error -> Signal<EnginePeer?, ImportNoPaidMessagesTokenError> in
+                if case .invalidToken = error {
+                    return .single(nil)
+                }
+                return .fail(error)
+            }
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            |> deliverOnMainQueue).startStandalone(next: { updatedPeer in
+                let enginePeer = updatedPeer ?? EnginePeer(peer)
+                openPeer(enginePeer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                let text: String
+                if updatedPeer != nil {
+                    text = presentationData.strings.QrStudio_NoPaidToken_Imported(enginePeer.compactDisplayTitle).string
+                } else {
+                    text = presentationData.strings.QrStudio_NoPaidToken_Invalid
+                }
+                Queue.mainQueue().after(0.4, {
+                    present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: text, timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
+                })
+            }, error: { _ in
+                openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil))
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            })
         case let .peer(peer, navigation):
             if let peer = peer {
                 openPeer(EnginePeer(peer), defaultNavigationForPeerId(peer.id, navigation: navigation))

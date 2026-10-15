@@ -114,7 +114,7 @@ public final class NewsScreen: ViewController {
     }
 
     private func searchContentNode() -> NavigationBarSearchContentNode? {
-        return (self.newsNode.navigationBarView.view as? ChatListNavigationBar.View)?.searchContentNode
+        return self.newsNode.headerView.searchContentNode
     }
 
     private func activateSearch() {
@@ -131,6 +131,15 @@ public final class NewsScreen: ViewController {
 
     private func openMoreMenu(sourceView: UIView) {
         let items: [ContextMenuItem] = [
+            .action(ContextMenuActionItem(text: self.presentationData.strings.News_ReloadFeed, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                // Feed2 Motion.afterMenu: the menu closes first.
+                Queue.mainQueue().after(0.25, {
+                    self?.newsNode.reloadFeed()
+                })
+            })),
             .action(ContextMenuActionItem(text: self.presentationData.strings.News_MarkAllAsRead, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadAll"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in

@@ -757,10 +757,13 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                     var referrer: String?
                     var albumId: Int64?
                     var collectionId: Int64?
+                    var noPaidMessagesToken: String?
                     
                     for queryItem in params.items {
                         if let value = queryItem.value {
                             switch queryItem.name {
+                            case "nopaidtoken":
+                                noPaidMessagesToken = value
                             case "phone":
                                 phone = value
                             case "domain":
@@ -836,6 +839,9 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                         if direct {
                             queryItems.append(URLQueryItem(name: "direct", value: nil))
                         }
+                        if let noPaidMessagesToken {
+                            queryItems.append(URLQueryItem(name: "nopaidtoken", value: noPaidMessagesToken))
+                        }
                         convertedUrl = makeTelegramUrl("/+\(phone)", queryItems: queryItems)
                     } else if let domain = domain {
                         var path = "/\(domain)"
@@ -897,6 +903,9 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                         }
                         if direct {
                             queryItems.append(URLQueryItem(name: "direct", value: nil))
+                        }
+                        if let noPaidMessagesToken {
+                            queryItems.append(URLQueryItem(name: "nopaidtoken", value: noPaidMessagesToken))
                         }
                         
                         convertedUrl = makeTelegramUrl(path, queryItems: queryItems)

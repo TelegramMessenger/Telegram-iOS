@@ -649,6 +649,25 @@ In a binary the fingerprint is a weak/unowned `…Init` whose stack slot gets `�
 first call to a closure specialized as `Arg[n] = Stack Promoted from Box`; a scan of every binary in
 the 2026-10-02 debug build found no other site.
 
+## Swift 6.4: SimplifyCFG crash in release builds only
+
+`BorrowUtils.swift:551: Fatal error: cannot get borrow introducers for unknown guaranteed value`,
+in pass `SimplifyCFG` (jump threading), crashes `swift-frontend` at `-Osize` while debug builds of the
+same source compile, so it first shows up on CI. Seen 2026-10-15 in `QrStudioCodePaths.init`: a
+nested function called from loops, with the cross-module-inlined `QrCodeMatrix.isEye(x:y:)` (an
+`&&`/`||` chain reading `self.size` of the borrowed matrix, a struct holding an array). Calling a
+static `QrCodeMatrix.isEye(x:y:size:)` with a local `size` avoids it; removing any other construct of
+the function on its own did not.
+
+To reproduce, replay the frontend command from the CI log in the bazel execroot. A single file only
+reproduces with a caller added, because WMO deletes an internal function nothing calls before
+optimizing it. Give the replay its own `-module-cache-path`: the default relative
+`bazel-out/…/_swift_module_cache`, run from the workspace instead of the execroot, writes pcms into
+bazel's shared cache under a second path (the `bazel-out` symlink), and the next build fails with
+"module '_DarwinFoundation1' is defined in both". Delete the hash directory it wrote to recover.
+Also, `Make.py build --target` on a bare `swift_library` builds it for the host (`no such module
+'UIKit'`); a library gets its iOS configuration only through the app's transition.
+
 ## Per-module `-O` and pixel loops
 
 Almost every submodule builds `-Onone` under `--configuration=debug_*`. Exactly **two** override it with
@@ -746,14 +765,16 @@ every build.** The `TelegramApiGenerated` genrule runs the host tool `//build-sy
 and declares a fixed file list: `Api0`…`Api43.swift` (`--swift-file-count`, types spread evenly),
 `TLApiSchemaData.m`, and the tests' `SchemaFixtures.swift`/`SchemaAccessorProbes.swift`. Nothing
 generated is checked in for Bazel; changing the schema is the whole change.
-- **SwiftPM reads a committed copy** in `Sources/`, `ObjC/` and `Tests/SwiftPMGenerated`
-  (TelegramCore's `Package.swift`, which Telegram-Mac builds, depends on TelegramApi's). After
-  changing the schema or the generator, run `submodules/TelegramApi/generate-swiftpm.sh` and
-  commit the result. Bazel's globs are non-recursive so it never compiles that copy; keep them so.
-  **Resolve a merge conflict there by rerunning the script, never file by file:** Swift and
-  `TLApiSchemaData.m` from different runs disagree on offsets and corrupt memory silently. Nothing
-  checks the pair at run time (one genrule action or one script run always writes both);
-  `SchemaTableTests.testHashesMatch` and `AccessorProbeTests` catch it in the tests.
+- **SwiftPM reads a locally generated copy** in `Sources/`, `ObjC/` and `Tests/SwiftPMGenerated`
+  (TelegramCore's `Package.swift`, which Telegram-Mac builds, depends on TelegramApi's). It is
+  gitignored (since 2026-10-15; Telegram-Mac ignores it too): `swift_scheme.tl` is the source of
+  truth, so run `submodules/TelegramApi/generate-swiftpm.sh` before a SwiftPM build or
+  `swift test`, and again after the schema or the generator changes. Bazel's globs are
+  non-recursive so it never compiles that copy; keep them so. **Only ever regenerate all three
+  directories together (the script does):** Swift and `TLApiSchemaData.m` from different runs
+  disagree on offsets and corrupt memory silently. Nothing checks the pair at run time (one genrule
+  action or one script run always writes both); `SchemaTableTests.testHashesMatch` and
+  `AccessorProbeTests` catch it in the tests.
 - **No header is generated.** `TLApiTypes.h` and the umbrella header are static, and the counts
   and hash are `extern const`s defined in the generated `TLApiSchemaData.m`. A generated public
   header would be on both Bazel's and SwiftPM's include paths, where either copy can shadow the
@@ -797,16 +818,11 @@ Compiler-invisible rules:
 - **`tlFunction` must stay unspecialized** (`@_semantics("optimize.sil.specialize.generic.never")`).
   Otherwise each of the ~40 result types gets its own closure copy. Check:
   `nm .build/release/TelegramApi.o | xcrun swift-demangle | grep -c "specialization.*tlFunction"` → 0.
-- **Wire compatibility is pinned by goldens.** `Tests/SchemaGoldens.swift` holds digests recorded
-  from pre-engine Swift code. **Never re-record them on the engine to make a change pass**: a
-  mismatch is a wire change. A schema change fails `SchemaGoldenTests` for exactly the changed
-  entries (and the types that contain them); record those on pre-engine code, as was done for the
-  October 2026 wallet changes: build the old generator from `git show e60e1032cd:build-system/SwiftTL`,
-  generate the old-style Swift from the new schema, and run `SchemaGoldenTests` with
-  `TLAPI_SCHEMA_GOLDENS_OUT=<path>` in a scratch SwiftPM package holding that Swift, the
-  hand-written `Sources/*.swift` of the same commit, `SchemaGoldenTests.swift`,
-  `LoggerDescription.swift`, `SchemaGoldens.swift` and the new `SchemaFixtures.swift`. Every
-  unchanged digest must come out identical, or the harness is wrong.
+- **The schema code generator and engine are trusted; there is no per-constructor wire test.**
+  `SchemaGoldenTests` (digests of every fixture recorded from the pre-engine Swift) was removed on
+  2026-10-15: every schema change failed it until the new entries were recorded on a frozen
+  pre-engine generator. `GoldenTests` keeps about 15 hand-written fixtures whose bytes and logger
+  output were recorded pre-engine; never re-record those on the engine.
 - **Unknown constructors are logged with their exact id, even after an earlier field failed.**
   That requires the engine to stop where the old Swift parser stopped: a primitive's id in an
   object field consumes the primitive, and a string whose length overruns still skips its
@@ -818,8 +834,9 @@ Compiler-invisible rules:
   (inline callback button data).
 - **Offsets are baked into Swift and into the table; they must agree.** `AccessorProbeTests`
   (generated probes) reads every field of every fixture through the Swift accessors and compares
-  it with the table-driven description. The goldens check construction (Swift offsets) against
-  serialization (table offsets). Change `storageLayout` only together with the layout version in
+  it with the table-driven description; since the fixtures are built through the Swift
+  initializers, that also checks construction (Swift offsets) against the table. Change
+  `storageLayout` only together with the layout version in
   `main.swift`'s hash string.
 - **Accessor offsets are part of TelegramCore's compiled code.** They are
   `@_alwaysEmitIntoClient`, so a TelegramApi regeneration needs TelegramCore recompiled. Bazel
@@ -847,7 +864,7 @@ Compiler-invisible rules:
   `TelegramCore/Sources/State/Serialization.swift` — re-copy it when that file changes.
 - **Foreign reference types (C structs) were tried and rejected**: they need iOS 16.4
   (metadata kind 0x204), and multi-payload enums leak them on Swift 6.4.
-- Tests: `swift test --package-path submodules/TelegramApi` (and
+- Tests: `swift test --package-path submodules/TelegramApi` after `generate-swiftpm.sh` (and
   `-c release -Xswiftc -enable-testing`), `swift test --package-path build-system/SwiftTL`;
   Bazel: `Make.py test --target //submodules/TelegramApi:TelegramApiTests`.
 

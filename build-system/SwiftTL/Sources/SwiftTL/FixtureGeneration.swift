@@ -1,9 +1,8 @@
 import Foundation
 
 /// Emits `SchemaFixtures.swift` for the TelegramApi tests: deterministic values for every constructor
-/// (all optionals present / all absent) and a call of every function, built only through
-/// APIs that exist both before and after the table-driven engine, so goldens recorded on
-/// one implementation check the other.
+/// (all optionals present / all absent) and a call of every function, which the accessor-probe and leak
+/// tests run through every path.
 enum FixtureGenerator {
     struct FixtureError: Error, CustomStringConvertible {
         var text: String

@@ -7,6 +7,7 @@ import SwiftSignalKit
 import AccountContext
 import WalletContext
 import PeerWalletScreen
+import WalletGiftStickerMediaComponent
 import WalletSendScreen
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -1471,7 +1472,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
 
         self.headerNode.openWallet = { [weak self] in
             guard let self, let controller = self.controller, let peer = self.data?.peer else { return }
-            let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sourceBackgroundColor: self.headerNode.walletSourceBackgroundColor, sendMoney: { [weak self] peerWalletScreen in
+            let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sourceBackgroundColor: self.headerNode.isAvatarExpanded ? UIColor(white: 0.4, alpha: 1.0) : self.headerNode.walletSourceBackgroundColor, sendMoney: { [weak self] peerWalletScreen in
                 guard let self, let controller = self.controller else { return }
                 if peer.id == self.context.account.peerId {
                     guard WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable else {
@@ -2618,6 +2619,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     deinit {
         self.dataDisposable?.dispose()
+        self.walletStickersPreloadDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.activeActionDisposable.dispose()
         self.logoutConfirmationDisposable.dispose()
@@ -2695,8 +2697,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         })
     }
     
+    private let walletStickersPreloadDisposable = MetaDisposable()
+    private var preloadedWalletCard: WalletCard?
+
     private func updateData(_ data: PeerInfoScreenData) {
         let previousData = self.data
+        let walletCard = (data.cachedData as? CachedUserData)?.walletCard
+        if walletCard != self.preloadedWalletCard {
+            self.preloadedWalletCard = walletCard
+            self.walletStickersPreloadDisposable.set(walletCard.map { WalletGiftStickerMedia.preload(context: self.context, card: $0) })
+        }
         var previousMemberCount: Int?
         if let data = self.data {
             if let members = data.members, case let .shortList(_, memberList) = members {

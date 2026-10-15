@@ -400,9 +400,10 @@ public final class AddedFeedContext {
         })
     }
 
-    public func loadNewer() {
+    /// `force`: load even when the window is believed to reach the newest post (a pull to refresh).
+    public func loadNewer(force: Bool = false) {
         self.impl.with { impl in
-            impl.loadNewer(force: false)
+            impl.loadNewer(force: force)
         }
     }
 

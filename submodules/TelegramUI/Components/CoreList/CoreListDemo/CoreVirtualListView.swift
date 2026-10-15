@@ -719,15 +719,20 @@ public final class CoreVirtualListView: UIView {
     // `onWillBeginDragging` is emitted BEFORE the catch (PhysicsScrollEngine.swift:163-167), so its
     // tracking flag is already true by the time this arrives.
     //
-    // A drag released with no momentum produces NO flight and therefore never reaches here. That case
-    // is the host's to read off `didEndDragging` + `isScrollFlightActive`, mirroring how ListViewImpl
-    // splits the same two cases across `willDecelerate`.
+    // A `.stepped` or UIKit deceleration publishes no flight; its end arrives here too, through
+    // `engine.onDidEndDecelerating`. A drag released with no momentum produces neither and never reaches
+    // here. That case is the host's to read off `didEndDragging` + `isScrollDecelerating`, mirroring how
+    // ListViewImpl splits the same two cases across `willDecelerate`.
     public var didEndScrolling: (() -> Void)?
     // True while the render server is carrying a momentum flight. Read at `didEndDragging` to learn
     // whether momentum followed the release: the engine emits that callback AFTER launching
     // deceleration, precisely so an observer sees the post-release truth
     // (PhysicsScrollEngine.swift:194-197).
     public var isScrollFlightActive: Bool { activeScrollFlight != nil }
+    // True while momentum moves the list after a release, in every deceleration mode. Read at `didEndDragging`
+    // to learn whether momentum follows the release: `isScrollFlightActive` answers that only for `.keyframe`,
+    // since `.stepped` and UIKit decelerations publish no flight.
+    public var isScrollDecelerating: Bool { engine.isDecelerating }
     // Signed distance the engine offset sits beyond its declared edges — negative past `min`, positive
     // past `max`, zero within. The analogue of reading `scrollView.contentOffset.y` against its content
     // bounds, and correct to sample at `didEndDragging`: `launchFlight` parks the LAYER at the settled
@@ -1040,6 +1045,11 @@ public final class CoreVirtualListView: UIView {
         }
         engine.onDidEndDragging = { [weak self] in
             self?.didEndDragging?()
+        }
+        // A `.stepped` or UIKit deceleration publishes no flight, so it ends here rather than in
+        // `onFlightChanged(nil)` below.
+        engine.onDidEndDecelerating = { [weak self] in
+            self?.didEndScrolling?()
         }
         engine.onFlightChanged = { [weak self] flight in
             guard let self else { return }

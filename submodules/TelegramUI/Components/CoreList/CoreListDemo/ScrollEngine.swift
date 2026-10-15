@@ -62,6 +62,16 @@ protocol ScrollEngine: AnyObject {
     /// `UIScrollViewDelegate.scrollViewDidEndDragging(_:willDecelerate:)`.
     var onDidEndDragging: (() -> Void)? { get set }
 
+    /// True while momentum (a fling's deceleration or an edge bounce) moves the offset after a release. Read at
+    /// `onDidEndDragging` it says whether momentum follows the release, which `.stepped` and UIKit cannot say
+    /// through `onFlightChanged` (only `.keyframe` publishes flights).
+    var isDecelerating: Bool { get }
+
+    /// Fired once when a momentum phase that publishes no flight comes to rest by itself: a `.stepped`
+    /// deceleration or bounce, or UIKit's (`scrollViewDidEndDecelerating`). A `.keyframe` flight reports its end
+    /// through `onFlightChanged(nil)` instead. Not fired when a touch catches the motion.
+    var onDidEndDecelerating: (() -> Void)? { get set }
+
     /// Consulted once per interactive release, BEFORE the engine decides whether momentum follows,
     /// with the recognizer's release velocity. Returning `true` releases as if the finger had come to
     /// rest: no fling, while an overscrolled release still springs back to the edge.

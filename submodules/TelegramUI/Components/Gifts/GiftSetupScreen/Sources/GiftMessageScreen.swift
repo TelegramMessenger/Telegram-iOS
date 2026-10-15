@@ -788,7 +788,8 @@ private final class GiftMessageScreenComponent: Component {
                             bottomInset: max(0.0, containerFrame.height - previewHeight),
                             contentHeight: previewHeight,
                             maximumBubbleBottom: publicToggleFrame.minY - 16.0,
-                            action: { [weak self] in self?.commit() }
+                            action: { [weak self] in self?.commit() },
+                            activateInput: { [weak self] in self?.activateInput() }
                         ),
                         params: listItemParams
                     )),

@@ -10,7 +10,6 @@ import TelegramCore
 import TelegramPresentationData
 import SearchUI
 import SearchBarNode
-import ChatListUI
 import ChatListHeaderComponent
 import ChatListTitleView
 import EdgeEffect
@@ -24,8 +23,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private weak var controller: NewsScreen?
     private var presentationData: PresentationData
 
-    let navigationBarView = ComponentView<Empty>()
-    private let segmentNode = NewsSegmentNode()
+    let headerView = NewsHeaderView()
     private let listsContainerNode = ASDisplayNode()
     private let forYouList = NewsFeedListView()
     private let addedList = NewsFeedListView()
@@ -35,6 +33,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let forYou: NewsForYouFeedBinding
     private let added: NewsAddedFeedBinding
     private var addedRows = NewsAddedFeedBinding.Rows(items: [], positions: [:], firstUnreadItemIndex: nil)
+    /// The pull-to-refresh drop (spec): its model, ticked while anything moves.
+    private let refreshController = NewsRefreshController()
+    private var forYouHasPosts = false
+    private var addedHasPosts = false
     private var pendingAddedReposition = false
     /// The user dragged the Added list since it was last positioned: a late window replacement must not
     /// pull the list away from what they are reading.
@@ -43,17 +45,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var previousAddedCount = 0
 
     private var selectedSegment = 0
+    /// The tab a tap selected while its shutter runs: the tabs show it at once, the pages swap under the shutter.
+    private var tappedSegment: Int?
+    private let tabSwitchGeneration = NewsGeneration()
     /// The swipe between the lists in progress, as a signed fraction of the width: negative towards Added.
     private var pagerFraction: CGFloat = 0.0
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
-    private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsFeedSkeletonRowLayout)?
+    private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsSkeletonModelRow)?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
 
     private var searchDisplayController: SearchDisplayController?
-    private var isSearchDisplayControllerActive: ChatListNavigationBar.ActiveSearch?
+    private var searchContentNode: NewsSearchContentNode?
+    private var isSearchActive = false
 
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
@@ -75,16 +81,24 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.listsContainerNode.view.addSubview(self.addedList)
         self.addedList.isHidden = true
         self.view.addSubview(self.edgeEffectView)
+        self.view.addSubview(self.headerView)
+        self.headerView.activateSearch = { [weak self] in
+            self?.requestActivateSearch?()
+        }
+        self.headerView.openMoreMenu = { [weak self] sourceView in
+            self?.openMoreMenu?(sourceView)
+        }
+        self.headerView.selectSegment = { [weak self] index in
+            self?.selectSegment(index)
+        }
 
-        self.forYouList.isPullToRefreshEnabled = true
+        self.forYouList.reduceMotion = self.presentationData.reduceMotion
+        self.addedList.reduceMotion = self.presentationData.reduceMotion
 
         self.forYouList.onEdgeReached = { [weak self] edge in
             if edge == .bottom {
                 self?.forYou.feed.loadMore()
             }
-        }
-        self.forYouList.onPullToRefresh = { [weak self] in
-            self?.forYou.feed.refresh()
         }
         self.addedList.onEdgeReached = { [weak self] edge in
             switch edge {
@@ -99,6 +113,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 guard let self, let list else {
                     return
                 }
+                self.refreshController.listMoved()
                 if self.pagerFraction != 0.0 {
                     // Mid-swipe the header blends both lists, so either one moving changes it.
                     self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: false), transition: .immediate)
@@ -136,8 +151,41 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self?.addedUserScrolledSinceReposition = true
         }
 
+        self.refreshController.selectedPage = { [weak self] in
+            return self?.selectedSegment ?? 0
+        }
+        self.refreshController.makeInput = { [weak self] page in
+            return self?.refreshInput(page: page)
+        }
+        self.refreshController.onBegin = { [weak self] page in
+            if page == 0 {
+                self?.forYou.beginPullRefresh()
+            } else {
+                self?.added.beginPullRefresh()
+            }
+        }
+        self.refreshController.onHold = { [weak self] page, hold in
+            (page == 0 ? self?.forYouList : self?.addedList)?.setRefreshHold(hold)
+        }
+        self.refreshController.onPose = { [weak self] _, pose in
+            guard let self else {
+                return
+            }
+            self.headerView.segmentNode.updateRefreshDrop(pose: pose, theme: self.presentationData.theme, lottieSettings: self.context.lottieRenderingSettings)
+        }
+        self.refreshController.onInsertRows = { [weak self] page, unfolded in
+            self?.revealPullRefresh(page: page, unfolded: unfolded)
+        }
+        self.forYou.onPullRefreshEnded = { [weak self] outcome in
+            self?.refreshController.fetchEnded(outcome)
+        }
+        self.added.onPullRefreshEnded = { [weak self] outcome in
+            self?.refreshController.fetchEnded(outcome)
+        }
+
         self.forYou.updated = { [weak self] in
             self?.updateForYouList(transition: .immediate)
+            self?.searchContentNode?.corpusUpdated()
         }
         self.added.updated = { [weak self] windowReplaced in
             guard let self else {
@@ -147,6 +195,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.pendingAddedReposition = true
             }
             self.updateAddedList(transition: .immediate)
+            self.searchContentNode?.corpusUpdated()
         }
 
         self.foregroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
@@ -168,7 +217,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
         // Swiping between the lists, set up as Peer Info's panes (PeerInfoPaneContainerNode).
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.pagerPanGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let self, self.isSearchDisplayControllerActive == nil else {
+            guard let self, !self.isSearchActive, self.tappedSegment == nil else {
                 return []
             }
             return self.selectedSegment == 0 ? .left : .right
@@ -198,6 +247,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let width = max(1.0, layout.size.width)
         switch recognizer.state {
         case .began:
+            self.refreshController.detach()
             self.isPagerDragging = true
             self.forYouList.isHidden = false
             self.addedList.isHidden = false
@@ -210,7 +260,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             self.pagerFraction = fraction
             self.layoutPages(transition: .immediate)
-            self.segmentNode.updateTabSwitchFraction(fraction, isDragging: true, transition: .immediate)
+            self.headerView.segmentNode.updateTabSwitchFraction(fraction, isDragging: true, transition: .immediate)
             self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: false), transition: .immediate)
         case .ended, .cancelled:
             var target = self.selectedSegment
@@ -237,6 +287,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
+        self.forYouList.reduceMotion = presentationData.reduceMotion
+        self.addedList.reduceMotion = presentationData.reduceMotion
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -245,11 +297,13 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     func didAppear() {
         self.isScreenVisible = true
+        self.refreshController.isScreenVisible = true
         self.added.feed.revalidate()
     }
 
     func didDisappear() {
         self.isScreenVisible = false
+        self.refreshController.isScreenVisible = false
     }
 
     func scrollToTop() {
@@ -260,17 +314,58 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.added.feed.markAllRead()
     }
 
+    /// The current page reloads under its skeleton, from the top.
+    func reloadFeed() {
+        self.activeList.scroll(toIndex: 0, pointOffset: 0.0, transition: .immediate)
+        if self.selectedSegment == 0 {
+            self.forYou.reloadFeed()
+        } else {
+            // The reload is the user's own request: its window opens at the read mark however the list was
+            // scrolled before.
+            self.addedUserScrolledSinceReposition = false
+            self.added.reloadFeed()
+        }
+    }
+
     private func selectSegment(_ index: Int) {
-        guard index != self.selectedSegment else {
-            // As tapping the current Peer Info tab does.
-            self.activeList.scrollToTop()
+        let displayed = self.tappedSegment ?? self.selectedSegment
+        guard index != displayed else {
+            if self.tappedSegment == nil {
+                // As tapping the current Peer Info tab does.
+                self.activeList.scrollToTop()
+            }
             return
         }
-        guard !self.isPagerDragging else {
+        guard !self.isPagerDragging, let (layout, navigationBarHeight) = self.validLayout else {
             return
         }
-        // The tabs' selection pill and the lists slide on the same spring Peer Info uses.
-        self.setSelectedSegment(index, transition: .animated(duration: 0.4, curve: .spring))
+        self.refreshController.detach()
+        // Feed2 FeedStore.swift:799-815: the shutter fades in, the pages swap while it is opaque, and it fades out.
+        let token = self.tabSwitchGeneration.begin()
+        self.tappedSegment = index
+        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+
+        let shutter = self.headerView.shutterView
+        let fromAlpha = CGFloat(shutter.layer.presentation()?.opacity ?? Float(shutter.alpha))
+        shutter.layer.removeAnimation(forKey: "opacity")
+        shutter.alpha = 1.0
+        shutter.layer.animateAlpha(from: fromAlpha, to: 1.0, duration: NewsShutter.fadeInDuration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+
+        Queue.mainQueue().after(NewsShutter.swapDelay, { [weak self] in
+            guard let self, self.tabSwitchGeneration.isCurrent(token) else {
+                return
+            }
+            self.tappedSegment = nil
+            self.setSelectedSegment(index, transition: .immediate)
+        })
+        Queue.mainQueue().after(NewsShutter.fadeOutDelay, { [weak self] in
+            guard let self, self.tabSwitchGeneration.isCurrent(token) else {
+                return
+            }
+            let shutter = self.headerView.shutterView
+            shutter.alpha = 0.0
+            shutter.layer.animateAlpha(from: 1.0, to: 0.0, duration: NewsShutter.fadeOutDuration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+        })
     }
 
     /// A tap on a tab, or a swipe that settled on it.
@@ -323,18 +418,11 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: nil, timecode: nil, setupReply: false, cachedAnchor: true)))
     }
 
-    private func openPeer(_ peer: EnginePeer) {
-        guard let navigationController = self.controller?.navigationController as? NavigationController else {
-            return
-        }
-        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
-    }
-
     // MARK: Lists
 
     /// A post row measured at the rows' width, for the skeletons; measured again when the width or the
     /// presentation changes.
-    private func skeletonRowLayout() -> NewsFeedSkeletonRowLayout {
+    private func skeletonRowLayout() -> NewsSkeletonModelRow {
         let width = max(1.0, (self.validLayout?.layout.size.width ?? 0.0) - self.listInsets.left - self.listInsets.right)
         let presentationData = self.presentationData
         if let cache = self.skeletonRowLayoutCache, cache.width == width, cache.theme === presentationData.theme, cache.strings === presentationData.strings {
@@ -356,23 +444,25 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.updateAddedList(transition: transition)
     }
 
-    private func updateForYouList(transition: CoreListTransition) {
+    private func updateForYouList(transition: CoreListTransition, anchorMode: CoreListAnchorMode = .automatic, animatesInsertions: Bool = true) {
         guard let (layout, _) = self.validLayout else {
             return
         }
         let environment = self.itemEnvironment(list: self.forYouList)
         let forYouRows = self.forYou.items(environment: environment)
         self.forYouList.setShowsSkeleton(forYouRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
-        self.forYouList.update(size: layout.size, insets: self.listInsets, items: forYouRows.items, scrollTo: nil, anchorMode: .automatic, transition: transition)
+        self.forYouHasPosts = forYouRows.hasPosts
+        self.forYouList.update(size: layout.size, insets: self.listInsets, items: forYouRows.items, scrollTo: nil, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: transition)
         self.recheckForYouEdgeIfGrown(count: forYouRows.items.count)
     }
 
-    private func updateAddedList(transition: CoreListTransition) {
+    private func updateAddedList(transition: CoreListTransition, anchorMode: CoreListAnchorMode = .preserveVisibleContent, animatesInsertions: Bool = true) {
         guard let (layout, _) = self.validLayout else {
             return
         }
         let environment = self.itemEnvironment(list: self.addedList)
         self.addedRows = self.added.rows(environment: environment)
+        self.addedHasPosts = !self.addedRows.isLoading && !self.addedRows.positions.isEmpty
         self.addedList.setShowsSkeleton(self.addedRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         var scrollTo: CoreListScrollTarget?
         let hasPosts = !self.addedRows.positions.isEmpty
@@ -394,7 +484,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             }
         }
-        self.addedList.update(size: layout.size, insets: self.listInsets, items: self.addedRows.items, scrollTo: scrollTo, anchorMode: .preserveVisibleContent, transition: scrollTo != nil ? .immediate : transition)
+        self.addedList.update(size: layout.size, insets: self.listInsets, items: self.addedRows.items, scrollTo: scrollTo, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: scrollTo != nil ? .immediate : transition)
 
         self.recheckAddedEdgesIfGrown(count: self.addedRows.items.count)
         self.updatePill(transition: .immediate)
@@ -439,7 +529,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func trackAddedReading(settled: Bool = false) {
-        guard self.isScreenVisible, self.selectedSegment == 1, self.isSearchDisplayControllerActive == nil else {
+        guard self.isScreenVisible, self.selectedSegment == 1, !self.isSearchActive else {
             return
         }
         let positions = self.addedRows.positions
@@ -460,7 +550,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         var title: String?
         // The pill lives on the Added page, so it shows only where that page does, and slides with it.
-        if self.isSearchDisplayControllerActive == nil, let state = self.added.state {
+        if !self.isSearchActive, let state = self.added.state {
             if state.hasNewer {
                 title = "↑ " + self.presentationData.strings.News_NewPostsPill
             } else if let readMax = state.readMaxPosition {
@@ -505,13 +595,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
 
-    /// 8 pt below the header's bottom edge, which rises as the search field folds away (and drops with an overscroll).
+    /// 8 pt below the header's current bottom edge, which rises as the search scrolls under the top row (and drops
+    /// with an overscroll).
     private func pillOriginY() -> CGFloat {
-        var clippedScrollOffset: CGFloat = 0.0
-        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View, let value = navigationBarComponentView.clippedScrollOffset {
-            clippedScrollOffset = value
-        }
-        return self.listInsets.top + 8.0 - clippedScrollOffset
+        return self.headerView.currentBottom + 8.0
     }
 
     /// Moves the pill with the header's tabs, on the same transition.
@@ -535,86 +622,31 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
 
-    // MARK: Header (as ContactsControllerNode)
+    // MARK: Header
 
-    private func updateNavigationBar(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = [
-            AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
-                content: .more,
-                pressed: { [weak self] sourceView in
-                    self?.openMoreMenu?(sourceView)
-                }
-            )))
-        ]
-        let title = self.presentationData.strings.News_Title
-        let primaryContent = ChatListHeaderComponent.Content(
-            title: title,
-            navigationBackTitle: nil,
-            titleComponent: nil,
-            chatListTitle: NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
-            leftButton: nil,
-            rightButtons: rightButtons,
-            backPressed: nil
-        )
-
-        self.segmentNode.update(context: self.context, width: layout.size.width, leftInset: 16.0 + layout.safeInsets.left, rightInset: 16.0 + layout.safeInsets.right, theme: self.presentationData.theme, strings: self.presentationData.strings, selectedIndex: self.selectedSegment, tabSwitchFraction: self.pagerFraction, isSwitchingByDragging: self.isPagerDragging, liftWhileSwitching: layout.deviceMetrics.type != .tablet, action: { [weak self] index in
-            self?.selectSegment(index)
-        }, transition: ComponentTransition(transition))
-
-        let navigationBarSize = self.navigationBarView.update(
-            transition: ComponentTransition(transition),
-            component: AnyComponent(ChatListNavigationBar(
-                context: self.context,
-                theme: self.presentationData.theme,
-                strings: self.presentationData.strings,
-                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
-                leftInset: layout.safeInsets.left,
-                rightInset: layout.safeInsets.right,
-                trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
-                search: ChatListNavigationBar.Search(isEnabled: true),
-                activeSearch: self.isSearchDisplayControllerActive,
-                primaryContent: primaryContent,
-                secondaryContent: nil,
-                secondaryTransition: 0.0,
-                storySubscriptions: nil,
-                storiesIncludeHidden: true,
-                uploadProgress: [:],
-                headerPanels: nil,
-                tabsNode: self.isSearchDisplayControllerActive == nil ? self.segmentNode : nil,
-                tabsNodeIsSearch: false,
-                accessoryPanelContainer: nil,
-                accessoryPanelContainerHeight: 0.0,
-                activateSearch: { [weak self] _ in
-                    self?.requestActivateSearch?()
-                },
-                openStatusSetup: { _ in
-                },
-                allowAutomaticOrder: {
-                }
-            )),
-            environment: {},
-            containerSize: layout.size
-        )
-        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.deferScrollApplication = true
-            if navigationBarComponentView.superview == nil {
-                self.view.addSubview(navigationBarComponentView)
-            }
-            transition.updateFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
-            return navigationBarSize.height
-        } else {
-            return 0.0
-        }
+    private func updateHeader(layout: ContainerViewLayout, transition: ComponentTransition) -> NewsHeaderGeometry {
+        transition.setFrame(view: self.headerView, frame: CGRect(origin: CGPoint(), size: layout.size))
+        return self.headerView.update(params: NewsHeaderView.Params(
+            context: self.context,
+            theme: self.presentationData.theme,
+            strings: self.presentationData.strings,
+            layout: layout,
+            isSearchActive: self.isSearchActive,
+            selectedSegment: self.tappedSegment ?? self.selectedSegment,
+            tabSwitchFraction: self.pagerFraction,
+            isSwitchingByDragging: self.isPagerDragging
+        ), transition: transition)
     }
 
-    /// The header follows the selected list; while a swipe is in progress, a blend of both lists' folds.
+    /// The header follows the selected list; while a swipe is in progress, a blend of both lists' offsets.
     private func navigationScrollOffset(settled: Bool) -> NewsFeedListView.ScrollOffset {
         let current = self.activeList.scrollOffset(settled: settled)
-        guard self.pagerFraction != 0.0 else {
+        guard self.pagerFraction != 0.0, let geometry = self.headerView.geometry else {
             return current
         }
         let next = (self.selectedSegment == 0 ? self.addedList : self.forYouList).scrollOffset(settled: settled)
-        return .known(newsPagerHeaderOffset(current: current.knownValue, next: next.knownValue, progress: abs(self.pagerFraction), foldHeight: ChatListNavigationBar.searchScrollHeight))
+        // Blended up to the search's full travel, so mid-swipe it can still be scrolled entirely away.
+        return .known(newsPagerHeaderOffset(current: current.knownValue, next: next.knownValue, progress: abs(self.pagerFraction), foldHeight: geometry.searchTravelLimit))
     }
 
     private func updateNavigationScrolling(offset scrollOffset: NewsFeedListView.ScrollOffset, transition: ComponentTransition) {
@@ -623,42 +655,42 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         case let .known(value):
             offset = value
         case .unknown:
-            offset = 1000.0
+            // The first row is not loaded: the list is scrolled well past the search, which is off the screen.
+            offset = self.headerView.geometry?.searchTravelLimit ?? 0.0
         }
-        if self.isSearchDisplayControllerActive != nil {
+        if self.isSearchActive {
             offset = 0.0
         }
-        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: false, transition: transition)
-        }
+        self.headerView.applyScroll(listOffset: offset, transition: transition)
         self.updatePillPosition(transition: transition)
     }
 
-    /// As `ContactsControllerNode.contentScrollingEnded`: a half-collapsed search field snaps open or shut.
+    /// A half-hidden search snaps open or shut when scrolling ends (as `ContactsControllerNode.contentScrollingEnded`).
     private func snapNavigationBar() {
-        guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset else {
+        guard let geometry = self.headerView.geometry, let target = newsHeaderSnapTarget(blockOffset: self.headerView.blockOffset, blockHeight: geometry.blockHeight) else {
             return
         }
-        guard clippedScrollOffset > 0.0 && clippedScrollOffset < ChatListNavigationBar.searchScrollHeight else {
-            return
-        }
-        let target: CGFloat = clippedScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 ? 0.0 : ChatListNavigationBar.searchScrollHeight
         self.activeList.scroll(toIndex: 0, pointOffset: -target, transition: .uiKitScroll())
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
 
-        let navigationHeight = self.updateNavigationBar(layout: layout, transition: transition)
+        let geometry = self.updateHeader(layout: layout, transition: ComponentTransition(transition))
 
         var insets = layout.insets(options: [.input])
-        insets.top += navigationHeight
-        // Both feeds start 8 pt below the header.
-        self.listInsets = UIEdgeInsets(top: insets.top + 8.0, left: layout.safeInsets.left, bottom: insets.bottom, right: layout.safeInsets.right)
+        // The lists keep the resting header's inset while search is up (spec §11.3); search lays out under the
+        // active bar.
+        insets.top += geometry.listTopInset
+        // The first row starts at the search field's bottom edge; rows carry their own top padding.
+        self.listInsets = UIEdgeInsets(top: insets.top, left: layout.safeInsets.left, bottom: insets.bottom, right: layout.safeInsets.right)
 
-        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
+        var searchInsets = layout.insets(options: [.input])
+        let searchNavigationHeight = self.isSearchActive ? self.headerView.activeSearchNavigationHeight : geometry.listTopInset
+        searchInsets.top += searchNavigationHeight
+        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: searchInsets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(innerLayout, navigationBarHeight: navigationHeight, transition: transition)
+            searchDisplayController.containerLayoutUpdated(innerLayout, navigationBarHeight: searchNavigationHeight, transition: transition)
         }
 
         transition.updateFrame(node: self.listsContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -672,59 +704,73 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
         // Settled: a programmatic scroll may still be animating toward it.
         self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: true), transition: ComponentTransition(transition))
-        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.deferScrollApplication = false
-            navigationBarComponentView.applyCurrentScroll(transition: ComponentTransition(transition))
-        }
-        // The scroll applied just above; the pill was laid out before it.
-        self.updatePillPosition(transition: ComponentTransition(transition))
     }
 
-    // MARK: Search (as ContactsControllerNode, with the chat list's search content)
+    // MARK: Pull to refresh
+
+    /// The model's input for `page` (spec §1.1-1.2), in this node's coordinates. The lists fill the node vertically,
+    /// so a list's y is the node's y.
+    private func refreshInput(page: Int) -> NewsRefreshInput? {
+        guard let (layout, _) = self.validLayout, let geometry = self.headerView.geometry else {
+            return nil
+        }
+        let list = page == 0 ? self.forYouList : self.addedList
+        let hasPosts = page == 0 ? self.forYouHasPosts : self.addedHasPosts
+        let canPull = page == self.selectedSegment && hasPosts && !self.isSearchActive && self.tappedSegment == nil && self.pagerFraction == 0.0 && !self.isPagerDragging
+        var firstPostTop: CGFloat?
+        if let frame = list.firstRowFrame, frame.maxY > self.headerView.currentBottom, frame.minY < layout.size.height {
+            firstPostTop = frame.minY
+        }
+        return NewsRefreshInput(
+            gap: list.pullDistance,
+            isDragging: list.isDragging,
+            atEdge: list.isAtTopEdge,
+            canPull: canPull,
+            islandFrame: geometry.island,
+            restingListTop: geometry.topRow.maxY + NewsHeaderMetrics.headerBottomPadding,
+            firstPostTop: firstPostTop
+        )
+    }
+
+    /// The drop landed (or retracted): the held-back posts become rows and lens in. After a landing they go in at the
+    /// top under the drop while the old posts slide down on `NewsSpring.spread`; after a retract they arrive without
+    /// moving what is being read (spec §1.6-1.7, §3).
+    private func revealPullRefresh(page: Int, unfolded: Bool) {
+        let now = CACurrentMediaTime()
+        let transition: CoreListTransition = unfolded ? NewsFeedListView.refreshInsertTransition : .immediate
+        // At the top the new posts go above the old first one and stay in view; scrolled into the list, they arrive
+        // above without moving what is being read.
+        let list = page == 0 ? self.forYouList : self.addedList
+        let anchorMode: CoreListAnchorMode = unfolded || list.isAtTopEdge ? .automatic : .preserveVisibleContent
+        if page == 0 {
+            self.forYou.revealPullRefresh(now: now)
+            self.updateForYouList(transition: transition, anchorMode: anchorMode, animatesInsertions: false)
+        } else {
+            self.added.revealPullRefresh(now: now)
+            self.updateAddedList(transition: transition, anchorMode: anchorMode, animatesInsertions: false)
+        }
+    }
+
+    // MARK: Search (as ContactsControllerNode, with the posts the feeds hold as its results)
 
     func activateSearch(placeholderNode: SearchBarPlaceholderNode?) {
         guard let (layout, navigationBarHeight) = self.validLayout, self.searchDisplayController == nil else {
             return
         }
-        self.isSearchDisplayControllerActive = ChatListNavigationBar.ActiveSearch(isExternal: placeholderNode == nil)
+        self.refreshController.detach()
+        self.isSearchActive = true
 
-        let contentNode = ChatListSearchContainerNode(
-            context: self.context,
-            animationCache: self.context.animationCache,
-            animationRenderer: self.context.animationRenderer,
-            filter: [],
-            requestPeerType: nil,
-            location: .chatList(groupId: .root),
-            folder: nil,
-            displaySearchFilters: true,
-            hasDownloads: false,
-            initialFilter: .channels,
-            openPeer: { [weak self] peer, _, _, _ in
-                self?.openPeer(peer)
-            },
-            openDisabledPeer: { _, _, _ in
-            },
-            openRecentPeerOptions: { _ in
-            },
-            openMessage: { [weak self] peer, _, messageId, _ in
-                self?.openPost(peer: peer, messageId: messageId)
-            },
-            addContact: nil,
-            peerContextAction: nil,
-            present: { [weak self] c, a in
-                self?.controller?.present(c, in: .window(.root), with: a)
-            },
-            presentInGlobalOverlay: { [weak self] c, a in
-                self?.controller?.presentInGlobalOverlay(c, with: a)
-            },
-            navigationController: self.controller?.navigationController as? NavigationController,
-            parentController: { [weak self] in
-                return self?.controller
+        let contentNode = NewsSearchContentNode(presentationData: self.presentationData, corpus: { [weak self] in
+            guard let self else {
+                return NewsSearchCorpus()
             }
-        )
-        contentNode.dismissSearch = { [weak self] in
-            self?.requestDeactivateSearch?()
-        }
+            var corpus = self.forYou.searchCorpus
+            corpus.append(self.added.searchCorpus)
+            return corpus
+        }, itemEnvironment: { [weak self] list in
+            return self?.itemEnvironment(list: list)
+        })
+        self.searchContentNode = contentNode
 
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .navigation, contentNode: contentNode, cancel: { [weak self] in
             self?.requestDeactivateSearch?()
@@ -735,9 +781,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 return
             }
             if isSearchBar {
-                if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-                    navigationBarComponentView.searchContentNode?.addSubnode(subnode)
-                }
+                self.headerView.searchContentNode?.addSubnode(subnode)
             } else {
                 self.insertSubnode(subnode, aboveSubnode: self.listsContainerNode)
             }
@@ -746,11 +790,12 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode?, animated: Bool) {
-        self.isSearchDisplayControllerActive = nil
+        self.isSearchActive = false
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
         }
+        self.searchContentNode = nil
         self.updatePill(transition: .immediate)
     }
 }

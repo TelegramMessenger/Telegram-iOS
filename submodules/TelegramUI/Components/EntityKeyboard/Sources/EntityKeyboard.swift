@@ -125,6 +125,7 @@ public final class EntityKeyboardComponent: Component {
     public let useExternalSearchContainer: Bool
     public let hidePanels: Bool
     public let customTintColor: UIColor?
+    public let alwaysShowsTopPanel: Bool
     
     public init(
         theme: PresentationTheme,
@@ -160,7 +161,8 @@ public final class EntityKeyboardComponent: Component {
         clipContentToTopPanel: Bool,
         useExternalSearchContainer: Bool,
         hidePanels: Bool = false,
-        customTintColor: UIColor? = nil
+        customTintColor: UIColor? = nil,
+        alwaysShowsTopPanel: Bool = false
     ) {
         self.theme = theme
         self.strings = strings
@@ -196,6 +198,7 @@ public final class EntityKeyboardComponent: Component {
         self.useExternalSearchContainer = useExternalSearchContainer
         self.hidePanels = hidePanels
         self.customTintColor = customTintColor
+        self.alwaysShowsTopPanel = alwaysShowsTopPanel
     }
     
     public static func ==(lhs: EntityKeyboardComponent, rhs: EntityKeyboardComponent) -> Bool {
@@ -254,6 +257,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
+        if lhs.alwaysShowsTopPanel != rhs.alwaysShowsTopPanel {
             return false
         }
         if lhs.clipContentToTopPanel != rhs.clipContentToTopPanel {
@@ -699,7 +705,7 @@ public final class EntityKeyboardComponent: Component {
                 panelHideBehavior = .hide
             } else if component.hidePanels {
                 panelHideBehavior = .disable
-            } else if component.isExpanded {
+            } else if component.isExpanded || component.alwaysShowsTopPanel {
                 panelHideBehavior = .show
             } else {
                 panelHideBehavior = .hideOnScroll

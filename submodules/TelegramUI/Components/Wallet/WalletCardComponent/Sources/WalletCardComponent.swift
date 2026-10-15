@@ -145,6 +145,10 @@ public final class WalletCardComponent: Component {
         public var giftStyleUpdated: ((UIColor, UIColor, CGPoint, CGFloat, CGFloat, Bool) -> Void)?
 
         private var giftStyle: WalletContext.CardGiftStyle?
+
+        public func giftStyled(_ color: UIColor) -> UIColor? {
+            return self.giftStyle.map { WalletCardTint($0).tint(WalletOklch(color)).uiColor }
+        }
         private var giftAccentColor = UIColor(rgb: 0x6ddcff)
         private var giftAddressColor = UIColor(rgb: 0x055ac4, alpha: 0.8)
         private let giftPatternLayer = CALayer()
@@ -351,6 +355,23 @@ public final class WalletCardComponent: Component {
         private let stickerSquash = WalletStickerSpring(1, 420, 0.38)
         private var stickerYaw: Double { self.currentCardY + Double(self.stickerKickH.value) * .pi / 18 }
 
+        public static func makeShakeAnimation() -> CAAnimation {
+            let animation = CAKeyframeAnimation(keyPath: "position.x")
+            animation.values = [0.0, -8.0, 7.0, -5.0, 3.0, -1.5, 0.0].map { NSNumber(value: Double($0)) }
+            animation.keyTimes = [0.0, 0.14, 0.32, 0.5, 0.68, 0.84, 1.0].map { NSNumber(value: $0) }
+            animation.duration = 0.45
+            animation.isAdditive = true
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            return animation
+        }
+
+        public func shake() {
+            self.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            if self.balanceTransitionView.superview != nil && !self.balanceTransitionView.isDescendant(of: self) {
+                self.balanceTransitionView.layer.add(Self.makeShakeAnimation(), forKey: "stickerLimitShake")
+            }
+        }
+
         public func stickerImpact(at point: CGPoint, thrown: Bool) {
             guard !UIAccessibility.isReduceMotionEnabled else { return }
             let push: CGFloat = thrown ? 3.4 : 1.4
@@ -456,7 +477,11 @@ public final class WalletCardComponent: Component {
                 let id = sticker.gift.address
                 let view = self.stickerViews[id] ?? WalletCardStickerView(frame: .zero)
                 self.stickerViews[id] = view
+                let appeared = view.image == nil && images[id] != nil
                 view.image = images[id]
+                if appeared && self.window != nil && !hidden.contains(id) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
                 view.isHidden = hidden.contains(id)
                 self.stickerContainer.addSubview(view)
             }

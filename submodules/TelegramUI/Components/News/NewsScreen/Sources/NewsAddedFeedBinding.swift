@@ -25,7 +25,16 @@ final class NewsAddedFeedBinding {
     /// The read mark when the current window opened: the list opens there, and it stays put while reading.
     private var readMarkPosition: EngineFeedPosition?
     private var appliedGeneration = -1
+    private var isReloading = false
+    private var reloadGeneration = 0
     private var stateDisposable: Disposable?
+    /// A pull to refresh in flight: the window's top when it began, and its request.
+    private var pullRefresh: (top: EngineFeedPosition, request: NewsAddedPullRequest)?
+    /// Posts a pull brought, kept out of the rows until the drop lands (spec §1.5).
+    private var heldBack = Set<AnyHashable>()
+    /// The last reveal: its posts and time, until `NewsFreshBlock.lifetime` later.
+    private var freshReveal: (keys: Set<AnyHashable>, time: Double)?
+    var onPullRefreshEnded: ((NewsRefreshOutcome) -> Void)?
 
     /// `windowReplaced` is true when the window was replaced wholesale and the list must be repositioned.
     var updated: ((_ windowReplaced: Bool) -> Void)?
@@ -45,11 +54,25 @@ final class NewsAddedFeedBinding {
             }
             self.state = state
             self.messages = loaded.messages
+            if var pull = self.pullRefresh {
+                let ended = pull.request.observe(isLoadingNewer: state.isLoadingNewer, isLoadingInitial: state.isLoadingInitial)
+                self.pullRefresh = pull
+                if ended && newsWindowIsResolved(entries: state.entries, loadedIds: loaded.ids) {
+                    self.pullRefresh = nil
+                    let fresh = newsAddedFreshPostKeys(entries: state.entries, above: pull.top)
+                    self.heldBack = Set(fresh)
+                    self.onPullRefreshEnded?(fresh.isEmpty ? .nothing : .posts(fresh.count))
+                }
+            }
             // A replaced window is applied (and the list repositioned) once its own messages have loaded.
             let windowReplaced = state.windowGeneration != self.appliedGeneration && newsWindowIsResolved(entries: state.entries, loadedIds: loaded.ids)
             if windowReplaced {
                 self.appliedGeneration = state.windowGeneration
                 self.readMarkPosition = state.windowReadMarkPosition
+            }
+            // A reload ends once its page has replaced the window (with its own messages) or has failed.
+            if self.isReloading && !state.isLoadingInitial && (windowReplaced || state.hasError) {
+                self.isReloading = false
             }
             self.updated?(windowReplaced)
         })
@@ -59,13 +82,70 @@ final class NewsAddedFeedBinding {
         self.stateDisposable?.dispose()
     }
 
+    /// Reload Feed: the skeleton stands in until the first page replaces the window; the list then opens where Added
+    /// always opens, at the read mark (spec §11.1).
+    func reloadFeed() {
+        guard self.state != nil else {
+            return
+        }
+        self.isReloading = true
+        self.reloadGeneration += 1
+        let generation = self.reloadGeneration
+        self.feed.reload()
+        self.updated?(false)
+        // Offline the request waits for the connection instead of failing: give the rows back meanwhile.
+        Queue.mainQueue().after(NewsReloadTracker.timeout, { [weak self] in
+            guard let self, self.isReloading, self.reloadGeneration == generation else {
+                return
+            }
+            self.isReloading = false
+            self.updated?(false)
+        })
+    }
+
+    /// The posts the window holds, for the search.
+    var searchCorpus: NewsSearchCorpus {
+        guard let state = self.state else {
+            return NewsSearchCorpus()
+        }
+        return NewsSearchCorpus(entries: state.entries, messages: self.messages)
+    }
+
+    func beginPullRefresh() {
+        guard let state = self.state, let top = state.entries.first?.position else {
+            self.onPullRefreshEnded?(.nothing)
+            return
+        }
+        self.pullRefresh = (top, NewsAddedPullRequest(isLoadingNewer: state.isLoadingNewer, isLoadingInitial: state.isLoadingInitial))
+        self.feed.loadNewer(force: true)
+    }
+
+    /// The drop landed: the held-back posts become rows, marked fresh. A later reveal replaces these marks.
+    func revealPullRefresh(now: Double) {
+        guard !self.heldBack.isEmpty else {
+            return
+        }
+        self.freshReveal = (self.heldBack, now)
+        self.heldBack = []
+        Queue.mainQueue().after(NewsFreshBlock.lifetime, { [weak self] in
+            guard let self, self.freshReveal?.time == now else {
+                return
+            }
+            self.freshReveal = nil
+            self.updated?(false)
+        })
+    }
+
     func rows(environment: NewsFeedItemEnvironment) -> Rows {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
         guard let state = self.state else {
             return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
         }
-        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys))
+        if self.isReloading {
+            return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
+        }
+        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys)).filter { !self.heldBack.contains(newsPostIdentity($0)) }
         if entries.isEmpty {
             if state.isLoadingInitial {
                 return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
@@ -84,8 +164,10 @@ final class NewsAddedFeedBinding {
         var firstUnreadItemIndex: Int?
         // CoreList rejects a repeated identity with a precondition failure; never hand it one.
         var usedIdentities = Set<AnyHashable>()
+        let freshKeys = self.freshReveal?.keys ?? []
+        let segments = newsFreshSegments(isFresh: entries.map { freshKeys.contains(newsPostIdentity($0)) }, revealTime: self.freshReveal?.time ?? 0.0)
         for (entryIndex, entry) in entries.enumerated() {
-            if let item = newsPostItem(entry: entry, messages: self.messages, environment: environment), usedIdentities.insert(item.identity).inserted {
+            if let item = newsPostItem(entry: entry, messages: self.messages, environment: environment, fresh: segments[entryIndex]), usedIdentities.insert(item.identity).inserted {
                 if entryIndex == firstUnreadEntryIndex {
                     firstUnreadItemIndex = items.count
                 }

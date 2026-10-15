@@ -14,7 +14,21 @@ public class EdgeEffectView: UIView {
     private let contentView: UIView
     private let contentMaskView: UIImageView
     private var blurView: VariableBlurView?
-    
+
+    /// A stop of a custom content gradient: at `location` (0 at the edge's outer side, 1 at its inner end) the
+    /// content colour shows at `alpha`.
+    public struct GradientStop: Equatable {
+        public var location: CGFloat
+        public var alpha: CGFloat
+
+        public init(location: CGFloat, alpha: CGFloat) {
+            self.location = location
+            self.alpha = alpha
+        }
+    }
+
+    private var currentContentGradient: [GradientStop]?
+
     public override init(frame: CGRect) {
         self.contentView = UIView()
         self.contentMaskView = UIImageView()
@@ -33,7 +47,7 @@ public class EdgeEffectView: UIView {
         transition.setBackgroundColor(view: self.contentView, color: color)
     }
     
-    public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+    public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
         #if DEBUG && false
         let content: UIColor = .blue
         //let blur: Bool = !"".isEmpty
@@ -48,11 +62,20 @@ public class EdgeEffectView: UIView {
         transition.setFrame(view: self.contentView, frame: bounds)
         transition.setFrame(view: self.contentMaskView, frame: bounds)
         
-        if self.contentMaskView.image?.size.height != edgeSize {
-            if edgeSize > 0.0 {
-                self.contentMaskView.image = EdgeEffectView.generateEdgeGradient(baseHeight: edgeSize, isInverted: edge == .bottom)
-            } else {
+        if self.contentMaskView.image?.size.height != edgeSize || self.currentContentGradient != contentGradient {
+            self.currentContentGradient = contentGradient
+            if edgeSize <= 0.0 {
                 self.contentMaskView.image = nil
+            } else if let contentGradient {
+                // The caller's stops over exactly `edgeSize`: the content's alpha follows them and nothing else.
+                self.contentMaskView.image = generateGradientImage(
+                    size: CGSize(width: 1.0, height: edgeSize),
+                    colors: contentGradient.map { UIColor(white: 0.0, alpha: $0.alpha) },
+                    locations: contentGradient.map(\.location),
+                    isInverted: edge == .bottom
+                )
+            } else {
+                self.contentMaskView.image = EdgeEffectView.generateEdgeGradient(baseHeight: edgeSize, isInverted: edge == .bottom)
             }
         }
         

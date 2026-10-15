@@ -24,7 +24,16 @@ private final class PeerWalletTransitionSource {
         self.view = view
         self.window = window
         self.frame = view.convert(view.bounds, to: window)
-        self.snapshot = view.snapshotView(afterScreenUpdates: false)
+        if let composite = window.resizableSnapshotView(from: self.frame, afterScreenUpdates: false, withCapInsets: .zero) {
+            let container = UIView(frame: CGRect(origin: .zero, size: self.frame.size))
+            container.clipsToBounds = true
+            container.layer.cornerRadius = self.frame.height * 0.5
+            composite.frame = container.bounds
+            container.addSubview(composite)
+            self.snapshot = container
+        } else {
+            self.snapshot = view.snapshotView(afterScreenUpdates: false)
+        }
     }
 }
 
@@ -323,8 +332,7 @@ private final class PeerWalletOverlayComponent: Component {
                 let startScale = slotScale * min(1.0, source.width * 0.45 / max(1.0, slotReach))
 
                 let slotLine = source.midY
-                let slidesDown = self.cardFrame.midY >= slotLine
-                let straddlesSlot = slidesDown ? self.cardFrame.minY < slotLine : self.cardFrame.maxY > slotLine
+                let straddlesSlot = self.cardFrame.minY < slotLine
                 let sidewaysHold: CGFloat = straddlesSlot && !dismissing ? 0.6 : 0.45
                 func cardPose(_ time: CGFloat) -> (pitch: CGFloat, yaw: CGFloat, roll: CGFloat, scale: CGFloat, travel: CGFloat, sideTravel: CGFloat, velocity: CGFloat) {
                     let travel = flight(time, start: 1.2, arrival: 0.16, hold: 0.1)
@@ -341,7 +349,7 @@ private final class PeerWalletOverlayComponent: Component {
                     )
                 }
                 func baseCenterY(_ projected: [CGPoint], travel: CGFloat) -> CGFloat {
-                    let hiddenEdge = slidesDown ? (projected.map { $0.y }.max() ?? halfHeight) : (projected.map { $0.y }.min() ?? -halfHeight)
+                    let hiddenEdge = projected.map { $0.y }.max() ?? halfHeight
                     let startY = slotLine - hiddenEdge
                     return startY + (self.cardFrame.midY - startY) * travel
                 }
@@ -350,14 +358,19 @@ private final class PeerWalletOverlayComponent: Component {
                 let peakPose = cardPose(peak)
                 let peakProjected = project(pose(pitch: peakPose.pitch, yaw: peakPose.yaw, roll: peakPose.roll, scale: peakPose.scale, camera: cameraDistance))
                 let peakCenterY = baseCenterY(peakProjected, travel: peakPose.travel)
-                let clearance: CGFloat = slidesDown
-                    ? max(0.0, slotLine + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
-                    : max(0.0, peakCenterY + (peakProjected.map { $0.y }.max() ?? halfHeight) - (slotLine - 4.0))
-                let dip = p < peak
-                    ? (dismissing ? smooth((p - 0.1) / (peak - 0.1)) : smooth((p / impact - 0.15) / 0.45))
-                    : 1.0 - smooth((p - peak) / (dismissing ? 1.0 - peak : 0.8 * impact))
+                let clearance = max(0.0, slotLine + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
 
                 let current = cardPose(p)
+                let peakTravel = max(0.001, peakPose.travel)
+                let dip: CGFloat
+                if p < peak {
+                    dip = current.travel / peakTravel
+                } else {
+                    let fallSpan = dismissing ? 1.0 - peak : 0.8 * impact
+                    let peakSlope = (cardPose(peak + 0.004).travel - cardPose(peak - 0.004).travel) / 0.008 / peakTravel
+                    let t = min(1.0, (p - peak) / fallSpan)
+                    dip = (2.0 * t * t * t - 3.0 * t * t + 1.0) + (t * t * t - 2.0 * t * t + t) * peakSlope * fallSpan
+                }
                 transform = pose(pitch: current.pitch, yaw: current.yaw, roll: current.roll, scale: current.scale, camera: cameraDistance)
                 let projected = project(transform)
                 let reach = WalletCardComponent.View.projectionReach - 4.0
@@ -369,13 +382,13 @@ private final class PeerWalletOverlayComponent: Component {
 
                 let sideways = self.cardFrame.width * 0.055 * current.velocity
                 center = CGPoint(x: source.midX + (self.cardFrame.midX - source.midX) * current.sideTravel + sideways,
-                    y: baseCenterY(projected, travel: current.travel) + (slidesDown ? clearance : -clearance) * dip)
+                    y: baseCenterY(projected, travel: current.travel) + clearance * dip)
                 self.cardContainer.center = center
                 self.cardContainer.alpha = smooth(p / 0.045)
                 self.cardMask.frame = self.cardContainer.bounds
                 let edge = halfHeight + (slotLine - center.y) * fit
                 let span = max(self.animationSize.width, self.animationSize.height) * 3.0
-                self.cardMask.path = CGPath(rect: CGRect(x: -span, y: slidesDown ? edge : edge - span, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
+                self.cardMask.path = CGPath(rect: CGRect(x: -span, y: edge, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
                 self.cardContainer.layer.mask = p < (clearance > 0.0 ? peak : (dismissing ? 0.75 : impact)) ? self.cardMask : nil
 
                 let shutterLift = smooth(p / (dismissing ? 0.42 : 0.16))

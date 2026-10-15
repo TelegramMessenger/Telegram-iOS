@@ -660,6 +660,9 @@ final class CoreVirtualListAnimationTests: XCTestCase {
         var onDidEndDragging: (() -> Void)?
         // Never consulted: this engine has no drag and therefore no release.
         var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
+        // This engine has no momentum.
+        var isDecelerating: Bool { false }
+        var onDidEndDecelerating: (() -> Void)?
         private(set) var offset: CGFloat = 0
 
         func setOffset(_ y: CGFloat) {

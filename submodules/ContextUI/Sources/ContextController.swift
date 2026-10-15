@@ -314,9 +314,11 @@ public final class ContextControllerReferenceViewInfo {
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
     public let actionsPosition: ActionsPosition
+    public let centersMorphedActions: Bool
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom, sourcePath: UIBezierPath? = nil) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom, sourcePath: UIBezierPath? = nil, centersMorphedActions: Bool = false) {
         self.sourcePath = sourcePath
+        self.centersMorphedActions = centersMorphedActions
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets

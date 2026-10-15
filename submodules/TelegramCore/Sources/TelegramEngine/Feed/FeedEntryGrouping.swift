@@ -176,9 +176,19 @@ private func mergingForYouBatch(into list: [EngineForYouItem], batch: [EngineFor
             }
         }
     }
-    if batchHasInterests {
+    if atTop && kept.contains(.interests) {
+        // A refresh never moves the interests block: it stays where it was, below the posts it sat among, and the
+        // batch's marker is dropped.
+        added.removeAll(where: { $0 == .interests })
+    } else if batchHasInterests {
         // Only the newest interests block stays.
         kept.removeAll(where: { $0 == .interests })
+    }
+    // A feed without a block takes the refresh batch's, but never between the new posts (they show as one run): it
+    // moves to just after them. One above them splits nothing and stays; a load-more keeps the server's placement.
+    if atTop, let marker = added.firstIndex(of: .interests), let firstPost = added.firstIndex(where: { $0 != .interests }), let lastPost = added.lastIndex(where: { $0 != .interests }), marker > firstPost, marker < lastPost {
+        added.remove(at: marker)
+        added.insert(.interests, at: lastPost)
     }
     return atTop ? (added + kept) : (kept + added)
 }

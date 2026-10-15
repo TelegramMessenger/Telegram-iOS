@@ -397,7 +397,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
     case let .messageActionWalletTonConnectRequest(data):
         return TelegramMediaAction(action: .walletTonConnectRequest(flags: data.flags, sessionId: data.sessionId, expires: data.expires, topic: data.topic, traceId: data.traceId, dappName: data.dappName))
     case .messageActionNoPaidMessagesTokenUsed:
-        return nil
+        return TelegramMediaAction(action: .noPaidMessagesTokenUsed)
     }
 }
 

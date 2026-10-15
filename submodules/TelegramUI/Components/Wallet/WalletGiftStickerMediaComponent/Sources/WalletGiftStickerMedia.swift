@@ -247,6 +247,42 @@ public final class WalletGiftStickerMedia {
         return true
     }
 
+    public static func preload(context: AccountContext, card: WalletCard) -> Disposable {
+        let disposables = DisposableSet()
+        var seen = Set<String>()
+        for sticker in card.stickers {
+            for attribute in sticker.nft.gift?.attributes ?? [] {
+                let file: TelegramMediaFile
+                let side: Int
+                let keyframeOnly: Bool
+                switch attribute {
+                case let .model(_, modelFile, _, _):
+                    file = modelFile
+                    side = Self.contentSide
+                    keyframeOnly = false
+                case let .pattern(_, patternFile, _):
+                    file = patternFile
+                    side = Self.renderSide
+                    keyframeOnly = true
+                default:
+                    continue
+                }
+                let id = file.resource.id.stringRepresentation
+                guard seen.insert(id).inserted else { continue }
+                let size = CGSize(width: side, height: side)
+                if context.animationCache.getFirstFrameSynchronously(sourceId: id, size: size) != nil {
+                    continue
+                }
+                let fetch = animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker,
+                    resource: .media(media: .standalone(media: file), resource: file.resource), type: .lottie, keyframeOnly: keyframeOnly, customColor: nil)
+                disposables.add((context.animationCache.get(sourceId: id, size: size, fetch: fetch)
+                |> filter { $0.isFinal }
+                |> take(1)).start())
+            }
+        }
+        return disposables
+    }
+
     private static func decodeFile(_ data: Data?) -> TelegramMediaFile? {
         guard let data else {
             return nil

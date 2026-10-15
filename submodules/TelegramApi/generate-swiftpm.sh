@@ -1,10 +1,11 @@
 #!/bin/bash
-# Regenerates the SwiftPM copy of TelegramApi's generated sources from swift_scheme.tl:
+# Generates the SwiftPM copy of TelegramApi's generated sources from swift_scheme.tl:
 # Sources/SwiftPMGenerated, ObjC/SwiftPMGenerated and Tests/SwiftPMGenerated.
 #
 # Bazel never reads these: it generates its own copy on every build (the TelegramApiGenerated
 # genrule in BUILD). SwiftPM consumers do, TelegramCore/Package.swift (which Telegram-Mac builds)
-# among them. Run this after changing swift_scheme.tl or the generator, and commit the result.
+# among them. The copy is gitignored, swift_scheme.tl being the source of truth: run this before a
+# SwiftPM build or test, and again after swift_scheme.tl or the generator changes.
 set -euo pipefail
 
 package="$(cd "$(dirname "$0")" && pwd)"

@@ -4,6 +4,7 @@ import ComponentFlow
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import LocalizedPeerData
 import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
@@ -38,23 +39,20 @@ struct NewsFeedItemEnvironment {
     let context: AccountContext
     let presentationData: PresentationData
     /// Measured from a post row at the list's width; the load-more placeholder is drawn from it.
-    let skeletonRowLayout: NewsFeedSkeletonRowLayout
+    let skeletonRowLayout: NewsSkeletonModelRow
     /// The list the rows are for: whether they load synchronously as they are built.
     let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
 }
 
-/// An album keeps its identity when a later page adds a message to it.
-private func newsPostIdentity(_ entry: EngineFeedEntry) -> AnyHashable {
-    if let groupingKey = entry.groupingKey {
-        return AnyHashable("album-\(entry.peerId.toInt64())-\(groupingKey)")
-    }
-    return AnyHashable("post-\(entry.peerId.toInt64())-\(entry.messageIds[0].namespace)-\(entry.messageIds[0].id)")
+/// The channel a post's row shows.
+private func newsPostPeer(_ message: EngineMessage) -> EnginePeer? {
+    return message.enginePeers[message.id.peerId] ?? message.author
 }
 
-func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMessage], environment: NewsFeedItemEnvironment) -> CoreListComponentItem? {
+func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMessage], environment: NewsFeedItemEnvironment, fresh: NewsFreshSegment? = nil) -> CoreListComponentItem? {
     let resolved = entry.messageIds.compactMap { messages[$0] }
-    guard let first = resolved.first, let peer = first.enginePeers[first.id.peerId] ?? first.author else {
+    guard let first = resolved.first, let peer = newsPostPeer(first) else {
         return nil
     }
     var newest = first
@@ -74,13 +72,41 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         messages: resolved,
         timestamp: newest.timestamp,
         loading: environment.rowLoading,
+        fresh: fresh,
+        reduceMotion: presentationData.reduceMotion,
         action: {
             openPost(peer, messageId)
         }
     )))
 }
 
-func newsPlaceholderItems(count: Int, theme: PresentationTheme, rowLayout: NewsFeedSkeletonRowLayout, identityPrefix: String) -> [CoreListComponentItem] {
+/// The posts a feed holds, as the search finds them, and their messages, which their rows are built from.
+struct NewsSearchCorpus {
+    var documents: [NewsSearchDocument] = []
+    var messages: [EngineMessage.Id: EngineMessage] = [:]
+
+    init() {
+    }
+
+    /// The feed's entries whose messages are loaded (`newsPostItem` builds no row for the others).
+    init(entries: [EngineFeedEntry], messages: [EngineMessage.Id: EngineMessage]) {
+        self.messages = messages
+        for entry in newsResolvedEntries(entries, availableMessageIds: Set(messages.keys)) {
+            let resolved = entry.messageIds.compactMap { messages[$0] }
+            guard let first = resolved.first, let peer = newsPostPeer(first) else {
+                continue
+            }
+            self.documents.append(NewsSearchDocument(entry: entry, texts: resolved.map(\.text), channelTitle: peer.compactDisplayTitle))
+        }
+    }
+
+    mutating func append(_ other: NewsSearchCorpus) {
+        self.documents.append(contentsOf: other.documents)
+        self.messages.merge(other.messages, uniquingKeysWith: { _, other in other })
+    }
+}
+
+func newsPlaceholderItems(count: Int, theme: PresentationTheme, rowLayout: NewsSkeletonModelRow, identityPrefix: String) -> [CoreListComponentItem] {
     return (0 ..< count).map { index in
         CoreListComponentItem(identity: AnyHashable("\(identityPrefix)-placeholder-\(index)"), component: AnyComponent(NewsPlaceholderRowComponent(theme: theme, rowLayout: rowLayout)))
     }
