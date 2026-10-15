@@ -365,6 +365,31 @@ func navigationBarCapsulePressGlow(_ container: GlassContextExtractableContainer
     return max(0.0, min(1.0, opacity))
 }
 
+/// UIKit's press glow on a capsule it is pressing to `press`. A glow is always there with a press: when the glow layer
+/// cannot be found (a UIKit change), a press alone stands for a full one. A press passes 1.03 within ~20 ms, so 1.01
+/// tells it from a reading that is merely not exactly 1.
+func navigationBarCapsulePressGlow(_ container: GlassContextExtractableContainer?, press: CGFloat) -> CGFloat {
+    if let container, let glow = navigationBarCapsulePressGlow(container) {
+        return glow
+    }
+    return press > 1.01 ? 1.0 : 0.0
+}
+
+/// UIKit's press on a capsule: how far it has grown the capsule's glass, and its glow.
+struct NavigationBarCapsulePress {
+    var scale: CGFloat
+    var glow: CGFloat
+
+    var isPressed: Bool {
+        return abs(self.scale - 1.0) > 0.0005 || self.glow > 0.001
+    }
+}
+
+func navigationBarCapsulePress(_ container: GlassContextExtractableContainer) -> NavigationBarCapsulePress {
+    let scale = navigationBarCapsulePressScale(container)
+    return NavigationBarCapsulePress(scale: scale, glow: navigationBarCapsulePressGlow(container, press: scale))
+}
+
 /// UIKit's press glow, drawn over a transition's capsule as `_UIFlexInteraction` draws it over a pressed one (measured
 /// 2026-10-14, glass RE notes §6): inside a container clipped to the capsule, a white BigGlow over the whole capsule and
 /// a 66 pt white LittleGlow (a shadow of radius half its size) at the touch, both under a `vibrantColorMatrix` filter

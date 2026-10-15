@@ -144,7 +144,10 @@ public final class NavigationBarComponent: Component {
         var inPlaceMergeContainer: GlassBackgroundContainerView?
         /// The press UIKit was drawing on each right pill as the layout began (by container), read before this layout's
         /// own changes touch the glass, for a merge to carry on.
-        var inPlacePressAtChange: [ObjectIdentifier: CGFloat] = [:]
+        var inPlacePressAtChange: [ObjectIdentifier: NavigationBarCapsulePress] = [:]
+        /// Whether this layout's in-place tint changes are cross-faded by the bar rather than by UIKit: in a layout where
+        /// pills merge (`NavigationBarInPlaceCapsule.tintFade`).
+        var inPlaceTintByHand = false
         /// Capsules animating an in-place change of their items, as iOS 27's glass does (see `startInPlace…`).
         var inPlaceCapsules: [NavigationBarInPlaceCapsule] = []
         var inPlaceLink: SharedDisplayLinkDriver.Link?
@@ -182,17 +185,8 @@ public final class NavigationBarComponent: Component {
                         self.lastPressSample = nil
                         self.detachedLeftPressScale = leftScale
                         self.detachedRightPressScales = rightScales
-                        // A glow is always there with a press: when the glow layer cannot be found (a UIKit change), a
-                        // press alone stands for a full one. A press passes 1.03 within ~20 ms, so 1.01 tells it from a
-                        // reading that is merely not exactly 1.
-                        func glow(_ container: GlassContextExtractableContainer?, press: CGFloat) -> CGFloat {
-                            if let container, let glow = navigationBarCapsulePressGlow(container) {
-                                return glow
-                            }
-                            return press > 1.01 ? 1.0 : 0.0
-                        }
-                        self.detachedLeftPressGlow = glow(self.leftButtonsBackgroundContainer, press: leftScale)
-                        self.detachedRightPressGlows = zip(self.rightPills, rightScales).map { glow($0.background, press: $1) }
+                        self.detachedLeftPressGlow = navigationBarCapsulePressGlow(self.leftButtonsBackgroundContainer, press: leftScale)
+                        self.detachedRightPressGlows = zip(self.rightPills, rightScales).map { navigationBarCapsulePressGlow($0.background, press: $1) }
                     } else {
                         self.detachedLeftPressScale = 1.0
                         self.detachedLeftPressGlow = 0.0
@@ -461,12 +455,15 @@ public final class NavigationBarComponent: Component {
             // A badge is not an item change: the back button animates its own.
             var inPlaceLeft = false
             var inPlaceRight = Set<Int>()
+            // Whether a right pill comes or goes in place, merging with its neighbour.
+            var inPlaceRightPillCountChanges = false
             if let previousPrimary = previousComponent?.primaryContent, let primary = component.primaryContent, component.secondaryContent == nil, previousComponent?.secondaryContent == nil, component.sideColumnLength == nil, previousComponent?.sideColumnLength == nil, !self.plattersDetached {
                 if !transition.animation.isImmediate {
                     inPlaceLeft = previousPrimary.back != primary.back || navigationBarCapsuleItemsDiffer(previousPrimary.leftButton.map { [$0] } ?? [], primary.leftButton.map { [$0] } ?? [])
                     // UIKit's sections change apart, compared by index from the edge.
                     let previousSections = navigationBarButtonPlacement(leftButton: previousPrimary.leftButton, rightButtons: previousPrimary.rightButtons, hasBack: previousPrimary.back != nil, columnLength: nil).rowRightSections
                     let sections = navigationBarButtonPlacement(leftButton: primary.leftButton, rightButtons: primary.rightButtons, hasBack: primary.back != nil, columnLength: nil).rowRightSections
+                    inPlaceRightPillCountChanges = previousSections.count != sections.count
                     for index in 0 ..< max(previousSections.count, sections.count) {
                         let previous = index < previousSections.count ? previousSections[index] : []
                         let current = index < sections.count ? sections[index] : []
@@ -487,9 +484,19 @@ public final class NavigationBarComponent: Component {
             }
             // The items swap at once inside their capsules, which animate the change (`startInPlaceChange`).
             let itemsTransition: ComponentTransition = (inPlaceLeft || !inPlaceRight.isEmpty) ? .immediate : transition
-            self.inPlacePressAtChange = Dictionary(self.rightBackgroundContainers.map { (ObjectIdentifier($0), navigationBarCapsulePressScale($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            self.inPlacePressAtChange = Dictionary(self.rightBackgroundContainers.map { (ObjectIdentifier($0), navigationBarCapsulePress($0)) }, uniquingKeysWith: { lhs, _ in lhs })
+            self.inPlaceTintByHand = inPlaceRightPillCountChanges && self.glassMergesShapes() && !self.inPlaceReduceMotion()
+            // A glass UIKit is pressing keeps its own edge inside a merged shape, so in a layout where pills merge a pressed
+            // pill's glass is renewed before the layout touches it; the merge carries the press's scale on
+            // (`lendInPlaceGlass`).
+            if self.inPlaceTintByHand {
+                for container in self.rightBackgroundContainers where self.inPlacePressAtChange[ObjectIdentifier(container)]?.isPressed == true {
+                    container.renewGlass()
+                }
+            }
             defer {
                 self.inPlacePressAtChange = [:]
+                self.inPlaceTintByHand = false
             }
             // Where each right pill is now and its tint, for a pill that grows out of one of them.
             let previousRightPills: [(frame: CGRect, tint: NavigationBarComponent.Button.Tint)?] = self.rightPills.map { pill in

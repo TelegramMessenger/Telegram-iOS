@@ -766,6 +766,25 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === edit)
     }
 
+    // While two pills merge, their glass is laid out by its frame and size, untransformed, as push/pop lays out merged
+    // platters (the glass container fuses shapes by their geometry).
+    func test_inPlaceMerge_lentGlass_isLaidOutByFrame_untransformed() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.08)
+        guard let partner = view.inPlaceStateForTesting(slot: .right(0)), let leaving = view.inPlaceStateForTesting(slot: .right(1)) else {
+            XCTFail("no merge")
+            return
+        }
+        XCTAssertGreaterThan(partner.pulse.width, 1.0)
+        XCTAssertFalse(partner.isGlassTransformed)
+        XCTAssertFalse(leaving.isGlassTransformed)
+        // The partner's glass is drawn at its swollen size.
+        XCTAssertGreaterThan(partner.glassFrame?.width ?? 0.0, partner.frame.width)
+    }
+
     // The pair pulses about SwiftUI's transition anchor (`transitionAnchor`, shared with push/pop): a right pill's
     // trailing edge, so the partner swells toward the leaving pill.
     func test_inPlaceMerge_partnerPulse_isAnchoredAtTheTrailingEdge() {
@@ -954,6 +973,133 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0, 1.1, accuracy: 0.01)
         self.settle(view)
         XCTAssertNil(view.inPlaceStateForTesting(slot: .right(0)))
+    }
+
+    /// The bar before Edit -> Done, with UIKit's press on Edit faked by growing its effect view (as `_UIFlexInteraction`
+    /// does), and that effect view.
+    private func pressedEditAndSearch(_ bar: ComponentView<Empty>) -> (edit: GlassContextExtractableContainer, glass: UIView)? {
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            return nil
+        }
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: edit.bounds.width * 1.1, height: 44.0 * 1.1)
+        glass.center = center
+        return (edit, glass)
+    }
+
+    // A glass UIKit is pressing is not fused with its neighbours in a glass container: it keeps its own edge inside the
+    // merged shape (a darker band where search joins Done, a darker disc where it was absorbed: probed on iOS 27, and only
+    // a new effect view was clean). So the pressed partner merges on a new effect view holding the same content.
+    func test_inPlaceMerge_pressedPartner_mergesOnANewEffectView() {
+        let bar = ComponentView<Empty>()
+        guard let (edit, pressedGlass) = self.pressedEditAndSearch(bar) else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        guard let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            XCTFail("the content is not in a glass")
+            return
+        }
+        XCTAssertFalse(glass === pressedGlass)
+        XCTAssertNil(pressedGlass.superview)
+        XCTAssertTrue(edit.isGlassLent)
+        // The press goes on as the bar's own release.
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0, 1.1, accuracy: 0.01)
+    }
+
+    // A pill going into its partner carries its items with it (iOS 27's search glyph stays inside the moving shape until
+    // it fades), where an in-place change leaves them where they rest while the shape morphs around them.
+    func test_inPlaceMerge_leavingPill_carriesItsItems() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        view.inPlaceTickForTesting(dt: 0.15)
+        guard let offset = view.inPlaceStateForTesting(slot: .right(1))?.leavingItemsOffsetInGlass else {
+            XCTFail("no leaving items in the lent glass")
+            return
+        }
+        XCTAssertEqual(offset.x, 0.0, accuracy: 0.5)
+        XCTAssertEqual(offset.y, 0.0, accuracy: 0.5)
+    }
+
+    // UIKit's animated change of a glass effect draws a dark band where two merging shapes meet (probed on iOS 27: an
+    // effect set every frame does not), so a merging pill's tint cross-fades frame by frame, from where it was.
+    func test_inPlaceMerge_partnerTint_crossFadesFrameByFrame() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let from = edit.glassTintColor else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertEqual(edit.glassTintColor, from)
+        view.inPlaceTickForTesting(dt: 0.03)
+        guard case let .custom(_, color)? = edit.glassTintColor?.kind else {
+            XCTFail("not cross-fading: \(String(describing: edit.glassTintColor))")
+            return
+        }
+        var alpha: CGFloat = 0.0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0.15)
+        XCTAssertLessThan(alpha, 0.95)
+        self.settle(view)
+        XCTAssertEqual(edit.glassTintColor, navigationBarGlassTintColor(.accent, theme: self.makeTheme()))
+    }
+
+    // A pill growing out of its partner starts in the partner's tint and cross-fades to its own, frame by frame too.
+    func test_inPlaceMerge_arrivingPill_crossFadesFromItsPartnersTint() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        let view = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .easeInOut(duration: 0.3))
+        guard let search = view.rightPillBackgroundContainer(at: 1) else {
+            XCTFail("no eject")
+            return
+        }
+        XCTAssertEqual(search.glassTintColor, navigationBarGlassTintColor(.accent, theme: self.makeTheme()))
+        view.inPlaceTickForTesting(dt: 0.03)
+        guard case let .custom(_, color)? = search.glassTintColor?.kind else {
+            XCTFail("not cross-fading: \(String(describing: search.glassTintColor))")
+            return
+        }
+        var alpha: CGFloat = 0.0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0.15)
+        XCTAssertLessThan(alpha, 0.95)
+        self.settle(view)
+        XCTAssertEqual(search.glassTintColor, navigationBarGlassTintColor(.generic, theme: self.makeTheme()))
+    }
+
+    // A merge with no press on the partner keeps its effect view (renewing it would cut a tint change short).
+    func test_inPlaceMerge_unpressedPartner_keepsItsEffectView() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: self.editAndSearch(), transition: .immediate)
+        before.glassMergesShapes = { true }
+        guard let edit = before.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: edit.contentView, container: edit) else {
+            XCTFail("no pill")
+            return
+        }
+        _ = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(navigationBarTestGlassEffectView(content: edit.contentView, container: edit) === glass)
+    }
+
+    // The merge draws no press glow of its own over the new effect view: push/pop's glow, drawn over a tinted glass, turns
+    // an accent pill cyan (measured: 99eefc, 3bd8fa), where iOS 27's pressed Done fades from white to accent through pale
+    // blues (c3def7, 8ccafc, 52b9fc). The press's scale goes on.
+    func test_inPlaceMerge_pressedPartner_drawsNoGlow() {
+        let bar = ComponentView<Empty>()
+        guard let (edit, _) = self.pressedEditAndSearch(bar) else {
+            XCTFail("no pill")
+            return
+        }
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertFalse(edit.contentView.superview?.subviews.contains(where: { $0 is NavigationBarPressGlowView }) ?? true)
+        XCTAssertEqual(view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0, 1.1, accuracy: 0.01)
     }
 
     private func editAndSearch() -> [NavigationBarComponent.Button] {

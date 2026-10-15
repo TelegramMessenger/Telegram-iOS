@@ -51,8 +51,8 @@ Filmed on the reference app, `-scenario oneTwo` (`[Edit]` <-> `[Edit, +]`, a new
   separates ~0.3 s after the change and settles at ~0.4 s.
 
 **Measured, the Administrators case (2026-10-15).** Reference app `-scenario editDone -adminsRight 1` (right items
-`[Edit, search]` <-> `[the system Done item]`, new items each change), filmed at 60 fps on K2; times from the first
-changed frame:
+`[Edit, search]` <-> `[the system Done item]`, new items each change), filmed at 60 fps on K2, driven by the
+scenario's timer without a touch (for a real tap see below); times from the first changed frame:
 
 - **Edit -> Done (search sucked in).** 0 s: Edit's items swap (blur) and the Edit pill swells (its item-change pulse);
   **both** pills cross-fade to the accent tint, the search pill included, fully blue by ~0.07 s. ~0.10 s: search starts
@@ -67,6 +67,23 @@ changed frame:
   Administrators order above is what the bar implements.
 - **New finding:** a pill merging with its partner takes the partner's tint on the way (the leaving search pill turns
   accent as it goes into Done; the arriving one starts accent and turns plain).
+- **With a real tap (filmed later the same day).** The film above was driven without a touch. Tapping Edit (`axe touch`,
+  reference app with `-scenario none -adminsRight 1`), Done starts as the pressed white glass and fades to accent
+  through pale blues over ~0.2 s, straight mixes of white and accent (sampled: f6fbfc, c3def7, 8ccafc, 52b9fc, 14a2fd,
+  0094fc); the search pill, already accent, merges into it as one shape, and nothing is left inside Done afterwards.
+
+**How glass behaves in a glass container (probed 2026-10-15, a plain-UIKit app on the iOS 27 simulator).** Two
+`UIGlassEffect` views in one `UIGlassContainerEffect`, one absorbed into the other:
+
+- They render as **one shape** whatever the nesting (effect view in plain wrapper views), the corner (`cornerRadius`
+  or `cornerConfiguration`), the motion (frame or transform, every frame) or the content.
+- An **animated effect change** (`UIView.animate { view.effect = … }`, the tint cross-fade) draws a **dark band where the
+  two shapes meet** for as long as it runs. Setting the effect again without animation does not cancel it. Setting a new
+  effect every frame, without animation, merges cleanly.
+- A glass **under UIKit's press** (`_UIFlexInteraction`, interactive glass) keeps its own edge inside the merged shape:
+  the other shape reads as a darker disc within it. Re-adding the view keeps the press; removing the interaction ends
+  the glow but leaves the press's lift and tint; a **new effect view** with the same effect is clean. UIKit keeps the
+  press glow in a `GlowContainerView` inside its own `_UIMultiLayer`, not among the content view's subviews.
 
 ## Where the bar stands (master 8157d4300d)
 
@@ -153,15 +170,22 @@ The old and new right pills are compared by index from the edge, as UIKit compar
   pill is gone or the arriving one has separated. While lent, the animator places the glass views at the pills'
   frames; the items stay live, so the arriving pill takes taps and the partner keeps its buttons. Both pills' glass is
   lent, the leaving or arriving one and its partner, since only shapes in one container merge.
-- **A press on the partner.** Moving the partner's glass may end the press UIKit is drawing on it (the tap on Edit
-  that started the change is still releasing). The animator therefore reads that press (`navigationBarCapsulePressScale`)
-  when it lends the glass and continues it as its own spring (`NavigationBarGlassSettings.pressRelease`), multiplied
-  with the pulse, as push/pop does with a bar's press. Task 5 films the case in the app and checks that UIKit's own
-  press does not also carry on (a doubled press); if it does, the measured continuation is dropped.
+- **A press on the partner.** A glass under UIKit's press does not merge cleanly (above), and the tap on Edit that
+  started the change is still releasing. So in a layout where a pill comes or goes, a right pill UIKit is pressing gets
+  a new effect view before the layout touches its glass (`GlassBackgroundView.renewNativeView`, the content moved
+  over), and the animator continues the press's scale as its own spring (`NavigationBarGlassSettings.pressRelease`),
+  multiplied with the pulse, as push/pop does with a bar's press. Its glow is not continued: push/pop's glow view,
+  drawn over an already tinted glass, turns an accent pill cyan (sampled 99eefc, 3bd8fa) where native fades through
+  pale blues, so the merge fades the tint alone.
 - **Order and tint, as measured** ("How a pill comes and goes in place"): the partner's item swap and pulse start at
   once; a leaving pill starts moving after the resolved delay and an arriving one at once; the moving pill cross-fades
   to its partner's tint as it leaves, or from the partner's tint to its own as it arrives, on the in-place tint
-  spring, while the partner's own tint change runs as today.
+  spring. In a layout where pills merge, every in-place tint change, the partner's included, is cross-faded by the
+  animator, a new effect each frame (`NavigationBarInPlaceCapsule.tintFade`), never by UIKit's animated effect change,
+  which bands the merged shape (above). Other in-place changes keep UIKit's cross-fade.
+- **Items travel with a matched pill.** An in-place change leaves items where they rest while the shape morphs around
+  them; a pill going into, or coming out of, its partner carries its items, placed in the pill they were laid out in
+  (`Matched.itemsPill`), so the magnifier stays inside the shape it fades in.
 
 ### 3. Testing and verification
 
