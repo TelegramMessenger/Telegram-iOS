@@ -184,6 +184,18 @@ public extension TelegramEngine {
             return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
         }
         
+        public func withdrawStarGift(reference: StarGiftReference, keepOnProfile: Bool, password: String) -> Signal<Never, WithdrawStarGiftError> {
+            return _internal_withdrawStarGift(account: self.account, reference: reference, keepOnProfile: keepOnProfile, password: password)
+        }
+
+        public func depositStarGift(peerId: EnginePeer.Id, slug: String, hideSender: Bool) -> Signal<StarGiftDepositPayload, DepositStarGiftError> {
+            return _internal_depositStarGift(account: self.account, peerId: peerId, slug: slug, hideSender: hideSender)
+        }
+
+        public func displayStarGift(peerId: EnginePeer.Id?, slug: String) -> Signal<Never, DisplayStarGiftError> {
+            return _internal_displayStarGift(account: self.account, peerId: peerId, slug: slug)
+        }
+
         public func buyStarGift(slug: String, peerId: EnginePeer.Id, price: CurrencyAmount?, hideName: Bool = true, text: String? = nil, entities: [MessageTextEntity]? = nil) -> Signal<Never, BuyStarGiftError> {
             return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId, price: price, hideName: hideName, text: text, entities: entities)
         }
