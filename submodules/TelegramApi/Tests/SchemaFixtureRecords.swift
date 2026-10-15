@@ -1,18 +1,8 @@
 import Foundation
-import XCTest
 @testable import TelegramApi
 
 private func hex(_ data: Data) -> String {
     return data.map { String(format: "%02x", $0) }.joined()
-}
-
-private func fnv1a64(_ text: String) -> UInt64 {
-    var hash: UInt64 = 0xcbf29ce484222325
-    for byte in text.utf8 {
-        hash ^= UInt64(byte)
-        hash = hash &* 0x100000001b3
-    }
-    return hash
 }
 
 private final class LogCapture {
@@ -50,7 +40,8 @@ private func serialized(_ value: Any) -> Data {
 }
 
 /// Everything observable about one constructor fixture: bytes, round trip, logs, where
-/// the reader stops, which truncated prefixes still parse, and the logger's rendering.
+/// the reader stops, which truncated prefixes still parse, and the logger's rendering. Building it
+/// runs every path a value takes through the engine, which `LeakTests` checks for leaks.
 func schemaConstructorRecord(_ fixture: SchemaConstructorFixture) -> String {
     let value = fixture.make()
     let bytes = serialized(value)
@@ -95,56 +86,4 @@ func schemaFunctionRecord(_ fixture: SchemaFunctionFixture) -> String {
     }
     parts.append("prefixes=\(parsingPrefixes)")
     return parts.joined(separator: "|")
-}
-
-final class SchemaGoldenTests: XCTestCase {
-    private func currentRecords() -> [(String, String)] {
-        return schemaConstructorFixtures.map { ($0.name, schemaConstructorRecord($0)) }
-            + schemaFunctionFixtures.map { ($0.name, schemaFunctionRecord($0)) }
-    }
-
-    // TLAPI_SCHEMA_GOLDENS_OUT=<path> records digests. Only ever on pre-engine code (the old generated
-    // Swift built with these test files), never on the engine: a recording there pins nothing.
-    // TLAPI_SCHEMA_DUMP=<path> writes every full record, for diffing two implementations.
-    func testRecordIfRequested() throws {
-        let environment = ProcessInfo.processInfo.environment
-        guard environment["TLAPI_SCHEMA_GOLDENS_OUT"] != nil || environment["TLAPI_SCHEMA_DUMP"] != nil else { return }
-        let records = self.currentRecords()
-        if let path = environment["TLAPI_SCHEMA_DUMP"] {
-            try records.map { $0.1 }.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
-        }
-        if let path = environment["TLAPI_SCHEMA_GOLDENS_OUT"] {
-            var out = "// Recorded by SchemaGoldenTests on pre-engine code. Do not edit.\n"
-            out += "let schemaGoldenDigests = \"\"\"\n"
-            for (name, record) in records {
-                out += "\(name) \(String(format: "%016llx", fnv1a64(record)))\n"
-            }
-            out += "\"\"\"\n"
-            try out.write(toFile: path, atomically: true, encoding: .utf8)
-        }
-    }
-
-    func testEveryFixtureMatchesItsGolden() {
-        var goldens: [String: String] = [:]
-        for line in schemaGoldenDigests.split(separator: "\n") {
-            let parts = line.split(separator: " ")
-            if parts.count == 2 {
-                goldens[String(parts[0])] = String(parts[1])
-            }
-        }
-        XCTAssertFalse(goldens.isEmpty, "no goldens recorded")
-        let records = self.currentRecords()
-        XCTAssertEqual(records.count, goldens.count)
-        var mismatches = 0
-        for (name, record) in records {
-            let digest = String(format: "%016llx", fnv1a64(record))
-            if goldens[name] != digest {
-                mismatches += 1
-                if mismatches <= 20 {
-                    XCTFail("\(name): \(String(record.prefix(1500)))")
-                }
-            }
-        }
-        XCTAssertEqual(mismatches, 0)
-    }
 }

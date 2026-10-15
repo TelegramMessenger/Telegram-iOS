@@ -797,16 +797,11 @@ Compiler-invisible rules:
 - **`tlFunction` must stay unspecialized** (`@_semantics("optimize.sil.specialize.generic.never")`).
   Otherwise each of the ~40 result types gets its own closure copy. Check:
   `nm .build/release/TelegramApi.o | xcrun swift-demangle | grep -c "specialization.*tlFunction"` → 0.
-- **Wire compatibility is pinned by goldens.** `Tests/SchemaGoldens.swift` holds digests recorded
-  from pre-engine Swift code. **Never re-record them on the engine to make a change pass**: a
-  mismatch is a wire change. A schema change fails `SchemaGoldenTests` for exactly the changed
-  entries (and the types that contain them); record those on pre-engine code, as was done for the
-  October 2026 wallet changes: build the old generator from `git show e60e1032cd:build-system/SwiftTL`,
-  generate the old-style Swift from the new schema, and run `SchemaGoldenTests` with
-  `TLAPI_SCHEMA_GOLDENS_OUT=<path>` in a scratch SwiftPM package holding that Swift, the
-  hand-written `Sources/*.swift` of the same commit, `SchemaGoldenTests.swift`,
-  `LoggerDescription.swift`, `SchemaGoldens.swift` and the new `SchemaFixtures.swift`. Every
-  unchanged digest must come out identical, or the harness is wrong.
+- **The schema code generator and engine are trusted; there is no per-constructor wire test.**
+  `SchemaGoldenTests` (digests of every fixture recorded from the pre-engine Swift) was removed on
+  2026-10-15: every schema change failed it until the new entries were recorded on a frozen
+  pre-engine generator. `GoldenTests` keeps about 15 hand-written fixtures whose bytes and logger
+  output were recorded pre-engine; never re-record those on the engine.
 - **Unknown constructors are logged with their exact id, even after an earlier field failed.**
   That requires the engine to stop where the old Swift parser stopped: a primitive's id in an
   object field consumes the primitive, and a string whose length overruns still skips its
@@ -818,8 +813,9 @@ Compiler-invisible rules:
   (inline callback button data).
 - **Offsets are baked into Swift and into the table; they must agree.** `AccessorProbeTests`
   (generated probes) reads every field of every fixture through the Swift accessors and compares
-  it with the table-driven description. The goldens check construction (Swift offsets) against
-  serialization (table offsets). Change `storageLayout` only together with the layout version in
+  it with the table-driven description; since the fixtures are built through the Swift
+  initializers, that also checks construction (Swift offsets) against the table. Change
+  `storageLayout` only together with the layout version in
   `main.swift`'s hash string.
 - **Accessor offsets are part of TelegramCore's compiled code.** They are
   `@_alwaysEmitIntoClient`, so a TelegramApi regeneration needs TelegramCore recompiled. Bazel
