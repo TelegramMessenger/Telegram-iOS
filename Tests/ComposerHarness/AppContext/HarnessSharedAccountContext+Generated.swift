@@ -541,7 +541,7 @@ extension HarnessSharedAccountContext {
     public func makeWalletTransactionPreviewScreen(context: AccountContext, walletContext: WalletContext, address: String, recipientPeer: EnginePeer?, collectible: WalletContext.Collectible, comment: String?, dismissSendScreen: @escaping () -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletTransactionPreviewScreen is not provided")
     }
-    public func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, collectibleSent: @escaping (String) -> Void) -> ViewController {
+    public func makeWalletCollectibleScreen(context: AccountContext, walletContext: WalletContext, collectible: WalletContext.Collectible, stickerHost: WalletCollectibleStickerHost?, collectibleSent: @escaping (String) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletCollectibleScreen is not provided")
     }
     public func authorizeWalletAccess(context: AccountContext, completion: @escaping (Bool) -> Void) {
