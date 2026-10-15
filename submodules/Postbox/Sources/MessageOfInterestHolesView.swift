@@ -173,7 +173,21 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
                 }
                 self.peerIds = peerIds
-                self.wrappedView = MutableMessageOfInterestHolesView.makeWrappedView(postbox: postbox, peerIds: peerIds, anchor: self.anchor, count: self.count)
+                let resolvedAnchor: HistoryViewInputAnchor
+                switch self.wrappedView.sampledState {
+                case .loading:
+                    resolvedAnchor = self.anchor
+                case let .loaded(sample):
+                    switch sample.anchor {
+                    case .lowerBound:
+                        resolvedAnchor = .lowerBound
+                    case .upperBound:
+                        resolvedAnchor = .upperBound
+                    case let .index(index):
+                        resolvedAnchor = .index(index)
+                    }
+                }
+                self.wrappedView = MutableMessageOfInterestHolesView.makeWrappedView(postbox: postbox, peerIds: peerIds, anchor: resolvedAnchor, count: self.count)
             }
             
             return self.updateFromView()
