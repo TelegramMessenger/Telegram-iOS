@@ -102,6 +102,26 @@ final class UnreadMessagesScanTests: XCTestCase {
         XCTAssertEqual(self.scan().map { $0.content }, ["newer", "older"], self.storeState([self.alice, self.ride]))
     }
 
+    /// The read state only tracks incoming messages, so the account's own reply above the read
+    /// marker must not pass for unread: Siri read it out ahead of the answer to it
+    /// (bugs.telegram.org/c/66638).
+    func testOwnMessagesAboveTheReadMarkerAreNotReported() {
+        let me = IntentMessageFixtures.user(1000, firstName: "Me")
+        let base: Int32 = 1_700_000_000
+        self.transaction { transaction in
+            transaction.updatePeersInternal([self.alice, me], update: { _, updated in updated })
+            transaction.updatePeerChatListInclusion(self.alice.id, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: nil))
+            let _ = transaction.addMessages([
+                self.incoming(10, in: self.alice, from: self.alice, text: "dinner tonight?", timestamp: base),
+                StoreMessage(id: MessageId(peerId: self.alice.id, namespace: Namespaces.Message.Cloud, id: 11), customStableId: nil, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: base + 1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: me.id, text: "sure, where?", attributes: [], media: []),
+                self.incoming(12, in: self.alice, from: self.alice, text: "the usual place", timestamp: base + 2)
+            ], location: .UpperHistoryBlock)
+            transaction.resetIncomingReadStates([self.alice.id: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: 10, maxOutgoingReadId: 0, maxKnownId: 12, count: 1, markedUnread: false)]])
+        }
+
+        XCTAssertEqual(self.scan().map { $0.content }, ["the usual place"], self.storeState([self.alice, me]))
+    }
+
     /// The store as the scan would see it, for failure messages.
     private func storeState(_ peers: [Peer]) -> String {
         var lines: [String] = []

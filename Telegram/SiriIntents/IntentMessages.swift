@@ -26,7 +26,15 @@ func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoEr
     return account.postbox.transaction { transaction -> [INMessage] in
         var messages: [INMessage] = []
         for id in ids {
-            if let message = transaction.getMessage(id).flatMap(messageWithTelegramMessage) {
+            guard let telegramMessage = transaction.getMessage(id) else {
+                continue
+            }
+            // Only messages written to the account are read out. An identifier handed out by
+            // a build whose unread scan returned the account's own messages may still name one.
+            if !telegramMessage.flags.contains(.Incoming) {
+                continue
+            }
+            if let message = messageWithTelegramMessage(telegramMessage) {
                 messages.append(message)
             }
         }
@@ -169,6 +177,12 @@ func unreadMessages(views: UnreadMessagesViews) -> Signal<[INMessage], NoError> 
                 var unreadEntries = 0
                 var unconvertible = 0
                 for entry in view.entries {
+                    // The read state only tracks incoming messages, so the account's own
+                    // messages above the read marker would pass for unread and be read out
+                    // ahead of the reply to them (bugs.telegram.org/c/66638).
+                    if !entry.message.flags.contains(.Incoming) {
+                        continue
+                    }
                     var isRead = true
                     if let readState = readState {
                         isRead = readState.state.isIncomingMessageIndexRead(entry.message.index)
