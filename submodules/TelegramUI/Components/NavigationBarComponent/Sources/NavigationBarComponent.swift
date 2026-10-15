@@ -181,12 +181,13 @@ public final class NavigationBarComponent: Component {
                         let now = self.pressSamplerClock()
                         var leftScale = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
                         var rightScales = self.rightPills.map { $0.background.flatMap(navigationBarCapsulePressScale) ?? 1.0 }
-                        // A press UIKit has already taken off (the touch just ended) is in the last sample.
+                        // A press UIKit has already taken off (the touch just ended) is in the last sample, unless the bar
+                        // took that press over when it renewed the glass (then the sample and the bar's press are one).
                         if let sample = self.lastPressSample, now - sample.time < 0.1 {
-                            if abs(leftScale - 1.0) < 0.0005 {
+                            if abs(leftScale - 1.0) < 0.0005 && abs(barLeftPress - 1.0) < 0.0005 {
                                 leftScale = sample.left
                             }
-                            for index in rightScales.indices where abs(rightScales[index] - 1.0) < 0.0005 && index < sample.right.count {
+                            for index in rightScales.indices where abs(rightScales[index] - 1.0) < 0.0005 && abs(barRightPresses[index] - 1.0) < 0.0005 && index < sample.right.count {
                                 rightScales[index] = sample.right[index]
                             }
                         }

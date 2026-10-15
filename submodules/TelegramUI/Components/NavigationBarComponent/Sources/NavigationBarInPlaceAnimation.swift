@@ -667,8 +667,9 @@ extension NavigationBarComponent.View {
         }
     }
 
-    /// Ends the in-place animation of `container` and of every pill merging with it at once (a layout without animation
-    /// takes the pill away): its glass comes back and nothing of the merge stays in the merging container.
+    /// Ends at once the in-place animation of `container` and of every pill going into, or coming out of, it (a layout
+    /// without animation takes the pill away): their glass comes back. A partner `container` was merging with keeps its
+    /// own animation, its glass drawn alone in the merging container until it rests.
     func finishInPlace(of container: GlassContextExtractableContainer) {
         let ending = self.inPlaceCapsules.filter { $0.container === container || $0.matched?.partner === container }
         guard !ending.isEmpty else {

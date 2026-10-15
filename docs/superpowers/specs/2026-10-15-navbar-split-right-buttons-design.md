@@ -304,13 +304,15 @@ The channel profile's [add story, Edit] capsule is PeerInfo's own header, not th
 
 **Whole-branch review** (Opus, fresh context): ready with fixes, no Critical. Fixed in `4280c582bd`: a relayout
 mid-merge sent the leaving pill toward its partner's old frame, and an item change on a still-lent pill went through
-UIKit's animated effect change. Ten minors were deferred, and fixed on 2026-10-16 (`fa790829b8`, `fd9620e6ea`,
-`c643afc56b`): a partner that only moves springs from where it is with its items (with three pills an insertion had
+UIKit's animated effect change. Nine minors were deferred (the tenth, b, was fixed before the merge) and were dealt
+with on 2026-10-16 (`fa790829b8`, `fd9620e6ea`, `c643afc56b`, and a review fix after them): a partner that only moves springs from where it is with its items (with three pills an insertion had
 left it at its old frame for good); a non-animated removal of a lent pill ends its merge; the press is read only by
 in-place layouts; a container that takes its glass back ends the loan; `renewGlass` waits out a context menu; a push
-mid-merge carries the bar's own press (no glow); a touch on a lent glass is sampled; the merging container follows the
-appearance; stale docs. The pulse anchor needed no refresh (it is a unit point), and the per-frame glass effect costs
-~14 us on the simulator and was already paid by every in-place frame (the shape is in the glass's params).
+mid-merge carries the bar's own press, once and with no glow; a touch on a lent glass is sampled; the merging container follows the
+appearance; stale docs. Measured rather than changed: the pulse anchor needs no refresh (it is a unit point), and the
+per-frame glass effect costs ~14 us on the simulator and was already paid by every in-place frame (the shape is in the
+glass's params).
 
-**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the final code (81 actions). `NavigationBarComponentTests` 180/180,
+**Builds and suites:** `debug_sim_arm64` OK. `release_arm64` OK on the split-buttons branch tip (81 actions), not re-run
+after the 2026-10-16 follow-ups. `NavigationBarComponentTests` 190/190 (180 before the follow-ups),
 `NavigationBarNodeTests` 77/77.

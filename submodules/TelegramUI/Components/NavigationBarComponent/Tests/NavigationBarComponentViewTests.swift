@@ -1382,6 +1382,38 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(view.detachedRightPressGlows.first ?? -1.0, 0.0, accuracy: 0.001)
     }
 
+    // A press the sampler caught during the touch (UIKit's, on the glass the merge then renewed) and the bar's continuation
+    // of that same press are one press: a transition right after the change gets it once, with no glow.
+    func test_inPlaceMerge_detachingRightAfterASampledPress_carriesThePressOnce() {
+        let bar = ComponentView<Empty>()
+        guard let (edit, glass) = self.pressedEditAndSearch(bar), let editButton = (bar.view as? NavigationBarComponent.View)?.rightButtonViews["edit"] else {
+            XCTFail("no pill")
+            return
+        }
+        let before = bar.view as! NavigationBarComponent.View
+        testWindow.addSubview(before)
+        defer {
+            before.removeFromSuperview()
+        }
+        let now = 100.0
+        before.pressSamplerClock = {
+            return now
+        }
+        // The touch on Edit, sampled while UIKit's press is on its glass.
+        XCTAssertTrue(before.hitTest(editButton.convert(CGPoint(x: editButton.bounds.midX, y: editButton.bounds.midY), to: before), with: nil)?.isDescendant(of: editButton) ?? false)
+        XCTAssertTrue(glass.superview != nil)
+        let view = self.updateBar(bar, back: .back, right: self.doneOnly(), transition: .easeInOut(duration: 0.3))
+        XCTAssertTrue(edit.isGlassLent)
+        view.inPlaceTickForTesting(dt: 1.0 / 60.0)
+        // The sampler's next frame reads the renewed glass.
+        view.tickPressSampler()
+        let press = view.inPlaceStateForTesting(slot: .right(0))?.press ?? 1.0
+        XCTAssertGreaterThan(press, 1.05)
+        view.plattersDetached = true
+        XCTAssertEqual(view.detachedRightPressScales.first ?? 1.0, press, accuracy: 0.001)
+        XCTAssertEqual(view.detachedRightPressGlows.first ?? -1.0, 0.0, accuracy: 0.001)
+    }
+
     // A touch on a pill whose glass is lent to a merge is sampled like any other, so a transition it starts carries its
     // press.
     func test_inPlaceMerge_touchOnALentGlass_samplesThePress() {
