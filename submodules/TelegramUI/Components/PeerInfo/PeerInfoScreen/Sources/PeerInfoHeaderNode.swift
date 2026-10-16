@@ -163,6 +163,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var musicBackground: UIView?
     var music: ComponentView<Empty>?
     var walletBalance: ComponentView<Empty>?
+    private var walletBalanceCutoutIcon: (color: UIColor, image: UIImage)?
     var hasBottomStrip: Bool {
         return self.music != nil
     }
@@ -200,7 +201,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     /// The bar's right buttons in its row, both sets (the title clears them when the header is collapsed).
     var navigationRowRightButtonCount: Int = 0
     
-    private(set) var walletSourceBackgroundColor: UIColor?
     private(set) var contentButtonBackgroundColor: UIColor?
     
     let animationCache: AnimationCache
@@ -690,13 +690,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
         let expandedAvatarContentButtonForegroundColor: UIColor = .white
         
-        self.walletSourceBackgroundColor = nil
         var hasCoverColor = false
         let regularNavigationContentsSecondaryColor: UIColor
         if let emojiStatus = peer?.emojiStatus, case let .starGift(_, _, _, _, _, innerColor, outerColor, _, _) = emojiStatus.content {
             let mainColor = UIColor(rgb: UInt32(bitPattern: innerColor))
             let secondaryColor = UIColor(rgb: UInt32(bitPattern: outerColor))
-            self.walletSourceBackgroundColor = secondaryColor.mixedWith(mainColor, alpha: 0.1)
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(mainColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -711,7 +709,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             hasCoverColor = true
         } else if let profileColor = peer?.effectiveProfileColor {
             let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance)
-            self.walletSourceBackgroundColor = backgroundColors.main
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -1724,7 +1721,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
-            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft, y: expandedAvatarHeight - bottomInset - balanceInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft, y: expandedAvatarHeight - bottomInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
             if !self.isSettings && !self.isMyProfile {
                 minTitleFrame.origin.y -= 83.0
             }
@@ -2663,8 +2660,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: balanceTitle, font: Font.regular(12.0 * textScale), textColor: primaryColor))))
                         ),
                         AnyComponentWithIdentity(
-                            id: "iconWithStar",
-                            component: AnyComponent(ZStack([
+                            id: self.isAvatarExpanded ? "iconCutout" : "iconWithStar",
+                            component: self.isAvatarExpanded ? AnyComponent(Image(image: self.walletBalanceCutoutIcon(color: iconColor), size: CGSize(width: 14.0, height: 14.0), contentMode: .center)) : AnyComponent(ZStack([
                                 AnyComponentWithIdentity(
                                     id: "base",
                                     component: AnyComponent(BundleIconComponent(name: "Wallet/TopGram", tintColor: iconColor, maxSize: CGSize(width: 14.0, height: 14.0)))
@@ -2694,10 +2691,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 environment: {},
                 containerSize: CGSize(width: maximumBalanceWidth, height: 20.0)
             )
-            let balanceFrame = CGRect(origin: CGPoint(
-                x: self.isAvatarExpanded ? stripLeft + 16.0 : stripLeft + floor((width - stripLeft - stripRight - balanceSize.width) * 0.5),
-                y: max(subtitleFrame.maxY, usernameFrame.maxY) + titleOffset + 8.0
-            ), size: balanceSize)
+            let balanceFrame: CGRect
+            if self.isAvatarExpanded {
+                let lastRowFrame = usernameFrame.maxY > subtitleFrame.maxY ? usernameFrame : subtitleFrame
+                balanceFrame = CGRect(origin: CGPoint(
+                    x: width - stripRight - 16.0 - balanceSize.width,
+                    y: floor(lastRowFrame.midY + titleOffset - balanceSize.height * 0.5)
+                ), size: balanceSize)
+            } else {
+                balanceFrame = CGRect(origin: CGPoint(
+                    x: stripLeft + floor((width - stripLeft - stripRight - balanceSize.width) * 0.5),
+                    y: max(subtitleFrame.maxY, usernameFrame.maxY) + titleOffset + 8.0
+                ), size: balanceSize)
+            }
             if let balanceView = balance.view {
                 balanceView.isAccessibilityElement = true
                 balanceView.accessibilityLabel = presentationData.strings.Wallet_Send_Balance(formattedBalance).string
@@ -2893,6 +2899,29 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.performButtonAction?(buttonNode.key, nil, gesture)
     }
     
+    private func walletBalanceCutoutIcon(color: UIColor) -> UIImage? {
+        if let current = self.walletBalanceCutoutIcon, current.color == color {
+            return current.image
+        }
+        guard let base = UIImage(bundleImageName: "Wallet/TopGram"), let highlight = UIImage(bundleImageName: "Wallet/TransactionGramHighlight") else {
+            return nil
+        }
+        let maxSize = CGSize(width: 14.0, height: 14.0)
+        let size = base.size.aspectFitted(maxSize)
+        let highlightSize = highlight.size.aspectFitted(maxSize)
+        guard let image = generateImage(size, rotatedContext: { size, context in
+            context.clear(CGRect(origin: .zero, size: size))
+            UIGraphicsPushContext(context)
+            generateTintedImage(image: base, color: color)?.draw(in: CGRect(origin: .zero, size: size))
+            highlight.draw(in: CGRect(origin: CGPoint(x: (size.width - highlightSize.width) * 0.5, y: (size.height - highlightSize.height) * 0.5), size: highlightSize), blendMode: .destinationOut, alpha: 1.0)
+            UIGraphicsPopContext()
+        }) else {
+            return nil
+        }
+        self.walletBalanceCutoutIcon = (color, image)
+        return image
+    }
+
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         var result = super.point(inside: point, with: event)
         for stripView in [self.music?.view, self.walletBalance?.view].compactMap({ $0 }) {

@@ -1611,10 +1611,10 @@ private final class QrStudioScreenComponent: Component {
                     return url
                 }
                 if let addressName = component.peer.addressName, !addressName.isEmpty {
-                    return "https://t.me/\(addressName)?nopaidtoken=\(token.token)"
+                    return "https://t.me/\(addressName)?free=\(token.token)"
                 }
                 if case let .user(user) = component.peer, let phone = user.phone, !phone.isEmpty {
-                    return "https://t.me/+\(phone)?nopaidtoken=\(token.token)"
+                    return "https://t.me/+\(phone)?free=\(token.token)"
                 }
             }
             if component.temporary {

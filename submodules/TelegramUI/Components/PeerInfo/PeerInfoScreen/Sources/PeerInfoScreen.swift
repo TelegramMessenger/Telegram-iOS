@@ -1481,7 +1481,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
 
         self.headerNode.openWallet = { [weak self] in
             guard let self, let controller = self.controller, let peer = self.data?.peer else { return }
-            let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sourceBackgroundColor: self.headerNode.isAvatarExpanded ? UIColor(white: 0.4, alpha: 1.0) : self.headerNode.walletSourceBackgroundColor, sendMoney: { [weak self] peerWalletScreen in
+            let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sendMoney: { [weak self] peerWalletScreen in
                 guard let self, let controller = self.controller else { return }
                 if peer.id == self.context.account.peerId {
                     guard WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable else {

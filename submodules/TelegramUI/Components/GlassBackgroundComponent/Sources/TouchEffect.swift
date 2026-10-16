@@ -13,6 +13,11 @@ public final class GlassHighlightGestureRecognizer: UIGestureRecognizer, UIGestu
             self.touchEffect?.setParameters(self.parameters, animated: false)
         }
     }
+    public var pressedScale: CGFloat? {
+        didSet {
+            self.parameters.pressedScale = self.pressedScale
+        }
+    }
     
     public override init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -123,6 +128,7 @@ final class TouchEffect {
             initialVelocity: 0.0
         )
         var pressedSizeIncrease: CGFloat = 20.0
+        var pressedScale: CGFloat?
     }
 
     private weak var view: UIView?
@@ -191,7 +197,10 @@ final class TouchEffect {
 
         let baseScaleX: CGFloat
         let baseScaleY: CGFloat
-        if state.isTracking {
+        if state.isTracking, let pressedScale = self.parameters.pressedScale {
+            baseScaleX = pressedScale
+            baseScaleY = pressedScale
+        } else if state.isTracking {
             if viewWidth < viewHeight {
                 baseScaleY = 1.0 + self.parameters.pressedSizeIncrease / viewHeight
                 baseScaleX = baseScaleY
