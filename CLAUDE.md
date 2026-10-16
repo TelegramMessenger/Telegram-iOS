@@ -1270,8 +1270,46 @@ come from TelegramCore around it. Four facts keep the critical path at one `mess
   fill that closes the hole to the top advances the channel state's `synchronizedUntilMessageId`, so
   the chat's re-subscription after a fill does not wipe it and the poll does not seed a gap hole over it.
 
+## News feed: parked at layer 232 (`TELEGRAM_NEWS_FEED_API`)
+
+Since 2026-10-16 the news feed is parked server-side and the app talks layer 232, whose schema has no feed API:
+no `feed.*` types or methods, no `updateReadFeed`, no `channels.editChannelNews`, `channels.joinChannel` without
+`for_news`, and a `channel` constructor without `in_news`. That constructor keeps `pinned_msg_id` and is still
+`#7ad15240`: a TL constructor id ignores `?true` fields. All News code stays in the app, so the feature comes back
+by defining one compile-time condition, not by restoring code. None of this shows up as a build error:
+
+- **`TELEGRAM_NEWS_FEED_API` is defined nowhere.** TelegramCore wraps only the lines that use a removed API symbol,
+  or read the removed `in_news` bit, in `#if TELEGRAM_NEWS_FEED_API`. Each `#else` sends nothing and answers with an
+  empty success (an empty For you batch, an empty Added page, a read mark kept local, interests left unchanged), so
+  no context retries. The feed models, contexts, page storage, grouping, caches and read state stay compiled. Code
+  inside an inactive `#if` is not type-checked, which is why the blocks are kept that small.
+- **One gate hides News.** TelegramCore exports `newsFeedApiIsAvailable` (Swift defines are per module, so the app
+  cannot test the condition itself), and `isNewsFeedEnabled(appConfiguration:apiIsAvailable:)` in `NewsFeedSupport`
+  returns false while it is false, before the `dev` flag and the `news_feed_enabled` kill switch. Every News surface
+  outside the News modules reads that gate: the tab (`ApplicationContext` → `TelegramRootController`), the channel
+  bar (Join or Mute/Unmute instead of the island, also for a channel a 233 build stored with `in_news`) and the
+  title's mute badge. `NewsScreen` is still created, like the hidden Calls tab, but never loads, so no feed context
+  starts. There is no `#if` on the app side: a new News entry point must go through the gate.
+- **A raw bit read compiles silently.** The parse of a channel's `flags2` bit 21 is a bit test, not an accessor, so
+  nothing would have caught it; `ParkedNewsFeedApiTests` pins that the parked build ignores it.
+- **Stays on:** the pinned-message skeleton (fed by the constructor's `pinned_msg_id` and by `channelFull`'s), no
+  read state for unjoined channels (below), and the history-open request chain (above).
+
+To bring the feed back:
+
+1. restore its entries in `swift_scheme.tl`, with `in_news`, `for_news` and `editChannelNews` as the server has them;
+2. define the condition for **both** TelegramCore and its tests: `"-DTELEGRAM_NEWS_FEED_API"` in the `copts` of
+   `TelegramCore` and `TelegramCoreTestsLib` in `submodules/TelegramCore/BUILD`, and
+   `.define("TELEGRAM_NEWS_FEED_API")` in the `swiftSettings` of both the `TelegramCore` and `TelegramCoreTests`
+   targets in its `Package.swift`. The tests are their own module. Without the define there, the parked tests
+   (`FeedApiConversionTests`, the `in_news` cases of `ChannelInNewsFlagTests` and `ChannelInNewsLocalChangeTests`)
+   stay compiled out, `ParkedNewsFeedApiTests` skips itself, and bit 21 is tested by nothing;
+3. set `Serialization.currentLayer()` to the server's layer;
+4. run `submodules/TelegramApi/generate-swiftpm.sh`.
+
 ## Opening a post from the News feed: the cached post first
 
+Reachable only while the feed is on (see "News feed: parked at layer 232" above).
 The feed stores every post it shows into the channel's history (inside the hole). Opening a post
 from the feed passes `cachedAnchor: true` in `ChatControllerSubject.message`, which the history
 view turns into `includeAnchorWhileLoading`: a Postbox view opened around a message that is stored
