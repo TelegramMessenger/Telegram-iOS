@@ -21,6 +21,9 @@ public final class ChatTitleExpansionLabels {
     public let title: UIView
     public let titleFrame: CGRect
     public let titleColor: UIColor
+    /// The layers the title's text is coloured through (its emoji drawn apart, untinted): an expansion runs the ink on
+    /// them rather than recolouring the whole title.
+    public let titleTintLayers: [CALayer]
     /// The status line in a wrapper the size of its text (the status node itself has no width).
     public let status: UIView?
     public let statusFrame: CGRect
@@ -29,10 +32,11 @@ public final class ChatTitleExpansionLabels {
     public let rest: UIView
     public let restFrame: CGRect
 
-    init(title: UIView, titleFrame: CGRect, titleColor: UIColor, status: UIView?, statusFrame: CGRect, statusColor: UIColor, rest: UIView, restFrame: CGRect) {
+    init(title: UIView, titleFrame: CGRect, titleColor: UIColor, titleTintLayers: [CALayer], status: UIView?, statusFrame: CGRect, statusColor: UIColor, rest: UIView, restFrame: CGRect) {
         self.title = title
         self.titleFrame = titleFrame
         self.titleColor = titleColor
+        self.titleTintLayers = titleTintLayers
         self.status = status
         self.statusFrame = statusFrame
         self.statusColor = statusColor
@@ -457,7 +461,8 @@ public final class ChatTitleComponent: Component {
                 status = wrapper
             }
             let statusColor = self.subtitleNode.flatMap { chatTitleActivityColor($0.state) } ?? component.theme.chat.inputPanel.inputControlColor
-            let labels = ChatTitleExpansionLabels(title: titleView, titleFrame: layout.titleFrame, titleColor: component.theme.chat.inputPanel.panelControlColor, status: status, statusFrame: statusFrame, statusColor: statusColor, rest: self.contentContainer, restFrame: self.contentContainer.frame)
+            let titleTintLayers = (titleView as? AnimatedTextComponent.View)?.textTintLayers ?? []
+            let labels = ChatTitleExpansionLabels(title: titleView, titleFrame: layout.titleFrame, titleColor: component.theme.chat.inputPanel.panelControlColor, titleTintLayers: titleTintLayers, status: status, statusFrame: statusFrame, statusColor: statusColor, rest: self.contentContainer, restFrame: self.contentContainer.frame)
             self.lentExpansionLabels = labels
             self.backgroundView?.isHidden = true
             return labels
@@ -1276,7 +1281,8 @@ public final class ChatTitleComponent: Component {
                     noDelay: false,
                     animateScale: true,
                     animateSlide: true,
-                    blur: true
+                    blur: true,
+                    splitsEmoji: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: maxTitleWidth, height: 100.0)

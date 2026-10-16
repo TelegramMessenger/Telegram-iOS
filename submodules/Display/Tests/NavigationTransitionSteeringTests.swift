@@ -102,6 +102,36 @@ private struct NoKeyboardHost: StatusBarHost {
     }
 }
 
+/// The navigation controller's half of a removal: `controllerRemoved` drops the screen from the stack and updates the
+/// container at once, as `NavigationController.filterController` does.
+final class FilteringStack {
+    let container: NavigationContainer
+    let layout: ContainerViewLayout
+    private(set) var controllers: [ViewController] = []
+    private(set) var removed: [ViewController] = []
+
+    init(container: NavigationContainer, layout: ContainerViewLayout) {
+        self.container = container
+        self.layout = layout
+        container.controllerRemoved = { [weak self] controller in
+            self?.remove(controller)
+        }
+    }
+
+    func set(_ controllers: [ViewController], animated: Bool) {
+        self.controllers = controllers
+        self.container.update(layout: self.layout, canBeClosed: false, controllers: controllers, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
+    }
+
+    private func remove(_ controller: ViewController) {
+        self.removed.append(controller)
+        let filtered = self.controllers.filter { $0 !== controller }
+        if filtered.count != self.controllers.count {
+            self.set(filtered, animated: false)
+        }
+    }
+}
+
 /// Steering any push (spec: docs/superpowers/specs/2026-10-16-steerable-navigation-transitions-design.md): touches
 /// reach the screen a transition is heading to from 0.25 s; back turns a push back at any moment.
 final class NavigationTransitionSteeringTests: XCTestCase {
@@ -404,5 +434,112 @@ final class NavigationTransitionSteeringTests: XCTestCase {
         container.update(layout: self.layout, canBeClosed: false, controllers: [a], transition: .animated(duration: 0.5, curve: .spring))
         self.tick(container, seconds: 2.0)
         self.assertSettled(container, top: a)
+    }
+
+    private func filtering(_ controllers: [ViewController]) -> FilteringStack {
+        let stack = FilteringStack(container: self.makeContainer(), layout: self.layout)
+        stack.set(controllers, animated: false)
+        return stack
+    }
+
+    /// A swipe back from b to a, committed by a flick.
+    private func swipeBackCommitted(_ container: NavigationContainer) {
+        container.interactivePopBegan(translation: 0.0, velocity: 300.0, time: 0.0)
+        container.interactivePopChanged(translation: 300.0, velocity: 1500.0, time: 0.1)
+        container.interactivePopChanged(translation: 330.0, velocity: 1500.0, time: 0.12)
+        container.interactivePopChanged(translation: 360.0, velocity: 1500.0, time: 0.14)
+        container.interactivePopEnded(translation: 360.0, velocity: 1500.0, isCancelled: false, time: 0.15)
+    }
+
+    // A swipe back committed: the swiped screen leaves the stack at the release, as UIKit's does, and the pop runs on to
+    // the screen beneath, which is the container's top from then on; it lands with each screen told once.
+    func test_swipeBackCommit_dropsTheScreenAtTheRelease() {
+        let a = SteeringController()
+        let b = SteeringController()
+        let stack = self.filtering([a, b])
+        let container = stack.container
+        a.events = []
+        b.events = []
+        self.swipeBackCommitted(container)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertTrue(stack.removed.first === b)
+        XCTAssertNotNil(container.transitionCoordinatorForTesting, "the pop runs on")
+        XCTAssertTrue(container.topControllerForTesting === a)
+        self.tick(container, seconds: 2.0)
+        self.assertSettled(container, top: a)
+        XCTAssertNil(b.displayNode.supernode)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertEqual(a.events, ["willAppear", "didAppear"])
+        XCTAssertEqual(b.events, ["willDisappear", "didDisappear"])
+    }
+
+    // A push from the revealed screen while the committed swipe runs on (a tap from 0.25 s after the release): the pop
+    // lands first, on the revealed screen, and the push runs from it; the swiped screen leaves once.
+    func test_swipeBackCommit_pushFromTheRevealedScreen() {
+        let a = SteeringController()
+        let b = SteeringController()
+        let c = SteeringController()
+        let stack = self.filtering([a, b])
+        let container = stack.container
+        a.events = []
+        b.events = []
+        self.swipeBackCommitted(container)
+        self.tick(container, seconds: 0.1)
+        XCTAssertNotNil(container.transitionCoordinatorForTesting)
+        stack.set([a, c], animated: true)
+        self.tick(container, seconds: 2.0)
+        self.assertSettled(container, top: c)
+        XCTAssertNil(b.displayNode.supernode)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertEqual(a.events, ["willAppear", "didAppear", "willDisappear", "didDisappear"])
+        XCTAssertEqual(b.events, ["willDisappear", "didDisappear"])
+        XCTAssertEqual(c.events, ["willAppear", "didAppear"])
+    }
+
+    // A push a swipe caught and let go toward the screen beneath: the pushed screen leaves the stack at the release too.
+    func test_caughtPushCommit_dropsTheScreenAtTheRelease() {
+        let a = SteeringController()
+        let b = SteeringController()
+        let stack = self.filtering([a])
+        let container = stack.container
+        stack.set([a, b], animated: true)
+        self.tick(container, seconds: 0.05)
+        a.events = []
+        b.events = []
+        self.swipeBackCommitted(container)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertTrue(stack.removed.first === b)
+        XCTAssertNotNil(container.transitionCoordinatorForTesting, "the push runs back")
+        XCTAssertTrue(container.topControllerForTesting === a)
+        self.tick(container, seconds: 2.0)
+        self.assertSettled(container, top: a)
+        XCTAssertNil(b.displayNode.supernode)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertEqual(a.events, ["willAppear", "didAppear"])
+        XCTAssertEqual(b.events, ["willDisappear", "didDisappear"])
+    }
+
+    // Focus follows the screen a transition heads to once the stack drops the other: back mid-push and a committed swipe.
+    func test_focusMovesToTheScreenBeneath() {
+        let a = SteeringController()
+        let b = SteeringController()
+        let container = self.makeContainer()
+        container.isInFocus = true
+        self.push(container, a, b)
+        XCTAssertTrue(b.isInFocus)
+        XCTAssertFalse(a.isInFocus)
+        self.tick(container, seconds: 0.1)
+        container.update(layout: self.layout, canBeClosed: false, controllers: [a], transition: .animated(duration: 0.5, curve: .spring))
+        XCTAssertTrue(a.isInFocus, "back mid-push")
+        XCTAssertFalse(b.isInFocus)
+
+        let c = SteeringController()
+        let d = SteeringController()
+        let stack = self.filtering([c, d])
+        stack.container.isInFocus = true
+        XCTAssertTrue(d.isInFocus)
+        self.swipeBackCommitted(stack.container)
+        XCTAssertTrue(c.isInFocus, "a committed swipe")
+        XCTAssertFalse(d.isInFocus)
     }
 }

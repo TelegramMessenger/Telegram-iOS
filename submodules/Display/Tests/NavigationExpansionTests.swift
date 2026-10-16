@@ -1000,8 +1000,8 @@ final class NavigationExpansionTests: XCTestCase {
         XCTAssertEqual(Array(top.events.suffix(3)), ["didAppear", "willDisappear", "didDisappear"])
     }
 
-    // A swipe committed toward the chat leaves the profile in the stack until it lands: a push from the chat meanwhile
-    // would stack on top of the profile, so the tail of a committed swipe takes no touch.
+    // A swipe committed toward the chat whose profile the stack has not dropped (the removal here only records it): a
+    // push from the chat meanwhile would stack on top of the profile, so that tail takes no touch.
     func test_hitTest_committedSwipeTail_takesNoTouch() {
         let (container, _, _, _, _) = self.expanded()
         container.interactivePopBegan(translation: 0.0, velocity: 300.0, time: 0.0, translationY: 0.0, anchor: CGPoint(x: 40.0, y: 520.0))
@@ -1012,7 +1012,7 @@ final class NavigationExpansionTests: XCTestCase {
         XCTAssertTrue(container.hitTest(CGPoint(x: 200.0, y: 600.0), with: nil) === container.view)
     }
 
-    // The same for a caught expanding push committed back to the chat.
+    // The same for a caught expanding push committed back to the chat, its profile still in the stack.
     func test_hitTest_caughtPushCommitTail_takesNoTouch() {
         let (container, _, _, _) = self.expandingPush()
         self.tick(container, seconds: 0.1)
@@ -1034,5 +1034,64 @@ final class NavigationExpansionTests: XCTestCase {
         XCTAssertEqual(renderer.ends, [true])
         XCTAssertTrue(container.topControllerForTesting === top)
         XCTAssertEqual(container.subnodes?.count, 1)
+    }
+
+    private func expandingStack(_ controllers: [ViewController], renderer: FakeExpansionRenderer) -> FilteringStack {
+        defaultNavigationExpansionRenderer = { _, _, _ in renderer }
+        let container = NavigationContainer(isFlat: false, controllerRemoved: { _ in })
+        container.frame = CGRect(x: 0.0, y: 0.0, width: 390.0, height: 844.0)
+        let stack = FilteringStack(container: container, layout: makeExpansionLayout())
+        stack.set(controllers, animated: false)
+        return stack
+    }
+
+    // A swipe from the profile committed toward the chat: the profile leaves the stack at the release, and from 0.25 s
+    // after it the chat takes touches while the close still runs.
+    func test_swipeCommit_dropsTheProfileAtTheRelease_chatTakesTouches() {
+        let renderer = FakeExpansionRenderer()
+        let (top, bottom) = self.pair()
+        let stack = self.expandingStack([bottom, top], renderer: renderer)
+        let container = stack.container
+        container.interactivePopBegan(translation: 0.0, velocity: 300.0, time: 0.0, translationY: 0.0, anchor: CGPoint(x: 40.0, y: 520.0))
+        container.interactivePopChanged(translation: 160.0, velocity: 300.0, time: 0.1, translationY: 0.0)
+        container.interactivePopEnded(translation: 160.0, velocity: 300.0, isCancelled: false, time: 0.2, translationY: 0.0)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertTrue(stack.removed.first === top)
+        XCTAssertTrue(container.topControllerForTesting === bottom)
+        self.tick(container, seconds: 0.3)
+        XCTAssertNotNil(container.transitionCoordinatorForTesting, "still in the tail")
+        XCTAssertTrue(container.hitTest(CGPoint(x: 200.0, y: 600.0), with: nil)?.isDescendant(of: bottom.displayNode.view) ?? false)
+        self.tick(container, seconds: 2.0)
+        XCTAssertNil(container.transitionCoordinatorForTesting)
+        XCTAssertEqual(renderer.ends, [false])
+        XCTAssertNil(top.displayNode.supernode)
+        XCTAssertEqual(container.subnodes?.count, 1)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertEqual(bottom.events.filter { $0 == "didAppear" }.count, 1)
+    }
+
+    // A caught expanding push committed back to the chat: the profile leaves the stack at the release too.
+    func test_caughtExpansionCommit_dropsTheProfileAtTheRelease() {
+        let renderer = FakeExpansionRenderer()
+        let (top, bottom) = self.pair()
+        let stack = self.expandingStack([bottom], renderer: renderer)
+        let container = stack.container
+        stack.set([bottom, top], animated: true)
+        self.tick(container, seconds: 0.1)
+        container.interactivePopBegan(translation: 0.0, velocity: 300.0, time: 0.0, translationY: 0.0, anchor: CGPoint(x: 40.0, y: 520.0))
+        container.interactivePopChanged(translation: 160.0, velocity: 300.0, time: 0.1, translationY: 0.0)
+        container.interactivePopEnded(translation: 160.0, velocity: 300.0, isCancelled: false, time: 0.2, translationY: 0.0)
+        XCTAssertEqual(stack.removed.count, 1)
+        XCTAssertTrue(stack.removed.first === top)
+        XCTAssertTrue(container.topControllerForTesting === bottom)
+        self.tick(container, seconds: 0.3)
+        XCTAssertNotNil(container.transitionCoordinatorForTesting, "still in the tail")
+        XCTAssertTrue(container.hitTest(CGPoint(x: 200.0, y: 600.0), with: nil)?.isDescendant(of: bottom.displayNode.view) ?? false)
+        self.tick(container, seconds: 2.0)
+        XCTAssertNil(container.transitionCoordinatorForTesting)
+        XCTAssertEqual(renderer.ends, [false])
+        XCTAssertNil(top.displayNode.supernode)
+        XCTAssertEqual(container.subnodes?.count, 1)
+        XCTAssertEqual(stack.removed.count, 1)
     }
 }

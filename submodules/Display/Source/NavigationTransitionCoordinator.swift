@@ -486,14 +486,17 @@ final class NavigationTransitionCoordinator {
     /// When the progress last started running on its own; nil while a finger steers it.
     private var runningSince: Double?
 
+    /// The stack has dropped the top screen of this transition, which runs on to the screen beneath (a swipe's commit,
+    /// back mid-push): the screen beneath is the stack's top.
+    var topLeftStack = false
+
     /// Whether touches may reach the screen the transition is heading to now. Not while a swipe's commit runs toward the
-    /// screen beneath: the top screen leaves the stack only when it lands, so a push from the screen beneath meanwhile
-    /// would stack on top of the leaving one.
+    /// screen beneath with its top still in the stack: a push from the screen beneath would stack on the leaving one.
     var acceptsTouches: Bool {
         guard let runningSince = self.runningSince else {
             return false
         }
-        if self.isInteractive && self.headingNode === self.bottomNode {
+        if self.isInteractive && self.headingNode === self.bottomNode && !self.topLeftStack {
             return false
         }
         return self.clock.now() - runningSince >= NavigationTransitionCoordinator.touchDelay

@@ -44,7 +44,7 @@ final class ChatExpansionSource: NavigationExpansionSourceProviding {
         let titleScreen = screen(labels.titleFrame)
         // The icons ride with the title: the rest of the container, in the title's coordinates.
         let restInTitle = CGRect(origin: CGPoint(x: -labels.titleFrame.minX, y: -labels.titleFrame.minY), size: labels.restFrame.size)
-        expansionLabels.append(NavigationExpansionLabel(view: labels.title, textCenter: CGPoint(x: labels.titleFrame.width * 0.5, y: labels.titleFrame.height * 0.5), textSize: labels.titleFrame.size, screenCenter: CGPoint(x: titleScreen.midX, y: titleScreen.midY), coloring: .recolor(labels.titleColor), accessories: [(container, restInTitle)]))
+        expansionLabels.append(NavigationExpansionLabel(view: labels.title, textCenter: CGPoint(x: labels.titleFrame.width * 0.5, y: labels.titleFrame.height * 0.5), textSize: labels.titleFrame.size, screenCenter: CGPoint(x: titleScreen.midX, y: titleScreen.midY), coloring: labels.titleTintLayers.isEmpty ? .recolor(labels.titleColor) : .multiply(labels.titleTintLayers, labels.titleColor), accessories: [(container, restInTitle)]))
         if let status = labels.status {
             let statusScreen = screen(labels.statusFrame)
             expansionLabels.append(NavigationExpansionLabel(view: status, textCenter: CGPoint(x: labels.statusFrame.width * 0.5, y: labels.statusFrame.height * 0.5), textSize: labels.statusFrame.size, screenCenter: CGPoint(x: statusScreen.midX, y: statusScreen.midY), coloring: .recolor(labels.statusColor)))

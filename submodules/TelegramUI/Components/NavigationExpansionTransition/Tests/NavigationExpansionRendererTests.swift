@@ -13,8 +13,16 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     let home = UIView()
     var lends = 0
     var returns = 0
+    /// The title's text layer (a `SplitTintTextView`'s tint layer), and how the title is coloured.
+    let titleTintLayer = CALayer()
+    var titleColoring: NavigationExpansionLabel.Coloring = .recolor(.black)
 
     init(screen: UIView) {
+        self.titleView.layer.addSublayer(self.titleTintLayer)
+        // The chat's avatar where the flying circle starts: its photo, centred on the capsule.
+        if let companion = makeExpansionGeometry().companion {
+            self.avatarView.frame = CGRect(x: companion.midX - 19.0, y: companion.midY - 19.0, width: 38.0, height: 38.0)
+        }
         self.screen = screen
         for view in [self.titleView, self.statusView, self.avatarView] {
             self.home.addSubview(view)
@@ -28,7 +36,7 @@ private final class FakeSource: NavigationExpansionSourceProviding {
         self.lends += 1
         let g = makeExpansionGeometry()
         return NavigationExpansionSourceLoan(origin: g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
-            NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: .recolor(.black)),
+            NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
         ], press: .none)
     }
@@ -101,7 +109,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
 }
 
 final class NavigationExpansionRendererTests: XCTestCase {
-    private func make(opening: Bool = true, configure: (FakeDestination) -> Void = { _ in }) -> (NavigationExpansionRendererImpl, container: UIView, top: UIView, source: FakeSource, destination: FakeDestination) {
+    private func make(opening: Bool = true, configureSource: (FakeSource) -> Void = { _ in }, configure: (FakeDestination) -> Void = { _ in }) -> (NavigationExpansionRendererImpl, container: UIView, top: UIView, source: FakeSource, destination: FakeDestination) {
         let size = makeExpansionGeometry().screenSize
         let container = UIView(frame: CGRect(origin: CGPoint(), size: size))
         let bottom = UIView(frame: container.bounds)
@@ -109,6 +117,7 @@ final class NavigationExpansionRendererTests: XCTestCase {
         container.addSubview(bottom)
         container.addSubview(top)
         let source = FakeSource(screen: bottom)
+        configureSource(source)
         let destination = FakeDestination(top: top)
         configure(destination)
         let renderer = NavigationExpansionRendererImpl.make(source: source, destination: destination, operation: opening ? .push : .pop) as! NavigationExpansionRendererImpl
@@ -455,6 +464,83 @@ final class NavigationExpansionRendererTests: XCTestCase {
         XCTAssertEqual(card.midX, expected.midX, accuracy: 0.5)
         XCTAssertEqual(card.midY, expected.midY, accuracy: 0.5)
         XCTAssertEqual(card.width, expected.width, accuracy: 0.5)
+    }
+
+    // A chat title tinted through its text layer (a `SplitTintTextView`: emoji in a layer of their own): the layer's
+    // multiply colour runs from the chat's colour to the profile's on the render server, with no recolour group over the
+    // title (which painted its emoji in the text colour), and is the chat's own again at the end.
+    func test_multiplySource_tintsItsTextLayer_emojiUntouched() {
+        let (renderer, _, _, source, _) = self.make(configureSource: { $0.titleColoring = .multiply([$0.titleTintLayer], .black) })
+        XCTAssertFalse((source.titleView.superview?.layer.sublayers ?? []).contains(where: { ($0.compositingFilter as? String) == "sourceAtop" }), "no recolour group")
+        let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
+        let times = timing.sampleTimes.map { CGFloat($0 / 0.5) }
+        renderer.animate(timeline: NavigationExpansionTimeline(timing: timing, times: times, isOpening: true, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in }))
+        guard let animation = source.titleTintLayer.animation(forKey: "navigationExpansion.contentsMultiplyColor") as? CAKeyframeAnimation, let values = animation.values, let first = values.first, let last = values.last else {
+            return XCTFail("no tint keyframes on the title's text layer")
+        }
+        func brightness(_ color: Any?) -> CGFloat {
+            guard let color else {
+                return -1.0
+            }
+            var r: CGFloat = 0.0, g: CGFloat = 0.0, b: CGFloat = 0.0, a: CGFloat = 0.0
+            UIColor(cgColor: color as! CGColor).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return max(r, g, b)
+        }
+        XCTAssertEqual(brightness(first), 0.0, accuracy: 0.01, "from the chat's black")
+        XCTAssertEqual(brightness(last), 1.0, accuracy: 0.01, "to the profile's white")
+        renderer.end(atTop: true)
+        XCTAssertEqual(brightness(source.titleTintLayer.layerTintColor), 0.0, accuracy: 0.01, "the chat's colour again")
+    }
+
+    private func timeline(from: CGFloat, to: CGFloat, opening: Bool) -> NavigationExpansionTimeline {
+        let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
+        let times = timing.sampleTimes.map { from + (to - from) * CGFloat($0 / 0.5) }
+        return NavigationExpansionTimeline(timing: timing, times: times, isOpening: opening, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in })
+    }
+
+    // The chat's avatar (live, animated avatars included) rides the flying circle above the profile's: at the open's
+    // start it is exactly where it was, so nothing jumps when the circle takes over.
+    func test_companion_ridesTheCircle_fromItsOwnPlace() {
+        let (_, container, _, source, _) = self.make()
+        let home = CGRect(x: makeExpansionGeometry().companion!.midX - 19.0, y: makeExpansionGeometry().companion!.midY - 19.0, width: 38.0, height: 38.0)
+        XCTAssertFalse(source.avatarView.superview === source.home, "lent to the circle")
+        let onScreen = source.avatarView.convert(source.avatarView.bounds, to: container)
+        XCTAssertEqual(onScreen.midX, home.midX, accuracy: 0.5)
+        XCTAssertEqual(onScreen.midY, home.midY, accuracy: 0.5)
+        XCTAssertEqual(onScreen.width, home.width, accuracy: 0.5)
+        XCTAssertEqual(source.avatarView.alpha, 1.0, accuracy: 0.001)
+    }
+
+    // The two avatars cross-fade on the clock: the chat's fades out over the open's first part and in over the close's
+    // last part.
+    func test_companion_crossfadesOnTheClock() {
+        let (opening, _, _, openingSource, _) = self.make()
+        opening.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
+        guard let fadeOut = openingSource.avatarView.layer.animation(forKey: "navigationExpansion.opacity") as? CAKeyframeAnimation, let outValues = fadeOut.values as? [NSNumber] else {
+            return XCTFail("no fade on the open")
+        }
+        XCTAssertEqual(outValues.first?.doubleValue ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(outValues.last?.doubleValue ?? 1.0, 0.0, accuracy: 0.001)
+
+        let (closing, _, _, closingSource, _) = self.make(opening: false)
+        XCTAssertEqual(closingSource.avatarView.alpha, 0.0, accuracy: 0.001, "the profile's avatar shows at the close's start")
+        closing.animate(timeline: self.timeline(from: 1.0, to: 0.0, opening: false))
+        guard let fadeIn = closingSource.avatarView.layer.animation(forKey: "navigationExpansion.opacity") as? CAKeyframeAnimation, let inValues = fadeIn.values as? [NSNumber] else {
+            return XCTFail("no fade on the close")
+        }
+        XCTAssertEqual(inValues.first?.doubleValue ?? 1.0, 0.0, accuracy: 0.001)
+        XCTAssertEqual(inValues.last?.doubleValue ?? 0.0, 1.0, accuracy: 0.001)
+    }
+
+    // At the end the chat's avatar is home: its superview, frame and transform, shown.
+    func test_companion_goesHome() {
+        let (renderer, _, _, source, _) = self.make(opening: false)
+        let home = CGRect(x: makeExpansionGeometry().companion!.midX - 19.0, y: makeExpansionGeometry().companion!.midY - 19.0, width: 38.0, height: 38.0)
+        renderer.end(atTop: false)
+        XCTAssertTrue(source.avatarView.superview === source.home)
+        XCTAssertEqual(source.avatarView.frame, home)
+        XCTAssertTrue(source.avatarView.transform.isIdentity)
+        XCTAssertEqual(source.avatarView.alpha, 1.0)
     }
 }
 

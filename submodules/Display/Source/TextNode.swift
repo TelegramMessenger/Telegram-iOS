@@ -2910,7 +2910,15 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
 
 open class TextView: UIView {
     public internal(set) var cachedLayout: TextNodeLayout?
-    
+    /// What it draws: its text, its emoji, or both (`SplitTintTextView` draws them in two layers).
+    public var renderContentTypes: TextNode.RenderContentTypes = .all {
+        didSet {
+            if self.renderContentTypes != oldValue {
+                self.setNeedsDisplay()
+            }
+        }
+    }
+
     override public init(frame: CGRect) {
         super.init(frame: frame)
         
@@ -2983,7 +2991,7 @@ open class TextView: UIView {
         context.setAllowsFontSubpixelQuantization(true)
         context.setShouldSubpixelQuantizeFonts(true)
         
-        TextNode.draw(rect, withParameters: TextNode.DrawingParameters(cachedLayout: layout, renderContentTypes: .all), isCancelled: { false }, isRasterizing: false)
+        TextNode.draw(rect, withParameters: TextNode.DrawingParameters(cachedLayout: layout, renderContentTypes: self.renderContentTypes), isCancelled: { false }, isRasterizing: false)
     }
     
     public static func asyncLayout(_ maybeView: TextView?) -> (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextView) {

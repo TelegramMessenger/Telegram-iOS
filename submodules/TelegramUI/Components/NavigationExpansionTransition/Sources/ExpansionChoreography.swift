@@ -79,6 +79,9 @@ public struct ExpansionFrame: Equatable {
     /// The press's light still on the origin's and the companion's glass (`light`).
     public var originLight: CGFloat
     public var companionLight: CGFloat
+    /// The companion's own photo (the chat's live avatar) in the flying circle, above the upper screen's: 1 at the lower
+    /// screen's end of the clock, gone from 0.3, so the two avatars cross-fade instead of one replacing the other.
+    public var companionContent: CGFloat
 }
 
 /// The prototype's scene as a function: one geometry, one path, one clock value → one frame.
@@ -303,7 +306,8 @@ public struct ExpansionChoreography {
             pattern: ExpansionCurve.smooth(ExpansionCurve.ramp(clock.time, 0.6, 1.0)),
             flooded: clock.phase((0.96, 1.00), (0.00, 0.03)),
             originLight: min(max(press.origin, 0.0), 1.0) * (1.0 - fillC),
-            companionLight: min(max(press.companion, 0.0), 1.0) * (1.0 - fillC)
+            companionLight: min(max(press.companion, 0.0), 1.0) * (1.0 - fillC),
+            companionContent: 1.0 - ExpansionCurve.smooth(ExpansionCurve.ramp(fill, 0.0, 0.3))
         )
     }
 }

@@ -54,6 +54,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     private let overlayHost = UIView()
     private let overlayMask = CALayer()
     private let photoWrapper = UIView()
+    /// Where the chat's avatar lives while it rides the flying circle (`companionContent`), to put it back.
+    private var companionHome: (superview: UIView?, index: Int, center: CGPoint, bounds: CGRect, transform: CGAffineTransform)?
     /// The photo's screen-sized host: it carries the swipe card's pose, as the card's content does.
     private let photoHost = UIView()
     private let photoMask = CAShapeLayer()
@@ -69,14 +71,27 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let sourceColorLayer = CALayer()
         let sourceColor: UIColor
         let destinationColor: UIColor
+        /// The layers whose multiply colour the ink runs on: a `.multiply` label's on either side (its text layer, emoji
+        /// drawn apart and untouched).
+        var multiplyLayers: [CALayer] {
+            var layers: [CALayer] = []
+            if case let .multiply(sourceLayers, _)? = self.source?.coloring {
+                layers.append(contentsOf: sourceLayers)
+            }
+            if case let .multiply(destinationLayers, _)? = self.destination?.coloring {
+                layers.append(contentsOf: destinationLayers)
+            }
+            return layers
+        }
 
         init(source: NavigationExpansionLabel?, destination: NavigationExpansionLabel?, destinationColor: UIColor) {
             self.source = source
             self.destination = destination
             self.destinationColor = destinationColor
-            if case let .recolor(color)? = source?.coloring {
+            switch source?.coloring {
+            case let .recolor(color)?, let .multiply(_, color)?:
                 self.sourceColor = color
-            } else {
+            default:
                 self.sourceColor = destinationColor
             }
         }
@@ -152,6 +167,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         if sourceLoan.companion != nil {
             dropsHost.addSubview(self.companionDrop)
         }
+        // The chat's avatar is lent to the flying circle once it is set up (below); without a circle it just hides.
         sourceLoan.companionView?.alpha = 0.0
 
         // The upper screen through the card.
@@ -185,6 +201,20 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             self.photoHost.isUserInteractionEnabled = false
             self.photoHost.addSubview(self.photoWrapper)
             self.view.insertSubview(self.photoHost, belowSubview: self.cardContentView)
+
+            // The chat's own avatar (live: an animated avatar keeps playing) rides the circle above the profile's and
+            // cross-fades with it, placed so that where the clock is at the chat's end it is exactly where it was.
+            if let companionView = sourceLoan.companionView, let choreography = self.choreography, let start = choreography.frame(ExpansionClock(time: 0.0, isOpening: isOpening), press: sourceLoan.press).photo, start.width > 0.0, start.height > 0.0 {
+                let screenFrame = companionView.convert(companionView.bounds, to: screen)
+                let scaleX = rest.width / start.width
+                let scaleY = rest.height / start.height
+                self.companionHome = (companionView.superview, companionView.superview?.subviews.firstIndex(of: companionView) ?? 0, companionView.center, companionView.bounds, companionView.transform)
+                companionView.removeFromSuperview()
+                companionView.transform = CGAffineTransform(scaleX: scaleX, y: scaleY)
+                companionView.center = CGPoint(x: rest.width * 0.5 + (screenFrame.midX - start.midX) * scaleX, y: rest.height * 0.5 + (screenFrame.midY - start.midY) * scaleY)
+                companionView.alpha = choreography.frame(ExpansionClock(time: time, isOpening: isOpening), press: sourceLoan.press).companionContent
+                self.photoWrapper.addSubview(companionView)
+            }
         }
         for (index, label) in sourceLoan.labels.enumerated() {
             let destinationLabel = index < destinationLoan.labels.count ? destinationLoan.labels[index] : nil
@@ -314,6 +344,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             self.photoWrapper.layer.transform = transform
             self.photoMask.path = self.photoPath(f, rest: destinationLoan.avatarRestFrame)
         }
+        if self.companionHome != nil {
+            sourceLoan.companionView?.alpha = f.companionContent
+        }
         for (index, host) in self.labelHosts.enumerated() where index < f.labels.count {
             let label = f.labels[index]
             host.sourceHost.layer.position = label.center
@@ -324,10 +357,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             host.destinationHost.alpha = label.destinationAlpha
             let color = self.color(host, ink: f.ink)
             host.sourceColorLayer.backgroundColor = color.cgColor
-            if case let .multiply(layers, _)? = host.destination?.coloring {
-                for layer in layers {
-                    layer.layerTintColor = color.cgColor
-                }
+            for layer in host.multiplyLayers {
+                layer.layerTintColor = color.cgColor
             }
         }
         for (index, view) in destinationLoan.appearingViews.enumerated() where index < f.appearing.count {
@@ -455,6 +486,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             add(self.photoWrapper.layer, "transform", photo.map { NSValue(caTransform3D: $0.transform) })
             add(self.photoMask, "path", frames.compactMap { self.photoPath($0, rest: rest) })
         }
+        if self.companionHome != nil, let companionView = sourceLoan.companionView {
+            add(companionView.layer, "opacity", frames.map { number($0.companionContent) })
+        }
 
         // The labels.
         for (index, host) in self.labelHosts.enumerated() {
@@ -467,10 +501,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             add(host.destinationHost.layer, "opacity", labels.map { number($0.destinationAlpha) })
             let colors = frames.map { self.color(host, ink: $0.ink).cgColor }
             add(host.sourceColorLayer, "backgroundColor", colors)
-            if case let .multiply(layers, _)? = host.destination?.coloring {
-                for layer in layers {
-                    add(layer, "contentsMultiplyColor", colors)
-                }
+            for layer in host.multiplyLayers {
+                add(layer, "contentsMultiplyColor", colors)
             }
         }
 
@@ -593,6 +625,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             }
         }
         for host in self.labelHosts {
+            // A chat label tinted through its text layer is the chat's own colour again.
+            if case let .multiply(layers, color)? = host.source?.coloring {
+                for layer in layers {
+                    layer.layerTintColor = color.cgColor
+                }
+            }
+        }
+        for host in self.labelHosts {
             host.sourceColorLayer.removeFromSuperlayer()
             host.sourceGroup.layer.mask = nil
             host.sourceGroup.removeFromSuperview()
@@ -610,6 +650,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         self.overlayHost.layer.mask = nil
         self.overlayHost.removeFromSuperview()
+        if let companionView = self.sourceLoan?.companionView, let home = self.companionHome {
+            companionView.removeFromSuperview()
+            companionView.transform = home.transform
+            companionView.bounds = home.bounds
+            companionView.center = home.center
+            if let superview = home.superview {
+                superview.insertSubview(companionView, at: min(home.index, superview.subviews.count))
+            }
+        }
+        self.companionHome = nil
         self.sourceLoan?.companionView?.alpha = 1.0
         if self.sourceLoan != nil {
             self.source.returnExpansionSource()

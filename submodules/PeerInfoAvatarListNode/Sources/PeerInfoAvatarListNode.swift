@@ -323,9 +323,16 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if value {
                 self.setupVideoPlayback()
             } else {
-                self.videoNode?.removeFromSupernode()
-                self.videoNode = nil
-                self.videoContent = nil
+                // A move to another superview (the chat ↔ profile expansion lends the photo, then returns it) leaves the
+                // hierarchy and re-enters it in one turn: the video goes only if the photo stays out.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, !self.hierarchyTrackingLayer.isInHierarchy else {
+                        return
+                    }
+                    self.videoNode?.removeFromSupernode()
+                    self.videoNode = nil
+                    self.videoContent = nil
+                }
             }
         }
         self.layer.addSublayer(self.hierarchyTrackingLayer)
