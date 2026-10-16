@@ -106,7 +106,8 @@ private final class QrStudioScreenComponent: Component {
         private var rawSettings: QrStudioLookSettings?
         private var customEmojiFiles: [Int64: TelegramMediaFile] = [:]
         private var isLookModified = false
-        private var codeMenuOpenedAt: Double = 0.0
+        private let codeMenuCooldown = QrStudioMenuCooldown()
+        private let shareMenuCooldown = QrStudioMenuCooldown()
         private var syncedServerLook: QrStudioServerLook?
         private var pendingServerLook: QrStudioServerLook?
         private var shareThemeDisposable: Disposable?
@@ -172,14 +173,20 @@ private final class QrStudioScreenComponent: Component {
             self.stage.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleStageTap(_:))))
 
             self.codePill.tapPaid = { [weak self] in
-                guard let self else {
-                    return
+                self?.codeMenuCooldown.perform { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.codePill.animatePourBump()
+                    self.performCodeAction(.expire)
                 }
-                self.codePill.animatePourBump()
-                self.performCodeAction(.expire)
             }
             self.codePill.openMenu = { [weak self] sourceView in
-                self?.openCodeMenu(sourceView: sourceView)
+                self?.codeMenuCooldown.perform { [weak self, weak sourceView] in
+                    if let self, let sourceView {
+                        self.openCodeMenu(sourceView: sourceView)
+                    }
+                }
             }
             self.codePill.needsNextCode = { [weak self] in
                 guard let self, let component = self.component else {
@@ -968,7 +975,7 @@ private final class QrStudioScreenComponent: Component {
                             return
                         }
                         self.pendingCodeAction = self.applyCodeActionState(action)
-                        let delay = max(0.0, 1.0 - (CACurrentMediaTime() - self.codeMenuOpenedAt))
+                        let delay = self.codeMenuCooldown.dismissDelay
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                             if let c {
                                 c.dismiss(result: .default, completion: {
@@ -983,12 +990,13 @@ private final class QrStudioScreenComponent: Component {
             }
             let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView, centersActions: true)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
             self.codePill.setTaken(true)
-            self.codeMenuOpenedAt = CACurrentMediaTime()
+            self.codeMenuCooldown.markOpened()
             self.pendingCodeAction = nil
             contextController.dismissed = { [weak self] in
                 guard let self else {
                     return
                 }
+                self.codeMenuCooldown.markClosed()
                 if self.pendingCodeAction != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: { [weak self] in
                         self?.finishPendingCodeAction()
@@ -1653,6 +1661,8 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func dismiss() {
+            self.codeMenuCooldown.cancel()
+            self.shareMenuCooldown.cancel()
             self.sheetView.close()
             self.environment?.controller()?.dismiss()
         }
@@ -1667,9 +1677,12 @@ private final class QrStudioScreenComponent: Component {
             func add(_ title: String, _ icon: String, _ action: @escaping () -> Void) {
                 items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: icon), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
-                    f(.default)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: action)
+                }, action: { [weak self] _, f in
+                    let delay = self?.shareMenuCooldown.dismissDelay ?? 0.0
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        f(.default)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: action)
+                    }
                 })))
             }
             add(strings.QrStudio_Share_Share, "Chat/Context Menu/Share", { [weak self] in
@@ -1682,6 +1695,10 @@ private final class QrStudioScreenComponent: Component {
                 self?.saveImage()
             })
             let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            self.shareMenuCooldown.markOpened()
+            contextController.dismissed = { [weak self] in
+                self?.shareMenuCooldown.markClosed()
+            }
             controller.presentInGlobalOverlay(contextController)
         }
 
@@ -1994,7 +2011,11 @@ private final class QrStudioScreenComponent: Component {
             if self.shareButtonView.superview == nil {
                 self.presentationContainer.addSubview(self.shareButtonView)
                 self.shareButtonView.action = { [weak self] sourceView in
-                    self?.openShareMenu(sourceView: sourceView)
+                    self?.shareMenuCooldown.perform { [weak self, weak sourceView] in
+                        if let self, let sourceView {
+                            self.openShareMenu(sourceView: sourceView)
+                        }
+                    }
                 }
             }
             transition.setFrame(view: self.shareButtonView, frame: CGRect(x: sideInset + environment.safeInsets.left, y: bottomRowY, width: buttonSide, height: buttonSide))
@@ -2108,6 +2129,54 @@ private func qrStudioProfilePalettes(_ colors: PeerNameColors) -> [QrStudioPalet
             return nil
         }
         return QrStudioPalette.profile(id: id, center: value.main.rgb, edge: (value.secondary ?? value.main).rgb)
+    }
+}
+
+private final class QrStudioMenuCooldown {
+    static var interval: Double {
+        if #available(iOS 27.0, *) {
+            return 1.0
+        } else {
+            return 1.2
+        }
+    }
+
+    private var openedAt: Double = 0.0
+    private var closedAt: Double = 0.0
+    private var pending: DispatchWorkItem?
+
+    var dismissDelay: Double {
+        return max(0.0, QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.openedAt))
+    }
+
+    func markOpened() {
+        self.openedAt = CACurrentMediaTime()
+    }
+
+    func markClosed() {
+        self.closedAt = CACurrentMediaTime()
+    }
+
+    func perform(_ action: @escaping () -> Void) {
+        let remaining = QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.closedAt)
+        guard remaining > 0.0 else {
+            action()
+            return
+        }
+        guard self.pending == nil else {
+            return
+        }
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.pending = nil
+            action()
+        }
+        self.pending = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + remaining, execute: workItem)
+    }
+
+    func cancel() {
+        self.pending?.cancel()
+        self.pending = nil
     }
 }
 
