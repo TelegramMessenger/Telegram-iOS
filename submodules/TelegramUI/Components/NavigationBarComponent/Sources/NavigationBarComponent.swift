@@ -296,6 +296,11 @@ public final class NavigationBarComponent: Component {
             return self.secondaryContentView ?? self.primaryContentView
         }
 
+        /// The row's back (or close) button, if it shows one.
+        public var backButtonView: UIView? {
+            return self.effectiveContentView?.backButtonView
+        }
+
         public var rightButtonViews: [AnyHashable: UIView] {
             return self.effectiveContentView?.rightButtonViews.reduce(into: [:], { result, view in
                 result[view.key] = view.value.view

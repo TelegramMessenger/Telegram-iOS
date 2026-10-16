@@ -11,6 +11,8 @@ swift_library(
     ],
     deps = [
         "//submodules/UrlWhitelist",
+        "//submodules/TelegramUI/Components/NavigationBarNode",
+        "//submodules/TelegramUI/Components/NavigationExpansionTransition",
         "//submodules/AccountContext",
         "//submodules/LottieSettings:LottieSettings",
         "//submodules/AccountUtils",

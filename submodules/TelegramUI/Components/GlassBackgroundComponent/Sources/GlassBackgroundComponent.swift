@@ -1948,6 +1948,13 @@ private func glassCornerRadiusKeyframes(_ view: UIView?, sizes: [CGSize], timing
     addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: sizes.map { NSNumber(value: Float(radius($0))) }, timing: timing)
 }
 
+private func glassCornerRadiusKeyframes(_ view: UIView?, radii: [CGFloat], timing: NavigationKeyframeTiming) {
+    guard let view else {
+        return
+    }
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: radii.map { NSNumber(value: Float(max(0.0, $0))) }, timing: timing)
+}
+
 extension GlassBackgroundView {
     /// Changes the glass's size along `width`/`height` (animation time from `timing`'s origin; corner radius half the
     /// shorter side) on the render server. The model takes the final size, and every view the glass lays out by its size
@@ -1959,24 +1966,31 @@ extension GlassBackgroundView {
 
     /// The same, from a size per sample of `timing`.
     public func animateShape(sizes: [CGSize], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
-        guard let last = sizes.last else {
+        self.animateShape(sizes: sizes, cornerRadii: sizes.map { min($0.width, $0.height) * 0.5 }, timing: timing, isDark: isDark, tintColor: tintColor)
+    }
+
+    /// The same with a corner radius per sample (an expansion's card: a capsule while short, the screen's corners once
+    /// tall). The legacy glass's rim image is made once for the last radius.
+    public func animateShape(sizes: [CGSize], cornerRadii: [CGFloat], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        guard let last = sizes.last, let lastRadius = cornerRadii.last, sizes.count == cornerRadii.count else {
             return
         }
-        self.update(size: last, cornerRadius: min(last.width, last.height) * 0.5, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        self.update(size: last, cornerRadius: lastRadius, isDark: isDark, tintColor: tintColor, transition: .immediate)
         let shadowInset: CGFloat = 32.0
         let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
         glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
         glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
-        glassCornerRadiusKeyframes(self.nativeView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 })
+        glassCornerRadiusKeyframes(self.nativeView, radii: cornerRadii, timing: timing)
         glassShapeKeyframes(self.maskContainerView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: CGSize(width: $0.width + shadowInset * 2.0, height: $0.height + shadowInset * 2.0)) })
         glassShapeKeyframes(self.maskContentView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: $0) })
         glassShapeKeyframes(self.contentContainer, sizes: sizes, timing: timing, frame: filling)
         if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
             let inset = tintColor.innerInset
             glassShapeKeyframes(innerBackgroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: inset, dy: inset) })
-            glassCornerRadiusKeyframes(innerBackgroundView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 - inset })
+            glassCornerRadiusKeyframes(innerBackgroundView, radii: cornerRadii.map { $0 - inset }, timing: timing)
         }
         glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
+        glassCornerRadiusKeyframes(self.legacyView, radii: cornerRadii, timing: timing)
         glassShapeKeyframes(self.legacyHighlightContainerView, sizes: sizes, timing: timing, frame: filling)
         glassShapeKeyframes(self.foregroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })
         glassShapeKeyframes(self.shadowView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })

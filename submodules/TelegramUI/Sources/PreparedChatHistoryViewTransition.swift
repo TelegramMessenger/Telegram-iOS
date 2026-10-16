@@ -320,23 +320,25 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     if let scrollPosition, let currentScrollToItem = scrollToItem {
         // A scroll to a message holds it where it lands until the next touch or scroll (the CoreList
         // backend honours this; ListViewImpl ignores it). Scrolls to either end of the history do not,
-        // and keep-in-place issues its own scroll (or none) in the history node.
-        let holds: Bool
+        // and keep-in-place issues its own scroll (or none) in the history node. The unread line holds
+        // nothing when the chat opens on its newest messages: the chat is then at the bottom, and a
+        // message arriving (or one under the line growing) has to push it up as it would anywhere else.
+        let hold: ListViewScrollHold
         switch scrollPosition {
-        case .unread, .positionRestoration, .pinnedAnchor:
-            holds = true
+        case .unread:
+            hold = .yieldingToNewestEdge
+        case .positionRestoration, .pinnedAnchor:
+            hold = .always
         case let .index(subject, _, _, _, _, _, _):
             if case .message = subject.index {
-                holds = true
+                hold = .always
             } else {
-                holds = false
+                hold = .none
             }
         case .keepInPlace:
-            holds = false
+            hold = .none
         }
-        if holds {
-            scrollToItem = currentScrollToItem.withHoldsPosition(true)
-        }
+        scrollToItem = currentScrollToItem.withHold(hold)
     }
     
     if updatedMessageSelection {

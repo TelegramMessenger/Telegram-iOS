@@ -41,7 +41,8 @@ final class ScrollHoldTests: XCTestCase {
     private func hold(_ fixture: VirtualListFixture,
                       index: Int,
                       edge: CoreListScrollHold.Edge,
-                      offset: CGFloat = 0) {
+                      offset: CGFloat = 0,
+                      yieldsToNewestEdge: Bool = false) {
         let area = viewport.height
         let resolve: (CGFloat, UIView & CoreListItemView) -> CGFloat
         let rowPoint: (CGFloat, UIView & CoreListItemView) -> CGFloat
@@ -58,7 +59,9 @@ final class ScrollHoldTests: XCTestCase {
         }
         fixture.listView.applyChanges(
             scrollTo: CoreListScrollTarget(index: index,
-                                           hold: CoreListScrollHold(edge: edge, rowPoint: rowPoint),
+                                           hold: CoreListScrollHold(edge: edge,
+                                                                    yieldsToNewestEdge: yieldsToNewestEdge,
+                                                                    rowPoint: rowPoint),
                                            resolve: resolve),
             transition: .easeInOut(duration: 0))
     }
@@ -169,6 +172,69 @@ final class ScrollHoldTests: XCTestCase {
         XCTAssertEqual(try y(fixture, ids[0]), -100, accuracy: 1e-6)
         fixture.listView.applyChanges(newInsets: insets(bottom: 60), transition: .easeInOut(duration: 0))
         XCTAssertEqual(try y(fixture, ids[9]) + 50, 340, accuracy: 1e-6)
+    }
+
+    // MARK: - Yielding to the newest edge
+
+    /// The unread shape again, with a hold that yields to the newest edge (the chat's unread line). It
+    /// lands exactly where the held one does — row 3 at 150, row 0 at 0, resting on the newest edge —
+    /// but arms nothing: the list follows that edge from now on, as it does when no scroll ran.
+    func testAYieldingLandingOnTheNewestEdgeDoesNotArm() throws {
+        let (fixture, ids) = self.fixture()
+        hold(fixture, index: 3, edge: .bottomInset, yieldsToNewestEdge: true)
+        XCTAssertEqual(try y(fixture, ids[3]), 150, accuracy: 1e-6, "the landing is clamped")
+        XCTAssertEqual(try y(fixture, ids[0]), 0, accuracy: 1e-6)
+        XCTAssertFalse(fixture.listView.isHoldingScrollTarget)
+    }
+
+    /// The inverse of `testAnArrivalAtTheNewestEdgeDoesNotMoveTheHeldRow`: a message arriving under a
+    /// yielded landing takes the newest edge and pushes everything up by its 36pt — row 0 to 36, row 3
+    /// to 186 — instead of landing under the input panel at −36.
+    func testAnArrivalPushesAYieldedLandingUp() throws {
+        let (fixture, ids) = self.fixture()
+        hold(fixture, index: 3, edge: .bottomInset, yieldsToNewestEdge: true)
+        let arrival = UUID()
+        let items: [CoreListItem] = [IdentifiableFixedHeightItem(id: arrival, height: 36)]
+            + fixture.listView.items
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try y(fixture, arrival), 0, accuracy: 1e-6, "on the newest edge")
+        XCTAssertEqual(try y(fixture, ids[0]), 36, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, ids[3]), 186, accuracy: 1e-6)
+    }
+
+    /// A row between the newest edge and the yielded landing grows (a reaction on a newly read
+    /// message): it grows away from the input edge, row 0 staying at 0 and row 3 moving 150 → 190.
+    /// Held, row 3 would stay at 150 and the growth would push row 0 to −40, under the input panel.
+    func testGrowthUnderAYieldedLandingGrowsAwayFromTheInputEdge() throws {
+        let (fixture, ids) = self.fixture(resizable: [1])
+        hold(fixture, index: 3, edge: .bottomInset, yieldsToNewestEdge: true)
+        var items = fixture.listView.items
+        items[1] = ContentResizableItem(id: ids[1], contentHeight: 90)
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try y(fixture, ids[0]), 0, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, ids[1]), 50, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, ids[3]), 190, accuracy: 1e-6)
+    }
+
+    /// Yielding loses nothing the hold gave this landing at the keyboard: the same 120pt top inset
+    /// carries the stack exactly as `testAClampedBottomHoldRidesTheInputEdgeWhenItGrows` pins.
+    func testAYieldedLandingRidesTheInputEdgeLikeAHeldOne() throws {
+        let (fixture, ids) = self.fixture()
+        hold(fixture, index: 3, edge: .bottomInset, yieldsToNewestEdge: true)
+        fixture.listView.applyChanges(newInsets: insets(top: 120), transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try y(fixture, ids[0]), 120, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, ids[3]), 270, accuracy: 1e-6)
+    }
+
+    /// The control: off the newest edge (`testAnUnclampedBottomHoldIgnoresTopInsetGrowth`'s landing)
+    /// a yielding hold arms like any other and keeps the edge the request named.
+    func testAYieldingHoldOffTheNewestEdgeArms() throws {
+        let (fixture, ids) = self.fixture()
+        hold(fixture, index: 8, edge: .bottomInset, yieldsToNewestEdge: true)
+        XCTAssertEqual(try y(fixture, ids[8]), 350, accuracy: 1e-6)
+        XCTAssertTrue(fixture.listView.isHoldingScrollTarget)
+        fixture.listView.applyChanges(newInsets: insets(top: 120), transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try y(fixture, ids[8]), 350, accuracy: 1e-6)
     }
 
     // MARK: - Insets and size

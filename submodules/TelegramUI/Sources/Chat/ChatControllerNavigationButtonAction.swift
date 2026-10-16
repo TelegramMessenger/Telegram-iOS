@@ -397,6 +397,9 @@ extension ChatControllerImpl {
                 })
             }
         case let .openChatInfo(expandAvatar, section):
+            // A tap on the header's pill or avatar: the profile this pushes expands out of them.
+            let fromHeader = self.openChatInfoFromHeader
+            self.openChatInfoFromHeader = false
             let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
                 guard let self else {
                     return
@@ -457,6 +460,9 @@ extension ChatControllerImpl {
                                     mode = .generic
                                 }
                                 if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: self.contentData?.inviteRequestsContext) {
+                                    if fromHeader {
+                                        self.expansionProfileToPush = infoController
+                                    }
                                     self.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }

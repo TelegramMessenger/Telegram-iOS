@@ -770,6 +770,14 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         ComponentTransition(transition).setAlpha(view: self.columnHost, alpha: self.columnHostTargetAlpha)
     }
 
+    /// The back button's frame in `view`'s coordinates (an expansion's back-button hole).
+    public func backButtonFrame(in view: UIView) -> CGRect? {
+        guard let backView = self.rowView?.backButtonView, backView.superview != nil else {
+            return nil
+        }
+        return backView.convert(backView.bounds, to: view)
+    }
+
     public func rightButtonView(for item: UIBarButtonItem) -> UIView? {
         return self.rowView?.rightButtonViews[AnyHashable(ObjectIdentifier(item))]
     }

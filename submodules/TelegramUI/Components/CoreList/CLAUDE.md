@@ -259,9 +259,14 @@ the pin latch, above `preserveVisibleContent`). **A landing the list clamped aga
 is held against that end**, whatever reference the scroll carried: resting on the newest edge (window
 from index 0, settled offset on the natural minimum) by its minY from `topInset`, on the oldest by its
 maxY from `bottomInset`, the newest winning when both hold. Held from the edge it named, a `.bottom`
-landing clamped at the newest edge — the chat opening at the unread line with a few unread — kept its
-distance from the bars, so the keyboard covered the newest rows and a top-inset shrink opened a gap
-under them. Released when a drag begins (`onWillBeginDragging`: under `PhysicsScrollEngine` the pan's
+landing clamped at the newest edge kept its distance from the bars, so the keyboard covered the newest
+rows and a top-inset shrink opened a gap under them. **A hold that `yieldsToNewestEdge` arms nothing
+on the newest edge** (the chat's unread line, 2026-10-16): the list then follows that edge as if no
+scroll had run, so a row arriving there pushes the content up instead of landing under the input
+panel, and a row under the landing grows away from the input edge instead of sinking the newest rows
+under it. Not arming is the whole change, because the landing pass is a scroll, which has already
+released any earlier hold and zeroed `holdSlack`. Off the newest edge such a hold arms as usual.
+Released when a drag begins (`onWillBeginDragging`: under `PhysicsScrollEngine` the pan's
 `.began`, after its movement hysteresis, or at once for a finger landing on moving content — a tap
 keeps the hold; under `UIKitScrollEngine`, `scrollViewWillBeginDragging`), any later `scrollTo` (a
 holding one arms a new hold), the held identity leaving the collection, a full replace,
@@ -283,7 +288,7 @@ slack; the flight plays against the extended edge instead. `resolveAnchor`'s
 resting-at-the-newest-edge shortcut reads the natural edge too (`includesHoldSlack: false`); that only
 matters when `pinsLoadedTop` declines (a nonzero `additionalScrollDistance`), where it would hand the
 anchor to row 0 at point offset 0 and move everything by the slack. `ScrollHoldTests` pins the hold,
-its releases, the clamped-landing rule and the newest-edge retirement on `UIKitScrollEngine`, and the
+its releases, the clamped-landing rule, the newest-edge yield and the newest-edge retirement on `UIKitScrollEngine`, and the
 flight case (no rebake, retired once at the end) on `TestScrollEngine`'s `.keyframe` mode (not yet:
 oldest-edge retirement, the `rebuildFromScratch` release, pin and hold slack together); the chat runs
 `PhysicsScrollEngine`, whose release/retire path (a fling out of a released slack) has not been
@@ -581,7 +586,8 @@ to `.spring`.
 
 `.customSpring(mass:stiffness:damping:initialVelocity:)` is CoreList's counterpart of Display's
 `ContainedViewLayoutTransitionCurve.customSpring`, and the one curve here with no ComponentFlow case —
-it exists so the chat's send transition scrolls the history on the bubble's own spring. It emits the
+it exists so the chat's spring send transition (behind a Debug Settings flag since 2026-10-16; the
+default is a bezier) scrolls the history on the bubble's own spring. It emits the
 object `CAAnimationUtils`' custom-spring branch builds (parameters quantized to `Float` as Display's
 string parsing does, `duration = settlingDuration`, linear timing) down the shared `isSystemSpring`
 path, so the settle reaches the pass as `speed`. Its `solve(at:)` is a **closed form**, not
