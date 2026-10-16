@@ -5203,21 +5203,30 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     let nsText = replyMessage.text as NSString
                     var startIndex = 0
                     var found = false
-                    while true {
-                        let range = nsText.range(of: quote.text, range: NSRange(location: startIndex, length: nsText.length - startIndex))
-                        if range.location != NSNotFound {
-                            let subEntities = messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: range, onlyQuoteable: true)
-                            if subEntities == quote.entities {
-                                found = true
+                    if let richText = quote.richText {
+                        // A rich quote is checked by the server's own rule against the page it was cut
+                        // from; a page still partial (before Show more) is checked as far as it goes.
+                        if let attribute = replyMessage.richText {
+                            let page = attribute.fullInstantPage ?? attribute.instantPage
+                            found = richReplyQuoteMatches(richText, nodes: page.quotableNodes, isPartialPage: !page.isComplete, offset: quote.offset)
+                        }
+                    } else {
+                        while true {
+                            let range = nsText.range(of: quote.text, range: NSRange(location: startIndex, length: nsText.length - startIndex))
+                            if range.location != NSNotFound {
+                                let subEntities = messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: range, onlyQuoteable: true)
+                                if subEntities == quote.entities {
+                                    found = true
+                                    break
+                                }
+
+                                startIndex = range.upperBound
+                            } else {
                                 break
                             }
-                            
-                            startIndex = range.upperBound
-                        } else {
-                            break
                         }
                     }
-                    
+
                     if !found, let controller = self.controller {
                         let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
                         let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)

@@ -6988,7 +6988,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             self.highlightedState = highlightedState
             
             for contentNode in self.contentNodes {
-                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                if let contentNode = contentNode as? ChatMessageQuoteSourceContentNode {
                     contentNode.updateQuoteTextHighlightState(text: nil, offset: nil, color: .clear, animated: true)
                 } else if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode {
                     contentNode.updateTaskHighlightState(id: nil, color: .clear, animated: true)
@@ -7045,8 +7045,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     
                                     var quoteFrame: CGRect?
                                     for contentNode in self.contentNodes {
-                                        if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                                            contentNode.updateQuoteTextHighlightState(text: quote.string, offset: quote.offset, color: highlightColor, animated: false)
+                                        if let quoteContentNode = contentNode as? ChatMessageQuoteSourceContentNode {
+                                            quoteContentNode.updateQuoteTextHighlightState(text: quote.string, offset: quote.offset, color: highlightColor, animated: false)
                                             var sourceFrame = backgroundHighlightNode.view.convert(backgroundHighlightNode.bounds, to: contentNode.view)
                                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                                 sourceFrame.origin.x += 6.0
@@ -7055,7 +7055,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                                 sourceFrame.size.width -= 6.0
                                             }
                                             
-                                            if let localFrame = contentNode.animateQuoteTextHighlightIn(sourceFrame: sourceFrame, transition: transition) {
+                                            if let localFrame = quoteContentNode.animateQuoteTextHighlightIn(sourceFrame: sourceFrame, transition: transition) {
                                                 if self.contentNodes[0] !== contentNode && self.contentNodes[0].supernode === contentNode.supernode {
                                                     contentNode.supernode?.insertSubnode(contentNode, belowSubnode: self.contentNodes[0])
                                                 }
@@ -7634,11 +7634,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return self.nameNode
     }
     
+    // The chat's scroll hold re-reads this on every held pass, including passes made while the message
+    // is in a context menu: the conversion must not cross the extraction boundary directly, which
+    // yields `CGRect.null` and placed the message at infinity.
     public func getQuoteRect(quote: String, offset: Int?) -> CGRect? {
         for contentNode in self.contentNodes {
-            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                if let result = contentNode.getQuoteRect(quote: quote, offset: offset) {
-                    return contentNode.view.convert(result, to: self.view)
+            if let quoteContentNode = contentNode as? ChatMessageQuoteSourceContentNode {
+                if let result = quoteContentNode.getQuoteRect(quote: quote, offset: offset) {
+                    return self.mainContextSourceNode.convertFromContent(result, in: contentNode.view, to: self.view)
                 }
             }
         }
@@ -7654,15 +7657,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
 
+    // Read by the scroll hold on every held pass, like `getQuoteRect`.
     public func getInnerReplySubjectRect(innerSubject: EngineMessageReplyInnerSubject) -> CGRect? {
         switch innerSubject {
         case let .todoItem(todoItemId):
             if let contentNode = self.contentNodes.first(where: { $0 is ChatMessageTodoBubbleContentNode }) as? ChatMessageTodoBubbleContentNode, let result = contentNode.getTaskRect(id: todoItemId) {
-                return contentNode.view.convert(result, to: self.view)
+                return self.mainContextSourceNode.convertFromContent(result, in: contentNode.view, to: self.view)
             }
         case let .pollOption(pollOption):
             if let contentNode = self.contentNodes.first(where: { $0 is ChatMessagePollBubbleContentNode }) as? ChatMessagePollBubbleContentNode, let result = contentNode.getOptionRect(id: pollOption) {
-                return contentNode.view.convert(result, to: self.view)
+                return self.mainContextSourceNode.convertFromContent(result, in: contentNode.view, to: self.view)
             }
         }
         return nil

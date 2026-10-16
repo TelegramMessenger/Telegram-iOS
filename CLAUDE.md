@@ -991,6 +991,14 @@ A run of adjacent unsupported blocks collapses to one pill, and the chat wallpap
 renderer through `InstantPageV2RenderContext.wallpaperBackgroundNode`. Details in
 [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Unsupported blocks".
 
+**Rich reply quotes** — a reply quoting a selection of a rich message sends `quote_rich`, one
+`RichText` per covered text node (`EngineMessageReplyQuote.richText`; `text`/`entities` are its
+derived flat form, so every quote consumer reads those unchanged). The pure core (node table,
+builder, the server's validation rule) is `TelegramCore/Sources/Utils/RichReplyQuote.swift`; the
+renderer stamps each laid-out run with its node and flat range so a selection maps to nodes. The
+node-id scheme is shared by the enumerator and the V2 layout and nothing checks the pair. Details
+in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Rich reply quotes".
+
 ## Rust MTProto engine on iOS
 
 The Rust MTProto engine (`third-party/mtproto-engine`, Swift wrapper `submodules/MTProtoRustEngine`)

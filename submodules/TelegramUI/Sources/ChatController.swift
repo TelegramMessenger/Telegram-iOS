@@ -109,6 +109,7 @@ import ChatMessageItemView
 import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
+import ChatMessageBubbleContentNode
 import ChatNavigationButton
 import WebsiteType
 import PeerInfoScreen
@@ -4583,13 +4584,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if let messageId = message?.id, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId)?._asMessage() ?? message {
                     var quoteData: EngineMessageReplyQuote?
-                    
-                    let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
-                    let quoteText = (message.text as NSString).substring(with: nsRange)
-                    
-                    let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
-                    if !trimmedText.string.isEmpty {
-                        quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nsRange.location, entities: trimmedText.entities, media: nil)
+
+                    if message.richText != nil {
+                        // A rich message's selection lives in its bubble's combined page text, not in
+                        // `message.text` (which is empty): the bubble cuts the quote from its page. Its
+                        // selection is still live, since the menu action runs before the menu closes.
+                        var quoteContentNode: ChatMessageQuoteSourceContentNode?
+                        self.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == message.id {
+                                quoteContentNode = itemNode.contentNodes.first(where: { $0 is ChatMessageQuoteSourceContentNode }) as? ChatMessageQuoteSourceContentNode
+                            }
+                            return quoteContentNode == nil
+                        }
+                        quoteData = quoteContentNode?.currentReplyQuote(maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
+                    } else {
+                        let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
+                        let quoteText = (message.text as NSString).substring(with: nsRange)
+
+                        let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
+                        if !trimmedText.string.isEmpty {
+                            quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nsRange.location, entities: trimmedText.entities, media: nil)
+                        }
                     }
                     
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(

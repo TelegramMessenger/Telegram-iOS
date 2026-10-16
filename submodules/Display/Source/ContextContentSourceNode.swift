@@ -70,6 +70,22 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
             return nil
         }
     }
+
+    /// `rect`, in the coordinate space of `view` (a view inside `contentNode`), converted to
+    /// `targetView` (a view outside it) as if the content had not been extracted.
+    ///
+    /// While the content is in a context preview, `contentNode` lives in the context controller's
+    /// hierarchy, and a direct `UIView.convert` from inside it to a view outside it returns
+    /// `CGRect.null` or a rect in the wrong place. The content keeps its own coordinate space while
+    /// extracted, so the conversion goes through it. Precondition: the owner lays the content out at
+    /// this node's bounds (`contentNode.frame == bounds`) while it is in place.
+    public func convertFromContent(_ rect: CGRect, in view: UIView, to targetView: UIView) -> CGRect {
+        if self.contentNode.view.superview === self.view {
+            return view.convert(rect, to: targetView)
+        }
+        let contentRect = view.convert(rect, to: self.contentNode.view)
+        return self.view.convert(contentRect, to: targetView)
+    }
 }
 
 public enum ContextExtractableContainerState {
