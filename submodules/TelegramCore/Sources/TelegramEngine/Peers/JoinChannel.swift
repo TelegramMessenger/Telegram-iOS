@@ -18,6 +18,11 @@ public enum JoinChannelResult {
 }
 
 func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
+    #if !TELEGRAM_API_LAYER_233
+    guard !forNews else {
+        return .fail(.generic)
+    }
+    #endif
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
     |> castError(JoinChannelError.self)
@@ -26,7 +31,11 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
         if let hash = hash {
             request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
         } else if let inputChannel = apiInputChannel(peer) {
+            #if TELEGRAM_API_LAYER_233
             request = account.network.request(Api.functions.channels.joinChannel(flags: forNews ? (1 << 0) : 0, channel: inputChannel))
+            #else
+            request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+            #endif
         } else {
             request = .fail(.init())
         }

@@ -16,6 +16,7 @@ private struct AddedFeedPage {
 
 /// One `feed.getFeed` page, stored and grouped (newest first). nil on a network error.
 private func fetchAddedFeedPage(account: Account, filterId: Int32, offsetToMaxRead: Bool, offsetPosition: EngineFeedPosition?, addOffset: Int32, limit: Int32) -> Signal<AddedFeedPage?, NoError> {
+    #if TELEGRAM_API_LAYER_233
     var flags: Int32 = 0
     if offsetPosition != nil {
         flags |= 1 << 0
@@ -43,6 +44,9 @@ private func fetchAddedFeedPage(account: Account, filterId: Int32, offsetToMaxRe
             }
         }
     }
+    #else
+    return .single(nil)
+    #endif
 }
 
 private final class AddedFeedContextImpl {
@@ -314,6 +318,7 @@ private final class AddedFeedContextImpl {
     }
 
     private func commitRead() {
+        #if TELEGRAM_API_LAYER_233
         guard let position = self.pendingReadPosition else {
             return
         }
@@ -335,6 +340,9 @@ private final class AddedFeedContextImpl {
             }
         }))
         self.persist()
+        #else
+        self.pendingReadPosition = nil
+        #endif
     }
 
     private func persist() {

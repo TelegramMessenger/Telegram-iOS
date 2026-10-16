@@ -7,6 +7,7 @@ private let forYouSnapshotLimit = 300
 
 /// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error.
 private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
+    #if TELEGRAM_API_LAYER_233
     return account.network.request(Api.functions.feed.getForYou(limit: limit))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.feed.ForYouFeed?, NoError> in
@@ -37,6 +38,9 @@ private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineF
             return forYouItems(from: forYouBatchElements(parsed.elements, storedById: storedById))
         }
     }
+    #else
+    return .single(nil)
+    #endif
 }
 
 private final class ForYouFeedContextImpl {

@@ -1,3 +1,4 @@
+#if TELEGRAM_API_LAYER_233
 import Foundation
 import Postbox
 internal import TelegramApi
@@ -126,3 +127,4 @@ func parseInterestCategories(_ result: Api.feed.InterestCategories) -> EngineInt
         return EngineInterestCategories(categories: categories, selectedIds: data.selected)
     }
 }
+#endif

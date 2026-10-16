@@ -1,3 +1,4 @@
+#if TELEGRAM_API_LAYER_233
 import XCTest
 import Postbox
 import TelegramApi
@@ -88,3 +89,4 @@ final class FeedApiConversionTests: XCTestCase {
         XCTAssertNil(parseInterestCategories(.interestCategoriesNotModified))
     }
 }
+#endif
