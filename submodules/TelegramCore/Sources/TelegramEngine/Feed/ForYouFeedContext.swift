@@ -7,7 +7,7 @@ private let forYouSnapshotLimit = 300
 
 /// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error.
 private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
-    return account.network.request(Api.functions.feed.getForYou(limit: limit))
+    return account.network.request(Api.functions.feed.getForYou(flags: 0, query: nil, limit: limit))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.feed.ForYouFeed?, NoError> in
         return .single(nil)
