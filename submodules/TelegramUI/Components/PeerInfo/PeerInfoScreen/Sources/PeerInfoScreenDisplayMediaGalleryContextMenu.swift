@@ -48,7 +48,7 @@ extension PeerInfoScreenNode {
                         a(.default)
                         
                         if let self {
-                            self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
+                            self.performNavigationButtonAction?(.postStory, nil, nil)
                         }
                     })))
                 }
@@ -111,26 +111,15 @@ extension PeerInfoScreenNode {
                     }
                     
                     var testView: UIView? = localResult
-                    while true {
-                        if let testViewValue = testView {
-                            if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
-                                node.isUserInteractionEnabled = false
-                                DispatchQueue.main.async {
-                                    node.isUserInteractionEnabled = true
-                                }
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else {
-                                testView = testViewValue.superview
-                            }
-                        } else {
-                            break
+                    while let testViewValue = testView {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
+                        } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
                         }
+                        testView = testViewValue.superview
                     }
                     
                     return .dismiss(consume: true, result: nil)
@@ -159,7 +148,7 @@ extension PeerInfoScreenNode {
                     a(.default)
                     
                     if let self {
-                        self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
+                        self.performNavigationButtonAction?(.postStory, nil, nil)
                     }
                 })))
                 
@@ -241,26 +230,15 @@ extension PeerInfoScreenNode {
                     }
                     
                     var testView: UIView? = localResult
-                    while true {
-                        if let testViewValue = testView {
-                            if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
-                                node.isUserInteractionEnabled = false
-                                DispatchQueue.main.async {
-                                    node.isUserInteractionEnabled = true
-                                }
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else {
-                                testView = testViewValue.superview
-                            }
-                        } else {
-                            break
+                    while let testViewValue = testView {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
+                        } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
                         }
+                        testView = testViewValue.superview
                     }
                     
                     return .dismiss(consume: true, result: nil)
@@ -412,7 +390,7 @@ extension PeerInfoScreenNode {
                 }
                 
                 var sourceView: UIView = source.view
-                if let containerView = strongSelf.headerNode.navigationButtonContainer.contextMenuSourceView(containing: sourceView) {
+                if let containerView = strongSelf.controller?.navigationBar?.navigationButtonContextContainer(sourceView: sourceView) {
                     sourceView = containerView
                 }
                 
@@ -428,26 +406,15 @@ extension PeerInfoScreenNode {
                     }
                     
                     var testView: UIView? = localResult
-                    while true {
-                        if let testViewValue = testView {
-                            if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
-                                node.isUserInteractionEnabled = false
-                                DispatchQueue.main.async {
-                                    node.isUserInteractionEnabled = true
-                                }
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
-                                node.brieflyDisableTouchActions()
-                                return .dismiss(consume: false, result: nil)
-                            } else {
-                                testView = testViewValue.superview
-                            }
-                        } else {
-                            break
+                    while let testViewValue = testView {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
+                        } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
                         }
+                        testView = testViewValue.superview
                     }
                     
                     return .dismiss(consume: true, result: nil)

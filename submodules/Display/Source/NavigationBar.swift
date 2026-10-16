@@ -27,8 +27,11 @@ public final class NavigationBarTheme {
     public let accentDisabledButtonColor: UIColor
     public let accentForegroundColor: UIColor
     public let glassStyle: NavigationBar.GlassStyle
+    /// The glass of capsules whose buttons ask for no tint of their own, when it is not the panel glass: the profile's
+    /// buttons over a cover colour or its expanded avatar. Nil: the panel glass (or clear, by `glassStyle`).
+    public let glassTintColor: UIColor?
     
-    public init(overallDarkAppearance: Bool, buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, badgeBackgroundColor: UIColor, badgeTextColor: UIColor, edgeEffectColor: UIColor? = nil, accentButtonColor: UIColor, accentDisabledButtonColor: UIColor, accentForegroundColor: UIColor, glassStyle: NavigationBar.GlassStyle = .default) {
+    public init(overallDarkAppearance: Bool, buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, badgeBackgroundColor: UIColor, badgeTextColor: UIColor, edgeEffectColor: UIColor? = nil, accentButtonColor: UIColor, accentDisabledButtonColor: UIColor, accentForegroundColor: UIColor, glassStyle: NavigationBar.GlassStyle = .default, glassTintColor: UIColor? = nil) {
         self.overallDarkAppearance = overallDarkAppearance
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
@@ -40,6 +43,7 @@ public final class NavigationBarTheme {
         self.accentDisabledButtonColor = accentDisabledButtonColor
         self.accentForegroundColor = accentForegroundColor
         self.glassStyle = glassStyle
+        self.glassTintColor = glassTintColor
     }
 }
 
@@ -202,6 +206,12 @@ public protocol NavigationBar: ASDisplayNode, NavigationBarTransitionSource {
     func setSecondaryContentNode(_ secondaryContentNode: ASDisplayNode?, animated: Bool)
     func executeBack() -> Bool
     func setHidden(_ hidden: Bool, animated: Bool)
+    /// The screen puts something of its own in the row's place (the profile's search, a pane's own navigation
+    /// content): the row and the iPhone Duo column hide, apart from `setHidden`, which the controller re-applies on
+    /// every layout. A hidden row hands a navigation transition no capsules.
+    func setRowHiddenByScreen(_ hidden: Bool, transition: ContainedViewLayoutTransition)
+    /// The view of a right bar button item the screen set, nil if the bar shows none for it.
+    func rightButtonView(for item: UIBarButtonItem) -> UIView?
     
     var requestContainerLayout: ((ContainedViewLayoutTransition) -> Void)? { get set }
     

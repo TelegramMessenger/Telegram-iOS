@@ -100,6 +100,8 @@ final class NewsFeedListView: UIView {
         }
         self.coreList.willBeginDragging = { [weak self] in
             self?.isDragging = true
+            // Scrolling closes an open swipe (spec §5).
+            self?.closeSwipedRows(animated: true)
             self?.onWillBeginDragging?()
         }
     }
@@ -115,6 +117,8 @@ final class NewsFeedListView: UIView {
         self.withSynchronousRowLoading {
             self.coreList.applyChanges(items: items, newSize: size, newInsets: self.coreListInsets, scrollTo: scrollTo, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: transition)
         }
+        // Rows may have moved under an open one: the separator above it is recomputed from scratch.
+        self.updateSwipeSeparators()
         // A programmatic pass fires no scroll callback: report the settled offset.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
         self.layoutSkeleton()
@@ -122,6 +126,53 @@ final class NewsFeedListView: UIView {
             self.onProgrammaticScroll?()
         }
         self.applyCascade()
+    }
+
+    // MARK: Swipe (spec §1, §4, §5)
+
+    private func postRow(_ view: UIView) -> NewsFeedPostComponent.View? {
+        return (view as? CoreListComponentItemView)?.componentView as? NewsFeedPostComponent.View
+    }
+
+    /// One open row at a time: closes every loaded row but `keptRow`. A row outside the loaded window is gone and
+    /// comes back closed.
+    func closeSwipedRows(except keptRow: NewsFeedPostComponent.View? = nil, animated: Bool) {
+        for view in self.coreList.loadedItemViews {
+            guard let row = self.postRow(view), row !== keptRow else {
+                continue
+            }
+            row.closeSwipe(animated: animated)
+        }
+    }
+
+    /// The separator above a row is the bottom separator of the row before it; it fades with that row's swipe (the
+    /// chat list finds the row above among `ListView` siblings, which CoreList rows are not).
+    func updateSwipeSeparators() {
+        var rows: [Int: NewsFeedPostComponent.View] = [:]
+        var alphas: [Int: CGFloat] = [:]
+        for entry in self.coreList.loadedItemEntries {
+            guard let row = self.postRow(entry.view) else {
+                continue
+            }
+            rows[entry.index] = row
+            alphas[entry.index] = row.swipeSeparatorAlpha
+        }
+        for (index, alpha) in newsSeparatorAlphasFromRowsBelow(alphas) {
+            rows[index]?.setRowBelowSeparatorAlpha(alpha)
+        }
+    }
+
+    /// Whether `point` (in this view) is on a post row with swipe actions, for the pager's rule.
+    func hasSwipeableRow(at point: CGPoint) -> Bool {
+        for view in self.coreList.loadedItemViews {
+            guard let row = self.postRow(view), row.hasSwipeActions else {
+                continue
+            }
+            if row.bounds.contains(row.convert(point, from: self)) {
+                return true
+            }
+        }
+        return false
     }
 
     private func withSynchronousRowLoading(_ f: () -> Void) {
@@ -250,6 +301,12 @@ final class NewsFeedListView: UIView {
         return CoreListTransition(animation: .curve(duration: spring.settlingDuration, curve: .customSpring(mass: spring.mass, stiffness: spring.stiffness, damping: spring.damping, initialVelocity: 0.0)))
     }
 
+    /// Rows going in or out for the "Post hidden" flow: `NewsSpring.rows` (`Motion.rows`), run for its settling time.
+    static var feedbackRowsTransition: CoreListTransition {
+        let spring = NewsSpring.rows
+        return CoreListTransition(animation: .curve(duration: spring.settlingDuration, curve: .customSpring(mass: spring.mass, stiffness: spring.stiffness, damping: spring.damping, initialVelocity: 0.0)))
+    }
+
     func scrollOffset(settled: Bool) -> ScrollOffset {
         if self.items.isEmpty {
             // No rows (the skeleton stands in, or the page is empty): the list rests at its top and only an
@@ -265,6 +322,16 @@ final class NewsFeedListView: UIView {
 
     var viewport: CGRect {
         return CGRect(x: 0.0, y: self.insets.top, width: self.bounds.width, height: max(0.0, self.bounds.height - self.insets.top - self.insets.bottom))
+    }
+
+    /// The identities of the rows on screen now (their frames meet the viewport).
+    var visibleItemIdentities: Set<AnyHashable> {
+        let viewport = self.viewport
+        var result = Set<AnyHashable>()
+        for row in self.visibleRowFrames() where row.index < self.items.count && row.frame.intersects(viewport) {
+            result.insert(self.items[row.index].identity)
+        }
+        return result
     }
 
     /// Loaded rows and their frames: on screen now, or where a programmatic scroll will leave them (`settled`).

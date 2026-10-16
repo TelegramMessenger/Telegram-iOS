@@ -54,6 +54,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
+    /// Each tab's "Post hidden" flow, for the screen's lifetime (spec §2).
+    private let forYouFeedback = NewsPostFeedbackController(tab: .forYou)
+    private let addedFeedback = NewsPostFeedbackController(tab: .added)
     private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsSkeletonModelRow)?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
@@ -198,6 +201,25 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self.updateAddedList(transition: .immediate)
             self.searchContentNode?.corpusUpdated()
         }
+        // Rows going in or out ride `NewsSpring.rows` and play their own appears, so the list adds no fade of its own.
+        self.forYouFeedback.updated = { [weak self] rowsChanged in
+            self?.updateForYouList(transition: rowsChanged ? NewsFeedListView.feedbackRowsTransition : .immediate, animatesInsertions: !rowsChanged)
+        }
+        self.forYouFeedback.currentPosts = { [weak self] in
+            return self?.forYou.feedbackPosts ?? []
+        }
+        self.forYouFeedback.visiblePosts = { [weak self] in
+            return self?.forYouList.visibleItemIdentities ?? []
+        }
+        self.addedFeedback.updated = { [weak self] rowsChanged in
+            self?.updateAddedList(transition: rowsChanged ? NewsFeedListView.feedbackRowsTransition : .immediate, animatesInsertions: !rowsChanged)
+        }
+        self.addedFeedback.currentPosts = { [weak self] in
+            return self?.added.feedbackPosts ?? []
+        }
+        self.addedFeedback.visiblePosts = { [weak self] in
+            return self?.addedList.visibleItemIdentities ?? []
+        }
 
         self.foregroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> distinctUntilChanged
@@ -217,11 +239,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         super.didLoad()
 
         // Swiping between the lists, set up as Peer Info's panes (PeerInfoPaneContainerNode).
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.pagerPanGesture(_:)), allowedDirections: { [weak self] _ in
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.pagerPanGesture(_:)), allowedDirections: { [weak self] point in
             guard let self, !self.isSearchActive, self.tappedSegment == nil else {
                 return []
             }
-            return self.selectedSegment == 0 ? .left : .right
+            if self.selectedSegment == 0 {
+                // The chat list's rule with folders (spec §4): a swipe from a post row's right edge reveals its actions,
+                // one from the middle pages to Added.
+                let list = self.forYouList
+                let pointInList = list.convert(point, from: self.listsContainerNode.view)
+                if newsPagerDefersToRowReveal(touchX: pointInList.x, width: list.bounds.width, rightInset: list.insets.right, isOnRevealableRow: list.hasSwipeableRow(at: pointInList)) {
+                    return []
+                }
+                return .left
+            }
+            return .right
         })
         panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
@@ -249,6 +281,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         switch recognizer.state {
         case .began:
             self.refreshController.detach()
+            self.closeSwipedRows(animated: true)
             self.isPagerDragging = true
             self.forYouList.isHidden = false
             self.addedList.isHidden = false
@@ -371,6 +404,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     /// A tap on a tab, or a swipe that settled on it.
     private func setSelectedSegment(_ index: Int, transition: ContainedViewLayoutTransition) {
+        self.closeSwipedRows(animated: true)
         self.selectedSegment = index
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
@@ -416,6 +450,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
+        // Back returns to a feed without an open swipe.
+        self.closeSwipedRows(animated: false)
         // Back returns to the feed, so the back button shows no unread chats.
         self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: nil, timecode: nil, setupReply: false, cachedAnchor: true), showsUnreadChatsBackBadge: false))
     }
@@ -436,9 +472,54 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func itemEnvironment(list: NewsFeedListView) -> NewsFeedItemEnvironment {
+        // The feeds' rows swipe and have the "Post hidden" flow; search results do neither (spec §1, §3).
+        let feedbackController: NewsPostFeedbackController?
+        if list === self.forYouList {
+            feedbackController = self.forYouFeedback
+        } else if list === self.addedList {
+            feedbackController = self.addedFeedback
+        } else {
+            feedbackController = nil
+        }
+        var postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
+        var feedback: NewsFeedItemFeedback?
+        if let feedbackController {
+            postSwipe = { [weak self, weak list, weak feedbackController] peer, messageId, post in
+                return NewsPostSwipe(action: { action in
+                    self?.postSwipeAction(action, peer: peer, messageId: messageId, post: post, feedback: feedbackController)
+                }, opened: { row in
+                    list?.closeSwipedRows(except: row, animated: true)
+                }, separatorAlphaChanged: { _ in
+                    list?.updateSwipeSeparators()
+                })
+            }
+            feedback = NewsFeedItemFeedback(state: feedbackController.state, tab: feedbackController.tab, postAppearTimes: feedbackController.postAppearTimes, panelAppearTimes: feedbackController.panelAppearTimes, undo: { [weak feedbackController] post, channel in
+                feedbackController?.undo(post: post, channel: channel)
+            }, choose: { [weak feedbackController] post, channel, choice in
+                feedbackController?.choose(post: post, channel: channel, choice: choice)
+            })
+        }
         return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
-        })
+        }, postSwipe: postSwipe, feedback: feedback)
+    }
+
+    /// A post row's swipe action (spec §3). Not Interested starts the tab's local "Post hidden" flow; Interesting has
+    /// nothing to do yet. Neither reaches the server: there is no API. Its requests, for `peer` and `messageId`, go
+    /// here once it exists.
+    private func postSwipeAction(_ action: NewsPostSwipeAction, peer: EnginePeer, messageId: EngineMessage.Id, post: AnyHashable, feedback: NewsPostFeedbackController?) {
+        switch action {
+        case .notInterested:
+            feedback?.notInterested(post: post)
+        case .interesting:
+            break
+        }
+    }
+
+    /// Closes an open swipe in either feed (spec §5).
+    private func closeSwipedRows(animated: Bool) {
+        self.forYouList.closeSwipedRows(animated: animated)
+        self.addedList.closeSwipedRows(animated: animated)
     }
 
     private func updateLists(transition: CoreListTransition) {
@@ -464,7 +545,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         let environment = self.itemEnvironment(list: self.addedList)
         self.addedRows = self.added.rows(environment: environment)
-        self.addedHasPosts = !self.addedRows.isLoading && !self.addedRows.positions.isEmpty
+        self.addedHasPosts = !self.addedRows.isLoading && self.addedRows.hasPostRows
         self.addedList.setShowsSkeleton(self.addedRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
         var scrollTo: CoreListScrollTarget?
         let hasPosts = !self.addedRows.positions.isEmpty
@@ -760,6 +841,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         self.refreshController.detach()
+        self.closeSwipedRows(animated: false)
         self.isSearchActive = true
 
         let contentNode = NewsSearchContentNode(presentationData: self.presentationData, corpus: { [weak self] in

@@ -164,10 +164,14 @@ func navigationBarCapsuleTint(_ buttons: [NavigationBarComponent.Button]) -> Nav
     return buttons.allSatisfy({ $0.tint == first.tint }) ? first.tint : .generic
 }
 
-/// The glass of a capsule or circle with `tint`, as the old glass bar drew it.
+/// The glass of a capsule or circle with `tint`, as the old glass bar drew it: a generic one takes the theme's glass
+/// tint when it has one.
 func navigationBarGlassTintColor(_ tint: NavigationBarComponent.Button.Tint, theme: NavigationBarTheme) -> GlassBackgroundView.TintColor {
     switch tint {
     case .generic:
+        if let glassTintColor = theme.glassTintColor {
+            return .init(kind: .custom(style: theme.glassStyle == .clear ? .clear : .default, color: glassTintColor))
+        }
         return .init(kind: theme.glassStyle == .clear ? .clear : .panel)
     case .accent:
         return .init(kind: .custom(style: theme.glassStyle == .clear ? .clear : .default, color: theme.accentButtonColor))

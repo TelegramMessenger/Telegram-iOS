@@ -1091,6 +1091,105 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertNil(rowView.inPlaceStateForTesting(isLeft: false))
     }
 
+    // The profile puts its search in the row's place. A row its screen hides stays hidden through the controller's
+    // layouts (each calls `setHidden(!displayNavigationBar)`), its Duo column with it, and the bar still takes part
+    // in a transition, handing it no capsules.
+    func test_rowHiddenByScreen_survivesTheControllersSetHidden() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setHidden(false, animated: false)
+        self.layout(node)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        XCTAssertEqual(node.columnHostAlphaForTesting, 0.0)
+        XCTAssertNotNil(node.takeView())
+        node.putBack()
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+        XCTAssertEqual(node.columnHostAlphaForTesting, 1.0)
+    }
+
+    // A capsule's native glass ignores its ancestors' alpha below the glass container (seen on the profile: a hidden
+    // row left its tinted glass on screen under the search field), so a row its screen hides fades the glass
+    // container, as a replacement content node does.
+    func test_rowHiddenByScreen_hidesTheGlass() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 1.0)
+    }
+
+    // A replacement content node leaving while the screen still hides the row does not bring the glass back.
+    func test_rowHiddenByScreen_outlastsAReplacementContentNode() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setContentNode(ReplacementContentNode(), animated: false)
+        node.setContentNode(nil, animated: false)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 1.0)
+    }
+
+    // The controller hides the bar while a replacement content node holds the row's place: the row is still hidden
+    // when the node leaves. The node fades the glass container and `setHidden` the row, so neither overrides the other.
+    func test_setHidden_duringAReplacementContentNode_holdsWhenItLeaves() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setContentNode(ReplacementContentNode(), animated: false)
+        node.setHidden(true, animated: false)
+        node.setContentNode(nil, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setHidden(false, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+    }
+
+    // Hidden before the bar has made its row (a profile laid out with its search already open): the row comes up hidden.
+    func test_rowHiddenByScreen_beforeTheFirstLayout() {
+        let node = self.makeNode()
+        let item = UINavigationItem(title: "Profile")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        node.item = item
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        self.layout(node)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+    }
+
+    // The controller's own hiding still works, and showing the bar again does not show a row its screen hides.
+    func test_setHidden_andRowHiddenByScreen_combine() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setHidden(true, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setHidden(false, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+    }
+
+    // A screen finds the view of a bar item it set: the anchor for its tooltip or its camera transition.
+    func test_rightButtonView_isTheItemsButton() {
+        let edit = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: edit)
+        guard let view = node.rightButtonView(for: edit), let capsule = node.rowViewForTesting?.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no button view")
+            return
+        }
+        XCTAssertTrue(view.isDescendant(of: capsule))
+        XCTAssertNil(node.rightButtonView(for: UIBarButtonItem(title: "Other", style: .plain, target: nil, action: nil)))
+    }
+
+    // The profile's glass over a cover colour reaches the bar's capsules.
+    func test_themeGlassTint_reachesTheCapsules() {
+        let theme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white, glassTintColor: .orange)
+        let node = NavigationBarNode(presentationData: NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More")))
+        let item = UINavigationItem(title: "Profile")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        node.item = item
+        self.layout(node)
+        XCTAssertEqual(node.rowViewForTesting?.rightPillBackgroundContainer(at: 0)?.glassTintColor, navigationBarGlassTintColor(.generic, theme: theme))
+        let plain = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white)
+        XCTAssertNotEqual(navigationBarGlassTintColor(.generic, theme: theme), navigationBarGlassTintColor(.generic, theme: plain))
+    }
+
     // A change made without animation is applied as is.
     func test_unanimatedItemChange_isImmediate() {
         let item = UINavigationItem(title: "Text Replacement")

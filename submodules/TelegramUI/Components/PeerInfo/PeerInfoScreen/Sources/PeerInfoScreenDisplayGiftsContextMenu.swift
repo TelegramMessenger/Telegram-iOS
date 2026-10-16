@@ -222,38 +222,16 @@ extension PeerInfoScreenNode {
         }
         
         var sourceView: UIView = source.view
-        if let containerView = self.headerNode.navigationButtonContainer.contextMenuSourceView(containing: sourceView) {
+        if let containerView = self.controller?.navigationBar?.navigationButtonContextContainer(sourceView: sourceView) {
             sourceView = containerView
         }
         
         let contextController = makeContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: items, gesture: gesture)
-        contextController.passthroughTouchEvent = { [weak self] sourceView, point in
-            guard let strongSelf = self else {
+        // A touch outside the menu only dismisses it, on the bar too: the sort button does not open the menu again.
+        contextController.passthroughTouchEvent = { [weak self] _, _ in
+            guard self != nil else {
                 return .ignore
             }
-            
-            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
-            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
-                return .dismiss(consume: true, result: nil)
-            }
-            
-            var testView: UIView? = localResult
-            while true {
-                if let testViewValue = testView {
-                    if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
-                        node.isUserInteractionEnabled = false
-                        DispatchQueue.main.async {
-                            node.isUserInteractionEnabled = true
-                        }
-                        return .dismiss(consume: false, result: nil)
-                    } else {
-                        testView = testViewValue.superview
-                    }
-                } else {
-                    break
-                }
-            }
-            
             return .dismiss(consume: true, result: nil)
         }
         self.mediaGalleryContextMenu = contextController

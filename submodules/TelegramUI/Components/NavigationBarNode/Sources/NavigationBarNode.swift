@@ -99,6 +99,24 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     private(set) var currentContent: NavigationBarComponent.Content?
     /// Whether the row was last laid out with its iPhone Duo column's buttons hidden (an active search).
     private(set) var currentHidesSideColumnButtons = false
+    /// `setHidden` (the controller, from `displayNavigationBar`) fades the row; `setRowHiddenByScreen` (the screen) fades
+    /// the glass container, since a capsule's native glass ignores the alpha of anything below that container. The row
+    /// shows when neither hides it.
+    private var isRowHiddenByController = false
+    private var isRowHiddenByScreen = false
+
+    private var rowTargetAlpha: CGFloat {
+        return self.isRowHiddenByController ? 0.0 : 1.0
+    }
+
+    /// The glass container (row, title view, over-background content) gives way to a replacement content node and to
+    /// what the screen puts in the row's place.
+    private var glassContainerTargetAlpha: CGFloat {
+        if let contentNode = self.contentNode, case .replacement = contentNode.mode {
+            return 0.0
+        }
+        return self.isRowHiddenByScreen ? 0.0 : 1.0
+    }
 
     private var rowView: NavigationBarComponent.View? {
         return self.row.view as? NavigationBarComponent.View
@@ -469,6 +487,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
             self.rowHost.addSubview(rowView)
             rowView.plattersDetached = self.transitionRole != nil || self.glassHold.isHeld
             rowView.frame = rowFrame
+            rowView.alpha = self.rowTargetAlpha
         } else {
             transition.updateFrame(view: rowView, frame: rowFrame)
         }
@@ -677,8 +696,8 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
                     self.requestLayout()
                 }
             } else {
-                if self.glassContainer.alpha.isZero {
-                    transition.setAlpha(view: self.glassContainer, alpha: 1.0)
+                if self.glassContainer.alpha != self.glassContainerTargetAlpha {
+                    transition.setAlpha(view: self.glassContainer, alpha: self.glassContainerTargetAlpha)
                 }
                 // Brings the side column's buttons back.
                 self.requestLayout()
@@ -725,13 +744,12 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     }
 
     public func setHidden(_ hidden: Bool, animated: Bool) {
-        if let contentNode = self.contentNode, case .replacement = contentNode.mode {
-            return
-        }
+        // Also while a replacement content node is set: it fades the glass container, this the row inside it.
+        self.isRowHiddenByController = hidden
         guard let rowView = self.rowView else {
             return
         }
-        let targetAlpha: CGFloat = hidden ? 0.0 : 1.0
+        let targetAlpha = self.rowTargetAlpha
         let previousAlpha = rowView.alpha
         if previousAlpha != targetAlpha {
             rowView.alpha = targetAlpha
@@ -739,6 +757,21 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
                 rowView.layer.animateAlpha(from: previousAlpha, to: targetAlpha, duration: 0.2)
             }
         }
+    }
+
+    public func setRowHiddenByScreen(_ hidden: Bool, transition: ContainedViewLayoutTransition) {
+        if self.isRowHiddenByScreen == hidden {
+            return
+        }
+        self.isRowHiddenByScreen = hidden
+        // Through the views' alpha, as `setContentNode` fades the glass container: native glass faded through its
+        // layer's opacity did not come back when shown again (measured on the iOS 27 simulator).
+        ComponentTransition(transition).setAlpha(view: self.glassContainer, alpha: self.glassContainerTargetAlpha)
+        ComponentTransition(transition).setAlpha(view: self.columnHost, alpha: self.columnHostTargetAlpha)
+    }
+
+    public func rightButtonView(for item: UIBarButtonItem) -> UIView? {
+        return self.rowView?.rightButtonViews[AnyHashable(ObjectIdentifier(item))]
     }
 
     public func updateEdgeEffectExtension(value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -781,10 +814,16 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         self.applyGlassVisibility()
     }
 
+    /// The column hides while a transition's glass draws it, and while the screen hides the row.
+    private var columnHostTargetAlpha: CGFloat {
+        let detached = self.transitionRole != nil || self.glassHold.isHeld
+        return (detached || self.isRowHiddenByScreen) ? 0.0 : 1.0
+    }
+
     private func applyGlassVisibility() {
         let detached = self.transitionRole != nil || self.glassHold.isHeld
         // While the transition's glass lingers above the bar it draws the column's capsules too.
-        self.columnHost.alpha = detached ? 0.0 : 1.0
+        self.columnHost.alpha = self.columnHostTargetAlpha
         self.rowView?.plattersDetached = detached
         // And the title's glass pill, which it treats as the second right platter.
         if let titleView = self.titleView as? NavigationBarGlassPillTitleView {
@@ -794,6 +833,10 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
     var columnHostAlphaForTesting: CGFloat {
         return self.columnHost.alpha
+    }
+
+    var glassContainerAlphaForTesting: CGFloat {
+        return self.glassContainer.alpha
     }
 
     /// The animation duration factor (Slow Animations) the hold's cap stretches with.

@@ -17,6 +17,8 @@ final class NewsAddedFeedBinding {
         var firstUnreadItemIndex: Int?
         /// The first load is under way and there are no rows: the list's skeleton stands in.
         var isLoading: Bool = false
+        /// A post or a "Post hidden" panel is among the rows (a panel has no read position).
+        var hasPostRows: Bool = false
     }
 
     let feed: AddedFeedContext
@@ -137,6 +139,11 @@ final class NewsAddedFeedBinding {
         })
     }
 
+    /// The feed's posts in order, with their channels, for the "Post hidden" flow.
+    var feedbackPosts: [(post: AnyHashable, channel: EnginePeer.Id)] {
+        return (self.state?.entries ?? []).map { (newsPostIdentity($0), $0.peerId) }
+    }
+
     func rows(environment: NewsFeedItemEnvironment) -> Rows {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
@@ -146,7 +153,7 @@ final class NewsAddedFeedBinding {
         if self.isReloading {
             return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
         }
-        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys)).filter { !self.heldBack.contains(newsPostIdentity($0)) }
+        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys)).filter { !self.heldBack.contains(newsPostIdentity($0)) && (environment.feedback?.isShown($0) ?? true) }
         if entries.isEmpty {
             if state.isLoadingInitial {
                 return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
@@ -166,16 +173,19 @@ final class NewsAddedFeedBinding {
         // CoreList rejects a repeated identity with a precondition failure; never hand it one.
         var usedIdentities = Set<AnyHashable>()
         let freshKeys = self.freshReveal?.keys ?? []
-        let segments = newsFreshSegments(isFresh: entries.map { freshKeys.contains(newsPostIdentity($0)) }, revealTime: self.freshReveal?.time ?? 0.0)
+        let segments = newsFreshSegments(isFresh: entries.map { freshKeys.contains(newsPostIdentity($0)) && !(environment.feedback?.hasPanel($0) ?? false) }, revealTime: self.freshReveal?.time ?? 0.0)
         for (entryIndex, entry) in entries.enumerated() {
             if let item = newsPostItem(entry: entry, messages: self.messages, environment: environment, fresh: segments[entryIndex]), usedIdentities.insert(item.identity).inserted {
                 if entryIndex == firstUnreadEntryIndex {
                     firstUnreadItemIndex = items.count
                 }
-                positions[items.count] = entry.position
+                // A panel row is no post: it carries no read position.
+                if environment.feedback?.state.hasPanel(newsPostIdentity(entry)) != true {
+                    positions[items.count] = entry.position
+                }
                 items.append(item)
             }
         }
-        return Rows(items: items, positions: positions, firstUnreadItemIndex: firstUnreadItemIndex)
+        return Rows(items: items, positions: positions, firstUnreadItemIndex: firstUnreadItemIndex, hasPostRows: !items.isEmpty)
     }
 }

@@ -802,7 +802,6 @@ extension PeerInfoScreenImpl {
         if self.controllerNode.headerNode.isAvatarExpanded {
             self.controllerNode.headerNode.ignoreCollapse = true
             self.controllerNode.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
-            self.controllerNode.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
         }
         self.controllerNode.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
