@@ -392,6 +392,14 @@ func walletTransactionMatchesMessageHash(_ transaction: WalletContext.Transactio
 }
 
 @available(macOS 10.15, *)
+func walletTransactionApplicableToMessageHash(_ transaction: WalletContext.Transaction, _ msgHash: String, isCollectibleTransfer: Bool) -> Bool {
+    if isCollectibleTransfer || transaction.collectible != nil {
+        return walletTransactionMatchesMessageHash(transaction, msgHash)
+    }
+    return true
+}
+
+@available(macOS 10.15, *)
 private func walletTransferConfirmed(_ pending: WalletContext.PendingTransfer, transaction: WalletContext.Transaction) -> WalletContext.PendingTransfer {
     WalletContext.PendingTransfer(
         id: pending.id, recipient: pending.recipient, amount: pending.amount,
@@ -892,9 +900,12 @@ extension WalletContextImpl {
             )
             guard self.isCurrentWalletTransferResolution(generation) else { return }
             let isCollectibleTransfer = unresolvedIds.contains { self.walletTransferResolutions[$0]?.pending.collectibleAddress != nil }
-            let applicableTransactions = isCollectibleTransfer ? transactions.filter { walletTransactionMatchesMessageHash($0, hash) } : transactions
-            if isCollectibleTransfer && applicableTransactions.isEmpty && !transactions.isEmpty {
-                self.requestSynchronization(scope: [.account, .transactions], force: true)
+            let applicableTransactions = transactions.filter { walletTransactionApplicableToMessageHash($0, hash, isCollectibleTransfer: isCollectibleTransfer) }
+            if applicableTransactions.count != transactions.count {
+                self.logger.log("event=wallet_transfer_lookup_skipped msg_hash=\(hash) skipped=\(transactions.count - applicableTransactions.count) applicable=\(applicableTransactions.count)")
+                if applicableTransactions.isEmpty {
+                    self.requestSynchronization(scope: [.account, .transactions], force: true)
+                }
             }
             for transaction in applicableTransactions {
                 self.rememberWalletFinalTransaction(transaction, msgHash: hash)
@@ -934,6 +945,7 @@ extension WalletContextImpl {
 
     func applyWalletFinalTransaction(_ transaction: Transaction, pending: PendingTransfer?, generation: UInt64, source: String = "transfer_resolution") async {
         guard !self.isShutdown, self.activationGeneration == generation, !transaction.id.isEmpty else { return }
+        self.logger.log("event=wallet_final_transaction_applied source=\(source) transaction_id=\(transaction.id) transaction_hash=\(transaction.transactionHash ?? "") pending_id=\(pending?.id ?? "") collectible=\(transaction.collectible != nil ? 1 : 0)")
         if transaction.status == .failed, let pending,
            pending.status == .confirmed || self.transferSubmissions.entries[pending.id]?.confirmed == true {
             return
@@ -1025,7 +1037,10 @@ extension WalletContextImpl {
                 if let state = self.walletTransferHashStates[transfer.msgHash], state.expiresAt <= now {
                     self.walletTransferHashStates[transfer.msgHash] = nil
                 }
-                if let apiTransaction, let transaction = walletTransactions(from: [apiTransaction]).first {
+                if let apiTransaction, let transaction = walletTransactions(from: [apiTransaction]).first, !walletTransactionApplicableToMessageHash(transaction, transfer.msgHash, isCollectibleTransfer: false) {
+                    self.logger.log("event=wallet_transfer_update_skipped msg_hash=\(transfer.msgHash) transaction_id=\(transaction.id)")
+                    self.requestSynchronization(scope: [.account, .transactions], force: true)
+                } else if let apiTransaction, let transaction = walletTransactions(from: [apiTransaction]).first {
                     self.rememberWalletFinalTransaction(transaction, msgHash: transfer.msgHash)
                     let candidates = self.currentState.pendingTransfers.filter {
                         $0.sentTransfer?.msgHash == transfer.msgHash

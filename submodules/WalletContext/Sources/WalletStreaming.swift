@@ -1174,6 +1174,18 @@ struct WalletStreamingPresentationOverlay {
 }
 
 @available(macOS 10.15, *)
+func walletTransactionMatchesPendingCollectibleTransfer(_ transaction: WalletContext.Transaction, pending: WalletContext.PendingTransfer) -> Bool {
+    guard let collectibleAddress = pending.collectibleAddress, let collectible = transaction.collectible,
+          walletEngineAddressesEqual(collectible.address, collectibleAddress) else {
+        return false
+    }
+    if let messageHash = pending.sentTransfer?.msgHash, walletTransactionMatchesMessageHash(transaction, messageHash) {
+        return true
+    }
+    return transaction.timestamp >= pending.createdAt - 60
+}
+
+@available(macOS 10.15, *)
 func walletTransactionsMergingPendingCollectibleTransfers(
     authoritative: [WalletContext.Transaction],
     local: [WalletContext.Transaction],
@@ -1196,8 +1208,8 @@ func walletTransactionsMergingPendingCollectibleTransfers(
                   walletEngineAddressesEqual(collectible.address, collectibleAddress) else {
                 return false
             }
-            if let messageHash {
-                return walletTransactionMatchesMessageHash(transaction, messageHash)
+            if let messageHash, walletTransactionMatchesMessageHash(transaction, messageHash) {
+                return true
             }
             return transaction.timestamp >= pending.createdAt - 60
         }
@@ -1461,10 +1473,9 @@ private func walletStreamingHash(_ hash: String?) -> Data? {
 
 @available(macOS 10.15, *)
 func walletHistoryTransactionForPending(_ pending: WalletContext.PendingTransfer, transactions: [WalletContext.Transaction]) -> WalletContext.Transaction? {
-    let collectibleMessageHash = pending.collectibleAddress != nil ? pending.sentTransfer?.msgHash : nil
     let matches = transactions.filter { transaction in
         (transaction.presentationId == "pending:\(pending.id)" || (pending.transactionHash != nil && transaction.transactionHash == pending.transactionHash)
-            || collectibleMessageHash.map { walletTransactionMatchesMessageHash(transaction, $0) } == true)
+            || walletTransactionMatchesPendingCollectibleTransfer(transaction, pending: pending))
             && !transaction.id.isEmpty
             && (transaction.status == .failed || transaction.status == .completed)
             && transaction.direction == .outgoing
