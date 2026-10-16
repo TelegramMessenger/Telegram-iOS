@@ -2067,8 +2067,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateStarGiftAuctionMyState(giftId: giftId, state: GiftAuctionContext.State.MyState(apiAuctionUserState: userState))
             case let .updateEmojiGameInfo(updateEmojiGameInfoData):
                 updatedState.updateEmojiGameInfo(info: EmojiGameInfo(apiEmojiGameInfo: updateEmojiGameInfoData.info))
+#if TELEGRAM_NEWS_FEED_API
             case let .updateReadFeed(updateReadFeedData):
                 updatedState.updateReadFeed(filterId: updateReadFeedData.filterId, maxPosition: EngineFeedPosition(apiPosition: updateReadFeedData.maxPosition))
+#endif
             default:
                 break
         }

@@ -90,11 +90,12 @@ public enum NewsChannelBarAction: Equatable {
     case existing
 }
 
-/// The News states of a channel chat's bottom bar (spec §1.1). Every joined broadcast channel is "Added to Chats" while
-/// the feature is on (user decision, 2026-10-15: the mockup has no Mute/Unmute). A light join (`in_news` without
-/// membership) is "Added to News" whether or not the feature is on, so it can always be moved or removed. The bar's own
-/// requests win over the stored state: a pending removal (from Chats or News), then a join, then an Add to News; a
-/// pending Notify / Do Not Notify wins over the stored mute setting.
+/// The News states of a channel chat's bottom bar (spec §1.1), only while the feature is on: with it off the bar is
+/// Join or Mute/Unmute as before News, also for a channel added to News while it was on (user decision, 2026-10-16).
+/// Every joined broadcast channel is "Added to Chats" (user decision, 2026-10-15: the mockup has no Mute/Unmute), and a
+/// light join (`in_news` without membership) is "Added to News". The bar's own requests win over the stored state: a
+/// pending removal (from Chats or News), then a join, then an Add to News; a pending Notify / Do Not Notify wins over
+/// the stored mute setting.
 public func newsChannelBarAction(isBroadcast: Bool, isInNews: Bool, participation: NewsChannelParticipation, isMuted: Bool, featureEnabled: Bool, pending: NewsChannelBarPending) -> NewsChannelBarAction {
     guard isBroadcast, participation != .kicked else {
         return .existing
@@ -106,14 +107,14 @@ public func newsChannelBarAction(isBroadcast: Bool, isInNews: Bool, participatio
         return featureEnabled ? .addedToChats(muted: pending.muted ?? true) : .existing
     }
     if pending.isAddingToNews {
-        return .addedToNews
+        return featureEnabled ? .addedToNews : .existing
     }
     switch participation {
     case .member:
         return featureEnabled ? .addedToChats(muted: pending.muted ?? isMuted) : .existing
     case .left:
         if isInNews {
-            return .addedToNews
+            return featureEnabled ? .addedToNews : .existing
         }
         return featureEnabled ? .addToNews : .existing
     case .kicked:

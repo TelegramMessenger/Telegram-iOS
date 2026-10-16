@@ -51,10 +51,13 @@ final class ChannelInNewsLocalChangeTests: XCTestCase {
         XCTAssertFalse(stored.flags.contains(.isInNews))
     }
 
+    // Needs in_news parsed, which is parked with the feed API (layer 232).
+#if TELEGRAM_NEWS_FEED_API
     func testWithoutALocalChangeTheServerDecides() {
         XCTAssertTrue(channelApplyingLocalInNews(self.serverChannel(inNews: true), localInNews: nil).flags.contains(.isInNews))
         XCTAssertFalse(channelApplyingLocalInNews(self.serverChannel(inNews: false), localInNews: nil).flags.contains(.isInNews))
     }
+#endif
 
     func testOnlyInNewsChanges() {
         let server = self.serverChannel(inNews: false, verified: true)
