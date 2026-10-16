@@ -394,6 +394,10 @@ public final class WalletTransactionItemComponent: Component {
         private let clockMinute = CALayer()
         private let clockHour = CALayer()
 
+        public var transferAmountFrame: CGRect {
+            return self.amount.view?.frame ?? .zero
+        }
+
         public var transferIconFrame: CGRect {
             guard let view = self.amountIcon.view else { return .zero }
             return CGRect(x: view.center.x - view.bounds.width * 0.5, y: view.center.y - view.bounds.height * 0.5, width: view.bounds.width, height: view.bounds.height)
@@ -404,8 +408,9 @@ public final class WalletTransactionItemComponent: Component {
             guard self.component?.animatesPendingTransfer == true else { return }
             if let view = self.amount.view {
                 let scale = 1.0 + 0.33 * expansion
+                let offset: CGFloat = self.component?.transaction?.collectible != nil ? -19.0 : -23.0
                 view.transform = CGAffineTransform(a: scale, b: 0.0, c: 0.0, d: scale,
-                    tx: -23.0 * expansion - (scale - 1.0) * view.bounds.width * 0.5, ty: 20.35 * expansion)
+                    tx: offset * expansion - (scale - 1.0) * view.bounds.width * 0.5, ty: 20.35 * expansion)
             }
             self.amountIcon.view?.alpha = iconAlpha
             self.amountIcon.view?.transform = CGAffineTransform(scaleX: max(0.001, iconScale), y: max(0.001, iconScale))

@@ -35,6 +35,29 @@ public enum WalletPeerSelectionScreenMode: Equatable {
     case collectible(WalletContext.Collectible)
 }
 
+public func walletMoveActionIcon(_ name: String) -> UIImage? {
+    guard let glyph = generateTintedImage(image: UIImage(bundleImageName: name), color: .white) else {
+        return nil
+    }
+    let size = CGSize(width: 40.0, height: 40.0)
+    return generateImage(size, contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        context.addEllipse(in: CGRect(origin: .zero, size: size))
+        context.clip()
+        let colors = [UIColor(rgb: 0x72d5fd).cgColor, UIColor(rgb: 0x2a9ef1).cgColor] as CFArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: &locations) {
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: [])
+        }
+        context.resetClip()
+        let glyphSize = CGSize(width: 24.0, height: 24.0)
+        let glyphFrame = CGRect(origin: CGPoint(x: (size.width - glyphSize.width) / 2.0, y: (size.height - glyphSize.height) / 2.0), size: glyphSize)
+        if let cgImage = glyph.cgImage {
+            context.draw(cgImage, in: glyphFrame)
+        }
+    })
+}
+
 func walletPeerSelectionIsEligiblePeer(_ peer: EnginePeer, accountPeerId: EnginePeer.Id) -> Bool {
     guard case let .user(user) = peer else {
         return false
@@ -343,7 +366,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                 return ContactListActionItem(
                     presentationData: ItemListPresentationData(listNode.presentationData),
                     title: title,
-                    icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                    icon: .generic(walletMoveActionIcon("Wallet/MoveToGifts")!),
                     actionStyle: .generic,
                     header: nil,
                     action: { [weak listNode] in

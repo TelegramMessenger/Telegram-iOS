@@ -1,10 +1,11 @@
 #include <metal_stdlib>
 using namespace metal;
 struct StickerVertex { float4 position [[position]]; float2 uv; };
-vertex StickerVertex walletStickerVertex(uint id [[vertex_id]]) {
+vertex StickerVertex walletStickerVertex(constant float4 &rect [[buffer(0)]], uint id [[vertex_id]]) {
     const float2 points[4] = { float2(-1, 1), float2(-1, -1), float2(1, 1), float2(1, -1) };
     const float2 uv[4] = { float2(0, 0), float2(0, 1), float2(1, 0), float2(1, 1) };
-    return {float4(points[id], 0, 1), uv[id]};
+    float2 placement = rect.xy + (points[id] * 0.5 + 0.5) * rect.zw;
+    return {float4(-1.0 + placement * 2.0, 0, 1), uv[id]};
 }
 struct StickerUniforms { float4 frame; float4 effect; };
 

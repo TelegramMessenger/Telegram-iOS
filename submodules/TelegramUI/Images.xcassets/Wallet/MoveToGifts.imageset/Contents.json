@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "togift.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

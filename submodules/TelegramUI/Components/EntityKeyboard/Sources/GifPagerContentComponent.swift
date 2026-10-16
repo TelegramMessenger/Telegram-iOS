@@ -897,7 +897,15 @@ public final class GifPagerContentComponent: Component {
             
             let pagerEnvironment = environment[PagerComponentChildEnvironment.self].value
             self.pagerEnvironment = pagerEnvironment
-            
+
+            pagerEnvironment.scrollToTop.connect { [weak self] in
+                guard let self else {
+                    return
+                }
+
+                self.scrollView.setContentOffset(CGPoint(), animated: true)
+            }
+
             transition.setFrame(view: self.shimmerHostView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             let shimmerBackgroundColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08)

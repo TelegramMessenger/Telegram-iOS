@@ -236,6 +236,7 @@ private func giftMovePathIcon(_ name: String, color: UIColor?, side: CGFloat) ->
 }
 
 private func giftMovePathString(items: [(String, String, Bool)], theme: PresentationTheme) -> NSAttributedString {
+    let accentColor = theme.actionSheet.controlAccentColor
     let font = Font.regular(13.0)
     let textColor = theme.actionSheet.secondaryTextColor
     let result = NSMutableAttributedString()
@@ -250,8 +251,8 @@ private func giftMovePathString(items: [(String, String, Bool)], theme: Presenta
                 result.append(NSAttributedString(string: " > ", font: font, textColor: textColor))
             }
         }
-        if let icon = giftMovePathIcon(item.0, color: item.2 ? textColor : nil, side: 14.0) {
-            result.append(NSAttributedString(string: "#", attributes: [.attachment: icon, .font: font, .foregroundColor: item.2 ? textColor : theme.actionSheet.controlAccentColor, .baselineOffset: 1.0]))
+        if let icon = giftMovePathIcon(item.0, color: item.2 ? textColor : accentColor, side: 16.0) {
+            result.append(NSAttributedString(string: "#", attributes: [.attachment: icon, .font: font, .foregroundColor: item.2 ? textColor : accentColor, .baselineOffset: 1.0]))
             result.append(NSAttributedString(string: "\u{00A0}\u{00A0}", font: font, textColor: textColor))
         }
         result.append(NSAttributedString(string: item.1, font: font, textColor: textColor))
@@ -296,9 +297,9 @@ public func giftMoveToWalletAlertController(
         id: "path",
         component: AnyComponent(
             AlertTextComponent(content: .attributed(giftMovePathString(items: [
-                ("Chat List/Tabs/IconSettings", strings.Settings_Title, true),
-                ("Ads/TonMedium", strings.Settings_Money, false),
-                ("Settings/GiftSmall", strings.Wallet_Collectibles, true)
+                ("Wallet/PathSettings", strings.Settings_Title, true),
+                ("Wallet/PathGram", strings.Settings_Money, false),
+                ("Wallet/PathGift", strings.Wallet_Collectibles, true)
             ], theme: presentationData.theme)), alignment: .center, insets: UIEdgeInsets(top: -6.0, left: 0.0, bottom: 0.0, right: 0.0))
         )
     ))
@@ -369,8 +370,8 @@ public func giftMoveToProfileAlertController(
         id: "path",
         component: AnyComponent(
             AlertTextComponent(content: .attributed(giftMovePathString(items: [
-                ("Chat/Context Menu/User", strings.Settings_MyProfile, true),
-                ("Settings/GiftSmall", strings.PeerInfo_PaneGifts, true)
+                ("Wallet/PathUser", strings.Settings_MyProfile, true),
+                ("Wallet/PathGift", strings.PeerInfo_PaneGifts, true)
             ], theme: presentationData.theme)), alignment: .center, insets: UIEdgeInsets(top: -6.0, left: 0.0, bottom: 0.0, right: 0.0))
         )
     ))

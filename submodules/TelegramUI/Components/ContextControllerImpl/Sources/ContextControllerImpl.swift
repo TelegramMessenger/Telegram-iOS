@@ -1753,6 +1753,10 @@ final class ContextControllerNode: ViewControllerTracingNode, ASScrollViewDelega
             return nil
         }
         
+        if let controller = self.getController() as? ContextControllerImpl, let passthroughHitTest = controller.passthroughHitTest, let result = passthroughHitTest(self.view.convert(point, to: nil)) {
+            return result
+        }
+        
         if let controller = self.getController() as? ContextController {
             var innerResult: UIView?
             controller.forEachController { c in
@@ -1895,6 +1899,7 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
     let hideReactionPanelTail: Bool
 
     public var passthroughTouchEvent: ((UIView, CGPoint) -> HandledTouchEvent)?
+    public var passthroughHitTest: ((CGPoint) -> UIView?)?
     
     private var shouldBeDismissedDisposable: Disposable?
     

@@ -703,7 +703,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
+            let baseContentButtonBackgroundColor = presentationData.theme.overallDarkAppearance ? baseButtonBackgroundColor : UIColor(white: 1.0, alpha: 0.35)
+            regularContentButtonBackgroundColor = baseContentButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
             
             hasCoverColor = true
@@ -717,7 +718,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.main)
+            let baseContentButtonBackgroundColor = presentationData.theme.overallDarkAppearance ? baseButtonBackgroundColor : UIColor(white: 1.0, alpha: 0.35)
+            regularContentButtonBackgroundColor = baseContentButtonBackgroundColor.blendOver(background: backgroundColors.main)
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: (backgroundColors.secondary ?? backgroundColors.main).mixedWith(backgroundColors.main, alpha: 0.1))
             
             hasCoverColor = true
@@ -2643,7 +2645,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let decimalSeparator = presentationData.dateTimeFormat.decimalSeparator
             let isOverlay = self.isAvatarExpanded || hasBackground
             let primaryColor = isOverlay ? UIColor.white : presentationData.theme.list.itemPrimaryTextColor
-            let iconColor = isOverlay ? navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45) : presentationData.theme.list.itemAccentColor
+            let isColoredBackground = hasBackground && !self.isAvatarExpanded
+            let iconColor: UIColor
+            if isColoredBackground {
+                iconColor = UIColor(white: 1.0, alpha: 0.3)
+            } else if isOverlay {
+                iconColor = navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45)
+            } else {
+                iconColor = presentationData.theme.list.itemAccentColor
+            }
             let balanceTitle = presentationData.strings.Wallet_Send_Balance("").string.trimmingCharacters(in: .whitespacesAndNewlines)
             // Shrink unusually long amounts/localizations to fit the profile band.
             let maximumBalanceWidth = max(1.0, width - stripLeft - stripRight - 32.0)
