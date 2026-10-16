@@ -16,7 +16,7 @@ final class ChannelInNewsLocalChangeTests: XCTestCase {
         if verified {
             flags |= 1 << 7
         }
-        let chat = Api.Chat.channel(.init(flags: flags, flags2: inNews ? 1 << 21 : 0, id: 1234, accessHash: 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil))
+        let chat = Api.Chat.channel(.init(flags: flags, flags2: inNews ? 1 << 21 : 0, id: 1234, accessHash: 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil, pinnedMsgId: nil))
         return parseTelegramGroupOrChannel(chat: chat) as! TelegramChannel
     }
 

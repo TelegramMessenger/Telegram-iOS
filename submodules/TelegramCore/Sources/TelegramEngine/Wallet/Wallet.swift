@@ -334,6 +334,16 @@ private extension WalletTransactionPeer {
             } else {
                 self = .address(apiPeer.address, domain: apiPeer.domain)
             }
+        case let .walletTransactionPeerChannel(apiPeer):
+            let peerId = EnginePeer.Id(
+                namespace: Namespaces.Peer.CloudChannel,
+                id: PeerId.Id._internalFromInt64Value(apiPeer.channelId)
+            )
+            if let peer = transaction.getPeer(peerId) {
+                self = .user(EnginePeer(peer), address: apiPeer.address, domain: apiPeer.domain)
+            } else {
+                self = .address(apiPeer.address, domain: apiPeer.domain)
+            }
         }
     }
 }

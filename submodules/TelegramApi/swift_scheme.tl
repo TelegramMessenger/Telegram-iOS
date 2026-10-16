@@ -101,7 +101,7 @@ userStatusLastMonth#65899777 flags:# by_me:flags.0?true = UserStatus;
 chatEmpty#29562865 id:long = Chat;
 chat#41cbf256 flags:# creator:flags.0?true left:flags.2?true deactivated:flags.5?true call_active:flags.23?true call_not_empty:flags.24?true noforwards:flags.25?true id:long title:string photo:ChatPhoto participants_count:int date:int version:int migrated_to:flags.6?InputChannel admin_rights:flags.14?ChatAdminRights default_banned_rights:flags.18?ChatBannedRights = Chat;
 chatForbidden#6592a1a7 id:long title:string = Chat;
-channel#d49f34c6 flags:# creator:flags.0?true left:flags.2?true broadcast:flags.5?true verified:flags.7?true megagroup:flags.8?true restricted:flags.9?true signatures:flags.11?true min:flags.12?true scam:flags.19?true has_link:flags.20?true has_geo:flags.21?true slowmode_enabled:flags.22?true call_active:flags.23?true call_not_empty:flags.24?true fake:flags.25?true gigagroup:flags.26?true noforwards:flags.27?true join_to_send:flags.28?true join_request:flags.29?true forum:flags.30?true flags2:# stories_hidden:flags2.1?true stories_hidden_min:flags2.2?true stories_unavailable:flags2.3?true signature_profiles:flags2.12?true autotranslation:flags2.15?true broadcast_messages_allowed:flags2.16?true monoforum:flags2.17?true forum_tabs:flags2.19?true in_news:flags2.21?true id:long access_hash:flags.13?long title:string username:flags.6?string photo:ChatPhoto date:int restriction_reason:flags.9?Vector<RestrictionReason> admin_rights:flags.14?ChatAdminRights banned_rights:flags.15?ChatBannedRights default_banned_rights:flags.18?ChatBannedRights participants_count:flags.17?int usernames:flags2.0?Vector<Username> stories_max_id:flags2.4?RecentStory color:flags2.7?PeerColor profile_color:flags2.8?PeerColor emoji_status:flags2.9?EmojiStatus level:flags2.10?int subscription_until_date:flags2.11?int bot_verification_icon:flags2.13?long send_paid_messages_stars:flags2.14?long linked_monoforum_id:flags2.18?long linked_community_id:flags2.20?long = Chat;
+channel#7ad15240 flags:# creator:flags.0?true left:flags.2?true broadcast:flags.5?true verified:flags.7?true megagroup:flags.8?true restricted:flags.9?true signatures:flags.11?true min:flags.12?true scam:flags.19?true has_link:flags.20?true has_geo:flags.21?true slowmode_enabled:flags.22?true call_active:flags.23?true call_not_empty:flags.24?true fake:flags.25?true gigagroup:flags.26?true noforwards:flags.27?true join_to_send:flags.28?true join_request:flags.29?true forum:flags.30?true flags2:# stories_hidden:flags2.1?true stories_hidden_min:flags2.2?true stories_unavailable:flags2.3?true signature_profiles:flags2.12?true autotranslation:flags2.15?true broadcast_messages_allowed:flags2.16?true monoforum:flags2.17?true forum_tabs:flags2.19?true in_news:flags2.21?true id:long access_hash:flags.13?long title:string username:flags.6?string photo:ChatPhoto date:int restriction_reason:flags.9?Vector<RestrictionReason> admin_rights:flags.14?ChatAdminRights banned_rights:flags.15?ChatBannedRights default_banned_rights:flags.18?ChatBannedRights participants_count:flags.17?int usernames:flags2.0?Vector<Username> stories_max_id:flags2.4?RecentStory color:flags2.7?PeerColor profile_color:flags2.8?PeerColor emoji_status:flags2.9?EmojiStatus level:flags2.10?int subscription_until_date:flags2.11?int bot_verification_icon:flags2.13?long send_paid_messages_stars:flags2.14?long linked_monoforum_id:flags2.18?long linked_community_id:flags2.20?long pinned_msg_id:flags2.22?int = Chat;
 channelForbidden#17d493d5 flags:# broadcast:flags.5?true megagroup:flags.8?true monoforum:flags.10?true id:long access_hash:long title:string until_date:flags.16?int = Chat;
 communityForbidden#fd3cdab8 flags:# id:long access_hash:flags.13?long title:string = Chat;
 community#65efe954 flags:# creator:flags.0?true left:flags.2?true min:flags.12?true flags2:# collapsed_in_dialogs:flags2.20?true id:long access_hash:flags.13?long title:string photo:ChatPhoto date:int admin_rights:flags.14?ChatAdminRights default_banned_rights:flags.18?ChatBannedRights = Chat;
@@ -2312,6 +2312,7 @@ walletTransactionPeerUser#d4ea706d flags:# user_id:long address:string domain:fl
 walletTransactionPeerAddress#62cc1bc flags:# address:string domain:flags.0?string = WalletTransactionPeer;
 walletTransactionPeerOnramp#e595186e flags:# address:string domain:flags.0?string provider_name:string = WalletTransactionPeer;
 walletTransactionPeerUnsupported#728bed5a = WalletTransactionPeer;
+walletTransactionPeerChannel#54e70c31 flags:# channel_id:long address:string domain:flags.0?string = WalletTransactionPeer;
 
 walletTransaction#952dc143 flags:# incoming:flags.0?true gasless:flags.1?true failed:flags.2?true key_change:flags.5?true comment_encrypted:flags.6?true id:string amount:long fee:long date:int peer:WalletTransactionPeer comment:flags.3?string tx_hash:flags.4?string nft:flags.7?wallet.NftItem = WalletTransaction;
 
@@ -2356,22 +2357,6 @@ auth.firebasePnvIntent#df5ac00c nonce:string digital_credential_payload:string =
 
 inputTonConnectOauthSession#629f66ce session_id:long challenge_answer:bytes body:bytes proof:WalletOwnershipProof = InputTonConnectOauthSession;
 
-feedPosition#5059dc73 date:int peer:Peer id:int = FeedPosition;
-
-feed.feedMessagesNotModified#db1a3503 = feed.FeedMessages;
-feed.feedMessages#dcf754b9 flags:# max_position:flags.0?FeedPosition min_position:flags.1?FeedPosition read_max_position:flags.2?FeedPosition messages:Vector<Message> chats:Vector<Chat> users:Vector<User> = feed.FeedMessages;
-
-feedItemMessage#7e73b3a5 message:Message = FeedItem;
-feedItemMessageGroup#652f4c71 messages:Vector<Message> = FeedItem;
-feedItemInterestCategories#6be7187b = FeedItem;
-
-feed.forYouFeed#52577805 flags:# items:Vector<FeedItem> chats:Vector<Chat> users:Vector<User> = feed.ForYouFeed;
-
-feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string emoji_document_id:flags.1?long = feed.InterestCategory;
-
-feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
-feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
-
 exportedNoPaidMessagesToken#cf5105be flags:# token:string url:flags.0?string expires:flags.1?int = ExportedNoPaidMessagesToken;
 
 shareThemeDefault#95ace84f = ShareTheme;
@@ -2393,6 +2378,22 @@ wallet.cardSticker#f3010cba coordinates:MediaAreaCoordinates nft:wallet.NftItem 
 wallet.card#8ed043b1 flags:# stickers:flags.0?Vector<wallet.CardSticker> bg_nft_item:flags.1?wallet.NftItem address:string balance:long = wallet.Card;
 
 payments.starGiftDepositPayload#725bb4eb nft_address:string payload:bytes amount:long = payments.StarGiftDepositPayload;
+
+feedPosition#5059dc73 date:int peer:Peer id:int = FeedPosition;
+
+feed.feedMessagesNotModified#db1a3503 = feed.FeedMessages;
+feed.feedMessages#dcf754b9 flags:# max_position:flags.0?FeedPosition min_position:flags.1?FeedPosition read_max_position:flags.2?FeedPosition messages:Vector<Message> chats:Vector<Chat> users:Vector<User> = feed.FeedMessages;
+
+feedItemMessage#7e73b3a5 message:Message = FeedItem;
+feedItemMessageGroup#652f4c71 messages:Vector<Message> = FeedItem;
+feedItemInterestCategories#6be7187b = FeedItem;
+
+feed.forYouFeed#52577805 flags:# items:Vector<FeedItem> chats:Vector<Chat> users:Vector<User> = feed.ForYouFeed;
+
+feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string emoji_document_id:flags.1?long = feed.InterestCategory;
+
+feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
+feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
 
 ---functions---
 
@@ -3286,6 +3287,6 @@ wallet.setCardStickers#68509ac flags:# stickers:Vector<InputWalletCardSticker> b
 
 feed.getFeed#7e76d7d3 flags:# offset_to_max_read:flags.3?true filter_id:int offset_position:flags.0?FeedPosition add_offset:int limit:int max_position:flags.1?FeedPosition min_position:flags.2?FeedPosition hash:long = feed.FeedMessages;
 feed.readFeed#b436c1ff filter_id:int max_position:FeedPosition = Updates;
-feed.getForYou#64516c01 limit:int = feed.ForYouFeed;
+feed.getForYou#33b8e5eb flags:# query:flags.0?string limit:int = feed.ForYouFeed;
 feed.getInterestCategories#ba7a1dba hash:long = feed.InterestCategories;
 feed.setInterestCategories#9f2958dc category_ids:Vector<int> = Bool;

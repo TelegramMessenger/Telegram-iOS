@@ -375,6 +375,9 @@ extension ChatControllerImpl {
         if previousState.pinnedMessage != contentData.state.pinnedMessage {
             animated = true
         }
+        if previousState.pinnedMessageSkeletonId != contentData.state.pinnedMessageSkeletonId {
+            animated = true
+        }
         if previousState.translationState?.isEnabled != contentData.state.translationState?.isEnabled {
             animated = true
         }
@@ -436,6 +439,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedKeyboardButtonsMessage(contentData.state.keyboardButtonsMessage)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageId(contentData.state.pinnedMessageId)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessage(contentData.state.pinnedMessage)
+            presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageSkeletonId(contentData.state.pinnedMessageSkeletonId)
             presentationInterfaceState = presentationInterfaceState.updatedPeerIsBlocked(contentData.state.peerIsBlocked)
             presentationInterfaceState = presentationInterfaceState.updatedCallsAvailable(contentData.state.callsAvailable)
             presentationInterfaceState = presentationInterfaceState.updatedCallsPrivate(contentData.state.callsPrivate)

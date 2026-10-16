@@ -197,6 +197,12 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
             } else if !isMin && storiesUnavailable {
                 transaction.clearStoryItemsInexactMaxId(peerId: chat.peerId)
             }
+            
+            if let pinnedUpdate = cachedPinnedMessageIdUpdate(chat: chat) {
+                transaction.updatePeerCachedData(peerIds: [chat.peerId], update: { peerId, current in
+                    return cachedChannelData(applying: pinnedUpdate, peerId: peerId, to: current)
+                })
+            }
         default:
             break
         }
