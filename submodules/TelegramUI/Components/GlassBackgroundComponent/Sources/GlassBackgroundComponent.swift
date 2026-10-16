@@ -506,6 +506,14 @@ public class GlassBackgroundView: UIView {
     private var nativeView: UIVisualEffectView?
     private var nativeViewClippingContext: ClippingShapeContext?
     private let nativeParamsView: EffectSettingsContainerView?
+
+    public var nativeBlurRadius: CGFloat? {
+        didSet {
+            if self.nativeBlurRadius != oldValue {
+                self.applyNativeBlurRadius()
+            }
+        }
+    }
     
     private let foregroundView: UIImageView?
     private let shadowView: UIImageView?
@@ -877,6 +885,28 @@ public class GlassBackgroundView: UIView {
     override public func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
     }
+
+    private func applyNativeBlurRadius() {
+        guard let nativeParamsView = self.nativeParamsView else {
+            return
+        }
+        let radius = Double(self.nativeBlurRadius ?? 0.0)
+        if radius == 0.0 && nativeParamsView.glassBlurRadius == 0.0 {
+            return
+        }
+        nativeParamsView.glassBlurRadius = radius
+        EffectSettingsContainerView.applyGlassBlurRadius(radius, toLayerTree: nativeParamsView.layer, depth: 0)
+    }
+
+    public static var morphBlurRadius: CGFloat? {
+        get {
+            let value = EffectSettingsContainerView.morphGlassBlurRadius
+            return value > 0.0 ? CGFloat(value) : nil
+        }
+        set {
+            EffectSettingsContainerView.morphGlassBlurRadius = Double(newValue ?? 0.0)
+        }
+    }
 }
 
 public final class GlassBackgroundContainerView: UIView {
@@ -1000,6 +1030,26 @@ public final class GlassBackgroundContainerView: UIView {
         return result
     }
     
+    public var nativeBlurRadius: CGFloat? {
+        didSet {
+            if self.nativeBlurRadius != oldValue {
+                self.applyNativeBlurRadius()
+            }
+        }
+    }
+
+    private func applyNativeBlurRadius() {
+        guard let nativeParamsView = self.nativeParamsView else {
+            return
+        }
+        let radius = Double(self.nativeBlurRadius ?? 0.0)
+        if radius == 0.0 && nativeParamsView.glassBlurRadius == 0.0 {
+            return
+        }
+        nativeParamsView.glassBlurRadius = radius
+        EffectSettingsContainerView.applyGlassBlurRadius(radius, toLayerTree: nativeParamsView.layer, depth: 0)
+    }
+
     public func update(size: CGSize, isDark: Bool, transition: ComponentTransition) {
         if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
             nativeParamsView.lumaMin = isDark ? 0.0 : 0.8
@@ -1648,6 +1698,15 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     private let glassView: GlassBackgroundView
+
+    public var nativeBlurRadius: CGFloat? {
+        get {
+            return self.glassView.nativeBlurRadius
+        }
+        set {
+            self.glassView.nativeBlurRadius = newValue
+        }
+    }
     /// The tint the glass was last given.
     public var glassTintColor: GlassBackgroundView.TintColor? {
         return self.normalParams?.tintColor
@@ -1758,6 +1817,25 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
             mappedTransition = ComponentTransition(transition)
         case let .spring(duration, stiffness, damping):
             mappedTransition = ComponentTransition(animation: .curve(duration: duration, curve: .bounce(stiffness: stiffness, damping: damping)))
+        }
+        
+        let glassSize: CGSize
+        switch self.state {
+        case .normal:
+            glassSize = normalParams.size
+        case let .extracted(size, _, extractionState):
+            switch extractionState {
+            case .animatedOut:
+                glassSize = normalParams.size
+            case .animatedIn:
+                glassSize = size
+            }
+        }
+        let glassFrame = CGRect(origin: CGPoint(), size: glassSize)
+        if self.isGlassLent {
+            self.glassFrameBeforeLending = glassFrame
+        } else {
+            mappedTransition.setFrame(view: self.glassView, frame: glassFrame)
         }
         
         switch self.state {

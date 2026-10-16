@@ -32,11 +32,9 @@ final class QrStudioToastView: UIView {
     private var glassWidth: CGFloat = 0.0
     private var lastTick: Double?
     private var tint = GlassBackgroundView.TintColor(kind: .panel)
+    private var isLight = false
+    private var foregroundColor = UIColor.white
     private var displayLink: SharedDisplayLinkDriver.Link?
-
-    static func glassColor(ink: QrStudioColor, isLight: Bool) -> UIColor {
-        return (isLight ? UIColor.black : ink.uiColor).withAlphaComponent(0.55)
-    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -47,11 +45,9 @@ final class QrStudioToastView: UIView {
         self.addSubview(self.glass)
 
         self.iconView.contentMode = .center
-        self.iconView.tintColor = .white
         self.contentView.addSubview(self.iconView)
 
         self.label.font = UIFont.systemFont(ofSize: 14.0)
-        self.label.textColor = .white
         self.label.numberOfLines = 2
         self.contentView.addSubview(self.label)
 
@@ -63,14 +59,20 @@ final class QrStudioToastView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func show(_ toast: QrStudioToast, ink: QrStudioColor, isLight: Bool) {
+    func show(_ toast: QrStudioToast, isLight: Bool, glassTint: GlassBackgroundView.TintColor) {
+        self.isLight = isLight
+        self.tint = glassTint
+        let color = isLight ? UIColor(white: 0.1, alpha: 1.0) : UIColor(white: 0.96, alpha: 1.0)
+        self.foregroundColor = color
+        self.iconView.tintColor = color
+        self.label.textColor = color
         if let animation = toast.animation {
             self.setIcon(.animation(animation))
         } else {
             self.iconView.image = UIImage(bundleImageName: toast.icon)?.withRenderingMode(.alwaysTemplate)
             self.setIcon(.image)
         }
-        self.present(text: toast.text, ink: ink, isLight: isLight)
+        self.present(text: toast.text)
     }
 
     private enum IconMode: Equatable {
@@ -83,7 +85,7 @@ final class QrStudioToastView: UIView {
         if case let .animation(name) = mode {
             let _ = self.doneIcon.update(
                 transition: .immediate,
-                component: AnyComponent(LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: name, mode: .animating(loop: false)), colors: [:], size: CGSize(width: 30.0, height: 30.0))),
+                component: AnyComponent(LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: name, mode: .animating(loop: false)), colors: ["__allcolors__": self.foregroundColor], size: CGSize(width: 30.0, height: 30.0))),
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
@@ -105,12 +107,11 @@ final class QrStudioToastView: UIView {
         }
     }
 
-    private func present(text: String, ink: QrStudioColor, isLight: Bool) {
+    private func present(text: String) {
         self.label.text = text
         self.layoutContent()
         self.glassWidth = self.contentSize.width
         self.contentView.transform = .identity
-        self.tint = GlassBackgroundView.TintColor(kind: .custom(style: .default, color: QrStudioToastView.glassColor(ink: ink, isLight: isLight)))
         self.isHidden = false
         self.phase = .opening(QrStudioClock.now)
         self.startDisplayLink()
@@ -185,7 +186,8 @@ final class QrStudioToastView: UIView {
         CATransaction.setDisableActions(true)
 
         self.glass.frame = glassFrame
-        self.glass.update(size: size, cornerRadius: cornerRadius, isDark: true, tintColor: self.tint, transition: .immediate)
+        self.glass.nativeBlurRadius = QrStudioGlass.blurRadius(self.tint)
+        self.glass.update(size: size, cornerRadius: cornerRadius, isDark: !self.isLight, tintColor: self.tint, transition: .immediate)
 
         let scale = 1.0 + 0.85 * (1.0 - c)
         self.contentView.transform = CGAffineTransform(scaleX: scale, y: scale)

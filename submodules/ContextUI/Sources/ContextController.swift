@@ -540,6 +540,8 @@ public struct ContextControllerItems {
     public var tip: ContextControllerTip?
     public var tipSignal: Signal<ContextControllerTip?, NoError>?
     public var dismissed: (() -> Void)?
+    public var usesClearGlass: Bool
+    public var glassBlurRadius: CGFloat?
 
     public init(
         id: AnyHashable? = nil,
@@ -557,8 +559,12 @@ public struct ContextControllerItems {
         previewReaction: TelegramMediaFile? = nil,
         tip: ContextControllerTip? = nil,
         tipSignal: Signal<ContextControllerTip?, NoError>? = nil,
-        dismissed: (() -> Void)? = nil
+        dismissed: (() -> Void)? = nil,
+        usesClearGlass: Bool = false,
+        glassBlurRadius: CGFloat? = nil
     ) {
+        self.usesClearGlass = usesClearGlass
+        self.glassBlurRadius = glassBlurRadius
         self.id = id
         self.content = content
         self.context = context
@@ -593,6 +599,8 @@ public struct ContextControllerItems {
         self.tip = nil
         self.tipSignal = nil
         self.dismissed = nil
+        self.usesClearGlass = false
+        self.glassBlurRadius = nil
     }
 }
 

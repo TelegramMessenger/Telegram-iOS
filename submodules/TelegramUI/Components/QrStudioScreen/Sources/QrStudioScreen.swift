@@ -371,7 +371,7 @@ private final class QrStudioScreenComponent: Component {
             }
             if !self.didApplyCodeSettings, let codeRemoveFee = settings.codeRemoveFee, codeRemoveFee {
                 self.codeState.removeFee = true
-                self.codeState.expires = settings.codeExpires ?? false
+                self.codeState.expires = (self.component?.temporary ?? false) || (settings.codeExpires ?? false)
                 self.codeState.issuedAt = QrStudioClock.now
                 self.codeState.pourFrom = 0.0
             }
@@ -688,7 +688,7 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func loadPaidPrice(component: QrStudioScreenComponent) {
-            guard self.privacyDisposable == nil, component.peer.id == component.context.account.peerId, !component.temporary else {
+            guard self.privacyDisposable == nil, component.peer.id == component.context.account.peerId else {
                 return
             }
             let _ = component.context.engine.privacy.updateGlobalPrivacySettings().startStandalone()
@@ -813,7 +813,7 @@ private final class QrStudioScreenComponent: Component {
             if self.toastView.superview == nil {
                 self.presentationContainer.insertSubview(self.toastView, belowSubview: self.sheetView)
             }
-            self.toastView.show(QrStudioToast(icon: icon, text: text, animation: animation), ink: self.look.ink, isLight: self.look.backdrop.isLight)
+            self.toastView.show(QrStudioToast(icon: icon, text: text, animation: animation), isLight: self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop))
             self.layoutToast()
         }
 
@@ -943,7 +943,7 @@ private final class QrStudioScreenComponent: Component {
             let presentationData = self.menuPresentationData(context: component.context)
             let strings = presentationData.strings
             var items: [ContextMenuItem] = []
-            let sections = QrStudioBurn.menu(for: self.codeState)
+            let sections = QrStudioBurn.menu(for: self.codeState, allowsPermanent: !component.temporary)
             for (index, section) in sections.enumerated() {
                 if index != 0 {
                     items.append(.separator)
@@ -988,7 +988,7 @@ private final class QrStudioScreenComponent: Component {
                     })))
                 }
             }
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView, centersActions: true)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView, centersActions: true)), items: .single(ContextController.Items(content: .list(items), usesClearGlass: QrStudioGlass.isClear(QrStudioGlass.tint(self.look.backdrop)), glassBlurRadius: QrStudioGlass.blurRadius(QrStudioGlass.tint(self.look.backdrop)))), gesture: nil)
             self.codePill.setTaken(true)
             self.codeMenuCooldown.markOpened()
             self.pendingCodeAction = nil
@@ -1606,15 +1606,17 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func link(component: QrStudioScreenComponent) -> String {
-            if self.codeState.removeFee && self.paidPrice != nil, let token = self.codeState.expires ? (self.temporaryNoPaidToken ?? self.noPaidToken) : self.noPaidToken {
-                if let url = token.url, !url.isEmpty {
-                    return url
+            if self.codeState.removeFee && self.paidPrice != nil {
+                let token: ExportedNoPaidMessagesToken?
+                if component.temporary {
+                    token = self.temporaryNoPaidToken
+                } else if self.codeState.expires {
+                    token = self.temporaryNoPaidToken ?? self.noPaidToken
+                } else {
+                    token = self.noPaidToken
                 }
-                if let addressName = component.peer.addressName, !addressName.isEmpty {
-                    return "https://t.me/\(addressName)?free=\(token.token)"
-                }
-                if case let .user(user) = component.peer, let phone = user.phone, !phone.isEmpty {
-                    return "https://t.me/+\(phone)?free=\(token.token)"
+                if let token, !token.url.isEmpty {
+                    return token.url
                 }
             }
             if component.temporary {
@@ -1694,7 +1696,7 @@ private final class QrStudioScreenComponent: Component {
             add(strings.QrStudio_Share_SaveImage, "Chat/Context Menu/Download", { [weak self] in
                 self?.saveImage()
             })
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items), usesClearGlass: QrStudioGlass.isClear(QrStudioGlass.tint(self.look.backdrop)), glassBlurRadius: QrStudioGlass.blurRadius(QrStudioGlass.tint(self.look.backdrop)))), gesture: nil)
             self.shareMenuCooldown.markOpened()
             contextController.dismissed = { [weak self] in
                 self?.shareMenuCooldown.markClosed()
@@ -2136,8 +2138,10 @@ private final class QrStudioMenuCooldown {
     static var interval: Double {
         if #available(iOS 27.0, *) {
             return 1.0
-        } else {
+        } else if #available(iOS 26.0, *) {
             return 1.2
+        } else {
+            return 0.0
         }
     }
 

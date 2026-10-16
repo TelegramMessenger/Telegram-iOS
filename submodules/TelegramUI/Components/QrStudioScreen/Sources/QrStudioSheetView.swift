@@ -674,6 +674,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.capsuleGlass.isHidden = !isGlassVisible
         if isGlassVisible {
             self.capsuleGlass.frame = frame
+            self.capsuleGlass.nativeBlurRadius = QrStudioGlass.blurRadius(self.glassTint)
             self.capsuleGlass.update(size: frame.size, cornerRadius: min(layout.top, min(frame.width, frame.height) * 0.5), isDark: QrStudioGlass.glassIsDark(self.isDark, tint: self.glassTint), tintColor: self.glassTint, isInteractive: true, transition: .immediate)
             self.capsuleGlass.alpha = layout.glassAlpha
             self.iconsContainer.center = CGPoint(x: frame.width * 0.5, y: frame.height * 0.5)

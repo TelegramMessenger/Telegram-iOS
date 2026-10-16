@@ -455,6 +455,7 @@ final class QrStudioCodePillView: UIView {
         let bounds = CGRect(origin: CGPoint(), size: size)
         transition.setFrame(view: self.glass, frame: bounds)
         self.touchView.frame = CGRect(origin: CGPoint(), size: size)
+        self.glass.nativeBlurRadius = QrStudioGlass.blurRadius(glassTint)
         self.glass.update(size: size, cornerRadius: size.height * 0.5, isDark: QrStudioGlass.glassIsDark(!isLight, tint: glassTint), tintColor: glassTint, isInteractive: true, transition: transition)
         transition.setFrame(view: self.glyphLabel, frame: bounds)
 

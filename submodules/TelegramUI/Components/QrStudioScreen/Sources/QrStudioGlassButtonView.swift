@@ -8,16 +8,20 @@ enum QrStudioGlass {
     static func tint(_ backdrop: QrStudioBackdrop) -> GlassBackgroundView.TintColor {
         if #available(iOS 27.0, *) {
         } else if !QrStudioGlass.isEmoji(backdrop) {
-            return GlassBackgroundView.TintColor(kind: .clear)
+            return GlassBackgroundView.TintColor(kind: .custom(style: .clear, color: .clear))
         }
         return GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .clear))
     }
 
-    static func glassIsDark(_ isDark: Bool, tint: GlassBackgroundView.TintColor) -> Bool {
-        if tint.kind == .clear {
-            return false
+    static func isClear(_ tint: GlassBackgroundView.TintColor) -> Bool {
+        if case let .custom(style, _) = tint.kind, style == .clear {
+            return true
         }
-        return isDark
+        return false
+    }
+
+    static func blurRadius(_ tint: GlassBackgroundView.TintColor) -> CGFloat? {
+        return QrStudioGlass.isClear(tint) ? 8.0 : nil
     }
 
     private static func isEmoji(_ backdrop: QrStudioBackdrop) -> Bool {
@@ -25,6 +29,10 @@ enum QrStudioGlass {
             return true
         }
         return false
+    }
+
+    static func glassIsDark(_ isDark: Bool, tint: GlassBackgroundView.TintColor) -> Bool {
+        return isDark
     }
 }
 
@@ -107,6 +115,7 @@ final class QrStudioGlassButtonView: UIView {
             self.titleLabel.attributedText = title.flatMap { NSAttributedString(string: $0, font: QrStudioGlassButtonView.titleFont, textColor: color) }
         }
         transition.setFrame(view: self.glass, frame: CGRect(origin: CGPoint(), size: size))
+        self.glass.nativeBlurRadius = QrStudioGlass.blurRadius(glassTint)
         self.glass.update(size: size, cornerRadius: size.height * 0.5, isDark: QrStudioGlass.glassIsDark(isDark, tint: glassTint), tintColor: glassTint, isInteractive: true, transition: transition)
         transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(), size: size))
         transition.setFrame(view: self.titleLabel, frame: CGRect(origin: CGPoint(), size: size))

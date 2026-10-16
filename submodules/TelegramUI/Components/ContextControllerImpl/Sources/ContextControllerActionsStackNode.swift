@@ -1470,6 +1470,9 @@ private final class ItemSelectionRecognizer: UIGestureRecognizer {
 }
 
 public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, ContextControllerActionsStackNode {
+    public var usesClearGlass: Bool = false
+    public var glassBlurRadius: CGFloat?
+
     final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let backgroundContainer: GlassBackgroundContainerView
         let contentContainer: LensTransitionContainer
@@ -1560,7 +1563,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             self.contentContainer.animateOut(currentSource: currentSource, alongsideAnimations: alongsideAnimations, completion: completion)
         }
 
-        func update(presentationData: PresentationData, presentation: Presentation, size: CGSize, transition: ContainedViewLayoutTransition) {
+        func update(presentationData: PresentationData, presentation: Presentation, size: CGSize, usesClearGlass: Bool, glassBlurRadius: CGFloat?, transition: ContainedViewLayoutTransition) {
             let transition = ComponentTransition(transition)
             
             transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: size))
@@ -1568,7 +1571,9 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             
             transition.setPosition(view: self.contentContainer, position: CGRect(origin: CGPoint(), size: size).center)
             transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: size))
-            self.contentContainer.update(size: size, cornerRadius: min(30.0, size.height * 0.5), isDark: presentationData.theme.overallDarkAppearance, transition: transition)
+            self.backgroundContainer.nativeBlurRadius = glassBlurRadius
+            self.contentContainer.nativeBlurRadius = glassBlurRadius
+            self.contentContainer.update(size: size, cornerRadius: min(30.0, size.height * 0.5), isDark: presentationData.theme.overallDarkAppearance, tintColor: GlassBackgroundView.TintColor(kind: usesClearGlass ? .custom(style: .clear, color: .clear) : .panel), transition: transition)
         }
     }
     
@@ -2100,7 +2105,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         let previousNavigationContainerFrame = self.navigationContainer.frame
         transition.updateFrame(node: self.navigationContainer, frame: navigationContainerFrame, beginWithCurrentState: true)
         if !navigationContainerFrame.isEmpty {
-            self.navigationContainer.update(presentationData: presentationData, presentation: presentation, size: navigationContainerFrame.size, transition: transition)
+            self.navigationContainer.update(presentationData: presentationData, presentation: presentation, size: navigationContainerFrame.size, usesClearGlass: self.usesClearGlass, glassBlurRadius: self.glassBlurRadius, transition: transition)
         }
         
         for i in 0 ..< self.itemContainers.count {

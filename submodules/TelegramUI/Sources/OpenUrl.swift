@@ -603,7 +603,11 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                     }
                 case "contact":
                     if let token = params["token"] {
-                        convertedUrl = makeTelegramUrl("/contact/\(token)")
+                        var queryItems: [URLQueryItem] = []
+                        if let noPaidMessagesToken = params["free"], !noPaidMessagesToken.isEmpty {
+                            queryItems.append(URLQueryItem(name: "free", value: noPaidMessagesToken))
+                        }
+                        convertedUrl = makeTelegramUrl("/contact/\(token)", queryItems: queryItems)
                     }
                 case "confirmphone":
                     if let phone = params["phone"], let hash = params["hash"] {

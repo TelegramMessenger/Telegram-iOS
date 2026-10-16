@@ -669,6 +669,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     }
     
     func replaceItems(items: ContextController.Items, animated: Bool?) {
+        self.actionsStackNode.usesClearGlass = items.usesClearGlass
+        self.actionsStackNode.glassBlurRadius = items.glassBlurRadius
         if case .twoLists = items.content {
             let stackItems = makeContextControllerActionsStackItem(items: items)
             self.actionsStackNode.replace(item: stackItems.first!, animated: animated)
