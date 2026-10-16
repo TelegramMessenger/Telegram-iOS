@@ -1081,6 +1081,7 @@ struct WalletStreamingPresentationOverlay {
         presentationIdByTraceId: [String: String],
         presentationIdByTransactionHash: [String: String],
         collectibleByPendingId: [String: WalletContext.Collectible] = [:],
+        giftDepositPendingIds: Set<String> = [],
         log: ((String) -> Void)? = nil
     ) -> WalletContext.State {
         let balance: WalletContext.Resource<Int64>
@@ -1104,7 +1105,7 @@ struct WalletStreamingPresentationOverlay {
             if let traceId = pending.streamingTraceId, self.traces[traceId] != nil {
                 return nil
             }
-            return walletPendingTransferTransaction(pending, collectible: collectibleByPendingId[pending.id])
+            return walletPendingTransferTransaction(pending, collectible: collectibleByPendingId[pending.id], isGiftDeposit: giftDepositPendingIds.contains(pending.id))
         }
         let streamingTransactions = self.traces.sorted(by: { $0.key < $1.key }).flatMap { traceId, trace in
             let transactions = self.transactionsWithPendingDetails(
@@ -1479,7 +1480,7 @@ func walletHistoryTransactionForPending(_ pending: WalletContext.PendingTransfer
             && !transaction.id.isEmpty
             && (transaction.status == .failed || transaction.status == .completed)
             && transaction.direction == .outgoing
-            && transaction.peer.address.map { walletEngineAddressesEqual($0, pending.recipient) } == true
+            && (transaction.peer.address.map { walletEngineAddressesEqual($0, pending.recipient) } ?? (pending.collectibleAddress != nil))
     }
     return matches.count == 1 ? matches.first : nil
 }
@@ -1813,7 +1814,7 @@ extension WalletContextImpl {
                 if let key = walletAddressMappingKey(address) {
                     peerlessAddresses.insert(key)
                 }
-            case .channel, .onramp, .unsupported:
+            case .channel, .telegramGift, .onramp, .unsupported:
                 break
             }
         }
@@ -1825,7 +1826,7 @@ extension WalletContextImpl {
             case let .address(address, _):
                 guard let key = walletAddressMappingKey(address), peerlessAddresses.contains(key) else { return nil }
                 return transaction
-            case .onramp, .unsupported:
+            case .telegramGift, .onramp, .unsupported:
                 return nil
             }
         }

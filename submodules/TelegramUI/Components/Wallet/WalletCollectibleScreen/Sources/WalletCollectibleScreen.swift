@@ -496,6 +496,8 @@ private final class WalletCollectibleContentComponent: Component {
         private let giftSubtitle = ComponentView<Empty>()
         private let giftTransferButton = ComponentView<Empty>()
         private let giftSellButton = ComponentView<Empty>()
+        private let giftApplyColorButton = ComponentView<Empty>()
+        private let giftAddToCardButton = ComponentView<Empty>()
         private let tearOffAnchor = UIView()
         private var giftSilhouetteView: UIImageView?
         private var displaysGiftHeader = false
@@ -647,6 +649,24 @@ private final class WalletCollectibleContentComponent: Component {
             }
         }
 
+        private func performStickerAction(color: Bool) {
+            guard let component = self.component, let host = component.stickerHost,
+                  let state = host.stickerMenuState(collectible: component.collectible) else {
+                return
+            }
+            let collectible = component.collectible
+            if !state.isOnCard, let sourceView = self.tearOffSourceView,
+               host.placeSticker(collectible: collectible, color: color, sourceView: sourceView) {
+                self.hideModelForFlight(host: host, collectible: collectible, sourceView: sourceView)
+                self.close()
+                return
+            }
+            self.close(completion: { [weak host] dismiss in
+                dismiss()
+                host?.performStickerAction(collectible: collectible, color: color)
+            })
+        }
+
         func closeIfDisplaying(address: String) -> Bool {
             guard self.configuredAddress == address else {
                 return false
@@ -755,19 +775,9 @@ private final class WalletCollectibleContentComponent: Component {
             items.append(.action(item))
             var stickerItems: [ContextMenuItem] = []
             if let host = component.stickerHost, let state = host.stickerMenuState(collectible: component.collectible) {
-                let collectible = component.collectible
                 let strings = environment.strings
-                let perform: (Bool) -> Void = { [weak self, weak host] color in
-                    if !state.isOnCard, let self, let host, let sourceView = self.tearOffSourceView,
-                       host.placeSticker(collectible: collectible, color: color, sourceView: sourceView) {
-                        self.hideModelForFlight(host: host, collectible: collectible, sourceView: sourceView)
-                        self.close()
-                        return
-                    }
-                    self?.close(completion: { dismiss in
-                        dismiss()
-                        host?.performStickerAction(collectible: collectible, color: color)
-                    })
+                let perform: (Bool) -> Void = { [weak self] color in
+                    self?.performStickerAction(color: color)
                 }
                 if state.canStyle || state.isStyled {
                     stickerItems.append(.action(ContextMenuActionItem(
@@ -1051,7 +1061,7 @@ private final class WalletCollectibleContentComponent: Component {
             self.displaysGiftHeader = headerGift != nil
             let giftHeaderButtonHeight: CGFloat = 58.0
             let giftHeaderButtonsBottomInset: CGFloat = 16.0
-            let giftHeaderHeight: CGFloat = 240.0 + giftHeaderButtonHeight + giftHeaderButtonsBottomInset
+            let giftHeaderHeight: CGFloat = 220.0 + giftHeaderButtonHeight + giftHeaderButtonsBottomInset
             var controlsBackground: GlassControlGroupComponent.Background = .panel
             var vibrantColor = UIColor.white.withAlphaComponent(0.6)
             var headerButtonColor = UIColor(rgb: 0xffffff, alpha: 0.1)
@@ -1173,19 +1183,32 @@ private final class WalletCollectibleContentComponent: Component {
 
                 let headerSideInset: CGFloat = 16.0
                 let headerButtonSpacing: CGFloat = 10.0
-                let headerButtonWidth = floor((availableSize.width - headerSideInset * 2.0 - headerButtonSpacing) / 2.0)
                 let headerButtonY = giftHeaderHeight - giftHeaderButtonHeight - giftHeaderButtonsBottomInset
-                let headerButtons: [(ComponentView<Empty>, String, String, () -> Void)] = [
+                var headerButtons: [(ComponentView<Empty>, String, String, () -> Void)] = [
                     (self.giftTransferButton, environment.strings.Gift_View_Header_Transfer, "Premium/Collectible/Transfer", {
                         component.openTransfer()
-                    }),
-                    (self.giftSellButton, environment.strings.Gift_View_Sell, "Premium/Collectible/Sell", {
+                    })
+                ]
+                if let stickerState = component.stickerHost?.stickerMenuState(collectible: component.collectible) {
+                    headerButtons.append((self.giftApplyColorButton, stickerState.isStyled ? environment.strings.Wallet_Collectible_Header_RemoveColor : environment.strings.Wallet_Collectible_Header_ApplyColor, "Wallet/ApplyColor", { [weak self] in
+                        self?.performStickerAction(color: true)
+                    }))
+                    headerButtons.append((self.giftAddToCardButton, stickerState.isOnCard ? environment.strings.Wallet_Collectible_Header_RemoveFromCard : environment.strings.Wallet_Collectible_Header_AddToCard, "Wallet/MoveToWallet", { [weak self] in
+                        self?.performStickerAction(color: false)
+                    }))
+                } else {
+                    headerButtons.append((self.giftSellButton, environment.strings.Gift_View_Sell, "Premium/Collectible/Sell", {
                         guard let url = walletCollectibleFragmentUrl(collectible: component.collectible) else {
                             return
                         }
                         component.openExternalUrl(url, theme)
-                    })
-                ]
+                    }))
+                }
+                for view in [self.giftSellButton, self.giftApplyColorButton, self.giftAddToCardButton] where !headerButtons.contains(where: { $0.0 === view }) {
+                    view.view?.isHidden = true
+                }
+                let headerButtonCount = CGFloat(headerButtons.count)
+                let headerButtonWidth = floor((availableSize.width - headerSideInset * 2.0 - headerButtonSpacing * (headerButtonCount - 1.0)) / headerButtonCount)
                 for (index, item) in headerButtons.enumerated() {
                     let size = item.0.update(
                         transition: transition,
@@ -1213,6 +1236,8 @@ private final class WalletCollectibleContentComponent: Component {
                 self.giftSubtitle.view?.isHidden = true
                 self.giftTransferButton.view?.isHidden = true
                 self.giftSellButton.view?.isHidden = true
+                self.giftApplyColorButton.view?.isHidden = true
+                self.giftAddToCardButton.view?.isHidden = true
                 self.transferButton.view?.isHidden = false
                 self.sellButton.view?.isHidden = false
                 let displaysCollection: Bool

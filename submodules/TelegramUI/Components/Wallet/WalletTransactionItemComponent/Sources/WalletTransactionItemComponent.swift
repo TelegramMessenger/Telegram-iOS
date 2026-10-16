@@ -787,6 +787,16 @@ public final class WalletTransactionItemComponent: Component {
                 if case let .onramp(_, _, providerName) = transaction.peer {
                     subtitleText = providerName
                 }
+                if case .telegramGift(true) = transaction.peer {
+                    switch displayedDirection {
+                    case .incoming:
+                        subtitleText = component.strings.Wallet_Transaction_MovedFromProfile
+                    case .outgoing:
+                        subtitleText = component.strings.Wallet_Transaction_MovedToProfile
+                    case .unknown:
+                        break
+                    }
+                }
             }
             if !isServiceTransaction, let peer = transaction.peer.peer {
                 avatarPeer = .transactionPeer(.peer(peer))
@@ -1078,6 +1088,8 @@ public final class WalletTransactionItemComponent: Component {
             switch transaction.peer {
             case let .user(peer, _, _), let .channel(peer, _, _):
                 peerTitle = peer.debugDisplayTitle
+            case .telegramGift:
+                peerTitle = component.strings.Wallet_Transaction_Telegram
             case let .address(address, domain):
                 if let domain = domain?.trimmingCharacters(in: .whitespacesAndNewlines), !domain.isEmpty {
                     peerTitle = domain

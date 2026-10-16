@@ -148,6 +148,8 @@ func walletTransactions(
             peer = .user(enginePeer, address: address, domain: domain)
         case let .channel(enginePeer, address, domain):
             peer = .channel(enginePeer, address: address, domain: domain)
+        case let .telegramGift(ownProfile):
+            peer = .telegramGift(ownProfile: ownProfile)
         case let .address(address, domain):
             peer = .address(address, domain: domain)
         case let .onramp(address, domain, providerName):
@@ -241,7 +243,8 @@ func mergeTransactions(
 @available(macOS 10.15, *)
 func walletPendingTransferTransaction(
     _ pending: WalletContext.PendingTransfer,
-    collectible: WalletContext.Collectible? = nil
+    collectible: WalletContext.Collectible? = nil,
+    isGiftDeposit: Bool = false
 ) -> WalletContext.Transaction? {
     let collectibleTransfer: WalletContext.Transaction.CollectibleTransfer?
     if pending.collectibleAddress != nil {
@@ -272,7 +275,7 @@ func walletPendingTransferTransaction(
         amount: -pending.amount,
         fee: pending.fee ?? 0,
         gasless: pending.gasless,
-        peer: .address(pending.recipient, domain: nil),
+        peer: isGiftDeposit ? .telegramGift(ownProfile: true) : .address(pending.recipient, domain: nil),
         comment: pending.comment,
         commentEncrypted: pending.commentEncrypted,
         collectible: collectibleTransfer,

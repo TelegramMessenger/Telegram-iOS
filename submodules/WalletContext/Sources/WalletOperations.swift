@@ -1869,7 +1869,8 @@ extension WalletContextImpl {
                 walletAddress: info.address,
                 transfer: transfer,
                 request: .send(intent),
-                allowsGasless: false
+                allowsGasless: false,
+                isGiftDeposit: true
             )
             self.removeExpiredPreparedTransfers()
             return transfer
@@ -2032,6 +2033,9 @@ extension WalletContextImpl {
             )
             if let collectible = prepared.collectible {
                 self.pendingTransferCollectibles[pending.id] = collectible
+            }
+            if record.isGiftDeposit {
+                self.pendingGiftDepositIds.insert(pending.id)
             }
             if WalletContext.useWalletTransferApi, case let .send(intent) = record.request {
                 let submission = try await self.beginWalletApiSubmission(
