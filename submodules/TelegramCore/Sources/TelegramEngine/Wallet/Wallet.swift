@@ -536,6 +536,12 @@ func _internal_getWalletUserAddresses(
                             transaction.putItemCacheEntry(id: addressCacheId, entry: entry)
                         }
                     }
+                    for address in addresses {
+                        let addressCacheId = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWalletUserAddresses, key: ValueBoxKey("address:\(address.address)"))
+                        if let entry = CodableEntry(CachedWalletUserAddresses(addresses: [address], timestamp: timestamp)) {
+                            transaction.putItemCacheEntry(id: addressCacheId, entry: entry)
+                        }
+                    }
                     return addresses
                 }
             }
