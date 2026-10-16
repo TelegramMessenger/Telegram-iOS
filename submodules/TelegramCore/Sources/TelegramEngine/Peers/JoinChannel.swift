@@ -62,12 +62,21 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
                 |> switchToLatest
             }
 
-            account.stateManager.addUpdates(updates)
             if forNews {
-                // A News-only subscription may not be reported as membership, so the participant fetch below
-                // could fail a join that succeeded. The applied updates carry the channel's new state.
-                return .single(.joined(nil))
+                // The client owns `in_news` for a while: it is stored before success is reported, and server channel
+                // objects keep it (ChannelInNewsLocalChanges), the ones in these updates and in responses to requests
+                // sent before the join alike. A News-only subscription may not be reported as membership, so the
+                // participant fetch below could fail a join that succeeded.
+                return account.postbox.transaction { transaction -> Void in
+                    _internal_storeLocalInNews(transaction: transaction, accountPeerId: account.peerId, channelId: peerId, isInNews: true)
+                }
+                |> castError(JoinChannelError.self)
+                |> map { _ -> JoinChannelResult in
+                    account.stateManager.addUpdates(updates)
+                    return .joined(nil)
+                }
             }
+            account.stateManager.addUpdates(updates)
             if hash == nil {
                 let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()
             }

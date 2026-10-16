@@ -12,11 +12,17 @@ public final class NavigationControllerTheme {
     public let statusBar: NavigationStatusBarStyle
     public let navigationBar: NavigationBarTheme
     public let emptyAreaColor: UIColor
+    /// The line between a split view's columns.
+    public let separatorColor: UIColor
+    /// A minimized app's header.
+    public let opaqueBackgroundColor: UIColor
     
-    public init(statusBar: NavigationStatusBarStyle, navigationBar: NavigationBarTheme, emptyAreaColor: UIColor) {
+    public init(statusBar: NavigationStatusBarStyle, navigationBar: NavigationBarTheme, emptyAreaColor: UIColor, separatorColor: UIColor, opaqueBackgroundColor: UIColor) {
         self.statusBar = statusBar
         self.navigationBar = navigationBar
         self.emptyAreaColor = emptyAreaColor
+        self.separatorColor = separatorColor
+        self.opaqueBackgroundColor = opaqueBackgroundColor
     }
 }
 

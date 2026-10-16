@@ -13,6 +13,7 @@ import SearchUI
 import AppBundle
 import ContextUI
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import ComponentFlow
 import SwiftUI
@@ -301,14 +302,14 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let tabsNodeIsSearch = false
         
         let title: String
-        let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
-        let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>]
+        let leftButton: NavigationBarComponent.Button?
+        let rightButtons: [NavigationBarComponent.Button]
         
         if let selectionState = self.contactListNode.selectionState {
             title = self.presentationData.strings.Contacts_SelectedContacts(Int32(selectionState.selectedPeerIndices.count))
-            leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+            leftButton = NavigationBarComponent.Button(id: "done",
                 content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
-                pressed: { [weak self] sourceView in
+                action: { [weak self] sourceView in
                     guard let self else {
                         return
                     }
@@ -316,34 +317,33 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         return nil
                     }
                 }
-            )))
+            )
             rightButtons = []
         } else {
             title = self.presentationData.strings.Contacts_Title
-            leftButton = AnyComponentWithIdentity(id: "sort", component: AnyComponent(NavigationButtonComponent(
+            leftButton = NavigationBarComponent.Button(id: "sort",
                 content: .text(title: self.presentationData.strings.Contacts_Sort, isBold: false),
-                pressed: { [weak self] sourceView in
+                action: { [weak self] sourceView in
                     guard let self else {
                         return
                     }
                     
                     self.controller?.presentSortMenu(sourceView: sourceView, gesture: nil)
                 }
-            )))
-            rightButtons = [AnyComponentWithIdentity(id: "add", component: AnyComponent(NavigationButtonComponent(
+            )
+            rightButtons = [NavigationBarComponent.Button(id: "add",
                 content: .icon(imageName: "Chat List/AddIcon"),
-                pressed: { [weak self] _ in
+                action: { [weak self] _ in
                     guard let self else {
                         return
                     }
                     self.controller?.addPressed()
                 }
-            )))]
+            )]
         }
         
         let primaryContent = ChatListHeaderComponent.Content(
             title: self.presentationData.strings.Contacts_Title,
-            navigationBackTitle: nil,
             titleComponent: nil,
             chatListTitle: NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
             leftButton: leftButton,

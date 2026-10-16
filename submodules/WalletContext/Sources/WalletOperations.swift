@@ -513,6 +513,28 @@ public extension WalletContext {
         }
     }
 
+    func prepareCollectibleDeposit(
+        collectible: Collectible,
+        address: String,
+        payload: Data,
+        amount: Int64
+    ) -> Signal<PreparedTransfer, WalletError> {
+        self.signal(
+            name: "preparing_transfer",
+            discardResult: { [impl = self.impl] prepared in
+                Task { await impl.discardPreparedTransfer(prepared) }
+            }
+        ) { impl, operationId in
+            try await impl.prepareCollectibleDeposit(
+                collectible: collectible,
+                address: address,
+                payload: payload,
+                amount: amount,
+                operationId: operationId
+            )
+        }
+    }
+
     func submitTransfer(
         _ prepared: PreparedTransfer,
         recipientPeerId: EnginePeer.Id? = nil,
@@ -1800,6 +1822,53 @@ extension WalletContextImpl {
                 walletAddress: info.address,
                 transfer: transfer,
                 request: .nft(intent)
+            )
+            self.removeExpiredPreparedTransfers()
+            return transfer
+        }
+    }
+
+    func prepareCollectibleDeposit(
+        collectible: Collectible,
+        address: String,
+        payload: Data,
+        amount: Int64,
+        operationId: UUID
+    ) async throws -> PreparedTransfer {
+        return try await self.performOperation(.preparingTransfer, operationId: operationId) {
+            guard case let .wallet(info) = self.currentState.phase, info.canSign else {
+                throw WalletError.unavailable
+            }
+            guard amount >= 0 else {
+                throw WalletError.invalidAmount
+            }
+            let destination = try WalletTransferDestination(address)
+            let body: SendMessageBody = .rawPayload(boc: payload.base64EncodedString())
+            let intent = SendIntent(
+                expiration: .engineDefault,
+                messages: [destination.message(amount: .exact(nanograms: String(amount)), body: body)]
+            )
+            let preview = try await self.runtime.previewSend(intent: intent)
+            try Task.checkCancellation()
+            guard !preview.emulation.isIncomplete else { throw WalletError.previewIncomplete }
+            guard let fee = Int64(preview.emulation.walletFeesNanograms) else { throw WalletError.previewFailed }
+            if let balance = self.currentState.balance.currentValue, amount > balance || fee > balance - amount {
+                let (required, overflow) = amount.addingReportingOverflow(fee)
+                throw WalletError.insufficientBalance(required: overflow ? Int64.max : required)
+            }
+            let transfer = PreparedTransfer(
+                id: UUID().uuidString.lowercased(),
+                recipient: destination.address,
+                amount: amount,
+                comment: nil,
+                collectible: collectible,
+                fee: fee,
+                expiresAt: Int32(clamping: preview.validUntil)
+            )
+            self.preparedTransfers[transfer.id] = PreparedEngineTransferRecord(
+                walletAddress: info.address,
+                transfer: transfer,
+                request: .send(intent)
             )
             self.removeExpiredPreparedTransfers()
             return transfer

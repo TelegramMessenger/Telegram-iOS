@@ -46,6 +46,11 @@ public class EdgeEffectView: UIView {
     public func updateColor(color: UIColor, transition: ComponentTransition) {
         transition.setBackgroundColor(view: self.contentView, color: color)
     }
+
+    /// The layer whose background colour is the effect's colour, for a caller animating it with its own keyframes.
+    public var colorLayer: CALayer {
+        return self.contentView.layer
+    }
     
     public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
         #if DEBUG && false

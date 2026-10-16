@@ -121,7 +121,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.updatedPresentationData = updatedPresentationData
         
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: style == .glass, hideSeparator: true), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme, edgeEffectColor: style == .glass ? .clear : nil), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
@@ -142,7 +142,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             }
             strongSelf.presentationData = presentationData
             
-            let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme, hideBackground: style == .glass, hideSeparator: true), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings))
+            let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme, edgeEffectColor: style == .glass ? .clear : nil), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings))
             
             strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)

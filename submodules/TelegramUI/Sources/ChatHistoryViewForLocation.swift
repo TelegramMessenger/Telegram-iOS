@@ -296,11 +296,18 @@ func chatHistoryViewForLocation(
                         if !view.entries.isEmpty {
                             let minIndex = max(0, targetIndex - count / 2)
                             let maxIndex = min(view.entries.count, targetIndex + count / 2)
-                            if minIndex == 0 && view.holeEarlier {
-                                fadeIn = true
-                                return .Loading(initialData: combinedInitialData, type: reportedGenericType)
-                            }
-                            if maxIndex == view.entries.count && view.holeLater {
+                            if (minIndex == 0 && view.holeEarlier) || (maxIndex == view.entries.count && view.holeLater) {
+                                // The view is loaded around the post, but holes reach into the window, so it
+                                // cannot be shown yet: a joined channel's history, which the update stream fills
+                                // from the top, opened at an older feed post. The cached post is shown as for a
+                                // post inside a hole, pinned, until the window is complete.
+                                if cachedAnchor, let anchorOnly = view.anchorOnlyWhileLoading(), case let .message(anchorIndex) = anchorOnly.anchorIndex {
+                                    if pinnedCachedAnchor {
+                                        return .HistoryView(view: anchorOnly, type: reportedGenericType, scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
+                                    }
+                                    pinnedCachedAnchor = true
+                                    return .HistoryView(view: anchorOnly, type: .Initial(fadeIn: false), scrollPosition: .pinnedAnchor(index: anchorIndex), flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
+                                }
                                 fadeIn = true
                                 return .Loading(initialData: combinedInitialData, type: reportedGenericType)
                             }

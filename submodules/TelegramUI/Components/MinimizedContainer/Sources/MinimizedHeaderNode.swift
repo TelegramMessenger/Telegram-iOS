@@ -86,7 +86,7 @@ private class BackgroundView: UIView {
 final class MinimizedHeaderNode: ASDisplayNode {
     var theme: NavigationControllerTheme {
         didSet {
-            self.backgroundView.backgroundColor = self.theme.navigationBar.opaqueBackgroundColor
+            self.backgroundView.backgroundColor = self.theme.opaqueBackgroundColor
             self.progressView.backgroundColor = self.theme.navigationBar.primaryTextColor.withAlphaComponent(0.06)
             self.iconView.tintColor = self.theme.navigationBar.primaryTextColor
         }
@@ -197,7 +197,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.strings = strings
         
         self.backgroundView.clipsToBounds = true
-        self.backgroundView.backgroundColor = theme.navigationBar.opaqueBackgroundColor
+        self.backgroundView.backgroundColor = theme.opaqueBackgroundColor
         self.backgroundView.layer.cornerRadius = 25.0
         if #available(iOS 11.0, *) {
             self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]

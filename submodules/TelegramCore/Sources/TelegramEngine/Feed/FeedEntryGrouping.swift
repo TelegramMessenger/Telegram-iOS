@@ -10,6 +10,8 @@ struct FeedPageMessage: Equatable {
 
 enum ForYouBatchElement: Equatable {
     case message(FeedPageMessage)
+    /// One server item holding several messages (`feedItemMessageGroup`): one entry, whatever their grouping keys.
+    case group([FeedPageMessage])
     case interests
 }
 
@@ -33,7 +35,8 @@ private func makeFeedEntry(messages: [FeedPageMessage], groupingKey: Int64?) -> 
 }
 
 /// Builds items from one batch in the order given: an album's messages (same peer and grouping key) join
-/// the entry of its first message; repeated message ids are skipped.
+/// the entry of its first message, a server group is one entry and joins the entry of any of its messages or
+/// albums already placed; repeated message ids are skipped.
 func forYouItems(from batch: [ForYouBatchElement]) -> [EngineForYouItem] {
     enum Slot {
         case interests
@@ -42,25 +45,49 @@ func forYouItems(from batch: [ForYouBatchElement]) -> [EngineForYouItem] {
     var slots: [Slot] = []
     var groups: [(groupingKey: Int64?, messages: [FeedPageMessage])] = []
     var albumIndex: [FeedAlbumKey: Int] = [:]
-    var seenIds = Set<MessageId>()
+    var messageIndex: [MessageId: Int] = [:]
+    func albumKey(_ message: FeedPageMessage) -> FeedAlbumKey? {
+        return message.groupingKey.map { FeedAlbumKey(peerId: message.id.peerId, groupingKey: $0) }
+    }
     for element in batch {
+        let messages: [FeedPageMessage]
         switch element {
         case .interests:
             slots.append(.interests)
+            continue
         case let .message(message):
-            if !seenIds.insert(message.id).inserted {
-                continue
+            messages = [message]
+        case let .group(groupMessages):
+            messages = groupMessages
+        }
+        // The entry this element joins: the one holding one of its messages, else one of its albums.
+        var index = messages.lazy.compactMap { messageIndex[$0.id] }.first
+        if index == nil {
+            index = messages.lazy.compactMap { albumKey($0).flatMap { albumIndex[$0] } }.first
+        }
+        let newMessages = messages.filter { messageIndex[$0.id] == nil }
+        if newMessages.isEmpty {
+            continue
+        }
+        let target: Int
+        if let index {
+            target = index
+        } else {
+            target = groups.count
+            slots.append(.group(target))
+            groups.append((messages.lazy.compactMap(\.groupingKey).first, []))
+        }
+        for message in newMessages {
+            if messageIndex[message.id] == nil {
+                messageIndex[message.id] = target
+                groups[target].messages.append(message)
             }
-            if let groupingKey = message.groupingKey {
-                let key = FeedAlbumKey(peerId: message.id.peerId, groupingKey: groupingKey)
-                if let index = albumIndex[key] {
-                    groups[index].messages.append(message)
-                    continue
-                }
-                albumIndex[key] = groups.count
+            if let key = albumKey(message), albumIndex[key] == nil {
+                albumIndex[key] = target
             }
-            slots.append(.group(groups.count))
-            groups.append((message.groupingKey, [message]))
+        }
+        if groups[target].groupingKey == nil {
+            groups[target].groupingKey = newMessages.lazy.compactMap(\.groupingKey).first
         }
     }
     return slots.map { slot -> EngineForYouItem in

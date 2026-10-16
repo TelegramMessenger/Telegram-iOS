@@ -5,8 +5,6 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
-import SideColumnLayout
-import SideColumnBarButtons
 
 public enum ItemListNavigationButtonStyle {
     case regular
@@ -110,11 +108,6 @@ public struct ItemListControllerState {
 }
 
 open class ItemListController: ViewController, KeyShortcutResponder, PresentableController {
-    /// iPhone Duo: this screen lays out its own side column, back button included.
-    override open var placesNavigationButtonInSideColumn: Bool {
-        return false
-    }
-    
     var controllerNode: ItemListControllerNode {
         return (self.displayNode as! ItemListControllerNode)
     }
@@ -129,12 +122,9 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     private var segmentedTitleView: ItemListControllerSegmentedTitleView?
     private var tabsNavigationContentNode: ItemListControllerTabsContentNode?
     
-    // iPhone Duo: the bar's buttons as built from the state, in the bar's order; the bar gets the top row's
-    // share while the side column shows the rest (docs/iphone-duo-layout.md).
+    // The bar's buttons as built from the state.
     private var fullLeftBarButtonItem: UIBarButtonItem?
     private var fullRightBarButtonItems: [UIBarButtonItem] = []
-    private var sideColumnLeftButton: ItemListNavigationButton?
-    private var sideColumnRightButtons: [ItemListNavigationButton] = []
     
     private var presentationData: ItemListPresentationData
     private let hideNavigationBarBackground: Bool
@@ -297,7 +287,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         self.presentationData = presentationData
         self.hideNavigationBarBackground = hideNavigationBarBackground
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideNavigationBarBackground, hideSeparator: hideNavigationBarBackground, style: .glass), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         
         self.isOpaqueWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
@@ -409,7 +399,6 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                     if let validLayout = strongSelf.validLayout {
                                         strongSelf.updateNavigationBarLayout(validLayout, transition: .immediate)
                                     }
-                                    strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                                 }
                                 if strongSelf.isNodeLoaded {
                                     strongSelf.controllerNode.panTransitionFractionChanged = { [weak self] transitionFraction in
@@ -431,8 +420,6 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         }
                     }
                     strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action, secondaryRight: controllerState.secondaryRightNavigationButton?.action)
-                    strongSelf.sideColumnLeftButton = controllerState.leftNavigationButton
-                    strongSelf.sideColumnRightButtons = [controllerState.secondaryRightNavigationButton, controllerState.rightNavigationButton].compactMap { $0 }
                                         
                     let themeUpdated = strongSelf.presentationData != controllerState.presentationData
                     if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style || themeUpdated {
@@ -575,7 +562,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                     if strongSelf.presentationData != controllerState.presentationData || isFirstTime {
                         strongSelf.presentationData = controllerState.presentationData
                         
-                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme, hideBackground: strongSelf.hideNavigationBarBackground, hideSeparator: strongSelf.hideNavigationBarBackground, edgeEffectColor: state.0.style == .blocks ? strongSelf.presentationData.theme.list.blocksBackgroundColor : strongSelf.presentationData.theme.list.plainBackgroundColor, style: .glass), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)), transition: .immediate)
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme, edgeEffectColor: state.0.style == .blocks ? strongSelf.presentationData.theme.list.blocksBackgroundColor : strongSelf.presentationData.theme.list.plainBackgroundColor), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)), transition: .immediate)
                         strongSelf.statusBar.updateStatusBarStyle(strongSelf.presentationData.theme.rootController.statusBarStyle.style, animated: true)
                         
                         strongSelf.segmentedTitleView?.theme = controllerState.presentationData.theme
@@ -593,7 +580,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         strongSelf.fullRightBarButtonItems = items
                     }
                     
-                    strongSelf.updateNavigationButtonPlacement(isLayout: false, transition: .immediate)
+                    strongSelf.applyNavigationButtons(animated: !isFirstTime)
                 }
             }
         }
@@ -626,24 +613,13 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
-        // iPhone Duo: the bar's buttons are split before the bar lays out.
-        self.updateNavigationButtonPlacement(isLayout: true, transition: transition)
         
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.controllerNode.navigationBarSideColumn = self.navigationBarSideColumnExtent(layout: layout)
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, transition: transition, additionalInsets: self.additionalInsets)
     }
 
-    // The navigation container sets this (after the bar's) just before a pushed screen lays out, so the
-    // column's back circle is there from the first frame.
-    override open var previousItem: NavigationPreviousAction? {
-        didSet {
-            if self.previousItem != oldValue {
-                self.updateNavigationButtonPlacement(isLayout: false, transition: .immediate)
-            }
-        }
-    }
-    
     @objc func leftNavigationButtonPressed() {
         self.navigationButtonActions.left?()
     }
@@ -656,139 +632,15 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         self.navigationButtonActions.secondaryRight?()
     }
     
-    // MARK: - iPhone Duo side column
-    
-    private final func currentSideColumnRegion(layout: ContainerViewLayout) -> SideColumnRegion? {
-        if layout.presentedInFormSheet {
-            return nil
-        }
-        return sideColumnRegion(layout: layout, minY: (layout.statusBarHeight ?? 0.0) + 8.0, reservedBelow: (self.parent as? TabBarController)?.verticalTabBarFrame(for: layout))
-    }
-    
-    private final var sideColumnNavigation: SideColumnBarNavigation {
-        switch self.previousItem {
-        case .none:
-            return .none
-        case .close?:
-            return .close
-        case .item?:
-            return .back
-        }
-    }
-    
-    /// The column for the current buttons and layout, or nil (no strip, nothing to move, or no fit).
-    private final func currentSideColumn() -> ItemListSideColumn? {
-        guard let layout = self.validLayout, let region = self.currentSideColumnRegion(layout: layout) else {
-            return nil
-        }
-        // Primary first: the bar keeps the secondary button before the primary one.
-        let right = Array(self.sideColumnRightButtons.reversed())
-        guard let split = sideColumnBarSplit(navigation: self.sideColumnNavigation, left: self.sideColumnLeftButton.map(itemListSideColumnKind), right: right.map(itemListSideColumnKind)) else {
-            return nil
-        }
-        let top = split.top.flatMap { self.sideColumnItem($0, right: right) }
-        let capsule = split.capsule.compactMap { self.sideColumnItem($0, right: right) }
-        let confirm = split.confirm.flatMap { self.sideColumnItem($0, right: right) }
-        guard let itemsLayout = sideColumnItemsLayout(regionLength: region.frame.height, hasBack: top != nil, priorities: capsule.map { _ -> Int? in nil }, hasTrailingCircle: confirm != nil) else {
-            return nil
-        }
-        return ItemListSideColumn(region: region, split: split, itemsLayout: itemsLayout, top: top, capsule: capsule, confirm: confirm, theme: self.presentationData.theme, strings: self.presentationData.strings)
-    }
-    
-    private final func sideColumnItem(_ entry: SideColumnBarEntry, right: [ItemListNavigationButton]) -> SideColumnBarButtonsItem? {
-        switch entry {
-        case .navigation:
-            let action: () -> Void = { [weak self] in
-                self?.navigationBar?.backPressed()
-            }
-            if case .close = self.sideColumnNavigation {
-                return .close(action: action)
-            }
-            return .back(action: action)
-        case .left:
-            guard let button = self.sideColumnLeftButton else {
-                return nil
-            }
-            return self.sideColumnItem(button: button, action: { [weak self] in
-                self?.navigationButtonActions.left?()
-            })
-        case let .right(index):
-            guard index < right.count else {
-                return nil
-            }
-            // `right` is primary first, so with two buttons the second is the secondary one.
-            let isSecondary = right.count > 1 && index == 1
-            return self.sideColumnItem(button: right[index], action: { [weak self] in
-                if isSecondary {
-                    self?.navigationButtonActions.secondaryRight?()
-                } else {
-                    self?.navigationButtonActions.right?()
-                }
-            })
-        }
-    }
-    
-    private final func sideColumnItem(button: ItemListNavigationButton, action: @escaping () -> Void) -> SideColumnBarButtonsItem? {
-        let theme = self.presentationData.theme
-        switch button.content {
-        case .none, .text:
-            return nil
-        case let .icon(icon):
-            switch icon {
-            case .close:
-                return .close(action: action)
-            case .done:
-                var isActivity = false
-                if case .activity = button.style {
-                    isActivity = true
-                }
-                return .confirm(isEnabled: button.enabled, isActivity: isActivity, action: action)
-            case .search:
-                return .icon(image: PresentationResourcesRootController.navigationCompactSearchIcon(theme), accessibilityLabel: self.presentationData.strings.Common_Search, isEnabled: button.enabled, action: action)
-            case .add:
-                return .icon(image: PresentationResourcesRootController.navigationAddIcon(theme), accessibilityLabel: nil, isEnabled: button.enabled, action: action)
-            case .action:
-                return .icon(image: PresentationResourcesRootController.navigationShareIcon(theme), accessibilityLabel: nil, isEnabled: button.enabled, action: action)
-            }
-        case let .node(node):
-            return .node(node, isEnabled: button.enabled, action: action)
-        }
-    }
-    
-    /// iPhone Duo: splits the bar's buttons between the top row and the side column, gives the bar its
-    /// share and the node the column. Without a strip, or when the column does not fit, the bar gets every
-    /// button. Outside a layout pass the node lays the column out at once.
-    private final func updateNavigationButtonPlacement(isLayout: Bool, transition: ContainedViewLayoutTransition) {
-        let column = self.currentSideColumn()
-        let leftItem: UIBarButtonItem?
-        let rightItems: [UIBarButtonItem]
-        let hidesBackButton: Bool
-        if let column {
-            leftItem = column.split.keepsLeftInTopRow ? self.fullLeftBarButtonItem : nil
-            // The split's right indices are primary first; the bar's items are secondary first.
-            let count = self.fullRightBarButtonItems.count
-            let topRowBarIndices = Set(column.split.topRowRightIndices.map { count - 1 - $0 })
-            rightItems = self.fullRightBarButtonItems.enumerated().filter { topRowBarIndices.contains($0.offset) }.map { $0.element }
-            hidesBackButton = !column.split.keepsLeftInTopRow
-        } else {
-            leftItem = self.fullLeftBarButtonItem
-            rightItems = self.fullRightBarButtonItems
-            hidesBackButton = false
-        }
-        if self.navigationItem.leftBarButtonItem !== leftItem {
-            self.navigationItem.setLeftBarButton(leftItem, animated: false)
+    /// Gives the bar the buttons built from the state. Changes after the first state animate (Edit <-> Done, a
+    /// Cancel replacing the back button), as UIKit's edit button does: the bar runs iOS 27's capsule animation.
+    private final func applyNavigationButtons(animated: Bool) {
+        if self.navigationItem.leftBarButtonItem !== self.fullLeftBarButtonItem {
+            self.navigationItem.setLeftBarButton(self.fullLeftBarButtonItem, animated: animated)
         }
         let currentRightItems = self.navigationItem.rightBarButtonItems ?? []
-        if currentRightItems.count != rightItems.count || zip(currentRightItems, rightItems).contains(where: { $0 !== $1 }) {
-            self.navigationItem.setRightBarButtonItems(rightItems, animated: false)
-        }
-        self.navigationBar?.hidesBackButton = hidesBackButton
-        guard self.isNodeLoaded else {
-            return
-        }
-        self.controllerNode.sideColumn = column
-        if !isLayout {
-            self.controllerNode.updateSideColumnView(transition: transition)
+        if currentRightItems.count != self.fullRightBarButtonItems.count || zip(currentRightItems, self.fullRightBarButtonItems).contains(where: { $0 !== $1 }) {
+            self.navigationItem.setRightBarButtonItems(self.fullRightBarButtonItems, animated: animated)
         }
     }
     
@@ -885,27 +737,6 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                 _ = self?.navigationBar?.executeBack()
             }
         })]
-    }
-}
-
-/// What an ItemList bar button is, for iPhone Duo's side column.
-private func itemListSideColumnKind(_ button: ItemListNavigationButton) -> SideColumnBarButtonKind {
-    switch button.content {
-    case .none:
-        return .spacer
-    case .text:
-        return .text
-    case let .icon(icon):
-        switch icon {
-        case .close:
-            return .close
-        case .done:
-            return .confirm
-        case .search, .add, .action:
-            return .icon
-        }
-    case .node:
-        return .icon
     }
 }
 

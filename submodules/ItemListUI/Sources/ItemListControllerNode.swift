@@ -9,7 +9,6 @@ import MergeLists
 import ComponentFlow
 import GlassControls
 import SideColumnLayout
-import SideColumnBarButtons
 
 public protocol ItemListHeaderItemNode: AnyObject {
     func updateTheme(theme: PresentationTheme)
@@ -149,25 +148,6 @@ private struct ItemListNodeTransition {
     let scrollEnabled: Bool
 }
 
-/// iPhone Duo: the side column an `ItemListController` hands its node
-/// (docs/iphone-duo-layout.md).
-struct ItemListSideColumn {
-    let region: SideColumnRegion
-    let split: SideColumnBarSplit
-    let itemsLayout: SideColumnItemsLayout
-    let top: SideColumnBarButtonsItem?
-    let capsule: [SideColumnBarButtonsItem]
-    let confirm: SideColumnBarButtonsItem?
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    
-    /// The column's lowest point, in the layout's coordinates.
-    var maxY: CGFloat {
-        let bottoms = [self.itemsLayout.backFrame?.maxY, self.itemsLayout.capsuleFrame?.maxY, self.itemsLayout.trailingFrame?.maxY].compactMap { $0 }
-        return self.region.frame.minY + (bottoms.max() ?? 0.0)
-    }
-}
-
 public final class ItemListNodeState {
     let presentationData: ItemListPresentationData
     let entries: [ItemListNodeAnyEntry]
@@ -293,10 +273,8 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var footerItem: ItemListControllerFooterItem?
     private var footerItemNode: ItemListControllerFooterItemNode?
     
-    /// iPhone Duo: the column the controller computed (nil without one), laid out by `updateSideColumnView`.
-    var sideColumn: ItemListSideColumn?
-    private var sideColumnView: SideColumnBarButtonsView?
-    private var appliedSideColumnRegion: SideColumnRegion?
+    /// iPhone Duo: the bar's side column, which the bottom panels keep clear of (nil without one).
+    var navigationBarSideColumn: NavigationBarSideColumnExtent?
     private var lastFooterHeight: CGFloat = 0.0
     
     private let transitionDisposable = MetaDisposable()
@@ -411,9 +389,11 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             strongSelf.contentOffsetChanged?(offset, inVoiceOver)
             
+            var hasExpansionContentNode = false
             if let navigationContentNode = strongSelf.navigationBar.contentNode, case .expansion = navigationContentNode.mode {
-                strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
-            } else {
+                hasExpansionContentNode = true
+            }
+            if !hasExpansionContentNode, let headerItemNode = strongSelf.headerItemNode {
                 var previousContentOffsetValue: CGFloat?
                 if let previousContentOffset = strongSelf.previousContentOffset {
                     if case let .known(value) = previousContentOffset {
@@ -430,19 +410,9 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     } else {
                         transition = .immediate
                     }
-                    if let headerItemNode = strongSelf.headerItemNode {
-                        headerItemNode.updateContentOffset(value, transition: transition)
-                        strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
-                    } else {
-                        strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
-                    }
+                    headerItemNode.updateContentOffset(value, transition: transition)
                 case .unknown, .none:
-                    if let headerItemNode = strongSelf.headerItemNode {
-                        headerItemNode.updateContentOffset(1000.0, transition: .immediate)
-                        strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
-                    } else {
-                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
-                    }
+                    headerItemNode.updateContentOffset(1000.0, transition: .immediate)
                 }
             }
             
@@ -509,7 +479,6 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     override open func didLoad() {
         super.didLoad()
         
-        self.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
         
         (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
             guard let strongSelf = self else {
@@ -691,7 +660,7 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     
     /// The side column's edge and lowest point, for the bottom panels' band rule.
     private var sideColumnExtent: (edge: ContainerViewLayoutSideEdge, maxY: CGFloat)? {
-        return self.sideColumn.map { (edge: $0.region.edge, maxY: $0.maxY) }
+        return self.navigationBarSideColumn.map { (edge: $0.edge, maxY: $0.frame.maxY) }
     }
     
     /// The toolbar's extra side insets beside a side strip (iPhone Duo): the band rule on a side with a
@@ -732,52 +701,6 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: listInsets.left, height: height)
             self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: 0.0, width: listInsets.right, height: height)
         }
-    }
-    
-    /// Places the side column at its region, fading it on a rotation or a change of side; hidden while the
-    /// screen's search has the bar.
-    final func updateSideColumnView(transition: ContainedViewLayoutTransition) {
-        let region = self.sideColumn?.region
-        let change = sideColumnPlacementChange(from: self.appliedSideColumnRegion, to: region)
-        self.appliedSideColumnRegion = region
-        if region == nil && self.sideColumnView == nil {
-            return
-        }
-        let sideColumnView: SideColumnBarButtonsView
-        if let current = self.sideColumnView {
-            sideColumnView = current
-        } else {
-            sideColumnView = SideColumnBarButtonsView(frame: CGRect())
-            sideColumnView.alpha = 0.0
-            self.sideColumnView = sideColumnView
-            self.view.addSubview(sideColumnView)
-        }
-        if let column = self.sideColumn {
-            var frameTransition = transition
-            switch change {
-            case .appear:
-                frameTransition = .immediate
-            case .move:
-                // A rotation or the strip switching sides: fade instead of flying across the list.
-                frameTransition = .immediate
-                if case let .animated(duration, _) = transition, sideColumnView.alpha > 0.0, let snapshotView = sideColumnView.snapshotView(afterScreenUpdates: false) {
-                    snapshotView.frame = sideColumnView.frame
-                    snapshotView.isUserInteractionEnabled = false
-                    self.view.insertSubview(snapshotView, aboveSubview: sideColumnView)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                    sideColumnView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5, delay: duration * 0.5)
-                }
-            case .none, .disappear, .animate:
-                break
-            }
-            frameTransition.updateFrame(view: sideColumnView, frame: column.region.frame)
-            sideColumnView.update(size: column.region.frame.size, top: column.top, capsule: column.capsule, confirm: column.confirm, layout: column.itemsLayout, theme: column.theme, strings: column.strings, transition: frameTransition)
-        }
-        let isVisible = self.sideColumn != nil && self.searchNode == nil
-        transition.updateAlpha(layer: sideColumnView.layer, alpha: isVisible ? 1.0 : 0.0)
-        sideColumnView.isUserInteractionEnabled = isVisible
     }
     
     open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
@@ -995,7 +918,6 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             
             searchNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
-        self.updateSideColumnView(transition: transition)
                 
         let dequeue = self.validLayout == nil
         self.validLayout = (layout, navigationBarHeight, additionalInsets)
@@ -1168,7 +1090,6 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         self.navigationBar.setContentNode(nil, animated: true)
                     }
                 }
-                self.updateSideColumnView(transition: .animated(duration: 0.2, curve: .easeInOut))
             }
             
             self.listNode.accessibilityPageScrolledString = { row, count in

@@ -130,7 +130,7 @@ public final class CallListController: TelegramBaseController {
         
         self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], selectedIndex: 0)
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.tabBarItemContextActionType = .always
         
@@ -230,7 +230,7 @@ public final class CallListController: TelegramBaseController {
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         
         if self.isNodeLoaded {
             self.controllerNode.updateThemeAndStrings(presentationData: self.presentationData)
@@ -437,7 +437,6 @@ public final class CallListController: TelegramBaseController {
         
         if case .navigation = self.mode {
             self.controllerNode.navigationBar = self.navigationBar
-            self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
         
         self.controllerNode.startNewCall = { [weak self] in

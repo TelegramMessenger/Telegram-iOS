@@ -6405,6 +6405,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         return false
     }
     
+    /// Has its own header: the bar takes no part in a navigation transition.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        return nil
+    }
+    
     let context: AccountContext
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let peerId: EnginePeer.Id
@@ -6573,12 +6578,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 buttonColor: .white,
                 disabledButtonColor: .white,
                 primaryTextColor: .white,
-                backgroundColor: .clear,
-                enableBackgroundBlur: false,
-                separatorColor: .clear,
                 badgeBackgroundColor: baseNavigationBarPresentationData.theme.badgeBackgroundColor,
-                badgeStrokeColor: baseNavigationBarPresentationData.theme.badgeStrokeColor,
                 badgeTextColor: baseNavigationBarPresentationData.theme.badgeTextColor,
+                edgeEffectColor: .clear,
                 accentButtonColor: baseNavigationBarPresentationData.theme.accentButtonColor,
                 accentDisabledButtonColor: baseNavigationBarPresentationData.theme.accentDisabledButtonColor,
                 accentForegroundColor: baseNavigationBarPresentationData.theme.accentForegroundColor
@@ -6756,11 +6758,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         }
            
-        if self.chatLocation.peerId != nil {
-            self.navigationBar?.makeCustomTransitionNode = { _, _ in
-                return nil
-            }
-        }
         
         self.scrollToTop = { [weak self] in
             self?.controllerNode.scrollToTop()
@@ -7121,32 +7118,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         
         DispatchQueue.main.async { [weak self] in
             self?.didAppear = true
-        }
-        
-        var chatNavigationStack: [ChatNavigationStackItem] = []
-        if !self.isSettings, let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
-            chatNavigationStack.removeAll()
-            chatNavigationStack = summary.peerNavigationItems.filter({ $0 != ChatNavigationStackItem(peerId: self.peerId, threadId: self.chatLocation.threadId) })
-        }
-        
-        if !chatNavigationStack.isEmpty, let backButtonNode = self.navigationBar?.backButtonNode as? ContextControllerSourceNode {
-            backButtonNode.isGestureEnabled = true
-            backButtonNode.activated = { [weak self] gesture, _ in
-                guard let strongSelf = self, let backButtonNode = strongSelf.navigationBar?.backButtonNode, let navigationController = strongSelf.navigationController as? NavigationController else {
-                    gesture.cancel()
-                    return
-                }
-                
-                PeerInfoScreenImpl.displayChatNavigationMenu(
-                    context: strongSelf.context,
-                    chatNavigationStack: chatNavigationStack,
-                    nextFolderId: nil,
-                    parentController: strongSelf,
-                    backButtonView: backButtonNode.view,
-                    navigationController: navigationController,
-                    gesture: gesture
-                )
-            }
         }
         
         self.controllerNode.refreshHasPersonalChannelsIfNeeded()

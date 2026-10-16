@@ -182,7 +182,6 @@ public class PremiumLimitsListScreen: ViewController {
             
             self.pagerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.pagerTapGesture(_:))))
             
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

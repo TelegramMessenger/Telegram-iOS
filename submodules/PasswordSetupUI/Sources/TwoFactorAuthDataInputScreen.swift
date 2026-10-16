@@ -72,9 +72,9 @@ public final class TwoFactorDataInputScreen: ViewController {
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
-        let navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, enableBackgroundBlur: false, hideBackground: true, edgeEffectColor: .clear, style: .glass)
+        let navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, edgeEffectColor: .clear)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close, more: self.presentationData.strings.Common_More)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = presentation

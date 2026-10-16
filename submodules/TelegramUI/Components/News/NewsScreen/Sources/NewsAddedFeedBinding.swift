@@ -120,7 +120,8 @@ final class NewsAddedFeedBinding {
         self.feed.loadNewer(force: true)
     }
 
-    /// The drop landed: the held-back posts become rows, marked fresh. A later reveal replaces these marks.
+    /// The refresh's result may be shown: the held-back posts become rows, marked fresh. A later reveal replaces these
+    /// marks.
     func revealPullRefresh(now: Double) {
         guard !self.heldBack.isEmpty else {
             return

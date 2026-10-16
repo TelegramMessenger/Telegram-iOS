@@ -40,7 +40,7 @@ public final class PermissionController: ViewController {
 //        if splashScreen {
 //            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(overallDarkAppearance: self.presentationData.theme.overallDarkAppearance, buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear, style: .glass), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
 //        } else {
-        let navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, style: .glass)
+        let navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
 //        }
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
@@ -92,7 +92,7 @@ public final class PermissionController: ViewController {
 //        if self.splashScreen {
 //            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(overallDarkAppearance: self.presentationData.theme.overallDarkAppearance, buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
 //        } else {
-        let navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, style: .glass)
+        let navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
 //        }
         
         self.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
@@ -205,7 +205,6 @@ public final class PermissionController: ViewController {
         self.displayNode = PermissionControllerNode(context: self.context, splitTest: self.splitTest)
         self.displayNodeDidLoad()
         
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.controllerNode.allow = { [weak self] in
             self?.allow?()

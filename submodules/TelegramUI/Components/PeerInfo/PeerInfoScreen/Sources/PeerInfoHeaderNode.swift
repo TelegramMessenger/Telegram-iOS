@@ -1157,21 +1157,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
         self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
-        if let navigationBar = self.controller?.navigationBar {
-            if let mainContentNode = navigationBar.backButtonNode.mainContentNode {
-                navigationTransition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
-            }
-            navigationTransition.updateTintColor(layer: navigationBar.backButtonArrow.layer, color: navigationContentsAccentColor)
-            
-            if let mainContentNode = navigationBar.leftButtonNode.mainContentNode {
-                navigationTransition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
-            }
-            
-            navigationBar.rightButtonNode.contentsColor = navigationContentsAccentColor
-            navigationBar.leftButtonNode.contentsColor = navigationContentsAccentColor
-            navigationBar.backButtonNode.contentsColor = navigationContentsAccentColor
-        }
-        
         var titleBrightness: CGFloat = 0.0
         navigationContentsPrimaryColor.getHue(nil, saturation: nil, brightness: &titleBrightness, alpha: nil)
         if isSearching {

@@ -373,12 +373,6 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 transition.setScale(view: titleView, scale: titleScale)
             }
             
-            let navigationAlpha: CGFloat = titleTransformFraction
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
-            
             let bottomPanelAlphaDistance: CGFloat = 20.0
             let bottomPanelDistance: CGFloat = self.scrollView.contentSize.height - self.scrollView.bounds.maxY
             let bottomPanelAlphaFraction: CGFloat = max(0.0, min(1.0, bottomPanelDistance / bottomPanelAlphaDistance))

@@ -58,6 +58,8 @@ func parseFeedMessages(_ result: Api.feed.FeedMessages) -> ParsedFeedMessages {
 
 enum ParsedForYouElement {
     case message(Api.Message)
+    /// Messages the server hands out as one item: a whole album.
+    case messageGroup([Api.Message])
     case interests
 }
 
@@ -75,12 +77,38 @@ func parseForYouFeed(_ result: Api.feed.ForYouFeed) -> ParsedForYouFeed {
             switch item {
             case let .feedItemMessage(itemData):
                 return .message(itemData.message)
+            case let .feedItemMessageGroup(itemData):
+                return .messageGroup(itemData.messages)
             case .feedItemInterestCategories:
                 return .interests
             }
         }
         return ParsedForYouFeed(elements: elements, chats: data.chats, users: data.users)
     }
+}
+
+/// The batch in server order, as stored: a message that was not stored is left out, and a group keeps the
+/// messages that were (none left drops it).
+func forYouBatchElements(_ elements: [ParsedForYouElement], storedById: [MessageId: FeedPageMessage]) -> [ForYouBatchElement] {
+    var batch: [ForYouBatchElement] = []
+    for element in elements {
+        switch element {
+        case .interests:
+            batch.append(.interests)
+        case let .message(message):
+            if let id = message.id(), let storedMessage = storedById[id] {
+                batch.append(.message(storedMessage))
+            }
+        case let .messageGroup(messages):
+            let storedMessages = messages.compactMap { message -> FeedPageMessage? in
+                return message.id().flatMap { storedById[$0] }
+            }
+            if !storedMessages.isEmpty {
+                batch.append(.group(storedMessages))
+            }
+        }
+    }
+    return batch
 }
 
 /// nil for `interestCategoriesNotModified`.

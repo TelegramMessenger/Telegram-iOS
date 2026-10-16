@@ -30,6 +30,14 @@ public final class NewsScreen: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
 
+    /// News draws its own header (no Display bar); its top row takes part in navigation transitions as a bar.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return self.newsNode.headerView
+    }
+
     private var newsNode: NewsScreenNode {
         return self.displayNode as! NewsScreenNode
     }

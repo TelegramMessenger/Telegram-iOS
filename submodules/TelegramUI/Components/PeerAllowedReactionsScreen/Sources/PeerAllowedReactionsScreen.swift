@@ -231,12 +231,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
         }
         
         private func updateScrolling(transition: ComponentTransition) {
-            let navigationAlphaDistance: CGFloat = 16.0
-            let navigationAlpha: CGFloat = max(0.0, min(1.0, self.scrollView.contentOffset.y / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
         }
         
         private func applySettings(standalone: Bool) {

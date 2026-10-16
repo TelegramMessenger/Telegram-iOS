@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/ChatTimerScreen",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/TelegramUI/Components/NavigationBarComponent",
         "//submodules/AttachmentUI",
         "//submodules/SearchBarNode",
         "//submodules/TextFormat",

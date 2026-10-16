@@ -126,9 +126,9 @@ public class LanguageSelectionScreen: ViewController {
                         } else {
                             transition = .immediate
                         }
-                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
+                        strongSelf.navigationBar?.setBackdropAlpha(min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
                     case .unknown, .none:
-                        strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                        strongSelf.navigationBar?.setBackdropAlpha(1.0, transition: .immediate)
                 }
                 
                 strongSelf.previousContentOffset = offset
@@ -143,7 +143,7 @@ public class LanguageSelectionScreen: ViewController {
         
         self._ready.set(self.controllerNode._ready.get())
         
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
         
         self.displayNodeDidLoad()
     }

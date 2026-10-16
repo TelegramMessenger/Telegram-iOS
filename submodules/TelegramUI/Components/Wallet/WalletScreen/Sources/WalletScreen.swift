@@ -9,7 +9,7 @@ import TelegramStringFormatting
 import TextFormat
 import ComponentFlow
 import ViewControllerComponent
-import ChatListHeaderComponent
+import NavigationBarComponent
 import BundleIconComponent
 import QrCodeUI
 import ContextUI
@@ -2929,68 +2929,49 @@ private final class WalletScreenComponent: Component {
         ) -> (originY: CGFloat, size: CGSize) {
             // iPhone Duo: the controller shows back in the side strip instead (WalletScreen.containerLayoutUpdated).
             let backButtonInSideColumn = (environment.controller() as? WalletScreen)?.backButtonInSideColumn ?? false
-            let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>? = backButtonInSideColumn ? nil : AnyComponentWithIdentity(
+            let leftButton: NavigationBarComponent.Button? = backButtonInSideColumn ? nil : NavigationBarComponent.Button(
                 id: "back",
-                component: AnyComponent(NavigationButtonComponent(
-                    content: .icon(imageName: environment.metrics.widthClass == .regular ? "Navigation/Close" : "Navigation/Back"),
-                    pressed: { [weak self] _ in
-                        self?.dismiss()
-                    }
-                ))
+                content: .icon(imageName: environment.metrics.widthClass == .regular ? "Navigation/Close" : "Navigation/Back"),
+                action: { [weak self] _ in
+                    self?.dismiss()
+                }
             )
-            let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = [
-                AnyComponentWithIdentity(
+            let rightButtons: [NavigationBarComponent.Button] = [
+                NavigationBarComponent.Button(
                     id: "more",
-                    component: AnyComponent(NavigationButtonComponent(
-                        content: .more,
-                        pressed: { [weak self] sourceView in
-                            self?.openContextMenu(sourceView: sourceView)
-                        }
-                    ))
+                    content: .more,
+                    action: { [weak self] sourceView in
+                        self?.openContextMenu(sourceView: sourceView)
+                    }
                 ),
-                AnyComponentWithIdentity(
+                NavigationBarComponent.Button(
                     id: "scanQr",
-                    component: AnyComponent(NavigationButtonComponent(
-                        content: .icon(imageName: "Navigation/ScanQr"),
-                        pressed: { [weak self] _ in
-                            self?.openQrCodeScanner()
-                        }
-                    ))
+                    content: .icon(imageName: "Navigation/ScanQr"),
+                    action: { [weak self] _ in
+                        self?.openQrCodeScanner()
+                    }
                 )
             ]
 
-            let primaryContent = ChatListHeaderComponent.Content(
-                title: "",
-                navigationBackTitle: nil,
-                titleComponent: nil,
-                chatListTitle: nil,
+            let primaryContent = NavigationBarComponent.Content(
+                title: .text(""),
+                back: nil,
                 leftButton: leftButton,
                 rightButtons: rightButtons,
-                backPressed: nil
+                backPressed: {}
             )
 
             let headerSize = self.header.update(
                 transition: transition,
-                component: AnyComponent(ChatListHeaderComponent(
+                component: AnyComponent(NavigationBarComponent(
+                    theme: NavigationBarTheme(rootControllerTheme: environment.theme),
+                    strings: NavigationBarStrings(presentationStrings: environment.strings),
                     leftInset: 16.0 + environment.safeInsets.left,
                     rightInset: 16.0 + environment.safeInsets.right,
                     trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                     primaryContent: primaryContent,
                     secondaryContent: nil,
-                    secondaryTransition: 0.0,
-                    networkStatus: nil,
-                    storySubscriptions: nil,
-                    storiesIncludeHidden: false,
-                    storiesFraction: 0.0,
-                    storiesUnlocked: false,
-                    uploadProgress: [:],
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    openStatusSetup: { _ in
-                    },
-                    toggleIsLocked: {
-                    }
+                    secondaryTransition: 0.0
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 44.0)
@@ -3966,6 +3947,11 @@ public final class WalletScreen: ViewControllerComponentContainer {
     fileprivate private(set) var backButtonInSideColumn = false
     private var walletScreenUpdatesDisposable: Disposable?
     private var didAppear = false
+
+    /// Has its own header: the bar takes no part in a navigation transition.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        return nil
+    }
 
     public init(
         context: AccountContext,

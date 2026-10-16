@@ -273,7 +273,7 @@ would each key a database with material only one of them persisted).
 
 ## RichTextEditor editor & the `ChatInputContent` composer
 
-A from-scratch WYSIWYG rich-text editor (`submodules/TelegramUI/Components/RichTextEditor`) is the native chat-composer backend — by default a **dual-field switch** (the composer uses the legacy input and latches to the native editor only when content becomes legacy-non-representable); the `forceNewTextInput` experimental flag (Debug Settings ▸ "Force Text Field v2") forces always-native. (This inverted the earlier default+`forceLegacyTextInput`-opt-out scheme.) `ChatInputContent` (a TelegramCore-native value model) replaced `NSAttributedString` as the composer currency. The app-side integration — the model and its load-bearing invariants, composer ↔ editor wiring, the formatting-menu / custom-emoji-mention-date / code-block / inline-media round-trips, rich-message send / edit / pending-display, the long-press-Send send-options preview, **media pre-upload** (attached media uploads immediately and is promoted to cloud media, surviving the editor closing and reopening), and draft persistence (local, cross-device media sync, re-login restore) — lives in [`docs/richtext-composer.md`](docs/richtext-composer.md). Editor internals (the TextKit seam, layout) are the editor's own `submodules/TelegramUI/Components/RichTextEditor/CLAUDE.md` — including the **code-block language field + syntax highlighting** (2026-08-25): a code block's language is authored in an always-visible editable line (a second leaf region on the box, so `activeStack` must resolve a box by its PRIMARY region or edits land in the wrong layout), and libprisma highlights code in both editor hosts through a host-provided seam, since the package cannot depend on the highlighter. The renderer half, and the three silent pre-existing defects that had to be fixed before any highlighting was visible, are in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md). Also **InstantPage V2 layout parity** (2026-08-14): the editor lays text out pixel-identically to the V2 renderer via the host-supplied `RichTextRenderMetrics` contract, and BOTH surfaces (composer + article editor) use the chat-message metrics, so what you type reads like the message sent. Message **rendering** is [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md).
+A from-scratch WYSIWYG rich-text editor (`submodules/TelegramUI/Components/RichTextEditor`) is the native chat-composer backend — by default a **dual-field switch** (the composer uses the legacy input and latches to the native editor only when content becomes legacy-non-representable); the `useInputDecEngine` experimental flag (Debug Settings ▸ "Input V3") forces always-native with the engine editor (iOS 18.4+). "Force Text Field v2" (`forceNewTextInput`, always-native on the legacy editor) was removed 2026-10-15; `ios_rich_input_mode = 1` still gives that. (This inverted the earlier default+`forceLegacyTextInput`-opt-out scheme.) `ChatInputContent` (a TelegramCore-native value model) replaced `NSAttributedString` as the composer currency. The app-side integration — the model and its load-bearing invariants, composer ↔ editor wiring, the formatting-menu / custom-emoji-mention-date / code-block / inline-media round-trips, rich-message send / edit / pending-display, the long-press-Send send-options preview, **media pre-upload** (attached media uploads immediately and is promoted to cloud media, surviving the editor closing and reopening), and draft persistence (local, cross-device media sync, re-login restore) — lives in [`docs/richtext-composer.md`](docs/richtext-composer.md). Editor internals (the TextKit seam, layout) are the editor's own `submodules/TelegramUI/Components/RichTextEditor/CLAUDE.md` — including the **code-block language field + syntax highlighting** (2026-08-25): a code block's language is authored in an always-visible editable line (a second leaf region on the box, so `activeStack` must resolve a box by its PRIMARY region or edits land in the wrong layout), and libprisma highlights code in both editor hosts through a host-provided seam, since the package cannot depend on the highlighter. The renderer half, and the three silent pre-existing defects that had to be fixed before any highlighting was visible, are in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md). Also **InstantPage V2 layout parity** (2026-08-14): the editor lays text out pixel-identically to the V2 renderer via the host-supplied `RichTextRenderMetrics` contract, and BOTH surfaces (composer + article editor) use the chat-message metrics, so what you type reads like the message sent. Message **rendering** is [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md).
 
 ## Composer harness (`Tests/ComposerHarness`)
 
@@ -378,7 +378,7 @@ lands in an existing `@catch` and becomes a failed CONSTRUCTION the host can gat
 its predecessor was true when written and silently stopped being true.
 
 It is also driven by a real editor now. `Sources/RichTextEngineEditor/` maps Telegram's `Document`
-onto the engine and is selected by Debug Settings ▸ **"Text Field v2: InputDec ENGINE editor"**
+onto the engine and is selected by Debug Settings ▸ **"Input V3"**
 (`ExperimentalUISettings.useInputDecEngine`). As of R9-inline it does links, inline code, spoilers
 (hidden text plus dust) and custom emoji, and it owns the composer's edit menu.
 
@@ -1283,6 +1283,23 @@ view start after the fill as for any other open, and it makes no read claim (`ma
 so no unread separator lands above the post). While the post is pinned and its surroundings have not
 loaded, the view reports no hole-fill restart, so a hole operation on the channel (the poll's, or any
 other) cannot restart the history around a post that is still inside the hole.
+
+**A channel the account is not a member of has no read state** (For You channels, and channels added only
+to News, which stay `.left`): the server keeps none, so the client keeps none either
+(`TelegramCore/Sources/State/NonMemberChannelReadState.swift`). Opening one installs a fixed state with
+nothing unread and nothing counted (`maxKnownId: Int32.max - 1`), interactive reads do nothing, the
+server's read-state operations for it are skipped in replay, and the synchronizer confirms anything queued
+for it without sending; dialogs fetched for chat folders store no read state for it either. The state's
+`maxIncomingReadId` is 0 on purpose: replaying `.ResetReadState` and validation both keep a local mark that
+is ahead of the server's while it reports unread (`localReadMarkIsAheadOfServer`), so a higher one would block
+the state a join brings in, which can itself be 0. **A join does
+not reliably fetch the dialog:** `initialStateWithPeerIds` judges the stored, still non-member channel and
+builds its chat info from stored notification settings, which opening the chat has fetched, so
+`resolveMissingPeerChatInfos` asks for nothing. A stored channel that becomes a member therefore queues a
+read-state validation itself (`channelJoinNeedsServerReadState` in `updatePeersCustom`). Monoforums (a
+user's direct messages with a channel) keep their read state whatever the participation status. A chat
+opened from News also shows no unread badge on its back button
+(`NavigateToChatControllerParams.showsUnreadChatsBackBadge`).
 
 ## Postbox → TelegramEngine refactor (in progress)
 

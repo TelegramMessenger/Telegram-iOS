@@ -1581,6 +1581,51 @@ public final class MessageHistoryView: PostboxView {
         self.peerStoryStats = mutableView.peerStoryStats
     }
     
+    /// This view as `includeAnchorWhileLoading`'s loading view carries its anchor: only the anchor message and its
+    /// album, loading on both sides, with no read claim. For a view that is loaded around a stored message whose
+    /// surroundings cannot be shown yet because holes reach into them (a joined channel's history, which the update
+    /// stream fills from the top, opened at an older post), so the chat shows the message the same way meanwhile.
+    /// Nil when the anchor is not a message among the entries.
+    public func anchorOnlyWhileLoading() -> MessageHistoryView? {
+        guard case let .message(anchor) = self.anchorIndex, let anchorEntry = self.entries.first(where: { $0.index.id == anchor.id }) else {
+            return nil
+        }
+        let groupingKey = anchorEntry.message.groupingKey
+        let anchorEntries = self.entries.filter { entry in
+            if entry.index.id == anchor.id {
+                return true
+            }
+            if let groupingKey, entry.message.groupingKey == groupingKey, entry.index.id.peerId == anchor.id.peerId {
+                return true
+            }
+            return false
+        }.map { entry in
+            MessageHistoryEntry(message: entry.message, isRead: false, location: nil, monthLocation: nil, attributes: entry.attributes)
+        }
+        return MessageHistoryView(anchorOnlyOf: self, entries: anchorEntries)
+    }
+
+    private init(anchorOnlyOf base: MessageHistoryView, entries: [MessageHistoryEntry]) {
+        self.tag = base.tag
+        self.namespaces = base.namespaces
+        self.anchorIndex = base.anchorIndex
+        self.earlierId = nil
+        self.laterId = nil
+        self.holeEarlier = true
+        self.holeLater = true
+        self.entries = entries
+        self.maxReadIndex = nil
+        self.fixedReadStates = base.fixedReadStates
+        self.transientReadStates = base.transientReadStates
+        self.topTaggedMessages = base.topTaggedMessages
+        self.additionalData = base.additionalData
+        self.isLoading = true
+        self.isLoadingEarlier = true
+        self.isAddedToChatList = base.isAddedToChatList
+        self.isAnchorOnlyWhileLoading = true
+        self.peerStoryStats = base.peerStoryStats
+    }
+
     public init(base: MessageHistoryView, fixed combinedReadStates: MessageHistoryViewReadState?, transient transientReadStates: MessageHistoryViewReadState?) {
         self.tag = base.tag
         self.namespaces = base.namespaces

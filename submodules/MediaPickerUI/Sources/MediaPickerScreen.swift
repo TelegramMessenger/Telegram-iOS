@@ -1703,15 +1703,21 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
         }
         
-        private var previousContentOffset: GridNodeVisibleContentOffset?
-        
+        /// The legacy style's bar had an opaque background that faded in as the grid scrolled under it; the glass style's
+        /// backdrop is clear (`hideBackground`), so only the legacy style fades it.
+        private func setNavigationBackdropAlpha(_ alpha: CGFloat) {
+            guard let controller = self.controller, controller.style != .glass else {
+                return
+            }
+            controller.navigationBar?.setBackdropAlpha(alpha, transition: .immediate)
+        }
+
         func updateNavigation(delayDisappear: Bool = false, transition: ContainedViewLayoutTransition) {
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
-                self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                self.setNavigationBackdropAlpha(1.0)
                 self.controller?.updateTabBarAlpha(1.0, transition)
             } else if self.placeholderNode != nil {
-                self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
-                
+                self.setNavigationBackdropAlpha(0.0)
                 if delayDisappear {
                     Queue.mainQueue().after(0.25) {
                         self.controller?.updateTabBarAlpha(0.0, transition)
@@ -1720,23 +1726,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.controller?.updateTabBarAlpha(0.0, transition)
                 }
             } else {
-                var previousContentOffsetValue: CGFloat?
-                if let previousContentOffset = self.previousContentOffset, case let .known(value) = previousContentOffset {
-                    previousContentOffsetValue = value
-                }
-                
-                let offset = self.gridNode.visibleContentOffset()
-                switch offset {
-                    case let .known(value):
-                        let transition: ContainedViewLayoutTransition
-                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 2.0 {
-                            transition = .animated(duration: 0.2, curve: .easeInOut)
-                        } else {
-                            transition = .immediate
-                        }
-                        self.controller?.navigationBar?.updateBackgroundAlpha(min(2.0, value) / 2.0, transition: transition)
-                    case .unknown, .none:
-                        self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                switch self.gridNode.visibleContentOffset() {
+                case let .known(value):
+                    self.setNavigationBackdropAlpha(min(2.0, value) / 2.0)
+                case .unknown, .none:
+                    self.setNavigationBackdropAlpha(1.0)
                 }
                 self.controller?.updateTabBarAlpha(1.0, transition)
             }
@@ -2217,7 +2211,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         var navigationBarPresentationData: NavigationBarPresentationData?
         if case .glass = style {
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: true, hideSeparator: true)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: true)
         } else {
             navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
         }
@@ -2789,7 +2783,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             transition.updateTransformScale(node: self.selectedButtonNode, scale: isSelectionButtonVisible ? 1.0 : 0.01)
             
             if self.selectedButtonNode.supernode == nil {
-                self.navigationBar?.addSubnode(self.selectedButtonNode)
+                self.navigationBar?.additionalContentNode.addSubnode(self.selectedButtonNode)
             }
             
             self.titleView.segmentsHidden = true
@@ -2969,7 +2963,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private func updateThemeAndStrings() {
         var navigationBarPresentationData: NavigationBarPresentationData
         if case .glass = style {
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: true, hideSeparator: true)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: true)
         } else {
             navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
         }

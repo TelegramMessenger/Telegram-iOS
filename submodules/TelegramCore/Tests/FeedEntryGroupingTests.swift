@@ -61,6 +61,36 @@ final class FeedEntryGroupingTests: XCTestCase {
         XCTAssertEqual(items.map(forYouTestDescription), ["5", "interests", "10,11"])
     }
 
+    func testForYouMessageGroupBecomesOneEntryAtItsNewestMessage() {
+        let items = forYouItems(from: [.group([self.message(self.channelA, 10, date: 900, group: 3), self.message(self.channelA, 11, date: 901, group: 3)]), .message(self.message(self.channelB, 5, date: 100))])
+        XCTAssertEqual(items.map(forYouTestDescription), ["10,11", "5"])
+        guard case let .post(entry) = items[0] else {
+            XCTFail("expected a post")
+            return
+        }
+        XCTAssertEqual(entry.position, EngineFeedPosition(date: 901, peerId: self.channelA, id: 11))
+        XCTAssertEqual(entry.groupingKey, 3)
+    }
+
+    // The server says what the group is: its messages are one entry even without a shared grouping key.
+    func testForYouMessageGroupWithoutAGroupingKeyIsStillOneEntry() {
+        let items = forYouItems(from: [.group([self.message(self.channelA, 10, date: 900), self.message(self.channelA, 11, date: 900)])])
+        XCTAssertEqual(items.map(forYouTestDescription), ["10,11"])
+    }
+
+    // An album the batch carries partly as a group and partly as a message, in either order, is one entry.
+    func testForYouMessageGroupJoinsTheRestOfItsAlbum() {
+        let after = forYouItems(from: [.message(self.message(self.channelA, 10, date: 900, group: 3)), .interests, .group([self.message(self.channelA, 11, date: 900, group: 3), self.message(self.channelA, 12, date: 900, group: 3)])])
+        XCTAssertEqual(after.map(forYouTestDescription), ["10,11,12", "interests"])
+        let before = forYouItems(from: [.group([self.message(self.channelA, 11, date: 900, group: 3)]), .message(self.message(self.channelA, 10, date: 900, group: 3))])
+        XCTAssertEqual(before.map(forYouTestDescription), ["10,11"])
+    }
+
+    func testForYouMessageGroupJoinsAnEntryThatHasOneOfItsMessages() {
+        let items = forYouItems(from: [.message(self.message(self.channelA, 10, date: 900)), .group([self.message(self.channelA, 10, date: 900), self.message(self.channelA, 11, date: 900)])])
+        XCTAssertEqual(items.map(forYouTestDescription), ["10,11"])
+    }
+
     func testAppendSkipsKnownPostsAndTheBatchBlockReplacesTheOldOne() {
         let list = forYouItems(from: [.message(self.message(self.channelA, 1, date: 1)), .interests, .message(self.message(self.channelA, 2, date: 2))])
         let batch = forYouItems(from: [.message(self.message(self.channelA, 2, date: 2)), .message(self.message(self.channelB, 3, date: 3)), .interests, .interests])

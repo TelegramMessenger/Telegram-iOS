@@ -251,12 +251,12 @@ private final class CommunityRequestsScreenComponent: Component {
         }
 
         private func updateScrolling(transition: ComponentTransition) {
-            guard let environment = self.environment, let controller = environment.controller(), let navigationBar = controller.navigationBar, let edgeEffectView = navigationBar.edgeEffectView else {
+            guard let environment = self.environment, let controller = environment.controller(), let navigationBar = controller.navigationBar else {
                 return
             }
             let alphaDistance: CGFloat = 16.0
             let edgeEffectAlpha = max(0.0, min(1.0, self.scrollView.contentOffset.y / alphaDistance))
-            transition.setAlpha(view: edgeEffectView, alpha: edgeEffectAlpha)
+            navigationBar.setBackdropAlpha(edgeEffectAlpha, transition: transition.containedViewLayoutTransition)
         }
 
         private var rows: [CommunityRequestRow] {

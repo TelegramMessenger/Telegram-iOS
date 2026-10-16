@@ -420,7 +420,7 @@ private final class CrashReportTextController: ViewController {
 
     init(presentationData: PresentationData, text: String) {
         self.presentationData = presentationData
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
                 
         self.title = "Crash Log"
         self.textView.text = text

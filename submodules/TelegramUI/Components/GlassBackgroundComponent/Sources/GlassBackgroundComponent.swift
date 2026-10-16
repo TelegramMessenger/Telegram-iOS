@@ -268,6 +268,40 @@ public class GlassBackgroundView: UIView {
             self.innerColor = innerColor
             self.innerInset = innerInset
         }
+
+        /// The native glass effect this tint gives: whether its style is `.clear` (else `.regular`), and its tint color.
+        func nativeEffect(isDark: Bool) -> (isClear: Bool, color: UIColor?) {
+            switch self.kind {
+            case .panel:
+                return (false, UIColor(white: 1.0, alpha: isDark ? 0.025 : 0.1))
+            case let .custom(style, color):
+                return (style == .clear, color)
+            case .clear:
+                return (true, isDark ? UIColor(white: 0.0, alpha: 0.28) : nil)
+            }
+        }
+
+        /// The native glass tint `fraction` of the way from `from` to `to`, as one effect: their tint colors mixed when
+        /// their styles match, else `to` from halfway. For native glass only: the custom glass draws a panel otherwise.
+        public static func blended(from: TintColor, to: TintColor, fraction: CGFloat, isDark: Bool) -> TintColor {
+            if fraction <= 0.0 {
+                return from
+            }
+            if fraction >= 1.0 {
+                return to
+            }
+            let start = from.nativeEffect(isDark: isDark)
+            let end = to.nativeEffect(isDark: isDark)
+            guard start.isClear == end.isClear, let startColor = start.color ?? end.color?.withAlphaComponent(0.0), let endColor = end.color ?? start.color?.withAlphaComponent(0.0) else {
+                return fraction < 0.5 ? from : to
+            }
+            var r0: CGFloat = 0.0, g0: CGFloat = 0.0, b0: CGFloat = 0.0, a0: CGFloat = 0.0
+            var r1: CGFloat = 0.0, g1: CGFloat = 0.0, b1: CGFloat = 0.0, a1: CGFloat = 0.0
+            startColor.getRed(&r0, green: &g0, blue: &b0, alpha: &a0)
+            endColor.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+            let color = UIColor(red: r0 + (r1 - r0) * fraction, green: g0 + (g1 - g0) * fraction, blue: b0 + (b1 - b0) * fraction, alpha: a0 + (a1 - a0) * fraction)
+            return TintColor(kind: .custom(style: start.isClear ? .clear : .default, color: color), innerColor: to.innerColor, innerInset: to.innerInset)
+        }
     }
     
     public struct CornerRadii: Equatable {
@@ -469,8 +503,8 @@ public class GlassBackgroundView: UIView {
     private let legacyHighlightClippingContext: ClippingShapeContext?
     private var glassHighlightRecognizer: GlassHighlightGestureRecognizer?
     
-    private let nativeView: UIVisualEffectView?
-    private let nativeViewClippingContext: ClippingShapeContext?
+    private var nativeView: UIVisualEffectView?
+    private var nativeViewClippingContext: ClippingShapeContext?
     private let nativeParamsView: EffectSettingsContainerView?
     
     private let foregroundView: UIImageView?
@@ -494,6 +528,32 @@ public class GlassBackgroundView: UIView {
         } else {
             return self.contentContainer
         }
+    }
+
+    /// Puts a new effect view in place of the native one, with the same effect, shape and content (`contentView` is then
+    /// the new one's). UIKit's press on interactive glass (`_UIFlexInteraction`) belongs to the effect view it started on,
+    /// and a glass it is pressing is not fused with its neighbours in a glass container: it keeps its own edge inside
+    /// their merged shape (probed on iOS 27; removing the interaction leaves the press's lift and tint behind, a new effect
+    /// view is clean). The press ends with the old view; a caller that wants it continues it. Does nothing for the custom
+    /// glass.
+    public func renewNativeView() {
+        guard let nativeParamsView = self.nativeParamsView, let previous = self.nativeView, let shape = self.nativeViewClippingContext?.shape else {
+            return
+        }
+        let nativeView = UIVisualEffectView(effect: previous.effect)
+        nativeView.overrideUserInterfaceStyle = previous.overrideUserInterfaceStyle
+        // The size the glass was laid out at: a press grows the old view around it.
+        let size = nativeParamsView.bounds.size
+        nativeView.frame = CGRect(origin: CGPoint(), size: size)
+        let clippingContext = ClippingShapeContext(view: nativeView)
+        clippingContext.update(shape: shape, size: size, transition: .immediate)
+        for subview in previous.contentView.subviews {
+            nativeView.contentView.addSubview(subview)
+        }
+        nativeParamsView.insertSubview(nativeView, aboveSubview: previous)
+        previous.removeFromSuperview()
+        self.nativeView = nativeView
+        self.nativeViewClippingContext = clippingContext
     }
     
     public private(set) var params: Params?
@@ -756,33 +816,9 @@ public class GlassBackgroundView: UIView {
                         var glassEffect: UIGlassEffect?
                         
                         if isVisible {
-                            let glassEffectValue: UIGlassEffect
-                            switch tintColor.kind {
-                            case .panel:
-                                if isDark {
-                                    glassEffectValue = UIGlassEffect(style: .regular)
-                                    glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.025)
-                                } else {
-                                    glassEffectValue = UIGlassEffect(style: .regular)
-                                    glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.1)
-                                }
-                            case let .custom(style, color):
-                                switch style {
-                                case .default:
-                                    glassEffectValue = UIGlassEffect(style: .regular)
-                                    glassEffectValue.tintColor = color
-                                case .clear:
-                                    glassEffectValue = UIGlassEffect(style: .clear)
-                                    glassEffectValue.tintColor = color
-                                }
-                            case .clear:
-                                glassEffectValue = UIGlassEffect(style: .clear)
-                                if isDark {
-                                    glassEffectValue.tintColor = UIColor(white: 0.0, alpha: 0.28)
-                                } else {
-                                    glassEffectValue.tintColor = nil
-                                }
-                            }
+                            let nativeTint = tintColor.nativeEffect(isDark: isDark)
+                            let glassEffectValue = UIGlassEffect(style: nativeTint.isClear ? .clear : .regular)
+                            glassEffectValue.tintColor = nativeTint.color
                             glassEffectValue.isInteractive = isInteractive
                             glassEffect = glassEffectValue
                         }
@@ -859,7 +895,21 @@ public final class GlassBackgroundContainerView: UIView {
         }
     }
     
+    /// How close two shapes come before they merge (`UIGlassContainerEffect.spacing`, which UIKit passes on unchanged as
+    /// the container's SDF smoothness: measured on iOS 27). Only native glass merges (`mergesShapes`).
+    public let spacing: CGFloat
+
+    /// Whether containers merge the glass shapes in them: native glass does, the custom implementation (before iOS 26, or
+    /// `GlassBackgroundView.useCustomGlassImpl`) only stacks them.
+    public static var mergesShapes: Bool {
+        if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
+            return true
+        }
+        return false
+    }
+
     public init(spacing: CGFloat = 7.0) {
+        self.spacing = spacing
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             let effect = UIGlassContainerEffect()
             effect.spacing = spacing
@@ -1598,6 +1648,13 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     private let glassView: GlassBackgroundView
+    /// The tint the glass was last given.
+    public var glassTintColor: GlassBackgroundView.TintColor? {
+        return self.normalParams?.tintColor
+    }
+    /// Whether the glass view is lent out (`lendGlass`).
+    public private(set) var isGlassLent = false
+    private var glassFrameBeforeLending = CGRect()
     
     private var state: State = .normal
     private var normalParams: NormalParams?
@@ -1640,6 +1697,38 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         return nil
     }
     
+    /// The glass view, its content (the items) included, lent to another container while it merges with a neighbour's
+    /// (the navigation bar's in-place merge): it leaves this view's hierarchy until `reclaimGlass()`. Updates still
+    /// reach it; the borrower places it. Hit testing still finds the content (`normalContentView`).
+    public func lendGlass() -> UIView {
+        if !self.isGlassLent {
+            self.isGlassLent = true
+            self.glassFrameBeforeLending = self.glassView.frame
+        }
+        return self.glassView
+    }
+
+    /// Ends UIKit's press on the glass by putting a new effect view in place of the one it is drawn on
+    /// (`GlassBackgroundView.renewNativeView`). Not while a context menu has the container extracted: the menu morphs the
+    /// effect view it took.
+    public func renewGlass() {
+        guard case .normal = self.state else {
+            return
+        }
+        self.glassView.renewNativeView()
+    }
+
+    /// Takes the lent glass view back, where it was.
+    public func reclaimGlass() {
+        guard self.isGlassLent else {
+            return
+        }
+        self.isGlassLent = false
+        self.glassView.transform = .identity
+        self.extractableContentView.addSubview(self.glassView)
+        self.glassView.frame = self.glassFrameBeforeLending
+    }
+
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
         let normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
         self.normalParams = normalParams
@@ -1650,6 +1739,8 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     public func updateState(state: State, transition: Transition, completion: ((Bool) -> Void)?) {
+        // A context menu extracts the glass where this view has it.
+        self.reclaimGlass()
         let previousState = self.state
         self.state = state
         self.applyState(previousState: previousState, transition: transition, completion: completion)
@@ -1757,5 +1848,74 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
                 }
             }
         }
+    }
+}
+
+/// Keyframes for a view whose frame is `frame(size)` at each of `sizes`, keeping its bounds origin and anchor point.
+private func glassShapeKeyframes(_ view: UIView?, sizes: [CGSize], timing: NavigationKeyframeTiming, frame: (CGSize) -> CGRect) {
+    guard let view else {
+        return
+    }
+    let origin = view.bounds.origin
+    let anchor = view.layer.anchorPoint
+    let frames = sizes.map(frame)
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.bounds", keyPath: "bounds", values: frames.map { NSValue(cgRect: CGRect(origin: origin, size: $0.size)) }, timing: timing)
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.position", keyPath: "position", values: frames.map { NSValue(cgPoint: CGPoint(x: $0.minX + $0.width * anchor.x, y: $0.minY + $0.height * anchor.y)) }, timing: timing)
+}
+
+private func glassCornerRadiusKeyframes(_ view: UIView?, sizes: [CGSize], timing: NavigationKeyframeTiming, radius: (CGSize) -> CGFloat) {
+    guard let view else {
+        return
+    }
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: sizes.map { NSNumber(value: Float(radius($0))) }, timing: timing)
+}
+
+extension GlassBackgroundView {
+    /// Changes the glass's size along `width`/`height` (animation time from `timing`'s origin; corner radius half the
+    /// shorter side) on the render server. The model takes the final size, and every view the glass lays out by its size
+    /// gets keyframes: Core Animation keyframes on the effect view resize native glass correctly (measured on iOS 27,
+    /// docs/superpowers/specs/2026-10-14-navbar-keyframed-transitions-design.md §6 results).
+    public func animateShape(width: NavigationSpringCurve, height: NavigationSpringCurve, timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        self.animateShape(sizes: timing.sampleTimes.map { CGSize(width: max(0.0, width.value(at: $0)), height: max(0.0, height.value(at: $0))) }, timing: timing, isDark: isDark, tintColor: tintColor)
+    }
+
+    /// The same, from a size per sample of `timing`.
+    public func animateShape(sizes: [CGSize], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        guard let last = sizes.last else {
+            return
+        }
+        self.update(size: last, cornerRadius: min(last.width, last.height) * 0.5, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        let shadowInset: CGFloat = 32.0
+        let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
+        glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
+        glassCornerRadiusKeyframes(self.nativeView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 })
+        glassShapeKeyframes(self.maskContainerView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: CGSize(width: $0.width + shadowInset * 2.0, height: $0.height + shadowInset * 2.0)) })
+        glassShapeKeyframes(self.maskContentView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: $0) })
+        glassShapeKeyframes(self.contentContainer, sizes: sizes, timing: timing, frame: filling)
+        if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
+            let inset = tintColor.innerInset
+            glassShapeKeyframes(innerBackgroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: inset, dy: inset) })
+            glassCornerRadiusKeyframes(innerBackgroundView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 - inset })
+        }
+        glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.legacyHighlightContainerView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.foregroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })
+        glassShapeKeyframes(self.shadowView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: -shadowInset, dy: -shadowInset) })
+    }
+}
+
+extension GlassBackgroundContainerView {
+    /// Changes the container's size along `width`/`height` on the render server, as `GlassBackgroundView.animateShape`.
+    public func animateSize(width: NavigationSpringCurve, height: NavigationSpringCurve, timing: NavigationKeyframeTiming, isDark: Bool) {
+        let sizes = timing.sampleTimes.map { CGSize(width: max(0.0, width.value(at: $0)), height: max(0.0, height.value(at: $0))) }
+        guard let last = sizes.last else {
+            return
+        }
+        self.update(size: last, isDark: isDark, transition: .immediate)
+        let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
+        glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
+        glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
     }
 }

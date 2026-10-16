@@ -175,6 +175,13 @@ private func confirmSynchronized(postbox: Postbox, peerId: PeerId) -> Signal<Voi
     |> castError(PeerReadStateValidationError.self)
 }
 
+/// Whether a local incoming read mark is kept over the server's: it is ahead, and the server still reports
+/// something unread (a server with nothing unread has caught up whatever its mark). Both the replay of
+/// `.ResetReadState` and validation decide by this.
+func localReadMarkIsAheadOfServer(localMaxIncomingReadId: MessageId.Id, serverMaxIncomingReadId: MessageId.Id, serverCount: Int32, serverMarkedUnread: Bool) -> Bool {
+    return (serverCount != 0 || serverMarkedUnread) && localMaxIncomingReadId > serverMaxIncomingReadId
+}
+
 private func validatePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Never, PeerReadStateValidationError> {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         // A secret chat has no Api.InputPeer, so there is no dialog to read an authoritative
@@ -204,10 +211,8 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
                         switch currentState {
                         case let .idBased(localMaxIncomingReadId, _, _, _, _):
                             if case let .idBased(updatedMaxIncomingReadId, _, _, updatedCount, updatedMarkedUnread) = readState {
-                                if updatedCount != 0 || updatedMarkedUnread {
-                                    if localMaxIncomingReadId > updatedMaxIncomingReadId {
-                                        return .retry
-                                    }
+                                if localReadMarkIsAheadOfServer(localMaxIncomingReadId: localMaxIncomingReadId, serverMaxIncomingReadId: updatedMaxIncomingReadId, serverCount: updatedCount, serverMarkedUnread: updatedMarkedUnread) {
+                                    return .retry
                                 }
                             }
                         default:
@@ -420,14 +425,31 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
 }
 
 func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, push: Bool, validate: Bool) -> Signal<Never, PeerReadStateValidationError> {
-    var signal: Signal<Never, PeerReadStateValidationError> = .complete()
-    if push {
-        signal = signal
-        |> then(pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, willValidate: validate))
+    // A channel the account is not a member of has no read state on the server
+    // (NonMemberChannelReadState.swift): nothing is pushed or validated, and the queued operation
+    // is confirmed so the manager does not pick it up again. This also covers paths that queue one
+    // without going through the interactive read (a support account's send, the chat list's
+    // read toggle, operations persisted by earlier builds).
+    let keepsReadState = postbox.transaction { transaction -> Bool in
+        return peerKeepsReadState(transaction.getPeer(peerId))
     }
-    if validate {
-        signal = signal
-        |> then(validatePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId))
+    |> castError(PeerReadStateValidationError.self)
+
+    return keepsReadState
+    |> mapToSignal { keepsReadState -> Signal<Never, PeerReadStateValidationError> in
+        if !keepsReadState {
+            return confirmSynchronized(postbox: postbox, peerId: peerId)
+            |> ignoreValues
+        }
+        var signal: Signal<Never, PeerReadStateValidationError> = .complete()
+        if push {
+            signal = signal
+            |> then(pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, willValidate: validate))
+        }
+        if validate {
+            signal = signal
+            |> then(validatePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId))
+        }
+        return signal
     }
-    return signal
 }

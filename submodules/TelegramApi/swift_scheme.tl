@@ -2362,6 +2362,7 @@ feed.feedMessagesNotModified#db1a3503 = feed.FeedMessages;
 feed.feedMessages#dcf754b9 flags:# max_position:flags.0?FeedPosition min_position:flags.1?FeedPosition read_max_position:flags.2?FeedPosition messages:Vector<Message> chats:Vector<Chat> users:Vector<User> = feed.FeedMessages;
 
 feedItemMessage#7e73b3a5 message:Message = FeedItem;
+feedItemMessageGroup#652f4c71 messages:Vector<Message> = FeedItem;
 feedItemInterestCategories#6be7187b = FeedItem;
 
 feed.forYouFeed#52577805 flags:# items:Vector<FeedItem> chats:Vector<Chat> users:Vector<User> = feed.ForYouFeed;

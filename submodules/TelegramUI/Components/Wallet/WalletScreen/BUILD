@@ -27,7 +27,7 @@ swift_library(
         "//submodules/Components/ViewControllerComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
-        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/TelegramUI/Components/NavigationBarComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/ListSectionComponent",

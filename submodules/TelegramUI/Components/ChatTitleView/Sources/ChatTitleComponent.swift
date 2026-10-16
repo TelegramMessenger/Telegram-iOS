@@ -13,8 +13,9 @@ import PhoneNumberFormat
 import TelegramStringFormatting
 import EmojiStatusComponent
 import GlassBackgroundComponent
+import NewsFeedSupport
 
-public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
+public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTitleView {
     private final class ContentData: Equatable {
         let context: AccountContext
         let theme: PresentationTheme
@@ -88,7 +89,26 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
     
     public func animateLayoutTransition() {
     }
-    
+
+    /// The header's glass pill: in a navigation transition it is the bar's second right platter, which the transition
+    /// draws (showing what it shows, lent live) while this view hides it.
+    public var glassPillFrame: CGRect? {
+        guard let titleView = self.title.view as? ChatTitleComponent.View, let frame = titleView.glassPillFrame else {
+            return nil
+        }
+        return titleView.convert(frame, to: self)
+    }
+
+    public var isGlassPillDetached: Bool = false {
+        didSet {
+            (self.title.view as? ChatTitleComponent.View)?.isGlassPillDetached = self.isGlassPillDetached
+        }
+    }
+
+    public func lendGlassPillContent() -> UIView? {
+        return (self.title.view as? ChatTitleComponent.View)?.lendGlassPillContent()
+    }
+
     public func prepareSnapshotState() -> ChatTitleView.SnapshotState? {
         //return titleView.contentView?.snapshotView(afterScreenUpdates: false)
         return nil
@@ -199,6 +219,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
                     }
                     self.addSubview(titleView)
                 }
+                (titleView as? ChatTitleComponent.View)?.isGlassPillDetached = self.isGlassPillDetached
                 transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(), size: titleSize))
             }
             return titleSize
@@ -307,6 +328,59 @@ public final class ChatTitleComponent: Component {
     public final class View: UIView {
         private var backgroundView: GlassBackgroundView?
         private let contentContainer: UIView
+        /// While a navigation transition draws the pill, the pill is hidden and what it shows is lent to the transition
+        /// (`lendGlassPillContent`); it is taken back when the pill is attached again.
+        var isGlassPillDetached: Bool = false {
+            didSet {
+                if self.isGlassPillDetached != oldValue {
+                    self.backgroundView?.isHidden = self.isGlassPillDetached
+                    if !self.isGlassPillDetached {
+                        self.reclaimGlassPillContent()
+                    }
+                }
+            }
+        }
+        /// The wrapper the content container is lent in while the pill is detached.
+        private var lentContentWrapper: UIView?
+
+        /// The pill's frame in this view, nil without one.
+        var glassPillFrame: CGRect? {
+            guard let backgroundView = self.backgroundView, !backgroundView.frame.isEmpty else {
+                return nil
+            }
+            return backgroundView.frame
+        }
+
+        /// What the pill shows (the title, its icons, the status line), live, in a wrapper the transition places and
+        /// animates: the content container itself, so an animated emoji status or a typing indicator goes on moving. Only
+        /// while the pill is detached; the same wrapper for the whole detachment.
+        func lendGlassPillContent() -> UIView? {
+            guard self.isGlassPillDetached, let frame = self.glassPillFrame else {
+                return nil
+            }
+            if let current = self.lentContentWrapper {
+                return current
+            }
+            let wrapper = UIView(frame: CGRect(origin: CGPoint(), size: frame.size))
+            wrapper.isUserInteractionEnabled = false
+            wrapper.addSubview(self.contentContainer)
+            self.contentContainer.frame = CGRect(origin: CGPoint(), size: frame.size)
+            self.lentContentWrapper = wrapper
+            return wrapper
+        }
+
+        private func reclaimGlassPillContent() {
+            guard self.lentContentWrapper != nil else {
+                return
+            }
+            self.lentContentWrapper = nil
+            if let backgroundView = self.backgroundView {
+                backgroundView.contentView.addSubview(self.contentContainer)
+                self.contentContainer.frame = CGRect(origin: CGPoint(), size: backgroundView.bounds.size)
+            } else {
+                self.addSubview(self.contentContainer)
+            }
+        }
         private let title = ComponentView<Empty>()
         private var subtitleNode: ChatTitleActivityNode?
         private var activityMeasureSubtitleNode: ChatTitleActivityNode?
@@ -364,12 +438,14 @@ public final class ChatTitleComponent: Component {
             let rightTitleIconSpacing: CGFloat = 3.0
             let containerSideInset: CGFloat = 14.0
             
+            let isUpdate = self.component != nil
             self.component = component
             self.state = state
             
             var titleSegments: [AnimatedTextComponent.Item] = []
             var titleLeftIcon: TitleIconComponent.Kind?
             var titleRightIcon: TitleIconComponent.Kind?
+            var animatesBadgeWithNewsSpring = false
             var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
             var titleVerifiedIcon: ChatTitleCredibilityIcon = .none
             var titleStatusIcon: ChatTitleCredibilityIcon = .none
@@ -470,11 +546,30 @@ public final class ChatTitleComponent: Component {
                         }
                     } else {
                         if let notificationSettings = peerView.notificationSettings {
+                            var isMutedNow = false
                             if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                                if titleCredibilityIcon != .verified {
-                                    titleRightIcon = .mute
+                                isMutedNow = true
+                            }
+                            var isBroadcast = false
+                            var participation: NewsChannelParticipation = .left
+                            if let channel = peerView.peer as? TelegramChannel {
+                                if case .broadcast = channel.info {
+                                    isBroadcast = true
+                                }
+                                switch channel.participationStatus {
+                                case .member:
+                                    participation = .member
+                                case .left:
+                                    participation = .left
+                                case .kicked:
+                                    participation = .kicked
                                 }
                             }
+                            let featureEnabled = isNewsFeedEnabled(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                            if newsChatTitleShowsMuteIcon(isBroadcast: isBroadcast, participation: participation, isMuted: isMutedNow, isVerified: titleCredibilityIcon == .verified, featureEnabled: featureEnabled) {
+                                titleRightIcon = .mute
+                            }
+                            animatesBadgeWithNewsSpring = isBroadcast && featureEnabled
                         }
                     }
                     if peerView.peerId.isVerificationCodes {
@@ -860,10 +955,22 @@ public final class ChatTitleComponent: Component {
             } else if let rightIcon = self.rightIcon {
                 self.rightIcon = nil
                 if let rightIconView = rightIcon.view {
-                    transition.setScale(view: rightIconView, scale: 0.001)
-                    transition.setAlpha(view: rightIconView, alpha: 0.0, completion: { [weak rightIconView] _ in
-                        rightIconView?.removeFromSuperview()
-                    })
+                    if animatesBadgeWithNewsSpring && isUpdate {
+                        // `Motion.content`: the badge shrinks to half and fades.
+                        let spring = NewsSpring.titleBadge
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "transform.scale", from: 1.0 as NSNumber, to: 0.5 as NSNumber), forKey: "newsBadgeScale")
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "opacity", from: 1.0 as NSNumber, to: 0.0 as NSNumber), forKey: "newsBadgeOpacity")
+                        rightIconView.layer.transform = CATransform3DMakeScale(0.5, 0.5, 1.0)
+                        rightIconView.alpha = 0.0
+                        DispatchQueue.main.asyncAfter(deadline: .now() + spring.settlingDuration, execute: { [weak rightIconView] in
+                            rightIconView?.removeFromSuperview()
+                        })
+                    } else {
+                        transition.setScale(view: rightIconView, scale: 0.001)
+                        transition.setAlpha(view: rightIconView, alpha: 0.0, completion: { [weak rightIconView] _ in
+                            rightIconView?.removeFromSuperview()
+                        })
+                    }
                 }
             }
             
@@ -1170,8 +1277,15 @@ public final class ChatTitleComponent: Component {
                     rightIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(rightIconView)
                     rightIconView.frame = rightIconFrame
-                    ComponentTransition.immediate.setScale(view: rightIconView, scale: 0.001)
-                    rightIconView.alpha = 0.0
+                    if animatesBadgeWithNewsSpring && isUpdate {
+                        // `Motion.content`: the badge grows from half and fades in.
+                        let spring = NewsSpring.titleBadge
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "transform.scale", from: 0.5 as NSNumber, to: 1.0 as NSNumber), forKey: "newsBadgeScale")
+                        rightIconView.layer.add(spring.makeAnimation(keyPath: "opacity", from: 0.0 as NSNumber, to: 1.0 as NSNumber), forKey: "newsBadgeOpacity")
+                    } else {
+                        ComponentTransition.immediate.setScale(view: rightIconView, scale: 0.001)
+                        rightIconView.alpha = 0.0
+                    }
                 }
                 transition.setPosition(view: rightIconView, position: rightIconFrame.center)
                 transition.setBounds(view: rightIconView, bounds: CGRect(origin: CGPoint(), size: rightIconFrame.size))
@@ -1188,21 +1302,29 @@ public final class ChatTitleComponent: Component {
                     backgroundView = GlassBackgroundView()
                     self.backgroundView = backgroundView
                     self.addSubview(backgroundView)
-                    backgroundView.contentView.addSubview(self.contentContainer)
+                    if self.lentContentWrapper == nil {
+                        backgroundView.contentView.addSubview(self.contentContainer)
+                    }
+                    backgroundView.isHidden = self.isGlassPillDetached
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, transition: transition)
-                transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+                // Not while a transition has it (`lendGlassPillContent`): the transition places it.
+                if self.lentContentWrapper == nil {
+                    transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+                }
                 self.contentContainer.layer.cornerRadius = containerFrame.height * 0.5
             } else {
                 if let backgroundView = self.backgroundView {
                     self.backgroundView = nil
                     backgroundView.removeFromSuperview()
                 }
-                if self.contentContainer.superview !== self {
-                    self.addSubview(self.contentContainer)
+                if self.lentContentWrapper == nil {
+                    if self.contentContainer.superview !== self {
+                        self.addSubview(self.contentContainer)
+                    }
+                    transition.setFrame(view: self.contentContainer, frame: containerFrame)
                 }
-                transition.setFrame(view: self.contentContainer, frame: containerFrame)
                 self.contentContainer.layer.cornerRadius = 0.0
             }
             

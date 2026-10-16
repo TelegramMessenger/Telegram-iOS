@@ -21,17 +21,10 @@ public enum NewsRefreshMetrics {
     /// The hold's release, measured on the mockup: a smoothstep over 0.3 s.
     public static let releaseDuration: Double = 0.3
     public static let minLoading: Double = 1.2
-    public static let iconOut: Double = 0.25
-    public static let handoff: Double = 0.22
-    public static let fallStart: Double = 0.28
-    public static let fallTime: Double = 0.38
+    /// New posts slide in this long after the hold's release (or the finger's lift), once the list rests.
     public static let settleAfterRelease: Double = 0.38
     public static let insertFallback: Double = 0.9
-    public static let unfoldLinger: Double = 0.8
-    /// Ours (user decision, 2026-10-15): once the new posts are in, the landed drop shrinks to this scale and fades
-    /// out on their card's top edge while the block comes in (`NewsFreshBlock.contentDelay`, `inDuration`).
-    public static let dropOutScale: CGFloat = 0.2
-    /// Ours: the drop shrinking back into the island when a refresh is detached from it.
+    /// Ours: the drop shrinking back into the island, how every refresh ends.
     public static let retractDuration: Double = 0.3
     /// The block's card inside a row (`RowShape.inset`, `RowShape.corner`).
     public static let cardSideInset: CGFloat = 8.0

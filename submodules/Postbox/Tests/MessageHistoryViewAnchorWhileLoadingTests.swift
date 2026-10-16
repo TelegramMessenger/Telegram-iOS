@@ -145,4 +145,71 @@ final class MessageHistoryViewAnchorWhileLoadingTests: XCTestCase {
             XCTFail("anchor index is \(view.anchorIndex)")
         }
     }
+
+    // MARK: a loaded view with holes near the anchor (a joined channel)
+
+    /// A joined channel: the update stream filled its history from the top, so the view around a feed post is
+    /// loaded, but the older history below the post is still a hole, holding an older post the feed stored out of
+    /// history (id 3), which makes the view report a hole earlier. The chat cannot show that window yet; the
+    /// anchor-only copy is what it shows meanwhile, exactly as for a post inside a hole.
+    private func storeJoinedChannelHistory(albumAt anchorGroup: Int64? = nil) {
+        self.store([
+            self.message(id: 3, timestamp: 30, text: "older"),
+            self.message(id: 5, timestamp: 50, text: "a", groupingKey: anchorGroup),
+            self.message(id: 6, timestamp: 60, text: "b", groupingKey: anchorGroup),
+            self.message(id: 7, timestamp: 70, text: "c")
+        ])
+        self.fixture.transaction { transaction in
+            transaction.removeHole(peerId: self.chat.id, threadId: nil, namespace: MessageHistoryTableFixture.messageNamespace, space: .everywhere, range: 5 ... (Int32.max - 1))
+        }
+    }
+
+    func testALoadedViewWithAHoleBelowIsLoadedNotPartial() {
+        self.storeJoinedChannelHistory()
+        let view = self.observeAround(id: 6, includeAnchor: true).waitForValues(count: 1).last!
+        XCTAssertFalse(view.isLoading)
+        XCTAssertFalse(view.isAnchorOnlyWhileLoading)
+        XCTAssertTrue(view.holeEarlier)
+        XCTAssertEqual(self.texts(view), ["a", "b", "c"])
+    }
+
+    func testAnchorOnlyCopyCarriesTheAnchorAsALoadingViewDoes() {
+        self.storeJoinedChannelHistory()
+        let view = self.observeAround(id: 6, includeAnchor: true).waitForValues(count: 1).last!
+        guard let copy = view.anchorOnlyWhileLoading() else {
+            XCTFail("no anchor-only copy")
+            return
+        }
+        XCTAssertEqual(self.texts(copy), ["b"])
+        XCTAssertTrue(copy.isLoading)
+        XCTAssertTrue(copy.isLoadingEarlier)
+        XCTAssertTrue(copy.isAnchorOnlyWhileLoading)
+        XCTAssertTrue(copy.holeEarlier)
+        XCTAssertTrue(copy.holeLater)
+        if case let .message(index) = copy.anchorIndex {
+            XCTAssertEqual(index.id, self.messageId(6))
+        } else {
+            XCTFail("anchor index is \(copy.anchorIndex)")
+        }
+    }
+
+    func testAnchorOnlyCopyKeepsTheAnchorsAlbum() {
+        self.storeJoinedChannelHistory(albumAt: 1)
+        let view = self.observeAround(id: 6, includeAnchor: true).waitForValues(count: 1).last!
+        XCTAssertEqual(view.anchorOnlyWhileLoading().map(self.texts), ["a", "b"])
+    }
+
+    func testAnchorOnlyCopyMakesNoReadClaim() {
+        self.fixture.transaction { transaction in
+            transaction.resetIncomingReadStates([self.chat.id: [MessageHistoryTableFixture.messageNamespace: .idBased(maxIncomingReadId: 5, maxOutgoingReadId: 0, maxKnownId: 7, count: 2, markedUnread: false)]])
+        }
+        self.storeJoinedChannelHistory()
+        let view = self.observeAround(id: 6, includeAnchor: true).waitForValues(count: 1).last!
+        XCTAssertNil(view.anchorOnlyWhileLoading()?.maxReadIndex)
+    }
+
+    func testNoAnchorOnlyCopyWithoutAMessageAnchor() {
+        let view = MessageHistoryView(tag: nil, namespaces: .all, entries: [], holeEarlier: true, holeLater: true, isLoading: false)
+        XCTAssertNil(view.anchorOnlyWhileLoading())
+    }
 }

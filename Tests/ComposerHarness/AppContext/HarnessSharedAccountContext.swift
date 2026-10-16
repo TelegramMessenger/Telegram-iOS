@@ -48,14 +48,12 @@ public final class HarnessSharedAccountContext: SharedAccountContext {
         var value = ExperimentalUISettings.defaultSettings
         switch self.settings.backend {
         case .engine:
-            // Rich input must be on for the composer to build a rich node at all; the engine
-            // editor is a choice WITHIN that, not an alternative to it.
+            // The engine flag also forces the composer native, which it must be for the engine
+            // editor to be built at all.
             value.useInputDecEngine = true
-            value.forceNewTextInput = true
             value.inputDecTextBackend = true
         case .legacy:
             value.useInputDecEngine = false
-            value.forceNewTextInput = false
             value.inputDecTextBackend = false
         }
         return value

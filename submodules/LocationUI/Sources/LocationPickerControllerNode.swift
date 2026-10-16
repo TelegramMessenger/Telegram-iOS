@@ -1300,7 +1300,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         }
         
         if self.locationAccessDenied {
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
             Queue.mainQueue().after(0.25) {
                 self.controller?.updateTabBarAlpha(0.0, .immediate)
             }
@@ -1347,7 +1347,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 placeholderBackgroundNode.removeFromSupernode()
             }
             
-            self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(1.0, transition: .immediate)
             self.controller?.updateTabBarAlpha(1.0, .immediate)
         }
         
@@ -1466,7 +1466,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             // iPhone Duo, with a side strip: where the bar shows its own close there (the controller's "___close" item,
             // which this button otherwise covers), this one would be a second close in the row, so it stays only as the
             // back arrow used while picking a point; where the bar has none (sharing), this button goes in the strip.
-            let barShowsCloseInSideColumn = self.controller?.navigationBar?.displaysNavigationButtonInSideColumn ?? false
+            let barShowsCloseInSideColumn = self.controller?.navigationBar?.isBackInSideColumn ?? false
             let cancelButtonFrame: CGRect
             if !barShowsCloseInSideColumn, let sideColumnFrame = layout.sideColumnNavigationButtonFrame {
                 cancelButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnFrame.midX - cancelButtonSize.width * 0.5), y: floorToScreenPixels(sideColumnFrame.midY - cancelButtonSize.height * 0.5)), size: cancelButtonSize)

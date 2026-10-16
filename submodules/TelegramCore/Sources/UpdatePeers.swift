@@ -201,8 +201,14 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
             break
         }
     }
+    let now = CFAbsoluteTimeGetCurrent()
     for (_, peer) in peers.peers {
-        parsedPeers.append(peer)
+        if let channel = peer as? TelegramChannel {
+            // A server channel keeps the client's own recent Add to News / Remove from News (ChannelInNewsLocalChanges).
+            parsedPeers.append(channelApplyingLocalInNews(channel, localInNews: ChannelInNewsLocalChanges.shared.localInNews(accountPeerId: accountPeerId, channelId: channel.id, at: now)))
+        } else {
+            parsedPeers.append(peer)
+        }
     }
     updatePeersCustom(transaction: transaction, peers: parsedPeers, update: { _, updated in updated })
     
@@ -327,6 +333,11 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
                 let isMember = updated.participationStatus == .member
                 if isMember != wasMember || updated.storiesHidden != wasHidden {
                     _internal_updateChannelMembership(transaction: transaction, channel: updated, isMember: isMember, justJoined: previous == nil || wasHidden == nil)
+                }
+                // The channel still holds the read state it had as a non-member
+                // (NonMemberChannelReadState.swift), and the join may not fetch the dialog.
+                if channelJoinNeedsServerReadState(previous: previous, updated: updated) {
+                    transaction.setNeedsIncomingReadStateSynchronization(peerId)
                 }
             }
         }

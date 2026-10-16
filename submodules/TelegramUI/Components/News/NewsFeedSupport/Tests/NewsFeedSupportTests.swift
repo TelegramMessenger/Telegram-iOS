@@ -207,38 +207,6 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.string("false"))))
     }
 
-    // MARK: channel bar
-
-    func testLightJoinedChannelShowsAddedToNews() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .left, featureEnabled: true, isAddingToNews: false), .addedToNews)
-    }
-
-    // A joined channel keeps Mute/Unmute even when it is in News, so Remove from News, which leaves the
-    // channel, is never offered to it.
-    func testJoinedChannelInNewsKeepsTheExistingBar() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .member, featureEnabled: true, isAddingToNews: false), .existing)
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .member, featureEnabled: true, isAddingToNews: true), .existing)
-    }
-
-    func testAddedToNewsStaysWithTheFeatureOff() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .left, featureEnabled: false, isAddingToNews: false), .addedToNews)
-    }
-
-    func testUnjoinedChannelOffersAddToNewsOnlyWithTheFeatureOn() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .left, featureEnabled: true, isAddingToNews: false), .addToNews)
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .left, featureEnabled: false, isAddingToNews: false), .existing)
-    }
-
-    func testAddingShowsAddedToNewsAtOnce() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .left, featureEnabled: true, isAddingToNews: true), .addedToNews)
-    }
-
-    func testGroupsMembersAndKickedKeepTheExistingBar() {
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: false, isInNews: false, participation: .left, featureEnabled: true, isAddingToNews: false), .existing)
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: false, participation: .member, featureEnabled: true, isAddingToNews: false), .existing)
-        XCTAssertEqual(newsChannelBarAction(isBroadcast: true, isInNews: true, participation: .kicked, featureEnabled: true, isAddingToNews: false), .existing)
-    }
-
     // MARK: preview text
 
     func testShortTextKeepsItsEntities() {

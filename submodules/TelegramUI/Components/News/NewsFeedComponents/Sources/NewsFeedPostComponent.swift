@@ -367,7 +367,8 @@ public final class NewsFeedPostComponent: Component {
                     // 3.5 pt wide); twice the width leaves room for characters of several UTF-16 units.
                     text: .plain(newsPostText(component: component, maxLength: Int(textWidth * 2.0))),
                     maximumNumberOfLines: 3,
-                    lineSpacing: 0.12
+                    lineSpacing: 0.12,
+                    displaysAsynchronously: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: textWidth, height: 1000.0)

@@ -34,6 +34,10 @@ func _internal_applyMaxReadMessageIdInteractively(postbox: Postbox, stateManager
         guard messageId.peerId.namespace != Namespaces.Peer.SecretChat else {
             return false
         }
+        // A channel the account is not a member of has no read state to apply to.
+        guard peerKeepsReadState(transaction.getPeer(messageId.peerId)) else {
+            return false
+        }
         let index = transaction.getMessage(messageId)?.index ?? MessageIndex(id: messageId, timestamp: 0)
         _internal_applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
         return true
@@ -41,6 +45,11 @@ func _internal_applyMaxReadMessageIdInteractively(postbox: Postbox, stateManager
 }
 
 func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex) {
+    // A channel the account is not a member of has no read state on the server
+    // (NonMemberChannelReadState.swift): nothing moves locally and no push is queued.
+    guard peerKeepsReadState(transaction.getPeer(index.id.peerId)) else {
+        return
+    }
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     
     if let peer = transaction.getPeer(index.id.peerId), peer.isForumOrMonoForum {

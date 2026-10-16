@@ -22,35 +22,43 @@ final class NewsRefreshPoseTests: XCTestCase {
         XCTAssertEqual(atThreshold.iconAlpha, 1.0, accuracy: 1e-9)
     }
 
-    func testLoadingPoseHangsAndBobs() {
+    func testLoadingPoseIsCentredBetweenTheIslandAndTheSearchField() {
         var model = NewsRefreshModel()
         _ = model.step(now: 0.0, input: self.input(gap: 80.0, dragging: true))
-        // Held 60 pt: 8 + 60 = 68 below the island, so the drop rests at max(24, 68 - 52) = 24.
-        let pose = model.dropPose(now: 1.0, input: self.input(gap: 60.0))
-        XCTAssertEqual(pose.top, 24.0 + 1.5 * CGFloat(sin(2.0 * Double.pi / 1.6)), accuracy: 1e-6)
-        XCTAssertEqual(pose.iconTime, 0.1, accuracy: 1e-9)
-        XCTAssertEqual(pose.iconAngle, CGFloat(4.0 * Double.pi / 180.0 * sin(2.0 * Double.pi / 1.5)), accuracy: 1e-6)
+        let bob = 1.5 * CGFloat(sin(2.0 * Double.pi / 1.6))
+        // Held 60 pt: the search field's top is 116 + 60, 76 below the island's bottom, so the 44 pt drop sits 16
+        // below the island and 16 above the field.
+        let held = model.dropPose(now: 1.0, input: self.input(gap: 60.0))
+        XCTAssertEqual(held.top, 16.0 + bob, accuracy: 1e-6)
+        XCTAssertEqual(held.diameter, 44.0, accuracy: 1e-6)
+        XCTAssertEqual(held.iconTime, 0.1, accuracy: 1e-9)
+        XCTAssertEqual(held.iconAngle, CGFloat(4.0 * Double.pi / 180.0 * sin(2.0 * Double.pi / 1.5)), accuracy: 1e-6)
+        // Pulled further while loading: it stays centred in the larger gap (136 below the island).
+        XCTAssertEqual(model.dropPose(now: 1.0, input: self.input(gap: 120.0, dragging: true)).top, 46.0 + bob, accuracy: 1e-6)
     }
 
-    func testFinishingWindsUpAndFalls() {
+    // Loading starts from the drop where the pull left it and settles on the centre within 0.3 s.
+    func testLoadingPoseEasesFromThePullToTheCentre() {
+        var model = NewsRefreshModel()
+        _ = model.step(now: 0.0, input: self.input(gap: 80.0, dragging: true))
+        // At the threshold the pulled drop is 18 below the island + 0.45 pt per point past it.
+        XCTAssertEqual(model.dropPose(now: 0.0, input: self.input(gap: 80.0, dragging: true)).top, 18.0 + 4.0 * 0.45, accuracy: 1e-6)
+        // By 0.3 s it is on the centre of the 96 pt gap, give or take the bob.
+        XCTAssertEqual(model.dropPose(now: 0.3, input: self.input(gap: 80.0, dragging: true)).top, (16.0 + 80.0 - 44.0) * 0.5, accuracy: 1.5)
+    }
+
+    func testFinishRetractsIntoTheIsland() {
         var model = NewsRefreshModel()
         _ = model.step(now: 0.0, input: self.input(gap: 80.0, dragging: true))
         model.fetchEnded(.posts(1))
         _ = model.step(now: 1.2, input: self.input(gap: 60.0))
-        guard case let .finishing(_, fallFromTop, _) = model.phase else {
-            return XCTFail("\(model.phase)")
-        }
-        // Target: the drop's centre on the card's top edge, 160 + 3 - 22 - 100 = 41 below the island.
-        let windUp = model.dropPose(now: 1.2 + 0.23, input: self.input())
-        XCTAssertEqual(windUp.top, fallFromTop - 5.0, accuracy: 1e-6)
-        let mid = model.dropPose(now: 1.2 + 0.47, input: self.input())
-        XCTAssertEqual(mid.top, fallFromTop + (41.0 - fallFromTop) * 0.25, accuracy: 1e-6)
-        XCTAssertEqual(model.dropPose(now: 1.2 + 0.66, input: self.input()).top, 41.0, accuracy: 1e-6)
-        let exit = model.dropPose(now: 1.2 + 0.25, input: self.input())
-        XCTAssertEqual(exit.iconScale, 0.55, accuracy: 1e-6)
-        XCTAssertEqual(exit.iconBlur, 7.0, accuracy: 1e-6)
-        XCTAssertEqual(exit.iconAlpha, 0.0, accuracy: 1e-6)
-        XCTAssertEqual(exit.iconAngle, 0.0, accuracy: 1e-6)
+        let start = model.dropPose(now: 1.2, input: self.input(gap: 60.0))
+        XCTAssertTrue(start.isVisible)
+        XCTAssertEqual(start.diameter, 44.0, accuracy: 1e-6)
+        let mid = model.dropPose(now: 1.35, input: self.input(gap: 30.0))
+        XCTAssertLessThan(mid.diameter, 44.0)
+        XCTAssertLessThan(mid.top, start.top)
+        XCTAssertFalse(model.dropPose(now: 1.51, input: self.input()).isVisible)
     }
 
     func testRetractShrinksIntoTheIsland() {
@@ -61,56 +69,5 @@ final class NewsRefreshPoseTests: XCTestCase {
         let end = model.dropPose(now: 0.79, input: self.input())
         XCTAssertLessThan(end.diameter, 11.0)
         XCTAssertFalse(model.dropPose(now: 0.81, input: self.input()).isVisible)
-    }
-
-    private func unfolded(count: Int = 2) -> NewsRefreshModel {
-        var model = NewsRefreshModel()
-        _ = model.step(now: 0.0, input: self.input(gap: 80.0, dragging: true))
-        model.fetchEnded(.posts(count))
-        _ = model.step(now: 1.2, input: self.input(gap: 60.0))
-        // Finger down at impact, so the rows wait.
-        _ = model.step(now: 1.86, input: self.input(dragging: true))
-        return model
-    }
-
-    func testTheDropRestsOnTheCardEdgeUntilTheRowsGoIn() {
-        let model = self.unfolded()
-        // Finger down at impact: no rows yet. The drop sits centred on the card's top edge, 160 + 3 - 22 - 100 = 41.
-        let pose = model.dropPose(now: 2.0, input: self.input(dragging: true))
-        XCTAssertTrue(pose.isVisible)
-        XCTAssertEqual(pose.top, 41.0, accuracy: 1e-6)
-        XCTAssertEqual(pose.diameter, 44.0, accuracy: 1e-6)
-        XCTAssertEqual(pose.scale, 1.0)
-        XCTAssertEqual(pose.alpha, 1.0)
-        XCTAssertEqual(pose.iconAlpha, 0.0)
-    }
-
-    func testTheDropShrinksAndFadesAsTheBlockComesIn() {
-        var model = self.unfolded()
-        _ = model.step(now: 2.3, input: self.input())
-        let inserted = model.unfold!.inserted!
-        let B = NewsFreshBlock.self
-        let M = NewsRefreshMetrics.self
-
-        // Until the block starts to come in, the drop rests on the card's top edge, whole.
-        let rest = model.dropPose(now: inserted + B.contentDelay * 0.5, input: self.input())
-        XCTAssertTrue(rest.isVisible)
-        XCTAssertEqual(rest.top, 41.0, accuracy: 1e-6)
-        XCTAssertEqual(rest.scale, 1.0, accuracy: 1e-9)
-        XCTAssertEqual(rest.alpha, 1.0, accuracy: 1e-9)
-
-        // Then it fades and shrinks in step with the block's alpha.
-        for f in [0.25, 0.5, 0.75] {
-            let t = B.contentDelay + B.inDuration * f
-            let pose = model.dropPose(now: inserted + t, input: self.input(firstPostTop: 170.0))
-            XCTAssertTrue(pose.isVisible)
-            XCTAssertEqual(pose.top, 51.0, accuracy: 1e-6)
-            XCTAssertEqual(pose.diameter, 44.0, accuracy: 1e-6)
-            XCTAssertEqual(pose.scale, 1.0 + (M.dropOutScale - 1.0) * B.alpha(at: t), accuracy: 1e-9)
-            XCTAssertEqual(pose.alpha, 1.0 - B.alpha(at: t), accuracy: 1e-9)
-        }
-        XCTAssertEqual(B.alpha(at: B.contentDelay + B.inDuration), 1.0, accuracy: 1e-9)
-        XCTAssertFalse(model.dropPose(now: inserted + B.contentDelay + B.inDuration, input: self.input()).isVisible)
-        XCTAssertGreaterThanOrEqual(M.unfoldLinger, B.contentDelay + B.inDuration)
     }
 }

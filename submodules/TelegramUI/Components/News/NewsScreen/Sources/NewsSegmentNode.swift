@@ -94,9 +94,47 @@ final class NewsSegmentNode: ASDisplayNode {
                 // The selected pill lifts out of the capsule while switching; give it room above the glass.
                 tabsView.setOverlayContainerView(overlayContainerView: self.view)
             }
-            transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(), size: frame.size))
+            // Not while a transition has them (`lendTabs`): it places them.
+            if tabsView.superview === self.backgroundView.contentView {
+                transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(), size: frame.size))
+            }
         }
         self.updateTabSwitchFraction(tabSwitchFraction, isDragging: isSwitchingByDragging, transition: transition)
+    }
+
+    /// The island's glass capsule, in this node's view: in a navigation transition it is the title pill that morphs with
+    /// the other screen's (a chat's header).
+    var islandFrame: CGRect {
+        return self.backgroundView.frame
+    }
+
+    /// While a navigation transition draws the island, the island hides.
+    var isIslandDetached: Bool = false {
+        didSet {
+            if self.isIslandDetached != oldValue {
+                self.backgroundContainer.isHidden = self.isIslandDetached
+            }
+        }
+    }
+
+    /// Lends the island's tabs, live (their lens is a visual effect, which no copy of them shows, and a screen that is
+    /// arriving has not been drawn to copy), to a navigation transition that draws the island while it is detached:
+    /// they move into `container` at the island's size until `reclaimTabs()`.
+    func lendTabs(to container: UIView) {
+        guard let tabsView = self.tabs.view else {
+            return
+        }
+        container.addSubview(tabsView)
+        tabsView.frame = CGRect(origin: CGPoint(), size: self.backgroundView.bounds.size)
+    }
+
+    /// Takes the tabs back from a transition.
+    func reclaimTabs() {
+        guard let tabsView = self.tabs.view, tabsView.superview != nil, tabsView.superview !== self.backgroundView.contentView else {
+            return
+        }
+        self.backgroundView.contentView.addSubview(tabsView)
+        tabsView.frame = CGRect(origin: CGPoint(), size: self.backgroundView.bounds.size)
     }
 
     /// The refresh drop for `pose`, below the island (spec §2).

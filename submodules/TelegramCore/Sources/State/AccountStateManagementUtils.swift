@@ -3848,6 +3848,47 @@ private final class OptimizeAddMessagesState {
     }
 }
 
+/// The highest incoming read mark each peer's cloud messages get in `operations`, for counting new messages
+/// in forum topics. Operations the replay skips for a channel the account is not a member of
+/// (`readStateOperationTargetsNonMember`) are left out.
+func cloudReadInboxMarks(_ operations: [AccountStateMutationOperation], getPeer: (PeerId) -> Peer?) -> [PeerId: Int32] {
+    var marks: [PeerId: Int32] = [:]
+    for operation in operations {
+        let peerId: PeerId
+        let mark: Int32
+        switch operation {
+        case let .ReadInbox(messageId):
+            guard messageId.namespace == Namespaces.Message.Cloud else {
+                continue
+            }
+            peerId = messageId.peerId
+            mark = messageId.id
+        case let .ResetIncomingReadState(_, peerIdValue, namespace, maxIncomingReadId, _, _):
+            guard namespace == Namespaces.Message.Cloud else {
+                continue
+            }
+            peerId = peerIdValue
+            mark = maxIncomingReadId
+        case let .ResetReadState(peerIdValue, namespace, maxIncomingReadId, _, _, _, _):
+            guard namespace == Namespaces.Message.Cloud else {
+                continue
+            }
+            peerId = peerIdValue
+            mark = maxIncomingReadId
+        default:
+            continue
+        }
+        if readStateOperationTargetsNonMember(operation, getPeer: getPeer) {
+            continue
+        }
+        if let current = marks[peerId], current >= mark {
+            continue
+        }
+        marks[peerId] = mark
+    }
+    return marks
+}
+
 private func optimizedOperations(_ operations: [AccountStateMutationOperation]) -> [AccountStateMutationOperation] {
     var result: [AccountStateMutationOperation] = []
     
@@ -4156,7 +4197,9 @@ func replayFinalState(
     
     var wasOperationScheduledMessageIds: [MessageId] = []
     
-    var readInboxCloudMessageIds: [PeerId: Int32] = [:]
+    // Judged by each peer as this batch leaves it, the way the replay below judges it when it applies the
+    // operation: a channel joined earlier in the batch counts.
+    let readInboxCloudMessageIds = cloudReadInboxMarks(finalState.state.operations, getPeer: { finalState.state.peers[$0] ?? transaction.getPeer($0) })
     
     var addedOperationIncomingMessageIds: [MessageId] = []
     var addedConferenceInvitationMessagesIds: [MessageId] = []
@@ -4226,36 +4269,6 @@ func replayFinalState(
                     }
                 }
             }
-        case let .ReadInbox(messageId):
-            if messageId.namespace == Namespaces.Message.Cloud {
-                if let current = readInboxCloudMessageIds[messageId.peerId] {
-                    if current < messageId.id {
-                        readInboxCloudMessageIds[messageId.peerId] = messageId.id
-                    }
-                } else {
-                    readInboxCloudMessageIds[messageId.peerId] = messageId.id
-                }
-            }
-        case let .ResetIncomingReadState(_, peerId, namespace, maxIncomingReadId, _, _):
-            if namespace == Namespaces.Message.Cloud {
-                if let current = readInboxCloudMessageIds[peerId] {
-                    if current < maxIncomingReadId {
-                        readInboxCloudMessageIds[peerId] = maxIncomingReadId
-                    }
-                } else {
-                    readInboxCloudMessageIds[peerId] = maxIncomingReadId
-                }
-            }
-        case let .ResetReadState(peerId, namespace, maxIncomingReadId, _, _, _, _):
-            if namespace == Namespaces.Message.Cloud {
-                if let current = readInboxCloudMessageIds[peerId] {
-                    if current < maxIncomingReadId {
-                        readInboxCloudMessageIds[peerId] = maxIncomingReadId
-                    }
-                } else {
-                    readInboxCloudMessageIds[peerId] = maxIncomingReadId
-                }
-            }
         default:
             break
         }
@@ -4317,6 +4330,11 @@ func replayFinalState(
     
     for operation in optimizedOperations(finalState.state.operations) {
         walletTonConnectEventBatch.append(contentsOf: walletTonConnectEvents(operation: operation))
+        // The server's read state for a channel the account is not a member of is not kept
+        // (NonMemberChannelReadState.swift). A join earlier in this replay is already stored.
+        if readStateOperationTargetsNonMember(operation, getPeer: { transaction.getPeer($0) }) {
+            continue
+        }
         switch operation {
             case let .AddMessages(messages, location):
                 if case .UpperHistoryBlock = location {
@@ -4828,15 +4846,13 @@ func replayFinalState(
                         if namespace == currentNamespace {
                             switch currentState {
                             case let .idBased(localMaxIncomingReadId, _, _, localCount, localMarkedUnread):
-                                if count != 0 || markedUnreadValue {
-                                    if localMaxIncomingReadId > maxIncomingReadId {
-                                        transaction.setNeedsIncomingReadStateSynchronization(peerId)
-                                        
-                                        transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: localMaxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: localCount, markedUnread: localMarkedUnread)]])
-                                        
-                                        Logger.shared.log("State", "not applying incoming read state for \(peerId): \(localMaxIncomingReadId) > \(maxIncomingReadId)")
-                                        ignore = true
-                                    }
+                                if localReadMarkIsAheadOfServer(localMaxIncomingReadId: localMaxIncomingReadId, serverMaxIncomingReadId: maxIncomingReadId, serverCount: count, serverMarkedUnread: markedUnreadValue) {
+                                    transaction.setNeedsIncomingReadStateSynchronization(peerId)
+
+                                    transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: localMaxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: localCount, markedUnread: localMarkedUnread)]])
+
+                                    Logger.shared.log("State", "not applying incoming read state for \(peerId): \(localMaxIncomingReadId) > \(maxIncomingReadId)")
+                                    ignore = true
                                 }
                             default:
                                 break

@@ -34,7 +34,7 @@ import TelegramUIDeclareEncodables
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
 import ContextMenuScreen
-import NavigationBarImpl
+import NavigationBarNode
 import ContextUI
 import ContextControllerImpl
 
@@ -204,7 +204,10 @@ public class ShareRootControllerImpl {
         self.getExtensionContext = getExtensionContext
         
         defaultNavigationBarImpl = { presentationData in
-            return NavigationBarImpl(presentationData: presentationData)
+            return NavigationBarNode(presentationData: presentationData)
+        }
+        defaultNavigationBarTransitionRenderer = { bottom, top in
+            return makeNavigationBarTransitionRenderer(bottom: bottom, top: top)
         }
         makeContextControllerImpl = { context, presentationData, configuration, recognizer, gesture, workaroundUseLegacyImplementation, disableScreenshots, hideReactionPanelTail in
             return ContextControllerImpl(
