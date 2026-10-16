@@ -223,6 +223,16 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         }
         return navigationBar
     }
+    /// This screen's side when the screen above it expands out of it (a push or pop between the two); nil: it does not
+    /// take part.
+    open func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        return nil
+    }
+
+    /// This screen's side when it expands out of the screen below it; nil: it does not (the slide).
+    open func navigationExpansionDestination(below controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionDestination? {
+        return nil
+    }
     public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true

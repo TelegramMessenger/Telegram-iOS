@@ -300,6 +300,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let chatWallpaperPromise = Promise<TelegramWallpaper?>()
     
     var chatTitleView: ChatNavigationBarTitleView?
+    /// Set by a tap on the header's title pill or avatar, just before the `.openChatInfo` it sends, which takes it at once.
+    var openChatInfoFromHeader = false
+    /// The profile `.openChatInfo` pushed for a header tap: only its push expands (the push waits for the profile to be
+    /// ready, and one the profile declines never asks the chat, so nothing else could clear a flag).
+    weak var expansionProfileToPush: ViewController?
+    /// The profile an expansion opened: its pop expands back.
+    private weak var expandedProfile: ViewController?
     var leftNavigationButton: ChatNavigationButton?
     var rightNavigationButton: ChatNavigationButton?
     var secondaryRightNavigationButton: ChatNavigationButton?
@@ -6445,6 +6452,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.tapAction = { [weak self] in
+            self?.openChatInfoFromHeader = true
             self?.navigationButtonAction(.openChatInfo(expandAvatar: false, section: nil))
         }
         
@@ -8593,9 +8601,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else if case let .peer(peerId) = self.chatLocation, case .openChatInfo(expandAvatar: true, _) = button.action, let storyStats = self.contentData?.state.storyStats, storyStats.unseenCount != 0, let avatarNode = self.avatarNode {
                 self.openStories(peerId: peerId, avatarHeaderNode: nil, avatarNode: avatarNode.avatarNode)
             } else {
+                if case .openChatInfo = button.action {
+                    self.openChatInfoFromHeader = true
+                }
                 self.navigationButtonAction(button.action)
             }
         }
+    }
+
+    override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        switch operation {
+        case .push:
+            guard let profile = self.expansionProfileToPush, profile === controller else {
+                return nil
+            }
+            self.expansionProfileToPush = nil
+        case .pop, .interactivePop:
+            guard let profile = self.expandedProfile, profile === controller else {
+                return nil
+            }
+        }
+        // Saved Messages, reply threads and monoforums keep the slide.
+        guard let titleView = self.chatTitleView, titleView.glassPillFrame != nil, case let .peer(peerId) = self.chatLocation, peerId != self.context.account.peerId, !self.presentationInterfaceState.isNotAccessible else {
+            return nil
+        }
+        if case .push = operation {
+            self.expandedProfile = controller
+        }
+        return ChatExpansionSource(titleView: titleView, avatarNode: self.avatarNode, avatarItem: self.chatInfoNavigationButton?.buttonItem, navigationBar: self.navigationBar, isDark: self.presentationData.theme.overallDarkAppearance, preferClearGlass: self.presentationInterfaceState.preferredGlassType == .clear)
     }
     
     @objc func secondaryRightNavigationButtonAction() {

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 
 /// A bar taking part in a navigation push or pop, by the context-menu extraction flow: the bar keeps its containing
 /// view in its screen; the coordinator lifts only the content view above the two sliding screens and returns it
@@ -19,11 +20,17 @@ public protocol NavigationBarTransitionSource: AnyObject {
     /// `interrupted` when it is touched or its content or layout changes, so that the transition's glass hands over at
     /// once. Returns whether the bar holds its glass; one that cannot is handed back at once.
     func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool
+    /// The bar's back button frame in `view`'s coordinates, nil without one: a push's back-button hole.
+    func backButtonFrame(in view: UIView) -> CGRect?
 }
 
 public extension NavigationBarTransitionSource {
     func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {
         return false
+    }
+
+    func backButtonFrame(in view: UIView) -> CGRect? {
+        return nil
     }
 }
 
@@ -43,6 +50,20 @@ public final class NavigationBarTransitionTakeViewInfo {
     public init(containingView: UIView, contentView: UIView) {
         self.containingView = containingView
         self.contentView = contentView
+    }
+}
+
+/// What another transition takes from a bar for itself, so its morph does not draw it twice: its title pill, and the
+/// screen nodes of these buttons.
+public struct NavigationBarTransitionExclusions {
+    public var titlePill: Bool
+    public var nodes: [ASDisplayNode]
+
+    public static let none = NavigationBarTransitionExclusions(titlePill: false, nodes: [])
+
+    public init(titlePill: Bool, nodes: [ASDisplayNode]) {
+        self.titlePill = titlePill
+        self.nodes = nodes
     }
 }
 
@@ -75,6 +96,9 @@ public protocol NavigationBarTransitionRenderer: AnyObject {
     /// The transition's glass is gone: at the transition's end, or at the end of its linger. Whatever the renderer
     /// borrowed from the bars goes back to them.
     func end()
+    /// What another transition took from the lower bar (an expansion: the chat's pill and avatar): the morph leaves it
+    /// out.
+    func updateExclusions(bottom: NavigationBarTransitionExclusions)
 }
 
 public extension NavigationBarTransitionRenderer {
@@ -88,6 +112,9 @@ public extension NavigationBarTransitionRenderer {
     }
 
     func end() {
+    }
+
+    func updateExclusions(bottom: NavigationBarTransitionExclusions) {
     }
 
     var isGlassAnimating: Bool {

@@ -119,6 +119,8 @@ import Pasteboard
 import AccountPeerContextItem
 import UrlWhitelist
 import SideColumnLayout
+import NavigationBarNode
+import NavigationExpansionTransition
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -273,6 +275,58 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     let enqueueMediaMessageDisposable = MetaDisposable()
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
+    /// While an expansion has the profile's views they are held still: layouts wait, and the last one is applied when
+    /// the views come back (`applyLayoutHeldDuringExpansion`).
+    var isLentToExpansion = false
+    private var layoutHeldDuringExpansion: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
+    /// The page's colour while an expansion fades it in under the card (the node's own colour is clear then).
+    var expansionBackgroundView: UIView?
+    /// What waits for the expansion to return the header's views (a tooltip pointing at one of them would show under
+    /// the lent avatar, which the expansion draws above the profile).
+    private var actionsAfterExpansion: [() -> Void] = []
+
+    /// The status gift's name, as a tooltip under its icon.
+    private func presentUniqueGiftInfo(sourceView: UIView, text: String) {
+        guard let controller = self.controller else {
+            return
+        }
+        let sourceRect = sourceView.convert(sourceView.bounds, to: controller.view)
+        guard sourceRect.minY > 44.0 else {
+            return
+        }
+        
+        let backgroundColor: UIColor
+        if !self.headerNode.isAvatarExpanded, let contentButtonBackgroundColor = self.headerNode.contentButtonBackgroundColor {
+            backgroundColor = contentButtonBackgroundColor
+        } else {
+            backgroundColor = UIColor(rgb: 0x000000, alpha: 0.65)
+        }
+        
+        let tooltipController = TooltipScreen(
+            context: self.context,
+            account: self.context.account,
+            sharedContext: self.context.sharedContext,
+            text: .attributedString(text: NSAttributedString(string: text, font: Font.semibold(11.0), textColor: .white)),
+            style: .customBlur(backgroundColor, -4.0),
+            arrowStyle: .small,
+            location: .point(sourceRect, .bottom),
+            isShimmering: true,
+            cornerRadius: 10.0,
+            shouldDismissOnTouch: { _, _ in
+                return .dismiss(consume: false)
+            }
+        )
+        controller.present(tooltipController, in: .current)
+    }
+
+    /// Runs `action` now, or once the expansion has returned the header's views.
+    func performAfterExpansion(_ action: @escaping () -> Void) {
+        if self.isLentToExpansion {
+            self.actionsAfterExpansion.append(action)
+        } else {
+            action()
+        }
+    }
     private(set) var data: PeerInfoScreenData?
     
     var state = PeerInfoState(
@@ -2278,36 +2332,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             self.headerNode.displayUniqueGiftInfo = { [weak self] sourceView, text in
-                guard let self, let controller = self.controller else {
+                guard let self, self.controller != nil else {
                     return
                 }
-                let sourceRect = sourceView.convert(sourceView.bounds, to: controller.view)
-                guard sourceRect.minY > 44.0 else {
-                    return
-                }
-                
-                let backgroundColor: UIColor
-                if !self.headerNode.isAvatarExpanded, let contentButtonBackgroundColor = self.headerNode.contentButtonBackgroundColor {
-                    backgroundColor = contentButtonBackgroundColor
-                } else {
-                    backgroundColor = UIColor(rgb: 0x000000, alpha: 0.65)
-                }
-                
-                let tooltipController = TooltipScreen(
-                    context: self.context,
-                    account: self.context.account,
-                    sharedContext: self.context.sharedContext,
-                    text: .attributedString(text: NSAttributedString(string: text, font: Font.semibold(11.0), textColor: .white)),
-                    style: .customBlur(backgroundColor, -4.0),
-                    arrowStyle: .small,
-                    location: .point(sourceRect, .bottom),
-                    isShimmering: true,
-                    cornerRadius: 10.0,
-                    shouldDismissOnTouch: { _, _ in
-                        return .dismiss(consume: false)
+                // Shown once an expansion has returned the header (else it shows under the lent avatar), pointing at
+                // the status icon where it is then.
+                self.performAfterExpansion { [weak self, weak sourceView] in
+                    guard let self, let sourceView else {
+                        return
                     }
-                )
-                controller.present(tooltipController, in: .current)
+                    self.presentUniqueGiftInfo(sourceView: sourceView, text: text)
+                }
             }
             
             self.headerNode.displayStatusPremiumIntro = { [weak self] in
@@ -5502,7 +5537,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         return navigationHeight
     }
     
+    func applyLayoutHeldDuringExpansion() {
+        if let held = self.layoutHeldDuringExpansion ?? self.validLayout.flatMap({ (layout: $0.0, navigationHeight: $0.1) }) {
+            self.layoutHeldDuringExpansion = nil
+            self.containerLayoutUpdated(layout: held.layout, navigationHeight: held.navigationHeight, transition: .immediate)
+        }
+        let actions = self.actionsAfterExpansion
+        self.actionsAfterExpansion = []
+        actions.forEach { $0() }
+    }
+
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
+        if self.isLentToExpansion {
+            self.layoutHeldDuringExpansion = (layout, navigationHeight)
+            return
+        }
         self.validLayout = (layout, navigationHeight)
         
         self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
@@ -5546,7 +5595,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let sideInsets = peerInfoSideInsets(layout: layout)
         let headerInset = sideInsets.base
         
-        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: transition.isAnimated && self.headerNode.navigationTransition == nil)
+        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: transition.isAnimated)
         
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: layout.size.height))
         if additive {
@@ -5916,11 +5965,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         } else {
             color = self.presentationData.theme.list.blocksBackgroundColor.mixedWith(self.presentationData.theme.list.plainBackgroundColor, alpha: self.effectiveAreaExpansionFraction)
         }
+        if let expansionBackgroundView = self.expansionBackgroundView {
+            expansionBackgroundView.backgroundColor = color
+            return
+        }
         self.backgroundColor = color
     }
         
     private var hasQrButton = false
     fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
+        // Held with the layout while an expansion has the header's views; the held layout's application runs it.
+        if self.isLentToExpansion {
+            return
+        }
         let offsetY = self.scrollNode.view.contentOffset.y
         
         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
@@ -5955,7 +6012,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let sideInsets = peerInfoSideInsets(layout: layout)
                 let headerInset = sideInsets.base
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: animateHeader && self.headerNode.navigationTransition == nil)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -7111,6 +7168,23 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    override public func navigationExpansionDestination(below controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionDestination? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        let node = self.controllerNode
+        guard peerInfoExpansionAllowed(isOpenedFromChat: self.isOpenedFromChat, isSettings: self.isSettings, scrollOffset: node.scrollNode.view.contentOffset.y, isEditing: node.state.isEditing, isSearching: node.searchDisplayController != nil) else {
+            return nil
+        }
+        let path: ExpansionPath = peerInfoExpansionPath(isAvatarExpanded: node.headerNode.isAvatarExpanded) == .photo ? .photo : .origin
+        if operation != .push, node.scrollNode.view.contentOffset.y > 0.0 {
+            // At most 8 pt (the policy): back to the top at once, under the card's first frames, before its views are
+            // measured and lent.
+            node.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+        }
+        return PeerInfoExpansionDestination(screenNode: node, navigationBar: self.navigationBar as? NavigationBarNode, path: path)
+    }
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

@@ -1202,6 +1202,29 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertNil(node.rowViewForTesting?.inPlaceStateForTesting(isLeft: false))
         XCTAssertEqual(node.rowViewForTesting?.plattersDetached, false)
     }
+
+    // An expansion takes the chat's pill and avatar: the bar morph draws neither for the lower bar, so the upper bar's
+    // Edit has no counterpart and materializes in place (without the exclusion it morphs out of the avatar capsule).
+    func test_transitionRenderer_exclusions_dropThePillAndTheNode() {
+        let avatarNode = ASDisplayNode()
+        let (bottom, _) = self.makePillNode(rightItems: [UIBarButtonItem(customDisplayNode: avatarNode)!])
+        let top = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        guard let renderer = makeNavigationBarTransitionRenderer(bottom: bottom, top: top) as? NavigationBarTransitionRendererImpl else {
+            return XCTFail("no renderer")
+        }
+        renderer.updateExclusions(bottom: NavigationBarTransitionExclusions(titlePill: true, nodes: [avatarNode]))
+        let size = CGSize(width: 390.0, height: 844.0)
+        let frame = CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0)
+        renderer.update(size: size, fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        guard let platterView = renderer.platterViewForTesting else {
+            return XCTFail("no platter view")
+        }
+        renderer.beginTransition(isInteractive: false, toTop: true)
+        let edit = platterView.platterStateForTesting(.trailing(0))
+        XCTAssertEqual(edit?.opacity ?? 1.0, 0.0, accuracy: 0.001, "Edit materializes")
+        XCTAssertGreaterThan(edit?.scale.height ?? 0.0, 1.0, "in place")
+        XCTAssertNil(platterView.platterStateForTesting(.trailing(1)), "no pill platter")
+    }
 }
 
 /// A screen's node that sizes itself like the chat's avatar (37pt, narrower than a button).

@@ -36,6 +36,8 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
     }
 
     private let renderer: NavigationBarTransitionRenderer
+    /// False in an expansion: nothing slides, so each bar keeps its whole width.
+    private let clipsToScreens: Bool
     private let bottom: Lifted
     private let top: Lifted
     /// The fraction on screen.
@@ -44,8 +46,9 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
     /// once if the layer leaves the screen).
     private var lingerCap: NavigationAnimationClock?
 
-    init(renderer: NavigationBarTransitionRenderer, bottom: (NavigationBarTransitionSource, NavigationBarTransitionTakeViewInfo, UIView), top: (NavigationBarTransitionSource, NavigationBarTransitionTakeViewInfo, UIView)) {
+    init(renderer: NavigationBarTransitionRenderer, bottom: (NavigationBarTransitionSource, NavigationBarTransitionTakeViewInfo, UIView), top: (NavigationBarTransitionSource, NavigationBarTransitionTakeViewInfo, UIView), clipsToScreens: Bool = true) {
         self.renderer = renderer
+        self.clipsToScreens = clipsToScreens
         self.bottom = Lifted(source: bottom.0, info: bottom.1, screenView: bottom.2)
         self.top = Lifted(source: top.0, info: top.1, screenView: top.2)
         super.init()
@@ -131,6 +134,14 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
     /// to its own screen, the bottom bar to the part of its screen the top screen does not cover. Index 0 is the bottom
     /// bar, 1 the top one; the content's frame is in its clip.
     private func liftedLayout(topScreen: CGRect, bottomScreen: CGRect) -> [(clip: CGRect, content: CGRect)] {
+        if !self.clipsToScreens {
+            // An expansion: nothing slides, so each bar keeps its whole width where its screen is.
+            let height = max(self.bounds.height, self.bottom.frame.maxY, self.top.frame.maxY)
+            return [self.bottom, self.top].map { lifted in
+                let clip = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: height)
+                return (clip, lifted.frame)
+            }
+        }
         let height = max(self.bounds.height, self.bottom.frame.maxY, self.top.frame.maxY)
         let topRange = (minX: topScreen.minX, maxX: topScreen.minX + topScreen.width)
         var bottomRange = (minX: bottomScreen.minX, maxX: bottomScreen.minX + bottomScreen.width)
@@ -167,6 +178,27 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
     private(set) var isLingering = false
     /// Called once a linger ends (the glass settled, the bar was touched or changed, or it was ended from outside).
     var lingerEnded: (() -> Void)?
+    /// Run when the linger ends, right after the bar takes its glass back (an expansion hands over what the lingering
+    /// glass leaves out); also if the layer goes without ending its linger.
+    private var lingerHandovers: [() -> Void] = []
+
+    func addLingerHandover(_ handover: @escaping () -> Void) {
+        self.lingerHandovers.append(handover)
+    }
+
+    deinit {
+        let handovers = self.lingerHandovers
+        if !handovers.isEmpty {
+            let run = {
+                handovers.forEach { $0() }
+            }
+            if Thread.isMainThread {
+                run()
+            } else {
+                DispatchQueue.main.async(execute: run)
+            }
+        }
+    }
 
     /// Ends the transition's bar part: both contents go back to their bars. UIKit's capsules run on their own clock and
     /// outlive the screens' transition, so when `lingering` is allowed and the renderer's glass is still animating, the
@@ -223,6 +255,9 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         let source = self.lingeringSource
         self.lingeringSource = nil
         let _ = source?.holdGlass(false, interrupted: nil)
+        let handovers = self.lingerHandovers
+        self.lingerHandovers = []
+        handovers.forEach { $0() }
         self.removeFromSupernode()
         let lingerEnded = self.lingerEnded
         self.lingerEnded = nil
