@@ -596,7 +596,9 @@ extension ChatControllerImpl {
         
         if let initialNavigationBadge = contentData.initialNavigationBadge {
             contentData.initialNavigationBadge = nil
-            self.navigationItem.badge = initialNavigationBadge
+            if self.showsUnreadChatsBackBadge {
+                self.navigationItem.badge = initialNavigationBadge
+            }
         }
         
         if let performDismissAction = contentData.state.performDismissAction, !self.didHandlePerformDismissAction {
@@ -5084,35 +5086,38 @@ extension ChatControllerImpl {
 
                 if case let .peer(peerId) = self.chatLocation {
                     self.chatUnreadCountDisposable?.dispose()
-                    self.chatUnreadCountDisposable = (self.context.engine.data.subscribe(
-                        TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId),
-                        TelegramEngine.EngineData.Item.Messages.TotalReadCounters(),
-                        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
-                    )
-                    |> deliverOnMainQueue).startStrict(next: { [weak self] peerUnreadCount, totalReadCounters, notificationSettings in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let unreadCount: Int32 = Int32(peerUnreadCount)
-                        
-                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        let totalChatCount: Int32 = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: totalReadCounters._asCounters()).0
-                        
-                        var globalRemainingUnreadChatCount = totalChatCount
-                        if !notificationSettings._asNotificationSettings().isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
-                            if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
-                                globalRemainingUnreadChatCount -= unreadCount
-                            } else {
-                                globalRemainingUnreadChatCount -= 1
+                    // A chat opened from News returns to the feed: there are no unread chats behind Back.
+                    if self.showsUnreadChatsBackBadge {
+                        self.chatUnreadCountDisposable = (self.context.engine.data.subscribe(
+                            TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId),
+                            TelegramEngine.EngineData.Item.Messages.TotalReadCounters(),
+                            TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+                        )
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] peerUnreadCount, totalReadCounters, notificationSettings in
+                            guard let strongSelf = self else {
+                                return
                             }
-                        }
-                        
-                        if globalRemainingUnreadChatCount > 0 {
-                            strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
-                        } else {
-                            strongSelf.navigationItem.badge = ""
-                        }
-                    })
+                            let unreadCount: Int32 = Int32(peerUnreadCount)
+                            
+                            let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                            let totalChatCount: Int32 = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: totalReadCounters._asCounters()).0
+                            
+                            var globalRemainingUnreadChatCount = totalChatCount
+                            if !notificationSettings._asNotificationSettings().isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
+                                if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                    globalRemainingUnreadChatCount -= unreadCount
+                                } else {
+                                    globalRemainingUnreadChatCount -= 1
+                                }
+                            }
+                            
+                            if globalRemainingUnreadChatCount > 0 {
+                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                            } else {
+                                strongSelf.navigationItem.badge = ""
+                            }
+                        })
+                    }
                 
                     self.chatUnreadMentionCountDisposable?.dispose()
                     self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: nil) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount, pollVoteCount in

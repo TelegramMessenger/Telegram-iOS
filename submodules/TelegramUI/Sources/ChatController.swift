@@ -248,7 +248,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let currentChatListFilter: Int32?
     let chatNavigationStack: [ChatNavigationStackItem]
     let customChatNavigationStack: [EnginePeer.Id]?
-    
+    let showsUnreadChatsBackBadge: Bool
+
     var didSetupDropToPaste: Bool = false
     
     let context: AccountContext
@@ -663,6 +664,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         chatListFilter: Int32? = nil,
         chatNavigationStack: [ChatNavigationStackItem] = [],
         customChatNavigationStack: [EnginePeer.Id]? = nil,
+        showsUnreadChatsBackBadge: Bool = true,
         initialTextInputState: ChatTextInputState? = nil,
         params: ChatControllerParams? = nil
     ) {
@@ -685,7 +687,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.currentChatListFilter = chatListFilter
         self.chatNavigationStack = chatNavigationStack
         self.customChatNavigationStack = customChatNavigationStack
-        
+        self.showsUnreadChatsBackBadge = showsUnreadChatsBackBadge
+
         self.forcedTheme = params?.forcedTheme
         self.forcedNavigationBarTheme = params?.forcedNavigationBarTheme
         self.forcedWallpaper = params?.forcedWallpaper

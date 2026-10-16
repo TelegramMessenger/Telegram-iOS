@@ -649,7 +649,10 @@ public final class NavigateToChatControllerParams {
     public let forceOpenChat: Bool
     public let customChatNavigationStack: [EnginePeer.Id]?
     public let skipAgeVerification: Bool
-    
+    /// Whether the chat's back button shows the unread chats Back returns to. Off for a chat opened from
+    /// News, whose Back returns to the feed.
+    public let showsUnreadChatsBackBadge: Bool
+
     public init(
         navigationController: NavigationController,
         chatController: ChatController? = nil,
@@ -683,7 +686,8 @@ public final class NavigateToChatControllerParams {
         chatListCompletion: @escaping (ChatListController) -> Void = { _ in },
         forceOpenChat: Bool = false,
         customChatNavigationStack: [EnginePeer.Id]? = nil,
-        skipAgeVerification: Bool = false
+        skipAgeVerification: Bool = false,
+        showsUnreadChatsBackBadge: Bool = true
     ) {
         self.navigationController = navigationController
         self.chatController = chatController
@@ -718,6 +722,7 @@ public final class NavigateToChatControllerParams {
         self.forceOpenChat = forceOpenChat
         self.customChatNavigationStack = customChatNavigationStack
         self.skipAgeVerification = skipAgeVerification
+        self.showsUnreadChatsBackBadge = showsUnreadChatsBackBadge
     }
     
     public func withSkipAgeVerification(_ skipAgeVerification: Bool) -> NavigateToChatControllerParams {
@@ -754,7 +759,8 @@ public final class NavigateToChatControllerParams {
             chatListCompletion: self.chatListCompletion,
             forceOpenChat: self.forceOpenChat,
             customChatNavigationStack: self.customChatNavigationStack,
-            skipAgeVerification: skipAgeVerification
+            skipAgeVerification: skipAgeVerification,
+            showsUnreadChatsBackBadge: self.showsUnreadChatsBackBadge
         )
     }
 }

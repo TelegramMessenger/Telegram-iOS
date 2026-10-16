@@ -416,7 +416,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
-        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: nil, timecode: nil, setupReply: false, cachedAnchor: true)))
+        // Back returns to the feed, so the back button shows no unread chats.
+        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: nil, timecode: nil, setupReply: false, cachedAnchor: true), showsUnreadChatsBackBadge: false))
     }
 
     // MARK: Lists

@@ -1284,6 +1284,23 @@ so no unread separator lands above the post). While the post is pinned and its s
 loaded, the view reports no hole-fill restart, so a hole operation on the channel (the poll's, or any
 other) cannot restart the history around a post that is still inside the hole.
 
+**A channel the account is not a member of has no read state** (For You channels, and channels added only
+to News, which stay `.left`): the server keeps none, so the client keeps none either
+(`TelegramCore/Sources/State/NonMemberChannelReadState.swift`). Opening one installs a fixed state with
+nothing unread and nothing counted (`maxKnownId: Int32.max - 1`), interactive reads do nothing, the
+server's read-state operations for it are skipped in replay, and the synchronizer confirms anything queued
+for it without sending; dialogs fetched for chat folders store no read state for it either. The state's
+`maxIncomingReadId` is 0 on purpose: replaying `.ResetReadState` and validation both keep a local mark that
+is ahead of the server's while it reports unread (`localReadMarkIsAheadOfServer`), so a higher one would block
+the state a join brings in, which can itself be 0. **A join does
+not reliably fetch the dialog:** `initialStateWithPeerIds` judges the stored, still non-member channel and
+builds its chat info from stored notification settings, which opening the chat has fetched, so
+`resolveMissingPeerChatInfos` asks for nothing. A stored channel that becomes a member therefore queues a
+read-state validation itself (`channelJoinNeedsServerReadState` in `updatePeersCustom`). Monoforums (a
+user's direct messages with a channel) keep their read state whatever the participation status. A chat
+opened from News also shows no unread badge on its back button
+(`NavigateToChatControllerParams.showsUnreadChatsBackBadge`).
+
 ## Postbox → TelegramEngine refactor (in progress)
 
 A gradual migration is underway to eliminate direct `import Postbox` from consumer submodules in favor of `TelegramEngine`.

@@ -2030,6 +2030,8 @@ public final class AccountViewTracker {
                     // until it has been polled in this context. The poll itself no longer gates
                     // the view (spec 2026-10-13): a joined channel never waited for it either,
                     // and the fill learns the top of the history from the server's own reply.
+                    // A channel the account is not a member of gets a read state with nothing
+                    // unread and nothing counted (NonMemberChannelReadState.swift).
                     var addHole = false
                     if let context = self.channelPollingContexts[peerId] {
                         if !context.isUpdatedValue && !context.addedHoleWhileStale {
@@ -2046,8 +2048,7 @@ public final class AccountViewTracker {
                             if isPeerHiddenByCollapsedCommunity(transaction: transaction, peerId: peerId) {
                                 return
                             }
-                            transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud : PeerReadState.idBased(
-                                maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: 0, markedUnread: false)]])
+                            transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: channelReadStateOnOpenOutsideChatList(peer: transaction.getPeer(peerId))]])
                             if addHole {
                                 resetPeerHoleManagement?(peerId)
                                 transaction.addHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))

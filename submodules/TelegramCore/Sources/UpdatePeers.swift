@@ -334,6 +334,11 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
                 if isMember != wasMember || updated.storiesHidden != wasHidden {
                     _internal_updateChannelMembership(transaction: transaction, channel: updated, isMember: isMember, justJoined: previous == nil || wasHidden == nil)
                 }
+                // The channel still holds the read state it had as a non-member
+                // (NonMemberChannelReadState.swift), and the join may not fetch the dialog.
+                if channelJoinNeedsServerReadState(previous: previous, updated: updated) {
+                    transaction.setNeedsIncomingReadStateSynchronization(peerId)
+                }
             }
         }
         if let updatedCommunity = updated as? TelegramCommunity {
