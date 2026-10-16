@@ -9,6 +9,7 @@ import SwiftSignalKit
 import ComponentFlow
 import ViewControllerComponent
 import ButtonComponent
+import PlainButtonComponent
 import WalletContext
 import WalletCardComponent
 import WalletGiftStickerMediaComponent
@@ -17,23 +18,12 @@ private final class PeerWalletTransitionSource {
     weak var view: UIView?
     weak var window: UIWindow?
     let frame: CGRect
-    let snapshot: UIView?
 
     init?(view: UIView?) {
         guard let view, let window = view.window else { return nil }
         self.view = view
         self.window = window
         self.frame = view.convert(view.bounds, to: window)
-        if let composite = window.resizableSnapshotView(from: self.frame, afterScreenUpdates: false, withCapInsets: .zero) {
-            let container = UIView(frame: CGRect(origin: .zero, size: self.frame.size))
-            container.clipsToBounds = true
-            container.layer.cornerRadius = self.frame.height * 0.5
-            composite.frame = container.bounds
-            container.addSubview(composite)
-            self.snapshot = container
-        } else {
-            self.snapshot = view.snapshotView(afterScreenUpdates: false)
-        }
     }
 }
 
@@ -43,19 +33,17 @@ private final class PeerWalletOverlayComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let card: WalletCard?
-    let sourceBackgroundColor: UIColor?
     let sendMoney: (PeerWalletScreen) -> Void
 
-    init(context: AccountContext, peer: EnginePeer, card: WalletCard?, sourceBackgroundColor: UIColor?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    init(context: AccountContext, peer: EnginePeer, card: WalletCard?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
         self.context = context
         self.peer = peer
         self.card = card
-        self.sourceBackgroundColor = sourceBackgroundColor
         self.sendMoney = sendMoney
     }
 
     static func ==(lhs: PeerWalletOverlayComponent, rhs: PeerWalletOverlayComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.card == rhs.card && lhs.sourceBackgroundColor == rhs.sourceBackgroundColor
+        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.card == rhs.card
     }
 
     final class State: ComponentState {
@@ -143,13 +131,14 @@ private final class PeerWalletOverlayComponent: Component {
         private var walletAccentColor: (theme: PresentationTheme, color: UIColor)?
         private let dimView = UIControl()
         private let cardContainer = UIView()
-        private let cardMask = CAShapeLayer()
-        private let slotView = UIView()
-        private var shutterView: UIView?
+        private let cardMask = CAGradientLayer()
+        private let cardEdgeView = UIView()
+        private let cardEdgeMask = CAGradientLayer()
+        private weak var sourceLabel: UIView?
         private weak var sourceView: UIView?
         private var initialSource: PeerWalletTransitionSource?
         private var pendingAnimateIn = false
-        private var sourceWasHidden = false
+        private var sourceClipped: Bool?
         private var sourceFrame: CGRect?
         private var cardFrame = CGRect.zero
         private var buttonFrame = CGRect.zero
@@ -178,15 +167,21 @@ private final class PeerWalletOverlayComponent: Component {
                     result[item.key] = WalletCardComponent.View.StickerLive(angle: CGFloat(sticker.angle), press: 0, grow: item.value.grow, image: item.value.image)
                 })
             }
-            self.slotView.isUserInteractionEnabled = false
-            self.slotView.alpha = 0.0
-            self.addSubview(self.slotView)
             self.blurView.isUserInteractionEnabled = false
             self.addSubview(self.blurView)
             self.dimView.addTarget(self, action: #selector(self.dimPressed), for: .touchUpInside)
             self.addSubview(self.dimView)
             self.addSubview(self.cardContainer)
-            self.cardMask.fillColor = UIColor.black.cgColor
+            self.cardContainer.addSubview(self.cardEdgeView)
+            self.cardMask.colors = (0 ... 8).map { index -> CGColor in
+                let t = CGFloat(index) / 8.0
+                return UIColor.black.withAlphaComponent(t * t * (3.0 - 2.0 * t)).cgColor
+            }
+            self.cardMask.startPoint = CGPoint(x: 0.5, y: 0.0)
+            self.cardMask.endPoint = CGPoint(x: 0.5, y: 1.0)
+            self.cardEdgeMask.colors = self.cardMask.colors
+            self.cardEdgeMask.startPoint = self.cardMask.startPoint
+            self.cardEdgeMask.endPoint = self.cardMask.endPoint
             self.alpha = 0.0
         }
 
@@ -233,43 +228,29 @@ private final class PeerWalletOverlayComponent: Component {
         }
 
         private func restoreSource() {
-            if self.shutterView != nil {
-                self.sourceView?.isHidden = self.sourceWasHidden
+            self.sourceLabel?.transform = .identity
+            self.sourceLabel = nil
+            if let sourceClipped = self.sourceClipped {
+                self.sourceView?.clipsToBounds = sourceClipped
             }
-            self.shutterView?.removeFromSuperview()
-            self.shutterView = nil
-            self.slotView.alpha = 0.0
+            self.sourceClipped = nil
         }
 
         private func prepareShutter(initialSource: PeerWalletTransitionSource? = nil) -> Bool {
             let frame: CGRect
-            let snapshot: UIView?
             if let initialSource, let window = initialSource.window {
                 frame = self.convert(initialSource.frame, from: window)
-                snapshot = initialSource.snapshot
             } else {
-                guard let source = self.sourceView, source.window != nil, self.window != nil,
-                      !source.isHidden || self.shutterView != nil, source.alpha > 0.01 else { return false }
+                guard let source = self.sourceView, source.window != nil, self.window != nil else { return false }
                 frame = source.convert(source.bounds, to: self)
-                snapshot = self.shutterView == nil ? source.snapshotView(afterScreenUpdates: false) : nil
             }
-            guard !frame.isEmpty, self.bounds.intersects(frame) else { return false }
-            if self.shutterView == nil, let snapshot {
-                self.sourceWasHidden = self.sourceView?.isHidden ?? false
-                snapshot.isUserInteractionEnabled = false
-                snapshot.bounds = CGRect(origin: .zero, size: frame.size)
-                snapshot.layer.anchorPoint = CGPoint(x: 0.5, y: 0.0)
-                snapshot.layer.position = CGPoint(x: frame.midX, y: frame.minY)
-                self.addSubview(snapshot)
-                self.shutterView = snapshot
+            guard !frame.isEmpty, self.bounds.intersects(frame), let source = self.sourceView else { return false }
+            if self.sourceClipped == nil {
+                self.sourceClipped = source.clipsToBounds
+                source.clipsToBounds = true
             }
-            guard let shutterView = self.shutterView else { return false }
-            shutterView.bounds = CGRect(origin: .zero, size: frame.size)
-            shutterView.layer.position = CGPoint(x: frame.midX, y: frame.minY)
-            self.sourceView?.isHidden = true
+            self.sourceLabel = (source as? PlainButtonComponent.View)?.contentView
             self.sourceFrame = frame
-            self.slotView.frame = frame
-            self.slotView.layer.cornerRadius = frame.height * 0.5
             return true
         }
 
@@ -332,6 +313,7 @@ private final class PeerWalletOverlayComponent: Component {
                 let startScale = slotScale * min(1.0, source.width * 0.45 / max(1.0, slotReach))
 
                 let slotLine = source.midY
+                let slotFeather: CGFloat = 30.0
                 let straddlesSlot = self.cardFrame.minY < slotLine
                 let sidewaysHold: CGFloat = straddlesSlot && !dismissing ? 0.6 : 0.45
                 func cardPose(_ time: CGFloat) -> (pitch: CGFloat, yaw: CGFloat, roll: CGFloat, scale: CGFloat, travel: CGFloat, sideTravel: CGFloat, velocity: CGFloat) {
@@ -358,7 +340,7 @@ private final class PeerWalletOverlayComponent: Component {
                 let peakPose = cardPose(peak)
                 let peakProjected = project(pose(pitch: peakPose.pitch, yaw: peakPose.yaw, roll: peakPose.roll, scale: peakPose.scale, camera: cameraDistance))
                 let peakCenterY = baseCenterY(peakProjected, travel: peakPose.travel)
-                let clearance = max(0.0, slotLine + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
+                let clearance = max(0.0, slotLine + slotFeather + 4.0 - (peakCenterY + (peakProjected.map { $0.y }.min() ?? -halfHeight)))
 
                 let current = cardPose(p)
                 let peakTravel = max(0.001, peakPose.travel)
@@ -385,19 +367,28 @@ private final class PeerWalletOverlayComponent: Component {
                     y: baseCenterY(projected, travel: current.travel) + clearance * dip)
                 self.cardContainer.center = center
                 self.cardContainer.alpha = smooth(p / 0.045)
-                self.cardMask.frame = self.cardContainer.bounds
                 let edge = halfHeight + (slotLine - center.y) * fit
                 let span = max(self.animationSize.width, self.animationSize.height) * 3.0
-                self.cardMask.path = CGPath(rect: CGRect(x: -span, y: edge, width: span * 2.0 + self.cardFrame.width, height: span), transform: nil)
-                self.cardContainer.layer.mask = p < (clearance > 0.0 ? peak : (dismissing ? 0.75 : impact)) ? self.cardMask : nil
+                self.cardMask.frame = CGRect(x: -span, y: edge, width: span * 2.0 + self.cardFrame.width, height: span)
+                self.cardMask.locations = (0 ... 8).map { NSNumber(value: Double(CGFloat($0) / 8.0 * slotFeather * fit / span)) }
+                let masksSlot = p < (clearance > 0.0 ? peak : (dismissing ? 0.75 : impact))
+                self.cardContainer.layer.mask = masksSlot ? self.cardMask : nil
+                let cardTop = projected.map { $0.y }.min() ?? -halfHeight
+                let edgeFade = 1.0 - smooth((center.y + cardTop - slotLine) / slotFeather)
+                if masksSlot && edgeFade > 0.0 {
+                    let edgeStart = halfHeight + cardTop * fit - (1.0 - edgeFade) * slotFeather * fit
+                    self.cardEdgeMask.frame = CGRect(x: -span, y: edgeStart, width: span * 2.0 + self.cardFrame.width, height: span)
+                    self.cardEdgeMask.locations = self.cardMask.locations
+                    self.cardEdgeView.layer.mask = self.cardEdgeMask
+                } else {
+                    self.cardEdgeView.layer.mask = nil
+                }
 
-                let shutterLift = smooth(p / (dismissing ? 0.42 : 0.16))
-                self.shutterView?.layer.transform = CATransform3DMakeScale(1.0, 1.0 - shutterLift * 0.5, 1.0)
-                self.shutterView?.alpha = 1.0 - smooth((p - (dismissing ? 0.08 : 0.03)) / (dismissing ? 0.45 : 0.17))
-                self.shutterView?.isHidden = false
-                self.slotView.alpha = shutterLift
+                let labelLift = smooth(p / (dismissing ? 0.4 : 0.3))
+                self.sourceLabel?.transform = CGAffineTransform(translationX: 0.0, y: -source.height * labelLift)
             } else {
                 self.cardContainer.layer.mask = nil
+                self.cardEdgeView.layer.mask = nil
                 self.cardContainer.layer.transform = CATransform3DIdentity
                 self.cardContainer.center = center
                 self.cardContainer.alpha = p
@@ -509,7 +500,6 @@ private final class PeerWalletOverlayComponent: Component {
                 blurAnimator.fractionComplete = 2.0 / 3.0
                 self.blurAnimator = blurAnimator
             }
-            self.slotView.backgroundColor = component.sourceBackgroundColor?.mixedWith(.black, alpha: 0.3) ?? environment.theme.list.blocksBackgroundColor
             self.dimView.backgroundColor = environment.theme.contextMenu.dimColor
             transition.setFrame(view: self.blurView, frame: CGRect(origin: .zero, size: availableSize))
             transition.setFrame(view: self.dimView, frame: CGRect(origin: .zero, size: availableSize))
@@ -544,10 +534,11 @@ private final class PeerWalletOverlayComponent: Component {
             let cardCenterY = max(cardTopLimit + cardSize.height * 0.5, min(availableSize.height * 0.5, buttonTop - 24.0 - cardSize.height * 0.5))
             if let cardView = self.card.view {
                 if cardView.superview == nil {
-                    self.cardContainer.addSubview(cardView)
+                    self.cardEdgeView.addSubview(cardView)
                 }
                 self.cardFrame = CGRect(x: centerX - cardSize.width * 0.5, y: cardCenterY - cardSize.height * 0.5, width: cardSize.width, height: cardSize.height)
                 self.cardContainer.bounds = CGRect(origin: .zero, size: cardSize)
+                self.cardEdgeView.frame = self.cardContainer.bounds
                 transition.setFrame(view: cardView, frame: CGRect(origin: .zero, size: cardSize))
             }
 
@@ -644,11 +635,11 @@ public final class PeerWalletScreen: ViewControllerComponentContainer {
     private var didAnimateIn = false
     private var transitionSource: PeerWalletTransitionSource?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, card: WalletCard?, sourceView: UIView? = nil, sourceBackgroundColor: UIColor? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, card: WalletCard?, sourceView: UIView? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
         self.transitionSource = PeerWalletTransitionSource(view: sourceView)
         super.init(
             context: context,
-            component: PeerWalletOverlayComponent(context: context, peer: peer, card: card, sourceBackgroundColor: sourceBackgroundColor, sendMoney: sendMoney),
+            component: PeerWalletOverlayComponent(context: context, peer: peer, card: card, sendMoney: sendMoney),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
             theme: .default,
