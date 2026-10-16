@@ -219,7 +219,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                     startAttach = value
                                 } else if queryItem.name == "text" {
                                     text = value
-                                } else if queryItem.name == "nopaidtoken" {
+                                } else if queryItem.name == "free" {
                                     noPaidMessagesToken = value
                                 }
                             }
@@ -347,7 +347,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                             return .oauth(url: "https://t.me/\(query)")
                         }
                     } else {
-                        if let value = queryItems.first(where: { $0.name == "nopaidtoken" })?.value, !value.isEmpty {
+                        if let value = queryItems.first(where: { $0.name == "free" })?.value, !value.isEmpty {
                             return .peer(.name(peerName), .noPaidMessagesToken(value))
                         }
                         for queryItem in queryItems {
