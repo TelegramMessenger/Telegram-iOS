@@ -581,7 +581,8 @@ to `.spring`.
 
 `.customSpring(mass:stiffness:damping:initialVelocity:)` is CoreList's counterpart of Display's
 `ContainedViewLayoutTransitionCurve.customSpring`, and the one curve here with no ComponentFlow case —
-it exists so the chat's send transition scrolls the history on the bubble's own spring. It emits the
+it exists so the chat's spring send transition (behind a Debug Settings flag since 2026-10-16; the
+default is a bezier) scrolls the history on the bubble's own spring. It emits the
 object `CAAnimationUtils`' custom-spring branch builds (parameters quantized to `Float` as Display's
 string parsing does, `duration = settlingDuration`, linear timing) down the shared `isSystemSpring`
 path, so the settle reaches the pass as `speed`. Its `solve(at:)` is a **closed form**, not

@@ -818,7 +818,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
-        self.messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, getContentAreaInScreenSpace: {
+        self.messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, animationParameters: context.sharedContext.immediateExperimentalUISettings.springSendAnimation ? .spring : .bezier, getContentAreaInScreenSpace: {
             return getContentAreaInScreenSpaceImpl?() ?? CGRect()
         }, onTransitionEvent: { transition in
             onTransitionEventImpl?(transition)
@@ -2148,7 +2148,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             
             previousHistoryNode.supernode?.insertSubnode(self.historyNode, aboveSubnode: previousHistoryNode)
             
-            let messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, getContentAreaInScreenSpace: { [weak self] in
+            let messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, animationParameters: self.messageTransitionNode.animationParameters, getContentAreaInScreenSpace: { [weak self] in
                 guard let self else {
                     return CGRect()
                 }
