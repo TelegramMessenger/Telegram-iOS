@@ -89,8 +89,11 @@ final class WalletPendingTransferAnimation {
         return true
     }
 
-    init(id: String) {
+    private let showsDiamond: Bool
+
+    init(id: String, showsDiamond: Bool = true) {
         self.id = id
+        self.showsDiamond = showsDiamond
         self.separatorMask.backgroundColor = UIColor.white.cgColor
         self.separatorMask.opacity = 0.0
         self.surface.cornerRadius = 22.0
@@ -191,7 +194,7 @@ final class WalletPendingTransferAnimation {
                 (band.mask as? CAShapeLayer)?.path = UIBezierPath(roundedRect: bounds, cornerRadius: 22.0).cgPath
             }
         }
-        if self.diamond == nil && !UIAccessibility.isReduceMotionEnabled {
+        if self.showsDiamond && self.diamond == nil && !UIAccessibility.isReduceMotionEnabled {
             let _ = self.diamondComponent.update(transition: .immediate,
                 component: AnyComponent(InteractiveDiamondComponent(size: CGSize(width: 150.0, height: 150.0), diamondWidth: 34.0,
                     isVisible: false, theme: theme)), environment: {}, containerSize: CGSize(width: 150.0, height: 150.0))

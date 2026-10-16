@@ -184,7 +184,7 @@ public extension TelegramEngine {
             return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
         }
         
-        public func withdrawStarGift(reference: StarGiftReference, keepOnProfile: Bool, password: String) -> Signal<Never, WithdrawStarGiftError> {
+        public func withdrawStarGift(reference: StarGiftReference, keepOnProfile: Bool, password: String?) -> Signal<Never, WithdrawStarGiftError> {
             return _internal_withdrawStarGift(account: self.account, reference: reference, keepOnProfile: keepOnProfile, password: password)
         }
 
@@ -216,6 +216,10 @@ public extension TelegramEngine {
             return _internal_getUniqueStarGift(account: self.account, slug: slug)
         }
         
+        public func cachedUniqueStarGift(slug: String) -> Signal<StarGift.UniqueGift?, NoError> {
+            return _internal_cachedUniqueStarGift(account: self.account, slug: slug)
+        }
+        
         public func getUniqueStarGiftValueInfo(slug: String) -> Signal<StarGift.UniqueGift.ValueInfo?, NoError> {
             return _internal_getUniqueStarGiftValueInfo(account: self.account, slug: slug)
         }
@@ -224,7 +228,7 @@ public extension TelegramEngine {
             return _internal_checkStarGiftWithdrawalAvailability(account: self.account, reference: reference)
         }
         
-        public func requestStarGiftWithdrawalUrl(reference: StarGiftReference, password: String) -> Signal<String, RequestStarGiftWithdrawalError> {
+        public func requestStarGiftWithdrawalUrl(reference: StarGiftReference, password: String?) -> Signal<String, RequestStarGiftWithdrawalError> {
             return _internal_requestStarGiftWithdrawalUrl(account: account, reference: reference, password: password)
         }
         

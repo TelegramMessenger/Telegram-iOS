@@ -170,6 +170,7 @@ public struct Namespaces {
         /// TelegramCore's ids must stay below 64, where applicationSpecificItemCacheCollectionId starts.
         public static let feed: Int8 = 60
         public static let shareThemeBackdrops: Int8 = 61
+        public static let cachedUniqueStarGifts: Int8 = 62
     }
     
     public struct UnorderedItemList {

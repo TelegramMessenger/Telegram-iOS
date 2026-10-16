@@ -463,6 +463,9 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                     y: CGFloat(self.placements[index].y) * (self.card?.stickerSurface.bounds.height ?? 0))
                 self.placements = self.placements.enumerated().map { i, s in s.withStyle(i == index && apply ? media.style : nil) }
             } else {
+                if self.placements[index].style != nil, let size = self.card?.stickerSurface.bounds.size {
+                    self.styleOrigin = CGPoint(x: CGFloat(self.placements[index].x) * size.width, y: CGFloat(self.placements[index].y) * size.height)
+                }
                 let sticker = self.placements.remove(at: index)
                 if let from = self.pose(sticker) { self.returnGift(gift, from: from, peelFirst: true) }
             }
@@ -1239,7 +1242,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
 
     private func tickStyle(now: Double) {
         guard let start = self.styleStart else { return }
-        let progress = min(1, (now - start) / (self.styleTo == nil ? 0.45 : 1.05))
+        let progress = min(1, (now - start) / (self.styleTo == nil ? 0.6 : 1.05))
         self.card?.setGiftStyle(from: self.styleFrom, to: self.styleTo, origin: self.styleOrigin, progress: progress, pattern: self.stylePattern(self.styleTo ?? self.styleFrom))
         if progress >= 1 { self.styleStart = nil; self.styleFrom = self.styleTo }
     }

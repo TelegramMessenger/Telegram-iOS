@@ -1947,9 +1947,9 @@ private final class WalletScreenComponent: Component {
             self.newTransferPresentationIds.formIntersection(transactions.keys)
             for transaction in state.transactions.items where transaction.status == .pending && transaction.currency == .ton
                 && transaction.direction == .outgoing && transaction.kind != .deployContract && transaction.kind != .keyChange
-                && transaction.collectible == nil && transaction.isVisibleInWalletHistory {
+                && transaction.isVisibleInWalletHistory {
                 guard self.pendingTransferAnimations[transaction.presentationId] == nil else { continue }
-                self.pendingTransferAnimations[transaction.presentationId] = WalletPendingTransferAnimation(id: transaction.presentationId)
+                self.pendingTransferAnimations[transaction.presentationId] = WalletPendingTransferAnimation(id: transaction.presentationId, showsDiamond: transaction.collectible == nil)
                 if let previous = self.walletState, !previous.transactions.items.contains(where: { $0.presentationId == transaction.presentationId }) {
                     self.newTransferPresentationIds.insert(transaction.presentationId)
                 }

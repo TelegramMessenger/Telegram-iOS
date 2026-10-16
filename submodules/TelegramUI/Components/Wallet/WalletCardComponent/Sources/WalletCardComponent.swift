@@ -179,25 +179,37 @@ public final class WalletCardComponent: Component {
             let size = self.foregroundView.bounds.size
             let frame = WalletCardStyleTransition(fraction: progress, removing: to == nil)
             let radius = frame.radius(origin: origin, size: self.giftStyleWaveSize ?? size)
-            self.giftStyleUpdated?(
-                from.map { WalletCardTint($0).tint(WalletOklch(self.giftButtonDefaultColor)).uiColor } ?? self.giftButtonDefaultColor,
-                to.map { WalletCardTint($0).tint(WalletOklch(self.giftButtonDefaultColor)).uiColor } ?? self.giftButtonDefaultColor,
-                origin, radius, frame.progress, to == nil)
-            if progress < 1, to != nil, !self.styleWaveHit {
+            let receding = to == nil && from != nil && progress < 1
+            let buttonColor: (WalletContext.CardGiftStyle?) -> UIColor = { style in
+                style.map { WalletCardTint($0).tint(WalletOklch(self.giftButtonDefaultColor)).uiColor } ?? self.giftButtonDefaultColor
+            }
+            if receding {
+                self.giftStyleUpdated?(buttonColor(nil), buttonColor(from), origin, radius, min(0.999, frame.progress), false)
+            } else {
+                self.giftStyleUpdated?(buttonColor(from), buttonColor(to), origin, radius, frame.progress, to == nil)
+            }
+            if progress < 1, (to != nil || receding), !self.styleWaveHit {
                 let gem = self.primaryBalanceContainerView.convert(self.gramIconContentFrame.center, to: self.foregroundView)
-                if radius >= hypot(gem.x - origin.x, gem.y - origin.y) {
+                let gemDistance = hypot(gem.x - origin.x, gem.y - origin.y)
+                if receding ? radius <= gemDistance : radius >= gemDistance {
                     self.styleWaveHit = true
                     if !UIAccessibility.isReduceMotionEnabled {
-                        let distance = max(1, hypot(gem.x - origin.x, gem.y - origin.y))
-                        let ux = (gem.x - origin.x) / distance, uy = (gem.y - origin.y) / distance
+                        let distance = max(1, gemDistance)
+                        let direction: CGFloat = receding ? -1 : 1
+                        let ux = direction * (gem.x - origin.x) / distance, uy = direction * (gem.y - origin.y) / distance
                         self.styleGemH.velocity += ux * 14
                         self.styleGemV.velocity += uy * 14
                         (self.gramDiamond.view as? InteractiveDiamondComponent.View)?.spin(ux >= 0 ? 4.6 : -4.6, decay: 0.7)
                     }
                 }
             }
-            self.backgroundView.updateGiftStyle(WalletCardStyleUniforms(from: from, to: to, origin: origin,
-                radius: radius, progress: frame.progress, fade: to == nil || progress >= 1))
+            if receding {
+                self.backgroundView.updateGiftStyle(WalletCardStyleUniforms(from: nil, to: from, origin: origin,
+                    radius: radius, progress: frame.progress, fade: false))
+            } else {
+                self.backgroundView.updateGiftStyle(WalletCardStyleUniforms(from: from, to: to, origin: origin,
+                    radius: radius, progress: frame.progress, fade: to == nil || progress >= 1))
+            }
             let accent = Self.mixStyleColor(from.map { WalletCardTint($0).accent } ?? UIColor(rgb: 0x6ddcff),
                 to.map { WalletCardTint($0).accent } ?? UIColor(rgb: 0x6ddcff), frame.textMix)
             let address = Self.mixStyleColor(from.map { WalletCardTint($0).address.withAlphaComponent(0.8) } ?? UIColor(rgb: 0x055ac4, alpha: 0.8),
@@ -233,10 +245,19 @@ public final class WalletCardComponent: Component {
             let fly = progress >= 1 || to == nil ? 1 : 1 + 2.2 * pow(t - 1, 3) + 1.2 * pow(t - 1, 2)
             for (index, item) in WalletGiftPattern.items(center: center, width: size.width).enumerated() {
                 let layer = self.giftPatternSymbols[index]
-                layer.bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
-                layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * fly, y: origin.y + (item.center.y - origin.y) * fly)
                 let alpha = WalletGiftPattern.alpha(at: item.center, center: center, height: size.height)
-                layer.opacity = Float(alpha * (to == nil ? 1 - frame.progress : min(1, t * 2)))
+                if to == nil {
+                    let k = max(0, frame.contraction)
+                    let side = item.size * (0.35 + 0.65 * min(1, k))
+                    layer.bounds = CGRect(x: 0, y: 0, width: side, height: side)
+                    layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * k, y: origin.y + (item.center.y - origin.y) * k)
+                    let vanish = min(1, max(0, (frame.progress - 0.6) / 0.4))
+                    layer.opacity = Float(alpha * (1 - vanish * vanish * (3 - 2 * vanish)))
+                } else {
+                    layer.bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
+                    layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * fly, y: origin.y + (item.center.y - origin.y) * fly)
+                    layer.opacity = Float(alpha * min(1, t * 2))
+                }
             }
             if let old = self.oldGiftPatternLayer {
                 old.mask = self.makeGiftPatternMask()

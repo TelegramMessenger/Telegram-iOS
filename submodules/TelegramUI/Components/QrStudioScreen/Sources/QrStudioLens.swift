@@ -16,8 +16,8 @@ enum QrStudioLens {
         return CGSize(width: max(0.0, w), height: max(0.0, h))
     }
 
-    static func closesAfterHold(holding: Double, isPersistent: Bool) -> Bool {
-        return !isPersistent && holding >= self.holdDuration - self.openDuration * 0.6
+    static func closesAfterHold(holding: Double) -> Bool {
+        return holding >= self.holdDuration - self.openDuration * 0.6
     }
 
     static func approach(_ value: CGFloat, to target: CGFloat, dt: Double) -> CGFloat {

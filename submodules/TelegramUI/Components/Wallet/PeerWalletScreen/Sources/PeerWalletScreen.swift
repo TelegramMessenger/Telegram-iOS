@@ -9,6 +9,7 @@ import SwiftSignalKit
 import ComponentFlow
 import ViewControllerComponent
 import ButtonComponent
+import BalancedTextComponent
 import PlainButtonComponent
 import WalletContext
 import WalletCardComponent
@@ -130,6 +131,8 @@ private final class PeerWalletOverlayComponent: Component {
         private var defaultButtonTheme: PresentationTheme?
         private var walletAccentColor: (theme: PresentationTheme, color: UIColor)?
         private let dimView = UIControl()
+        private let noticeContainer = UIView()
+        private let notice = ComponentView<Empty>()
         private let cardContainer = UIView()
         private let cardMask = CAGradientLayer()
         private let cardEdgeView = UIView()
@@ -171,6 +174,8 @@ private final class PeerWalletOverlayComponent: Component {
             self.addSubview(self.blurView)
             self.dimView.addTarget(self, action: #selector(self.dimPressed), for: .touchUpInside)
             self.addSubview(self.dimView)
+            self.noticeContainer.isUserInteractionEnabled = false
+            self.addSubview(self.noticeContainer)
             self.addSubview(self.cardContainer)
             self.cardContainer.addSubview(self.cardEdgeView)
             self.cardMask.colors = (0 ... 8).map { index -> CGColor in
@@ -264,6 +269,7 @@ private final class PeerWalletOverlayComponent: Component {
             let backgroundAlpha = self.backgroundHidden ? 0.0 : self.backgroundProgress
             self.blurView.alpha = backgroundAlpha
             self.dimView.alpha = backgroundAlpha
+            self.noticeContainer.alpha = backgroundAlpha
             guard let card = self.card.view as? WalletCardComponent.View else { return }
             var transform = CATransform3DIdentity
             var center = self.cardFrame.center
@@ -433,6 +439,8 @@ private final class PeerWalletOverlayComponent: Component {
             self.blurView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
             self.dimView.alpha = 0.0
             self.dimView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
+            self.noticeContainer.alpha = 0.0
+            self.noticeContainer.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
         }
 
         func animateIn(source: PeerWalletTransitionSource?) {
@@ -499,6 +507,7 @@ private final class PeerWalletOverlayComponent: Component {
                 blurAnimator.pauseAnimation()
                 blurAnimator.fractionComplete = 2.0 / 3.0
                 self.blurAnimator = blurAnimator
+                self.noticeContainer.layer.compositingFilter = blurIsLight ? "plusD" : "plusL"
             }
             self.dimView.backgroundColor = environment.theme.contextMenu.dimColor
             transition.setFrame(view: self.blurView, frame: CGRect(origin: .zero, size: availableSize))
@@ -511,7 +520,36 @@ private final class PeerWalletOverlayComponent: Component {
             let centerX = environment.safeInsets.left + contentWidth * 0.5
             let buttonBottomInset: CGFloat = 30.0
             let buttonTop = availableSize.height - buttonBottomInset - 52.0
-            let cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
+            var cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
+            self.noticeContainer.frame = CGRect(origin: .zero, size: availableSize)
+            if component.peer.id == component.context.account.peerId {
+                func noticeText(_ color: UIColor) -> AnyComponent<Empty> {
+                    return AnyComponent(BalancedTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.Wallet_PublicBalanceNotice,
+                            font: Font.semibold(17.0),
+                            textColor: color,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.0
+                    ))
+                }
+                let noticeContainerSize = CGSize(width: max(1.0, contentWidth - 64.0), height: availableSize.height)
+                let noticeSize = self.notice.update(transition: .immediate, component: noticeText(blurIsLight ? UIColor(white: 0.63, alpha: 0.6) : UIColor(white: 0.5, alpha: 0.4)), environment: {}, containerSize: noticeContainerSize)
+                let noticeFrame = CGRect(origin: CGPoint(x: floor(centerX - noticeSize.width * 0.5), y: cardTopLimit + 24.0), size: noticeSize)
+                if let noticeView = self.notice.view {
+                    if noticeView.superview == nil {
+                        self.noticeContainer.addSubview(noticeView)
+                    }
+                    noticeView.isHidden = false
+                    noticeView.frame = noticeFrame
+                }
+                cardTopLimit = noticeFrame.maxY + 24.0
+            } else {
+                self.notice.view?.isHidden = true
+            }
             let cardHeightLimit = max(1.0, buttonTop - 24.0 - cardTopLimit)
             let cardWidth = min(430.0, max(1.0, contentWidth - 44.0), cardHeightLimit * 370.0 / 220.0)
             let cardSize = self.card.update(

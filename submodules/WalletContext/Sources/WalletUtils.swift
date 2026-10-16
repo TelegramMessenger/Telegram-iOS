@@ -301,6 +301,31 @@ private struct WalletBocBitReader {
 }
 
 @available(macOS 10.15, *)
+func walletNftTransferNewOwner(_ payload: Data) -> String? {
+    guard let boc = try? WalletBoc(payload) else {
+        return nil
+    }
+    var reader = WalletBocBitReader(cell: boc.cells[boc.root])
+    do {
+        guard try reader.read(32) == 0x5fcc3d14 else {
+            return nil
+        }
+        try reader.skip(64)
+        guard try reader.read(2) == 2, try reader.read(1) == 0 else {
+            return nil
+        }
+        let workchain = Int8(truncatingIfNeeded: try reader.read(8))
+        var hash = ""
+        for _ in 0 ..< 8 {
+            hash += String(format: "%08x", UInt32(truncatingIfNeeded: try reader.read(32)))
+        }
+        return try convertTonAddress(value: "\(workchain):\(hash)", format: .userFriendly(bounceable: true, testnet: false))
+    } catch {
+        return nil
+    }
+}
+
+@available(macOS 10.15, *)
 private func walletBocCRC32C(_ bytes: ArraySlice<UInt8>) -> UInt32 {
     var crc: UInt32 = 0xffffffff
     for byte in bytes {

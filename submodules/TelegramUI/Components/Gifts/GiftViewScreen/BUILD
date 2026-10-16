@@ -71,6 +71,8 @@ swift_library(
         "//submodules/TelegramUI/Components/AlertComponent/AlertTransferHeaderComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertTableComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertInputFieldComponent",
+        "//submodules/WalletContext",
+        "//submodules/PhoneNumberFormat",
         "//submodules/TelegramUI/Components/GlassControls",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/Components/ResizableSheetComponent",
