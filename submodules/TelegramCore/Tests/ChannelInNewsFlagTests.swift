@@ -12,19 +12,24 @@ final class ChannelInNewsFlagTests: XCTestCase {
         if left {
             flags |= 1 << 2
         }
-        return Api.Chat.channel(.init(flags: flags, flags2: flags2, id: 1234, accessHash: isMin ? nil : 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil))
+        return Api.Chat.channel(.init(flags: flags, flags2: flags2, id: 1234, accessHash: isMin ? nil : 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil, pinnedMsgId: nil))
     }
 
+    // Needs in_news parsed, which is parked with the feed API (layer 232).
+#if TELEGRAM_NEWS_FEED_API
     func testInNewsBitMapsToFlag() {
         let channel = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 1 << 21)) as? TelegramChannel
         XCTAssertEqual(channel?.flags.contains(.isInNews), true)
     }
+#endif
 
     func testMissingBitLeavesFlagClear() {
         let channel = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 0)) as? TelegramChannel
         XCTAssertEqual(channel?.flags.contains(.isInNews), false)
     }
 
+    // Needs in_news parsed, which is parked with the feed API (layer 232).
+#if TELEGRAM_NEWS_FEED_API
     func testFlagSurvivesPostboxCoding() {
         guard let channel = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 1 << 21)) as? TelegramChannel else {
             XCTFail("not a channel")
@@ -35,6 +40,7 @@ final class ChannelInNewsFlagTests: XCTestCase {
         let decoded = TelegramChannel(decoder: PostboxDecoder(buffer: MemoryBuffer(data: encoder.makeData())))
         XCTAssertTrue(decoded.flags.contains(.isInNews))
     }
+#endif
 
     // `in_news` is a light join: the channel is followed in News and stays out of Chats.
     func testLightJoinedChannelIsExcludedFromTheChatList() {
@@ -65,6 +71,8 @@ final class ChannelInNewsFlagTests: XCTestCase {
         XCTAssertTrue(channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: { true }))
     }
 
+    // Needs in_news parsed, which is parked with the feed API (layer 232).
+#if TELEGRAM_NEWS_FEED_API
     // `in_news` is per-user state that a min constructor does not carry: a min update keeps the stored value.
     func testMinUpdateKeepsStoredFlag() {
         guard let stored = parseTelegramGroupOrChannel(chat: self.apiChannel(flags2: 1 << 21)) as? TelegramChannel else {
@@ -74,4 +82,5 @@ final class ChannelInNewsFlagTests: XCTestCase {
         let merged = mergeGroupOrChannel(lhs: stored, rhs: self.apiChannel(flags2: 0, isMin: true)) as? TelegramChannel
         XCTAssertEqual(merged?.flags.contains(.isInNews), true)
     }
+#endif
 }

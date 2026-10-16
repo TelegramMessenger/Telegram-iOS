@@ -769,6 +769,25 @@ private struct LayoutContext {
     /// Quotes the reader has expanded, keyed by structural block path. Mirrors `expandedDetails`, which
     /// is the same idea keyed by the details block's ordinal index.
     let expandedQuotePaths: Set<[Int]>
+
+    /// The path of the block being laid out when the rich-quote spec lists it as a quote source
+    /// (`InstantPageBlock.isRichQuoteSource`), else nil: its text then carries no quote stamps.
+    var quoteBlockPath: [Int]? = nil
+    /// Set while a table lays out its title or a cell through `layoutBlockSequence`, whose paragraph
+    /// would otherwise be addressed by the sequence's own throwaway path.
+    var quoteNodeOverride: InstantPageTextNodeId? = nil
+
+    /// The cursor that stamps one quotable node's text (see `InstantPageQuoteSource.swift`), or nil
+    /// outside a quote source. Its ids must match `instantPageQuotableNodes`.
+    func quoteSource(_ part: InstantPageTextNodeId.Part, subpath: [Int] = []) -> InstantPageQuoteSourceCursor? {
+        if let quoteNodeOverride = self.quoteNodeOverride {
+            return InstantPageQuoteSourceCursor(node: quoteNodeOverride)
+        }
+        guard let quoteBlockPath = self.quoteBlockPath else {
+            return nil
+        }
+        return InstantPageQuoteSourceCursor(node: InstantPageTextNodeId(blockPath: quoteBlockPath + subpath, part: part))
+    }
 }
 
 // MARK: - Driver
@@ -954,6 +973,10 @@ private func layoutBlock(
     context: inout LayoutContext
 ) -> [InstantPageV2LaidOutItem] {
     let _ = isLast  // reserved for Tasks 7–9
+    // A cover's inner block is not a quote source: the spec's table does not list covers.
+    let savedQuoteBlockPath = context.quoteBlockPath
+    context.quoteBlockPath = (!isCover && block.isRichQuoteSource) ? pathPrefix : nil
+    defer { context.quoteBlockPath = savedQuoteBlockPath }
     switch block {
     case let .cover(inner):
         return layoutBlock(inner, boundingWidth: boundingWidth, horizontalInset: horizontalInset, kind: kind,
@@ -1481,7 +1504,7 @@ private func layoutDetails(
     // The header reads as a control, not body copy — semibold as a BASELINE weight, so an explicit
     // `.bold` inside the title still wins over it.
     titleStyleStack.push(.semibold)
-    let titleString = attributedStringForRichText(title, styleStack: titleStyleStack, formatDate: context.formatDate)
+    let titleString = attributedStringForRichText(title, styleStack: titleStyleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.title))
     let (measuredTitleTextItem, _, _) = layoutTextItem(
         titleString,
         boundingWidth: boundingWidth - horizontalInset * 2.0 - context.metrics.detailsChevronReserve,   // reserve right edge for chevron
@@ -1685,6 +1708,9 @@ private func layoutTable(
     // captured, and these are the only two table constants that scale with the content.
     let cellInsets = compact ? context.metrics.tableCompactCellInsets : context.metrics.tableCellInsets
     let minCompressedColumnWidth = context.metrics.tableMinCompressedColumnWidth
+    // The title and the cells are laid out through `layoutBlockSequence`, which addresses its
+    // paragraph by a path of its own; they are stamped with the table's ids instead.
+    let tableQuotePath = context.quoteBlockPath
 
     if rows.isEmpty {
         return []
@@ -1913,7 +1939,8 @@ private func layoutTable(
         var k: Int = 0
         var rowCells: [PendingCell] = []
 
-        for cell in row.cells {
+        // `cellIndex` (the index in `row.cells`) is the cell's quote id; `k` is its grid column.
+        for (cellIndex, cell) in row.cells.enumerated() {
             // Skip columns occupied by row spans.
             if let cells = awaitingSpanCells[i] {
                 for colAndCell in cells {
@@ -1946,6 +1973,8 @@ private func layoutTable(
             if let cellText = cell.text {
                 let cellContentWidth = cellWidth - totalCellPadding
                 if cellContentWidth > 0.0 {
+                    let savedQuoteNodeOverride = context.quoteNodeOverride
+                    context.quoteNodeOverride = tableQuotePath.flatMap { InstantPageTextNodeId(blockPath: $0, part: .cell(row: i, column: cellIndex)) }
                     let cellLayout = layoutBlockSequence(
                         [.paragraph(cellText)],
                         boundingWidth: cellContentWidth,
@@ -1953,6 +1982,7 @@ private func layoutTable(
                         kind: .cell,
                         context: &context
                     )
+                    context.quoteNodeOverride = savedQuoteNodeOverride
                     stampMarkdownContext(cellLayout.items, kind: .tableCell(row: i, column: k, isHeader: cell.header))
                     subLayout = cellLayout
                     subLayoutHeight = cellLayout.contentSize.height
@@ -2171,6 +2201,8 @@ private func layoutTable(
     if case .empty = title {
         // no title
     } else {
+        let savedQuoteNodeOverride = context.quoteNodeOverride
+        context.quoteNodeOverride = tableQuotePath.flatMap { InstantPageTextNodeId(blockPath: $0, part: .title) }
         let titleLayout = layoutBlockSequence(
             [.paragraph(title)],
             boundingWidth: totalWidth - cellInsets.left * 2.0,
@@ -2178,6 +2210,7 @@ private func layoutTable(
             kind: .cell,
             context: &context
         )
+        context.quoteNodeOverride = savedQuoteNodeOverride
         titleSubLayout = titleLayout
         let titleHeight = titleLayout.contentSize.height + cellInsets.top + cellInsets.bottom
         titleFrame = CGRect(x: 0.0, y: 0.0, width: totalWidth, height: titleHeight)
@@ -2246,7 +2279,7 @@ private func layoutCaptionAndCredit(
         y += metrics.captionTopPad
         let styleStack = InstantPageTextStyleStack()
         setupStyleStack(styleStack, theme: context.theme, category: .caption, link: false)
-        let attributedString = attributedStringForRichText(caption.text, styleStack: styleStack, formatDate: context.formatDate)
+        let attributedString = attributedStringForRichText(caption.text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.captionText))
         let (textItem, captionItems, captionSize) = layoutTextItem(
             attributedString,
             boundingWidth: boundingWidth - horizontalInset * 2.0,
@@ -2272,7 +2305,7 @@ private func layoutCaptionAndCredit(
         }
         let styleStack = InstantPageTextStyleStack()
         setupStyleStack(styleStack, theme: context.theme, category: .credit, link: false)
-        let attributedString = attributedStringForRichText(caption.credit, styleStack: styleStack, formatDate: context.formatDate)
+        let attributedString = attributedStringForRichText(caption.credit, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.captionCredit))
         let (_, creditItems, creditSize) = layoutTextItem(
             attributedString,
             boundingWidth: boundingWidth - horizontalInset * 2.0,
@@ -2616,7 +2649,7 @@ private func layoutSimpleText(
 ) -> [InstantPageV2LaidOutItem] {
     let styleStack = InstantPageTextStyleStack()
     setupStyleStack(styleStack, theme: context.theme, category: category, link: false)
-    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
     let (_, items, _) = layoutTextItem(
         attributedString,
         boundingWidth: boundingWidth - horizontalInset * 2.0,
@@ -2637,7 +2670,7 @@ private func layoutHeading(
 ) -> [InstantPageV2LaidOutItem] {
     let styleStack = InstantPageTextStyleStack()
     setupStyleStack(styleStack, theme: context.theme, attributes: context.theme.headingTextAttributes(level: level, link: false))
-    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
     let (_, items, _) = layoutTextItem(
         attributedString,
         boundingWidth: boundingWidth - horizontalInset * 2.0,
@@ -2668,7 +2701,7 @@ private func layoutParagraph(
     // Deliberately NOT passed as `boundingWidth`: that parameter also drives the inline-IMAGE clamp
     // (`fittedToWidthOrSmaller`), which has never been active on this path, and switching it on would
     // silently resize existing inline images.
-    let attributedString = attributedStringForRichText(text, styleStack: styleStack, inlineButtonMaxWidth: boundingWidth - horizontalInset * 2.0, formatDate: context.formatDate)
+    let attributedString = attributedStringForRichText(text, styleStack: styleStack, inlineButtonMaxWidth: boundingWidth - horizontalInset * 2.0, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
 
     let (_, items, _) = layoutTextItem(
         attributedString,
@@ -2799,7 +2832,7 @@ private func layoutCodeBlock(
     styleStack.push(.fontSize(context.metrics.codeBlockFontSize))
     // `attributedStringForRichText` returns an immutable `NSAttributedString`, so take a mutable copy to
     // overlay onto — the same move V1's `attributedStringForPreformattedText` makes.
-    let highlightedString = (attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+    let highlightedString = (attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
         .mutableCopy() as! NSMutableAttributedString)
     // Overlay the cached syntax highlight. `cachedMessageSyntaxHighlight` has been stored on the layout
     // context — and read by nothing — since V2 was written, so V2 code blocks rendered plain while V1's
@@ -2922,7 +2955,7 @@ private func layoutThinking(
     )
     let styleStack = InstantPageTextStyleStack()
     setupStyleStack(styleStack, theme: context.theme, attributes: dimmedAttributes)
-    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+    let attributedString = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
 
     // Mirror a normal `.text` item's sizing: lay the text out flush (offset .zero) and put the page
     // inset onto the BLOCK frame, so the `.thinking` item's frame == a `.text` item's frame
@@ -3149,7 +3182,7 @@ private func layoutBlockQuote(
         // from the body again at the reader's larger font sizes. Pushed after `setupStyleStack`
         // because the stack resolves last-push-wins (see `textAttributes()`).
         captionStyleStack.push(.fontSize(context.theme.textCategories.paragraph.font.size))
-        let attributedCaption = attributedStringForRichText(caption, styleStack: captionStyleStack, formatDate: context.formatDate)
+        let attributedCaption = attributedStringForRichText(caption, styleStack: captionStyleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.captionText))
         let (_, captionItems, captionSize) = layoutTextItem(
             attributedCaption,
             boundingWidth: innerBoundingWidth,
@@ -3256,7 +3289,7 @@ private func layoutQuoteText(
         : (context.rtl ? horizontalInset + trailingInset : horizontalInset + leadingInset)
     let textAlignment: NSTextAlignment = isPull ? .center : (context.rtl ? .right : .natural)
 
-    let attributedBody = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+    let attributedBody = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
     // Subtract the font-box overhead so the VISIBLE top/bottom padding equals verticalInset (6pt),
     // matching the geometric horizontal inset (see instantPageV2TextBoxOverheads).
     let bodyOverheads = instantPageV2TextBoxOverheads(attributedBody)
@@ -3307,7 +3340,7 @@ private func layoutQuoteText(
         if isPull {
             captionStyleStack.push(.italic)
         }
-        let attributedCaption = attributedStringForRichText(caption, styleStack: captionStyleStack, formatDate: context.formatDate)
+        let attributedCaption = attributedStringForRichText(caption, styleStack: captionStyleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.captionText))
         lastBottomOverhead = instantPageV2TextBoxOverheads(attributedCaption).bottom
         let (_, captionItems, captionSize) = layoutTextItem(
             attributedCaption,
@@ -3563,7 +3596,7 @@ private func layoutList(
             // Layout text content.
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: context.theme, category: .paragraph, link: false)
-            let attrStr = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate)
+            let attrStr = attributedStringForRichText(text, styleStack: styleStack, formatDate: context.formatDate, quoteSource: context.quoteSource(.text, subpath: [i]))
             let textX = instantPageV2ContentColumnX(horizontalInset: horizontalInset, gutter: contentGutter, rtl: context.rtl)
             let textWidth = boundingWidth - horizontalInset * 2.0 - contentGutter
             let (textItem, textLaidOutItems, textSize) = layoutTextItem(

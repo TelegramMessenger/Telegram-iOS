@@ -129,6 +129,7 @@ extension ChatControllerImpl {
             var keyboardButtonsMessage: Message?
             var pinnedMessageId: EngineMessage.Id?
             var pinnedMessage: ChatPinnedMessage?
+            var pinnedMessageSkeletonId: EngineMessage.Id?
             var peerIsBlocked: Bool = false
             var callsAvailable: Bool = true
             var callsPrivate: Bool = false
@@ -2022,8 +2023,19 @@ extension ChatControllerImpl {
                         buttonKeyboardMessage = nil
                     }
                     
-                    strongSelf.state.pinnedMessageId = pinnedMessageId
-                    strongSelf.state.pinnedMessage = pinnedMessage
+                    // A channel at a .peer location takes its pinned panel from the cachedData closure's rule
+                    // (chatPinnedPanelSource), which also covers a stored cached message. Writing it here as well
+                    // could drop a skeleton that closure has just set.
+                    let pinnedStateBelongsToTheCachedDataRule: Bool
+                    if case .peer = chatLocation, chatLocation.peerId?.namespace == Namespaces.Peer.CloudChannel {
+                        pinnedStateBelongsToTheCachedDataRule = true
+                    } else {
+                        pinnedStateBelongsToTheCachedDataRule = false
+                    }
+                    if !pinnedStateBelongsToTheCachedDataRule {
+                        strongSelf.state.pinnedMessageId = pinnedMessageId
+                        strongSelf.state.pinnedMessage = pinnedMessage
+                    }
                     strongSelf.state.keyboardButtonsMessage = buttonKeyboardMessage
                     strongSelf.state.peerIsBlocked = peerIsBlocked
                     strongSelf.state.callsAvailable = callsAvailable
@@ -2275,16 +2287,16 @@ extension ChatControllerImpl {
                     hasPendingMessages = .single(false)
                 }
                 
-                let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+                let topPinnedMessage: Signal<ChatControllerImpl.TopPinnedMessageState, NoError>
                 if let subject = initialSubject {
                     switch subject {
                     case .messageOptions, .pinnedMessages, .scheduledMessages:
-                        topPinnedMessage = .single(nil)
+                        topPinnedMessage = .single(.resolved(nil))
                     default:
-                        topPinnedMessage = ChatControllerImpl.topPinnedScrollMessage(context: context, chatLocation: chatLocation, historyNode: historyNode, scrolledToMessageId: self.scrolledToMessageId.get())
+                        topPinnedMessage = ChatControllerImpl.topPinnedScrollMessageState(context: context, chatLocation: chatLocation, historyNode: historyNode, scrolledToMessageId: self.scrolledToMessageId.get())
                     }
                 } else {
-                    topPinnedMessage = ChatControllerImpl.topPinnedScrollMessage(context: context, chatLocation: chatLocation, historyNode: historyNode, scrolledToMessageId: self.scrolledToMessageId.get())
+                    topPinnedMessage = ChatControllerImpl.topPinnedScrollMessageState(context: context, chatLocation: chatLocation, historyNode: historyNode, scrolledToMessageId: self.scrolledToMessageId.get())
                 }
                 
                 let cachedData: Signal<(CachedPeerData?, [MessageId: Message]), NoError>
@@ -2339,6 +2351,7 @@ extension ChatControllerImpl {
                     }
                     
                     var pinnedMessageId: MessageId?
+                    var pinnedMessageSkeletonId: MessageId?
                     var peerIsBlocked: Bool = false
                     var callsAvailable: Bool = false
                     var callsPrivate: Bool = false
@@ -2380,8 +2393,8 @@ extension ChatControllerImpl {
                     switch chatLocation {
                     case let .replyThread(replyThreadMessage):
                         if isForum {
-                            pinnedMessageId = topPinnedMessage?.message.id
-                            pinnedMessage = topPinnedMessage
+                            pinnedMessageId = topPinnedMessage.message?.message.id
+                            pinnedMessage = topPinnedMessage.message
                         } else {
                             if isTopReplyThreadMessageShown {
                                 pinnedMessageId = nil
@@ -2395,8 +2408,36 @@ extension ChatControllerImpl {
                             }
                         }
                     case .peer:
-                        pinnedMessageId = topPinnedMessage?.message.id
-                        pinnedMessage = topPinnedMessage
+                        // A channel's cached pinned id (its constructor's pinned_msg_id, or the full channel's) stands in
+                        // until the pinned list has answered: the stored message if there is one, else a skeleton.
+                        // Only channels have CachedChannelData. (Not `state.renderedPeer`: it can arrive after this
+                        // closure's last run, and renderedPeer is not one of its inputs.)
+                        let cachedPinnedMessageId = (cachedData as? CachedChannelData)?.pinnedMessageId
+                        let listResolution: ChatPinnedListResolution
+                        switch topPinnedMessage {
+                        case .unresolved:
+                            listResolution = .unresolved
+                        case let .resolved(message):
+                            listResolution = .resolved(hasMessage: message != nil)
+                        }
+                        let isCachedMessageStored = cachedPinnedMessageId.flatMap { messages[$0] } != nil
+                        switch chatPinnedPanelSource(list: listResolution, cachedPinnedMessageId: cachedPinnedMessageId, isCachedMessageStored: isCachedMessageStored) {
+                        case .none:
+                            pinnedMessageId = nil
+                            pinnedMessage = nil
+                        case .list:
+                            pinnedMessage = topPinnedMessage.message
+                            pinnedMessageId = pinnedMessage?.message.id
+                        case .storedCachedMessage:
+                            if let cachedPinnedMessageId, let message = messages[cachedPinnedMessageId] {
+                                pinnedMessage = ChatPinnedMessage(message: message, index: 0, totalCount: 1, topMessageId: message.id)
+                            }
+                            pinnedMessageId = cachedPinnedMessageId
+                        case let .skeleton(id):
+                            pinnedMessageId = id
+                            pinnedMessage = nil
+                            pinnedMessageSkeletonId = id
+                        }
                     case .customChatContents:
                         pinnedMessageId = nil
                         pinnedMessage = nil
@@ -2466,11 +2507,12 @@ extension ChatControllerImpl {
                     }
                 
                     var isUpdated = false
-                    if strongSelf.state.pinnedMessageId != pinnedMessageId || strongSelf.state.pinnedMessage != pinnedMessage || strongSelf.state.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.state.slowmodeState != slowmodeState || strongSelf.state.activeGroupCallInfo != activeGroupCallInfo || customEmojiAvailable != strongSelf.state.customEmojiAvailable || threadData != strongSelf.state.threadData || forumTopicData != strongSelf.state.forumTopicData || premiumGiftOptions != strongSelf.state.premiumGiftOptions {
+                    if strongSelf.state.pinnedMessageId != pinnedMessageId || strongSelf.state.pinnedMessage != pinnedMessage || strongSelf.state.pinnedMessageSkeletonId != pinnedMessageSkeletonId || strongSelf.state.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.state.slowmodeState != slowmodeState || strongSelf.state.activeGroupCallInfo != activeGroupCallInfo || customEmojiAvailable != strongSelf.state.customEmojiAvailable || threadData != strongSelf.state.threadData || forumTopicData != strongSelf.state.forumTopicData || premiumGiftOptions != strongSelf.state.premiumGiftOptions {
                         isUpdated = true
                         
                         strongSelf.state.pinnedMessage = pinnedMessage
                         strongSelf.state.pinnedMessageId = pinnedMessageId
+                        strongSelf.state.pinnedMessageSkeletonId = pinnedMessageSkeletonId
                         strongSelf.state.activeGroupCallInfo = activeGroupCallInfo
                         strongSelf.state.peerIsBlocked = peerIsBlocked
                         strongSelf.state.callsAvailable = callsAvailable

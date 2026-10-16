@@ -26,7 +26,12 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
         if let hash = hash {
             request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
         } else if let inputChannel = apiInputChannel(peer) {
+#if TELEGRAM_NEWS_FEED_API
             request = account.network.request(Api.functions.channels.joinChannel(flags: forNews ? (1 << 0) : 0, channel: inputChannel))
+#else
+            // The feed API is parked (layer 232): there is no News-only join; with News hidden nothing asks for one.
+            request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+#endif
         } else {
             request = .fail(.init())
         }
@@ -62,6 +67,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
                 |> switchToLatest
             }
 
+#if TELEGRAM_NEWS_FEED_API
             if forNews {
                 // The client owns `in_news` for a while: it is stored before success is reported, and server channel
                 // objects keep it (ChannelInNewsLocalChanges), the ones in these updates and in responses to requests
@@ -76,6 +82,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
                     return .joined(nil)
                 }
             }
+#endif
             account.stateManager.addUpdates(updates)
             if hash == nil {
                 let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()

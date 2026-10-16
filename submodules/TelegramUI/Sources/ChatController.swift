@@ -109,6 +109,7 @@ import ChatMessageItemView
 import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
+import ChatMessageBubbleContentNode
 import ChatNavigationButton
 import WebsiteType
 import PeerInfoScreen
@@ -4583,13 +4584,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if let messageId = message?.id, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId)?._asMessage() ?? message {
                     var quoteData: EngineMessageReplyQuote?
-                    
-                    let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
-                    let quoteText = (message.text as NSString).substring(with: nsRange)
-                    
-                    let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
-                    if !trimmedText.string.isEmpty {
-                        quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nsRange.location, entities: trimmedText.entities, media: nil)
+
+                    if message.richText != nil {
+                        // A rich message's selection lives in its bubble's combined page text, not in
+                        // `message.text` (which is empty): the bubble cuts the quote from its page. Its
+                        // selection is still live, since the menu action runs before the menu closes.
+                        var quoteContentNode: ChatMessageQuoteSourceContentNode?
+                        self.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == message.id {
+                                quoteContentNode = itemNode.contentNodes.first(where: { $0 is ChatMessageQuoteSourceContentNode }) as? ChatMessageQuoteSourceContentNode
+                            }
+                            return quoteContentNode == nil
+                        }
+                        quoteData = quoteContentNode?.currentReplyQuote(maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
+                    } else {
+                        let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
+                        let quoteText = (message.text as NSString).substring(with: nsRange)
+
+                        let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
+                        if !trimmedText.string.isEmpty {
+                            quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nsRange.location, entities: trimmedText.entities, media: nil)
+                        }
                     }
                     
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(
@@ -7291,6 +7306,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.moreBarButton.updateColor(color: presentationTheme.chat.inputPanel.panelControlColor)
     }
     
+    /// The chat's pinned list: `.unresolved` until it has answered, i.e. the history has loaded and the `.pinned`
+    /// tag view has entries or has finished loading with none.
+    enum TopPinnedMessageState: Equatable {
+        case unresolved
+        case resolved(ChatPinnedMessage?)
+        
+        var message: ChatPinnedMessage? {
+            if case let .resolved(message) = self {
+                return message
+            }
+            return nil
+        }
+    }
+    
     enum PinnedReferenceMessage {
         struct Loaded {
             var id: MessageId
@@ -7330,7 +7359,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    static func topPinnedScrollMessage(context: AccountContext, chatLocation: ChatLocation, historyNode: ChatHistoryListNodeImpl, scrolledToMessageId: Signal<ScrolledToMessageId?, NoError>) -> Signal<ChatPinnedMessage?, NoError> {
+    static func topPinnedScrollMessageState(context: AccountContext, chatLocation: ChatLocation, historyNode: ChatHistoryListNodeImpl, scrolledToMessageId: Signal<ScrolledToMessageId?, NoError>) -> Signal<TopPinnedMessageState, NoError> {
         //TODO:release move to ContentData
         let loadState: Signal<Bool, NoError> = historyNode.historyState.get()
         |> map { state -> Bool in
@@ -7348,14 +7377,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return loadState
         |> mapToSignal { loadState in
             if !loadState {
-                return .single(nil)
+                return .single(.unresolved)
             } else {
-                return ChatControllerImpl.topPinnedMessageSignal(context: context, chatLocation: chatLocation, referenceMessage: referenceMessage)
+                return ChatControllerImpl.topPinnedMessageState(context: context, chatLocation: chatLocation, referenceMessage: referenceMessage)
             }
         }
     }
     
-    static func topPinnedMessageSignal(context: AccountContext, chatLocation: ChatLocation, referenceMessage: Signal<PinnedReferenceMessage?, NoError>?) -> Signal<ChatPinnedMessage?, NoError> {
+    static func topPinnedMessageState(context: AccountContext, chatLocation: ChatLocation, referenceMessage: Signal<PinnedReferenceMessage?, NoError>?) -> Signal<TopPinnedMessageState, NoError> {
         var pinnedPeerId: EnginePeer.Id?
         let threadId = chatLocation.threadId
         
@@ -7371,7 +7400,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let peerId = pinnedPeerId {
-            let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+            let topPinnedMessage: Signal<TopPinnedMessageState, NoError>
             
             func pinnedHistorySignal(anchorMessageId: MessageId?, count: Int) -> Signal<ChatHistoryViewUpdate, NoError> {
                 let location: ChatHistoryLocation
@@ -7445,6 +7474,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 var messages: [PinnedMessage]
                 var totalCount: Int
+                var isLoading: Bool
             }
             
             let adjustedReplyHistory: Signal<PinnedHistory, NoError>
@@ -7458,7 +7488,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         guard case let .HistoryView(viewValue, _, _, _, _, _, _) = view else {
-                            subscriber.putNext(PinnedHistory(messages: [], totalCount: 0))
+                            subscriber.putNext(PinnedHistory(messages: [], totalCount: 0, isLoading: true))
                             return
                         }
                         
@@ -7469,7 +7499,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 index: i
                             ))
                         }
-                        let result = PinnedHistory(messages: messages, totalCount: messages.count)
+                        let result = PinnedHistory(messages: messages, totalCount: messages.count, isLoading: false)
                         
                         if case let .ready(loaded) = referenceMessageValue {
                             let referenceId = loaded.id
@@ -7537,7 +7567,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> map { view -> PinnedHistory in
                     switch view {
                     case .Loading:
-                        return PinnedHistory(messages: [], totalCount: 0)
+                        return PinnedHistory(messages: [], totalCount: 0, isLoading: true)
                     case let .HistoryView(viewValue, _, _, _, _, _, _):
                         var messages: [PinnedHistory.PinnedMessage] = []
                         var totalCount = viewValue.entries.count
@@ -7556,7 +7586,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 index: index
                             ))
                         }
-                        return PinnedHistory(messages: messages, totalCount: totalCount)
+                        return PinnedHistory(messages: messages, totalCount: totalCount, isLoading: false)
                     }
                 }
             }
@@ -7566,12 +7596,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 topMessage,
                 referenceMessage ?? .single(nil)
             )
-            |> map { pinnedMessages, topMessage, referenceMessage -> ChatPinnedMessage? in
+            |> map { pinnedMessages, topMessage, referenceMessage -> TopPinnedMessageState in
                 var message: ChatPinnedMessage?
                 
                 let topMessageId: MessageId
                 if pinnedMessages.messages.isEmpty {
-                    return nil
+                    return pinnedMessages.isLoading ? .unresolved : .resolved(nil)
                 }
                 topMessageId = topMessage?.message.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
                 
@@ -7586,10 +7616,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if threadId != nil {
                         if referenceMessage.minId <= topMessage.message.id {
-                            return nil
+                            return .resolved(nil)
                         }
                     }
-                    return ChatPinnedMessage(message: topMessage.message, index: index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId)
+                    return .resolved(ChatPinnedMessage(message: topMessage.message, index: index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId))
                 }
                 
                 //print("reference: \(String(describing: referenceMessage?.id.id)) entries: \(view.entries.map(\.index.id.id))")
@@ -7621,14 +7651,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
 
-                return message
+                return .resolved(message)
             }
             |> distinctUntilChanged
             
             return topPinnedMessage
         } else {
-            return .single(nil)
+            return .single(.resolved(nil))
         }
+    }
+    
+    static func topPinnedMessageSignal(context: AccountContext, chatLocation: ChatLocation, referenceMessage: Signal<PinnedReferenceMessage?, NoError>?) -> Signal<ChatPinnedMessage?, NoError> {
+        return ChatControllerImpl.topPinnedMessageState(context: context, chatLocation: chatLocation, referenceMessage: referenceMessage)
+        |> map { state -> ChatPinnedMessage? in
+            return state.message
+        }
+        |> distinctUntilChanged
     }
 
     var storedAnimateFromSnapshotState: ChatControllerNode.SnapshotState?

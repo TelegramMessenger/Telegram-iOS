@@ -375,6 +375,9 @@ extension ChatControllerImpl {
         if previousState.pinnedMessage != contentData.state.pinnedMessage {
             animated = true
         }
+        if previousState.pinnedMessageSkeletonId != contentData.state.pinnedMessageSkeletonId {
+            animated = true
+        }
         if previousState.translationState?.isEnabled != contentData.state.translationState?.isEnabled {
             animated = true
         }
@@ -436,6 +439,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedKeyboardButtonsMessage(contentData.state.keyboardButtonsMessage)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageId(contentData.state.pinnedMessageId)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessage(contentData.state.pinnedMessage)
+            presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageSkeletonId(contentData.state.pinnedMessageSkeletonId)
             presentationInterfaceState = presentationInterfaceState.updatedPeerIsBlocked(contentData.state.peerIsBlocked)
             presentationInterfaceState = presentationInterfaceState.updatedCallsAvailable(contentData.state.callsAvailable)
             presentationInterfaceState = presentationInterfaceState.updatedCallsPrivate(contentData.state.callsPrivate)
@@ -5471,7 +5475,17 @@ extension ChatControllerImpl {
                         
                         var extendHighlight = false
                         if let quote = toSubject.quote {
-                            if message.text.contains(quote.string) {
+                            // A rich message's text is its page's quotable nodes, which a rich quote's flat
+                            // text is cut from; `message.text` is empty. A partial page (before Show more)
+                            // may hold the quote in its unseen tail: the bubble expands to find it.
+                            let quoteFound: Bool
+                            if let richText = message.richText {
+                                let page = richText.fullInstantPage ?? richText.instantPage
+                                quoteFound = !page.isComplete || richReplyQuoteFlatText(page.quotableNodes).contains(quote.string)
+                            } else {
+                                quoteFound = message.text.contains(quote.string)
+                            }
+                            if quoteFound {
                                 extendHighlight = true
                             } else {
                                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)

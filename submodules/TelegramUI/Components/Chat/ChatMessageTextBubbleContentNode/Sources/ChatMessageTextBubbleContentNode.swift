@@ -1831,3 +1831,20 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         })
     }
 }
+
+extension ChatMessageTextBubbleContentNode: ChatMessageQuoteSourceContentNode {
+    public var hasTextSelection: Bool {
+        return self.getCurrentTextSelection() != nil
+    }
+
+    public func currentReplyQuote(maxLength: Int) -> EngineMessageReplyQuote? {
+        guard let textSelection = self.getCurrentTextSelection() else {
+            return nil
+        }
+        let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: maxLength)
+        if trimmedText.string.isEmpty {
+            return nil
+        }
+        return EngineMessageReplyQuote(text: trimmedText.string, offset: textSelection.offset, entities: trimmedText.entities, media: nil)
+    }
+}
