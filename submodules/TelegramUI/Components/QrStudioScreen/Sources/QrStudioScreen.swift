@@ -81,6 +81,7 @@ private final class QrStudioScreenComponent: Component {
         private let closeButton = QrStudioGlassButtonView()
         private let shareButtonView = QrStudioGlassButtonView()
         private let scanButton = QrStudioGlassButtonView()
+        private let saveButton = QrStudioGlassButtonView()
 
         private var component: QrStudioScreenComponent?
         private weak var state: EmptyComponentState?
@@ -1519,7 +1520,7 @@ private final class QrStudioScreenComponent: Component {
                 self.codePill.isUserInteractionEnabled = !self.sheetView.isOpen
                 self.codePill.isActive = self.paidPrice != nil
             }
-            self.scanButton.isUserInteractionEnabled = !self.sheetView.isOpen
+            self.saveButton.isUserInteractionEnabled = !self.sheetView.isOpen
             self.shareButtonView.isUserInteractionEnabled = !self.sheetView.isOpen
             CATransaction.commit()
             if updateButtons {
@@ -1537,7 +1538,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             self.buttonsOpacityTarget = target
-            for layer in [self.scanButton.layer, self.shareButtonView.layer] {
+            for layer in [self.saveButton.layer, self.shareButtonView.layer] {
                 let animation: CAAnimation
                 if values.count > 1 {
                     let keyframes = CAKeyframeAnimation(keyPath: "opacity")
@@ -1847,7 +1848,7 @@ private final class QrStudioScreenComponent: Component {
             controller.push(QrCodeScanScreen(context: component.context, subject: .peer))
         }
 
-        private func updateGlassButton(_ button: QrStudioGlassButtonView, icon: String, isDark: Bool, glassTint: GlassBackgroundView.TintColor, frame: CGRect, transition: ComponentTransition, action: @escaping () -> Void) {
+        private func updateGlassButton(_ button: QrStudioGlassButtonView, icon: String? = nil, title: String? = nil, isDark: Bool, glassTint: GlassBackgroundView.TintColor, frame: CGRect, transition: ComponentTransition, action: @escaping () -> Void) {
             if button.superview == nil {
                 self.presentationContainer.addSubview(button)
                 button.action = { _ in
@@ -1855,7 +1856,7 @@ private final class QrStudioScreenComponent: Component {
                 }
             }
             transition.setFrame(view: button, frame: frame)
-            button.update(size: frame.size, isDark: isDark, glassTint: glassTint, icon: icon, transition: transition)
+            button.update(size: frame.size, isDark: isDark, glassTint: glassTint, icon: icon, title: title, transition: transition)
         }
 
         func update(component: QrStudioScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -1974,6 +1975,20 @@ private final class QrStudioScreenComponent: Component {
                 }
             )
 
+            let scanTitle = environment.strings.PeerInfo_QRCode_Scan
+            let scanWidth = QrStudioGlassButtonView.width(title: scanTitle, height: buttonSide)
+            self.updateGlassButton(
+                self.scanButton,
+                title: scanTitle,
+                isDark: isDark,
+                glassTint: glassTint,
+                frame: CGRect(x: availableSize.width - 16.5 - environment.safeInsets.right - scanWidth, y: closeTop, width: scanWidth, height: buttonSide),
+                transition: transition,
+                action: { [weak self] in
+                    self?.scan()
+                }
+            )
+
             let bottomRowY = availableSize.height - bottomInset - buttonSide
             let sideInset = rowInset
             if self.shareButtonView.superview == nil {
@@ -1985,14 +2000,14 @@ private final class QrStudioScreenComponent: Component {
             transition.setFrame(view: self.shareButtonView, frame: CGRect(x: sideInset + environment.safeInsets.left, y: bottomRowY, width: buttonSide, height: buttonSide))
             self.shareButtonView.update(size: CGSize(width: buttonSide, height: buttonSide), isDark: isDark, glassTint: glassTint, icon: "Navigation/Share", transition: transition)
             self.updateGlassButton(
-                self.scanButton,
-                icon: "Navigation/ScanQr",
+                self.saveButton,
+                icon: "Share/QrSaveIcon",
                 isDark: isDark,
                 glassTint: glassTint,
                 frame: CGRect(x: availableSize.width - sideInset - environment.safeInsets.right - buttonSide, y: bottomRowY, width: buttonSide, height: buttonSide),
                 transition: transition,
                 action: { [weak self] in
-                    self?.scan()
+                    self?.saveImage()
                 }
             )
 
@@ -2042,6 +2057,7 @@ private final class QrStudioScreenComponent: Component {
                 transition.setAlpha(view: self.codePill, alpha: 0.0)
             }
             self.presentationContainer.bringSubviewToFront(self.closeButton)
+            self.presentationContainer.bringSubviewToFront(self.scanButton)
             self.applySheetProgress()
             self.layoutToast()
 

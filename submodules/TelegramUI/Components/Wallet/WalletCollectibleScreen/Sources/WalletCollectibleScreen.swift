@@ -1422,12 +1422,13 @@ private final class WalletCollectibleContentComponent: Component {
                         ], spacing: 10.0)),
                         effectAlignment: .center,
                         action: { [weak self] in
-                            guard let self, let uniqueGift else {
+                            guard let self, let uniqueGift = self.uniqueGift else {
                                 return
                             }
-                            self.displayedOverride = !displayed
+                            let displayed = !(self.displayedOverride ?? (uniqueGift.hostPeerId != nil))
+                            self.displayedOverride = displayed
                             self.componentState?.updated(transition: .easeInOut(duration: 0.2))
-                            self.updateDisplayedOnProfile(gift: uniqueGift, displayed: !displayed)
+                            self.updateDisplayedOnProfile(gift: uniqueGift, displayed: displayed)
                         },
                         animateAlpha: false,
                         animateScale: false

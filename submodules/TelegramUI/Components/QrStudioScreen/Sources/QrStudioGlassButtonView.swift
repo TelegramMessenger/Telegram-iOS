@@ -45,8 +45,10 @@ func qrStudioCrossfadeGlass(_ view: UIView, duration: Double = 0.45) {
 final class QrStudioGlassButtonView: UIView {
     let glass = GlassContextExtractableContainer()
     private let iconView = UIImageView()
+    private let titleLabel = UILabel()
     private let touchView = UIView()
     private var icon: String?
+    private var title: String?
     private var isDark: Bool?
 
     var action: ((UIView) -> Void)?
@@ -59,6 +61,8 @@ final class QrStudioGlassButtonView: UIView {
 
         self.iconView.contentMode = .center
         self.glass.contentView.addSubview(self.iconView)
+        self.titleLabel.textAlignment = .center
+        self.glass.contentView.addSubview(self.titleLabel)
         self.glass.contentView.addSubview(self.touchView)
 
         self.touchView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
@@ -82,19 +86,30 @@ final class QrStudioGlassButtonView: UIView {
         self.action?(self.glass)
     }
 
-    func update(size: CGSize, isDark: Bool, glassTint: GlassBackgroundView.TintColor, icon: String, transition: ComponentTransition) {
-        if self.icon != icon || self.isDark != isDark {
+    static let titleFont = Font.regular(17.0)
+    static let titleInset: CGFloat = 12.0
+
+    static func width(title: String, height: CGFloat) -> CGFloat {
+        let textWidth = ceil((title as NSString).size(withAttributes: [.font: QrStudioGlassButtonView.titleFont]).width)
+        return max(height, textWidth + QrStudioGlassButtonView.titleInset * 2.0)
+    }
+
+    func update(size: CGSize, isDark: Bool, glassTint: GlassBackgroundView.TintColor, icon: String? = nil, title: String? = nil, transition: ComponentTransition) {
+        if self.icon != icon || self.title != title || self.isDark != isDark {
             if self.isDark != nil && self.isDark != isDark && !transition.animation.isImmediate {
                 qrStudioCrossfadeGlass(self.glass)
             }
             self.icon = icon
+            self.title = title
             self.isDark = isDark
             let color = isDark ? UIColor(white: 0.96, alpha: 1.0) : UIColor(white: 0.1, alpha: 1.0)
-            self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: icon), color: color)
+            self.iconView.image = icon.flatMap { generateTintedImage(image: UIImage(bundleImageName: $0), color: color) }
+            self.titleLabel.attributedText = title.flatMap { NSAttributedString(string: $0, font: QrStudioGlassButtonView.titleFont, textColor: color) }
         }
         transition.setFrame(view: self.glass, frame: CGRect(origin: CGPoint(), size: size))
         self.glass.update(size: size, cornerRadius: size.height * 0.5, isDark: QrStudioGlass.glassIsDark(isDark, tint: glassTint), tintColor: glassTint, isInteractive: true, transition: transition)
         transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(), size: size))
+        transition.setFrame(view: self.titleLabel, frame: CGRect(origin: CGPoint(), size: size))
         self.touchView.frame = CGRect(origin: CGPoint(), size: size)
     }
 }
