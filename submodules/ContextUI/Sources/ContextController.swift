@@ -728,6 +728,7 @@ public protocol ContextController: ViewController, StandalonePresentableControll
     var dismissed: (() -> Void)? { get set }
     var dismissedForCancel: (() -> Void)? { get set }
     var passthroughTouchEvent: ((UIView, CGPoint) -> HandledTouchEvent)? { get set }
+    var passthroughHitTest: ((CGPoint) -> UIView?)? { get set }
     var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)? { get set }
     var premiumReactionsSelected: (() -> Void)? { get set }
     var getOverlayViews: (() -> [UIView])? { get set }

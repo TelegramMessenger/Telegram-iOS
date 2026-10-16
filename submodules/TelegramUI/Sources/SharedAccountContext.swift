@@ -90,6 +90,7 @@ import WalletConnectScreen
 import WalletContext
 import WalletTransactionScreen
 import WalletCollectibleScreen
+import WalletPeerSelectionScreen
 import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
@@ -3307,7 +3308,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     ContactListAdditionalOption(
                         title: context.walletContext?.stateValue.walletAddress != nil ? presentationData.strings.Gift_Transfer_MoveToWallet : presentationData.strings.Gift_Transfer_SendViaBlockchain,
                         subtitle: subtitle,
-                        icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                        icon: .generic(context.walletContext?.stateValue.walletAddress != nil ? walletMoveActionIcon("Wallet/MoveToWallet")! : UIImage(bundleImageName: "Item List/Ton")!),
                         style: .generic,
                         action: {
                             presentExportAlertImpl?()
@@ -3323,7 +3324,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             contactOptions = .single([
                 ContactListAdditionalOption(
                     title: presentationData.strings.Gift_Transfer_MoveToGifts,
-                    icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                    icon: .generic(walletMoveActionIcon("Wallet/MoveToGifts")!),
                     style: .generic,
                     action: {
                         presentDepositAlertImpl?()

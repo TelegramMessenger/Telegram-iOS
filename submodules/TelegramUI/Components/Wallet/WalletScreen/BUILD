@@ -19,6 +19,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramNotices",
+        "//submodules/TooltipUI",
         "//submodules/TelegramPresentationData",
         "//submodules/PresentationDataUtils",
         "//submodules/TelegramStringFormatting",

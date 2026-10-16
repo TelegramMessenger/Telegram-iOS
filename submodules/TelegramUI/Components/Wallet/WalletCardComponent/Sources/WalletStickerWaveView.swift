@@ -1,120 +1,111 @@
 import UIKit
+import Display
 import Metal
 import MetalKit
+import MetalEngine
 
-/// An on-demand Metal surface. The caller owns the animation clock; this view
-/// has no display link and never draws while its pose is unchanged.
+private final class WalletStickerWaveLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    private final class RenderState: RenderToLayerState {
+        let pipelineState: MTLRenderPipelineState
+
+        required init?(device: MTLDevice) {
+            guard let library = walletCardMetalLibrary(device: device),
+                  let vertexFunction = library.makeFunction(name: "walletStickerVertex"),
+                  let fragmentFunction = library.makeFunction(name: "walletStickerFragment") else {
+                return nil
+            }
+            let descriptor = MTLRenderPipelineDescriptor()
+            descriptor.label = "Wallet Sticker Pipeline"
+            descriptor.vertexFunction = vertexFunction
+            descriptor.fragmentFunction = fragmentFunction
+            descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: descriptor) else {
+                return nil
+            }
+            self.pipelineState = pipelineState
+        }
+    }
+
+    var internalData: MetalEngineSubjectInternalData?
+
+    var texture: MTLTexture?
+    var artTexture: MTLTexture?
+    var uniforms: [SIMD4<Float>] = []
+
+    func update(context: MetalEngineSubjectContext) {
+        guard !self.bounds.isEmpty, let texture = self.texture, self.uniforms.count == 2 else { return }
+        let scale = UIScreenScale
+        let uniforms = self.uniforms
+        let artTexture = self.artTexture ?? texture
+        context.renderToLayer(
+            spec: RenderLayerSpec(size: RenderSize(
+                width: max(1, Int(ceil(self.bounds.width * scale))),
+                height: max(1, Int(ceil(self.bounds.height * scale)))
+            )),
+            state: RenderState.self,
+            layer: self,
+            commands: { encoder, placement in
+                let effectiveRect = placement.effectiveRect
+                var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY),
+                    Float(effectiveRect.width), Float(effectiveRect.height))
+                encoder.setVertexBytes(&rect, length: MemoryLayout<SIMD4<Float>>.size, index: 0)
+                encoder.setFragmentTexture(texture, index: 0)
+                encoder.setFragmentTexture(artTexture, index: 1)
+                uniforms.withUnsafeBytes { bytes in
+                    if let base = bytes.baseAddress { encoder.setFragmentBytes(base, length: bytes.count, index: 0) }
+                }
+                encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+            }
+        )
+    }
+}
+
+/// Drawn through the shared MetalEngine; the caller owns the animation clock
+/// and the layer only renders when its pose changes.
 public final class WalletStickerWaveView: UIView {
-    private static let device = MTLCreateSystemDefaultDevice()
-    private static let commandQueue = device?.makeCommandQueue()
-    private static let pipeline: MTLRenderPipelineState? = {
-        guard let device, let library = walletCardMetalLibrary(device: device) else { return nil }
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = library.makeFunction(name: "walletStickerVertex")
-        descriptor.fragmentFunction = library.makeFunction(name: "walletStickerFragment")
-        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        return try? device.makeRenderPipelineState(descriptor: descriptor)
-    }()
+    override public class var layerClass: AnyClass {
+        return WalletStickerWaveLayer.self
+    }
 
-    private let metalView: MTKView
-    private let fallback = UIImageView()
-    private var texture: MTLTexture?
-    private var artTexture: MTLTexture?
-    private var artImage: UIImage?
-    private var border: CGFloat = 1
+    private var waveLayer: WalletStickerWaveLayer {
+        return self.layer as! WalletStickerWaveLayer
+    }
+
     private var image: UIImage?
-    private var front: CGFloat = 1
-    private var bend: CGFloat = 0
-    private var shade: CGFloat = 0
+    private var artImage: UIImage?
 
     public override init(frame: CGRect) {
-        self.metalView = MTKView(frame: .zero, device: Self.device)
         super.init(frame: frame)
         self.isUserInteractionEnabled = false
-        self.metalView.isOpaque = false
-        self.metalView.backgroundColor = .clear
-        self.metalView.clearColor = MTLClearColorMake(0, 0, 0, 0)
-        self.metalView.isPaused = true
-        self.metalView.enableSetNeedsDisplay = false
-        self.metalView.framebufferOnly = true
-        self.metalView.autoResizeDrawable = true
-        self.addSubview(self.metalView)
-        self.fallback.contentMode = .scaleAspectFit
-        self.addSubview(self.fallback)
+        self.backgroundColor = .clear
         self.layer.shadowColor = UIColor.black.cgColor
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    private static func makeTexture(_ image: UIImage?) -> MTLTexture? {
+        guard let cgImage = image?.cgImage else { return nil }
+        return try? MTKTextureLoader(device: MetalEngine.shared.device).newTexture(cgImage: cgImage,
+            options: [.SRGB: false, .origin: MTKTextureLoader.Origin.topLeft])
+    }
+
     /// Bounds include 30% padding on every edge, as in the reference.
     public func update(image: UIImage, art: UIImage? = nil, border: CGFloat = 1, front: CGFloat, bend: CGFloat, shade: CGFloat, lift: CGFloat) {
         if self.image !== image {
             self.image = image
-            self.fallback.image = image
-            if let cgImage = image.cgImage, let device = Self.device {
-                self.texture = try? MTKTextureLoader(device: device).newTexture(cgImage: cgImage,
-                    options: [.SRGB: false, .origin: MTKTextureLoader.Origin.topLeft])
-            }
+            self.waveLayer.texture = Self.makeTexture(image)
         }
         if self.artImage !== art {
             self.artImage = art
-            if let cgImage = art?.cgImage, let device = Self.device {
-                self.artTexture = try? MTKTextureLoader(device: device).newTexture(cgImage: cgImage,
-                    options: [.SRGB: false, .origin: MTKTextureLoader.Origin.topLeft])
-            } else {
-                self.artTexture = nil
-            }
+            self.waveLayer.artTexture = Self.makeTexture(art)
         }
-        self.border = border
-        self.front = front
-        self.bend = bend
-        self.shade = shade
         self.layer.shadowOpacity = Float(0.3 * lift)
         self.layer.shadowRadius = 3 + 15 * lift
         self.layer.shadowOffset = CGSize(width: 0, height: 2 + 18 * lift)
-        self.setNeedsLayout()
-        self.layoutIfNeeded()
-        self.draw()
-    }
-
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        self.metalView.frame = self.bounds
-        self.fallback.frame = self.bounds.insetBy(dx: self.bounds.width * 0.3 / 1.6, dy: self.bounds.height * 0.3 / 1.6)
-    }
-
-    public override func didMoveToWindow() {
-        super.didMoveToWindow()
-        if self.window != nil { self.draw() }
-    }
-
-    private func draw() {
-        self.metalView.isHidden = false
-        guard self.window != nil, self.bounds.width > 0,
-              let pipeline = Self.pipeline, let texture = self.texture,
-              let command = Self.commandQueue?.makeCommandBuffer(),
-              let descriptor = self.metalView.currentRenderPassDescriptor,
-              let drawable = self.metalView.currentDrawable,
-              let encoder = command.makeRenderCommandEncoder(descriptor: descriptor) else {
-            self.fallback.isHidden = false
-            self.metalView.isHidden = true
-            return
-        }
-        self.fallback.isHidden = true
-        self.metalView.isHidden = false
         let side = Float(self.bounds.width / 1.6)
-        let uniforms = [SIMD4<Float>(side * 0.3, side * 0.3, side, side * 1.6),
-                        SIMD4<Float>(Float(self.front), Float(self.bend), Float(self.shade), Float(self.border))]
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setFragmentTexture(texture, index: 0)
-        encoder.setFragmentTexture(self.artTexture ?? texture, index: 1)
-        uniforms.withUnsafeBytes { bytes in
-            if let base = bytes.baseAddress { encoder.setFragmentBytes(base, length: bytes.count, index: 0) }
-        }
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-        encoder.endEncoding()
-        command.present(drawable)
-        command.commit()
+        self.waveLayer.uniforms = [SIMD4<Float>(side * 0.3, side * 0.3, side, side * 1.6),
+            SIMD4<Float>(Float(front), Float(bend), Float(shade), Float(border))]
+        self.waveLayer.setNeedsUpdate()
     }
 }
 

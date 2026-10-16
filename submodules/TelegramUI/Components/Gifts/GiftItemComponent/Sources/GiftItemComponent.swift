@@ -406,6 +406,13 @@ public final class GiftItemComponent: Component {
             self.animationLayer?.playOnce()
         }
 
+        public func setModelTransform(_ transform: CATransform3D) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.animationLayer?.transform = transform
+            CATransaction.commit()
+        }
+
         private var selectionLayer: SimpleShapeLayer?
         private var backgroundTrimMask: CAShapeLayer?
         private var patternTrimMask: CAShapeLayer?
@@ -860,7 +867,8 @@ public final class GiftItemComponent: Component {
             let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : (floorToScreenPixels((size.height - iconSize.height) / 2.0) + explicitAnimationOffset)), size: iconSize)
             if let animationLayer = self.animationLayer {
                 animationLayer.isHidden = self.modelHidden
-                animationTransition.setFrame(layer: animationLayer, frame: animationFrame)
+                animationTransition.setPosition(layer: animationLayer, position: CGPoint(x: animationFrame.midX, y: animationFrame.midY))
+                animationTransition.setBounds(layer: animationLayer, bounds: CGRect(origin: .zero, size: animationFrame.size))
             }
             
             if let backgroundColor {
