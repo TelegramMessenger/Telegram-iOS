@@ -545,8 +545,8 @@ extension StoreMessage {
                     let replyNamespace: MessageId.Namespace = (innerFlags & (1 << 13)) != 0 ? Namespaces.Message.EphemeralLocal : Namespaces.Message.Cloud
 
                     var quote: EngineMessageReplyQuote?
-                    if quoteText != nil || replyMedia != nil {
-                        quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                    if quoteText != nil || replyMedia != nil || messageReplyHeaderData.quoteRich != nil {
+                        quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media, richText: messageReplyHeaderData.quoteRich?.map { RichText(apiText: $0) })
                     }
 
                     if let replyToMsgId {
@@ -1142,8 +1142,8 @@ extension StoreMessage {
                         var quote: EngineMessageReplyQuote?
                         let isQuote = (innerFlags & (1 << 9)) != 0
                         
-                        if quoteText != nil || replyMedia != nil {
-                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                        if quoteText != nil || replyMedia != nil || messageReplyHeaderData.quoteRich != nil {
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media, richText: messageReplyHeaderData.quoteRich?.map { RichText(apiText: $0) })
                         }
                         
                         if let replyToMsgId = replyToMsgId {
@@ -1541,8 +1541,8 @@ extension StoreMessage {
                             let (innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, quoteText, quoteEntities, quoteOffset, todoItemId, pollOption) = (messageReplyHeaderData.flags, messageReplyHeaderData.replyToMsgId, messageReplyHeaderData.replyToPeerId, messageReplyHeaderData.replyFrom, messageReplyHeaderData.replyMedia, messageReplyHeaderData.quoteText, messageReplyHeaderData.quoteEntities, messageReplyHeaderData.quoteOffset, messageReplyHeaderData.todoItemId, messageReplyHeaderData.pollOption)
                             var quote: EngineMessageReplyQuote?
                             let isQuote = (innerFlags & (1 << 9)) != 0
-                            if quoteText != nil || replyMedia != nil {
-                                quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                            if quoteText != nil || replyMedia != nil || messageReplyHeaderData.quoteRich != nil {
+                                quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media, richText: messageReplyHeaderData.quoteRich?.map { RichText(apiText: $0) })
                             }
 
                             if let replyToMsgId = replyToMsgId {
@@ -1571,8 +1571,8 @@ extension StoreMessage {
                         let (innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset, todoItemId, pollOption) = (messageReplyHeaderData.flags, messageReplyHeaderData.replyToMsgId, messageReplyHeaderData.replyToPeerId, messageReplyHeaderData.replyFrom, messageReplyHeaderData.replyMedia, messageReplyHeaderData.replyToTopId, messageReplyHeaderData.quoteText, messageReplyHeaderData.quoteEntities, messageReplyHeaderData.quoteOffset, messageReplyHeaderData.todoItemId, messageReplyHeaderData.pollOption)
                         var quote: EngineMessageReplyQuote?
                         let isQuote = (innerFlags & (1 << 9)) != 0
-                        if quoteText != nil || replyMedia != nil {
-                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                        if quoteText != nil || replyMedia != nil || messageReplyHeaderData.quoteRich != nil {
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media, richText: messageReplyHeaderData.quoteRich?.map { RichText(apiText: $0) })
                         }
                         
                         if let replyToMsgId = replyToMsgId {

@@ -213,22 +213,28 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             var quoteText: String?
             var quoteEntities: [Api.MessageEntity]?
             var quoteOffset: Int32?
+            var quoteRich: [Api.RichText]?
             if let replyQuote = replySubject.quote {
-                quoteText = replyQuote.text
-                quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
+                if let richText = replyQuote.richText {
+                    quoteRich = richText.map { $0.apiRichText() }
+                    innerFlags |= 1 << 8
+                } else {
+                    quoteText = replyQuote.text
+                    quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
                 
-                if !replyQuote.entities.isEmpty {
-                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                    for entity in replyQuote.entities {
-                        for associatedPeerId in entity.associatedPeerIds {
-                            if associatedPeers[associatedPeerId] == nil {
-                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                    associatedPeers[associatedPeerId] = associatedPeer
+                    if !replyQuote.entities.isEmpty {
+                        var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                        for entity in replyQuote.entities {
+                            for associatedPeerId in entity.associatedPeerIds {
+                                if associatedPeers[associatedPeerId] == nil {
+                                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                        associatedPeers[associatedPeerId] = associatedPeer
+                                    }
                                 }
                             }
                         }
+                        quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                     }
-                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                 }
             }
             
@@ -262,7 +268,7 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 innerFlags |= 1 << 7
             }
             if !discard {
-                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
+                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich))
             }
         } else if let topMsgId {
             flags |= 1 << 0

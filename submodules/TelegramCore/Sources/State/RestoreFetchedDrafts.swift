@@ -25,12 +25,13 @@ func _internal_synchronizeableChatInputState(accountPeerId: PeerId, peerId: Peer
                 let _ = monoforumPeerId
 
                 var quote: EngineMessageReplyQuote?
-                if let quoteText = quoteText {
+                if quoteText != nil || inputReplyToMessageData.quoteRich != nil {
                     quote = EngineMessageReplyQuote(
-                        text: quoteText,
+                        text: quoteText ?? "",
                         offset: quoteOffset.flatMap(Int.init),
                         entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
-                        media: nil
+                        media: nil,
+                        richText: inputReplyToMessageData.quoteRich?.map { RichText(apiText: $0) }
                     )
                 }
 

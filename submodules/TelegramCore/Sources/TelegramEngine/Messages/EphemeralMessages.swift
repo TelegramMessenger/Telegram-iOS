@@ -128,26 +128,32 @@ private func preparedEphemeralReply(replyTo replySubject: EngineMessageReplySubj
     var quoteText: String?
     var quoteEntities: [Api.MessageEntity]?
     var quoteOffset: Int32?
+    var quoteRich: [Api.RichText]?
     if let replyQuote = replySubject.quote {
-        quoteText = replyQuote.text
-        replyFlags |= 1 << 2
+        if let richText = replyQuote.richText {
+            quoteRich = richText.map { $0.apiRichText() }
+            replyFlags |= 1 << 8
+        } else {
+            quoteText = replyQuote.text
+            replyFlags |= 1 << 2
 
-        if !replyQuote.entities.isEmpty {
-            var associatedPeers = SimpleDictionary<PeerId, Peer>()
-            for entity in replyQuote.entities {
-                for associatedPeerId in entity.associatedPeerIds {
-                    if associatedPeers[associatedPeerId] == nil, let associatedPeer = transaction.getPeer(associatedPeerId) {
-                        associatedPeers[associatedPeerId] = associatedPeer
+            if !replyQuote.entities.isEmpty {
+                var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                for entity in replyQuote.entities {
+                    for associatedPeerId in entity.associatedPeerIds {
+                        if associatedPeers[associatedPeerId] == nil, let associatedPeer = transaction.getPeer(associatedPeerId) {
+                            associatedPeers[associatedPeerId] = associatedPeer
+                        }
                     }
                 }
+                quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
+                replyFlags |= 1 << 3
             }
-            quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
-            replyFlags |= 1 << 3
-        }
 
-        quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
-        if quoteOffset != nil {
-            replyFlags |= 1 << 4
+            quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
+            if quoteOffset != nil {
+                replyFlags |= 1 << 4
+            }
         }
     }
 
@@ -166,7 +172,7 @@ private func preparedEphemeralReply(replyTo replySubject: EngineMessageReplySubj
 
     let threadMessageId = topMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }
     return (
-        .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: nil, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil)),
+        .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: nil, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich)),
         ReplyMessageAttribute(messageId: replySubject.messageId, threadMessageId: threadMessageId, quote: replySubject.quote, isQuote: replySubject.quote != nil, innerSubject: replySubject.innerSubject)
     )
 }

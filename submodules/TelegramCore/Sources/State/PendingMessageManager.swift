@@ -1466,28 +1466,34 @@ public final class PendingMessageManager {
                         var quoteText: String?
                         var quoteEntities: [Api.MessageEntity]?
                         var quoteOffset: Int32?
+                        var quoteRich: [Api.RichText]?
                         if let replyQuote = replyQuote {
-                            replyFlags |= 1 << 2
-                            quoteText = replyQuote.text
-                            quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                            if let richText = replyQuote.richText {
+                                quoteRich = richText.map { $0.apiRichText() }
+                                replyFlags |= 1 << 8
+                            } else {
+                                replyFlags |= 1 << 2
+                                quoteText = replyQuote.text
+                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
                             
-                            if !replyQuote.entities.isEmpty {
-                                replyFlags |= 1 << 3
-                                var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                                for entity in replyQuote.entities {
-                                    for associatedPeerId in entity.associatedPeerIds {
-                                        if associatedPeers[associatedPeerId] == nil {
-                                            if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                                associatedPeers[associatedPeerId] = associatedPeer
+                                if !replyQuote.entities.isEmpty {
+                                    replyFlags |= 1 << 3
+                                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                                    for entity in replyQuote.entities {
+                                        for associatedPeerId in entity.associatedPeerIds {
+                                            if associatedPeers[associatedPeerId] == nil {
+                                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                                    associatedPeers[associatedPeerId] = associatedPeer
+                                                }
                                             }
                                         }
                                     }
+                                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                 }
-                                quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
-                            }
                             
-                            if quoteOffset != nil {
-                                replyFlags |= 1 << 4
+                                if quoteOffset != nil {
+                                    replyFlags |= 1 << 4
+                                }
                             }
                         }
                         
@@ -1498,7 +1504,7 @@ public final class PendingMessageManager {
                             replyFlags |= 1 << 7
                         }
                         
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich))
                     } else if let replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -1878,28 +1884,34 @@ public final class PendingMessageManager {
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
                             var quoteOffset: Int32?
+                            var quoteRich: [Api.RichText]?
                             if let replyQuote = replyQuote {
-                                replyFlags |= 1 << 2
-                                quoteText = replyQuote.text
-                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                                if let richText = replyQuote.richText {
+                                    quoteRich = richText.map { $0.apiRichText() }
+                                    replyFlags |= 1 << 8
+                                } else {
+                                    replyFlags |= 1 << 2
+                                    quoteText = replyQuote.text
+                                    quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
                                 
-                                if !replyQuote.entities.isEmpty {
-                                    replyFlags |= 1 << 3
-                                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                                    for entity in replyQuote.entities {
-                                        for associatedPeerId in entity.associatedPeerIds {
-                                            if associatedPeers[associatedPeerId] == nil {
-                                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                                    associatedPeers[associatedPeerId] = associatedPeer
+                                    if !replyQuote.entities.isEmpty {
+                                        replyFlags |= 1 << 3
+                                        var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                                        for entity in replyQuote.entities {
+                                            for associatedPeerId in entity.associatedPeerIds {
+                                                if associatedPeers[associatedPeerId] == nil {
+                                                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                                        associatedPeers[associatedPeerId] = associatedPeer
+                                                    }
                                                 }
                                             }
                                         }
+                                        quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                     }
-                                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
-                                }
                                 
-                                if quoteOffset != nil {
-                                    replyFlags |= 1 << 4
+                                    if quoteOffset != nil {
+                                        replyFlags |= 1 << 4
+                                    }
                                 }
                             }
                             
@@ -1909,7 +1921,7 @@ public final class PendingMessageManager {
                             if let _ = replyPollOption {
                                 replyFlags |= 1 << 7
                             }
-                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
+                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich))
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                                 flags |= 1 << 0
@@ -1979,28 +1991,34 @@ public final class PendingMessageManager {
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
                             var quoteOffset: Int32?
+                            var quoteRich: [Api.RichText]?
                             if let replyQuote = replyQuote {
-                                replyFlags |= 1 << 2
-                                quoteText = replyQuote.text
+                                if let richText = replyQuote.richText {
+                                    quoteRich = richText.map { $0.apiRichText() }
+                                    replyFlags |= 1 << 8
+                                } else {
+                                    replyFlags |= 1 << 2
+                                    quoteText = replyQuote.text
                                 
-                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
-                                if quoteOffset != nil {
-                                    replyFlags |= 1 << 4
-                                }
+                                    quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                                    if quoteOffset != nil {
+                                        replyFlags |= 1 << 4
+                                    }
                                 
-                                if !replyQuote.entities.isEmpty {
-                                    replyFlags |= 1 << 3
-                                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                                    for entity in replyQuote.entities {
-                                        for associatedPeerId in entity.associatedPeerIds {
-                                            if associatedPeers[associatedPeerId] == nil {
-                                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                                    associatedPeers[associatedPeerId] = associatedPeer
+                                    if !replyQuote.entities.isEmpty {
+                                        replyFlags |= 1 << 3
+                                        var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                                        for entity in replyQuote.entities {
+                                            for associatedPeerId in entity.associatedPeerIds {
+                                                if associatedPeers[associatedPeerId] == nil {
+                                                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                                        associatedPeers[associatedPeerId] = associatedPeer
+                                                    }
                                                 }
                                             }
                                         }
+                                        quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                     }
-                                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                 }
                             }
 
@@ -2010,7 +2028,7 @@ public final class PendingMessageManager {
                             if let _ = replyPollOption {
                                 replyFlags |= 1 << 7
                             }
-                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
+                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich))
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                                 flags |= 1 << 0
@@ -2134,28 +2152,34 @@ public final class PendingMessageManager {
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
                             var quoteOffset: Int32?
+                            var quoteRich: [Api.RichText]?
                             if let replyQuote = replyQuote {
-                                replyFlags |= 1 << 2
-                                quoteText = replyQuote.text
+                                if let richText = replyQuote.richText {
+                                    quoteRich = richText.map { $0.apiRichText() }
+                                    replyFlags |= 1 << 8
+                                } else {
+                                    replyFlags |= 1 << 2
+                                    quoteText = replyQuote.text
                                 
-                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
-                                if quoteOffset != nil {
-                                    replyFlags |= 1 << 4
-                                }
+                                    quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                                    if quoteOffset != nil {
+                                        replyFlags |= 1 << 4
+                                    }
                                 
-                                if !replyQuote.entities.isEmpty {
-                                    replyFlags |= 1 << 3
-                                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                                    for entity in replyQuote.entities {
-                                        for associatedPeerId in entity.associatedPeerIds {
-                                            if associatedPeers[associatedPeerId] == nil {
-                                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                                    associatedPeers[associatedPeerId] = associatedPeer
+                                    if !replyQuote.entities.isEmpty {
+                                        replyFlags |= 1 << 3
+                                        var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                                        for entity in replyQuote.entities {
+                                            for associatedPeerId in entity.associatedPeerIds {
+                                                if associatedPeers[associatedPeerId] == nil {
+                                                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                                        associatedPeers[associatedPeerId] = associatedPeer
+                                                    }
                                                 }
                                             }
                                         }
+                                        quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                     }
-                                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                 }
                             }
 
@@ -2165,7 +2189,7 @@ public final class PendingMessageManager {
                             if let _ = replyPollOption {
                                 replyFlags |= 1 << 7
                             }
-                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
+                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteRich))
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                                 flags |= 1 << 0

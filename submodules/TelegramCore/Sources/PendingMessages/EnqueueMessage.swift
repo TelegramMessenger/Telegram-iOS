@@ -50,18 +50,21 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         case entities = "e"
         case media = "m"
         case offset = "o"
+        case richText = "r"
     }
     
     public var text: String
     public var offset: Int?
     public var entities: [MessageTextEntity]
     public var media: Media?
+    public var richText: [RichText]?
     
-    public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?) {
-        self.text = text
+    public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?, richText: [RichText]? = nil) {
+        self.text = text.isEmpty ? richText?.map { $0.plainText }.joined(separator: "\n") ?? text : text
         self.offset = offset
         self.entities = entities
         self.media = media
+        self.richText = richText
     }
     
     public init(from decoder: Decoder) throws {
@@ -70,6 +73,15 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         self.text = try container.decode(String.self, forKey: .text)
         self.offset = (try container.decodeIfPresent(Int32.self, forKey: .offset)).flatMap(Int.init)
         self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
+        if let richTextData = try container.decodeIfPresent(Data.self, forKey: .richText) {
+            let richTextDecoder = PostboxDecoder(buffer: MemoryBuffer(data: richTextData))
+            self.richText = richTextDecoder.decodeObjectArrayWithDecoderForKey("r")
+        } else {
+            self.richText = nil
+        }
+        if self.text.isEmpty, let richText = self.richText {
+            self.text = richText.map { $0.plainText }.joined(separator: "\n")
+        }
         
         if let mediaData = try container.decodeIfPresent(Data.self, forKey: .media) {
             self.media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as? Media
@@ -84,6 +96,11 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         try container.encode(self.text, forKey: .text)
         try container.encodeIfPresent(self.offset.flatMap(Int32.init(clamping:)), forKey: .offset)
         try container.encode(self.entities, forKey: .entities)
+        if let richText = self.richText {
+            let richTextEncoder = PostboxEncoder()
+            richTextEncoder.encodeObjectArray(richText, forKey: "r")
+            try container.encode(richTextEncoder.makeData(), forKey: .richText)
+        }
         if let media = self.media {
             let mediaEncoder = PostboxEncoder()
             mediaEncoder.encodeRootObject(media)
@@ -96,6 +113,9 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
             return false
         }
         if lhs.offset != rhs.offset {
+            return false
+        }
+        if lhs.richText != rhs.richText {
             return false
         }
         if lhs.entities != rhs.entities {
