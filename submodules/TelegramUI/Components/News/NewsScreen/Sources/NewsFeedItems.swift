@@ -43,6 +43,36 @@ struct NewsFeedItemEnvironment {
     /// The list the rows are for: whether they load synchronously as they are built.
     let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
+    /// A post row's swipe actions: the feeds' rows swipe, search results do not (nil). The last argument is the post's
+    /// identity (`newsPostIdentity`).
+    let postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
+    /// The tab's "Post hidden" flow; nil for search results.
+    let feedback: NewsFeedItemFeedback?
+}
+
+/// What a tab's rows read from its "Post hidden" flow (spec §3).
+struct NewsFeedItemFeedback {
+    let state: NewsPostFeedbackState
+    let tab: NewsPostFeedbackPanelComponent.Tab
+    let postAppearTimes: [AnyHashable: Double]
+    let panelAppearTimes: [AnyHashable: Double]
+    let undo: (AnyHashable, EnginePeer.Id) -> Void
+    let choose: (AnyHashable, EnginePeer.Id, NewsPostFeedbackChoice) -> Void
+
+    /// Hidden entries leave the feed before its rows (and their fresh segments) are built.
+    func isShown(_ entry: EngineFeedEntry) -> Bool {
+        return self.state.isShown(post: newsPostIdentity(entry), channel: entry.peerId)
+    }
+
+    /// A panel stands where the entry's post was: it is no part of a fresh run.
+    func hasPanel(_ entry: EngineFeedEntry) -> Bool {
+        return self.state.hasPanel(newsPostIdentity(entry))
+    }
+}
+
+/// A panel row's identity: never equal to a post row's, so the panel replaces the post rather than updating it.
+private struct NewsPostFeedbackPanelIdentity: Hashable {
+    let post: AnyHashable
 }
 
 /// The channel a post's row shows.
@@ -62,7 +92,38 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
     let presentationData = environment.presentationData
     let openPost = environment.openPost
     let messageId = first.id
-    return CoreListComponentItem(identity: newsPostIdentity(entry), component: AnyComponent(NewsFeedPostComponent(
+    let identity = newsPostIdentity(entry)
+    var fading = false
+    // On its way out (fading for its panel, or a hidden channel's post until its fade): no swipe, no tap.
+    let isLeaving = environment.feedback?.state.isLeaving(identity) ?? false
+    if let feedback = environment.feedback {
+        switch feedback.state.row(post: identity, channel: entry.peerId) {
+        case .hidden:
+            return nil
+        case let .panel(phase, panelFading):
+            let channel = entry.peerId
+            return CoreListComponentItem(identity: AnyHashable(NewsPostFeedbackPanelIdentity(post: identity)), component: AnyComponent(NewsPostFeedbackPanelComponent(
+                context: environment.context,
+                theme: presentationData.theme,
+                strings: presentationData.strings,
+                peer: peer,
+                tab: feedback.tab,
+                phase: phase,
+                fading: panelFading,
+                appearTime: feedback.panelAppearTimes[identity],
+                reduceMotion: presentationData.reduceMotion,
+                undo: {
+                    feedback.undo(identity, channel)
+                },
+                choose: { choice in
+                    feedback.choose(identity, channel, choice)
+                }
+            )))
+        case let .post(postFading):
+            fading = postFading
+        }
+    }
+    return CoreListComponentItem(identity: identity, component: AnyComponent(NewsFeedPostComponent(
         context: environment.context,
         theme: presentationData.theme,
         strings: presentationData.strings,
@@ -74,8 +135,13 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         loading: environment.rowLoading,
         fresh: fresh,
         reduceMotion: presentationData.reduceMotion,
+        fading: fading,
+        appearTime: environment.feedback?.postAppearTimes[identity],
+        swipe: isLeaving ? nil : environment.postSwipe?(peer, messageId, identity),
         action: {
-            openPost(peer, messageId)
+            if !isLeaving {
+                openPost(peer, messageId)
+            }
         }
     )))
 }

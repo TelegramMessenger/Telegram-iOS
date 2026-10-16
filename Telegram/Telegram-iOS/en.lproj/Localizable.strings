@@ -17150,6 +17150,15 @@ Error: %8$@";
 "Channel.Toast.Unarchived" = "**%@** unarchived.";
 "News.Empty.ForYou" = "No posts for you yet";
 "News.Refresh" = "Refresh";
+"News.Swipe.Interesting" = "Interesting";
+"News.Swipe.NotInterested" = "Not Interested";
+"News.Feedback.Hidden" = "Post hidden. Tell us more?";
+"News.Feedback.HideChannel" = "Don't show posts from %@";
+"News.Feedback.FewerLikeThis" = "Don't show posts like this";
+"News.Feedback.RemoveFromNews" = "Remove %@ from News";
+"News.Feedback.Done.HideChannel" = "You won't see posts from %@";
+"News.Feedback.Done.FewerLikeThis" = "You'll see fewer posts like this";
+"News.Feedback.Done.RemoveFromNews" = "%@ removed from News";
 
 "Wallet.Sticker.AddToCard" = "Add to Card";
 "Wallet.Sticker.RemoveFromCard" = "Remove from Card";

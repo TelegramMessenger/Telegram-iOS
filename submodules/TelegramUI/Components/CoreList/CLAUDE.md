@@ -1488,6 +1488,11 @@ Animation an authority.
     makes `hasHorizontalGestures` `.strict` and fails the pop pan in its own `touchesBegan`) also kills
     the edge swipe for the duration of a fling and needs a device pass. The one thing NOT to do is
     answer it from this engine's own delegate.
+  - **A pan that FAILS still reports the lift, from `reset()`.** When another recognizer wins the touch (a
+    row's swipe, a pager, the chat's swipe to reply) the list's pan receives no `touchesEnded`, so
+    `onTouchUp` never fired and content caught overscrolled at touch-down stayed off its edge until the
+    next drag. `PhysicsPanGestureRecognizer` tracks whether a touch went down without its lift being
+    reported and reports it from `reset()`, once (`PhysicsPanTouchUpTests`). Delivered lifts are unchanged.
   - **`delaysTouchesEnded` must stay `false`.** A freshly constructed recognizer defaults to `true`,
     and `UIScrollView.panGestureRecognizer` — what `ListViewImpl` scrolls on — is `false` (measured on
     iOS 26.2, and asserted as a control in `PhysicsScrollEngineTests`). Left at the default, the list's

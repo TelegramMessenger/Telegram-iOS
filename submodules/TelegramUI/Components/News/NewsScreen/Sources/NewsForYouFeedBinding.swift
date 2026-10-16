@@ -160,6 +160,20 @@ final class NewsForYouFeedBinding {
         return NewsSearchCorpus(entries: entries, messages: self.messages)
     }
 
+    /// The feed's posts in order, with their channels, for the "Post hidden" flow.
+    var feedbackPosts: [(post: AnyHashable, channel: EnginePeer.Id)] {
+        guard let state = self.state else {
+            return []
+        }
+        var result: [(post: AnyHashable, channel: EnginePeer.Id)] = []
+        for item in state.items {
+            if case let .post(entry) = item {
+                result.append((newsPostIdentity(entry), entry.peerId))
+            }
+        }
+        return result
+    }
+
     /// The rows, or none while the first load is under way (`isLoading`): the list's skeleton stands in then.
     func beginPullRefresh() {
         guard let state = self.state else {
@@ -211,7 +225,7 @@ final class NewsForYouFeedBinding {
         for item in newsForYouItemsShowingInterests(self.holdingSnapshot.map { newsForYouHeldItems(snapshot: $0, current: state.items) } ?? state.items) {
             switch item {
             case let .post(entry):
-                if let resolved = newsResolvedEntries([entry], availableMessageIds: available).first {
+                if let resolved = newsResolvedEntries([entry], availableMessageIds: available).first, environment.feedback?.isShown(resolved) ?? true {
                     rows.append(.post(resolved))
                 }
             case .interests:
@@ -221,7 +235,7 @@ final class NewsForYouFeedBinding {
         let freshKeys = self.freshReveal?.keys ?? []
         let segments = newsFreshSegments(isFresh: rows.map { row in
             if case let .post(entry) = row {
-                return freshKeys.contains(newsPostIdentity(entry))
+                return freshKeys.contains(newsPostIdentity(entry)) && !(environment.feedback?.hasPanel(entry) ?? false)
             }
             return false
         }, revealTime: self.freshReveal?.time ?? 0.0)
