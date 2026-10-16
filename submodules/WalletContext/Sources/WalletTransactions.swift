@@ -146,6 +146,8 @@ func walletTransactions(
         switch transaction.peer {
         case let .user(enginePeer, address, domain):
             peer = .user(enginePeer, address: address, domain: domain)
+        case let .channel(enginePeer, address, domain):
+            peer = .channel(enginePeer, address: address, domain: domain)
         case let .address(address, domain):
             peer = .address(address, domain: domain)
         case let .onramp(address, domain, providerName):
@@ -184,7 +186,7 @@ func walletTransactions(
     from transactions: [WalletStoredTransaction],
     engine: TelegramEngine
 ) async throws -> [WalletContext.Transaction] {
-    let peerIds = Array(Set(transactions.compactMap { $0.peer.userId }))
+    let peerIds = Array(Set(transactions.compactMap { $0.peer.peerId }))
     guard !peerIds.isEmpty else {
         return transactions.map { $0.transaction(peers: [:]) }
     }
@@ -238,10 +240,20 @@ func mergeTransactions(
 
 @available(macOS 10.15, *)
 func walletPendingTransferTransaction(
-    _ pending: WalletContext.PendingTransfer
+    _ pending: WalletContext.PendingTransfer,
+    collectible: WalletContext.Collectible? = nil
 ) -> WalletContext.Transaction? {
-    guard pending.collectibleAddress == nil, pending.amount > 0 else {
-        return nil
+    let collectibleTransfer: WalletContext.Transaction.CollectibleTransfer?
+    if pending.collectibleAddress != nil {
+        guard let collectible else {
+            return nil
+        }
+        collectibleTransfer = WalletContext.Transaction.CollectibleTransfer(collectible: collectible)
+    } else {
+        guard pending.amount > 0 else {
+            return nil
+        }
+        collectibleTransfer = nil
     }
     let status: WalletContext.Transaction.Status
     switch pending.status {
@@ -263,6 +275,7 @@ func walletPendingTransferTransaction(
         peer: .address(pending.recipient, domain: nil),
         comment: pending.comment,
         commentEncrypted: pending.commentEncrypted,
+        collectible: collectibleTransfer,
         status: status
     )
 }

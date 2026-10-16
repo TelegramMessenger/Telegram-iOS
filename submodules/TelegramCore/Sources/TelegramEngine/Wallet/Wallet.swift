@@ -84,6 +84,7 @@ public struct WalletUserAddress: Equatable {
 
 public enum WalletTransactionPeer: Equatable, @unchecked Sendable {
     case user(EnginePeer, address: String, domain: String?)
+    case channel(EnginePeer, address: String, domain: String?)
     case address(String, domain: String?)
     case onramp(address: String, domain: String?, providerName: String)
     case unsupported
@@ -331,6 +332,16 @@ private extension WalletTransactionPeer {
             )
             if let peer = transaction.getPeer(peerId) {
                 self = .user(EnginePeer(peer), address: apiPeer.address, domain: apiPeer.domain)
+            } else {
+                self = .address(apiPeer.address, domain: apiPeer.domain)
+            }
+        case let .walletTransactionPeerChannel(apiPeer):
+            let peerId = EnginePeer.Id(
+                namespace: Namespaces.Peer.CloudChannel,
+                id: PeerId.Id._internalFromInt64Value(apiPeer.channelId)
+            )
+            if let peer = transaction.getPeer(peerId) {
+                self = .channel(EnginePeer(peer), address: apiPeer.address, domain: apiPeer.domain)
             } else {
                 self = .address(apiPeer.address, domain: apiPeer.domain)
             }

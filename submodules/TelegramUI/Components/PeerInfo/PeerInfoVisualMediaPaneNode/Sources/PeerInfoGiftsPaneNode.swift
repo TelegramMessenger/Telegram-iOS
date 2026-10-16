@@ -1368,6 +1368,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     }
                                 })
                                 return profileGifts.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
+                            }, withdraw: { reference, password in
+                                return profileGifts.withdrawStarGift(reference: reference, keepOnProfile: false, password: password)
                             })
                             self.parentController?.push(controller)
                         })

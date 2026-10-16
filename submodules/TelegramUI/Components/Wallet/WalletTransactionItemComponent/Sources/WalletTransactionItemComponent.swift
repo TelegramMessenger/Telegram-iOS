@@ -783,7 +783,7 @@ public final class WalletTransactionItemComponent: Component {
                     subtitleText = providerName
                 }
             }
-            if !isServiceTransaction, case let .user(peer, _, _) = transaction.peer {
+            if !isServiceTransaction, let peer = transaction.peer.peer {
                 avatarPeer = .transactionPeer(.peer(peer))
             }
             
@@ -1071,7 +1071,7 @@ public final class WalletTransactionItemComponent: Component {
             let peerTitle: String
             var titleAddress: String?
             switch transaction.peer {
-            case let .user(peer, _, _):
+            case let .user(peer, _, _), let .channel(peer, _, _):
                 peerTitle = peer.debugDisplayTitle
             case let .address(address, domain):
                 if let domain = domain?.trimmingCharacters(in: .whitespacesAndNewlines), !domain.isEmpty {

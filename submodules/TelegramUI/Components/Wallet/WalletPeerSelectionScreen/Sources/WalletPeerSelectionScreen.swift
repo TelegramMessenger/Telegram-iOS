@@ -28,6 +28,7 @@ import UndoUI
 import WalletContext
 import WalletSendScreen
 import SideColumnLayout
+import ContactListUI
 
 public enum WalletPeerSelectionScreenMode: Equatable {
     case transfer
@@ -249,6 +250,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
     let dismissSourceScreen: () -> Void
     let transferAnimation: WalletSendTransferAnimation?
     let returnedToWallet: (() -> Void)?
+    let moveToGifts: (() -> Void)?
 
     init(
         context: AccountContext,
@@ -257,7 +259,8 @@ private final class WalletPeerSelectionScreenComponent: Component {
         mode: WalletPeerSelectionScreenMode,
         dismissSourceScreen: @escaping () -> Void,
         transferAnimation: WalletSendTransferAnimation?,
-        returnedToWallet: (() -> Void)?
+        returnedToWallet: (() -> Void)?,
+        moveToGifts: (() -> Void)?
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -266,6 +269,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
         self.dismissSourceScreen = dismissSourceScreen
         self.transferAnimation = transferAnimation
         self.returnedToWallet = returnedToWallet
+        self.moveToGifts = moveToGifts
     }
 
     static func ==(lhs: WalletPeerSelectionScreenComponent, rhs: WalletPeerSelectionScreenComponent) -> Bool {
@@ -274,6 +278,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
             && lhs.updatedPresentationData.signal === rhs.updatedPresentationData.signal
             && lhs.walletContext === rhs.walletContext
             && lhs.mode == rhs.mode
+            && (lhs.moveToGifts == nil) == (rhs.moveToGifts == nil)
     }
 
     private struct PeerInfo: Equatable {
@@ -290,12 +295,15 @@ private final class WalletPeerSelectionScreenComponent: Component {
 
     private enum ContentEntry: Comparable, Identifiable {
         enum Id: Hashable {
+            case moveToGifts
             case topPeers
             case peer(EnginePeer.Id)
         }
 
         var stableId: Id {
             switch self {
+            case .moveToGifts:
+                return .moveToGifts
             case .topPeers:
                 return .topPeers
             case let .peer(peer, _, _, _, _):
@@ -303,11 +311,18 @@ private final class WalletPeerSelectionScreenComponent: Component {
             }
         }
 
+        case moveToGifts(title: String)
         case topPeers
         case peer(peer: EnginePeer, presence: EnginePeer.Presence?, sortIndex: Int, section: PeerSection = .none, query: String? = nil)
 
         static func <(lhs: ContentEntry, rhs: ContentEntry) -> Bool {
             switch (lhs, rhs) {
+            case (.moveToGifts, .moveToGifts):
+                return false
+            case (.moveToGifts, _):
+                return true
+            case (_, .moveToGifts):
+                return false
             case (.topPeers, .topPeers):
                 return false
             case (.topPeers, _):
@@ -324,6 +339,17 @@ private final class WalletPeerSelectionScreenComponent: Component {
 
         func item(listNode: ContentListNode) -> ListViewItem {
             switch self {
+            case let .moveToGifts(title):
+                return ContactListActionItem(
+                    presentationData: ItemListPresentationData(listNode.presentationData),
+                    title: title,
+                    icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                    actionStyle: .generic,
+                    header: nil,
+                    action: { [weak listNode] in
+                        listNode?.parentView?.moveToGiftsSelected()
+                    }
+                )
             case .topPeers:
                 return WalletPeerSelectionTopPeersItem(context: listNode.context, presentationData: listNode.presentationData, peerSelected: { [weak listNode] peer in
                     listNode?.parentView?.peerSelected(peer: peer)
@@ -929,6 +955,10 @@ private final class WalletPeerSelectionScreenComponent: Component {
             return {
                 let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
             }
+        }
+
+        func moveToGiftsSelected() {
+            self.component?.moveToGifts?()
         }
 
         func peerSelected(peer: EnginePeer) {
@@ -1670,6 +1700,9 @@ private final class WalletPeerSelectionScreenComponent: Component {
 
             var entries: [ContentEntry] = []
             var peerIds = Set<EnginePeer.Id>()
+            if component.moveToGifts != nil && self.query.isEmpty && self.recipientPeer == nil {
+                entries.append(.moveToGifts(title: environment.strings.Gift_Transfer_MoveToGifts))
+            }
             if let recipientPeer = self.recipientPeer?.peer {
                 peerIds.insert(recipientPeer.id)
                 entries.append(.peer(
@@ -2089,7 +2122,8 @@ public final class WalletPeerSelectionScreen: ViewControllerComponentContainer {
         mode: WalletPeerSelectionScreenMode = .transfer,
         dismissSourceScreen: @escaping () -> Void = {},
         transferAnimation: WalletSendTransferAnimation? = nil,
-        returnedToWallet: (() -> Void)? = nil
+        returnedToWallet: (() -> Void)? = nil,
+        moveToGifts: (() -> Void)? = nil
     ) {
         let updatedPresentationData = presentationDataWithDefaultAccent((
             initial: context.sharedContext.currentPresentationData.with { $0 },
@@ -2104,7 +2138,8 @@ public final class WalletPeerSelectionScreen: ViewControllerComponentContainer {
                 mode: mode,
                 dismissSourceScreen: dismissSourceScreen,
                 transferAnimation: transferAnimation,
-                returnedToWallet: returnedToWallet
+                returnedToWallet: returnedToWallet,
+                moveToGifts: moveToGifts
             ),
             navigationBarAppearance: .none,
             theme: .default,

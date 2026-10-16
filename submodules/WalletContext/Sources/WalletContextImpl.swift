@@ -39,6 +39,7 @@ actor WalletContextImpl {
         let transfer: PreparedTransfer
         let request: PreparedEngineTransfer
         var sessionId: UUID? = nil
+        var allowsGasless: Bool = true
     }
 
     struct PendingTransferHistoryReconciliation {
@@ -90,6 +91,7 @@ actor WalletContextImpl {
     
     var transactionHistory = WalletTransactionHistory()
     var preparedTransfers: [String: PreparedEngineTransferRecord] = [:]
+    var pendingTransferCollectibles: [String: Collectible] = [:]
     var pendingTransferRegistrations: [String: WalletPendingTransferRegistrationRecord] = [:]
     var outgoingTransactionPresentationIdentities: [String: OutgoingTransactionPresentationIdentity] = [:]
     
@@ -1277,11 +1279,22 @@ actor WalletContextImpl {
     func publishPresentationState() {
         _ = self.pruneOutgoingTransactionPresentationIdentities(state: self.currentState)
         let presentationIds = self.outgoingTransactionPresentationIds()
+        var collectibleByPendingId: [String: Collectible] = [:]
+        for pending in self.currentState.pendingTransfers {
+            guard let address = pending.collectibleAddress else {
+                continue
+            }
+            if let collectible = self.pendingTransferCollectibles[pending.id] ?? self.currentState.collectibles.items.first(where: { walletEngineAddressesEqual($0.address, address) }) {
+                collectibleByPendingId[pending.id] = collectible
+            }
+        }
+        self.pendingTransferCollectibles = self.pendingTransferCollectibles.filter { collectibleByPendingId[$0.key] != nil }
         self.output.publish(state: self.streamingPresentationOverlay.applying(
             to: self.currentState,
             peerByAddress: self.peerByWalletAddress,
             presentationIdByTraceId: presentationIds.byTraceId,
             presentationIdByTransactionHash: presentationIds.byTransactionHash,
+            collectibleByPendingId: collectibleByPendingId,
             log: self.logger.log
         ))
     }

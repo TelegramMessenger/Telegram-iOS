@@ -3257,11 +3257,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?) -> ViewController {
+    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?, withdraw: ((StarGiftReference, String?) -> Signal<Never, WithdrawStarGiftError>)?) -> ViewController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var presentExportAlertImpl: (() -> Void)?
         var presentTransferAlertImpl: ((EnginePeer) -> Void)?
+        var presentDepositAlertImpl: (() -> Void)?
         
         var presentBirthdayPickerImpl: (() -> Void)?
         var mode: ContactSelectionControllerMode = .generic
@@ -3269,6 +3270,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         if case let .starGiftTransfer(birthdays, _, _, _, _, showSelf) = source {
             mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: showSelf, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_TransferSelf)
+            currentBirthdays = birthdays
+        } else if case let .starGiftDeposit(birthdays, _) = source {
+            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false, selfSubtitle: nil)
             currentBirthdays = birthdays
         } else if case let .chatList(birthdays) = source {
             mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_BuySelf)
@@ -3301,7 +3305,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 contactOptions = .single([
                     ContactListAdditionalOption(
-                        title: presentationData.strings.Gift_Transfer_SendViaBlockchain,
+                        title: context.walletContext?.stateValue.walletAddress != nil ? presentationData.strings.Gift_Transfer_MoveToWallet : presentationData.strings.Gift_Transfer_SendViaBlockchain,
                         subtitle: subtitle,
                         icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
                         style: .generic,
@@ -3314,6 +3318,19 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             } else {
                 contactOptions = .single([])
             }
+        } else if case .starGiftDeposit = source {
+            allowChannelsInSearch = true
+            contactOptions = .single([
+                ContactListAdditionalOption(
+                    title: presentationData.strings.Gift_Transfer_MoveToGifts,
+                    icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                    style: .generic,
+                    action: {
+                        presentDepositAlertImpl?()
+                    },
+                    clearHighlightAutomatically: true
+                )
+            ])
         } else if currentBirthdays != nil || "".isEmpty {
             contactOptions = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId))
             |> map { birthday in
@@ -3340,6 +3357,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         let title: String
         if case .starGiftTransfer = source {
+            title = presentationData.strings.Gift_Transfer_Title
+        } else if case .starGiftDeposit = source {
             title = presentationData.strings.Gift_Transfer_Title
         } else {
             title = presentationData.strings.Gift_PremiumOrStars_Title
@@ -3370,6 +3389,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         )).startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 if case .starGiftTransfer = source {
+                    presentTransferAlertImpl?(peer)
+                } else if case .starGiftDeposit = source {
                     presentTransferAlertImpl?(peer)
                 } else {
                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.DisallowedGifts(id: peer.id))
@@ -3450,36 +3471,45 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            if currentTime > canExportDate {
-                let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: { [controller] in
-                    let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
-                    |> deliverOnMainQueue).start(error: { [weak controller] error in
-                        switch error {
-                        case .serverProvided:
+            if currentTime > canExportDate, let walletAddress = context.walletContext?.stateValue.walletAddress, let navigationController = controller.navigationController as? NavigationController {
+                controller.view.window?.endEditing(true)
+                navigationController.setViewControllers(navigationController.viewControllers.filter { $0 !== controller }, animated: true)
+                guard let giftController = navigationController.viewControllers.last as? ViewController else {
+                    return
+                }
+                let alertController = giftMoveToWalletAlertController(context: context, address: walletAddress, commit: { [weak giftController, weak navigationController] in
+                    requestGiftMoveToWallet(context: context, reference: reference, withdraw: withdraw, present: { [weak giftController] c in
+                        giftController?.present(c, in: .window(.root))
+                    }, completion: { [weak giftController, weak navigationController] in
+                        guard let navigationController else {
                             return
-                        case .requestPassword:
-                            let alertController = confirmGiftWithdrawalController(context: context, reference: reference, present: { [weak controller] c, a in
-                                controller?.present(c, in: .window(.root))
-                            }, completion: { [weak controller] url in
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                                
-                                guard let controller, let navigationController = controller.navigationController as? NavigationController else {
-                                    return
-                                }
-                                var controllers = navigationController.viewControllers
-                                controllers = controllers.filter { !($0 is ContactSelectionController) }
-                                navigationController.setViewControllers(controllers, animated: true)
-                            })
-                            controller?.present(alertController, in: .window(.root))
-                        default:
-                            let alertController = giftWithdrawalController(context: context, reference: reference, initialError: error, present: { [weak controller] c, a in
-                                controller?.present(c, in: .window(.root))
-                            }, completion: { _ in
-                                
-                            })
-                            controller?.present(alertController, in: .window(.root))
                         }
+                        if let giftViewScreen = giftController as? GiftViewScreen {
+                            giftViewScreen.dismissAnimated()
+                        } else {
+                            navigationController.setViewControllers(navigationController.viewControllers.filter { !($0 is GiftViewScreen) }, animated: true)
+                        }
+                        
+                        Queue.mainQueue().after(0.4) {
+                            presentGiftMovedToast(context: context, navigationController: navigationController, gift: gift, toWallet: true)
+                        }
+                    })
+                })
+                giftController.present(alertController, in: .window(.root))
+            } else if currentTime > canExportDate {
+                let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: { [weak controller] in
+                    requestGiftWithdrawalUrl(context: context, reference: reference, present: { [weak controller] c, _ in
+                        controller?.present(c, in: .window(.root))
+                    }, completion: { [weak controller] url in
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        
+                        guard let controller, let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is ContactSelectionController) }
+                        navigationController.setViewControllers(controllers, animated: true)
                     })
                 })
                 controller.present(alertController, in: .window(.root))
@@ -3502,8 +3532,57 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> map(Optional.init))
         }
         
+        presentDepositAlertImpl = { [weak controller] in
+            guard let controller, case let .starGiftDeposit(_, gift) = source else {
+                return
+            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                guard let controller, let peer, let navigationController = controller.navigationController as? NavigationController else {
+                    return
+                }
+                controller.view.window?.endEditing(true)
+                navigationController.setViewControllers(navigationController.viewControllers.filter { $0 !== controller }, animated: true)
+                guard let giftController = navigationController.viewControllers.last as? ViewController else {
+                    return
+                }
+                let alertController = giftMoveToProfileAlertController(context: context, peer: peer, commit: { [weak giftController, weak navigationController] in
+                    guard let completion else {
+                        return
+                    }
+                    let _ = (completion([context.account.peerId])
+                    |> deliverOnMainQueue).startStandalone(error: { [weak giftController] _ in
+                        let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Gift_Send_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        giftController?.present(alertController, in: .window(.root))
+                    }, completed: { [weak giftController, weak navigationController] in
+                        guard let navigationController else {
+                            return
+                        }
+                        if let giftViewScreen = giftController as? GiftViewScreen {
+                            giftViewScreen.dismissAnimated()
+                        }
+                        Queue.mainQueue().after(0.4) {
+                            presentGiftMovedToast(context: context, navigationController: navigationController, gift: gift, toWallet: false)
+                        }
+                    })
+                })
+                giftController.present(alertController, in: .window(.root))
+            })
+        }
+        
         presentTransferAlertImpl = { [weak controller] peer in
-            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _, _) = source else {
+            let gift: StarGift.UniqueGift
+            let transferStars: Int64
+            if case let .starGiftTransfer(_, _, transferGift, transferGiftStars, _, _) = source {
+                gift = transferGift
+                transferStars = transferGiftStars
+            } else if case let .starGiftDeposit(_, depositGift) = source {
+                gift = depositGift
+                transferStars = 0
+            } else {
+                return
+            }
+            guard let controller else {
                 return
             }
             controller.view.window?.endEditing(true)
@@ -4308,7 +4387,50 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             walletContext: walletContext,
             collectible: collectible,
             stickerHost: stickerHost,
-            collectibleSent: collectibleSent
+            collectibleSent: collectibleSent,
+            moveToGifts: { collectible, controller, completion in
+                guard let slug = collectible.giftSlug else {
+                    return
+                }
+                let _ = (combineLatest(
+                    context.engine.payments.getUniqueStarGift(slug: slug)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<StarGift.UniqueGift?, NoError> in
+                        return .single(nil)
+                    },
+                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                )
+                |> deliverOnMainQueue).start(next: { [weak controller] gift, peer in
+                    guard let controller, let gift, let peer else {
+                        return
+                    }
+                    let alertController = giftMoveToProfileAlertController(context: context, peer: peer, commitWithProgress: { [weak controller] done in
+                        let navigationController = controller?.navigationController as? NavigationController
+                        var didFinish = false
+                        let _ = (depositStarGiftFromWallet(context: context, gift: gift, peerId: context.account.peerId, submitted: {
+                            guard !didFinish else {
+                                return
+                            }
+                            didFinish = true
+                            completion()
+                            done()
+                        })
+                        |> deliverOnMainQueue).start(error: { [weak navigationController] _ in
+                            if !didFinish {
+                                didFinish = true
+                                done()
+                            }
+                            guard let lastController = navigationController?.viewControllers.last as? ViewController else {
+                                return
+                            }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Gift_Send_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            lastController.present(alertController, in: .window(.root))
+                        })
+                    })
+                    controller.present(alertController, in: .window(.root))
+                })
+            }
         )
     }
 

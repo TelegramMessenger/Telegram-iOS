@@ -57,6 +57,7 @@ public enum PremiumGiftSource: Equatable {
     case chatList([EnginePeer.Id: TelegramBirthday]?)
     case stars([EnginePeer.Id: TelegramBirthday]?)
     case starGiftTransfer([EnginePeer.Id: TelegramBirthday]?, StarGiftReference, StarGift.UniqueGift, Int64, Int32?, Bool)
+    case starGiftDeposit([EnginePeer.Id: TelegramBirthday]?, StarGift.UniqueGift)
     case channelBoost
     case deeplink(String?)
 }

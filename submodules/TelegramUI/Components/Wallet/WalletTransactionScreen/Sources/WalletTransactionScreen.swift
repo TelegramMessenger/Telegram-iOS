@@ -2269,7 +2269,7 @@ private final class WalletTransactionContentComponent: Component {
                     transferAnimation: transactionController?.transferAnimation,
                     completed: transactionController?.returnedToWallet
                 )
-            case .onramp, .unsupported:
+            case .channel, .onramp, .unsupported:
                 return
             }
             sendScreen.navigationPresentation = .modal
@@ -3050,7 +3050,7 @@ private final class WalletTransactionContentComponent: Component {
             }
             let counterpartyContentId: CounterpartyContentId
             let counterpartyContent: AnyComponent<Empty>
-            if case let .user(peer, _, _) = transaction.peer {
+            if let peer = transaction.peer.peer {
                 counterpartyContentId = .peer(peer.id)
                 let peerItems: [AnyComponentWithIdentity<Empty>] = [
                     AnyComponentWithIdentity(
@@ -3106,7 +3106,7 @@ private final class WalletTransactionContentComponent: Component {
                 canSendToPeer = true
             case .address:
                 canSendToPeer = transaction.peer.address != nil
-            case .onramp, .unsupported:
+            case .channel, .onramp, .unsupported:
                 canSendToPeer = false
             }
             let displaysSendButton: Bool
@@ -3124,7 +3124,7 @@ private final class WalletTransactionContentComponent: Component {
             switch transaction.peer {
             case .address:
                 alignSendButtonToTop = true
-            case .user, .onramp, .unsupported:
+            case .user, .channel, .onramp, .unsupported:
                 alignSendButtonToTop = false
             }
             let counterpartyComponent: AnyComponent<Empty>
@@ -3207,7 +3207,7 @@ private final class WalletTransactionContentComponent: Component {
             )]
             let displaysSeparateAddress: Bool
             switch transaction.peer {
-            case .user, .onramp:
+            case .user, .channel, .onramp:
                 displaysSeparateAddress = true
             case .address:
                 displaysSeparateAddress = transaction.peer.domain != nil

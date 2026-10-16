@@ -123,9 +123,9 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
             tabBar: rootController.tabBar.withUpdated(
                 backgroundColor: mainBackgroundColor?.withAlphaComponent(0.9),
                 separatorColor: mainSeparatorColor,
-                iconColor: mainForegroundColor,
+                iconColor: UIColor(rgb: 0xffffff),
                 selectedIconColor: accentColor,
-                textColor: mainForegroundColor,
+                textColor: UIColor(rgb: 0xffffff),
                 selectedTextColor: accentColor
             ),
             navigationBar: rootController.navigationBar.withUpdated(
@@ -547,9 +547,9 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: mainBackgroundColor,
         separatorColor: mainSeparatorColor,
-        iconColor: mainForegroundColor,
+        iconColor: UIColor(rgb: 0xffffff),
         selectedIconColor: accentColor,
-        textColor: mainForegroundColor,
+        textColor: UIColor(rgb: 0xffffff),
         selectedTextColor: accentColor,
         badgeBackgroundColor: UIColor(rgb: 0xef5b5b),
         badgeStrokeColor: UIColor(rgb: 0xef5b5b),

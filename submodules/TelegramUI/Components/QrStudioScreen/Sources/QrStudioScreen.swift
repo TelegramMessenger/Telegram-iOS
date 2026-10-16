@@ -61,11 +61,7 @@ private final class QrStudioScreenComponent: Component {
         private let codePill = QrStudioCodePillView()
         private let toastView = QrStudioToastView()
         private var pendingCodeAction: PendingCodeAction?
-        private var videoExporter: QrStudioVideoExporter?
-        private let videoSceneDisposable = MetaDisposable()
         private var themesDisposable: Disposable?
-        private var videoRequestId: Int?
-        private var nextVideoRequestId = 0
         private var codePillSize = CGSize()
         private var codeState = QrStudioCodeState()
         private var paidPrice: Int64?
@@ -211,9 +207,7 @@ private final class QrStudioScreenComponent: Component {
         }
 
         deinit {
-            self.videoSceneDisposable.dispose()
             self.themesDisposable?.dispose()
-            self.videoExporter?.cancel()
             self.contactTokenDisposable.dispose()
             self.lookDisposable?.dispose()
             self.emojiFilesDisposable?.dispose()
@@ -808,9 +802,6 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func showToast(_ icon: String, _ text: String, animation: String? = nil) {
-            if self.toastView.isShowingProgress {
-                return
-            }
             if self.toastView.superview == nil {
                 self.presentationContainer.insertSubview(self.toastView, belowSubview: self.sheetView)
             }
@@ -1661,7 +1652,6 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func dismiss() {
-            self.cancelVideo()
             self.sheetView.close()
             self.environment?.controller()?.dismiss()
         }
@@ -1690,104 +1680,8 @@ private final class QrStudioScreenComponent: Component {
             add(strings.QrStudio_Share_SaveImage, "Chat/Context Menu/Download", { [weak self] in
                 self?.saveImage()
             })
-            if self.isVideoExportAvailable {
-                add(strings.QrStudio_Share_SaveVideo, "Chat/Context Menu/Save", { [weak self] in
-                    self?.saveVideo()
-                })
-            }
             let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
             controller.presentInGlobalOverlay(contextController)
-        }
-
-        private var isVideoExportAvailable: Bool {
-            switch self.look.backdrop {
-            case .gift:
-                return true
-            case let .emoji(items, _):
-                return items.contains(where: { !$0.file.isStaticEmoji })
-            case .color, .theme:
-                return false
-            }
-        }
-
-        private func saveVideo() {
-            guard let component = self.component, self.videoRequestId == nil else {
-                return
-            }
-            let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
-            self.nextVideoRequestId += 1
-            let requestId = self.nextVideoRequestId
-            self.videoRequestId = requestId
-            if self.toastView.superview == nil {
-                self.presentationContainer.insertSubview(self.toastView, belowSubview: self.sheetView)
-            }
-            self.toastView.showProgress(text: strings.QrStudio_Toast_PreparingVideo, ink: self.look.ink, isLight: self.look.backdrop.isLight, cancel: { [weak self] in
-                guard let self, self.videoRequestId == requestId else {
-                    return
-                }
-                self.cancelVideo()
-            })
-            self.layoutToast()
-            self.videoSceneDisposable.set(self.makeExportScene(canvas: .story, animated: true, completion: { [weak self] scene in
-                guard let self, self.videoRequestId == requestId else {
-                    return
-                }
-                guard let scene else {
-                    self.finishVideo(success: false, denied: false, strings: strings)
-                    return
-                }
-                let exporter = QrStudioVideoExporter(scene: scene)
-                self.videoExporter = exporter
-                exporter.start(progress: { [weak self] value in
-                    guard let self, self.videoRequestId == requestId else {
-                        return
-                    }
-                    self.toastView.updateProgress(value)
-                }, completion: { [weak self] url in
-                    guard let self, self.videoRequestId == requestId, !exporter.isCancelled else {
-                        if let url {
-                            try? FileManager.default.removeItem(at: url)
-                        }
-                        return
-                    }
-                    self.videoExporter = nil
-                    guard let url else {
-                        self.finishVideo(success: false, denied: false, strings: strings)
-                        return
-                    }
-                    self.saveToPhotos(image: nil, videoUrl: url, reportDenied: true, completion: { [weak self] success, denied in
-                        try? FileManager.default.removeItem(at: url)
-                        guard let self, self.videoRequestId == requestId else {
-                            return
-                        }
-                        self.finishVideo(success: success, denied: denied, strings: strings)
-                    })
-                })
-            }))
-        }
-
-        private func cancelVideo() {
-            self.videoSceneDisposable.set(nil)
-            self.videoExporter?.cancel()
-            self.videoExporter = nil
-            self.videoRequestId = nil
-            if self.toastView.isShowingProgress {
-                self.toastView.dismiss()
-            }
-        }
-
-        private func finishVideo(success: Bool, denied: Bool, strings: PresentationStrings) {
-            self.videoRequestId = nil
-            if success {
-                self.toastView.completeProgress(text: strings.QrStudio_Toast_VideoSaved)
-            } else {
-                self.toastView.dismiss()
-                if !denied {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + QrStudioLens.closeDuration, execute: { [weak self] in
-                        self?.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
-                    })
-                }
-            }
         }
 
         private func copyLink() {
@@ -1812,17 +1706,11 @@ private final class QrStudioScreenComponent: Component {
             return (result.image, CGRect(x: center.x - size.width * 0.5, y: center.y - size.height * 0.5, width: size.width, height: size.height), result.planeRect)
         }
 
-        private func makeExportScene(canvas: QrStudioExportCanvas, animated: Bool, completion: @escaping (QrStudioExportScene?) -> Void) -> Disposable {
-            guard let component = self.component, let (cardImage, screenCard, planeRect) = self.exportCardImage(scale: canvas.scale * 1.5, staticPlane: !animated) else {
+        private func makeExportScene(canvas: QrStudioExportCanvas, completion: @escaping (QrStudioExportScene?) -> Void) -> Disposable {
+            guard let component = self.component, let (cardImage, screenCard, _) = self.exportCardImage(scale: canvas.scale * 1.5, staticPlane: true) else {
                 completion(nil)
                 return EmptyDisposable
             }
-            let planeSide = Int(planeRect.width * canvas.scale * 1.5)
-            let plane: Signal<QrStudioExportScene.Plane?, NoError> = animated ? (Signal<QrStudioExportScene.Plane?, NoError> { subscriber in
-                subscriber.putNext(qrStudioDecodeExportPlane(pixelSide: planeSide).map { QrStudioExportScene.Plane(sticker: $0, rect: planeRect) })
-                subscriber.putCompletion()
-                return EmptyDisposable
-            } |> runOn(Queue.concurrentDefaultQueue())) : .single(nil)
             let screenSize = self.bounds.size
             let backdrop = self.look.backdrop
             let isLight = backdrop.isLight
@@ -1830,7 +1718,7 @@ private final class QrStudioScreenComponent: Component {
             let context = component.context
             switch backdrop {
             case let .color(palette):
-                completion(animated ? nil : QrStudioExportScene(background: .mesh(palette.colors), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
+                completion(QrStudioExportScene(background: .mesh(palette.colors), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
                 return EmptyDisposable
             case .theme:
                 var snapshot: CGImage?
@@ -1839,7 +1727,7 @@ private final class QrStudioScreenComponent: Component {
                         snapshot = view.snapshotImage(scale: canvas.scale)
                     }
                 }
-                guard !animated, let snapshot else {
+                guard let snapshot else {
                     completion(nil)
                     return EmptyDisposable
                 }
@@ -1848,29 +1736,21 @@ private final class QrStudioScreenComponent: Component {
             case let .emoji(items, _):
                 let side = Int(56.0 * canvas.scale)
                 let patternItems = QrStudioEmojiPatternView.canonicalExportItems(size: screenSize, fileCount: items.count)
-                let signals = items.map { qrStudioDecodeExportSticker(context: context, file: $0.file, pixelSide: side, tint: $0.isTemplate ? ink : nil, firstFrameOnly: !animated) }
-                return (combineLatest(combineLatest(signals), plane)
+                let signals = items.map { qrStudioDecodeExportSticker(context: context, file: $0.file, pixelSide: side, tint: $0.isTemplate ? ink : nil, firstFrameOnly: true) }
+                return (combineLatest(signals)
                 |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { stickers, plane in
-                    if animated && stickers.contains(where: { $0 == nil }) {
-                        completion(nil)
-                        return
-                    }
+                |> deliverOnMainQueue).startStandalone(next: { stickers in
                     let loaded = stickers.map { $0 ?? QrStudioExportSticker(frames: [], period: 0.0) }
-                    completion(QrStudioExportScene(background: .emoji(stickers: loaded, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight, plane: plane))
+                    completion(QrStudioExportScene(background: .emoji(stickers: loaded, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
                 })
             case let .gift(gift):
                 let symbol = qrStudioDecodeExportSticker(context: context, file: gift.pattern, pixelSide: Int(28.0 * canvas.scale), tint: gift.patternColor.uiColor.withAlphaComponent(0.42), firstFrameOnly: true)
-                let model = qrStudioDecodeExportSticker(context: context, file: gift.model, pixelSide: Int(94.0 * canvas.scale), tint: nil, firstFrameOnly: !animated)
+                let model = qrStudioDecodeExportSticker(context: context, file: gift.model, pixelSide: Int(94.0 * canvas.scale), tint: nil, firstFrameOnly: true)
                 let patternItems = QrStudioGiftPatternView.canonicalExportItems(size: screenSize)
-                return (combineLatest(symbol, model, plane)
+                return (combineLatest(symbol, model)
                 |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { symbol, model, plane in
-                    if animated && model == nil {
-                        completion(nil)
-                        return
-                    }
-                    completion(QrStudioExportScene(background: .gift(inner: gift.inner, outer: gift.outer, symbol: symbol?.frames.first, model: model, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight, plane: plane))
+                |> deliverOnMainQueue).startStandalone(next: { symbol, model in
+                    completion(QrStudioExportScene(background: .gift(inner: gift.inner, outer: gift.outer, symbol: symbol?.frames.first, model: model, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
                 })
             }
         }
@@ -1879,30 +1759,23 @@ private final class QrStudioScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let link = self.link(component: component)
             let canvas = QrStudioExportCanvas.screen(size: self.bounds.size, scale: UIScreenScale)
-            let _ = self.makeExportScene(canvas: canvas, animated: false, completion: { [weak self] scene in
+            let _ = self.makeExportScene(canvas: canvas, completion: { [weak self] scene in
                 guard let self, let scene else {
                     return
                 }
                 DispatchQueue.global(qos: .userInitiated).async {
                     let image = qrStudioExportImage(scene, canvas: canvas)
                     DispatchQueue.main.async {
-                        var items: [Any] = []
-                        if let data = image?.jpegData(compressionQuality: 0.92) {
-                            let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("qr-code.jpg")
-                            try? FileManager.default.removeItem(at: url)
-                            if (try? data.write(to: url)) != nil {
-                                items.append(url)
-                            }
-                        }
-                        if !link.isEmpty, let url = URL(string: link) {
-                            items.append(url)
-                        }
-                        guard !items.isEmpty else {
+                        guard let data = image?.jpegData(compressionQuality: 0.92) else {
                             return
                         }
-                        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+                        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("qr-code.jpg")
+                        try? FileManager.default.removeItem(at: url)
+                        guard (try? data.write(to: url)) != nil else {
+                            return
+                        }
+                        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
                         if let popover = controller.popoverPresentationController {
                             popover.sourceView = self.shareButtonView
                             popover.sourceRect = self.shareButtonView.bounds
@@ -1918,7 +1791,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
-            let _ = self.makeExportScene(canvas: .story, animated: false, completion: { [weak self] scene in
+            let _ = self.makeExportScene(canvas: .story, completion: { [weak self] scene in
                 guard let self else {
                     return
                 }
@@ -1929,7 +1802,11 @@ private final class QrStudioScreenComponent: Component {
                 DispatchQueue.global(qos: .userInitiated).async {
                     let image = qrStudioExportImage(scene, canvas: .story)
                     DispatchQueue.main.async {
-                        self.saveToPhotos(image: image, videoUrl: nil, reportDenied: false, completion: { success, _ in
+                        guard let image else {
+                            self.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
+                            return
+                        }
+                        self.saveToPhotos(image: image, completion: { success in
                             if success {
                                 self.showToast("Chat/Context Menu/Download", strings.QrStudio_Toast_ImageSaved, animation: "anim_savemedia")
                             } else {
@@ -1941,9 +1818,9 @@ private final class QrStudioScreenComponent: Component {
             })
         }
 
-        private func saveToPhotos(image: UIImage?, videoUrl: URL?, reportDenied: Bool, completion: @escaping (_ success: Bool, _ denied: Bool) -> Void) {
-            guard let component = self.component, image != nil || videoUrl != nil else {
-                completion(false, false)
+        private func saveToPhotos(image: UIImage, completion: @escaping (_ success: Bool) -> Void) {
+            guard let component = self.component else {
+                completion(false)
                 return
             }
             let context = component.context
@@ -1951,20 +1828,13 @@ private final class QrStudioScreenComponent: Component {
                 context.sharedContext.presentGlobalController(c, a)
             }, openSettings: context.sharedContext.applicationBindings.openSettings, { authorized in
                 guard authorized else {
-                    if reportDenied {
-                        completion(false, true)
-                    }
                     return
                 }
                 PHPhotoLibrary.shared().performChanges({
-                    if let image {
-                        PHAssetChangeRequest.creationRequestForAsset(from: image)
-                    } else if let videoUrl {
-                        PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: videoUrl)
-                    }
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
                 }, completionHandler: { success, _ in
                     DispatchQueue.main.async {
-                        completion(success, false)
+                        completion(success)
                     }
                 })
             })

@@ -81,12 +81,21 @@ final class WalletCardStyleTransitionTests: XCTestCase {
         XCTAssertGreaterThan(early.textMix, 0)
         XCTAssertLessThan(early.textMix, 1)
     }
-    func testRemovalUsesSmoothFadeAndStaticPattern() {
-        let frame = WalletCardStyleTransition(fraction: 0.25, removing: true)
-        XCTAssertEqual(frame.progress, 0.15625, accuracy: 0.000001)
-        XCTAssertEqual(frame.patternTime, 1)
-        XCTAssertEqual(frame.textMix, 0)
-        XCTAssertEqual(WalletCardStyleTransition(fraction: 0.5, removing: true).progress, 0.5)
+    func testRemovalInhalesThenContractsToOrigin() {
+        let size = CGSize(width: 370, height: 220)
+        let origin = CGPoint(x: 120, y: 80)
+        let early = WalletCardStyleTransition(fraction: 0.3, removing: true)
+        XCTAssertEqual(early.progress, 0)
+        XCTAssertGreaterThan(early.contraction, 1)
+        XCTAssertEqual(early.textMix, 0)
+        XCTAssertEqual(early.radius(origin: origin, size: size), WalletCardStyleTransition(fraction: 0, removing: true).radius(origin: origin, size: size), accuracy: 0.000001)
+        let late = WalletCardStyleTransition(fraction: 0.8, removing: true)
+        XCTAssertGreaterThan(late.progress, 0)
+        XCTAssertLessThan(late.contraction, 1)
+        let done = WalletCardStyleTransition(fraction: 1, removing: true)
+        XCTAssertEqual(done.progress, 1, accuracy: 0.000001)
+        XCTAssertEqual(done.radius(origin: origin, size: size), 0, accuracy: 0.000001)
+        XCTAssertEqual(done.patternTime, 1)
     }
     func testWaveCoversFarthestCornerAndRestorationIsComplete() {
         let size = CGSize(width: 370, height: 220)

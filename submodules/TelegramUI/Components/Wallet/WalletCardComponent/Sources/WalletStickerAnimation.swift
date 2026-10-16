@@ -45,16 +45,27 @@ struct WalletCardStyleTransition {
     let progress: CGFloat
     let textMix: CGFloat
     let patternTime: CGFloat
+    let contraction: CGFloat
+    let removing: Bool
 
     init(fraction: Double, removing: Bool) {
         let x = CGFloat(min(1, max(0, fraction)))
-        self.progress = removing ? x * x * (3 - 2 * x) : 1 - pow(1 - x, 4)
+        self.removing = removing
+        if removing {
+            let pull = x * x * (2.25 * x - 1.25)
+            self.progress = max(0, pull)
+            self.contraction = 1 - pull
+        } else {
+            self.progress = 1 - pow(1 - x, 4)
+            self.contraction = 1
+        }
         let text = min(1, max(0, (self.progress - 0.25) / 0.45))
         self.textMix = text * text * (3 - 2 * text)
         self.patternTime = removing ? 1 : min(1, x * 1.05 / 0.45)
     }
 
     func radius(origin: CGPoint, size: CGSize) -> CGFloat {
-        return hypot(max(origin.x, size.width - origin.x), max(origin.y, size.height - origin.y)) * 1.05 * self.progress
+        let full = hypot(max(origin.x, size.width - origin.x), max(origin.y, size.height - origin.y)) * 1.05
+        return full * (self.removing ? max(0, min(1, self.contraction)) : self.progress)
     }
 }

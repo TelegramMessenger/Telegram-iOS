@@ -23,25 +23,18 @@ struct QrStudioExportScene {
         case gift(inner: QrStudioColor, outer: QrStudioColor, symbol: CGImage?, model: QrStudioExportSticker?, items: [QrStudioExportPatternItem])
     }
 
-    struct Plane {
-        var sticker: QrStudioExportSticker
-        var rect: CGRect
-    }
-
     var background: Background
     var card: CGImage
     var screenSize: CGSize
     var screenCard: CGRect
     var isLight: Bool
-    var plane: Plane?
 
-    init(background: Background, card: CGImage, screenSize: CGSize, screenCard: CGRect, isLight: Bool, plane: Plane? = nil) {
+    init(background: Background, card: CGImage, screenSize: CGSize, screenCard: CGRect, isLight: Bool) {
         self.background = background
         self.card = card
         self.screenSize = screenSize
         self.screenCard = screenCard
         self.isLight = isLight
-        self.plane = plane
     }
 }
 
@@ -186,10 +179,6 @@ func qrStudioDrawExportFrame(_ scene: QrStudioExportScene, canvas: QrStudioExpor
     context.scaleBy(x: 1.0, y: -1.0)
     context.draw(scene.card, in: CGRect(origin: CGPoint(), size: card.size))
     context.restoreGState()
-    if let plane = scene.plane, let image = plane.sticker.image(phase: 0.0, at: time) {
-        let rect = CGRect(x: card.minX + plane.rect.minX * k, y: card.minY + plane.rect.minY * k, width: plane.rect.width * k, height: plane.rect.height * k)
-        qrStudioDraw(image, center: CGPoint(x: rect.midX, y: rect.midY), side: rect.width, degrees: 0.0, alpha: 1.0, in: context)
-    }
     context.restoreGState()
 }
 

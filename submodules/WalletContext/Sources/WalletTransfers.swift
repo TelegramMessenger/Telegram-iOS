@@ -387,6 +387,11 @@ func walletTransferResolutionCandidate(_ pending: WalletContext.PendingTransfer,
 }
 
 @available(macOS 10.15, *)
+func walletTransactionMatchesMessageHash(_ transaction: WalletContext.Transaction, _ msgHash: String) -> Bool {
+    return transaction.transactionHash == msgHash || transaction.id.hasSuffix(":" + msgHash)
+}
+
+@available(macOS 10.15, *)
 private func walletTransferConfirmed(_ pending: WalletContext.PendingTransfer, transaction: WalletContext.Transaction) -> WalletContext.PendingTransfer {
     WalletContext.PendingTransfer(
         id: pending.id, recipient: pending.recipient, amount: pending.amount,
@@ -530,7 +535,8 @@ extension WalletContextImpl {
         control: WalletTransferSubmissionControl,
         minimumSeqno: UInt32?,
         pendingRegistration: WalletContext.PendingTransferRegistration? = nil,
-        registrationSession: PasscodeSession? = nil
+        registrationSession: PasscodeSession? = nil,
+        allowsGasless: Bool = true
     ) async throws -> WalletAPISubmission {
         let startedAt = ProcessInfo.processInfo.systemUptime
         do {
@@ -555,7 +561,8 @@ extension WalletContextImpl {
             }
             let data = try WalletTransferData(
                 prepared: preparedData.data,
-                includeInternalBoc: prepared.amount >= self.transferGaslessMinAmount
+                includeInternalBoc: allowsGasless
+                    && prepared.amount >= self.transferGaslessMinAmount
                     && !WalletContext.isSelfTransfer(recipient: prepared.recipient, walletAddress: walletAddress)
             )
             var persistedPending = pending
@@ -770,7 +777,8 @@ extension WalletContextImpl {
 
     func trackWalletTransferResolution(_ pending: PendingTransfer, receivedAt: Int32? = nil) {
         guard self.walletTransferResolutions[pending.id] == nil,
-              let sent = pending.sentTransfer, !sent.msgHash.isEmpty, pending.collectibleAddress == nil else { return }
+              let sent = pending.sentTransfer, !sent.msgHash.isEmpty,
+              pending.collectibleAddress == nil || pending.streamingData != nil else { return }
         let acceptedAt = receivedAt ?? pending.uiExpiresAt.map {
             Int32(clamping: Int64($0) - Int64(walletPendingTransferUILifetime))
         } ?? pending.createdAt
@@ -883,7 +891,12 @@ extension WalletContextImpl {
                 |> map { walletTransactions(from: $0.items) }
             )
             guard self.isCurrentWalletTransferResolution(generation) else { return }
-            for transaction in transactions {
+            let isCollectibleTransfer = unresolvedIds.contains { self.walletTransferResolutions[$0]?.pending.collectibleAddress != nil }
+            let applicableTransactions = isCollectibleTransfer ? transactions.filter { walletTransactionMatchesMessageHash($0, hash) } : transactions
+            if isCollectibleTransfer && applicableTransactions.isEmpty && !transactions.isEmpty {
+                self.requestSynchronization(scope: [.account, .transactions], force: true)
+            }
+            for transaction in applicableTransactions {
                 self.rememberWalletFinalTransaction(transaction, msgHash: hash)
                 await self.applyWalletFinalTransaction(transaction, pending: nil, generation: generation, source: "message_lookup")
                 guard self.isCurrentWalletTransferResolution(generation) else { return }
@@ -891,7 +904,7 @@ extension WalletContextImpl {
             for id in unresolvedIds {
                 guard self.isCurrentWalletTransferResolution(generation),
                       let pending = self.pendingWalletTransferResolution(id),
-                      let transaction = walletTransferResolutionCandidate(pending, transactions: transactions, history: self.currentState.transactions.items) else { continue }
+                      let transaction = walletTransferResolutionCandidate(pending, transactions: applicableTransactions, history: self.currentState.transactions.items) else { continue }
                 let sameRecipient = self.walletTransferResolutions.values.filter {
                     $0.expiresAt > currentWalletTimestamp() && $0.pending.sentTransfer?.msgHash == hash
                         && walletEngineAddressesEqual($0.pending.recipient, pending.recipient)

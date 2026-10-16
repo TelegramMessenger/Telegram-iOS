@@ -22,6 +22,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/ViewControllerComponent",
         "//submodules/ContactsPeerItem",
+        "//submodules/ContactListUI",
         "//submodules/Display",
         "//submodules/ItemListUI",
         "//submodules/MergeLists",
