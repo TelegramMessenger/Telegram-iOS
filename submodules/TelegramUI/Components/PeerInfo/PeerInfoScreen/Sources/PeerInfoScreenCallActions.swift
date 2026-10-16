@@ -124,7 +124,7 @@ extension PeerInfoScreenNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
+                    strongSelf.performNavigationButtonAction?(.cancel, nil, nil)
                     
                     let text: String
                     switch error {

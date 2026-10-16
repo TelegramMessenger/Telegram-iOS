@@ -155,7 +155,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let headerEdgeEffectContainer: UIView
     let headerEdgeEffectView: EdgeEffectView
     var navigationTitle: String?
-    let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     let searchContainer: ASDisplayNode
     var searchEdgeEffectView: EdgeEffectView?
     let searchBarContainer: SparseNode
@@ -194,6 +193,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var backgroundAlpha: CGFloat = 1.0
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    /// The glass under the bar's buttons, reported on every update; the screen applies a change.
+    var updateNavigationGlass: ((PeerInfoNavigationGlass, ContainedViewLayoutTransition) -> Void)?
+    /// Whether the header puts something in the bar's row place (its search, a pane's own navigation content).
+    var updateNavigationRowHidden: ((Bool, ContainedViewLayoutTransition) -> Void)?
+    /// The bar's right buttons in its row, both sets (the title clears them when the header is collapsed).
+    var navigationRowRightButtonCount: Int = 0
     
     private(set) var walletSourceBackgroundColor: UIColor?
     private(set) var contentButtonBackgroundColor: UIColor?
@@ -292,7 +297,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
         self.avatarOverlayNode.isUserInteractionEnabled = false
         
-        self.navigationButtonContainer = PeerInfoHeaderNavigationButtonContainerNode()
         self.searchBarContainer = SparseNode()
         self.searchContainer = ASDisplayNode()
         
@@ -339,7 +343,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
         self.view.addSubview(self.editingEdgeEffectView)
-        self.addSubnode(self.navigationButtonContainer)
         
         self.addSubnode(self.searchContainer)
         self.addSubnode(self.searchBarContainer)
@@ -372,7 +375,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.navigationButtonContainer.layer.animateAlpha(from: 0.0, to: strongSelf.navigationButtonContainer.alpha, duration: 0.25)
             strongSelf.avatarListNode.listContainerNode.topShadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.topShadowNode.alpha, duration: 0.25)
             
             strongSelf.avatarListNode.listContainerNode.bottomShadowNode.alpha = 1.0
@@ -649,7 +651,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         transition.updateAlpha(node: self.regularContentNode, alpha: (state.isEditing || self.customNavigationContentNode != nil) ? 0.0 : 1.0)
         if self.navigationTransition == nil {
-            transition.updateAlpha(node: self.navigationButtonContainer, alpha: (self.customNavigationContentNode != nil || isSearching) ? 0.0 : 1.0)
+            self.updateNavigationRowHidden?(self.customNavigationContentNode != nil || isSearching, transition)
         }
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
@@ -1152,10 +1154,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.titleExpandedVerifiedIconSize = expandedIconSize
         }
         
-        var actualNavigationContentsColor = navigationContentsAccentColor
-        actualNavigationContentsColor = presentationData.theme.chat.inputPanel.panelControlColor
-        
-        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: actualNavigationContentsColor, isOverColoredContents: !navigationContentsCanBeExpanded, transition: navigationTransition)
+        self.updateNavigationGlass?(navigationContentsCanBeExpanded ? .plain : .tinted(headerButtonBackgroundColor), navigationTransition)
         
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
         self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
@@ -1366,7 +1365,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
         
         var titleConstrainedSize = CGSize(width: width - stripLeft - stripRight - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
-        if self.navigationButtonContainer.rowRightButtonCount > 1 {
+        if self.navigationRowRightButtonCount > 1 {
             titleConstrainedSize.width -= 60.0
         }
         
@@ -2966,10 +2965,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if let subtitleRatingView = self.subtitleRating?.view, let result = subtitleRatingView.hitTest(self.view.convert(point, to: subtitleRatingView), with: event) {
-            return result
-        }
-        
-        if result.isDescendant(of: self.navigationButtonContainer.view) {
             return result
         }
         

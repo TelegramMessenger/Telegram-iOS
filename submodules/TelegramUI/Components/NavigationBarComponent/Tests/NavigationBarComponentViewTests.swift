@@ -75,6 +75,50 @@ final class NavigationBarComponentViewTests: XCTestCase {
         return NavigationBarTheme(overallDarkAppearance: false, buttonColor: .black, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white)
     }
 
+    private func makeTintedTheme(_ color: UIColor, glassStyle: NavigationBar.GlassStyle = .default) -> NavigationBarTheme {
+        return NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white, glassStyle: glassStyle, glassTintColor: color)
+    }
+
+    private func updateBar(_ bar: ComponentView<Empty>, theme: NavigationBarTheme, right: [NavigationBarComponent.Button], transition: ComponentTransition) -> NavigationBarComponent.View {
+        let content = NavigationBarComponent.Content(title: .text("Profile"), back: .back, leftButton: nil, rightButtons: right, backPressed: {})
+        let size = bar.update(
+            transition: transition,
+            component: AnyComponent(NavigationBarComponent(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, primaryContent: content, secondaryContent: nil, secondaryTransition: 0.0)),
+            environment: {},
+            containerSize: CGSize(width: 390.0, height: 44.0)
+        )
+        let view = bar.view as! NavigationBarComponent.View
+        view.frame = CGRect(origin: CGPoint(), size: size)
+        return view
+    }
+
+    // A theme's glass tint (the profile over a cover colour) is the glass of capsules that ask for no tint; accent
+    // capsules keep the accent; without a tint generic capsules are the panel glass.
+    func test_glassTintColor_isTheGenericCapsulesGlass() {
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: self.makeTheme()), GlassBackgroundView.TintColor(kind: .panel))
+        let tinted = self.makeTintedTheme(.orange)
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: tinted), GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .orange)))
+        XCTAssertEqual(navigationBarGlassTintColor(.accent, theme: tinted), GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .blue)))
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: self.makeTintedTheme(.orange, glassStyle: .clear)), GlassBackgroundView.TintColor(kind: .custom(style: .clear, color: .orange)))
+    }
+
+    // The profile's header steps its glass colour while its buttons stay: the kept capsule takes the new glass, and a
+    // colour change alone is not an item change (no in-place animation, no pulse).
+    func test_glassTintChange_retintsTheKeptCapsule_withoutAnInPlaceChange() {
+        let bar = ComponentView<Empty>()
+        let edit = NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })
+        let before = self.updateBar(bar, theme: self.makeTheme(), right: [edit], transition: .immediate)
+        guard let capsule = before.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no capsule")
+            return
+        }
+        let tinted = self.makeTintedTheme(.orange)
+        let view = self.updateBar(bar, theme: tinted, right: [edit], transition: .easeInOut(duration: 0.2))
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === capsule)
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(capsule.glassTintColor, GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .orange)))
+    }
+
     private func makeBar(content: NavigationBarComponent.Content) -> NavigationBarComponent.View {
         let bar = ComponentView<Empty>()
         let size = bar.update(

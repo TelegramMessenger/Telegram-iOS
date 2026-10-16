@@ -45,7 +45,7 @@ extension PeerInfoScreenNode {
                 guard let self else {
                     return
                 }
-                self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
+                self.performNavigationButtonAction?(.edit, nil, nil)
                 
                 for (_, section) in self.editingSections {
                     for (id, itemNode) in section.itemNodes {
