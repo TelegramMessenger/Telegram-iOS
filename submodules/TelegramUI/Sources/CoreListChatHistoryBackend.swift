@@ -660,12 +660,12 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         }
     }
 
-    /// The hold reference for a scroll that asked to hold (`ListViewScrollToItem.holdsPosition`): the
+    /// The hold reference for a scroll that asked to hold (`ListViewScrollToItem.hold`): the
     /// edge the placement measured from, and the point in the row that placement put at a fixed
     /// distance from it. `rowPoint = edge − placement` reproduces every case: the row's minY for `.top`,
     /// its maxY for `.bottom`, its centre for a `.center` that fits, and for one that overflows the point
     /// that sat on the visible centre — continuous where the row starts or stops fitting.
-    private func scrollHold(for position: ListViewScrollPosition, excludesAttachedHeaderSpace: Bool) -> CoreListScrollHold? {
+    private func scrollHold(for position: ListViewScrollPosition, excludesAttachedHeaderSpace: Bool, yieldsToNewestEdge: Bool) -> CoreListScrollHold? {
         let edge: CoreListScrollHold.Edge
         switch position {
         case .top:
@@ -677,7 +677,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         case .visible:
             return nil
         }
-        return CoreListScrollHold(edge: edge) { [weak self] height, view in
+        return CoreListScrollHold(edge: edge, yieldsToNewestEdge: yieldsToNewestEdge) { [weak self] height, view in
             guard let self else {
                 return 0.0
             }
@@ -1002,9 +1002,15 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 direction = .backward
             }
             let excludesAttachedHeaderSpace = scrollToItem.excludesAttachedHeaderSpace
-            let hold = scrollToItem.holdsPosition && !self.isLowestPinToEdgeIndex(index)
-                ? self.scrollHold(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace)
-                : nil
+            let hold: CoreListScrollHold?
+            switch scrollToItem.hold {
+            case .none:
+                hold = nil
+            case .always, .yieldingToNewestEdge:
+                hold = self.isLowestPinToEdgeIndex(index)
+                    ? nil
+                    : self.scrollHold(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace, yieldsToNewestEdge: scrollToItem.hold == .yieldingToNewestEdge)
+            }
             scrollTo = CoreListScrollTarget(index: index, direction: direction, hold: hold) { [weak self] height, view in
                 guard let self else {
                     return 0.0

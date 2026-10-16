@@ -304,7 +304,7 @@ extension ListViewImpl: ChatHistoryListViewBackend {
         return (self.visibleContentOffset(), self.visibleBottomContentOffset())
     }
 
-    // `ListViewImpl` never holds a scroll target: `ListViewScrollToItem.holdsPosition` is ignored here.
+    // `ListViewImpl` never holds a scroll target: `ListViewScrollToItem.hold` is ignored here.
     public var isHoldingScrollTarget: Bool {
         return false
     }
