@@ -9,6 +9,7 @@ import TelegramUIPreferences
 struct WalletStoredTransaction: Codable, Equatable, Sendable {
     enum Peer: Codable, Equatable, @unchecked Sendable {
         case user(id: EnginePeer.Id)
+        case channel(id: EnginePeer.Id)
         case address(String)
         case onramp(address: String, providerName: String)
         case unsupported
@@ -18,11 +19,13 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             case address = 1
             case unsupported = 2
             case onramp = 3
+            case channel = 4
         }
 
         private enum CodingKeys: String, CodingKey {
             case kind
             case userId
+            case channelId
             case address
             case providerName
         }
@@ -42,6 +45,10 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                 self = .user(
                     id: EnginePeer.Id(try container.decode(Int64.self, forKey: .userId))
                 )
+            case .channel:
+                self = .channel(
+                    id: EnginePeer.Id(try container.decode(Int64.self, forKey: .channelId))
+                )
             case .address:
                 self = .address(try container.decode(String.self, forKey: .address))
             case .onramp:
@@ -60,6 +67,9 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             case let .user(id):
                 try container.encode(Kind.user.rawValue, forKey: .kind)
                 try container.encode(id.toInt64(), forKey: .userId)
+            case let .channel(id):
+                try container.encode(Kind.channel.rawValue, forKey: .kind)
+                try container.encode(id.toInt64(), forKey: .channelId)
             case let .address(address):
                 try container.encode(Kind.address.rawValue, forKey: .kind)
                 try container.encode(address, forKey: .address)
@@ -72,11 +82,13 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             }
         }
 
-        var userId: EnginePeer.Id? {
-            if case let .user(id) = self {
+        var peerId: EnginePeer.Id? {
+            switch self {
+            case let .user(id), let .channel(id):
                 return id
+            case .address, .onramp, .unsupported:
+                return nil
             }
-            return nil
         }
     }
 
@@ -115,6 +127,10 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             self.peer = .user(id: peer.id)
             self.peerAddress = address
             self.peerDomain = domain
+        case let .channel(peer, address, domain):
+            self.peer = .channel(id: peer.id)
+            self.peerAddress = address
+            self.peerDomain = domain
         case let .address(address, domain):
             self.peer = .address(address)
             self.peerAddress = nil
@@ -141,6 +157,14 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
         case let .user(id):
             if let value = peers[id] {
                 peer = .user(value, address: self.peerAddress ?? "", domain: self.peerDomain)
+            } else if let peerAddress = self.peerAddress, !peerAddress.isEmpty {
+                peer = .address(peerAddress, domain: self.peerDomain)
+            } else {
+                peer = .unsupported
+            }
+        case let .channel(id):
+            if let value = peers[id] {
+                peer = .channel(value, address: self.peerAddress ?? "", domain: self.peerDomain)
             } else if let peerAddress = self.peerAddress, !peerAddress.isEmpty {
                 peer = .address(peerAddress, domain: self.peerDomain)
             } else {

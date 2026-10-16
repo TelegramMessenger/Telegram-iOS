@@ -146,6 +146,8 @@ func walletTransactions(
         switch transaction.peer {
         case let .user(enginePeer, address, domain):
             peer = .user(enginePeer, address: address, domain: domain)
+        case let .channel(enginePeer, address, domain):
+            peer = .channel(enginePeer, address: address, domain: domain)
         case let .address(address, domain):
             peer = .address(address, domain: domain)
         case let .onramp(address, domain, providerName):
@@ -184,7 +186,7 @@ func walletTransactions(
     from transactions: [WalletStoredTransaction],
     engine: TelegramEngine
 ) async throws -> [WalletContext.Transaction] {
-    let peerIds = Array(Set(transactions.compactMap { $0.peer.userId }))
+    let peerIds = Array(Set(transactions.compactMap { $0.peer.peerId }))
     guard !peerIds.isEmpty else {
         return transactions.map { $0.transaction(peers: [:]) }
     }

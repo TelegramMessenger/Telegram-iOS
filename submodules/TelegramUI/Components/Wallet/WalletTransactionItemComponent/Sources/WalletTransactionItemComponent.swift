@@ -783,8 +783,13 @@ public final class WalletTransactionItemComponent: Component {
                     subtitleText = providerName
                 }
             }
-            if !isServiceTransaction, case let .user(peer, _, _) = transaction.peer {
-                avatarPeer = .transactionPeer(.peer(peer))
+            if !isServiceTransaction {
+                switch transaction.peer {
+                case let .user(peer, _, _), let .channel(peer, _, _):
+                    avatarPeer = .transactionPeer(.peer(peer))
+                case .address, .onramp, .unsupported:
+                    break
+                }
             }
             
             if amountValue > 0 {
@@ -1071,7 +1076,7 @@ public final class WalletTransactionItemComponent: Component {
             let peerTitle: String
             var titleAddress: String?
             switch transaction.peer {
-            case let .user(peer, _, _):
+            case let .user(peer, _, _), let .channel(peer, _, _):
                 peerTitle = peer.debugDisplayTitle
             case let .address(address, domain):
                 if let domain = domain?.trimmingCharacters(in: .whitespacesAndNewlines), !domain.isEmpty {

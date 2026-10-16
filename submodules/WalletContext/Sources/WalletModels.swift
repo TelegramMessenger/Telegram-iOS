@@ -425,6 +425,7 @@ public extension WalletContext {
 
         public enum Peer: Equatable, @unchecked Sendable {
             case user(EnginePeer, address: String, domain: String?)
+            case channel(EnginePeer, address: String, domain: String?)
             case address(String, domain: String?)
             case onramp(address: String, domain: String?, providerName: String)
             case unsupported
@@ -432,7 +433,7 @@ public extension WalletContext {
             public var address: String? {
                 let value: String
                 switch self {
-                case let .user(_, address, _):
+                case let .user(_, address, _), let .channel(_, address, _):
                     value = address
                 case let .address(address, _), let .onramp(address, _, _):
                     value = address
@@ -448,7 +449,7 @@ public extension WalletContext {
             public var domain: String? {
                 let value: String?
                 switch self {
-                case let .user(_, _, domain), let .address(_, domain), let .onramp(_, domain, _):
+                case let .user(_, _, domain), let .channel(_, _, domain), let .address(_, domain), let .onramp(_, domain, _):
                     value = domain
                 case .unsupported:
                     value = nil
@@ -459,9 +460,18 @@ public extension WalletContext {
                 return value
             }
 
+            public var counterpartyPeer: EnginePeer? {
+                switch self {
+                case let .user(peer, _, _), let .channel(peer, _, _):
+                    return peer
+                case .address, .onramp, .unsupported:
+                    return nil
+                }
+            }
+
             public var displayName: String? {
                 switch self {
-                case let .user(peer, _, _):
+                case let .user(peer, _, _), let .channel(peer, _, _):
                     return peer.debugDisplayTitle
                 case let .onramp(_, _, providerName):
                     return providerName

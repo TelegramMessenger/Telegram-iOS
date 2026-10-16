@@ -1755,14 +1755,14 @@ extension WalletContextImpl {
                 if let key = walletAddressMappingKey(address) {
                     peerlessAddresses.insert(key)
                 }
-            case .onramp, .unsupported:
+            case .channel, .onramp, .unsupported:
                 break
             }
         }
         return transactions.compactMap { transaction in
             let transaction = transactionWithResolvedPeer(transaction, peerByAddress: peerByAddress)
             switch transaction.peer {
-            case .user:
+            case .user, .channel:
                 return transaction
             case let .address(address, _):
                 guard let key = walletAddressMappingKey(address), peerlessAddresses.contains(key) else { return nil }
