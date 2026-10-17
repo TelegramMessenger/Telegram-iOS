@@ -72,6 +72,11 @@ public struct ExpansionFrame: Equatable {
     public var appearing: [ExpansionAppearFrame]
     /// The upper screen's content below its header (`infoAppear`).
     public var list: CGFloat
+    /// How far below its resting place the page under the header (its buttons and list) stands: as far as the status
+    /// stands from its own, so the page rides the status in, its spring's overshoot included, as the prototype's actions
+    /// and info card hang off `seenY` (ProfileMorph.swift:964-971, 1506). Without the press's lift and the close's
+    /// landing, which only the labels take there too.
+    public var page: CGFloat
     /// The upper screen's background pattern (`giftsShown`).
     public var pattern: CGFloat
     /// The card covers the screen: its mask can go (`flooded`).
@@ -231,6 +236,7 @@ public struct ExpansionChoreography {
         let sway = wobble * (1.0 - fillC)
         let carriedEdge = ExpansionCurve.mix(start.maxY, g.carriedEdge, fill) + abs(hit) * 0.3
         var labelFrames: [ExpansionLabelFrame] = []
+        var page: CGFloat = 0.0
         if let anchor = g.labels.last {
             let anchorGap = ExpansionCurve.mix(start.maxY - anchor.sourceCenter.y, g.carriedEdge - anchor.destinationCenter.y, fillC)
             let anchorY = carriedEdge - anchorGap
@@ -256,6 +262,9 @@ public struct ExpansionChoreography {
                 } else {
                     x = ExpansionCurve.mix(label.sourceCenter.x, destinationCenter.x, text) + sway
                     y = anchorY - ExpansionCurve.mix(anchor.sourceCenter.y - label.sourceCenter.y, anchor.destinationCenter.y - label.destinationCenter.y, text)
+                }
+                if label == anchor {
+                    page = y - destinationCenter.y
                 }
                 let width = ExpansionCurve.mix(label.sourceSize.width, destinationSize.width, sizeT)
                 var center = CGPoint(x: pivot.x + (x - pivot.x) * groupScale, y: pivot.y + (y - pivot.y) * groupScale)
@@ -303,6 +312,7 @@ public struct ExpansionChoreography {
             tint: 0.55 * fillC,
             appearing: appearing,
             list: list,
+            page: page,
             pattern: ExpansionCurve.smooth(ExpansionCurve.ramp(clock.time, 0.6, 1.0)),
             flooded: clock.phase((0.96, 1.00), (0.00, 0.03)),
             originLight: min(max(press.origin, 0.0), 1.0) * (1.0 - fillC),

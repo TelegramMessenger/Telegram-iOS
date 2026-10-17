@@ -65,6 +65,8 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     var overlays: [UIView] = []
     /// Views around the status that keep their place beside it (the profile's level, username, balance).
     var statusFollowers: [UIView] = []
+    /// The page below the header, which rides the status (the profile's list and music strip).
+    var pageViews: [UIView] = []
     var path: ExpansionPath = .origin
     var lends = 0
     var returns = 0
@@ -96,7 +98,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
-        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
+        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
     }
 
     func returnExpansionDestination() {
@@ -635,6 +637,100 @@ final class NavigationExpansionRendererTests: XCTestCase {
             XCTAssertEqual(followers!.scaled.transform, .identity)
             XCTAssertNil(followers!.plain.layer.animation(forKey: "navigationExpansion.transform"))
             XCTAssertNil(followers!.scaled.layer.animation(forKey: "navigationExpansion.transform"))
+        }
+    }
+
+    /// The page: one view straight in the upper screen with a transform of its own (the list), one in a container that
+    /// scales it.
+    private func makePage(_ destination: FakeDestination) -> (plain: UIView, scaled: UIView) {
+        let top = destination.top!
+        let plain = UIView(frame: CGRect(x: 0.0, y: 360.0, width: 402.0, height: 514.0))
+        plain.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        top.addSubview(plain)
+        let container = UIView(frame: CGRect(x: 0.0, y: 300.0, width: 402.0, height: 60.0))
+        container.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        top.addSubview(container)
+        let scaled = UIView(frame: CGRect(x: 20.0, y: 10.0, width: 300.0, height: 24.0))
+        container.addSubview(scaled)
+        destination.pageViews = [plain, scaled]
+        return (plain, scaled)
+    }
+
+    // The page below the header rides the status as one piece: wherever the status's host stands, the page views and
+    // the buttons (their platters with them, `test_platters_appearWithTheirButtons`) stand as far from their resting
+    // places, overshoot included, each keeping its own transform. Without it the avatar and the name bounced over a page that held still.
+    func test_page_ridesTheStatus() {
+        var page: (plain: UIView, scaled: UIView)?
+        var rest: [CGRect] = []
+        let (renderer, container, _, _, destination) = self.make(configure: { destination in
+            page = self.makePage(destination)
+            rest = ([page!.plain, page!.scaled] + destination.buttons).map { $0.convert($0.bounds, to: destination.top!.superview!) }
+        })
+        guard let page else {
+            return XCTFail()
+        }
+        let statusRest = makeExpansionGeometry().labels[1].destinationCenter.y
+        var overshoot: CGFloat = 0.0
+        for time: CGFloat in [0.6, 1.0, 1.04] {
+            renderer.update(time: time, isOpening: true, pose: .none)
+            guard let host = renderer.destinationLabelHostsForTesting.last else {
+                return XCTFail("no status host")
+            }
+            let delta = host.layer.position.y - statusRest
+            let views = [page.plain, page.scaled] + (time >= 1.0 ? destination.buttons : [])
+            for (view, restRect) in zip(views, rest) {
+                let now = view.convert(view.bounds, to: container)
+                XCTAssertEqual(now.midY - restRect.midY, delta, accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(now.midX, restRect.midX, accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(now.height, restRect.height, accuracy: 0.01, "t=\(time): its own transform is kept")
+            }
+            if time == 0.6 {
+                XCTAssertLessThan(delta, -20.0, "mid-flight the page is still above its place")
+            }
+            if time == 1.04 {
+                overshoot = delta
+            }
+        }
+        XCTAssertGreaterThan(overshoot, 2.0, "the page goes past its place with the status")
+    }
+
+    // On keyframes too, ending where the page rests; and the followers keep theirs beside it.
+    func test_page_keyframed() {
+        var page: (plain: UIView, scaled: UIView)?
+        var followers: (plain: UIView, scaled: UIView, container: UIView)?
+        let (renderer, _, _, _, destination) = self.make(configure: { destination in
+            page = self.makePage(destination)
+            followers = self.makeFollowers(destination)
+        })
+        let timeline = self.timeline(from: 0.0, to: 1.0, opening: true)
+        renderer.animate(timeline: timeline)
+        for (view, restTransform) in [(page!.plain, CATransform3DMakeScale(0.9, 0.9, 1.0)), (page!.scaled, CATransform3DIdentity), (destination.buttons[0], CATransform3DIdentity)] {
+            guard let animation = view.layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let values = animation.values as? [NSValue] else {
+                return XCTFail("no page keyframes")
+            }
+            XCTAssertEqual(values.count, timeline.timing.sampleTimes.count)
+            XCTAssertLessThan(values[0].caTransform3DValue.m42, -20.0, "it starts above its place, under the chat's status")
+            let last = values[values.count - 1].caTransform3DValue
+            XCTAssertEqual(last.m11, restTransform.m11, accuracy: 0.01)
+            XCTAssertEqual(last.m42, 0.0, accuracy: 1.0)
+        }
+        for follower in [followers!.plain, followers!.scaled] {
+            XCTAssertNotNil(follower.layer.animation(forKey: "navigationExpansion.transform"), "the followers still ride their label")
+        }
+    }
+
+    // On every ending the page views keep their own transforms again, with no keyframes left.
+    func test_page_restoredOnEveryEnding() {
+        for atTop in [true, false] {
+            var page: (plain: UIView, scaled: UIView)?
+            let (renderer, _, _, _, _) = self.make(configure: { page = self.makePage($0) })
+            renderer.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
+            renderer.update(time: 0.7, isOpening: true, pose: .none)
+            renderer.end(atTop: atTop)
+            XCTAssertEqual(page!.plain.transform, CGAffineTransform(scaleX: 0.9, y: 0.9))
+            XCTAssertEqual(page!.scaled.transform, .identity)
+            XCTAssertNil(page!.plain.layer.animation(forKey: "navigationExpansion.transform"))
+            XCTAssertNil(page!.scaled.layer.animation(forKey: "navigationExpansion.transform"))
         }
     }
 

@@ -23,7 +23,7 @@ public struct NavigationExpansionLabel {
     public let screenCenter: CGPoint
     public let coloring: Coloring
     public let accessories: [(view: UIView, frame: CGRect)]
-    /// Views laid out around the label at rest (the profile's level, badge, username, balance, music strip): they stay
+    /// Views laid out around the label at rest (the profile's level, badge, rating, username, balance): they stay
     /// in their own superviews (a mask's shapes too) and keep their own alpha, and move and scale as if they were part
     /// of the label.
     public let followers: [UIView]
@@ -86,7 +86,7 @@ public final class NavigationExpansionDestinationLoan {
     /// The labels' colours at rest: what the ink runs to.
     public let labelColors: [UIColor]
     public let carriedEdge: CGFloat
-    /// The action buttons, in order, laid out at rest.
+    /// The action buttons, in order, laid out at rest: each appears on its own and rides the page (`pageViews`).
     public let appearingViews: [UIView]
     /// Views that appear with each button, by its index: drawn elsewhere (the profile's platters are shapes in a blur's
     /// mask), so the button's own alpha and transform do not reach them.
@@ -98,12 +98,15 @@ public final class NavigationExpansionDestinationLoan {
     public let backgroundViews: [UIView]
     public let listViews: [UIView]
     public let patternViews: [UIView]
+    /// The page below the header, which rides the status with the action buttons (`page`): they stay in their own
+    /// superviews and keep their own transforms. Never a label's follower: it rides its label already.
+    public let pageViews: [UIView]
     /// The colour the drops' glass tints toward (the profile's colour; nil: none, the plain profile).
     public let glassTint: UIColor?
     public let screenCornerRadius: CGFloat
     public let backButtonFrame: CGRect?
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], patternViews: [UIView], glassTint: UIColor?, screenCornerRadius: CGFloat, backButtonFrame: CGRect?) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadius: CGFloat, backButtonFrame: CGRect?) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -116,6 +119,7 @@ public final class NavigationExpansionDestinationLoan {
         self.overlayViews = overlayViews
         self.backgroundViews = backgroundViews
         self.listViews = listViews
+        self.pageViews = pageViews
         self.patternViews = patternViews
         self.glassTint = glassTint
         self.screenCornerRadius = screenCornerRadius

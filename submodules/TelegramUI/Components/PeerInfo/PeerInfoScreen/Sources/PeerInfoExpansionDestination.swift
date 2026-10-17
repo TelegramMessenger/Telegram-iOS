@@ -94,8 +94,7 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         // Each button's platter is a shape in the buttons' blur mask, so it appears with its button.
         let buttons = header.orderedButtonNodes
         let key: AnyHashable = self.expansionPath == .photo ? TitleNodeStateExpanded : TitleNodeStateRegular
-        // The decorations around the status (level, badge, username, balance) move with it, fading with the list; the
-        // music strip only fades.
+        // The decorations around the status (level, badge, username, balance) move with it, fading with the list.
         let lent = [self.label(header.titleNode, key: key, in: screenView), self.label(header.subtitleNode, key: key, in: screenView, followers: header.expansionStatusFollowerViews)].compactMap { $0 }
 
         // On the photo path the header's content (buttons, badges, balance) lies on the expanded photo, which is drawn
@@ -124,6 +123,9 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             overlayViews: overlays,
             backgroundViews: [background, banner],
             listViews: [node.scrollNode.view] + header.expansionDecorationViews + photoControls,
+            // The page rides the status with the buttons, as the prototype's actions and info card do: the list and the
+            // music strip.
+            pageViews: [node.scrollNode.view] + header.expansionPageViews,
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
