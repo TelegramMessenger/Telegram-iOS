@@ -1200,7 +1200,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         return
                     }
                     let context = self.context
-                    let shareController = context.sharedContext.makeShareController(
+                    let shareController = context.sharedContext.makeShareScreen(
                         context: context,
                         params: ShareControllerParams(
                             subject: .url(link),

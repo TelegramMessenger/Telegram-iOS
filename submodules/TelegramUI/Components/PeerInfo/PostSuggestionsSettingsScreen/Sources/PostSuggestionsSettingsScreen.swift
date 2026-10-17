@@ -196,7 +196,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             }
             
             let context = component.context
-            let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: nil, actionCompleted: {
+            let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: nil, actionCompleted: {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, completed: { [weak controller] peerIds in

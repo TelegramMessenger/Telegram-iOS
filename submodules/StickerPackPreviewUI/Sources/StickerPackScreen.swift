@@ -1114,7 +1114,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             if let strongSelf = self {
                 let parentNavigationController = strongSelf.controller?.parentNavigationController
-                let shareController = strongSelf.context.sharedContext.makeShareController(
+                let shareController = strongSelf.context.sharedContext.makeShareScreen(
                     context: strongSelf.context,
                     params: ShareControllerParams(
                         subject: shareSubject,

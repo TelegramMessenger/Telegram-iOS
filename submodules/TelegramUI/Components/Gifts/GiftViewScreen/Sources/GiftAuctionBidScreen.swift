@@ -1739,7 +1739,7 @@ private final class GiftAuctionBidScreenComponent: Component {
                 link = "https://t.me/auction/\(slug)"
             }
             
-            let shareController = context.sharedContext.makeShareController(
+            let shareController = context.sharedContext.makeShareScreen(
                 context: context,
                 params: ShareControllerParams(
                     subject: .url(link),
