@@ -18,6 +18,8 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     var titleColoring: NavigationExpansionLabel.Coloring = .recolor(.black)
     /// The title pill, where the geometry's is not wanted.
     var origin: CGRect?
+    /// A view whose frame is the title pill, measured in the space it is lent in (as the chat's pill is).
+    var originView: UIView?
 
     init(screen: UIView) {
         self.titleView.layer.addSublayer(self.titleTintLayer)
@@ -37,7 +39,8 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     func lendExpansionSource(in screenView: UIView) -> NavigationExpansionSourceLoan? {
         self.lends += 1
         let g = makeExpansionGeometry()
-        return NavigationExpansionSourceLoan(origin: self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
+        let measuredOrigin = self.originView.map { $0.convert($0.bounds, to: screenView) }
+        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
         ], press: .none)
@@ -118,9 +121,10 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
 }
 
 final class NavigationExpansionRendererTests: XCTestCase {
-    private func make(opening: Bool = true, configureSource: (FakeSource) -> Void = { _ in }, configure: (FakeDestination) -> Void = { _ in }) -> (NavigationExpansionRendererImpl, container: UIView, top: UIView, source: FakeSource, destination: FakeDestination) {
+    private func make(opening: Bool = true, configureContainer: (UIView) -> Void = { _ in }, configureSource: (FakeSource) -> Void = { _ in }, configure: (FakeDestination) -> Void = { _ in }) -> (NavigationExpansionRendererImpl, container: UIView, top: UIView, source: FakeSource, destination: FakeDestination) {
         let size = makeExpansionGeometry().screenSize
         let container = UIView(frame: CGRect(origin: CGPoint(), size: size))
+        configureContainer(container)
         let bottom = UIView(frame: container.bounds)
         let top = UIView(frame: container.bounds)
         container.addSubview(bottom)
@@ -150,6 +154,29 @@ final class NavigationExpansionRendererTests: XCTestCase {
         XCTAssertEqual(renderer.destinationLabelAlphasForTesting, [0.0, 0.0])
         XCTAssertEqual(destination.buttons.map { $0.alpha }, [0.0, 0.0, 0.0, 0.0])
         XCTAssertEqual(destination.list.alpha, 0.0)
+    }
+
+    // A modal's root container is shifted by its sublayer transform (scaled about its centre, moved down), and a pop
+    // that also removes the modal begins before the shift is animated away. The renderer draws inside that container,
+    // so the shift reaches its views anyway: the card starts on the chat's pill as laid out, not as shifted, and rides
+    // the shift as it goes.
+    func test_begin_underAModalsShift_measuresThePillAsLaidOut() {
+        let g = makeExpansionGeometry()
+        let pill = UIView(frame: g.origin)
+        let (_, _, top, _, _) = self.make(configureContainer: { container in
+            container.layer.sublayerTransform = CATransform3DScale(CATransform3DMakeTranslation(0.0, 27.0, 0.0), 0.92, 0.92, 1.0)
+        }, configureSource: { source in
+            source.home.addSubview(pill)
+            source.originView = pill
+        })
+        guard let mask = top.layer.mask else {
+            return XCTFail("no card mask")
+        }
+        // The conversion passes through the transform and its inverse: equal up to rounding.
+        XCTAssertEqual(mask.frame.minX, g.origin.minX, accuracy: 1e-6)
+        XCTAssertEqual(mask.frame.minY, g.origin.minY, accuracy: 1e-6)
+        XCTAssertEqual(mask.frame.width, g.origin.width, accuracy: 1e-6)
+        XCTAssertEqual(mask.frame.height, g.origin.height, accuracy: 1e-6)
     }
 
     // The drops' container merges them no sooner than the chat's pill and capsule stand apart at rest, so they do not

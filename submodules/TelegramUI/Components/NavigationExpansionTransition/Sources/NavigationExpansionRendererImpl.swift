@@ -155,7 +155,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     public func begin(topView: UIView, bottomView: UIView, size: CGSize, time: CGFloat, isOpening: Bool) {
         self.topView = topView
         self.size = size
-        guard let screen = topView.superview, let sourceLoan = self.source.lendExpansionSource(in: screen) else {
+        guard let container = topView.superview else {
+            return
+        }
+        // Measured where the renderer draws (its screen-sized view in the screens' container), not in the container: a
+        // conversion into the container includes the container's own sublayer transform, which shifts the screens
+        // beneath a modal and is still in place when a pop that also removes the modal begins. Measured so, the
+        // geometry keeps no shift, and the renderer's views follow the container's transform as it animates away.
+        let screen: UIView = self.view.superview === container ? self.view : container
+        guard let sourceLoan = self.source.lendExpansionSource(in: screen) else {
             return
         }
         guard let destinationLoan = self.destination.lendExpansionDestination(in: screen) else {
