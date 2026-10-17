@@ -97,7 +97,8 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     func lendExpansionDestination(in screenView: UIView) -> NavigationExpansionDestinationLoan? {
         self.lends += 1
         let g = makeExpansionGeometry()
-        return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: g.avatar!, labels: [
+        // On the photo path its avatar view is the expanded photo, as the profile's is.
+        return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: self.path == .photo ? g.photo! : g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
         ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
@@ -275,6 +276,38 @@ final class NavigationExpansionRendererTests: XCTestCase {
     func test_photo_liesUnderTheLabels() {
         let (renderer, _, _, _, _) = self.make()
         XCTAssertTrue(renderer.photoIsBelowLabelsForTesting)
+    }
+
+    // On the photo path the photo's view is the expanded photo (402 × 500), scaled on each axis apart into the frame's
+    // photo, down to the flying circle. Its mask's corners are round on screen, so it lands as the chat's avatar's
+    // circle. Corners drawn round in the photo's own points came out 19 pt across and 15 pt down at the circle, its
+    // sides straight for 7 pt, which cut the chat's avatar at the sides until the transition ended.
+    func test_photoPath_maskCornersAreRoundOnScreen() {
+        let (renderer, container, _, _, _) = self.make(opening: false, configure: { $0.path = .photo })
+        let choreography = ExpansionChoreography(geometry: makeExpansionGeometry(), path: .photo, duration: renderer.openSpring.response)
+        for time: CGFloat in [0.0, 0.3, 0.6, 0.9] {
+            renderer.update(time: time, isOpening: false, pose: .none)
+            let frame = choreography.frame(ExpansionClock(time: time, isOpening: false), press: .none)
+            guard let photo = frame.photo, let path = renderer.photoMaskForTesting.path else {
+                return XCTFail("no photo at \(time)")
+            }
+            let wrapper = renderer.photoMaskForTesting.wrapper
+            // The left corners, top and bottom: around each one's centre, just inside its radius and just outside.
+            let corners: [(center: CGPoint, radius: CGFloat, down: CGFloat)] = [
+                (CGPoint(x: photo.minX + frame.photoTopCornerRadius, y: photo.minY + frame.photoTopCornerRadius), frame.photoTopCornerRadius, -1.0),
+                (CGPoint(x: photo.minX + frame.photoCornerRadius, y: photo.maxY - frame.photoCornerRadius), frame.photoCornerRadius, 1.0)
+            ]
+            for corner in corners where corner.radius > 2.0 {
+                for degrees in stride(from: 5.0, through: 85.0, by: 10.0) {
+                    let angle = CGFloat(degrees) * .pi / 180.0
+                    func point(_ distance: CGFloat) -> CGPoint {
+                        return wrapper.convert(CGPoint(x: corner.center.x - cos(angle) * distance, y: corner.center.y + corner.down * sin(angle) * distance), from: container.layer)
+                    }
+                    XCTAssertTrue(path.contains(point(corner.radius - 0.5)), "t=\(time) r=\(corner.radius) at \(degrees)°: inside")
+                    XCTAssertFalse(path.contains(point(corner.radius + 0.5)), "t=\(time) r=\(corner.radius) at \(degrees)°: outside")
+                }
+            }
+        }
     }
 
     // Content that lies on the photo (the profile's header on the photo path: buttons, badges) is lifted above the photo

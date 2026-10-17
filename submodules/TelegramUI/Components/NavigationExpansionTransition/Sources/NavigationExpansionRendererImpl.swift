@@ -332,14 +332,17 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return self.choreography?.frame(ExpansionClock(time: time, isOpening: isOpening), press: self.press(at: sampleTime))
     }
 
+    /// The photo's shape in its view's own points, which the wrapper scales on each axis apart (the expanded photo, taller
+    /// than wide, into the flying circle): a corner round on screen is an ellipse there.
     private func photoPath(_ frame: ExpansionFrame, rest: CGRect) -> CGPath? {
         guard let photo = frame.photo, rest.width > 0.0, rest.height > 0.0 else {
             return nil
         }
-        let scaleX = photo.width / rest.width
-        let scaleY = photo.height / rest.height
-        let k = max(0.0001, scaleX)
-        return navigationExpansionRoundedPath(rect: CGRect(origin: CGPoint(), size: rest.size), top: frame.photoTopCornerRadius / k, bottom: frame.photoCornerRadius / max(0.0001, scaleY))
+        let scaleX = max(0.0001, photo.width / rest.width)
+        let scaleY = max(0.0001, photo.height / rest.height)
+        let top = CGSize(width: frame.photoTopCornerRadius / scaleX, height: frame.photoTopCornerRadius / scaleY)
+        let bottom = CGSize(width: frame.photoCornerRadius / scaleX, height: frame.photoCornerRadius / scaleY)
+        return navigationExpansionRoundedPath(rect: CGRect(origin: CGPoint(), size: rest.size), top: top, bottom: bottom)
     }
 
     private func photoTransform(_ frame: ExpansionFrame, rest: CGRect) -> (center: CGPoint, transform: CATransform3D)? {
@@ -809,6 +812,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         return photo < content && self.overlayHost.superview === self.cardContentView
     }
+    /// The photo's mask's path, in the coordinates of the layer it masks.
+    var photoMaskForTesting: (wrapper: CALayer, path: CGPath?) {
+        return (self.photoWrapper.layer, self.photoMask.path)
+    }
     var overlayMaskFrameForTesting: CGRect {
         return self.overlayMask.frame
     }
@@ -824,22 +831,27 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
 }
 
-/// A rectangle with its own top and bottom corner radii, drawn with the same elements whatever the radii (four arcs,
-/// zero-radius ones included), so Core Animation can interpolate between two of them.
-func navigationExpansionRoundedPath(rect: CGRect, top: CGFloat, bottom: CGFloat) -> CGPath {
-    let maxRadius = min(rect.width, rect.height) * 0.5
-    let t = min(max(top, 0.0), maxRadius)
-    let b = min(max(bottom, 0.0), maxRadius)
+/// A rectangle with its own top and bottom corner radii, across and down (elliptical corners), drawn with the same
+/// elements whatever the radii (one cubic per corner, zero-radius ones included), so Core Animation can interpolate
+/// between two of them.
+func navigationExpansionRoundedPath(rect: CGRect, top: CGSize, bottom: CGSize) -> CGPath {
+    func clamped(_ radius: CGSize) -> CGSize {
+        return CGSize(width: min(max(radius.width, 0.0), rect.width * 0.5), height: min(max(radius.height, 0.0), rect.height * 0.5))
+    }
+    let t = clamped(top)
+    let b = clamped(bottom)
+    // A quarter ellipse's control points lie this far along its tangents (a cubic's quarter circle).
+    let k: CGFloat = 0.5522847498
     let path = CGMutablePath()
-    path.move(to: CGPoint(x: rect.minX + t, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.maxX - t, y: rect.minY))
-    path.addArc(center: CGPoint(x: rect.maxX - t, y: rect.minY + t), radius: t, startAngle: -.pi / 2.0, endAngle: 0.0, clockwise: false)
-    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - b))
-    path.addArc(center: CGPoint(x: rect.maxX - b, y: rect.maxY - b), radius: b, startAngle: 0.0, endAngle: .pi / 2.0, clockwise: false)
-    path.addLine(to: CGPoint(x: rect.minX + b, y: rect.maxY))
-    path.addArc(center: CGPoint(x: rect.minX + b, y: rect.maxY - b), radius: b, startAngle: .pi / 2.0, endAngle: .pi, clockwise: false)
-    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + t))
-    path.addArc(center: CGPoint(x: rect.minX + t, y: rect.minY + t), radius: t, startAngle: .pi, endAngle: .pi * 1.5, clockwise: false)
+    path.move(to: CGPoint(x: rect.minX + t.width, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX - t.width, y: rect.minY))
+    path.addCurve(to: CGPoint(x: rect.maxX, y: rect.minY + t.height), control1: CGPoint(x: rect.maxX - t.width * (1.0 - k), y: rect.minY), control2: CGPoint(x: rect.maxX, y: rect.minY + t.height * (1.0 - k)))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - b.height))
+    path.addCurve(to: CGPoint(x: rect.maxX - b.width, y: rect.maxY), control1: CGPoint(x: rect.maxX, y: rect.maxY - b.height * (1.0 - k)), control2: CGPoint(x: rect.maxX - b.width * (1.0 - k), y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX + b.width, y: rect.maxY))
+    path.addCurve(to: CGPoint(x: rect.minX, y: rect.maxY - b.height), control1: CGPoint(x: rect.minX + b.width * (1.0 - k), y: rect.maxY), control2: CGPoint(x: rect.minX, y: rect.maxY - b.height * (1.0 - k)))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + t.height))
+    path.addCurve(to: CGPoint(x: rect.minX + t.width, y: rect.minY), control1: CGPoint(x: rect.minX, y: rect.minY + t.height * (1.0 - k)), control2: CGPoint(x: rect.minX + t.width * (1.0 - k), y: rect.minY))
     path.closeSubpath()
     return path
 }
