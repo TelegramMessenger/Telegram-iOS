@@ -324,6 +324,14 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                 if titleView.superview == nil {
                     self.view.addSubview(titleView)
                 }
+                ComponentTransition(transition).animateView {
+                    titleView.alpha = self.areControlsHidden ? 0.0 : 1.0
+                }
+            }
+            // A title view the navigation bar has taken (the avatar gallery's, its item title view) is the bar's to place:
+            // placed here as well, it went back to the screen's centre on every layout and the bar slid it to its own
+            // place again.
+            if let titleView = self.titleView, titleView.superview === self.view {
                 
                 // The navigation bar's own status height (compact beside iPhone Duo's status island, where the
                 // centered title also narrows on both sides so it stays clear of the island).
@@ -338,9 +346,6 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                 }
                 let _ = titleView.updateLayout(availableSize: titleFrame.size, transition: .immediate)
                 transition.updateFrame(view: titleView, frame: titleFrame)
-                ComponentTransition(transition).animateView {
-                    titleView.alpha = self.areControlsHidden ? 0.0 : 1.0
-                }
             }
         }
             

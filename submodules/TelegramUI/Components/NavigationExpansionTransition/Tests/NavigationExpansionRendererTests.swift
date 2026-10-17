@@ -61,6 +61,8 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     let home = UIView()
     /// Content that lies on the photo (the profile's header content on the photo path).
     var overlays: [UIView] = []
+    /// Views around the status that keep their place beside it (the profile's level, username, balance).
+    var statusFollowers: [UIView] = []
     var path: ExpansionPath = .origin
     var lends = 0
     var returns = 0
@@ -91,7 +93,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         let g = makeExpansionGeometry()
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
-            NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white))
+            NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
         ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
     }
 
@@ -533,6 +535,96 @@ final class NavigationExpansionRendererTests: XCTestCase {
     }
 
     // At the end the chat's avatar is home: its superview, frame and transform, shown.
+    /// The followers of the status: one straight in the upper screen with a transform of its own, one in a container
+    /// that scales it (the profile's subtitle container), both laid out beside the status's resting place.
+    private func makeFollowers(_ destination: FakeDestination) -> (plain: UIView, scaled: UIView, container: UIView) {
+        let top = destination.top!
+        let plain = UIView(frame: CGRect(x: 40.0, y: 300.0, width: 60.0, height: 20.0))
+        plain.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        top.addSubview(plain)
+        let container = UIView(frame: CGRect(x: 100.0, y: 340.0, width: 200.0, height: 40.0))
+        container.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        top.addSubview(container)
+        let scaled = UIView(frame: CGRect(x: 20.0, y: 10.0, width: 80.0, height: 20.0))
+        container.addSubview(scaled)
+        destination.statusFollowers = [plain, scaled]
+        return (plain, scaled, container)
+    }
+
+    // The status's followers move and scale with it as if they were part of it, in their own superviews: wherever the
+    // status is, each stands where it stood beside the status's resting place, in the status's own (moving, scaling)
+    // coordinates. Without that they stayed put while the status flew in and bounced.
+    func test_followers_rideTheirLabel_inPlace() {
+        var followers: (plain: UIView, scaled: UIView, container: UIView)?
+        var rest: [CGRect] = []
+        let (renderer, container, top, _, _) = self.make(configure: { destination in
+            followers = self.makeFollowers(destination)
+            let r = makeExpansionGeometry().labels[1].destinationCenter
+            rest = [followers!.plain, followers!.scaled].map { $0.convert($0.bounds, to: destination.top!.superview!).offsetBy(dx: -r.x, dy: -r.y) }
+        })
+        guard let followers else {
+            return XCTFail()
+        }
+        for time: CGFloat in [0.0, 0.3, 0.6, 1.03] {
+            renderer.update(time: time, isOpening: true, pose: .none)
+            guard let host = renderer.destinationLabelHostsForTesting.last else {
+                return XCTFail("no status host")
+            }
+            for (view, restRect) in zip([followers.plain, followers.scaled], rest) {
+                let inHost = view.layer.convert(view.bounds, to: host.layer)
+                XCTAssertEqual(inHost.midX, restRect.midX, accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(inHost.midY, restRect.midY, accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(inHost.width, restRect.width, accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(inHost.height, restRect.height, accuracy: 0.01, "t=\(time)")
+            }
+            if time == 0.3 {
+                let onScreen = followers.plain.convert(followers.plain.bounds, to: container)
+                let r = makeExpansionGeometry().labels[1].destinationCenter
+                XCTAssertGreaterThan(abs(onScreen.midY - (rest[0].midY + r.y)), 5.0, "mid-flight the follower is away from its resting place")
+            }
+        }
+        // They stay where they are in the tree.
+        XCTAssertTrue(followers.plain.superview === top)
+        XCTAssertTrue(followers.scaled.superview === followers.container)
+    }
+
+    // On keyframes too: each follower gets one transform keyframe per sample, ending where it rests.
+    func test_followers_keyframed() {
+        var followers: (plain: UIView, scaled: UIView, container: UIView)?
+        let (renderer, _, _, _, _) = self.make(configure: { followers = self.makeFollowers($0) })
+        let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
+        let times = timing.sampleTimes.map { CGFloat($0 / 0.5) }
+        renderer.animate(timeline: NavigationExpansionTimeline(timing: timing, times: times, isOpening: true, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in }))
+        for (view, restTransform) in [(followers!.plain, CATransform3DMakeScale(0.8, 0.8, 1.0)), (followers!.scaled, CATransform3DIdentity)] {
+            guard let animation = view.layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let values = animation.values as? [NSValue] else {
+                return XCTFail("no follower keyframes")
+            }
+            XCTAssertEqual(values.count, timing.sampleTimes.count)
+            XCTAssertFalse(CATransform3DEqualToTransform(values[0].caTransform3DValue, restTransform), "it starts away from its resting place")
+            let last = values[values.count - 1].caTransform3DValue
+            XCTAssertEqual(last.m11, restTransform.m11, accuracy: 0.01)
+            XCTAssertEqual(last.m41, 0.0, accuracy: 0.5)
+            XCTAssertEqual(last.m42, 0.0, accuracy: 0.5)
+        }
+    }
+
+    // On every ending the followers keep their own transforms again, with no keyframes left.
+    func test_followers_restoredOnEveryEnding() {
+        for atTop in [true, false] {
+            var followers: (plain: UIView, scaled: UIView, container: UIView)?
+            let (renderer, _, _, _, _) = self.make(configure: { followers = self.makeFollowers($0) })
+            let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
+            let times = timing.sampleTimes.map { CGFloat($0 / 0.5) }
+            renderer.animate(timeline: NavigationExpansionTimeline(timing: timing, times: times, isOpening: true, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in }))
+            renderer.update(time: 0.4, isOpening: true, pose: .none)
+            renderer.end(atTop: atTop)
+            XCTAssertEqual(followers!.plain.transform, CGAffineTransform(scaleX: 0.8, y: 0.8))
+            XCTAssertEqual(followers!.scaled.transform, .identity)
+            XCTAssertNil(followers!.plain.layer.animation(forKey: "navigationExpansion.transform"))
+            XCTAssertNil(followers!.scaled.layer.animation(forKey: "navigationExpansion.transform"))
+        }
+    }
+
     func test_companion_goesHome() {
         let (renderer, _, _, source, _) = self.make(opening: false)
         let home = CGRect(x: makeExpansionGeometry().companion!.midX - 19.0, y: makeExpansionGeometry().companion!.midY - 19.0, width: 38.0, height: 38.0)

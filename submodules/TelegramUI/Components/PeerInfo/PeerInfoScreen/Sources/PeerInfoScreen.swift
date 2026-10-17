@@ -277,7 +277,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     /// While an expansion has the profile's views they are held still: layouts wait, and the last one is applied when
     /// the views come back (`applyLayoutHeldDuringExpansion`).
-    var isLentToExpansion = false
+    var isLentToExpansion = false {
+        didSet {
+            if self.isLentToExpansion && !oldValue {
+                self.contentOffsetWhenLent = self.scrollNode.view.contentOffset.y
+            }
+        }
+    }
+    /// The list's offset when the expansion took the header's views: the header cannot follow the list while they are
+    /// lent, so the list stays there until they come back (a drag begun meanwhile moves it from then on).
+    private var contentOffsetWhenLent: CGFloat?
     private var layoutHeldDuringExpansion: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     /// The page's colour while an expansion fades it in under the card (the node's own colour is clear then).
     var expansionBackgroundView: UIView?
@@ -5538,6 +5547,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     func applyLayoutHeldDuringExpansion() {
+        self.contentOffsetWhenLent = nil
         if let held = self.layoutHeldDuringExpansion ?? self.validLayout.flatMap({ (layout: $0.0, navigationHeight: $0.1) }) {
             self.layoutHeldDuringExpansion = nil
             self.containerLayoutUpdated(layout: held.layout, navigationHeight: held.navigationHeight, transition: .immediate)
@@ -6111,6 +6121,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !self.ignoreScrolling else {
+            return
+        }
+        // While an expansion has the header's views the header cannot follow the list, which would leave it to jump
+        // when they come back: the list waits where it was. A drag keeps tracking, and moves it from there once they are
+        // back (the scroll view applies a drag incrementally).
+        if self.isLentToExpansion, let offset = self.contentOffsetWhenLent, scrollView.contentOffset.y != offset {
+            self.ignoreScrolling = true
+            scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: offset)
+            self.ignoreScrolling = false
             return
         }
         

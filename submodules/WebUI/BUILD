@@ -26,6 +26,7 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/MoreButtonNode:MoreButtonNode",
+        "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/BotPaymentsUI:BotPaymentsUI",
         "//submodules/PromptUI:PromptUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",

@@ -143,9 +143,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private(set) var expansionGlassTint: UIColor?
     /// The round avatar's frame in `avatarClippingNode`, also while the photo is expanded (where it would be).
     private(set) var expansionRoundAvatarFrame: CGRect?
-    /// What an expansion fades with the list: the header's decorations around the name (the level badge and rating, the
-    /// username, the balance, the music strip and its platter), which the prototype's header does not have.
+    /// What an expansion fades with the list: the header's decorations around the name, which the prototype's header
+    /// does not have — those that move with the status (`expansionStatusFollowerViews`), and the music strip and its
+    /// platter, which stay at the header's bottom.
     var expansionDecorationViews: [UIView] {
+        var views = self.expansionStatusFollowerViews
+        if let view = self.music?.view {
+            views.append(view)
+        }
+        if let view = self.musicBackground {
+            views.append(view)
+        }
+        return views
+    }
+    /// The decorations an expansion moves with the status: the level badge and rating, the username and the balance.
+    var expansionStatusFollowerViews: [UIView] {
         var views: [UIView] = [self.usernameNodeContainer.view]
         if let view = self.subtitleBadgeView {
             views.append(view)
@@ -154,12 +166,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             views.append(view)
         }
         if let view = self.walletBalance?.view {
-            views.append(view)
-        }
-        if let view = self.music?.view {
-            views.append(view)
-        }
-        if let view = self.musicBackground {
             views.append(view)
         }
         return views

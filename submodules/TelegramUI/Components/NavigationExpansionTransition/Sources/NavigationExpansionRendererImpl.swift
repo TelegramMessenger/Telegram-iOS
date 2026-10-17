@@ -97,6 +97,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
     }
     private var labelHosts: [LabelHost] = []
+    /// A destination label's follower (`NavigationExpansionLabel.followers`), measured before anything is lent: its anchor
+    /// point on screen, how many screen points one of its superlayer's points is, and its own transform.
+    private struct Follower {
+        let layer: CALayer
+        let label: Int
+        let anchor: CGPoint
+        let unit: CGSize
+        let rest: CATransform3D
+    }
+    private var followers: [Follower] = []
     private var tintLink: SharedDisplayLinkDriver.Link?
     private var tintTimeline: (timeline: NavigationExpansionTimeline, fills: [CGFloat])?
     private var appliedTintFill: CGFloat = -1.0
@@ -142,6 +152,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.sourceLoan = sourceLoan
         self.destinationLoan = destinationLoan
         self.backButtonFrame = destinationLoan.backButtonFrame
+        for (index, label) in destinationLoan.labels.enumerated() {
+            for view in label.followers {
+                guard let superlayer = view.layer.superlayer else {
+                    continue
+                }
+                let unit = superlayer.convert(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0), to: screen.layer).size
+                self.followers.append(Follower(layer: view.layer, label: index, anchor: superlayer.convert(view.layer.position, to: screen.layer), unit: unit, rest: view.layer.transform))
+                self.touchedLayers.append(view.layer)
+            }
+        }
 
         var labels: [ExpansionLabelGeometry] = []
         for (index, sourceLabel) in sourceLoan.labels.enumerated() where index < destinationLoan.labels.count {
@@ -303,6 +323,19 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return (CGPoint(x: photo.midX, y: photo.midY), CATransform3DMakeScale(photo.width / rest.width, photo.height / rest.height, 1.0))
     }
 
+    /// A follower's transform when its label stands at `label`: its label's motion from rest (to the frame's centre,
+    /// scaled about it), in its superlayer's points, after its own transform.
+    private func followerTransform(_ follower: Follower, _ label: ExpansionLabelFrame) -> CATransform3D {
+        guard let rest = self.destinationLoan.flatMap({ follower.label < $0.labels.count ? $0.labels[follower.label].screenCenter : nil }) else {
+            return follower.rest
+        }
+        let scale = label.destinationScale
+        let target = CGPoint(x: label.center.x + (follower.anchor.x - rest.x) * scale, y: label.center.y + (follower.anchor.y - rest.y) * scale)
+        let dx = (target.x - follower.anchor.x) / max(follower.unit.width, 0.0001)
+        let dy = (target.y - follower.anchor.y) / max(follower.unit.height, 0.0001)
+        return CATransform3DConcat(CATransform3DConcat(follower.rest, CATransform3DMakeScale(scale, scale, 1.0)), CATransform3DMakeTranslation(dx, dy, 0.0))
+    }
+
     private func color(_ host: LabelHost, ink: CGFloat) -> UIColor {
         return host.sourceColor.mixedWith(host.destinationColor, alpha: min(max(ink, 0.0), 1.0))
     }
@@ -360,6 +393,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             for layer in host.multiplyLayers {
                 layer.layerTintColor = color.cgColor
             }
+        }
+        for follower in self.followers where follower.label < f.labels.count {
+            follower.layer.transform = self.followerTransform(follower, f.labels[follower.label])
         }
         for (index, view) in destinationLoan.appearingViews.enumerated() where index < f.appearing.count {
             let a = f.appearing[index]
@@ -505,6 +541,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 add(layer, "contentsMultiplyColor", colors)
             }
         }
+        for follower in self.followers where frames.allSatisfy({ follower.label < $0.labels.count }) {
+            add(follower.layer, "transform", frames.map { NSValue(caTransform3D: self.followerTransform(follower, $0.labels[follower.label])) })
+        }
 
         // The upper screen's own parts.
         for (index, view) in destinationLoan.appearingViews.enumerated() {
@@ -603,6 +642,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.tintLink = nil
         self.tintTimeline = nil
         self.removeKeyframes()
+        for follower in self.followers {
+            follower.layer.transform = follower.rest
+        }
+        self.followers = []
         self.topView?.layer.mask = nil
         self.topView?.transform = .identity
         if let destinationLoan = self.destinationLoan {
@@ -683,6 +726,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     // Tests.
     var labelHostCentersForTesting: [CGPoint] {
         return self.labelHosts.map { $0.sourceHost.layer.position }
+    }
+    var destinationLabelHostsForTesting: [UIView] {
+        return self.labelHosts.map { $0.destinationHost }
     }
     var destinationLabelAlphasForTesting: [CGFloat] {
         return self.labelHosts.map { $0.destinationHost.alpha }
