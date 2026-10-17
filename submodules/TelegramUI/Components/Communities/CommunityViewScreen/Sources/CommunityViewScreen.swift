@@ -1875,8 +1875,13 @@ private final class CommunityViewScreenComponent: Component {
         private let bottomEdgeEffectView = EdgeEffectView()
         private let navigationBarView = ComponentView<Empty>()
 
-        /// The chat-list-style header, for navigation transitions.
+        /// The chat-list-style header, for navigation transitions. None for the sheet: its header lies on the sheet, below
+        /// the top of the screen, and a transition would fly its buttons to the other screen's bar; it slides with the
+        /// sheet instead.
         var navigationTransitionHeader: ChatListNavigationBar.View? {
+            guard let component = self.component, component.mode.usesFullscreenPresentation else {
+                return nil
+            }
             return self.navigationBarView.view as? ChatListNavigationBar.View
         }
         private let searchOverlayNode = ASDisplayNode()
