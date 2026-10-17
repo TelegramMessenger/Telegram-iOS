@@ -317,12 +317,27 @@ public func giftMoveToWalletAlertController(
     )
 }
 
+public func giftDepositNetworkFee(context: AccountContext, gift: StarGift.UniqueGift) -> Signal<Int64?, NoError> {
+    guard let walletContext = context.walletContext,
+          let address = walletContext.stateValue.collectibles.items.first(where: { $0.giftSlug == gift.slug })?.address else {
+        return .single(nil)
+    }
+    return walletContext.estimateTransferFee(address: address, comment: .none)
+    |> map { estimate -> Int64? in
+        return estimate.fee
+    }
+    |> `catch` { _ -> Signal<Int64?, NoError> in
+        return .single(nil)
+    }
+}
+
 public func giftMoveToProfileAlertController(
     context: AccountContext,
     peer: EnginePeer,
+    networkFee: Signal<Int64?, NoError> = .single(nil),
     commit: @escaping () -> Void
 ) -> ViewController {
-    return giftMoveToProfileAlertController(context: context, peer: peer, commitWithProgress: { done in
+    return giftMoveToProfileAlertController(context: context, peer: peer, networkFee: networkFee, commitWithProgress: { done in
         commit()
         done()
     })
@@ -331,6 +346,7 @@ public func giftMoveToProfileAlertController(
 public func giftMoveToProfileAlertController(
     context: AccountContext,
     peer: EnginePeer,
+    networkFee: Signal<Int64?, NoError> = .single(nil),
     commitWithProgress: @escaping (@escaping () -> Void) -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -376,26 +392,44 @@ public func giftMoveToProfileAlertController(
         )
     ))
 
+    let baseContent = content
+    let contentSignal: Signal<[AnyComponentWithIdentity<AlertComponentEnvironment>], NoError> = .single(baseContent)
+    |> then(networkFee
+    |> take(1)
+    |> map { fee -> [AnyComponentWithIdentity<AlertComponentEnvironment>] in
+        guard let fee else {
+            return baseContent
+        }
+        let feeText = formatTonAmountText(fee, dateTimeFormat: presentationData.dateTimeFormat, maxDecimalPositions: 5, formatString: strings.Currency_Grams)
+        return baseContent + [AnyComponentWithIdentity(
+            id: "fee",
+            component: AnyComponent(
+                AlertTextComponent(content: .plain(strings.Wallet_Send_NetworkFee + " " + feeText), alignment: .center, color: .secondary, style: .plain(.small), insets: UIEdgeInsets(top: 12.0, left: 0.0, bottom: 0.0, right: 0.0))
+            )
+        )]
+    })
+
     let progressPromise = ValuePromise<Bool>(false)
     var isInProgress = false
     var dismissImpl: (() -> Void)?
+    let actions: [AlertScreen.Action] = [
+        .init(title: strings.Common_Cancel),
+        .init(title: strings.Gift_MoveToWallet_Move, type: .default, action: {
+            guard !isInProgress else {
+                return
+            }
+            isInProgress = true
+            progressPromise.set(true)
+            commitWithProgress({
+                dismissImpl?()
+            })
+        }, autoDismiss: false, progress: progressPromise.get())
+    ]
     let alertController = AlertScreen(
-        context: context,
         configuration: AlertScreen.Configuration(),
-        content: content,
-        actions: [
-            .init(title: strings.Common_Cancel),
-            .init(title: strings.Gift_MoveToWallet_Move, type: .default, action: {
-                guard !isInProgress else {
-                    return
-                }
-                isInProgress = true
-                progressPromise.set(true)
-                commitWithProgress({
-                    dismissImpl?()
-                })
-            }, autoDismiss: false, progress: progressPromise.get())
-        ]
+        contentSignal: contentSignal,
+        actionsSignal: .single(actions),
+        updatedPresentationData: (presentationData, context.sharedContext.presentationData)
     )
     dismissImpl = { [weak alertController] in
         alertController?.dismiss(completion: nil)
