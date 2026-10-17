@@ -365,9 +365,12 @@ private final class WalletPeerSelectionScreenComponent: Component {
             case let .moveToGifts(title):
                 return ContactListActionItem(
                     presentationData: ItemListPresentationData(listNode.presentationData),
+                    systemStyle: .glass,
                     title: title,
                     icon: .generic(walletMoveActionIcon("Wallet/MoveToGifts")!),
                     actionStyle: .generic,
+                    height: .tall,
+                    hideBackground: true,
                     header: nil,
                     action: { [weak listNode] in
                         listNode?.parentView?.moveToGiftsSelected()

@@ -32,7 +32,6 @@ import WalletSendScreen
 import WalletPeerSelectionScreen
 import SettingsUI
 import UndoUI
-import WalletCollectibleScreen
 import WalletAuthorizationUI
 import PasscodeCore
 import Markdown
@@ -1176,21 +1175,6 @@ private final class WalletScreenComponent: Component {
                 position: .bottom,
                 action: { _ in false }
             ), in: .current)
-        }
-
-        private func presentStickerStyleRestriction() {
-            guard let component = self.component else { return }
-            let context = component.context
-            let _ = (context.engine.payments.cachedStarGifts()
-            |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] gifts in
-                guard let self, self.environment?.isVisible == true, let controller = self.environment?.controller() else { return }
-                guard let tooltip = makeWalletStyleRestrictionTooltip(context: context, gifts: gifts, location: .bottom, openGift: { [weak controller] gift in
-                    guard let navigationController = controller?.navigationController as? NavigationController else { return }
-                    navigationController.pushViewController(context.sharedContext.makeGiftStoreController(context: context, peerId: context.account.peerId, gift: gift))
-                }) else { return }
-                controller.present(tooltip, in: .current)
-            })
         }
 
         private func presentStickerLimitError() {
@@ -3925,24 +3909,16 @@ private final class WalletScreenComponent: Component {
             self.revealPendingTransferIfNeeded()
             self.updatePendingTransferAnimations()
             self.giftStickers.limitReached = { [weak self] in self?.presentStickerLimitError() }
-            self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, styleRestricted, placementAction, styleAction, dismissed, passthrough in
+            self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, placementAction, styleAction, dismissed, passthrough in
                 guard let self, let component = self.component, let controller = self.environment?.controller() else { return nil }
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                 let strings = presentationData.strings
                 var items: [ContextMenuItem] = []
-                if canStyle || styled || styleRestricted {
-                    let isStyleRestricted = styleRestricted && !styled
+                if canStyle || styled {
                     items.append(.action(ContextMenuActionItem(
                         text: styled ? strings.Wallet_Sticker_RemoveColor : strings.Wallet_Sticker_ApplyColor,
                         icon: { theme in generateTintedImage(image: UIImage(bundleImageName: styled ? "Media Editor/Erase" : "Chat/Context Menu/Palette"), color: theme.contextMenu.primaryColor) },
-                        action: { [weak self] _, dismiss in
-                            dismiss(.default)
-                            if isStyleRestricted {
-                                self?.presentStickerStyleRestriction()
-                            } else {
-                                styleAction()
-                            }
-                        }
+                        action: { _, dismiss in dismiss(.default); styleAction() }
                     )))
                 }
                 items.append(.action(ContextMenuActionItem(

@@ -140,7 +140,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         self.tutorial.map { ($0.sticker.gift, $0.center, $0.scale) }
     }
     var isDragging: Bool { self.drag != nil || self.pending != nil || self.swallowing }
-    var showMenu: ((UIView, Bool, Bool, Bool, Bool, @escaping () -> Void, @escaping () -> Void, @escaping () -> Void, ((CGPoint) -> UIView?)?) -> (() -> Void)?)?
+    var showMenu: ((UIView, Bool, Bool, Bool, @escaping () -> Void, @escaping () -> Void, @escaping () -> Void, ((CGPoint) -> UIView?)?) -> (() -> Void)?)?
     private var held = false
     private struct Pending { let gift: WalletContext.Collectible; let point: CGPoint }
     private var pending: Pending?
@@ -439,8 +439,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         guard let source = self.grid?.stickerSourceView(address: pending.gift.address) else { return }
         let sticker = self.placements.first(where: { $0.gift.address == pending.gift.address })
         self.dismissMenu = self.showMenu?(source, sticker != nil, sticker?.style != nil,
-            self.styleAvailability(pending.gift) == .allowed && self.media[pending.gift.address]?.style != nil && self.media[pending.gift.address]?.patternImage != nil,
-            self.styleAvailability(pending.gift) == .restricted, { [weak self] in
+            self.styleAvailability(pending.gift) == .allowed && self.media[pending.gift.address]?.style != nil && self.media[pending.gift.address]?.patternImage != nil, { [weak self] in
                 self?.menuAction(pending.gift, color: false)
             }, { [weak self] in self?.menuAction(pending.gift, color: true) }, { [weak self] in
                 self?.dismissMenu = nil

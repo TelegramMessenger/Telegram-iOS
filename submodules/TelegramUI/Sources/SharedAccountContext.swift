@@ -3730,7 +3730,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
     public func makeGiftCollectiblesController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
         guard let starsContext = context.starsContext else {
             fatalError()
@@ -3740,6 +3739,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
         let controller = GiftStoreScreen(context: context, peerId: peerId, gift: gift)
         return controller
     }
