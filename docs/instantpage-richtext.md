@@ -1681,7 +1681,9 @@ generic "Message".
 - **A resend keeps a reply's quote only if the original asked for one** (`resentReplySubject`): a
   cross-chat reply's display-only quote (`isQuote == false`) is never sent.
 - **Highlight goes through the same stamps**: the quote's flat text is found among the page's
-  nodes (nearest to `quote_offset`) and mapped back to display ranges; the adapter is built on
-  demand when no selection is active. The bubble re-applies a shown highlight after every layout,
+  nodes (nearest to `quote_offset`) and mapped back to display ranges, adjacent runs joined into
+  one span (`LinkHighlightingNode` takes one rect per line, so a range per run split a line of an
+  emoji and bold text into two half-height pieces); the adapter is built on demand when no
+  selection is active. The bubble re-applies a shown highlight after every layout,
   and a quote missing from a collapsed partial page expands Show more (fetching the full page if
   needed) and is highlighted there; the "quote not found" toast never fires for a partial page.
