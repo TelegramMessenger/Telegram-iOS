@@ -437,6 +437,70 @@ private final class WalletCollectibleTraitValueComponent: Component {
     }
 }
 
+public func makeWalletStyleRestrictionTooltip(context: AccountContext, gifts: [StarGift]?, location: TooltipScreen.Location, openGift: @escaping (StarGift.Gift) -> Void) -> TooltipScreen? {
+    let collections = WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).cardBackgroundGiftCollections ?? []
+    guard !collections.isEmpty else {
+        return nil
+    }
+    var giftsByCollection: [String: StarGift.Gift] = [:]
+    for gift in gifts ?? [] {
+        if case let .generic(gift) = gift, let title = gift.title {
+            let collection = title.filter { $0.isLetter || $0.isNumber }
+            if giftsByCollection[collection] == nil {
+                giftsByCollection[collection] = gift
+            }
+        }
+    }
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    let font = Font.regular(14.0)
+    let linkColor = UIColor(rgb: 0x64d2ff)
+    let nameFont = Font.medium(14.0)
+    let available = collections.compactMap { collection -> (String, StarGift.Gift)? in
+        return giftsByCollection[collection].flatMap { (collection, $0) }
+    }
+    guard !available.isEmpty else {
+        return nil
+    }
+    let names = NSMutableAttributedString()
+    for (index, item) in available.enumerated() {
+        let (collection, gift) = item
+        if index > 0 {
+            names.append(NSAttributedString(string: index == available.count - 1 ? strings.CreateGroup_PeersTitleLastDelimeter : strings.CreateGroup_PeersTitleDelimeter, font: font, textColor: .white))
+        }
+        names.append(NSAttributedString(string: ".", attributes: [.font: font, ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: gift.file.fileId.id, file: gift.file)]))
+        names.append(NSAttributedString(string: "\u{00A0}", font: font, textColor: .white))
+        names.append(NSAttributedString(string: strings.Wallet_Sticker_ColorRestrictedCollection(gift.title ?? collection).string, attributes: [.font: nameFont, .foregroundColor: linkColor, NSAttributedString.Key(rawValue: TelegramTextAttributes.URL): collection]))
+    }
+    let formatted = strings.Wallet_Sticker_ColorRestricted("")
+    let text = NSMutableAttributedString(string: formatted.string, font: font, textColor: .white)
+    if let range = formatted.ranges.first(where: { $0.index == 0 })?.range {
+        text.insert(names, at: range.location)
+    } else {
+        text.append(names)
+    }
+    return TooltipScreen(
+        context: context,
+        account: context.account,
+        sharedContext: context.sharedContext,
+        text: .attributedString(text: text),
+        arrowStyle: .none,
+        icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ApplyColor"), color: .white).flatMap { .image($0) },
+        location: location,
+        displayDuration: .default,
+        cornerRadius: 26.0,
+        contentLayout: TooltipScreen.ContentLayout(insets: UIEdgeInsets(top: 11.0, left: 14.0, bottom: 11.0, right: 20.0), iconSpacing: 12.0),
+        shouldDismissOnTouch: { _, _ in
+            return .dismiss(consume: false)
+        },
+        openActiveTextItem: { item, _ in
+            guard case let .url(url, _) = item, let gift = giftsByCollection[url] else {
+                return
+            }
+            openGift(gift)
+        }
+    )
+}
+
 private final class WalletCollectibleContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
@@ -659,10 +723,6 @@ private final class WalletCollectibleContentComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let collections = WalletConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 }).cardBackgroundGiftCollections ?? []
-            guard !collections.isEmpty else {
-                return
-            }
             self.styleRestrictionDisposable.set((component.context.engine.payments.cachedStarGifts()
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] gifts in
@@ -670,66 +730,14 @@ private final class WalletCollectibleContentComponent: Component {
                       let sourceView = self.giftApplyColorButton.view, sourceView.window != nil, !sourceView.isHidden else {
                     return
                 }
-                var giftsByCollection: [String: StarGift.Gift] = [:]
-                for gift in gifts ?? [] {
-                    if case let .generic(gift) = gift, let title = gift.title {
-                        let collection = title.filter { $0.isLetter || $0.isNumber }
-                        if giftsByCollection[collection] == nil {
-                            giftsByCollection[collection] = gift
-                        }
-                    }
-                }
-                let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
-                let font = Font.regular(14.0)
-                let linkColor = UIColor(rgb: 0x64d2ff)
-                let nameFont = Font.medium(14.0)
-                let available = collections.compactMap { collection -> (String, StarGift.Gift)? in
-                    return giftsByCollection[collection].flatMap { (collection, $0) }
-                }
-                guard !available.isEmpty else {
+                let sourceFrame = sourceView.convert(sourceView.bounds, to: nil)
+                guard let tooltip = makeWalletStyleRestrictionTooltip(context: component.context, gifts: gifts, location: .point(sourceFrame, .bottom), openGift: { [weak self] gift in
+                    self?.openGiftStore(gift: gift)
+                }) else {
                     return
                 }
-                let names = NSMutableAttributedString()
-                for (index, item) in available.enumerated() {
-                    let (collection, gift) = item
-                    if index > 0 {
-                        names.append(NSAttributedString(string: index == available.count - 1 ? strings.CreateGroup_PeersTitleLastDelimeter : strings.CreateGroup_PeersTitleDelimeter, font: font, textColor: .white))
-                    }
-                    names.append(NSAttributedString(string: ".", attributes: [.font: font, ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: gift.file.fileId.id, file: gift.file)]))
-                    names.append(NSAttributedString(string: "\u{00A0}", font: font, textColor: .white))
-                    names.append(NSAttributedString(string: strings.Wallet_Sticker_ColorRestrictedCollection(gift.title ?? collection).string, attributes: [.font: nameFont, .foregroundColor: linkColor, NSAttributedString.Key(rawValue: TelegramTextAttributes.URL): collection]))
-                }
-                let formatted = strings.Wallet_Sticker_ColorRestricted("")
-                let text = NSMutableAttributedString(string: formatted.string, font: font, textColor: .white)
-                if let range = formatted.ranges.first(where: { $0.index == 0 })?.range {
-                    text.insert(names, at: range.location)
-                } else {
-                    text.append(names)
-                }
                 controller.dismissAllTooltips()
-                let sourceFrame = sourceView.convert(sourceView.bounds, to: nil)
-                let context = component.context
-                controller.present(TooltipScreen(
-                    context: context,
-                    account: context.account,
-                    sharedContext: context.sharedContext,
-                    text: .attributedString(text: text),
-                    arrowStyle: .none,
-                    icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ApplyColor"), color: .white).flatMap { .image($0) },
-                    location: .point(sourceFrame, .bottom),
-                    displayDuration: .default,
-                    cornerRadius: 26.0,
-                    contentLayout: TooltipScreen.ContentLayout(insets: UIEdgeInsets(top: 11.0, left: 14.0, bottom: 11.0, right: 20.0), iconSpacing: 12.0),
-                    shouldDismissOnTouch: { _, _ in
-                        return .dismiss(consume: false)
-                    },
-                    openActiveTextItem: { [weak self] item, _ in
-                        guard case let .url(url, _) = item, let gift = giftsByCollection[url] else {
-                            return
-                        }
-                        self?.openGiftStore(gift: gift)
-                    }
-                ), in: .current)
+                controller.present(tooltip, in: .current)
             }))
         }
 

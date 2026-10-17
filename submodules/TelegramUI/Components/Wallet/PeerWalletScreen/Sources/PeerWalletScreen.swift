@@ -4,6 +4,7 @@ import Display
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 import PresentationDataUtils
 import SwiftSignalKit
 import ComponentFlow
@@ -522,11 +523,21 @@ private final class PeerWalletOverlayComponent: Component {
             let buttonTop = availableSize.height - buttonBottomInset - 52.0
             var cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
             self.noticeContainer.frame = CGRect(origin: .zero, size: availableSize)
+            let noticeString: String?
             if component.peer.id == component.context.account.peerId {
+                noticeString = environment.strings.Wallet_PublicBalanceNotice
+            } else if let balance = state.balance {
+                let amount = formatTonAmountText(balance, dateTimeFormat: environment.dateTimeFormat).replacingOccurrences(of: environment.dateTimeFormat.groupingSeparator, with: "")
+                let name = state.peer.displayTitle(strings: environment.strings, displayOrder: component.context.sharedContext.currentPresentationData.with { $0 }.nameDisplayOrder)
+                noticeString = environment.strings.Wallet_PeerBalanceNotice(name, amount).string
+            } else {
+                noticeString = nil
+            }
+            if let noticeString {
                 func noticeText(_ color: UIColor) -> AnyComponent<Empty> {
                     return AnyComponent(BalancedTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Wallet_PublicBalanceNotice,
+                            string: noticeString,
                             font: Font.semibold(17.0),
                             textColor: color,
                             paragraphAlignment: .center
