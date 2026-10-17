@@ -1190,10 +1190,10 @@ private final class WalletCollectibleContentComponent: Component {
                     })
                 ]
                 if let stickerState = component.stickerHost?.stickerMenuState(collectible: component.collectible) {
-                    headerButtons.append((self.giftApplyColorButton, stickerState.isStyled ? environment.strings.Wallet_Collectible_Header_RemoveColor : environment.strings.Wallet_Collectible_Header_ApplyColor, "Wallet/ApplyColor", { [weak self] in
+                    headerButtons.append((self.giftApplyColorButton, stickerState.isStyled ? environment.strings.Wallet_Collectible_Header_RemoveColor : environment.strings.Wallet_Collectible_Header_ApplyColor, stickerState.isStyled ? "Wallet/RemoveColor" : "Wallet/ApplyColor", { [weak self] in
                         self?.performStickerAction(color: true)
                     }))
-                    headerButtons.append((self.giftAddToCardButton, stickerState.isOnCard ? environment.strings.Wallet_Collectible_Header_RemoveFromCard : environment.strings.Wallet_Collectible_Header_AddToCard, "Wallet/MoveToWallet", { [weak self] in
+                    headerButtons.append((self.giftAddToCardButton, stickerState.isOnCard ? environment.strings.Wallet_Collectible_Header_RemoveFromCard : environment.strings.Wallet_Collectible_Header_AddToCard, stickerState.isOnCard ? "Wallet/RemoveFromCard" : "Wallet/MoveToWallet", { [weak self] in
                         self?.performStickerAction(color: false)
                     }))
                 } else {
