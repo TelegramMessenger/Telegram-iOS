@@ -51,6 +51,19 @@ public struct ExpansionGeometry: Equatable {
     /// The upper screen's appearing items in order (the action buttons), at rest.
     public var appearing: [CGRect]
 
+    /// How close the drops come before they merge (the glass container's spacing): the prototype's 30 pt, but no more
+    /// than the origin and the companion stand apart at rest, or they would join in a neck where the transition starts
+    /// and ends (a long title on a narrow phone takes the pill to 10 pt from the capsule).
+    public var dropMergeSpacing: CGFloat {
+        let maximum: CGFloat = 30.0
+        guard let companion = self.companion else {
+            return maximum
+        }
+        let dx = max(0.0, max(companion.minX - self.origin.maxX, self.origin.minX - companion.maxX))
+        let dy = max(0.0, max(companion.minY - self.origin.maxY, self.origin.minY - companion.maxY))
+        return min(maximum, (dx * dx + dy * dy).squareRoot())
+    }
+
     public init(screenSize: CGSize, screenCornerRadius: CGFloat, origin: CGRect, companion: CGRect?, companionPhotoDiameter: CGFloat, avatar: CGRect?, photo: CGRect?, labels: [ExpansionLabelGeometry], carriedEdge: CGFloat, appearing: [CGRect]) {
         self.screenSize = screenSize
         self.screenCornerRadius = screenCornerRadius

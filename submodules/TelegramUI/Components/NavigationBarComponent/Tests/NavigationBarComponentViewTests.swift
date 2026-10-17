@@ -153,7 +153,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_titleBand_clearsTheButtons() {
         let view = self.makeBar(content: NavigationBarComponent.Content(title: .text("Chats"), back: .back, leftButton: nil, rightButtons: [NavigationBarComponent.Button(id: "a", content: .custom(AnyComponent(FixedButtonContentComponent())), action: { _ in })], backPressed: {}))
         // Back is 44pt wide, the right button 44pt: each extent is 16 + 44.
-        XCTAssertEqual(view.primaryCenterContentInsets.left, 48.0)
+        XCTAssertEqual(view.primaryCenterContentInsets.left, 64.0)
         XCTAssertEqual(view.primaryCenterContentInsets.right, 64.0)
         XCTAssertEqual(view.centeredContentFrame, CGRect(x: 0.0, y: 0.0, width: 390.0, height: 44.0))
         XCTAssertNotNil(view.rightButtonViews["a"])

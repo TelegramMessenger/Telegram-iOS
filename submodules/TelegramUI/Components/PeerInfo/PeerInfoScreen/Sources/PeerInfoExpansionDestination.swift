@@ -101,9 +101,14 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         // On the photo path the header's content (buttons, badges, balance) lies on the expanded photo, which is drawn
         // above the card: it is lifted above the photo for the transition.
         var overlays: [UIView] = []
+        // The expanded photo's top shadow and page strip lie on the header's content, not on the photo, so they would stay
+        // at the top of the screen, over the chat's pill, as the photo flies back: they fade with the list, as the
+        // profile's own collapse fades them.
+        var photoControls: [UIView] = []
         if self.expansionPath == .photo {
             self.remember(header.regularContentNode.view)
             overlays.append(header.regularContentNode.view)
+            photoControls.append(header.avatarListNode.listContainerNode.controlsContainerNode.view)
         }
 
         return NavigationExpansionDestinationLoan(
@@ -118,7 +123,7 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             appearingCompanions: buttons.map { [$0.backgroundContainerView] },
             overlayViews: overlays,
             backgroundViews: [background, banner],
-            listViews: [node.scrollNode.view] + header.expansionDecorationViews,
+            listViews: [node.scrollNode.view] + header.expansionDecorationViews + photoControls,
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadius: layout.deviceMetrics.screenCornerRadius,

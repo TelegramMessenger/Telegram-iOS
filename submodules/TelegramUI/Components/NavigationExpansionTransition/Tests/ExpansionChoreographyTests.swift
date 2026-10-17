@@ -70,6 +70,18 @@ final class ExpansionChoreographyTests: XCTestCase {
         XCTAssertNil(frame.photo)
     }
 
+    // The drops merge from 30 pt apart, but never sooner than the lower screen's own shapes stand at rest: a pill
+    // closer than that to the capsule (a long title, a narrow phone) would join it in a neck at both ends.
+    func test_dropMergeSpacing_staysBelowTheRestGap() {
+        var g = makeExpansionGeometry()
+        XCTAssertEqual(g.dropMergeSpacing, 30.0, accuracy: 1e-9)
+        g.origin = CGRect(x: g.companion!.minX - 10.0 - 250.0, y: g.origin.minY, width: 250.0, height: 44.0)
+        XCTAssertLessThanOrEqual(g.dropMergeSpacing, 10.0)
+        XCTAssertGreaterThan(g.dropMergeSpacing, 0.0)
+        g.companion = nil
+        XCTAssertEqual(g.dropMergeSpacing, 30.0, accuracy: 1e-9)
+    }
+
     // The circle reaches the pill on opening (gap ≤ 6 pt): found once from the geometry, never on the photo path.
     func test_impactMoment_isWhereTheCircleReachesThePill() {
         let c = self.choreography()

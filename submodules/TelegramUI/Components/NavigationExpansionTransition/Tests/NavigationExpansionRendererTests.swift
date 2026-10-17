@@ -16,6 +16,8 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     /// The title's text layer (a `SplitTintTextView`'s tint layer), and how the title is coloured.
     let titleTintLayer = CALayer()
     var titleColoring: NavigationExpansionLabel.Coloring = .recolor(.black)
+    /// The title pill, where the geometry's is not wanted.
+    var origin: CGRect?
 
     init(screen: UIView) {
         self.titleView.layer.addSublayer(self.titleTintLayer)
@@ -35,7 +37,7 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     func lendExpansionSource(in screenView: UIView) -> NavigationExpansionSourceLoan? {
         self.lends += 1
         let g = makeExpansionGeometry()
-        return NavigationExpansionSourceLoan(origin: g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
+        return NavigationExpansionSourceLoan(origin: self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
         ], press: .none)
@@ -143,6 +145,17 @@ final class NavigationExpansionRendererTests: XCTestCase {
         XCTAssertEqual(renderer.destinationLabelAlphasForTesting, [0.0, 0.0])
         XCTAssertEqual(destination.buttons.map { $0.alpha }, [0.0, 0.0, 0.0, 0.0])
         XCTAssertEqual(destination.list.alpha, 0.0)
+    }
+
+    // The drops' container merges them no sooner than the chat's pill and capsule stand apart at rest, so they do not
+    // join in a neck as the close lands (or as the open starts) where the pill reaches close to the capsule.
+    func test_dropsContainer_mergesNoCloserThanThePillAndCapsuleRest() {
+        let g = makeExpansionGeometry()
+        let roomy = self.make(opening: false)
+        XCTAssertEqual(roomy.0.glassContainerSpacingForTesting, 30.0, accuracy: 1e-9)
+        let pill = CGRect(x: g.companion!.minX - 10.0 - 250.0, y: g.origin.minY, width: 250.0, height: 44.0)
+        let tight = self.make(opening: false, configureSource: { $0.origin = pill })
+        XCTAssertLessThanOrEqual(tight.0.glassContainerSpacingForTesting, 10.0)
     }
 
     // The bake: the card's mask grows from the pill to the screen on keyframes.

@@ -38,7 +38,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     private weak var topView: UIView?
     private var size = CGSize()
 
-    private let glassContainer = GlassBackgroundContainerView(spacing: 30.0)
+    /// Built again in `begin` when the drops must merge closer (`ExpansionGeometry.dropMergeSpacing`).
+    private var glassContainer = GlassBackgroundContainerView(spacing: 30.0)
     private let originDrop = GlassBackgroundView()
     /// When the drops' container went on screen (`glassContainerWarmUp`).
     private var glassContainerShownAt: Double = 0.0
@@ -172,6 +173,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.choreography = ExpansionChoreography(geometry: geometry, path: self.destination.expansionPath, duration: self.openSpring.response)
 
         // Under the upper screen: the drops, merging.
+        if self.glassContainer.spacing != geometry.dropMergeSpacing {
+            self.glassContainer = GlassBackgroundContainerView(spacing: geometry.dropMergeSpacing)
+        }
         self.glassContainer.frame = CGRect(origin: CGPoint(), size: size)
         self.glassContainer.update(size: size, isDark: sourceLoan.isDark, transition: .immediate)
         self.shadowView.frame = CGRect(origin: CGPoint(), size: size)
@@ -754,6 +758,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
     var overlayMaskFrameForTesting: CGRect {
         return self.overlayMask.frame
+    }
+    /// The merge spacing of the drops' container on screen (nan without one).
+    var glassContainerSpacingForTesting: CGFloat {
+        return (self.underView.subviews.first(where: { $0 is GlassBackgroundContainerView }) as? GlassBackgroundContainerView)?.spacing ?? .nan
     }
     var dropsInContainerForTesting: Bool {
         return self.originDrop.superview === self.glassContainer.contentView
