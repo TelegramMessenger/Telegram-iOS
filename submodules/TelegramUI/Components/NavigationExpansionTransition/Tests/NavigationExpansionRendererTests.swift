@@ -67,6 +67,8 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     var statusFollowers: [UIView] = []
     /// The page below the header, which rides the status (the profile's list and music strip).
     var pageViews: [UIView] = []
+    /// Views clipping at the page's top edge (the profile's cover).
+    var pageEdgeViews: [UIView] = []
     var path: ExpansionPath = .origin
     var lends = 0
     var returns = 0
@@ -98,7 +100,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
-        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
+        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
     }
 
     func returnExpansionDestination() {
@@ -758,6 +760,89 @@ final class NavigationExpansionRendererTests: XCTestCase {
                 XCTAssertNil(view.layer.animation(forKey: "navigationExpansion.transform"))
             }
         }
+    }
+
+    // And the cover's edge keeps its own transform and sublayer transform again, with no keyframes left.
+    func test_pageEdge_restoredOnEveryEnding() {
+        for atTop in [true, false] {
+            var cover: (edge: UIView, content: UIView)?
+            let (renderer, _, _, _, _) = self.make(configure: { destination in
+                cover = self.makePageEdge(destination)
+                cover!.edge.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, 2.0, 0.0)
+            })
+            renderer.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
+            renderer.update(time: 0.7, isOpening: true, pose: .none)
+            renderer.end(atTop: atTop)
+            XCTAssertTrue(CATransform3DIsIdentity(cover!.edge.layer.transform))
+            XCTAssertTrue(CATransform3DEqualToTransform(cover!.edge.layer.sublayerTransform, CATransform3DMakeTranslation(0.0, 2.0, 0.0)))
+            XCTAssertNil(cover!.edge.layer.animation(forKey: "navigationExpansion.transform"))
+            XCTAssertNil(cover!.edge.layer.animation(forKey: "navigationExpansion.sublayerTransform"))
+        }
+    }
+
+    /// The cover: a view clipping at its bottom edge, the page's top, tall above the screen as the profile's is, with its
+    /// content (the gradient) at its bottom; it has a transform of its own.
+    private func makePageEdge(_ destination: FakeDestination) -> (edge: UIView, content: UIView) {
+        let top = destination.top!
+        let edge = UIView(frame: CGRect(x: -3.0, y: 360.0 - 2000.0, width: 408.0, height: 2000.0))
+        edge.clipsToBounds = true
+        top.addSubview(edge)
+        let content = UIView(frame: CGRect(x: 0.0, y: 2000.0 - 363.0, width: 408.0, height: 363.0))
+        edge.addSubview(content)
+        destination.pageEdgeViews = [edge]
+        return (edge, content)
+    }
+
+    // The cover's bottom edge rides the page, its content still: wherever the status's host stands, the edge stands as
+    // far from its place as the page does, and the gradient where it rests. Riding in from above, the page's music strip
+    // (the cover's bottom band) otherwise left a strip of the cover below it, 40 pt at first.
+    func test_pageEdge_ridesThePageWithItsContentStill() {
+        var cover: (edge: UIView, content: UIView)?
+        var rest: (edge: CGRect, content: CGRect)?
+        let (renderer, container, _, _, _) = self.make(configure: { destination in
+            cover = self.makePageEdge(destination)
+            let screen = destination.top!.superview!
+            rest = (cover!.edge.convert(cover!.edge.bounds, to: screen), cover!.content.convert(cover!.content.bounds, to: screen))
+        })
+        guard let cover, let rest else {
+            return XCTFail()
+        }
+        let statusRest = makeExpansionGeometry().labels[1].destinationCenter.y
+        for time: CGFloat in [0.6, 1.0, 1.04] {
+            renderer.update(time: time, isOpening: true, pose: .none)
+            guard let host = renderer.destinationLabelHostsForTesting.last else {
+                return XCTFail("no status host")
+            }
+            let delta = host.layer.position.y - statusRest
+            let edge = cover.edge.convert(cover.edge.bounds, to: container)
+            XCTAssertEqual(edge.maxY - rest.edge.maxY, delta, accuracy: 0.01, "t=\(time)")
+            XCTAssertEqual(edge.height, rest.edge.height, accuracy: 0.01, "t=\(time)")
+            let content = cover.content.convert(cover.content.bounds, to: container)
+            XCTAssertEqual(content.minY, rest.content.minY, accuracy: 0.01, "t=\(time): the gradient holds still")
+            XCTAssertEqual(content.height, rest.content.height, accuracy: 0.01, "t=\(time)")
+            if time == 0.6 {
+                XCTAssertLessThan(delta, -20.0, "mid-flight the edge is still above its place")
+            }
+        }
+    }
+
+    // On keyframes too: the edge's transform and its content's sublayer transform cancel in every frame, from above its
+    // place to its rest.
+    func test_pageEdge_keyframed() {
+        var cover: (edge: UIView, content: UIView)?
+        let (renderer, _, _, _, _) = self.make(configure: { cover = self.makePageEdge($0) })
+        let timeline = self.timeline(from: 0.0, to: 1.0, opening: true)
+        renderer.animate(timeline: timeline)
+        guard let edge = cover?.edge, let transform = edge.layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let transforms = transform.values as? [NSValue], let sublayer = edge.layer.animation(forKey: "navigationExpansion.sublayerTransform") as? CAKeyframeAnimation, let sublayers = sublayer.values as? [NSValue] else {
+            return XCTFail("no edge keyframes")
+        }
+        XCTAssertEqual(transforms.count, timeline.timing.sampleTimes.count)
+        XCTAssertEqual(sublayers.count, transforms.count)
+        XCTAssertLessThan(transforms[0].caTransform3DValue.m42, -20.0, "it starts above its place")
+        for (edgeValue, contentValue) in zip(transforms, sublayers) {
+            XCTAssertEqual(edgeValue.caTransform3DValue.m42 + contentValue.caTransform3DValue.m42, 0.0, accuracy: 1e-6)
+        }
+        XCTAssertEqual(transforms[transforms.count - 1].caTransform3DValue.m42, 0.0, accuracy: 1.0)
     }
 
     func test_companion_goesHome() {

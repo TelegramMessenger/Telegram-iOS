@@ -108,12 +108,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let rest: CATransform3D
     }
     private var followers: [Follower] = []
-    /// A view of the page below the header (`NavigationExpansionDestinationLoan.pageViews`), measured before anything is
-    /// lent: how many screen points one of its superlayer's points is, vertically, and its own transform.
+    /// A view of the page below the header (`NavigationExpansionDestinationLoan.pageViews`, `pageEdgeViews`), measured
+    /// before anything is lent: how many screen points one of its superlayer's points is, vertically, and its own
+    /// transform.
     private struct PageRider {
         let layer: CALayer
         let unit: CGFloat
         let rest: CATransform3D
+        /// An edge's (`pageEdgeViews`): how many screen points one of its own points is, vertically, and its own sublayer
+        /// transform, which takes its content back to where it stands.
+        let content: (unit: CGFloat, rest: CATransform3D)?
     }
     private var pageRiders: [PageRider] = []
     private var tintLink: SharedDisplayLinkDriver.Link?
@@ -171,12 +175,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 self.touchedLayers.append(view.layer)
             }
         }
-        for view in destinationLoan.pageViews {
+        for (view, isEdge) in destinationLoan.pageViews.map({ ($0, false) }) + destinationLoan.pageEdgeViews.map({ ($0, true) }) {
             guard let superlayer = view.layer.superlayer else {
                 continue
             }
-            let unit = superlayer.convert(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0), to: screen.layer).height
-            self.pageRiders.append(PageRider(layer: view.layer, unit: unit, rest: view.layer.transform))
+            let point = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
+            let unit = superlayer.convert(point, to: screen.layer).height
+            let content = isEdge ? (unit: view.layer.convert(point, to: screen.layer).height, rest: view.layer.sublayerTransform) : nil
+            self.pageRiders.append(PageRider(layer: view.layer, unit: unit, rest: view.layer.transform, content: content))
             self.touchedLayers.append(view.layer)
         }
 
@@ -362,6 +368,12 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return CATransform3DConcat(rider.rest, CATransform3DMakeTranslation(0.0, page / max(rider.unit, 0.0001), 0.0))
     }
 
+    /// An edge's sublayer transform with the page `page` points below its resting place: its content as far back, in its
+    /// own points, so only the edge moves.
+    private func pageContentTransform(_ rider: PageRider, page: CGFloat) -> CATransform3D? {
+        return rider.content.map { CATransform3DConcat($0.rest, CATransform3DMakeTranslation(0.0, -page / max($0.unit, 0.0001), 0.0)) }
+    }
+
     private func color(_ host: LabelHost, ink: CGFloat) -> UIColor {
         return host.sourceColor.mixedWith(host.destinationColor, alpha: min(max(ink, 0.0), 1.0))
     }
@@ -433,6 +445,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         for rider in self.pageRiders {
             rider.layer.transform = self.pageTransform(rider, page: f.page)
+            if let content = self.pageContentTransform(rider, page: f.page) {
+                rider.layer.sublayerTransform = content
+            }
         }
         for view in destinationLoan.backgroundViews {
             view.alpha = f.background
@@ -585,6 +600,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         for rider in self.pageRiders {
             add(rider.layer, "transform", frames.map { NSValue(caTransform3D: self.pageTransform(rider, page: $0.page)) })
+            if rider.content != nil {
+                add(rider.layer, "sublayerTransform", frames.compactMap { self.pageContentTransform(rider, page: $0.page).map { NSValue(caTransform3D: $0) } })
+            }
         }
         for view in destinationLoan.backgroundViews {
             add(view.layer, "opacity", frames.map { number($0.background) })
@@ -680,6 +698,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.followers = []
         for rider in self.pageRiders {
             rider.layer.transform = rider.rest
+            if let content = rider.content {
+                rider.layer.sublayerTransform = content.rest
+            }
         }
         self.pageRiders = []
         self.topView?.layer.mask = nil
