@@ -6849,6 +6849,14 @@ private final class ChatListLocationContext {
     private var didSetReady: Bool = false
     let ready = Promise<Bool>()
     
+    /// Whether the screen is in a window (a screen being pushed is not, until the push starts).
+    private var parentIsShown: Bool {
+        guard let parentController = self.parentController, parentController.isViewLoaded else {
+            return false
+        }
+        return parentController.view.window != nil
+    }
+    
     private var stateDisposable: Disposable?
     
     init(
@@ -7410,12 +7418,15 @@ private final class ChatListLocationContext {
             }
         }
         
-        if !self.didSetReady {
+        // The header takes this content before ready lets a push start: a push lifts the header as it is then and holds
+        // it until the push ends. Content for a screen not shown yet is laid out at once.
+        let isFirstUpdate = !self.didSetReady
+        self.parentController?.requestLayout(transition: self.parentIsShown ? .animated(duration: 0.45, curve: .spring) : .immediate)
+        
+        if isFirstUpdate {
             self.didSetReady = true
             self.ready.set(.single(true))
         }
-        
-        self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
         
         Queue.mainQueue().after(1.0, { [weak self] in
             guard let self else {
@@ -7511,18 +7522,23 @@ private final class ChatListLocationContext {
             )
         }
         
-        if !self.didSetReady {
-            self.didSetReady = true
-            self.ready.set(.single(true))
-        }
-        
+        let isFirstUpdate = !self.didSetReady
         if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, !channel.isForumOrMonoForum {
+            if isFirstUpdate {
+                self.didSetReady = true
+                self.ready.set(.single(true))
+            }
             if let parentController = self.parentController, let navigationController = parentController.navigationController as? NavigationController {
                 let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                 navigationController.replaceController(parentController, with: chatController, animated: true)
             }
         } else {
-            self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
+            // As in `updateChatList`: the header takes the forum's title and buttons before ready lets a push lift it.
+            self.parentController?.requestLayout(transition: self.parentIsShown ? .animated(duration: 0.45, curve: .spring) : .immediate)
+            if isFirstUpdate {
+                self.didSetReady = true
+                self.ready.set(.single(true))
+            }
         }
     }
     

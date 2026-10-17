@@ -138,6 +138,12 @@ Do **not** fall back to `cliclick` / `osascript` / `screencapture -R` for this. 
 
 If the `mcp__XcodeBuildMCP__*` tools are absent from a session's tool list (it has happened — the server is configured but its tools weren't exposed), say so and hand the interactive checks to the user rather than attempting the privilege-blocked fallbacks.
 
+### Visual features and animations: verify from recorded frames
+
+Any visual change, and always an animated one, is verified by recording the simulator and reading its frames, not by
+a green build: [`AGENTS.md`](AGENTS.md), "Visual features and animations" (`simctl io recordVideo`, then
+`tools/animation_sheet.py` for labelled frame sheets, per-frame numbers and per-element tracks in points).
+
 ### CI builds in tart VMs (and why every download needs a checksum)
 
 GitLab CI (`.gitlab-ci.yml`) builds, uploads to TestFlight and verifies in tart VMs on the runner host:

@@ -94,16 +94,20 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         // Each button's platter is a shape in the buttons' blur mask, so it appears with its button.
         let buttons = header.orderedButtonNodes
         let key: AnyHashable = self.expansionPath == .photo ? TitleNodeStateExpanded : TitleNodeStateRegular
-        // The decorations around the status (level, badge, username, balance) move with it, fading with the list; the
-        // music strip only fades.
+        // The decorations around the status (level, badge, username, balance) move with it, fading with the list.
         let lent = [self.label(header.titleNode, key: key, in: screenView), self.label(header.subtitleNode, key: key, in: screenView, followers: header.expansionStatusFollowerViews)].compactMap { $0 }
 
         // On the photo path the header's content (buttons, badges, balance) lies on the expanded photo, which is drawn
         // above the card: it is lifted above the photo for the transition.
         var overlays: [UIView] = []
+        // The expanded photo's top shadow and page strip lie on the header's content, not on the photo, so they would stay
+        // at the top of the screen, over the chat's pill, as the photo flies back: they fade with the list, as the
+        // profile's own collapse fades them.
+        var photoControls: [UIView] = []
         if self.expansionPath == .photo {
             self.remember(header.regularContentNode.view)
             overlays.append(header.regularContentNode.view)
+            photoControls.append(header.avatarListNode.listContainerNode.controlsContainerNode.view)
         }
 
         return NavigationExpansionDestinationLoan(
@@ -118,7 +122,10 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             appearingCompanions: buttons.map { [$0.backgroundContainerView] },
             overlayViews: overlays,
             backgroundViews: [background, banner],
-            listViews: [node.scrollNode.view] + header.expansionDecorationViews,
+            listViews: [node.scrollNode.view] + header.expansionDecorationViews + photoControls,
+            // The page rides the status, as the prototype's actions and info card do: the list, the buttons and the music
+            // strip.
+            pageViews: [node.scrollNode.view] + header.expansionPageViews,
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadius: layout.deviceMetrics.screenCornerRadius,

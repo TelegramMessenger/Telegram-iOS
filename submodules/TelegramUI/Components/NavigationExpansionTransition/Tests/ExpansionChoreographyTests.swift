@@ -70,6 +70,18 @@ final class ExpansionChoreographyTests: XCTestCase {
         XCTAssertNil(frame.photo)
     }
 
+    // The drops merge from 30 pt apart, but never sooner than the lower screen's own shapes stand at rest: a pill
+    // closer than that to the capsule (a long title, a narrow phone) would join it in a neck at both ends.
+    func test_dropMergeSpacing_staysBelowTheRestGap() {
+        var g = makeExpansionGeometry()
+        XCTAssertEqual(g.dropMergeSpacing, 30.0, accuracy: 1e-9)
+        g.origin = CGRect(x: g.companion!.minX - 10.0 - 250.0, y: g.origin.minY, width: 250.0, height: 44.0)
+        XCTAssertLessThanOrEqual(g.dropMergeSpacing, 10.0)
+        XCTAssertGreaterThan(g.dropMergeSpacing, 0.0)
+        g.companion = nil
+        XCTAssertEqual(g.dropMergeSpacing, 30.0, accuracy: 1e-9)
+    }
+
     // The circle reaches the pill on opening (gap ≤ 6 pt): found once from the geometry, never on the photo path.
     func test_impactMoment_isWhereTheCircleReachesThePill() {
         let c = self.choreography()
@@ -197,6 +209,31 @@ final class ExpansionChoreographyTests: XCTestCase {
         XCTAssertEqual(c.frame(ExpansionClock(time: 0.7, isOpening: false), press: .none).appearing[0].alpha, 0.0)
     }
 
+    // The page below the header (its buttons and list) hangs off the status, as the prototype's actions and info card
+    // hang off `seenY` (ProfileMorph.swift:964-971, 1506): it stands as far from its resting place as the status does,
+    // all the way in and through the spring's overshoot past 1, on either path.
+    func test_page_ridesTheStatus_overshootIncluded() {
+        let g = makeExpansionGeometry()
+        for path in [ExpansionPath.origin, .photo] {
+            let c = self.choreography(path)
+            let rest = path == .photo ? g.labels[1].photoCenter!.y : g.labels[1].destinationCenter.y
+            for time: CGFloat in [0.0, 0.3, 0.6, 0.9, 1.0, 1.03, 1.06] {
+                let frame = c.frame(ExpansionClock(time: time, isOpening: true), press: .none)
+                XCTAssertEqual(frame.page, frame.labels[1].center.y - rest, accuracy: 1e-6, "\(path) t=\(time)")
+            }
+            XCTAssertEqual(c.frame(ExpansionClock(time: 0.0, isOpening: true), press: .none).page, g.labels[1].sourceCenter.y - rest, accuracy: 1e-6, "\(path): it starts where the chat's status is")
+            XCTAssertEqual(c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none).page, 0.0, accuracy: 0.5, "\(path): at rest at 1 (a trace of the knock at most)")
+            XCTAssertGreaterThan(c.frame(ExpansionClock(time: 1.06, isOpening: true), press: .none).page, 5.0, "\(path): past its place on the overshoot")
+        }
+        // Like the prototype's, it takes neither the press's lift nor the close's landing, which only the labels have.
+        let c = self.choreography()
+        let landing = c.frame(ExpansionClock(time: -0.04, isOpening: false), press: .none)
+        XCTAssertEqual(landing.page, c.frame(ExpansionClock(time: 0.0, isOpening: false), press: .none).page, accuracy: 1e-6)
+        XCTAssertNotEqual(landing.labels[1].center.y - g.labels[1].destinationCenter.y, landing.page, accuracy: 1.0)
+        let pressed = c.frame(ExpansionClock(time: 0.2, isOpening: true), press: ExpansionPress(origin: 1.0, companion: 0.0))
+        XCTAssertEqual(pressed.page, c.frame(ExpansionClock(time: 0.2, isOpening: true), press: .none).page, accuracy: 1e-6)
+    }
+
     // The photo path ends in the expanded photo: square-cornered at the bottom, the screen's corners at the top.
     func test_photoPath_endsInTheExpandedPhoto() {
         let g = makeExpansionGeometry()
@@ -237,10 +274,10 @@ final class ExpansionChoreographyTests: XCTestCase {
             for i in 0 ... 400 {
                 let t = -0.06 + 1.12 * CGFloat(i) / 400.0
                 let frame = c.frame(ExpansionClock(time: t, isOpening: isOpening), press: .none)
-                let values = [frame.card.minX, frame.card.minY, frame.card.maxX, frame.card.maxY, frame.circle?.midX ?? 0.0, frame.circle?.midY ?? 0.0, frame.photo?.width ?? 0.0] + frame.labels.flatMap { [$0.center.x, $0.center.y] }
+                let values = [frame.card.minX, frame.card.minY, frame.card.maxX, frame.card.maxY, frame.circle?.midX ?? 0.0, frame.circle?.midY ?? 0.0, frame.photo?.width ?? 0.0, frame.page] + frame.labels.flatMap { [$0.center.x, $0.center.y] }
                 XCTAssertFalse(values.contains(where: { $0.isNaN }), "\(path) \(isOpening) t=\(t)")
                 if let previous {
-                    let before = [previous.card.minX, previous.card.minY, previous.card.maxX, previous.card.maxY, previous.circle?.midX ?? 0.0, previous.circle?.midY ?? 0.0, previous.photo?.width ?? 0.0] + previous.labels.flatMap { [$0.center.x, $0.center.y] }
+                    let before = [previous.card.minX, previous.card.minY, previous.card.maxX, previous.card.maxY, previous.circle?.midX ?? 0.0, previous.circle?.midY ?? 0.0, previous.photo?.width ?? 0.0, previous.page] + previous.labels.flatMap { [$0.center.x, $0.center.y] }
                     for (a, b) in zip(before, values) {
                         XCTAssertLessThan(abs(a - b), 24.0, "\(path) \(isOpening) t=\(t)")
                     }

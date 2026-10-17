@@ -204,10 +204,11 @@ func navigationBarCenteredFrame(size: CGSize, rowSize: CGSize) -> CGRect {
 }
 
 /// The band the chat list's story list centers its title in, measured from the row's edges (each side includes
-/// its own inset; they differ where the system reserves one side, e.g. iPhone Duo's vertical status bar). With the
-/// standard 16pt inset these equal the former `nextLeftButtonX + 4.0` / `nextRightButtonX + 20.0`.
+/// its own inset; they differ where the system reserves one side, e.g. iPhone Duo's vertical status bar): 4 pt clear
+/// of each side's capsules. (The left used to be the text-button bar's `nextLeftButtonX + 4.0`, 12 pt under the left
+/// capsule.)
 func navigationBarCenterContentInsets(leftExtent: CGFloat, rightExtent: CGFloat) -> (left: CGFloat, right: CGFloat) {
-    return (leftExtent - 12.0, rightExtent + 4.0)
+    return (leftExtent + 4.0, rightExtent + 4.0)
 }
 
 public extension NavigationBarComponent {

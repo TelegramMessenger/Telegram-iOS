@@ -144,9 +144,11 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertEqual(navigationBarCenteredFrame(size: CGSize(width: 101.0, height: 21.0), rowSize: CGSize(width: 390.0, height: 44.0)), CGRect(x: 144.0, y: 11.0, width: 101.0, height: 21.0))
     }
 
-    func test_centerContentInsets_matchTheStoryListBand() {
+    // The story list's band clears both sides' capsules by the same 4 pt (the title and the stories used to be allowed
+    // 12 pt under the left one, a margin from the text-button bar).
+    func test_centerContentInsets_clearBothSidesCapsules() {
         let insets = navigationBarCenterContentInsets(leftExtent: 60.0, rightExtent: 104.0)
-        XCTAssertEqual(insets.left, 48.0)
+        XCTAssertEqual(insets.left, 64.0)
         XCTAssertEqual(insets.right, 108.0)
     }
 

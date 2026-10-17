@@ -38,7 +38,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     private weak var topView: UIView?
     private var size = CGSize()
 
-    private let glassContainer = GlassBackgroundContainerView(spacing: 30.0)
+    /// Built again in `begin` when the drops must merge closer (`ExpansionGeometry.dropMergeSpacing`).
+    private var glassContainer = GlassBackgroundContainerView(spacing: 30.0)
     private let originDrop = GlassBackgroundView()
     /// When the drops' container went on screen (`glassContainerWarmUp`).
     private var glassContainerShownAt: Double = 0.0
@@ -107,6 +108,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let rest: CATransform3D
     }
     private var followers: [Follower] = []
+    /// A view of the page below the header (`NavigationExpansionDestinationLoan.pageViews`), measured before anything is
+    /// lent: how many screen points one of its superlayer's points is, vertically, and its own transform.
+    private struct PageRider {
+        let layer: CALayer
+        let unit: CGFloat
+        let rest: CATransform3D
+    }
+    private var pageRiders: [PageRider] = []
     private var tintLink: SharedDisplayLinkDriver.Link?
     private var tintTimeline: (timeline: NavigationExpansionTimeline, fills: [CGFloat])?
     private var appliedTintFill: CGFloat = -1.0
@@ -162,6 +171,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 self.touchedLayers.append(view.layer)
             }
         }
+        for view in destinationLoan.pageViews {
+            guard let superlayer = view.layer.superlayer else {
+                continue
+            }
+            let unit = superlayer.convert(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0), to: screen.layer).height
+            self.pageRiders.append(PageRider(layer: view.layer, unit: unit, rest: view.layer.transform))
+            self.touchedLayers.append(view.layer)
+        }
 
         var labels: [ExpansionLabelGeometry] = []
         for (index, sourceLabel) in sourceLoan.labels.enumerated() where index < destinationLoan.labels.count {
@@ -172,6 +189,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.choreography = ExpansionChoreography(geometry: geometry, path: self.destination.expansionPath, duration: self.openSpring.response)
 
         // Under the upper screen: the drops, merging.
+        if self.glassContainer.spacing != geometry.dropMergeSpacing {
+            self.glassContainer = GlassBackgroundContainerView(spacing: geometry.dropMergeSpacing)
+        }
         self.glassContainer.frame = CGRect(origin: CGPoint(), size: size)
         self.glassContainer.update(size: size, isDark: sourceLoan.isDark, transition: .immediate)
         self.shadowView.frame = CGRect(origin: CGPoint(), size: size)
@@ -336,6 +356,12 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return CATransform3DConcat(CATransform3DConcat(follower.rest, CATransform3DMakeScale(scale, scale, 1.0)), CATransform3DMakeTranslation(dx, dy, 0.0))
     }
 
+    /// A page view's transform with the page `page` points below its resting place: after its own, in its superlayer's
+    /// points.
+    private func pageTransform(_ rider: PageRider, page: CGFloat) -> CATransform3D {
+        return CATransform3DConcat(rider.rest, CATransform3DMakeTranslation(0.0, page / max(rider.unit, 0.0001), 0.0))
+    }
+
     private func color(_ host: LabelHost, ink: CGFloat) -> UIColor {
         return host.sourceColor.mixedWith(host.destinationColor, alpha: min(max(ink, 0.0), 1.0))
     }
@@ -404,6 +430,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 view.alpha = a.alpha
                 view.layer.transform = CATransform3DScale(CATransform3DMakeTranslation(0.0, a.offset, 0.0), a.scale, a.scale, 1.0)
             }
+        }
+        for rider in self.pageRiders {
+            rider.layer.transform = self.pageTransform(rider, page: f.page)
         }
         for view in destinationLoan.backgroundViews {
             view.alpha = f.background
@@ -554,6 +583,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 add(view.layer, "transform", appear.map { NSValue(caTransform3D: CATransform3DScale(CATransform3DMakeTranslation(0.0, $0.offset, 0.0), $0.scale, $0.scale, 1.0)) })
             }
         }
+        for rider in self.pageRiders {
+            add(rider.layer, "transform", frames.map { NSValue(caTransform3D: self.pageTransform(rider, page: $0.page)) })
+        }
         for view in destinationLoan.backgroundViews {
             add(view.layer, "opacity", frames.map { number($0.background) })
         }
@@ -646,6 +678,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             follower.layer.transform = follower.rest
         }
         self.followers = []
+        for rider in self.pageRiders {
+            rider.layer.transform = rider.rest
+        }
+        self.pageRiders = []
         self.topView?.layer.mask = nil
         self.topView?.transform = .identity
         if let destinationLoan = self.destinationLoan {
@@ -754,6 +790,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
     var overlayMaskFrameForTesting: CGRect {
         return self.overlayMask.frame
+    }
+    /// The merge spacing of the drops' container on screen (nan without one).
+    var glassContainerSpacingForTesting: CGFloat {
+        return (self.underView.subviews.first(where: { $0 is GlassBackgroundContainerView }) as? GlassBackgroundContainerView)?.spacing ?? .nan
     }
     var dropsInContainerForTesting: Bool {
         return self.originDrop.superview === self.glassContainer.contentView
