@@ -5,8 +5,8 @@ import Display
 import GlassBackgroundComponent
 
 /// One label lent to an expansion: the live view, where its text's centre is in it and the text's size (for the common
-/// width), where that centre is on screen, how its colour changes, and views riding with it (the chat title's emoji
-/// status and verified icons), framed in the label view's coordinates.
+/// width), where that centre is on screen, how its colour changes, views riding with it (the chat title's emoji status
+/// and verified icons), framed in the label view's coordinates, and views following it in place.
 public struct NavigationExpansionLabel {
     public enum Coloring {
         /// The view is rendered in this colour; a colour layer composited source-atop over it, in a group of its own,
@@ -23,14 +23,19 @@ public struct NavigationExpansionLabel {
     public let screenCenter: CGPoint
     public let coloring: Coloring
     public let accessories: [(view: UIView, frame: CGRect)]
+    /// Views laid out around the label at rest (the profile's level, badge, username, balance, music strip): they stay
+    /// in their own superviews (a mask's shapes too) and keep their own alpha, and move and scale as if they were part
+    /// of the label.
+    public let followers: [UIView]
 
-    public init(view: UIView, textCenter: CGPoint, textSize: CGSize, screenCenter: CGPoint, coloring: Coloring, accessories: [(view: UIView, frame: CGRect)] = []) {
+    public init(view: UIView, textCenter: CGPoint, textSize: CGSize, screenCenter: CGPoint, coloring: Coloring, accessories: [(view: UIView, frame: CGRect)] = [], followers: [UIView] = []) {
         self.view = view
         self.textCenter = textCenter
         self.textSize = textSize
         self.screenCenter = screenCenter
         self.coloring = coloring
         self.accessories = accessories
+        self.followers = followers
     }
 }
 

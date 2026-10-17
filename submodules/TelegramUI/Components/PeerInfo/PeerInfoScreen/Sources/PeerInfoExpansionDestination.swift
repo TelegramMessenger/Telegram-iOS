@@ -32,8 +32,8 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
 
     /// A header label: a `MultiScaleTextNode` has no size (its text is laid out around its origin) and a container above
     /// it scales it, so it is lent in a wrapper carrying the scale it has on screen, its text's centre where the scaled
-    /// state's is.
-    private func label(_ textNode: MultiScaleTextNode, key: AnyHashable, in screenView: UIView) -> (label: NavigationExpansionLabel, color: UIColor)? {
+    /// state's is. `followers` stay where they are and move with it.
+    private func label(_ textNode: MultiScaleTextNode, key: AnyHashable, in screenView: UIView, followers: [UIView] = []) -> (label: NavigationExpansionLabel, color: UIColor)? {
         guard let state = textNode.stateNode(forKey: key), !state.bounds.isEmpty else {
             return nil
         }
@@ -49,7 +49,7 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         wrapper.addSubview(textNode.view)
         self.wrappers.append(wrapper)
         let textCenter = CGPoint(x: state.frame.midX * scale, y: state.frame.midY * scale)
-        let label = NavigationExpansionLabel(view: wrapper, textCenter: textCenter, textSize: screenRect.size, screenCenter: CGPoint(x: screenRect.midX, y: screenRect.midY), coloring: .multiply([state.layer], color))
+        let label = NavigationExpansionLabel(view: wrapper, textCenter: textCenter, textSize: screenRect.size, screenCenter: CGPoint(x: screenRect.midX, y: screenRect.midY), coloring: .multiply([state.layer], color), followers: followers)
         return (label, color)
     }
 
@@ -94,7 +94,9 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         // Each button's platter is a shape in the buttons' blur mask, so it appears with its button.
         let buttons = header.orderedButtonNodes
         let key: AnyHashable = self.expansionPath == .photo ? TitleNodeStateExpanded : TitleNodeStateRegular
-        let lent = [self.label(header.titleNode, key: key, in: screenView), self.label(header.subtitleNode, key: key, in: screenView)].compactMap { $0 }
+        // The decorations around the status (level, badge, username, balance) move with it, fading with the list; the
+        // music strip only fades.
+        let lent = [self.label(header.titleNode, key: key, in: screenView), self.label(header.subtitleNode, key: key, in: screenView, followers: header.expansionStatusFollowerViews)].compactMap { $0 }
 
         // On the photo path the header's content (buttons, badges, balance) lies on the expanded photo, which is drawn
         // above the card: it is lifted above the photo for the transition.
