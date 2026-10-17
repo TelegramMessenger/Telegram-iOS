@@ -564,11 +564,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             codeBlockTitleColor = .white
                             codeBlockAccentColor = UIColor(white: 1.0, alpha: 0.5)
                             codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.25)
-                            // The default dark theme's outgoing bubble is a light blue gradient: the white-tinted block
-                            // made the code hard to read on it.
-                            if item.presentationData.theme.theme.referenceTheme == .night {
-                                codeBlockFillColor = UIColor(white: 0.0, alpha: 0.1)
-                            }
+                            // Dark themes' outgoing bubbles are coloured (the default's a light blue gradient): the
+                            // white-tinted block made the code hard to read on them.
+                            codeBlockFillColor = UIColor(white: 0.0, alpha: 0.1)
                         } else {
                             codeBlockTitleColor = mainColor
                             codeBlockAccentColor = mainColor
