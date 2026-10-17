@@ -7,7 +7,7 @@ import GlassBackgroundComponent
 enum QrStudioGlass {
     static func tint(_ backdrop: QrStudioBackdrop) -> GlassBackgroundView.TintColor {
         if #available(iOS 27.0, *) {
-        } else if !QrStudioGlass.isEmoji(backdrop) {
+        } else {
             return GlassBackgroundView.TintColor(kind: .custom(style: .clear, color: .clear))
         }
         return GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .clear))
@@ -22,13 +22,6 @@ enum QrStudioGlass {
 
     static func blurRadius(_ tint: GlassBackgroundView.TintColor) -> CGFloat? {
         return QrStudioGlass.isClear(tint) ? 8.0 : nil
-    }
-
-    private static func isEmoji(_ backdrop: QrStudioBackdrop) -> Bool {
-        if case .emoji = backdrop {
-            return true
-        }
-        return false
     }
 
     static func glassIsDark(_ isDark: Bool, tint: GlassBackgroundView.TintColor) -> Bool {
