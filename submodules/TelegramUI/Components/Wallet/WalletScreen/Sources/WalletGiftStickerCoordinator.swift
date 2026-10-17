@@ -439,7 +439,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         guard let source = self.grid?.stickerSourceView(address: pending.gift.address) else { return }
         let sticker = self.placements.first(where: { $0.gift.address == pending.gift.address })
         self.dismissMenu = self.showMenu?(source, sticker != nil, sticker?.style != nil,
-            self.media[pending.gift.address]?.style != nil && self.media[pending.gift.address]?.patternImage != nil, { [weak self] in
+            self.styleAvailability(pending.gift) == .allowed && self.media[pending.gift.address]?.style != nil && self.media[pending.gift.address]?.patternImage != nil, { [weak self] in
                 self?.menuAction(pending.gift, color: false)
             }, { [weak self] in self?.menuAction(pending.gift, color: true) }, { [weak self] in
                 self?.dismissMenu = nil
@@ -509,7 +509,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
         if let index = self.placements.firstIndex(where: { $0.gift.address == gift.address }) {
             if color {
                 let apply = self.placements[index].style == nil
-                guard !apply || media.style != nil else { return }
+                guard !apply || (media.style != nil && self.styleAvailability(gift) == .allowed) else { return }
                 self.styleOrigin = CGPoint(x: CGFloat(self.placements[index].x) * (self.card?.stickerSurface.bounds.width ?? 0),
                     y: CGFloat(self.placements[index].y) * (self.card?.stickerSurface.bounds.height ?? 0))
                 self.placements = self.placements.enumerated().map { i, s in s.withStyle(i == index && apply ? media.style : nil) }
@@ -535,7 +535,7 @@ final class WalletGiftStickerCoordinator: NSObject, UIGestureRecognizerDelegate 
                 if let heldFrom { self.returnGift(gift, from: heldFrom); self.sync() }
                 return
             }
-            self.place(gift, from: from, spot: spot, angle: 0, thrown: true, style: color ? media.style : nil)
+            self.place(gift, from: from, spot: spot, angle: 0, thrown: true, style: color && self.styleAvailability(gift) == .allowed ? media.style : nil)
         }
     }
 
@@ -1242,8 +1242,10 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
         self.prepare([collectible])
         let sticker = self.placements.first(where: { $0.gift.address == collectible.address })
         let media = self.media[collectible.address]
+        let styleAvailability = self.styleAvailability(collectible)
         return WalletCollectibleStickerMenuState(isOnCard: sticker != nil, isStyled: sticker?.style != nil,
-            canStyle: media?.style != nil && media?.patternImage != nil)
+            canStyle: styleAvailability == .allowed && media?.style != nil && media?.patternImage != nil,
+            isStyleRestricted: styleAvailability == .restricted)
     }
 
     func performStickerAction(collectible: WalletContext.Collectible, color: Bool) {
@@ -1259,7 +1261,7 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
               !self.placements.contains(where: { $0.gift.address == collectible.address }),
               self.placements.count < Self.maxStickers, self.drag == nil, self.pending == nil, self.flights[collectible.address] == nil else { return false }
         self.prepare([collectible])
-        guard let media = self.media[collectible.address], media.first != nil, !color || media.style != nil,
+        guard let media = self.media[collectible.address], media.first != nil, !color || (media.style != nil && self.styleAvailability(collectible) == .allowed),
               let spot = self.solver(excluding: collectible.address)?.spread(aim: nil, scale: 1) else { return false }
         let rect = sourceView.convert(sourceView.bounds, to: host)
         let frame = self.grid?.stickerModelFrame(address: collectible.address, side: rect.width)
@@ -1270,6 +1272,19 @@ extension WalletGiftStickerCoordinator: WalletCollectibleStickerHost {
         self.visible = true
         self.place(collectible, from: from, spot: spot, angle: 0, thrown: true, style: color ? media.style : nil)
         return true
+    }
+
+    fileprivate enum StyleAvailability {
+        case allowed
+        case restricted
+        case unavailable
+    }
+
+    fileprivate func styleAvailability(_ gift: WalletContext.Collectible) -> StyleAvailability {
+        guard let context = self.context else { return .unavailable }
+        let configuration = WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        guard configuration.cardBackgroundGiftCollections != nil else { return .unavailable }
+        return configuration.allowsCardBackground(giftSlug: gift.giftSlug) ? .allowed : .restricted
     }
 
     fileprivate func runPendingMenuAction() {

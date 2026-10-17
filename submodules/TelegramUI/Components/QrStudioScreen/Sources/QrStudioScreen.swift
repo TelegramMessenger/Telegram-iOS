@@ -598,7 +598,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             self.look.palettes = qrStudioProfilePalettes(context.peerNameColors)
-            self.look.emojiDark = context.sharedContext.currentPresentationData.with { $0 }.theme.overallDarkAppearance
+            self.look.emojiDark = true
             self.backdropsDisposable = (context.engine.peers.shareThemeBackdrops()
             |> deliverOnMainQueue).startStrict(next: { [weak self] backdrops in
                 guard let self else {
@@ -2051,7 +2051,7 @@ private final class QrStudioScreenComponent: Component {
                     glassTint: glassTint,
                     texts: QrStudioCodePillView.Texts(
                         free: environment.strings.QrStudio_Pill_Free,
-                        removeFee: environment.strings.QrStudio_Pill_RemoveFee,
+                        removeFee: qrStudioRemoveFeeParts(environment.strings),
                         permanent: environment.strings.QrStudio_Pill_Permanent,
                         expiresIn: { [strings = environment.strings] value in
                             return strings.QrStudio_Pill_ExpiresIn(value).string
@@ -2132,6 +2132,17 @@ private func qrStudioProfilePalettes(_ colors: PeerNameColors) -> [QrStudioPalet
         }
         return QrStudioPalette.profile(id: id, center: value.main.rgb, edge: (value.secondary ?? value.main).rgb)
     }
+}
+
+private func qrStudioRemoveFeeParts(_ strings: PresentationStrings) -> (prefix: String, suffix: String) {
+    let formatted = strings.QrStudio_Pill_RemoveFee("")
+    let string = formatted.string as NSString
+    guard let range = formatted.ranges.first(where: { $0.index == 0 })?.range else {
+        return (formatted.string, "")
+    }
+    let prefix = string.substring(to: range.location).trimmingCharacters(in: .whitespaces)
+    let suffix = string.substring(from: range.location + range.length).trimmingCharacters(in: .whitespaces)
+    return (prefix, suffix)
 }
 
 private final class QrStudioMenuCooldown {

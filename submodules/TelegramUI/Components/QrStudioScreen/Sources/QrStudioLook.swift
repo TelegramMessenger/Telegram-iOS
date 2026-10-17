@@ -136,7 +136,7 @@ enum QrStudioBackdrop: Equatable {
         case let .color(palette):
             return palette.colors.count > 4 ? palette.colors[4] : (palette.colors.first ?? QrStudioColor(1.0, 1.0, 1.0))
         case let .emoji(_, isDark):
-            return isDark ? QrStudioColor(0.0, 0.0, 0.0) : QrStudioColor(1.0, 1.0, 1.0)
+            return isDark ? QrStudioPalette.fallback.colors[4] : QrStudioColor(1.0, 1.0, 1.0)
         case let .gift(gift):
             return gift.outer
         case let .theme(theme):
@@ -203,7 +203,7 @@ struct QrStudioLook: Equatable {
         if let colorId = self.colorId, let palette = self.palettes.first(where: { $0.id == .color(colorId) }) {
             return palette
         }
-        return self.palettes.first ?? QrStudioPalette.fallback
+        return self.backdrops.first(where: { $0.id == QrStudioPalette.fallback.id }) ?? QrStudioPalette.fallback
     }
 
     var selectedGift: QrStudioGift? {

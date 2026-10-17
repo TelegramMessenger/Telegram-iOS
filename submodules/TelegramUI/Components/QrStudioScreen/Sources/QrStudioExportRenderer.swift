@@ -148,8 +148,16 @@ func qrStudioDrawExportFrame(_ scene: QrStudioExportScene, canvas: QrStudioExpor
         context.draw(image, in: CGRect(x: (size.width - drawSize.width) * 0.5, y: (size.height - drawSize.height) * 0.5, width: drawSize.width, height: drawSize.height))
         context.restoreGState()
     case let .emoji(stickers, items):
-        context.setFillColor(scene.isLight ? UIColor.white.cgColor : UIColor.black.cgColor)
-        context.fill(bounds)
+        if !scene.isLight, let mesh = qrStudioMeshImage(colors: QrStudioPalette.fallback.colors, width: 72, height: 128) {
+            context.saveGState()
+            context.translateBy(x: 0.0, y: size.height)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.draw(mesh, in: bounds)
+            context.restoreGState()
+        } else {
+            context.setFillColor(scene.isLight ? UIColor.white.cgColor : UIColor.black.cgColor)
+            context.fill(bounds)
+        }
         qrStudioDrawPattern(items, scene: scene, card: card, size: size, time: time, wobble: 1.0, in: context, image: { item in
             guard case let .sticker(index) = item.content, index >= 0, index < stickers.count else {
                 return nil

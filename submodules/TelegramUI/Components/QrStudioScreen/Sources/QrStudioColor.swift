@@ -185,7 +185,7 @@ struct QrStudioPalette: Equatable {
         ], ink: QrStudioColor.ink(center: center, edge: edge))
     }
 
-    static let fallback: QrStudioPalette = QrStudioPalette.profile(id: -1, center: 0xca70c6, edge: 0x9662d4)
+    static let fallback: QrStudioPalette = QrStudioPalette.backdrop(id: 0, center: 0x363738, edge: 0x0e0f0f, pattern: 0x6c6868, text: 0x8c8f91)
 }
 
 extension QrStudioColor {

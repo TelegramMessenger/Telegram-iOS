@@ -62,6 +62,7 @@ public enum WalletCardUpdateError: Error, Equatable, Sendable {
     case notOwned
     case invalidNft
     case savedInProfile
+    case backgroundNotAllowed
     case floodWait(Int32)
     case generic
 
@@ -75,6 +76,7 @@ public enum WalletCardUpdateError: Error, Equatable, Sendable {
         case "WALLET_NFT_NOT_OWNED": self = .notOwned
         case "WALLET_NFT_INVALID": self = .invalidNft
         case "WALLET_STICKER_SAVED_PROFILE": self = .savedInProfile
+        case "WALLET_CARD_BG_NOT_ALLOWED": self = .backgroundNotAllowed
         default:
             if description.hasPrefix("FLOOD_WAIT_"), let seconds = Int32(description.dropFirst("FLOOD_WAIT_".count)) {
                 self = .floodWait(seconds)

@@ -554,7 +554,8 @@ public struct WalletConfiguration: Equatable, Sendable {
             explorerUrl: "https://tonscan.org",
             transferMinAmount: 100_000_000,
             transferGaslessMinAmount: 100_000_000,
-            transferGaslessDailyLimit: 5
+            transferGaslessDailyLimit: 5,
+            cardBackgroundGiftCollections: nil
         )
     }
 
@@ -563,19 +564,36 @@ public struct WalletConfiguration: Equatable, Sendable {
     public let transferMinAmount: Int64
     public let transferGaslessMinAmount: Int64
     public let transferGaslessDailyLimit: Int32
+    public let cardBackgroundGiftCollections: [String]?
 
     private init(
         isAvailable: Bool,
         explorerUrl: String,
         transferMinAmount: Int64,
         transferGaslessMinAmount: Int64,
-        transferGaslessDailyLimit: Int32
+        transferGaslessDailyLimit: Int32,
+        cardBackgroundGiftCollections: [String]?
     ) {
         self.isAvailable = isAvailable
         self.explorerUrl = explorerUrl
         self.transferMinAmount = transferMinAmount
         self.transferGaslessMinAmount = transferGaslessMinAmount
         self.transferGaslessDailyLimit = transferGaslessDailyLimit
+        self.cardBackgroundGiftCollections = cardBackgroundGiftCollections
+    }
+
+    public static func giftCollection(slug: String) -> String {
+        if let range = slug.range(of: "-", options: .backwards), !slug[range.upperBound...].isEmpty, slug[range.upperBound...].allSatisfy(\.isNumber) {
+            return String(slug[..<range.lowerBound])
+        }
+        return slug
+    }
+
+    public func allowsCardBackground(giftSlug: String?) -> Bool {
+        guard let collections = self.cardBackgroundGiftCollections, let giftSlug else {
+            return false
+        }
+        return collections.contains(WalletConfiguration.giftCollection(slug: giftSlug))
     }
 
     public static func with(appConfiguration: AppConfiguration) -> WalletConfiguration {
@@ -598,12 +616,17 @@ public struct WalletConfiguration: Equatable, Sendable {
         if let value = appConfiguration.data?["wallet_gasless_daily_transfers"] as? Double {
             transferGaslessDailyLimit = Int32(value)
         }
+        var cardBackgroundGiftCollections: [String]?
+        if let value = appConfiguration.data?["wallet_card_bg_gifts"] as? [Any] {
+            cardBackgroundGiftCollections = value.compactMap { $0 as? String }
+        }
         return WalletConfiguration(
             isAvailable: isAvailable,
             explorerUrl: explorerUrl,
             transferMinAmount: transferMinAmount,
             transferGaslessMinAmount: transferGaslessMinAmount,
-            transferGaslessDailyLimit: transferGaslessDailyLimit
+            transferGaslessDailyLimit: transferGaslessDailyLimit,
+            cardBackgroundGiftCollections: cardBackgroundGiftCollections
         )
     }
 }

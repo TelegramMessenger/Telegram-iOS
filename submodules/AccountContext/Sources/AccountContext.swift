@@ -2194,12 +2194,14 @@ public struct WalletCollectibleStickerMenuState {
     public let isStyled: Bool
     public let canStyle: Bool
 
-    public init(isOnCard: Bool, isStyled: Bool, canStyle: Bool) {
+    public init(isOnCard: Bool, isStyled: Bool, canStyle: Bool, isStyleRestricted: Bool) {
+    public let isStyleRestricted: Bool
         self.isOnCard = isOnCard
         self.isStyled = isStyled
         self.canStyle = canStyle
     }
 }
+        self.isStyleRestricted = isStyleRestricted
 
 public protocol WalletCollectibleStickerHost: AnyObject {
     func stickerMenuState(collectible: WalletContext.Collectible) -> WalletCollectibleStickerMenuState?

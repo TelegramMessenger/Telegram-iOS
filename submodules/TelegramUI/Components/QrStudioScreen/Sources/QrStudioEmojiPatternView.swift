@@ -17,6 +17,7 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
 
     private let context: AccountContext
     private var isDark: Bool
+    private let meshView = QrStudioMeshBackgroundView(palette: QrStudioPalette.fallback)
     private let nodesLayer = SimpleLayer()
     private var files: [TelegramMediaFile]
     private var previousFiles: [TelegramMediaFile]?
@@ -67,8 +68,10 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
 
         super.init(frame: CGRect())
 
-        self.backgroundColor = isDark ? .black : .white
+        self.backgroundColor = .white
         self.clipsToBounds = true
+        self.meshView.alpha = isDark ? 1.0 : 0.0
+        self.addSubview(self.meshView)
         self.layer.addSublayer(self.nodesLayer)
     }
 
@@ -79,6 +82,8 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
     func update(size: CGSize, revealCenter: CGPoint) {
         self.size = size
         self.revealCenter = revealCenter
+        self.meshView.frame = CGRect(origin: CGPoint(), size: size)
+        self.meshView.update(size: size, revealCenter: revealCenter)
         self.nodesLayer.frame = CGRect(origin: CGPoint(), size: size)
     }
 
@@ -88,6 +93,7 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
 
     func setVisible(_ isVisible: Bool) {
         self.isVisible = isVisible
+        self.meshView.setVisible(isVisible && self.isDark)
         for (_, animation) in self.animations {
             animation.setPaused(!isVisible)
         }
@@ -98,8 +104,9 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
             return
         }
         self.isDark = isDark
+        self.meshView.setVisible(self.isVisible && isDark)
         UIView.animate(withDuration: 0.45, delay: 0.0, options: [.curveEaseInOut, .allowUserInteraction], animations: {
-            self.backgroundColor = isDark ? .black : .white
+            self.meshView.alpha = isDark ? 1.0 : 0.0
         })
     }
 
@@ -127,6 +134,9 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
     }
 
     func tick(time: Double, pan: QrStudioPan, drift: QrStudioDrift, tilt: SIMD2<Double>) {
+        if self.isVisible && self.isDark {
+            self.meshView.tick(time: time, pan: pan, drift: drift, tilt: tilt)
+        }
         guard self.isVisible, !self.files.isEmpty, self.size.width > 0.0, self.size.height > 0.0 else {
             return
         }
