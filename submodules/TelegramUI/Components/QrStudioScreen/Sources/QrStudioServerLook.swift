@@ -2,10 +2,8 @@ import Foundation
 
 enum QrStudioServerLook: Equatable {
     case `default`
-    case emoji([QrStudioLookSettings.Emoji])
-    case color(Int32)
+    case emojiBackdrop(emoji: [QrStudioLookSettings.Emoji]?, backdropId: Int32?)
     case gift(Int64)
-    case backdrop(Int32)
 }
 
 extension QrStudioLookSettings {
@@ -18,7 +16,11 @@ extension QrStudioLookSettings {
                 }
                 return true
             }
-            return emoji.isEmpty ? .default : .emoji(Array(emoji.prefix(6)))
+            let backdropId = self.themeId == nil ? self.backdropId : nil
+            if emoji.isEmpty && backdropId == nil {
+                return .default
+            }
+            return .emojiBackdrop(emoji: emoji.isEmpty ? nil : Array(emoji.prefix(6)), backdropId: backdropId)
         case 2:
             if let giftId = self.giftId {
                 return .gift(giftId)
@@ -26,10 +28,7 @@ extension QrStudioLookSettings {
             return .default
         default:
             if self.themeId == nil, let backdropId = self.backdropId {
-                return .backdrop(backdropId)
-            }
-            if self.themeId == nil, let colorId = self.colorId {
-                return .color(colorId)
+                return .emojiBackdrop(emoji: nil, backdropId: backdropId)
             }
             return .default
         }
@@ -43,19 +42,16 @@ extension QrStudioLookSettings {
             result.colorId = nil
             result.backdropId = nil
             result.themeId = nil
-        case let .emoji(emoji):
-            let encoded = QrStudioLookSettings(kind: 1, colorId: nil, emoji: emoji, giftId: nil)
-            result.kind = 1
-            result.emojiUnicode = encoded.emojiUnicode
-            result.emojiFileIds = encoded.emojiFileIds
-            result.themeId = nil
-        case let .color(colorId):
-            result.kind = 0
-            result.colorId = colorId
-            result.backdropId = nil
-            result.themeId = nil
-        case let .backdrop(backdropId):
-            result.kind = 0
+        case let .emojiBackdrop(emoji, backdropId):
+            if let emoji, !emoji.isEmpty {
+                let encoded = QrStudioLookSettings(kind: 1, colorId: nil, emoji: emoji, giftId: nil)
+                result.kind = 1
+                result.emojiUnicode = encoded.emojiUnicode
+                result.emojiFileIds = encoded.emojiFileIds
+            } else {
+                result.kind = 0
+            }
+            result.colorId = nil
             result.backdropId = backdropId
             result.themeId = nil
         case let .gift(giftId):

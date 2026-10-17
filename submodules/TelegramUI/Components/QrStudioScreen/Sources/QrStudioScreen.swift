@@ -466,8 +466,8 @@ private final class QrStudioScreenComponent: Component {
                 switch theme {
                 case .default:
                     serverLook = .default
-                case let .emoji(reactions):
-                    let emoji = reactions.compactMap { reaction -> QrStudioLookSettings.Emoji? in
+                case let .emojiBackdrop(reactions, backdropId):
+                    let emoji = (reactions ?? []).compactMap { reaction -> QrStudioLookSettings.Emoji? in
                         switch reaction {
                         case let .builtin(value):
                             return .unicode(value)
@@ -477,9 +477,11 @@ private final class QrStudioScreenComponent: Component {
                             return nil
                         }
                     }
-                    serverLook = emoji.isEmpty ? .default : .emoji(emoji)
-                case let .color(colorId):
-                    serverLook = .color(colorId)
+                    if emoji.isEmpty && backdropId == nil {
+                        serverLook = .default
+                    } else {
+                        serverLook = .emojiBackdrop(emoji: emoji.isEmpty ? nil : emoji, backdropId: backdropId)
+                    }
                 case let .gift(gift):
                     if case let .unique(uniqueGift) = gift {
                         serverLook = .gift(uniqueGift.id)
@@ -493,8 +495,6 @@ private final class QrStudioScreenComponent: Component {
                     } else {
                         serverLook = .default
                     }
-                case let .backdrop(backdropId):
-                    serverLook = .backdrop(backdropId)
                 }
                 self.didReceiveServerLook = true
                 self.syncedServerLook = serverLook
@@ -511,7 +511,7 @@ private final class QrStudioScreenComponent: Component {
             if case let .gift(giftId) = serverLook, !self.areGiftsLoaded, !self.look.gifts.contains(where: { $0.id == giftId }) {
                 return
             }
-            if case .backdrop = serverLook, !self.areBackdropsLoaded {
+            if case .emojiBackdrop(_, .some) = serverLook, !self.areBackdropsLoaded {
                 return
             }
             self.pendingServerLook = nil
@@ -574,24 +574,20 @@ private final class QrStudioScreenComponent: Component {
             switch local {
             case .default:
                 update = .default
-            case let .emoji(emoji):
-                update = .emoji(emoji.map { item -> MessageReaction.Reaction in
+            case let .emojiBackdrop(emoji, backdropId):
+                update = .emojiBackdrop(emojis: emoji?.map { item -> MessageReaction.Reaction in
                     switch item {
                     case let .unicode(value):
                         return .builtin(value)
                     case let .custom(fileId):
                         return .custom(fileId)
                     }
-                })
-            case let .color(colorId):
-                update = .color(colorId)
+                }, backdropId: backdropId)
             case let .gift(giftId):
                 guard let gift = self.look.gifts.first(where: { $0.id == giftId }) else {
                     return
                 }
                 update = .gift(gift.reference ?? .slug(slug: gift.gift.slug))
-            case let .backdrop(backdropId):
-                update = .backdrop(backdropId)
             }
             self.syncedServerLook = local
             self.pendingServerLook = nil
@@ -614,7 +610,7 @@ private final class QrStudioScreenComponent: Component {
                 func rgb(_ value: Int32) -> UInt32 {
                     return UInt32(bitPattern: value) & 0xffffff
                 }
-                let palettes = qrStudioSortedBackdrops(backdrops).map { QrStudioPalette.backdrop(id: $0.id, center: rgb($0.centerColor), edge: rgb($0.edgeColor), pattern: rgb($0.patternColor), text: rgb($0.textColor)) }
+                let palettes = backdrops.map { QrStudioPalette.backdrop(id: $0.id, center: rgb($0.centerColor), edge: rgb($0.edgeColor), pattern: rgb($0.patternColor), text: rgb($0.textColor)) }
                 let wasLoaded = self.areBackdropsLoaded
                 self.areBackdropsLoaded = true
                 if self.look.backdrops != palettes {
@@ -2399,99 +2395,4 @@ private final class QrStudioReferenceContentSource: ContextReferenceContentSourc
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, centersMorphedActions: self.centersActions)
     }
-}
-
-private let qrStudioBackdropOrder: [String] = [
-    "Black",
-    "Onyx Black",
-    "Gunmetal",
-    "Midnight Blue",
-    "Steel Grey",
-    "Roman Silver",
-    "Raspberry",
-    "Carmine",
-    "Fire Engine",
-    "Burnt Sienna",
-    "Tomato",
-    "Copper",
-    "Persimmon",
-    "Orange",
-    "Caramel",
-    "Mustard",
-    "Old Gold",
-    "Satin Gold",
-    "Amber",
-    "Pure Gold",
-    "Lemongrass",
-    "Malachite",
-    "Shamrock Green",
-    "Mint Green",
-    "Emerald",
-    "Pacific Green",
-    "Jade Green",
-    "Deep Cyan",
-    "Celtic Blue",
-    "Cobalt Blue",
-    "Neon Blue",
-    "Cyberpunk",
-    "Electric Indigo",
-    "Lavender",
-    "Grape",
-    "French Violet",
-    "Purple",
-    "Electric Purple",
-    "Fandango",
-    "Mexican Pink",
-    "Burgundy",
-    "Rosewood",
-    "Chestnut",
-    "Coral Red",
-    "Strawberry",
-    "Mystic Pearl",
-    "Carrot Juice",
-    "Light Olive",
-    "Khaki Green",
-    "Camo Green",
-    "Pistachio",
-    "Hunter Green",
-    "Pine Green",
-    "Gunship Green",
-    "Tactical Pine",
-    "Aquamarine",
-    "Pacific Cyan",
-    "Turquoise",
-    "Moonstone",
-    "Sky Blue",
-    "Azure Blue",
-    "Sapphire",
-    "Silver Blue",
-    "Indigo Dye",
-    "French Blue",
-    "Navy Blue",
-    "English Violet",
-    "Dark Lilac",
-    "Seal Brown",
-    "Chocolate",
-    "Cappuccino",
-    "Desert Sand",
-    "Dark Green",
-    "Ranger Green",
-    "Marine Blue",
-    "Ivory White",
-    "Platinum",
-    "Battleship Grey",
-    "Rifle Green",
-    "Feldgrau"
-]
-
-func qrStudioSortedBackdrops(_ backdrops: [TelegramShareThemeBackdrop]) -> [TelegramShareThemeBackdrop] {
-    var rank: [String: Int] = [:]
-    for (index, name) in qrStudioBackdropOrder.enumerated() {
-        rank[name] = index
-    }
-    return backdrops.enumerated().sorted { lhs, rhs in
-        let lhsRank = rank[lhs.element.name] ?? qrStudioBackdropOrder.count + lhs.offset
-        let rhsRank = rank[rhs.element.name] ?? qrStudioBackdropOrder.count + rhs.offset
-        return lhsRank < rhsRank
-    }.map { $0.element }
 }

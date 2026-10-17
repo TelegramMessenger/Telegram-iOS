@@ -3863,9 +3863,9 @@ func _internal_checkStarGiftWithdrawalAvailability(account: Account, reference: 
         guard let starGift else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 0, stargift: starGift, password: .inputCheckPasswordEmpty, tmpPassword: nil))
+        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 0, stargift: starGift, tmpPassword: nil))
         |> mapError { error -> RequestStarGiftWithdrawalError in
-            if error.errorDescription == "PASSWORD_HASH_INVALID" {
+            if error.errorDescription == "PASSWORD_HASH_INVALID" || error.errorDescription.hasPrefix("TMP_PASSWORD") {
                 return .requestPassword
             } else if error.errorDescription == "PASSWORD_MISSING" {
                 return .twoStepAuthMissing
@@ -3917,39 +3917,13 @@ private func _internal_storeStarGiftWithdrawalTemporaryPassword(account: Account
     }
 }
 
-private enum StarGiftWithdrawalCredentials {
-    case password(Api.InputCheckPasswordSRP)
-    case temporaryPassword(Data)
-}
-
-private func _internal_starGiftWithdrawalPasswordCredentials(account: Account, password: String) -> Signal<StarGiftWithdrawalCredentials, RequestStarGiftWithdrawalError> {
-    return _internal_twoStepAuthData(account.network)
-    |> mapError { error -> RequestStarGiftWithdrawalError in
-        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-            return .limitExceeded
-        } else {
-            return .generic
-        }
-    }
-    |> mapToSignal { authData -> Signal<StarGiftWithdrawalCredentials, RequestStarGiftWithdrawalError> in
-        if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-            guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, keychain: account.network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
-                return .fail(.generic)
-            }
-            return .single(.password(.inputCheckPasswordSRP(.init(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1)))))
-        } else {
-            return .fail(.twoStepAuthMissing)
-        }
-    }
-}
-
-private func _internal_starGiftWithdrawalCredentials(account: Account, password: String?) -> Signal<StarGiftWithdrawalCredentials, RequestStarGiftWithdrawalError> {
+private func _internal_starGiftWithdrawalTemporaryPassword(account: Account, password: String?) -> Signal<Data, RequestStarGiftWithdrawalError> {
     guard let password else {
         return _internal_cachedStarGiftWithdrawalTemporaryPassword(account: account)
         |> castError(RequestStarGiftWithdrawalError.self)
-        |> mapToSignal { token -> Signal<StarGiftWithdrawalCredentials, RequestStarGiftWithdrawalError> in
+        |> mapToSignal { token -> Signal<Data, RequestStarGiftWithdrawalError> in
             if let token {
-                return .single(.temporaryPassword(token))
+                return .single(token)
             } else {
                 return .fail(.requestPassword)
             }
@@ -3959,40 +3933,32 @@ private func _internal_starGiftWithdrawalCredentials(account: Account, password:
         return .fail(.invalidPassword)
     }
     return _internal_requestTemporaryTwoStepPasswordToken(account: account, password: password, period: starGiftWithdrawalTemporaryPasswordPeriod, requiresBiometrics: false)
-    |> map(Optional.init)
-    |> `catch` { error -> Signal<TemporaryTwoStepPasswordToken?, RequestStarGiftWithdrawalError> in
+    |> mapError { error -> RequestStarGiftWithdrawalError in
         switch error {
         case .invalidPassword:
-            return .fail(.invalidPassword)
+            return .invalidPassword
         case .limitExceeded:
-            return .fail(.limitExceeded)
+            return .limitExceeded
         case .generic:
-            return .single(nil)
+            return .generic
         }
     }
-    |> mapToSignal { token -> Signal<StarGiftWithdrawalCredentials, RequestStarGiftWithdrawalError> in
-        if let token {
-            return _internal_storeStarGiftWithdrawalTemporaryPassword(account: account, token: token)
-            |> castError(RequestStarGiftWithdrawalError.self)
-            |> map { _ -> StarGiftWithdrawalCredentials in
-                return .temporaryPassword(token.token)
-            }
-        } else {
-            return _internal_starGiftWithdrawalPasswordCredentials(account: account, password: password)
+    |> mapToSignal { token -> Signal<Data, RequestStarGiftWithdrawalError> in
+        return _internal_storeStarGiftWithdrawalTemporaryPassword(account: account, token: token)
+        |> castError(RequestStarGiftWithdrawalError.self)
+        |> map { _ -> Data in
+            return token.token
         }
     }
 }
 
-private func starGiftWithdrawalError(_ error: MTRpcError, credentials: StarGiftWithdrawalCredentials) -> RequestStarGiftWithdrawalError {
+private func starGiftWithdrawalError(_ error: MTRpcError) -> RequestStarGiftWithdrawalError {
     if error.errorCode == 406 {
         return .serverProvided(text: error.errorDescription)
     } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
         return .limitExceeded
     } else if error.errorDescription == "PASSWORD_HASH_INVALID" || error.errorDescription.hasPrefix("TMP_PASSWORD") {
-        if case .temporaryPassword = credentials {
-            return .requestPassword
-        }
-        return .invalidPassword
+        return .requestPassword
     } else if error.errorDescription == "PASSWORD_MISSING" {
         return .twoStepAuthMissing
     } else if error.errorDescription.hasPrefix("PASSWORD_TOO_FRESH_") {
@@ -4009,7 +3975,7 @@ private func starGiftWithdrawalError(_ error: MTRpcError, credentials: StarGiftW
     return .generic
 }
 
-private func _internal_performStarGiftWithdrawalRequest<T>(account: Account, reference: StarGiftReference, password: String?, request: @escaping (Api.InputSavedStarGift, Api.InputCheckPasswordSRP, Buffer?) -> Signal<T, MTRpcError>) -> Signal<T, RequestStarGiftWithdrawalError> {
+private func _internal_performStarGiftWithdrawalRequest<T>(account: Account, reference: StarGiftReference, password: String?, request: @escaping (Api.InputSavedStarGift, Buffer) -> Signal<T, MTRpcError>) -> Signal<T, RequestStarGiftWithdrawalError> {
     return account.postbox.transaction { transaction -> Api.InputSavedStarGift? in
         return reference.apiStarGiftReference(transaction: transaction)
     }
@@ -4018,18 +3984,11 @@ private func _internal_performStarGiftWithdrawalRequest<T>(account: Account, ref
         guard let starGift else {
             return .fail(.generic)
         }
-        return _internal_starGiftWithdrawalCredentials(account: account, password: password)
-        |> mapToSignal { credentials -> Signal<T, RequestStarGiftWithdrawalError> in
-            let signal: Signal<T, MTRpcError>
-            switch credentials {
-            case let .password(checkPassword):
-                signal = request(starGift, checkPassword, nil)
-            case let .temporaryPassword(token):
-                signal = request(starGift, .inputCheckPasswordEmpty, Buffer(data: token))
-            }
-            return signal
+        return _internal_starGiftWithdrawalTemporaryPassword(account: account, password: password)
+        |> mapToSignal { token -> Signal<T, RequestStarGiftWithdrawalError> in
+            return request(starGift, Buffer(data: token))
             |> `catch` { error -> Signal<T, RequestStarGiftWithdrawalError> in
-                let mappedError = starGiftWithdrawalError(error, credentials: credentials)
+                let mappedError = starGiftWithdrawalError(error)
                 if case .requestPassword = mappedError {
                     return _internal_storeStarGiftWithdrawalTemporaryPassword(account: account, token: nil)
                     |> castError(RequestStarGiftWithdrawalError.self)
@@ -4044,12 +4003,8 @@ private func _internal_performStarGiftWithdrawalRequest<T>(account: Account, ref
 }
 
 func _internal_requestStarGiftWithdrawalUrl(account: Account, reference: StarGiftReference, password: String?) -> Signal<String, RequestStarGiftWithdrawalError> {
-    return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, checkPassword, temporaryPassword in
-        var flags: Int32 = 0
-        if temporaryPassword != nil {
-            flags |= (1 << 0)
-        }
-        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: flags, stargift: starGift, password: checkPassword, tmpPassword: temporaryPassword), automaticFloodWait: false)
+    return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, temporaryPassword in
+        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 1 << 0, stargift: starGift, tmpPassword: temporaryPassword), automaticFloodWait: false)
         |> map { result -> String in
             switch result {
             case let .starGiftWithdrawalUrl(starGiftWithdrawalUrlData):
@@ -4071,15 +4026,12 @@ public enum WithdrawStarGiftError: Equatable {
 }
 
 func _internal_withdrawStarGift(account: Account, reference: StarGiftReference, keepOnProfile: Bool, password: String?) -> Signal<Never, WithdrawStarGiftError> {
-    return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, checkPassword, temporaryPassword in
-        var flags: Int32 = 0
+    return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, temporaryPassword in
+        var flags: Int32 = 1 << 1
         if keepOnProfile {
             flags |= (1 << 0)
         }
-        if temporaryPassword != nil {
-            flags |= (1 << 1)
-        }
-        return account.network.request(Api.functions.payments.withdrawStarGift(flags: flags, stargift: starGift, password: checkPassword, tmpPassword: temporaryPassword), automaticFloodWait: false)
+        return account.network.request(Api.functions.payments.withdrawStarGift(flags: flags, stargift: starGift, tmpPassword: temporaryPassword), automaticFloodWait: false)
     })
     |> mapError { error -> WithdrawStarGiftError in
         switch error {

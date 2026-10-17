@@ -2360,11 +2360,9 @@ inputTonConnectOauthSession#629f66ce session_id:long challenge_answer:bytes body
 exportedNoPaidMessagesToken#695dd042 flags:# token:string url:string expires:flags.0?int = ExportedNoPaidMessagesToken;
 
 shareThemeDefault#95ace84f = ShareTheme;
-shareThemeEmoji#3ab4430a emojis:Vector<Reaction> = ShareTheme;
-shareThemeColor#1f48bc20 color_id:int = ShareTheme;
+shareThemeEmojiBackdrop#64b334e1 flags:# backdrop_id:flags.0?int emojis:flags.1?Vector<Reaction> = ShareTheme;
 shareThemeGift#ebece66d stargift:StarGift = ShareTheme;
 inputShareThemeGift#3fb92b5b stargift:InputSavedStarGift = ShareTheme;
-shareThemeBackdrop#fd62fbd1 backdrop_id:int = ShareTheme;
 
 shareThemeBackdropOption#45c1d652 backdrop_id:int name:string center_color:int edge_color:int pattern_color:int text_color:int = ShareThemeBackdropOption;
 
@@ -3044,7 +3042,7 @@ payments.transferStarGift#7f18176a stargift:InputSavedStarGift to_id:InputPeer =
 payments.getUniqueStarGift#a1974d72 slug:string = payments.UniqueStarGift;
 payments.getSavedStarGifts#a319e569 flags:# exclude_unsaved:flags.0?true exclude_saved:flags.1?true exclude_unlimited:flags.2?true exclude_unique:flags.4?true sort_by_value:flags.5?true exclude_upgradable:flags.7?true exclude_unupgradable:flags.8?true peer_color_available:flags.9?true exclude_hosted:flags.10?true peer:InputPeer collection_id:flags.6?int offset:string limit:int = payments.SavedStarGifts;
 payments.getSavedStarGift#b455a106 stargift:Vector<InputSavedStarGift> = payments.SavedStarGifts;
-payments.getStarGiftWithdrawalUrl#cb4ead0b flags:# stargift:InputSavedStarGift password:InputCheckPasswordSRP tmp_password:flags.0?bytes = payments.StarGiftWithdrawalUrl;
+payments.getStarGiftWithdrawalUrl#cd1f1f0d flags:# stargift:InputSavedStarGift tmp_password:flags.0?bytes = payments.StarGiftWithdrawalUrl;
 payments.toggleChatStarGiftNotifications#60eaefa1 flags:# enabled:flags.0?true peer:InputPeer = Bool;
 payments.toggleStarGiftsPinnedToTop#1513e7b0 peer:InputPeer stargift:Vector<InputSavedStarGift> = Bool;
 payments.canPurchaseStore#4fdc5ea7 purpose:InputStorePaymentPurpose = Bool;
@@ -3072,7 +3070,7 @@ payments.getOnrampAvailability#2ec29951 flags:# provider:string crypto_currency:
 payments.getOnrampLimits#80e851fd flags:# provider:string crypto_currency:string base_currency:string payment_method:flags.0?string = OnrampLimits;
 payments.getOnrampQuote#e06645fa flags:# provider:string crypto_currency:string base_currency:string base_amount:flags.0?string crypto_amount:flags.1?string payment_method:flags.2?string = OnrampQuote;
 payments.createOnrampSession#a2197cf6 flags:# provider:string crypto_currency:string address:string payment_method:flags.0?string base_currency:flags.1?string base_amount:flags.2?string memo:flags.3?string theme:flags.4?string success_return_url:flags.5?string fail_return_url:flags.6?string crypto_amount:flags.7?string = OnrampSession;
-payments.withdrawStarGift#20109cb3 flags:# keep_on_profile:flags.0?true stargift:InputSavedStarGift password:InputCheckPasswordSRP tmp_password:flags.1?bytes = Bool;
+payments.withdrawStarGift#d16f51f7 flags:# keep_on_profile:flags.0?true stargift:InputSavedStarGift tmp_password:flags.1?bytes = Bool;
 payments.depositStarGift#c0a2ea9f flags:# hide_sender:flags.0?true peer:InputPeer slug:string = payments.StarGiftDepositPayload;
 payments.displayStarGift#4aa5f0fe flags:# peer:flags.0?InputPeer slug:string = Bool;
 
