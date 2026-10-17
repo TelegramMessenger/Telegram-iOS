@@ -155,9 +155,19 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
         return result
     }
 
-    /// The combined-text ranges showing the given flat range of each node, one per stamped run.
+    /// The combined-text ranges showing the given flat range of each node, adjacent runs joined: a
+    /// highlight measures each range on its own and takes one rect per line (`LinkHighlightingNode`
+    /// reads consecutive rects as consecutive lines), so a range per run split a line of an emoji and
+    /// bold text into the emoji's top half and the text's bottom half.
     public func ranges(showing nodeRanges: [(id: InstantPageTextNodeId, range: Range<Int>)]) -> [NSRange] {
         var result: [NSRange] = []
+        func append(_ range: NSRange) {
+            if let last = result.last, last.location + last.length == range.location {
+                result[result.count - 1].length += range.length
+            } else {
+                result.append(range)
+            }
+        }
         for entry in self.entries {
             let string = entry.item.attributedString
             string.enumerateAttribute(InstantPageQuoteLeafAttribute, in: NSRange(location: 0, length: string.length), options: []) { value, runRange, _ in
@@ -169,14 +179,14 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
                 if leaf.isAtomic {
                     let overlaps = leafLower == leafUpper ? (quoted.lowerBound < leafLower && leafLower < quoted.upperBound) : (leafLower < quoted.upperBound && leafUpper > quoted.lowerBound)
                     if overlaps {
-                        result.append(NSRange(location: entry.charOffset + runRange.location, length: runRange.length))
+                        append(NSRange(location: entry.charOffset + runRange.location, length: runRange.length))
                     }
                     return
                 }
                 let lower = max(leafLower, quoted.lowerBound)
                 let upper = min(leafUpper, quoted.upperBound)
                 if lower < upper {
-                    result.append(NSRange(location: entry.charOffset + runRange.location + (lower - leafLower), length: upper - lower))
+                    append(NSRange(location: entry.charOffset + runRange.location + (lower - leafLower), length: upper - lower))
                 }
             }
         }

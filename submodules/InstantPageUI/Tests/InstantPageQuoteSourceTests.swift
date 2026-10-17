@@ -123,6 +123,20 @@ final class InstantPageQuoteSourceTests: XCTestCase {
             self.stamped(.plain("world"), node: self.second)
         ])
         let ranges = adapter.ranges(showing: [(id: self.first, range: 2 ..< 8), (id: self.second, range: 0 ..< 3)])
-        XCTAssertEqual(ranges, [NSRange(location: 2, length: 4), NSRange(location: 6, length: 1), NSRange(location: 9, length: 3)])
+        XCTAssertEqual(ranges, [NSRange(location: 2, length: 5), NSRange(location: 9, length: 3)])
+    }
+
+    // A quote's highlight takes one rect per line (`LinkHighlightingNode` reads consecutive rects as
+    // consecutive lines and splits overlapping ones at their middle), so the runs a quote covers come
+    // back as one span. One range per run drew a line of an emoji and bold text as the emoji's top
+    // half beside the text's bottom half.
+    func testQuoteOverSeveralRunsOfALineIsOneSpan() {
+        // Display: the emoji placeholder, " ", "Chain or belt?" (16); flat: "⚙️" (2), " ", the text (17).
+        let adapter = self.adapter([
+            self.stamped(.concat([.textCustomEmoji(fileId: 1, alt: "⚙️"), .plain(" "), .bold(.plain("Chain or belt?"))]), node: self.first)
+        ])
+        let ranges = adapter.ranges(showing: [(id: self.first, range: 0 ..< 17)])
+        XCTAssertEqual(ranges, [NSRange(location: 0, length: 16)])
+        XCTAssertEqual(ranges.compactMap { adapter.textRangeRects(in: $0) }.flatMap(\.rects).count, 1)
     }
 }
