@@ -13,6 +13,7 @@ final class QrStudioEmojiTabView: UIView {
     var resolveUnicode: ((String) -> QrStudioEmojiItem?)?
     var toggle: ((QrStudioEmojiItem) -> Bool)?
     var push: ((ViewController) -> Void)?
+    var premiumRequired: (() -> Void)?
     var requestLayout: (() -> Void)?
     var scrollViewFound: ((UIScrollView) -> Void)?
     var isAnimatedUnicode: ((String) -> Bool)?
@@ -339,7 +340,7 @@ final class QrStudioEmojiTabView: UIView {
             let file = itemFile._parse()
             if file.isPremiumEmoji && !self.context.isPremium {
                 self.hapticFeedback.error()
-                self.push?(self.context.sharedContext.makePremiumIntroController(context: self.context, source: .animatedEmoji, forceDark: false, dismissed: nil))
+                self.premiumRequired?()
                 return
             }
             resolved = QrStudioEmojiItem(file: file, unicode: nil)

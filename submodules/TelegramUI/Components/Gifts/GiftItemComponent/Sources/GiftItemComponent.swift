@@ -1582,8 +1582,19 @@ public final class GiftItemComponent: Component {
                 }
             }
             
+            var drawsSelection = false
             switch component.mode {
             case .generic, .grid, .upgradePreview:
+                drawsSelection = true
+            case .profile:
+                if case .trimmedBackground = component.selectionStyle {
+                    drawsSelection = true
+                }
+            default:
+                break
+            }
+            switch component.mode {
+            case _ where drawsSelection:
                 let lineWidth: CGFloat = 2.0
                 var selectionFrame = backgroundFrame.insetBy(dx: 2.0, dy: 2.0)
                 

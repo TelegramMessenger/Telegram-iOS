@@ -16,12 +16,10 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
     private static let nodeSide: CGFloat = 38.0
 
     private let context: AccountContext
-    private var isDark: Bool
-    private let meshView = QrStudioMeshBackgroundView(palette: QrStudioPalette.fallback)
+    private let meshView: QrStudioMeshBackgroundView
     private let nodesLayer = SimpleLayer()
     private var files: [TelegramMediaFile]
-    private var previousFiles: [TelegramMediaFile]?
-    private var changedAt: Double = -10.0
+    private var chain: [(files: [TelegramMediaFile], at: Double)] = []
     private var animations: [Int64: QrStudioPhasedAnimation] = [:]
     private var nodes: [Int64: QrStudioPatternNode] = [:]
     private var reusableNodes: [QrStudioPatternNode] = []
@@ -61,16 +59,14 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
         }
     }
 
-    init(context: AccountContext, files: [TelegramMediaFile], isDark: Bool = false) {
+    init(context: AccountContext, files: [TelegramMediaFile], palette: QrStudioPalette) {
         self.context = context
         self.files = files
-        self.isDark = isDark
+        self.meshView = QrStudioMeshBackgroundView(palette: palette)
 
         super.init(frame: CGRect())
 
-        self.backgroundColor = .white
         self.clipsToBounds = true
-        self.meshView.alpha = isDark ? 1.0 : 0.0
         self.addSubview(self.meshView)
         self.layer.addSublayer(self.nodesLayer)
     }
@@ -93,37 +89,31 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
 
     func setVisible(_ isVisible: Bool) {
         self.isVisible = isVisible
-        self.meshView.setVisible(isVisible && self.isDark)
+        self.meshView.setVisible(isVisible)
         for (_, animation) in self.animations {
             animation.setPaused(!isVisible)
         }
-    }
-
-    func setDark(_ isDark: Bool) {
-        guard self.isDark != isDark else {
-            return
-        }
-        self.isDark = isDark
-        self.meshView.setVisible(self.isVisible && isDark)
-        UIView.animate(withDuration: 0.45, delay: 0.0, options: [.curveEaseInOut, .allowUserInteraction], animations: {
-            self.meshView.alpha = isDark ? 1.0 : 0.0
-        })
     }
 
     func updateFiles(_ files: [TelegramMediaFile], at time: Double) {
         guard files.map({ $0.fileId }) != self.files.map({ $0.fileId }) else {
             return
         }
-        self.previousFiles = self.files
+        if self.chain.isEmpty {
+            self.chain = [(self.files, -10.0)]
+        }
+        self.chain.append((files, time))
+        while self.chain.count > 1, self.chain[1].at < time - 0.8 {
+            self.chain.removeFirst()
+        }
         self.files = files
-        self.changedAt = time
     }
 
     private func animation(for file: TelegramMediaFile) -> QrStudioPhasedAnimation {
         if let current = self.animations[file.fileId.id] {
             return current
         }
-        let animation = QrStudioPhasedAnimation(context: self.context, file: file, pointSize: CGSize(width: QrStudioEmojiPatternView.nodeSide, height: QrStudioEmojiPatternView.nodeSide), hostLayer: self.layer, placeholderColor: self.isDark ? UIColor(white: 1.0, alpha: 0.12) : UIColor(white: 0.0, alpha: 0.08))
+        let animation = QrStudioPhasedAnimation(context: self.context, file: file, pointSize: CGSize(width: QrStudioEmojiPatternView.nodeSide, height: QrStudioEmojiPatternView.nodeSide), hostLayer: self.layer, placeholderColor: UIColor(white: 1.0, alpha: 0.12))
         animation.setPaused(!self.isVisible)
         self.animations[file.fileId.id] = animation
         return animation
@@ -134,15 +124,15 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
     }
 
     func tick(time: Double, pan: QrStudioPan, drift: QrStudioDrift, tilt: SIMD2<Double>) {
-        if self.isVisible && self.isDark {
+        if self.isVisible {
             self.meshView.tick(time: time, pan: pan, drift: drift, tilt: tilt)
         }
         guard self.isVisible, !self.files.isEmpty, self.size.width > 0.0, self.size.height > 0.0 else {
             return
         }
 
-        if self.previousFiles != nil, time - self.changedAt > 1.0 {
-            self.previousFiles = nil
+        if let last = self.chain.last, time - last.at > 1.0 {
+            self.chain = []
             let currentIds = Set(self.files.map { $0.fileId.id })
             for (_, node) in self.nodes {
                 if let fileId = node.fileId, !currentIds.contains(fileId) {
@@ -175,19 +165,32 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
                 continue
             }
 
-            var fileIndex = qrStudioEmojiIndex(r: cell.r, c: cell.c, count: self.files.count)
-            var pop: Double = 1.0
-            if let previousFiles = self.previousFiles, !previousFiles.isEmpty {
-                let previousIndex = qrStudioEmojiIndex(r: cell.r, c: cell.c, count: previousFiles.count)
-                let local = QrStudioCurve.clamp01((time - self.changedAt - cell.hash * 0.3) / 0.45)
-                if previousFiles[previousIndex].fileId != self.files[fileIndex].fileId && local < 1.0 {
-                    if local < 0.3 {
-                        pop = max(0.0, 1.0 - local / 0.4)
-                        fileIndex = -1 - previousIndex
-                    } else {
-                        pop = QrStudioCurve.backOut((local - 0.3) / 0.7)
-                    }
+            func pick(_ files: [TelegramMediaFile]) -> TelegramMediaFile? {
+                return files.isEmpty ? nil : files[qrStudioEmojiIndex(r: cell.r, c: cell.c, count: files.count)]
+            }
+            let steps = self.chain.isEmpty ? [(files: self.files, at: -10.0)] : self.chain
+            var shown = pick(steps[0].files)
+            var grow: Double = 1.0
+            var shrinking: (file: TelegramMediaFile?, pop: Double)?
+            for step in steps.dropFirst() {
+                let next = pick(step.files)
+                guard next?.fileId != shown?.fileId else {
+                    continue
                 }
+                let local = QrStudioCurve.clamp01((time - step.at - cell.hash * 0.3) / 0.45)
+                let shrink = grow * max(0.0, 1.0 - local / 0.4)
+                shrinking = shrink > 0.01 ? (shown, shrink) : nil
+                shown = next
+                grow = local < 0.3 ? 0.0 : QrStudioCurve.backOut((local - 0.3) / 0.7)
+            }
+            let file: TelegramMediaFile?
+            let pop: Double
+            if grow <= 0.01, let shrinking {
+                file = shrinking.file
+                pop = shrinking.pop
+            } else {
+                file = shown
+                pop = grow
             }
 
             let key = self.nodeKey(r: cell.r, c: cell.c)
@@ -207,14 +210,6 @@ final class QrStudioEmojiPatternView: UIView, QrStudioBackgroundContent {
             }
             node.isUsed = true
 
-            let file: TelegramMediaFile?
-            if fileIndex >= 0 {
-                file = self.files[fileIndex]
-            } else if let previousFiles = self.previousFiles {
-                file = previousFiles[-1 - fileIndex]
-            } else {
-                file = nil
-            }
             if node.fileId != file?.fileId.id {
                 self.detach(node)
                 node.fileId = file?.fileId.id

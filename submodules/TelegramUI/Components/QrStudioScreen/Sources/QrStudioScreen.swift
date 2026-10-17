@@ -59,6 +59,8 @@ private final class QrStudioScreenComponent: Component {
         private var emojiTab: QrStudioEmojiTabView?
 
         private let codePill = QrStudioCodePillView()
+        private let emojiStripView = QrStudioEmojiStripView()
+        private var emojiStripRestCenter = CGPoint()
         private let toastView = QrStudioToastView()
         private var pendingCodeAction: PendingCodeAction?
         private var themesDisposable: Disposable?
@@ -91,6 +93,7 @@ private final class QrStudioScreenComponent: Component {
         private var contactToken: ExportedContactToken?
         private let contactTokenDisposable = MetaDisposable()
         private var contactTokenGeneration = 0
+        private var contactTokenStaleAttempt = 0
         private var didRequestContactToken = false
 
         private let pan = QrStudioPan()
@@ -127,8 +130,6 @@ private final class QrStudioScreenComponent: Component {
         private var unicodeEmojiFiles: [String: TelegramMediaFile] = [:]
         private var giftsContext: ProfileGiftsContext?
         private var giftsDisposable: Disposable?
-        private var emojiInkProbes: [Int64: QrStudioPhasedAnimation] = [:]
-        private var emojiInks: [Int64: QrStudioColor] = [:]
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -141,9 +142,9 @@ private final class QrStudioScreenComponent: Component {
                 switch backdrop {
                 case let .color(palette):
                     return QrStudioMeshBackgroundView(palette: palette)
-                case let .emoji(items, isDark):
+                case let .emoji(items, palette):
                     if let context = self?.component?.context {
-                        return QrStudioEmojiPatternView(context: context, files: items.map { $0.file }, isDark: isDark)
+                        return QrStudioEmojiPatternView(context: context, files: items.map { $0.file }, palette: palette)
                     }
                     return QrStudioMeshBackgroundView(palette: QrStudioPalette.fallback)
                 case let .gift(gift):
@@ -159,9 +160,8 @@ private final class QrStudioScreenComponent: Component {
                 }
             }
             self.stage.updateContent = { content, backdrop in
-                if case let .emoji(items, isDark) = backdrop, let content = content as? QrStudioEmojiPatternView {
+                if case let .emoji(items, _) = backdrop, let content = content as? QrStudioEmojiPatternView {
                     content.updateFiles(items.map { $0.file }, at: QrStudioClock.now)
-                    content.setDark(isDark)
                 }
             }
             self.presentationContainer.addSubview(self.stage)
@@ -598,7 +598,6 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             self.look.palettes = qrStudioProfilePalettes(context.peerNameColors)
-            self.look.emojiDark = true
             self.backdropsDisposable = (context.engine.peers.shareThemeBackdrops()
             |> deliverOnMainQueue).startStrict(next: { [weak self] backdrops in
                 guard let self else {
@@ -607,7 +606,7 @@ private final class QrStudioScreenComponent: Component {
                 func rgb(_ value: Int32) -> UInt32 {
                     return UInt32(bitPattern: value) & 0xffffff
                 }
-                let palettes = backdrops.map { QrStudioPalette.backdrop(id: $0.id, center: rgb($0.centerColor), edge: rgb($0.edgeColor), pattern: rgb($0.patternColor), text: rgb($0.textColor)) }
+                let palettes = qrStudioSortedBackdrops(backdrops).map { QrStudioPalette.backdrop(id: $0.id, center: rgb($0.centerColor), edge: rgb($0.edgeColor), pattern: rgb($0.patternColor), text: rgb($0.textColor)) }
                 let wasLoaded = self.areBackdropsLoaded
                 self.areBackdropsLoaded = true
                 if self.look.backdrops != palettes {
@@ -806,14 +805,17 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
-            self.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
+            self.showToast(.image("Chat/Context Menu/Info"), strings.QrStudio_Toast_Failed)
         }
 
-        private func showToast(_ icon: String, _ text: String, animation: String? = nil) {
+        private func showToast(_ icon: QrStudioToastIcon, _ text: String, action: QrStudioToast.Action? = nil) {
             if self.toastView.superview == nil {
-                self.presentationContainer.insertSubview(self.toastView, belowSubview: self.sheetView)
+                if let component = self.component {
+                    self.toastView.lottieSettings = component.context.lottieRenderingSettings
+                }
             }
-            self.toastView.show(QrStudioToast(icon: icon, text: text, animation: animation), isLight: self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop))
+            self.presentationContainer.addSubview(self.toastView)
+            self.toastView.show(QrStudioToast(icon: icon, text: text, action: action), isLight: self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop))
             self.layoutToast()
         }
 
@@ -821,8 +823,11 @@ private final class QrStudioScreenComponent: Component {
             guard self.toastView.superview != nil else {
                 return
             }
-            let shareView = self.shareButtonView
-            self.toastView.center = CGPoint(x: self.bounds.midX, y: shareView.frame.minY - 16.0 - self.toastView.bounds.height * 0.5)
+            if let follow = self.sheetFollow(sample: self.sheetView.presentedSample) {
+                self.toastView.center = follow.toastCenter
+            } else {
+                self.toastView.center = CGPoint(x: self.bounds.midX, y: self.shareButtonView.frame.minY - 16.0 - self.toastView.bounds.height * 0.5)
+            }
         }
 
         private struct PendingCodeAction {
@@ -879,16 +884,16 @@ private final class QrStudioScreenComponent: Component {
             switch action {
             case .expire:
                 if wasFree {
-                    self.showToast("Chat/Context Menu/Timer", strings.QrStudio_Toast_Expires)
+                    self.showToast(.timer, strings.QrStudio_Toast_Expires)
                 } else {
-                    self.showToast("Chat/Context Menu/Stars", strings.QrStudio_Toast_FeeRemoved)
+                    self.showToast(.timer, strings.QrStudio_Toast_FeeRemoved)
                 }
             case .permanent:
-                self.showToast("Chat/Context Menu/Timer", strings.QrStudio_Toast_Permanent)
+                self.showToast(.clock, strings.QrStudio_Toast_Permanent)
             case .renew:
-                self.showToast("Chat/Context Menu/Reload", strings.QrStudio_Toast_NewCode)
+                self.showToast(.success, strings.QrStudio_Toast_NewCode)
             case .restore:
-                self.showToast("Chat/Context Menu/Stars", strings.QrStudio_Toast_FeeRestored)
+                self.showToast(.star, strings.QrStudio_Toast_FeeRestored)
             }
             switch action {
             case .expire:
@@ -920,9 +925,6 @@ private final class QrStudioScreenComponent: Component {
         private func sheetTheme(_ theme: PresentationTheme) -> PresentationTheme {
             if theme.overallDarkAppearance {
                 return theme
-            }
-            if case let .emoji(_, isDark) = self.look.backdrop, isDark {
-                return defaultDarkColorPresentationTheme
             }
             return theme
         }
@@ -1026,40 +1028,6 @@ private final class QrStudioScreenComponent: Component {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
         }
 
-        private func updateEmojiInk(context: AccountContext) {
-            guard case .emoji = self.look.backdrop, let file = self.look.inkEmoji?.file else {
-                if case .emoji = self.look.backdrop, self.look.emojiInk != nil {
-                    self.look.emojiInk = nil
-                }
-                return
-            }
-            let fileId = file.fileId.id
-            if let ink = self.emojiInks[fileId] {
-                if self.look.emojiInk != ink {
-                    self.look.emojiInk = ink
-                }
-                return
-            }
-            guard self.emojiInkProbes[fileId] == nil else {
-                return
-            }
-            let probe = QrStudioPhasedAnimation(context: context, file: file, pointSize: CGSize(width: 38.0, height: 38.0), hostLayer: self.layer)
-            self.emojiInkProbes[fileId] = probe
-            probe.firstFrameImage(completion: { [weak self] image in
-                guard let self else {
-                    return
-                }
-                self.emojiInkProbes.removeValue(forKey: fileId)
-                guard let image else {
-                    return
-                }
-                self.emojiInks[fileId] = QrStudioColor.dominant(of: image).ink
-                let isPending = self.pendingAnimateIn != nil
-                self.requestUpdate(transition: isPending ? .immediate : .easeInOut(duration: 0.5))
-                self.revealIfReady()
-            })
-        }
-
         func updateVisibility(_ isVisible: Bool) {
             guard self.isVisible != isVisible else {
                 return
@@ -1067,7 +1035,7 @@ private final class QrStudioScreenComponent: Component {
             self.isVisible = isVisible
             self.stage.setVisible(isVisible)
             if isVisible {
-                if let component = self.component, component.temporary, let token = self.contactToken, qrStudioTokenIsExpired(expires: Double(token.expires), now: Date().timeIntervalSince1970) {
+                if let component = self.component, component.temporary, let token = self.contactToken, qrStudioTokenIsExpired(expires: Double(token.expires), now: Double(component.context.account.network.getApproximateRemoteTimestamp())) {
                     self.requestContactToken(context: component.context)
                 }
                 self.deviceTilt.start()
@@ -1115,9 +1083,6 @@ private final class QrStudioScreenComponent: Component {
                 return false
             }
             if self.look.themeId != nil && self.look.selectedTheme == nil && self.look.kind == .color {
-                return false
-            }
-            if case .emoji = self.look.backdrop, self.look.emojiInk == nil {
                 return false
             }
             if self.look.kind == .gift, self.look.selectedGift == nil, !self.areGiftsLoaded {
@@ -1185,6 +1150,7 @@ private final class QrStudioScreenComponent: Component {
             self.updateStatusBar()
             self.setPresentationRounded(true)
             self.isAnimatingIn = true
+            (self.card.view as? QrStudioCardComponent.View)?.playCodeReveal(delay: 0.03)
             let from = self.presentationOffset
             self.setPresentationOffset(0.0)
             self.presentationContainer.layer.animate(from: from as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.translation.y", timingFunction: kCAMediaTimingFunctionSpring, duration: QrStudioPresentation.openDuration, additive: true, completion: { [weak self] _ in
@@ -1328,7 +1294,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             let workItem = DispatchWorkItem { [weak self] in
-                guard let self, self.sheetView.currentTab == kind else {
+                guard let self, self.sheetView.isOpen, self.sheetView.currentTab == kind else {
                     return
                 }
                 self.isLookModified = true
@@ -1395,12 +1361,12 @@ private final class QrStudioScreenComponent: Component {
                 }
             } else if shownTab == .color, let backdropId = self.look.backdropId, self.look.backdrops.contains(where: { $0.id == .backdrop(backdropId) }) {
                 colorsSelection = .palette(.backdrop(backdropId))
-            } else if shownTab == .color, let colorId = self.look.colorId, self.look.palettes.contains(where: { $0.id == .color(colorId) }) {
-                colorsSelection = .palette(.color(colorId))
+            } else if shownTab == .color, self.look.themeId == nil, let paletteId = self.look.palette.id {
+                colorsSelection = .palette(paletteId)
             } else {
                 colorsSelection = nil
             }
-            colorsTab.update(size: sheetSize, theme: self.sheetTheme(environment.theme), strings: environment.strings, themes: self.look.themes, palettes: self.look.palettes + self.look.backdrops, selection: colorsSelection, revealSelection: revealTab == .color)
+            colorsTab.update(size: sheetSize, theme: self.sheetTheme(environment.theme), strings: environment.strings, themes: self.look.themes, palettes: self.look.backdrops, selection: colorsSelection, revealSelection: revealTab == .color)
 
             let emojiTab: QrStudioEmojiTabView
             if let current = self.emojiTab {
@@ -1433,6 +1399,9 @@ private final class QrStudioScreenComponent: Component {
                 emojiTab.push = { [weak self] controller in
                     (self?.environment?.controller() as? ViewController)?.push(controller)
                 }
+                emojiTab.premiumRequired = { [weak self] in
+                    self?.presentPremiumEmojiToast()
+                }
                 emojiTab.requestLayout = { [weak self] in
                     self?.requestUpdate(transition: .immediate)
                 }
@@ -1444,30 +1413,97 @@ private final class QrStudioScreenComponent: Component {
             }
             emojiTab.update(size: sheetSize, theme: self.sheetTheme(environment.theme), strings: environment.strings, deviceMetrics: environment.deviceMetrics, selected: self.isEmojiPlaceholder ? [] : self.look.emoji, animatedCount: self.unicodeEmojiFiles.count)
 
-            if !self.look.gifts.isEmpty {
-                let giftsTab: QrStudioGiftsTabView
-                if let current = self.giftsTab {
-                    giftsTab = current
-                } else {
-                    giftsTab = QrStudioGiftsTabView()
-                    giftsTab.tintMaskContainer = self.sheetView.tintMaskContainer(for: .gift)
-                    giftsTab.selected = { [weak self] id in
-                        guard let self else {
-                            return
-                        }
-                        self.isLookModified = true
-                        self.look.selectGift(id: id)
-                        self.requestUpdate(transition: .easeInOut(duration: 0.35))
+            let giftsTab: QrStudioGiftsTabView
+            if let current = self.giftsTab {
+                giftsTab = current
+            } else {
+                giftsTab = QrStudioGiftsTabView()
+                giftsTab.tintMaskContainer = self.sheetView.tintMaskContainer(for: .gift)
+                giftsTab.selected = { [weak self] id in
+                    guard let self else {
+                        return
                     }
-                    giftsTab.loadMore = { [weak self] in
-                        self?.giftsContext?.loadMore()
-                    }
-                    self.giftsTab = giftsTab
-                    self.sheetView.setContent(giftsTab, for: .gift)
-                    self.sheetView.attachScrollView(giftsTab.scrollView)
+                    self.isLookModified = true
+                    self.look.selectGift(id: id)
+                    self.requestUpdate(transition: .easeInOut(duration: 0.35))
                 }
-                giftsTab.update(size: sheetSize, context: component.context, theme: self.sheetTheme(environment.theme), strings: environment.strings, gifts: self.look.gifts, selectedId: self.look.kind == .gift || shownTab == .gift ? self.look.giftId : nil, revealSelection: revealTab == .gift, scrollsToSelection: self.pinnedGiftId == nil || self.look.giftId != self.pinnedGiftId)
+                giftsTab.loadMore = { [weak self] in
+                    self?.giftsContext?.loadMore()
+                }
+                giftsTab.browse = { [weak self] in
+                    self?.openGiftShop()
+                }
+                self.giftsTab = giftsTab
+                self.sheetView.setContent(giftsTab, for: .gift)
+                self.sheetView.attachScrollView(giftsTab.scrollView)
             }
+            giftsTab.update(size: sheetSize, context: component.context, theme: self.sheetTheme(environment.theme), strings: environment.strings, gifts: self.look.gifts, isLoaded: self.areGiftsLoaded, selectedId: self.look.kind == .gift || shownTab == .gift ? self.look.giftId : nil, revealSelection: revealTab == .gift, scrollsToSelection: self.pinnedGiftId == nil || self.look.giftId != self.pinnedGiftId)
+        }
+
+        private func presentPremiumEmojiToast() {
+            guard let component = self.component else {
+                return
+            }
+            let context = component.context
+            let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+            self.showToast(.star, strings.QrStudio_Toast_PremiumEmoji, action: QrStudioToast.Action(title: strings.QrStudio_Toast_Subscribe, perform: { [weak self] in
+                guard let controller = self?.environment?.controller() as? ViewController else {
+                    return
+                }
+                controller.push(context.sharedContext.makePremiumIntroController(context: context, source: .animatedEmoji, forceDark: false, dismissed: nil))
+            }))
+        }
+
+        private var emojiStripItems: [QrStudioEmojiItem] {
+            return self.isEmojiPlaceholder ? [] : self.look.emoji
+        }
+
+        private func updateEmojiStripVisibility() {
+            let isShown = self.sheetView.isOpen && self.sheetView.currentTab == .emoji && (self.environment?.inputHeight ?? 0.0) <= 0.0 && !self.emojiStripItems.isEmpty
+            self.emojiStripView.setShown(isShown, animated: true)
+        }
+
+        private func updateEmojiStrip(component: QrStudioScreenComponent, environment: EnvironmentType, transition: ComponentTransition) {
+            if self.emojiStripView.superview == nil {
+                self.emojiStripView.tap = { [weak self] item in
+                    guard let self else {
+                        return
+                    }
+                    guard self.look.toggleEmoji(item) else {
+                        UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        return
+                    }
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    self.didPickEmoji = true
+                    self.isLookModified = true
+                    self.requestUpdate(transition: .easeInOut(duration: 0.35))
+                }
+                self.presentationContainer.insertSubview(self.emojiStripView, aboveSubview: self.sheetView)
+            }
+            guard let geometry = self.sheetView.geometry else {
+                return
+            }
+            let items = self.emojiStripItems
+            let size = CGSize(width: QrStudioEmojiStripView.width(count: max(1, items.count)), height: QrStudioEmojiStripView.height)
+            self.emojiStripRestCenter = CGPoint(x: geometry.capsule.midX, y: geometry.capsule.midY)
+            let stripTransition: ComponentTransition = self.emojiStripView.isShown ? .spring(duration: 0.4) : .immediate
+            stripTransition.setBounds(view: self.emojiStripView, bounds: CGRect(origin: CGPoint(), size: size))
+            if let follow = self.sheetFollow(sample: self.sheetView.presentedSample) {
+                self.emojiStripView.center = follow.stripCenter
+            } else {
+                self.emojiStripView.center = self.emojiStripRestCenter
+            }
+            self.emojiStripView.update(context: component.context, emoji: items, isDark: !self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop), size: size, transition: stripTransition)
+            self.updateEmojiStripVisibility()
+        }
+
+        private func openGiftShop() {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            let context = component.context
+            let giftsController = context.sharedContext.makeGiftOptionsController(context: context, peerId: context.account.peerId, premiumOptions: [], hasBirthday: false, completion: nil)
+            controller.push(giftsController)
         }
 
         @objc private func handleStageTap(_ recognizer: UITapGestureRecognizer) {
@@ -1486,6 +1522,8 @@ private final class QrStudioScreenComponent: Component {
             var cardScale: CGFloat
             var pillCenter: CGPoint
             var buttonsAlpha: CGFloat
+            var toastCenter: CGPoint
+            var stripCenter: CGPoint
         }
 
         private static let sheetFollowKey = "qrSheetFollow"
@@ -1497,15 +1535,21 @@ private final class QrStudioScreenComponent: Component {
             let openness = sample.openness(travel: geometry.sheet.height)
             let search = sample.search
             let groupY = self.cardRestCenter.y - self.cardSize.height * 0.5 + (self.cardSize.height + QrStudioCardMetrics.pillReserve) * 0.5
-            let rest = QrStudioSheetGeometry.raise(card: self.cardSize.height, groupY: groupY, panelTop: geometry.sheet.minY, gap: 35.0)
-            let lifted = QrStudioSheetGeometry.raise(card: self.cardSize.height, groupY: groupY, panelTop: geometry.sheet.minY - geometry.searchLift(keyboard: self.sheetView.keyboardHeight), gap: 14.0)
+            let panelTop = geometry.sheetFrame(height: sample.height).minY
+            let rest = QrStudioSheetGeometry.raise(card: self.cardSize.height, groupY: groupY, panelTop: panelTop, gap: 35.0)
+            let lifted = QrStudioSheetGeometry.raise(card: self.cardSize.height, groupY: groupY, panelTop: panelTop - geometry.searchLift(keyboard: self.sheetView.keyboardHeight), gap: 14.0)
             let fit = rest.fit + (lifted.fit - rest.fit) * search
             let lift = rest.lift + (lifted.lift - rest.lift) * search
             let scale = 1.0 + (fit - 1.0) * openness
             let cardCenter = CGPoint(x: self.cardRestCenter.x, y: self.cardRestCenter.y + lift * openness + self.cardSize.height * (1.0 - scale) * 0.5)
             let pillCenter = CGPoint(x: cardCenter.x, y: cardCenter.y + self.cardSize.height * scale * 0.5 + 16.0 + QrStudioCodePillView.height * 0.5)
             let t = min(1.0, max(0.0, openness / 0.55))
-            return SheetFollow(cardCenter: cardCenter, cardScale: scale, pillCenter: pillCenter, buttonsAlpha: 1.0 - t * t * (3.0 - 2.0 * t))
+            let toastHalfHeight = self.toastView.bounds.height * 0.5
+            var toastY = self.shareButtonView.frame.minY - 16.0 - toastHalfHeight
+            if let windowFrame = self.sheetView.windowFrame(sample: sample) {
+                toastY = min(toastY, windowFrame.minY - 16.0 - toastHalfHeight)
+            }
+            return SheetFollow(cardCenter: cardCenter, cardScale: scale, pillCenter: pillCenter, buttonsAlpha: 1.0 - t * t * (3.0 - 2.0 * t), toastCenter: CGPoint(x: self.bounds.midX, y: toastY), stripCenter: CGPoint(x: self.emojiStripRestCenter.x, y: self.emojiStripRestCenter.y + max(0.0, sample.pull)))
         }
 
         private func liftedCardCenter() -> CGPoint {
@@ -1530,6 +1574,13 @@ private final class QrStudioScreenComponent: Component {
             }
             self.saveButton.isUserInteractionEnabled = !self.sheetView.isOpen
             self.shareButtonView.isUserInteractionEnabled = !self.sheetView.isOpen
+            self.updateEmojiStripVisibility()
+            if self.toastView.superview != nil {
+                self.toastView.center = follow.toastCenter
+            }
+            if self.emojiStripView.superview != nil {
+                self.emojiStripView.center = follow.stripCenter
+            }
             CATransaction.commit()
             if updateButtons {
                 self.setButtonsOpacity([NSNumber(value: Float(follow.buttonsAlpha))], duration: 0.0)
@@ -1576,7 +1627,7 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func removeSheetProgressAnimations() {
-            var layers: [CALayer] = [self.codePill.layer]
+            var layers: [CALayer] = [self.codePill.layer, self.toastView.layer, self.emojiStripView.layer]
             if let cardView = self.card.view {
                 layers.append(cardView.layer)
             }
@@ -1601,6 +1652,12 @@ private final class QrStudioScreenComponent: Component {
             }
             if self.codePillSize.width > 0.0 {
                 self.addSheetKeyframes(self.codePill.layer, "position", follows.map { NSValue(cgPoint: $0.pillCenter) }, duration: duration)
+            }
+            if self.toastView.superview != nil {
+                self.addSheetKeyframes(self.toastView.layer, "position", follows.map { NSValue(cgPoint: $0.toastCenter) }, duration: duration)
+            }
+            if self.emojiStripView.superview != nil {
+                self.addSheetKeyframes(self.emojiStripView.layer, "position", follows.map { NSValue(cgPoint: $0.stripCenter) }, duration: duration)
             }
             self.setButtonsOpacity(follows.map { NSNumber(value: Float($0.buttonsAlpha)) }, duration: duration)
         }
@@ -1647,12 +1704,23 @@ private final class QrStudioScreenComponent: Component {
                 guard let self, self.contactTokenGeneration == generation else {
                     return
                 }
-                if let token {
-                    self.contactToken = token
-                    self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                let now = Double(context.account.network.getApproximateRemoteTimestamp())
+                let delay: Double
+                if let token, !qrStudioTokenIsExpired(expires: Double(token.expires), now: now) {
+                    self.contactTokenStaleAttempt = 0
+                    if self.contactToken?.url != token.url || self.contactToken?.expires != token.expires {
+                        self.contactToken = token
+                        self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                    }
+                    delay = qrStudioTokenRefreshDelay(expires: Double(token.expires), now: now, staleAttempt: 0)
+                } else {
+                    if self.contactToken == nil, let token {
+                        self.contactToken = token
+                        self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                    }
+                    delay = qrStudioTokenRefreshDelay(expires: Double(token?.expires ?? 0), now: now, staleAttempt: self.contactTokenStaleAttempt)
+                    self.contactTokenStaleAttempt += 1
                 }
-
-                let delay = token.flatMap { qrStudioTokenRefreshDelay(expires: Double($0.expires), now: Date().timeIntervalSince1970) } ?? 15.0
                 Queue.mainQueue().after(delay, { [weak self] in
                     guard let self, self.contactTokenGeneration == generation, let component = self.component else {
                         return
@@ -1683,18 +1751,15 @@ private final class QrStudioScreenComponent: Component {
                     let delay = self?.shareMenuCooldown.dismissDelay ?? 0.0
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                         f(.default)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: action)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42, execute: action)
                     }
                 })))
             }
-            add(strings.QrStudio_Share_Share, "Chat/Context Menu/Share", { [weak self] in
-                self?.shareImage()
-            })
             add(strings.QrStudio_Share_CopyLink, "Chat/Context Menu/Link", { [weak self] in
                 self?.copyLink()
             })
-            add(strings.QrStudio_Share_SaveImage, "Chat/Context Menu/Download", { [weak self] in
-                self?.saveImage()
+            add(strings.QrStudio_Share_Share, "Chat/Context Menu/Share", { [weak self] in
+                self?.shareImage()
             })
             let contextController = makeContextController(presentationData: presentationData, source: .reference(QrStudioReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items), usesClearGlass: QrStudioGlass.isClear(QrStudioGlass.tint(self.look.backdrop)), glassBlurRadius: QrStudioGlass.blurRadius(QrStudioGlass.tint(self.look.backdrop)))), gesture: nil)
             self.shareMenuCooldown.markOpened()
@@ -1714,7 +1779,7 @@ private final class QrStudioScreenComponent: Component {
             }
             UIPasteboard.general.string = link
             let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
-            self.showToast("Chat/Context Menu/Link", strings.QrStudio_Toast_LinkCopied)
+            self.showToast(.copy, strings.QrStudio_Toast_LinkCopied)
         }
 
         private func exportCardImage(scale: CGFloat, staticPlane: Bool) -> (image: CGImage, screenCard: CGRect, planeRect: CGRect)? {
@@ -1753,7 +1818,7 @@ private final class QrStudioScreenComponent: Component {
                 }
                 completion(QrStudioExportScene(background: .image(snapshot), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
                 return EmptyDisposable
-            case let .emoji(items, _):
+            case let .emoji(items, palette):
                 let side = Int(56.0 * canvas.scale)
                 let patternItems = QrStudioEmojiPatternView.canonicalExportItems(size: screenSize, fileCount: items.count)
                 let signals = items.map { qrStudioDecodeExportSticker(context: context, file: $0.file, pixelSide: side, tint: $0.isTemplate ? ink : nil, firstFrameOnly: true) }
@@ -1761,7 +1826,7 @@ private final class QrStudioScreenComponent: Component {
                 |> take(1)
                 |> deliverOnMainQueue).startStandalone(next: { stickers in
                     let loaded = stickers.map { $0 ?? QrStudioExportSticker(frames: [], period: 0.0) }
-                    completion(QrStudioExportScene(background: .emoji(stickers: loaded, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
+                    completion(QrStudioExportScene(background: .emoji(colors: palette.colors, stickers: loaded, items: patternItems), card: cardImage, screenSize: screenSize, screenCard: screenCard, isLight: isLight))
                 })
             case let .gift(gift):
                 let symbol = qrStudioDecodeExportSticker(context: context, file: gift.pattern, pixelSide: Int(28.0 * canvas.scale), tint: gift.patternColor.uiColor.withAlphaComponent(0.42), firstFrameOnly: true)
@@ -1816,21 +1881,22 @@ private final class QrStudioScreenComponent: Component {
                     return
                 }
                 guard let scene else {
-                    self.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
+                    self.showToast(.image("Chat/Context Menu/Info"), strings.QrStudio_Toast_Failed)
                     return
                 }
                 DispatchQueue.global(qos: .userInitiated).async {
                     let image = qrStudioExportImage(scene, canvas: .story)
                     DispatchQueue.main.async {
                         guard let image else {
-                            self.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
+                            self.showToast(.image("Chat/Context Menu/Info"), strings.QrStudio_Toast_Failed)
                             return
                         }
                         self.saveToPhotos(image: image, completion: { success in
+                            UINotificationFeedbackGenerator().notificationOccurred(success ? .success : .error)
                             if success {
-                                self.showToast("Chat/Context Menu/Download", strings.QrStudio_Toast_ImageSaved, animation: "anim_savemedia")
+                                self.showToast(.save, strings.QrStudio_Toast_ImageSaved)
                             } else {
-                                self.showToast("Chat/Context Menu/Info", strings.QrStudio_Toast_Failed)
+                                self.showToast(.image("Chat/Context Menu/Info"), strings.QrStudio_Toast_Failed)
                             }
                         })
                     }
@@ -1902,7 +1968,6 @@ private final class QrStudioScreenComponent: Component {
             self.loadGifts(component: component)
             self.loadPaidPrice(component: component)
             self.syncNoPaidToken(context: component.context)
-            self.updateEmojiInk(context: component.context)
 
             let backdrop = self.look.backdrop
             let isDark = !backdrop.isLight
@@ -1917,7 +1982,11 @@ private final class QrStudioScreenComponent: Component {
 
             self.updateStatusBar()
 
-            let cardCenterY = QrStudioCardMetrics.cardCenterY(screenHeight: availableSize.height, showsUsername: username != nil)
+            let linkExpires = username == nil && component.temporary ? self.contactToken.flatMap { token -> Int32 in
+                let skew = Int32(Date().timeIntervalSince1970) - component.context.account.network.getApproximateRemoteTimestamp()
+                return token.expires + skew
+            } : nil
+            let cardCenterY = QrStudioCardMetrics.cardCenterY(screenHeight: availableSize.height, showsUsername: username != nil || linkExpires != nil)
             let cardCenter = CGPoint(x: availableSize.width * 0.5, y: cardCenterY)
             self.cardRestCenter = cardCenter
 
@@ -1925,6 +1994,7 @@ private final class QrStudioScreenComponent: Component {
             let bottomInset = rowInset
             self.sheetView.frame = CGRect(origin: CGPoint(), size: availableSize)
             self.sheetView.isHidden = !self.canEdit(component)
+            self.sheetView.compactHeights[.gift] = self.areGiftsLoaded ? QrStudioGiftsTabView.compactHeight(count: self.look.gifts.count, width: availableSize.width, bottomInset: environment.safeInsets.bottom) : nil
             self.sheetView.update(
                 size: availableSize,
                 safeBottom: bottomInset,
@@ -1959,6 +2029,7 @@ private final class QrStudioScreenComponent: Component {
                 component: AnyComponent(QrStudioCardComponent(
                     link: link,
                     username: username,
+                    expires: linkExpires,
                     ink: ink,
                     isLight: backdrop.isLight,
                     bounceToken: backdrop.cardSignature + link,
@@ -2024,7 +2095,7 @@ private final class QrStudioScreenComponent: Component {
             self.shareButtonView.update(size: CGSize(width: buttonSide, height: buttonSide), isDark: isDark, glassTint: glassTint, icon: "Navigation/Share", transition: transition)
             self.updateGlassButton(
                 self.saveButton,
-                icon: "Share/QrSaveIcon",
+                icon: "sf:arrow.down.to.line",
                 isDark: isDark,
                 glassTint: glassTint,
                 frame: CGRect(x: availableSize.width - sideInset - environment.safeInsets.right - buttonSide, y: bottomRowY, width: buttonSide, height: buttonSide),
@@ -2039,6 +2110,9 @@ private final class QrStudioScreenComponent: Component {
             }
             if self.isLookLoaded {
                 self.updateTabs(component: component, environment: environment)
+            }
+            if self.canEdit(component) {
+                self.updateEmojiStrip(component: component, environment: environment, transition: transition)
             }
             if let price = self.paidPrice {
                 let isAppearing = self.codePill.superview == nil
@@ -2312,4 +2386,99 @@ private final class QrStudioReferenceContentSource: ContextReferenceContentSourc
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, centersMorphedActions: self.centersActions)
     }
+}
+
+private let qrStudioBackdropOrder: [String] = [
+    "Black",
+    "Onyx Black",
+    "Gunmetal",
+    "Midnight Blue",
+    "Steel Grey",
+    "Roman Silver",
+    "Raspberry",
+    "Carmine",
+    "Fire Engine",
+    "Burnt Sienna",
+    "Tomato",
+    "Copper",
+    "Persimmon",
+    "Orange",
+    "Caramel",
+    "Mustard",
+    "Old Gold",
+    "Satin Gold",
+    "Amber",
+    "Pure Gold",
+    "Lemongrass",
+    "Malachite",
+    "Shamrock Green",
+    "Mint Green",
+    "Emerald",
+    "Pacific Green",
+    "Jade Green",
+    "Deep Cyan",
+    "Celtic Blue",
+    "Cobalt Blue",
+    "Neon Blue",
+    "Cyberpunk",
+    "Electric Indigo",
+    "Lavender",
+    "Grape",
+    "French Violet",
+    "Purple",
+    "Electric Purple",
+    "Fandango",
+    "Mexican Pink",
+    "Burgundy",
+    "Rosewood",
+    "Chestnut",
+    "Coral Red",
+    "Strawberry",
+    "Mystic Pearl",
+    "Carrot Juice",
+    "Light Olive",
+    "Khaki Green",
+    "Camo Green",
+    "Pistachio",
+    "Hunter Green",
+    "Pine Green",
+    "Gunship Green",
+    "Tactical Pine",
+    "Aquamarine",
+    "Pacific Cyan",
+    "Turquoise",
+    "Moonstone",
+    "Sky Blue",
+    "Azure Blue",
+    "Sapphire",
+    "Silver Blue",
+    "Indigo Dye",
+    "French Blue",
+    "Navy Blue",
+    "English Violet",
+    "Dark Lilac",
+    "Seal Brown",
+    "Chocolate",
+    "Cappuccino",
+    "Desert Sand",
+    "Dark Green",
+    "Ranger Green",
+    "Marine Blue",
+    "Ivory White",
+    "Platinum",
+    "Battleship Grey",
+    "Rifle Green",
+    "Feldgrau"
+]
+
+func qrStudioSortedBackdrops(_ backdrops: [TelegramShareThemeBackdrop]) -> [TelegramShareThemeBackdrop] {
+    var rank: [String: Int] = [:]
+    for (index, name) in qrStudioBackdropOrder.enumerated() {
+        rank[name] = index
+    }
+    return backdrops.enumerated().sorted { lhs, rhs in
+        let lhsRank = rank[lhs.element.name] ?? qrStudioBackdropOrder.count + lhs.offset
+        let rhsRank = rank[rhs.element.name] ?? qrStudioBackdropOrder.count + rhs.offset
+        return lhsRank < rhsRank
+    }.map { $0.element }
 }

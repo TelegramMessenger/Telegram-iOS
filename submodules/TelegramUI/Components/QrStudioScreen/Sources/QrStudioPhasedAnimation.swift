@@ -48,7 +48,6 @@ final class QrStudioPhasedAnimation {
     private let pixelSize: CGSize
     private let customColor: UIColor?
     private var members: [ObjectIdentifier: QrStudioPhaseMember] = [:]
-    private var firstFrameDisposable: Disposable?
     private var framesDisposable: Disposable?
     private var placeholder: CGImage?
     private var firstFrame: CGImage?
@@ -107,7 +106,6 @@ final class QrStudioPhasedAnimation {
     }
 
     deinit {
-        self.firstFrameDisposable?.dispose()
         self.framesDisposable?.dispose()
     }
 
@@ -160,15 +158,6 @@ final class QrStudioPhasedAnimation {
             return
         }
         layer.removeAnimation(forKey: QrStudioPhasedAnimation.animationKey)
-    }
-
-    func firstFrameImage(completion: @escaping (CGImage?) -> Void) {
-        self.firstFrameDisposable?.dispose()
-        self.firstFrameDisposable = self.context.animationRenderer.loadFirstFrameAsImage(cache: self.context.animationCache, itemId: self.itemId, size: self.pixelSize, fetch: self.fetch(), completion: { image in
-            Queue.mainQueue().async {
-                completion(image)
-            }
-        })
     }
 
     private var itemId: String {

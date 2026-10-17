@@ -127,7 +127,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             }
             let a = self.samples[index]
             let b = self.samples[index + 1]
-            return QrStudioSheetMotion.Sample(rise: a.rise + (b.rise - a.rise) * fraction, spread: a.spread + (b.spread - a.spread) * fraction, pull: a.pull + (b.pull - a.pull) * fraction, search: a.search + (b.search - a.search) * fraction)
+            return QrStudioSheetMotion.Sample(rise: a.rise + (b.rise - a.rise) * fraction, spread: a.spread + (b.spread - a.spread) * fraction, pull: a.pull + (b.pull - a.pull) * fraction, search: a.search + (b.search - a.search) * fraction, height: a.height + (b.height - a.height) * fraction)
         }
 
         func velocity(at time: Double) -> QrStudioSheetMotion.Sample {
@@ -138,7 +138,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             let a = self.samples[index]
             let b = self.samples[index + 1]
             let k = CGFloat(1.0 / QrStudioSheetView.sampleStep)
-            return QrStudioSheetMotion.Sample(rise: (b.rise - a.rise) * k, spread: (b.spread - a.spread) * k, pull: (b.pull - a.pull) * k, search: (b.search - a.search) * k)
+            return QrStudioSheetMotion.Sample(rise: (b.rise - a.rise) * k, spread: (b.spread - a.spread) * k, pull: (b.pull - a.pull) * k, search: (b.search - a.search) * k, height: (b.height - a.height) * k)
         }
     }
 
@@ -363,6 +363,15 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             }
         }
 
+        let targetHeight = self.targetHeight(geometry: geometry)
+        if self.motion.height != targetHeight && self.playback == nil {
+            self.motion.setHeight(targetHeight, animated: self.motion.isOpen && !geometryChanged)
+            if self.motion.isOpen && !geometryChanged && self.inputHeight == inputHeight {
+                self.runMotion()
+                return
+            }
+        }
+
         if self.inputHeight != inputHeight {
             self.inputHeight = inputHeight
             self.syncPlayback()
@@ -424,7 +433,17 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         }
     }
 
+    var compactHeights: [QrStudioLook.Kind: CGFloat] = [:]
+
+    private func targetHeight(geometry: QrStudioSheetGeometry) -> CGFloat {
+        if let tab = self.currentTab, let height = self.compactHeights[tab] {
+            return min(height, geometry.sheet.height)
+        }
+        return geometry.sheet.height
+    }
+
     func open(tab: QrStudioLook.Kind) {
+        let wasOpen = self.motion.isOpen
         self.currentTab = tab
         for (kind, view) in self.contents {
             view.isHidden = kind != tab
@@ -433,6 +452,9 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             container.isHidden = kind != tab
         }
         self.syncPlayback()
+        if let geometry = self.geometry {
+            self.motion.setHeight(self.targetHeight(geometry: geometry), animated: wasOpen)
+        }
         self.motion.open(animated: true)
         self.updateAttachedContent()
         self.runMotion()
@@ -475,7 +497,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
     }
 
     private func releaseTravel(geometry: QrStudioSheetGeometry) -> CGFloat {
-        return geometry.capsule.minY - (geometry.sheet.minY + self.motion.pull)
+        return geometry.capsule.minY - (geometry.sheetFrame(height: self.motion.height).minY + self.motion.pull)
     }
 
     @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
@@ -545,8 +567,15 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         }
     }
 
+    func windowFrame(sample: QrStudioSheetMotion.Sample) -> CGRect? {
+        guard let geometry = self.geometry else {
+            return nil
+        }
+        return self.frame(geometry: geometry, sample: sample)
+    }
+
     private func frame(geometry: QrStudioSheetGeometry, sample: QrStudioSheetMotion.Sample) -> CGRect {
-        return geometry.frame(rise: sample.rise, spread: sample.spread, pull: sample.pull, lift: self.searchLift(sample))
+        return geometry.frame(rise: sample.rise, spread: sample.spread, pull: sample.pull, lift: self.searchLift(sample), height: sample.height)
     }
 
     private func layout(geometry: QrStudioSheetGeometry, sample: QrStudioSheetMotion.Sample) -> Layout {

@@ -101,15 +101,15 @@ func qrStudioWallpaperColors(_ wallpaper: TelegramWallpaper) -> [QrStudioColor] 
 enum QrStudioBackdrop: Equatable {
     case color(QrStudioPalette)
     case theme(QrStudioTheme)
-    case emoji([QrStudioEmojiItem], isDark: Bool)
+    case emoji([QrStudioEmojiItem], palette: QrStudioPalette)
     case gift(QrStudioGift)
 
     var key: String {
         switch self {
         case let .color(palette):
             return "color-\(palette.name)"
-        case .emoji:
-            return "emoji"
+        case let .emoji(_, palette):
+            return "emoji-\(palette.name)"
         case let .gift(gift):
             return "gift-\(gift.id)"
         case let .theme(theme):
@@ -118,15 +118,15 @@ enum QrStudioBackdrop: Equatable {
     }
 
     var cardSignature: String {
-        if case let .emoji(items, _) = self {
-            return "emoji-" + items.map { "\($0.id)" }.joined(separator: ",")
+        if case let .emoji(items, palette) = self {
+            return "emoji-\(palette.name)-" + items.map { "\($0.id)" }.joined(separator: ",")
         }
         return self.key
     }
 
     var signature: String {
-        if case let .emoji(items, isDark) = self {
-            return (isDark ? "emoji-dark-" : "emoji-") + items.map { "\($0.id)" }.joined(separator: ",")
+        if case let .emoji(items, palette) = self {
+            return "emoji-\(palette.name)-" + items.map { "\($0.id)" }.joined(separator: ",")
         }
         return self.key
     }
@@ -135,8 +135,8 @@ enum QrStudioBackdrop: Equatable {
         switch self {
         case let .color(palette):
             return palette.colors.count > 4 ? palette.colors[4] : (palette.colors.first ?? QrStudioColor(1.0, 1.0, 1.0))
-        case let .emoji(_, isDark):
-            return isDark ? QrStudioPalette.fallback.colors[4] : QrStudioColor(1.0, 1.0, 1.0)
+        case let .emoji(_, palette):
+            return palette.colors.count > 4 ? palette.colors[4] : (palette.colors.first ?? QrStudioColor(0.0, 0.0, 0.0))
         case let .gift(gift):
             return gift.outer
         case let .theme(theme):
@@ -146,8 +146,6 @@ enum QrStudioBackdrop: Equatable {
 
     var isLight: Bool {
         switch self {
-        case let .emoji(_, isDark):
-            return !isDark
         case .theme:
             return true
         default:
@@ -179,7 +177,6 @@ struct QrStudioLook: Equatable {
     var giftId: Int64?
     var themes: [QrStudioTheme] = []
     var themeId: String?
-    var emojiDark = false
 
     var selectedTheme: QrStudioTheme? {
         guard let themeId = self.themeId else {
@@ -194,7 +191,6 @@ struct QrStudioLook: Equatable {
         }
         return .color(self.palette)
     }
-    var emojiInk: QrStudioColor?
 
     var palette: QrStudioPalette {
         if let backdropId = self.backdropId, let palette = self.backdrops.first(where: { $0.id == .backdrop(backdropId) }) {
@@ -219,7 +215,7 @@ struct QrStudioLook: Equatable {
             return self.colorBackdrop
         case .emoji:
             if !self.emoji.isEmpty {
-                return .emoji(self.emoji, isDark: self.emojiDark)
+                return .emoji(self.emoji, palette: self.palette)
             }
             return self.colorBackdrop
         case .gift:
@@ -230,16 +226,12 @@ struct QrStudioLook: Equatable {
         }
     }
 
-    var inkEmoji: QrStudioEmojiItem? {
-        return self.emoji.first(where: { !$0.isTemplate })
-    }
-
     var ink: QrStudioColor {
         switch self.backdrop {
         case let .color(palette):
             return palette.ink
-        case .emoji:
-            return self.emojiInk ?? QrStudioColor(rgb: 0x9662D4).ink
+        case let .emoji(_, palette):
+            return palette.ink
         case let .gift(gift):
             return QrStudioColor.ink(center: gift.inner, edge: gift.outer)
         case let .theme(theme):
@@ -248,15 +240,11 @@ struct QrStudioLook: Equatable {
     }
 
     var availableKinds: [Kind] {
-        var result: [Kind] = [.color, .emoji]
-        if !self.gifts.isEmpty {
-            result.append(.gift)
-        }
-        return result
+        return [.color, .emoji, .gift]
     }
 
     var settings: QrStudioLookSettings {
-        var settings = QrStudioLookSettings(kind: self.kind.rawValue, colorId: self.colorId, emoji: self.kind == .emoji ? self.emoji.map { $0.setting } : [], giftId: self.giftId, themeId: self.themeId, backdropId: self.backdropId)
+        var settings = QrStudioLookSettings(kind: self.kind.rawValue, colorId: self.colorId, emoji: self.emoji.map { $0.setting }, giftId: self.giftId, themeId: self.themeId, backdropId: self.backdropId)
         if let gift = self.selectedGift {
             settings.gift = gift.gift
             settings.giftReference = gift.reference
@@ -265,7 +253,7 @@ struct QrStudioLook: Equatable {
     }
 
     mutating func select(_ kind: Kind) {
-        guard self.availableKinds.contains(kind) else {
+        guard self.availableKinds.contains(kind), kind != .gift || !self.gifts.isEmpty else {
             return
         }
         self.kind = kind
@@ -324,6 +312,6 @@ struct QrStudioLook: Equatable {
     }
 
     static func ==(lhs: QrStudioLook, rhs: QrStudioLook) -> Bool {
-        return lhs.kind == rhs.kind && lhs.palettes == rhs.palettes && lhs.backdrops == rhs.backdrops && lhs.colorId == rhs.colorId && lhs.backdropId == rhs.backdropId && lhs.emoji == rhs.emoji && lhs.gifts == rhs.gifts && lhs.giftId == rhs.giftId && lhs.emojiInk == rhs.emojiInk && lhs.themes == rhs.themes && lhs.themeId == rhs.themeId && lhs.emojiDark == rhs.emojiDark
+        return lhs.kind == rhs.kind && lhs.palettes == rhs.palettes && lhs.backdrops == rhs.backdrops && lhs.colorId == rhs.colorId && lhs.backdropId == rhs.backdropId && lhs.emoji == rhs.emoji && lhs.gifts == rhs.gifts && lhs.giftId == rhs.giftId && lhs.themes == rhs.themes && lhs.themeId == rhs.themeId
     }
 }

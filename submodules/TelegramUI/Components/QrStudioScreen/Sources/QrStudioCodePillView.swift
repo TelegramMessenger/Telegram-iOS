@@ -225,6 +225,7 @@ final class QrStudioCodePillView: UIView {
     var needsNextCode: (() -> Void)?
 
     let glass = GlassContextExtractableContainer()
+    private let pressFeedback = UIImpactFeedbackGenerator(style: .rigid)
     private let glyphLabel = QrStudioPillLabelView()
     private let touchView = UIView()
     private let foregroundView = UIView()
@@ -337,13 +338,25 @@ final class QrStudioCodePillView: UIView {
         let scale: CGFloat = isPressed ? 0.93 : 1.0
         let from = self.layer.presentation()?.value(forKeyPath: "transform.scale") as? CGFloat ?? (isPressed ? 1.0 : 0.93)
         self.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-        let animation = CASpringAnimation(keyPath: "transform.scale")
-        animation.fromValue = from
-        animation.toValue = scale
-        animation.stiffness = 438.0
-        animation.damping = 23.0
-        animation.duration = 0.5
-        self.layer.add(animation, forKey: "press")
+        if isPressed {
+            self.pressFeedback.prepare()
+            let animation = CABasicAnimation(keyPath: "transform.scale")
+            animation.fromValue = from
+            animation.toValue = scale
+            animation.duration = 0.14
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.layer.add(animation, forKey: "press")
+        } else {
+            let stiffness = pow(2.0 * Double.pi / 0.28, 2.0)
+            let animation = CASpringAnimation(keyPath: "transform.scale")
+            animation.fromValue = from
+            animation.toValue = scale
+            animation.mass = 1.0
+            animation.stiffness = stiffness
+            animation.damping = 2.0 * stiffness.squareRoot()
+            animation.duration = animation.settlingDuration
+            self.layer.add(animation, forKey: "press")
+        }
     }
 
     @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {

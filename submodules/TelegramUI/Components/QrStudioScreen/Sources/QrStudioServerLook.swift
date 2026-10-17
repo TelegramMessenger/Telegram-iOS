@@ -44,9 +44,11 @@ extension QrStudioLookSettings {
             result.backdropId = nil
             result.themeId = nil
         case let .emoji(emoji):
-            result = QrStudioLookSettings(kind: 1, colorId: self.colorId, emoji: emoji, giftId: self.giftId, themeId: nil, backdropId: self.backdropId)
-            result.codeRemoveFee = self.codeRemoveFee
-            result.codeExpires = self.codeExpires
+            let encoded = QrStudioLookSettings(kind: 1, colorId: nil, emoji: emoji, giftId: nil)
+            result.kind = 1
+            result.emojiUnicode = encoded.emojiUnicode
+            result.emojiFileIds = encoded.emojiFileIds
+            result.themeId = nil
         case let .color(colorId):
             result.kind = 0
             result.colorId = colorId

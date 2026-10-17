@@ -41,7 +41,7 @@ final class QrStudioExportRenderTests: XCTestCase {
     func testScreenExportDrawsEmojiWhereTheScreenShowsThem() {
         let sticker = QrStudioExportSticker(frames: [self.solid(.green, side: 48)], period: 0.0)
         let item = QrStudioExportPatternItem(content: .sticker(0), point: CGPoint(x: 200.0, y: 140.0), side: 40.0, degrees: 0.0, hash: 0.3)
-        let scene = QrStudioExportScene(background: .emoji(stickers: [sticker], items: [item]), card: self.solid(.white, side: 100), screenSize: self.screen, screenCard: self.screenCard, isLight: true)
+        let scene = QrStudioExportScene(background: .emoji(colors: QrStudioPalette.fallback.colors, stickers: [sticker], items: [item]), card: self.solid(.white, side: 100), screenSize: self.screen, screenCard: self.screenCard, isLight: true)
         let image = qrStudioExportImage(scene, canvas: .screen(size: self.screen, scale: 3.0))!
         let hit = self.pixel(image, x: 600, y: 420)
         XCTAssertGreaterThan(hit.1, 150)
@@ -74,7 +74,7 @@ final class QrStudioExportRenderTests: XCTestCase {
         let cardImage = self.solid(.white, side: 64)
         let frames = (0 ..< 10).map { i in self.solid(UIColor(white: CGFloat(i) / 10.0, alpha: 1.0), side: 32) }
         let item = QrStudioExportPatternItem(content: .sticker(0), point: CGPoint(x: 200.0, y: 140.0), side: 40.0, degrees: 0.0, hash: 0.3)
-        let scene = QrStudioExportScene(background: .emoji(stickers: [QrStudioExportSticker(frames: frames, period: 1.0)], items: [item]), card: cardImage, screenSize: self.screen, screenCard: self.screenCard, isLight: true)
+        let scene = QrStudioExportScene(background: .emoji(colors: QrStudioPalette.fallback.colors, stickers: [QrStudioExportSticker(frames: frames, period: 1.0)], items: [item]), card: cardImage, screenSize: self.screen, screenCard: self.screenCard, isLight: true)
         let exporter = QrStudioVideoExporter(scene: scene, canvas: .story, frameCount: 12)
         let done = self.expectation(description: "done")
         var output: URL?

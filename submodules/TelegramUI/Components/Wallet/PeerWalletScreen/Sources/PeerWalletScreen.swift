@@ -4,6 +4,7 @@ import Display
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 import PresentationDataUtils
 import SwiftSignalKit
 import ComponentFlow
@@ -56,11 +57,13 @@ private final class PeerWalletOverlayComponent: Component {
         var stickerMedia: [String: WalletGiftStickerMedia] = [:]
         var fiatCurrency: WalletContext.FiatCurrency = .usd
         var fiatRate: WalletContext.FiatRate?
+        var hasOwnWallet: Bool
         private let disposables = DisposableSet()
 
         init(context: AccountContext, peer: EnginePeer, card: WalletCard?) {
             self.peer = peer
             self.card = nil
+            self.hasOwnWallet = context.walletContext?.stateValue.walletAddress != nil
             super.init()
             self.updateCard(card, context: context)
 
@@ -82,9 +85,11 @@ private final class PeerWalletOverlayComponent: Component {
                 self.disposables.add((walletContext.state
                 |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                     guard let self else { return }
-                    if self.fiatCurrency != state.fiat.selectedCurrency || self.fiatRate != state.fiat.selectedRate {
+                    let hasOwnWallet = state.walletAddress != nil
+                    if self.fiatCurrency != state.fiat.selectedCurrency || self.fiatRate != state.fiat.selectedRate || self.hasOwnWallet != hasOwnWallet {
                         self.fiatCurrency = state.fiat.selectedCurrency
                         self.fiatRate = state.fiat.selectedRate
+                        self.hasOwnWallet = hasOwnWallet
                         self.updated(transition: .immediate)
                     }
                 }))
@@ -522,11 +527,21 @@ private final class PeerWalletOverlayComponent: Component {
             let buttonTop = availableSize.height - buttonBottomInset - 52.0
             var cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
             self.noticeContainer.frame = CGRect(origin: .zero, size: availableSize)
+            let noticeString: String?
             if component.peer.id == component.context.account.peerId {
+                noticeString = environment.strings.Wallet_PublicBalanceNotice
+            } else if let balance = state.balance {
+                let amount = formatTonAmountText(balance, dateTimeFormat: environment.dateTimeFormat, formatString: environment.strings.Currency_Grams)
+                let name = state.peer.displayTitle(strings: environment.strings, displayOrder: component.context.sharedContext.currentPresentationData.with { $0 }.nameDisplayOrder)
+                noticeString = environment.strings.Wallet_PeerBalanceNotice(name, amount).string
+            } else {
+                noticeString = nil
+            }
+            if let noticeString {
                 func noticeText(_ color: UIColor) -> AnyComponent<Empty> {
                     return AnyComponent(BalancedTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Wallet_PublicBalanceNotice,
+                            string: noticeString,
                             font: Font.semibold(17.0),
                             textColor: color,
                             paragraphAlignment: .center
@@ -621,6 +636,8 @@ private final class PeerWalletOverlayComponent: Component {
                 cardView.giftStyleUpdated = nil
             }
 
+            let isOwnWallet = component.peer.id == component.context.account.peerId
+            let showsWalletInfo = !isOwnWallet && !state.hasOwnWallet
             let buttonSize = self.sendButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -632,14 +649,18 @@ private final class PeerWalletOverlayComponent: Component {
                         cornerRadius: 26.0
                     ),
                     content: AnyComponentWithIdentity(id: "send", component: AnyComponent(Text(
-                        text: component.peer.id == component.context.account.peerId ? environment.strings.Wallet_Transaction_OpenWallet : environment.strings.Wallet_SendMoney,
+                        text: isOwnWallet ? environment.strings.Wallet_Transaction_OpenWallet : (showsWalletInfo ? environment.strings.Wallet_HowDoesItWork : environment.strings.Wallet_SendMoney),
                         font: Font.semibold(17.0),
                         color: buttonForegroundColor
                     ))),
-                    isEnabled: component.peer.id == component.context.account.peerId || (component.context.walletContext != nil && state.card != nil),
+                    isEnabled: isOwnWallet || showsWalletInfo || (component.context.walletContext != nil && state.card != nil),
                     action: {
                         guard let controller = controller() as? PeerWalletScreen else { return }
-                        component.sendMoney(controller)
+                        if showsWalletInfo {
+                            controller.push(component.context.sharedContext.makeWalletInfoScreen(context: component.context, mode: .wallet, completion: nil))
+                        } else {
+                            component.sendMoney(controller)
+                        }
                     }
                 )),
                 environment: {},

@@ -304,7 +304,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             self.effectNode = NavigationBackgroundNode(color: backgroundColor, enableSaturation: enableSaturation)
             self.backgroundMaskNode.addSubnode(self.backgroundClipNode)
             self.backgroundClipNode.clipsToBounds = true
-            if case .bottom = location {
+            if let cornerRadius {
+                self.backgroundClipNode.cornerRadius = cornerRadius
+            } else if case .bottom = location {
                 self.backgroundClipNode.cornerRadius = 8.5
             } else {
                 self.backgroundClipNode.cornerRadius = 14.0

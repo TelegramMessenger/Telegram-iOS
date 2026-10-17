@@ -182,61 +182,11 @@ struct QrStudioPalette: Equatable {
             corner, mix(center, edge, 0.35), corner,
             mix(center, edge, 0.5), glow, mix(center, edge, 0.5),
             low, mix(center, edge, 0.62), low,
-        ], ink: QrStudioColor.ink(center: center, edge: edge))
+        ], ink: id == QrStudioPalette.blackBackdropId ? QrStudioColor(0.02, 0.02, 0.025) : QrStudioColor.ink(center: center, edge: edge))
     }
 
-    static let fallback: QrStudioPalette = QrStudioPalette.backdrop(id: 0, center: 0x363738, edge: 0x0e0f0f, pattern: 0x6c6868, text: 0x8c8f91)
-}
-
-extension QrStudioColor {
-    static func dominant(of image: CGImage) -> QrStudioColor {
-        let n = 32
-        var buffer = [UInt8](repeating: 0, count: n * n * 4)
-        guard let ctx = CGContext(data: &buffer, width: n, height: n, bitsPerComponent: 8, bytesPerRow: n * 4,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return QrStudioColor(0.5, 0.5, 0.5) }
-        ctx.interpolationQuality = .medium
-        ctx.draw(image, in: CGRect(x: 0, y: 0, width: n, height: n))
-
-        let bins = 24
-        var weight = [Double](repeating: 0, count: bins)
-        var sum = [(r: Double, g: Double, b: Double)](repeating: (0, 0, 0), count: bins)
-        var all = (w: 0.0, r: 0.0, g: 0.0, b: 0.0)
-        for i in stride(from: 0, to: buffer.count, by: 4) {
-            let a = Double(buffer[i + 3]) / 255
-            guard a > 0.4 else { continue }
-            let r = Double(buffer[i]) / 255 / a, g = Double(buffer[i + 1]) / 255 / a, b = Double(buffer[i + 2]) / 255 / a
-            all = (all.w + a, all.r + r * a, all.g + g * a, all.b + b * a)
-            let mx = max(r, g, b), mn = min(r, g, b)
-            let s = mx > 0 ? (mx - mn) / mx : 0
-            guard s > 0.15, mx > 0.2 else { continue }
-            var h: Double
-            let d = mx - mn
-            switch mx {
-            case r: h = (g - b) / d + (g < b ? 6 : 0)
-            case g: h = (b - r) / d + 2
-            default: h = (r - g) / d + 4
-            }
-            let k = min(Int(h / 6 * Double(bins)), bins - 1)
-            let w = a * s * s * mx
-            weight[k] += w
-            sum[k] = (sum[k].r + r * w, sum[k].g + g * w, sum[k].b + b * w)
-        }
-        let total = weight.reduce(0, +)
-        guard total > 0.6 else {
-            return all.w > 0 ? QrStudioColor(all.r / all.w, all.g / all.w, all.b / all.w) : QrStudioColor(0.5, 0.5, 0.5)
-        }
-        func around(_ k: Int) -> Double {
-            weight[(k + bins - 1) % bins] * 0.5 + weight[k] + weight[(k + 1) % bins] * 0.5
-        }
-        let best = (0..<bins).max { around($0) < around($1) } ?? 0
-        var w = 0.0, r = 0.0, g = 0.0, b = 0.0
-        for k in [best - 1, best, best + 1] {
-            let j = (k + bins) % bins
-            w += weight[j]; r += sum[j].r; g += sum[j].g; b += sum[j].b
-        }
-        return QrStudioColor(r / w, g / w, b / w)
-    }
+    static let blackBackdropId: Int32 = 0
+    static let fallback: QrStudioPalette = QrStudioPalette.backdrop(id: QrStudioPalette.blackBackdropId, center: 0x363738, edge: 0x0e0f0f, pattern: 0x6c6868, text: 0x8c8f91)
 }
 
 func qrStudioSwatchPixels(colors: [QrStudioColor], side: Int) -> [UInt8] {
