@@ -77,12 +77,13 @@ and prints a summary: when the motion starts and stops, when it comes within 2% 
 time it passes its rest and comes back out (a spring's overshoot, an oscillation), every flagged frame, each track's
 path and how far apart the tracks ever are:
 
-- `gap`: an interval over 1.5x the median while the picture changes: a frame drawn late, or a stall.
+- `gap`: an interval over 1.5x the median while the picture changes by at least 5% of the clip's largest change: a
+  frame drawn late, or a stall (a spinner or caret drawing at its own lower rate is not counted).
 - `jump`: a frame that changed over 3x as much as the frames around it: a snap, a teleport, something appearing or
   vanishing at once in the middle of smooth motion.
 
-**Tracks are the precise instrument.** `--track NAME=X,Y,W,H` names a region of the LAST frame (the rest); in every
-frame the script finds where that content stands, shifted vertically, and reports the offset in points: negative
+**Tracks are the precise instrument.** `--track NAME=X,Y,W,H` names a region of the LAST frame (the rest; for
+something leaving, a close, pass `--track-reference first` and name it in the first frame); in every frame the script finds where that content stands, shifted vertically, and reports the offset in points: negative
 above its rest, positive below, 0 at rest. One track gives an element's real path (where it starts, how far past its
 rest it goes, when it is within 1 pt); several give "these move together" as a number: in every frame where all are
 found their offsets must agree. Pick each region inside one element, with texture (text, icons, edges), clear of

@@ -27,8 +27,8 @@ The distance from the last frame is the coarse read of an animation's shape: an 
 spring falls, touches its rest and rises again by its overshoot before settling; a hitch is a step in it. It is
 unsigned and measures the whole picture (or the --crop).
 
-A track is the precise read: a region of the LAST frame (the rest), in points, is looked for in every frame by shifting
-it vertically (within --track-range) to where it matches best, so its offset is signed and in points: negative above
+A track is the precise read: a region of the reference frame (the rest: the last frame, or the first with
+--track-reference first for something leaving), in points, is looked for in every frame by shifting it vertically (within --track-range) to where it matches best, so its offset is signed and in points: negative above
 its rest, positive below. Several tracks answer "do these move together": in every frame where all are found their
 offsets must agree. Pick regions with texture (text, icons, edges), wholly inside the element, and clear of anything
 that moves differently; a flat colour matches anywhere. A region is "not found" in a frame (blank in the table) when its
@@ -160,10 +160,12 @@ def measure(frames):
 def flag(rows):
     intervals = [r["interval"] for r in rows[1:] if r["change"] > STILL_THRESHOLD]
     median = statistics.median(intervals) if intervals else 0.0
+    # A gap counts only in the animation being judged, not in a spinner or a caret that draws at its own lower rate.
+    significant = 0.05 * max([r["change"] for r in rows] + [0.0])
     for i, row in enumerate(rows):
         if i == 0:
             continue
-        if median > 0.0 and row["change"] > STILL_THRESHOLD and row["interval"] > 1.5 * median:
+        if median > 0.0 and row["change"] > max(STILL_THRESHOLD, significant) and row["interval"] > 1.5 * median:
             row["flags"].append("gap")
         # The window's median change, without the frame itself: robust to the recorder's near-copies.
         window = [rows[k]["change"] for k in range(max(1, i - 3), min(len(rows), i + 4)) if k != i]
@@ -206,11 +208,12 @@ def parse_track(text):
     return name, tuple(values)
 
 
-def track(frames, rows, name, rect, search, tolerance):
-    """The region `rect` of the last frame looked for in every frame by a vertical shift within ±`search` points: the
-    shift with the least mean absolute difference (coarse in steps of 2, then refined), and that difference."""
+def track(frames, rows, name, rect, search, tolerance, reference):
+    """The region `rect` of the reference frame (the last, or the first) looked for in every frame by a vertical shift
+    within ±`search` points: the shift with the least mean absolute difference (coarse in steps of 2, then refined),
+    and that difference."""
     x, y, w, h = rect
-    template = Image.open(frames[-1][0]).convert("L").crop((x, y, x + w, y + h))
+    template = Image.open(frames[-1 if reference == "last" else 0][0]).convert("L").crop((x, y, x + w, y + h))
     for row, (path, _) in zip(rows, frames):
         image = Image.open(path).convert("L")
 
@@ -412,9 +415,10 @@ def main():
     parser.add_argument("--end", type=float, help="last second to keep")
     parser.add_argument("--scale", type=float, default=3.0, help="recording pixels per point (default 3)")
     parser.add_argument("--crop", help="X,Y,W,H in points: look at this part of the screen only")
-    parser.add_argument("--track", action="append", default=[], help="NAME=X,Y,W,H in points (after --crop), as it is at rest in the last frame; repeatable")
+    parser.add_argument("--track", action="append", default=[], help="NAME=X,Y,W,H in points (after --crop), as it is at rest in the reference frame; repeatable")
     parser.add_argument("--track-range", type=int, default=260, help="how far, in points, a track is looked for above and below its rest (default 260)")
     parser.add_argument("--track-tolerance", type=float, default=12.0, help="worst mean error (0...255) a track still counts as found at (default 12)")
+    parser.add_argument("--track-reference", choices=["last", "first"], default="last", help="the frame the tracked regions are at rest in: the last (an element arriving, the default) or the first (one leaving)")
     parser.add_argument("--tile-width", type=int, default=200, help="width of one frame on the sheet (default 200)")
     parser.add_argument("--columns", type=int, default=8)
     parser.add_argument("--rows", type=int, default=4, help="rows per sheet (default 4)")
@@ -429,7 +433,7 @@ def main():
     rows = measure(frames)
     median = flag(rows)
     for name, rect in tracks:
-        track(frames, rows, name, rect, args.track_range, args.track_tolerance)
+        track(frames, rows, name, rect, args.track_range, args.track_tolerance, args.track_reference)
     names = [name for name, _ in tracks]
 
     with open(os.path.join(args.out_dir, "frames.tsv"), "w", newline="") as f:
