@@ -71,7 +71,7 @@ final class QrStudioEmojiTabView: UIView {
             guard let self else {
                 return
             }
-            let emojiContent = QrStudioEmojiTabView.systemEmojiFirst(emojiContent)
+            let emojiContent = QrStudioEmojiTabView.systemEmojiFirst(QrStudioEmojiTabView.supportedOnly(emojiContent))
             self.sourceEmojiContent = emojiContent
             self.filteredAnimatedCount = 0
             self.emojiContent = emojiContent
@@ -144,6 +144,57 @@ final class QrStudioEmojiTabView: UIView {
         return content.withUpdatedItemGroups(panelItemGroups: reorder(content.panelItemGroups), contentItemGroups: reorder(content.contentItemGroups), itemContentUniqueId: content.itemContentUniqueId, emptySearchResults: content.emptySearchResults, searchState: content.searchState)
     }
 
+    static func isSupported(_ file: TelegramMediaFile) -> Bool {
+        return !file.isStaticEmoji && !file.isVideoEmoji && !file.isCustomTemplateEmoji
+    }
+
+    static func isSupported(_ file: TelegramMediaFile.Accessor) -> Bool {
+        return !file.isStaticEmoji && !file.isVideoEmoji && !file.isCustomTemplateEmoji
+    }
+
+    private static func withItems(_ group: EmojiPagerContentComponent.ItemGroup, _ items: [EmojiPagerContentComponent.Item]) -> EmojiPagerContentComponent.ItemGroup {
+        return EmojiPagerContentComponent.ItemGroup(
+            supergroupId: group.supergroupId,
+            groupId: group.groupId,
+            title: group.title,
+            subtitle: group.subtitle,
+            badge: group.badge,
+            actionButtonTitle: group.actionButtonTitle,
+            isFeatured: group.isFeatured,
+            isPremiumLocked: group.isPremiumLocked,
+            isEmbedded: group.isEmbedded,
+            hasClear: group.hasClear,
+            hasEdit: group.hasEdit,
+            collapsedLineCount: group.collapsedLineCount,
+            displayPremiumBadges: group.displayPremiumBadges,
+            headerItem: group.headerItem,
+            fillWithLoadingPlaceholders: group.fillWithLoadingPlaceholders,
+            customTintColor: group.customTintColor,
+            items: items
+        )
+    }
+
+    private static func supportedOnly(_ content: EmojiPagerContentComponent) -> EmojiPagerContentComponent {
+        let contentGroups = content.contentItemGroups.compactMap { group -> EmojiPagerContentComponent.ItemGroup? in
+            guard group.groupId != AnyHashable("static") else {
+                return group
+            }
+            let items = group.items.filter { item in
+                if let file = item.itemFile {
+                    return QrStudioEmojiTabView.isSupported(file)
+                }
+                return true
+            }
+            if items.isEmpty && !group.items.isEmpty {
+                return nil
+            }
+            return items.count == group.items.count ? group : QrStudioEmojiTabView.withItems(group, items)
+        }
+        let groupIds = Set(contentGroups.map { $0.groupId })
+        let panelGroups = content.panelItemGroups.filter { groupIds.contains($0.groupId) }
+        return content.withUpdatedItemGroups(panelItemGroups: panelGroups, contentItemGroups: contentGroups, itemContentUniqueId: content.itemContentUniqueId, emptySearchResults: content.emptySearchResults, searchState: content.searchState)
+    }
+
     private func filterStaticEmoji(animatedCount: Int) {
         guard animatedCount > 0, animatedCount != self.filteredAnimatedCount, let content = self.sourceEmojiContent, let isAnimatedUnicode = self.isAnimatedUnicode else {
             return
@@ -159,25 +210,7 @@ final class QrStudioEmojiTabView: UIView {
                 }
                 return true
             }
-            return EmojiPagerContentComponent.ItemGroup(
-                supergroupId: group.supergroupId,
-                groupId: group.groupId,
-                title: group.title,
-                subtitle: group.subtitle,
-                badge: group.badge,
-                actionButtonTitle: group.actionButtonTitle,
-                isFeatured: group.isFeatured,
-                isPremiumLocked: group.isPremiumLocked,
-                isEmbedded: group.isEmbedded,
-                hasClear: group.hasClear,
-                hasEdit: group.hasEdit,
-                collapsedLineCount: group.collapsedLineCount,
-                displayPremiumBadges: group.displayPremiumBadges,
-                headerItem: group.headerItem,
-                fillWithLoadingPlaceholders: group.fillWithLoadingPlaceholders,
-                customTintColor: group.customTintColor,
-                items: items
-            )
+            return QrStudioEmojiTabView.withItems(group, items)
         }
         self.emojiContent = content.withUpdatedItemGroups(panelItemGroups: content.panelItemGroups, contentItemGroups: groups, itemContentUniqueId: content.itemContentUniqueId, emptySearchResults: content.emptySearchResults, searchState: content.searchState)
     }
@@ -282,6 +315,9 @@ final class QrStudioEmojiTabView: UIView {
                         if file.isPremiumEmoji && !hasPremium {
                             continue
                         }
+                        if !QrStudioEmojiTabView.isSupported(file) {
+                            continue
+                        }
                         items.append(QrStudioEmojiTabView.fileItem(file))
                     }
                     return ([QrStudioEmojiTabView.searchGroup(items, placeholders: false)], found.canLoadMore, items.isEmpty && found.isLoadingMore, searchContext)
@@ -312,7 +348,7 @@ final class QrStudioEmojiTabView: UIView {
             |> map { files, isFinalResult -> (items: [EmojiPagerContentComponent.Item], isFinalResult: Bool) in
                 var items: [EmojiPagerContentComponent.Item] = []
                 var existingIds = Set<EngineMedia.Id>()
-                for file in files where !existingIds.contains(file.fileId) {
+                for file in files where !existingIds.contains(file.fileId) && QrStudioEmojiTabView.isSupported(file) {
                     existingIds.insert(file.fileId)
                     items.append(QrStudioEmojiTabView.fileItem(file))
                 }

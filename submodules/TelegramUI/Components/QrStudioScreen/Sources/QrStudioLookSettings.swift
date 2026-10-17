@@ -9,8 +9,8 @@ func qrStudioToggle<Id: Equatable>(_ ids: inout [Id], _ id: Id, limit: Int) -> B
         ids.remove(at: index)
         return true
     }
-    guard ids.count < limit else {
-        return false
+    if ids.count >= limit {
+        ids.removeFirst(ids.count - limit + 1)
     }
     ids.append(id)
     return true
