@@ -94,6 +94,10 @@ private final class QrStudioScreenComponent: Component {
         private let contactTokenDisposable = MetaDisposable()
         private var contactTokenGeneration = 0
         private var contactTokenStaleAttempt = 0
+        private lazy var placeholderContactLink: String = {
+            let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+            return "https://t.me/contact/" + String((0 ..< 32).map { _ in alphabet.randomElement()! })
+        }()
         private var didRequestContactToken = false
 
         private let pan = QrStudioPan()
@@ -254,9 +258,11 @@ private final class QrStudioScreenComponent: Component {
             })
         }
 
-        private func mergedGifts(_ loadedGifts: [QrStudioGift]) -> [QrStudioGift] {
+        private static let giftsFirstPageSize = 30
+
+        private func mergedGifts(_ loadedGifts: [QrStudioGift], isComplete: Bool) -> [QrStudioGift] {
             var gifts = loadedGifts
-            for extra in [self.localGift, self.serverGift] {
+            for extra in isComplete ? [] : [self.localGift, self.serverGift] {
                 if let extra, !gifts.contains(where: { $0.id == extra.id }) {
                     gifts.append(extra)
                 }
@@ -292,7 +298,7 @@ private final class QrStudioScreenComponent: Component {
                 self.applyLoadedGifts()
                 return
             }
-            let gifts = self.mergedGifts([])
+            let gifts = self.mergedGifts([], isComplete: false)
             if !gifts.isEmpty, self.look.gifts != gifts {
                 self.look.gifts = gifts
             }
@@ -303,7 +309,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             self.pinGiftIfNeeded(self.rememberedGiftId)
-            let gifts = self.mergedGifts(loadedGifts)
+            let gifts = self.mergedGifts(loadedGifts, isComplete: loadedGifts.count < QrStudioScreenComponent.View.giftsFirstPageSize)
             let wasLoaded = self.areGiftsLoaded
             self.areGiftsLoaded = true
             if self.look.gifts != gifts {
@@ -311,6 +317,8 @@ private final class QrStudioScreenComponent: Component {
                 self.look.gifts(gifts)
                 let backdropChanged = previousBackdrop != self.look.backdrop
                 self.requestUpdate(transition: (backdropChanged && !self.isLookModified) || self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+            } else if !wasLoaded {
+                self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
             }
             if !wasLoaded {
                 self.revealIfReady()
@@ -1502,7 +1510,7 @@ private final class QrStudioScreenComponent: Component {
                 return
             }
             let context = component.context
-            let giftsController = context.sharedContext.makeGiftOptionsController(context: context, peerId: context.account.peerId, premiumOptions: [], hasBirthday: false, completion: nil)
+            let giftsController = context.sharedContext.makeGiftCollectiblesController(context: context, peerId: context.account.peerId)
             controller.push(giftsController)
         }
 
@@ -1792,7 +1800,7 @@ private final class QrStudioScreenComponent: Component {
         }
 
         private func makeExportScene(canvas: QrStudioExportCanvas, completion: @escaping (QrStudioExportScene?) -> Void) -> Disposable {
-            guard let component = self.component, let (cardImage, screenCard, _) = self.exportCardImage(scale: canvas.scale * 1.5, staticPlane: true) else {
+            guard let component = self.component, !self.link(component: component).isEmpty, let (cardImage, screenCard, _) = self.exportCardImage(scale: canvas.scale * 1.5, staticPlane: true) else {
                 completion(nil)
                 return EmptyDisposable
             }
@@ -1973,7 +1981,10 @@ private final class QrStudioScreenComponent: Component {
             let isDark = !backdrop.isLight
             let glassTint = QrStudioGlass.tint(backdrop)
             let ink = self.look.ink
-            let link = self.link(component: component)
+            var link = self.link(component: component)
+            if link.isEmpty && component.temporary {
+                link = self.placeholderContactLink
+            }
 
             var username: String?
             if let addressName = component.peer.addressName, !addressName.isEmpty {
@@ -1986,7 +1997,8 @@ private final class QrStudioScreenComponent: Component {
                 let skew = Int32(Date().timeIntervalSince1970) - component.context.account.network.getApproximateRemoteTimestamp()
                 return token.expires + skew
             } : nil
-            let cardCenterY = QrStudioCardMetrics.cardCenterY(screenHeight: availableSize.height, showsUsername: username != nil || linkExpires != nil)
+            let reservesTimer = username == nil && component.temporary
+            let cardCenterY = QrStudioCardMetrics.cardCenterY(screenHeight: availableSize.height, showsUsername: username != nil || linkExpires != nil || reservesTimer)
             let cardCenter = CGPoint(x: availableSize.width * 0.5, y: cardCenterY)
             self.cardRestCenter = cardCenter
 
@@ -2030,6 +2042,7 @@ private final class QrStudioScreenComponent: Component {
                     link: link,
                     username: username,
                     expires: linkExpires,
+                    reservesTimer: reservesTimer,
                     ink: ink,
                     isLight: backdrop.isLight,
                     bounceToken: backdrop.cardSignature + link,

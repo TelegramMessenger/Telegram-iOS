@@ -292,10 +292,9 @@ struct QrStudioLook: Equatable {
         guard qrStudioToggle(&ids, item.id, limit: QrStudioLook.maxEmoji) else {
             return false
         }
-        if ids.contains(item.id) {
-            self.emoji.append(item)
-        } else {
-            self.emoji.removeAll(where: { $0.id == item.id })
+        let current = self.emoji
+        self.emoji = ids.compactMap { id in
+            id == item.id ? item : current.first(where: { $0.id == id })
         }
         self.kind = .emoji
         return true

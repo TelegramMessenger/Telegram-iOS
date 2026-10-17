@@ -550,6 +550,7 @@ private final class WalletCollectibleContentComponent: Component {
 
         private let giftDisposable = MetaDisposable()
         private let styleRestrictionDisposable = MetaDisposable()
+        private let giftVariantsDisposable = MetaDisposable()
         private let peerDisposable = MetaDisposable()
         private var component: WalletCollectibleContentComponent?
         private var environment: EnvironmentType?
@@ -681,6 +682,7 @@ private final class WalletCollectibleContentComponent: Component {
         deinit {
             self.giftDisposable.dispose()
             self.styleRestrictionDisposable.dispose()
+            self.giftVariantsDisposable.dispose()
             self.peerDisposable.dispose()
         }
 
@@ -738,6 +740,41 @@ private final class WalletCollectibleContentComponent: Component {
                 }
                 controller.dismissAllTooltips()
                 controller.present(tooltip, in: .current)
+            }))
+        }
+
+        private func openGiftVariants(attributeKey: String) {
+            guard let component = self.component, let gift = self.uniqueGift ?? component.collectible.nft?.gift else {
+                return
+            }
+            let focusedAttribute = gift.attributes.first(where: { attribute in
+                switch attribute {
+                case .model:
+                    return attributeKey == "model"
+                case .backdrop:
+                    return attributeKey == "backdrop"
+                case .pattern:
+                    return attributeKey == "symbol"
+                default:
+                    return false
+                }
+            })
+            let context = component.context
+            let starGift = StarGift.unique(gift)
+            self.giftVariantsDisposable.set((context.engine.payments.getStarGiftUpgradeAttributes(giftId: starGift.giftId)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] attributes in
+                guard let self, let attributes, let controller = self.environment?.controller() else {
+                    return
+                }
+                controller.push(context.sharedContext.makeGiftUpgradeVariantsScreen(
+                    context: context,
+                    gift: starGift,
+                    crafted: false,
+                    attributes: attributes,
+                    selectedAttributes: gift.attributes,
+                    focusedAttribute: focusedAttribute
+                ))
             }))
         }
 
@@ -1091,28 +1128,43 @@ private final class WalletCollectibleContentComponent: Component {
                 TableComponent.Item(
                     id: "model",
                     title: strings.Gift_Unique_Model,
-                    component: AnyComponent(WalletCollectibleTraitValueComponent(
-                        theme: theme,
-                        value: model.value,
-                        rarity: model.rarity
+                    component: AnyComponent(Button(
+                        content: AnyComponent(WalletCollectibleTraitValueComponent(
+                            theme: theme,
+                            value: model.value,
+                            rarity: model.rarity
+                        )),
+                        action: { [weak self] in
+                            self?.openGiftVariants(attributeKey: "model")
+                        }
                     ))
                 ),
                 TableComponent.Item(
                     id: "backdrop",
                     title: strings.Gift_Unique_Backdrop,
-                    component: AnyComponent(WalletCollectibleTraitValueComponent(
-                        theme: theme,
-                        value: backdrop.value,
-                        rarity: backdrop.rarity
+                    component: AnyComponent(Button(
+                        content: AnyComponent(WalletCollectibleTraitValueComponent(
+                            theme: theme,
+                            value: backdrop.value,
+                            rarity: backdrop.rarity
+                        )),
+                        action: { [weak self] in
+                            self?.openGiftVariants(attributeKey: "backdrop")
+                        }
                     ))
                 ),
                 TableComponent.Item(
                     id: "symbol",
                     title: strings.Gift_Unique_Symbol,
-                    component: AnyComponent(WalletCollectibleTraitValueComponent(
-                        theme: theme,
-                        value: symbol.value,
-                        rarity: symbol.rarity
+                    component: AnyComponent(Button(
+                        content: AnyComponent(WalletCollectibleTraitValueComponent(
+                            theme: theme,
+                            value: symbol.value,
+                            rarity: symbol.rarity
+                        )),
+                        action: { [weak self] in
+                            self?.openGiftVariants(attributeKey: "symbol")
+                        }
                     ))
                 )
             ]
@@ -2132,6 +2184,28 @@ public final class WalletCollectibleScreen: ViewControllerComponentContainer {
         guard self.isScreenVisible, self.pendingSigningTransfer == nil,
               self.recoveryPhraseImportController == nil else { return }
         guard case let .wallet(info) = self.walletContext.stateValue.phase else { return }
+        if let balance = self.walletContext.stateValue.balance.currentValue, balance < 100_000_000 {
+            let strings = self.walletPresentationData.initial.strings
+            self.present(textAlertController(
+                context: self.accountContext,
+                updatedPresentationData: self.walletPresentationData,
+                title: strings.Wallet_Backup_InsufficientFundsTitle,
+                text: strings.Wallet_Transfer_CollectibleTopUpText,
+                actions: [
+                    TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .defaultAction, title: strings.Wallet_Backup_TopUp, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.push(self.accountContext.sharedContext.makeWalletReceiveScreen(
+                            context: self.accountContext,
+                            address: info.address
+                        ))
+                    })
+                ]
+            ), in: .window(.root))
+            return
+        }
         if info.canSign {
             self.routeToTransfer(collectible)
         } else if info.canExportPhrase {

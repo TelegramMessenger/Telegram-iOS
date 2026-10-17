@@ -3547,7 +3547,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 guard let giftController = navigationController.viewControllers.last as? ViewController else {
                     return
                 }
-                let alertController = giftMoveToProfileAlertController(context: context, peer: peer, commit: { [weak giftController, weak navigationController] in
+                let alertController = giftMoveToProfileAlertController(context: context, peer: peer, networkFee: giftDepositNetworkFee(context: context, gift: gift), commit: { [weak giftController, weak navigationController] in
                     guard let completion else {
                         return
                     }
@@ -3731,6 +3731,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
+    public func makeGiftCollectiblesController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
+        guard let starsContext = context.starsContext else {
+            fatalError()
+        }
+        let controller = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peerId, premiumOptions: [], hasBirthday: false, opensCollectibles: true)
+        controller.navigationPresentation = .modal
+        return controller
+    }
+    
         let controller = GiftStoreScreen(context: context, peerId: peerId, gift: gift)
         return controller
     }
@@ -4405,7 +4414,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     guard let controller, let gift, let peer else {
                         return
                     }
-                    let alertController = giftMoveToProfileAlertController(context: context, peer: peer, commitWithProgress: { [weak controller] done in
+                    let alertController = giftMoveToProfileAlertController(context: context, peer: peer, networkFee: giftDepositNetworkFee(context: context, gift: gift), commitWithProgress: { [weak controller] done in
                         let navigationController = controller?.navigationController as? NavigationController
                         var didFinish = false
                         let _ = (depositStarGiftFromWallet(context: context, gift: gift, peerId: context.account.peerId, submitted: {
