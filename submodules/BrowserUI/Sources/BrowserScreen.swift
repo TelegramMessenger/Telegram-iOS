@@ -695,7 +695,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     } else {
                         subject = .url(url)
                     }
-                    let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, actionCompleted: { [weak self] in
+                    let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: subject, actionCompleted: { [weak self] in
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }, completed: { [weak self] peerIds in
                         guard let self else {

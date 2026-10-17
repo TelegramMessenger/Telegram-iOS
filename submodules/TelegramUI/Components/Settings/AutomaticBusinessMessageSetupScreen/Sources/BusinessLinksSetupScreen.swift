@@ -254,7 +254,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 return
             }
             
-            environment.controller()?.present(component.context.sharedContext.makeShareController(context: component.context, params: ShareControllerParams(subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false)), in: .window(.root))
+            environment.controller()?.present(component.context.sharedContext.makeShareScreen(context: component.context, params: ShareControllerParams(subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false)), in: .window(.root))
         }
         
         func update(component: BusinessLinksSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {

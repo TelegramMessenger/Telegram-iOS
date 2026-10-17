@@ -840,7 +840,7 @@ final class VideoChatScreenComponent: Component {
                             return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
                         })]
                     }
-                    let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                    let shareController = groupCall.accountContext.sharedContext.makeShareScreen(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
                         guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                             return
                         }
@@ -889,7 +889,7 @@ final class VideoChatScreenComponent: Component {
                     return
                 }
                 
-                let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                let shareController = groupCall.accountContext.sharedContext.makeShareScreen(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
                     guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                         return
                     }

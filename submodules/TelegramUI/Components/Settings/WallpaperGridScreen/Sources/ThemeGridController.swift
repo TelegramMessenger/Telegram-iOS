@@ -446,7 +446,7 @@ public final class ThemeGridController: ViewController {
         } else {
             subject = .text(string)
         }
-        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: subject))
+        let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: subject))
         self.present(shareController, in: .window(.root), blockInteraction: true)
         
         self.donePressed()

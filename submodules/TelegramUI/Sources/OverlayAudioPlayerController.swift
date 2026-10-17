@@ -80,7 +80,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                     if case .messages = subject {
                         canShowInChat = true
                     }
-                    let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: subject, showInChat: canShowInChat ? { message in
+                    let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: subject, showInChat: canShowInChat ? { message in
                         if let strongSelf = self {
                             strongSelf.context.sharedContext.navigateToChat(accountId: strongSelf.context.account.id, peerId: message.id.peerId, messageId: message.id)
                             strongSelf.dismiss()

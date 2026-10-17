@@ -1645,7 +1645,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             }
         }), ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuShare, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let self, let (webPage, _) = self.webPage, let image = media.media._asMedia() as? TelegramMediaImage {
-                self.present(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) })))), nil)
+                self.present(self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) })))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
@@ -1788,7 +1788,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                     }
                 }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
                     if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                        strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
+                        strongSelf.present(strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
                     }
                 })]
                 
