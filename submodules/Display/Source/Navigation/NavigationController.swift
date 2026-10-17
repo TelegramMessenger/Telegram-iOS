@@ -1251,9 +1251,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 if let rootModalFrame = self.rootModalFrame {
                     self.rootModalFrame = nil
-                    rootModalFrame.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
-                        rootModalFrame?.removeFromSupernode()
-                    })
+                    rootModalFrame.dismissAndRemove(transition: transition)
                 }
                 if let rootContainer = self.rootContainer {
                     var rootContainerNode: ASDisplayNode

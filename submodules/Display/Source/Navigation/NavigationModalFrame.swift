@@ -98,6 +98,30 @@ public final class NavigationModalFrame: ASDisplayNode {
         }
     }
     
+    /// Dismisses the frame and removes it. Dismissed, its corners stand on the screen's own, as large as the screen
+    /// rounds them; removed then, they would be cut off at once wherever the screen is not rounded quite like them (a
+    /// recording is not rounded at all). So they shrink into the screen's corners first, which on the screen stays
+    /// inside the corners it rounds.
+    public func dismissAndRemove(transition: ContainedViewLayoutTransition) {
+        self.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            guard transition.isAnimated, let layout = self.validLayout else {
+                self.removeFromSupernode()
+                return
+            }
+            let shrink = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            let size = layout.size
+            shrink.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: size.width, y: 0.0), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: size.width, y: size.height), size: CGSize()), beginWithCurrentState: true, completion: { [weak self] _ in
+                self?.removeFromSupernode()
+            })
+        })
+    }
+    
     private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let sideInset: CGFloat = 16.0
         var topInset: CGFloat = 0.0
