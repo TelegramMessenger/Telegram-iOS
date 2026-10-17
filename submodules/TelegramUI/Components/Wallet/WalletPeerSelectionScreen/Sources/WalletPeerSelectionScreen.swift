@@ -50,7 +50,7 @@ public func walletMoveActionIcon(_ name: String) -> UIImage? {
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: [])
         }
         context.resetClip()
-        let glyphSize = CGSize(width: 24.0, height: 24.0)
+        let glyphSize = CGSize(width: 30.0, height: 30.0)
         let glyphFrame = CGRect(origin: CGPoint(x: (size.width - glyphSize.width) / 2.0, y: (size.height - glyphSize.height) / 2.0), size: glyphSize)
         if let cgImage = glyph.cgImage {
             context.draw(cgImage, in: glyphFrame)
