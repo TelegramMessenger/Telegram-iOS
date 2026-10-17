@@ -1755,7 +1755,7 @@ extension WalletContextImpl {
                 if let key = walletAddressMappingKey(address) {
                     peerlessAddresses.insert(key)
                 }
-            case .channel, .onramp, .unsupported:
+            case .channel, .onramp, .telegramGift, .unsupported:
                 break
             }
         }
@@ -1767,7 +1767,7 @@ extension WalletContextImpl {
             case let .address(address, _):
                 guard let key = walletAddressMappingKey(address), peerlessAddresses.contains(key) else { return nil }
                 return transaction
-            case .onramp, .unsupported:
+            case .onramp, .telegramGift, .unsupported:
                 return nil
             }
         }

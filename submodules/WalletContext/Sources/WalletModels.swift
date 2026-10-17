@@ -428,6 +428,7 @@ public extension WalletContext {
             case channel(EnginePeer, address: String, domain: String?)
             case address(String, domain: String?)
             case onramp(address: String, domain: String?, providerName: String)
+            case telegramGift(ownProfile: Bool)
             case unsupported
 
             public var address: String? {
@@ -437,7 +438,7 @@ public extension WalletContext {
                     value = address
                 case let .address(address, _), let .onramp(address, _, _):
                     value = address
-                case .unsupported:
+                case .telegramGift, .unsupported:
                     return nil
                 }
                 if !value.isEmpty {
@@ -451,7 +452,7 @@ public extension WalletContext {
                 switch self {
                 case let .user(_, _, domain), let .channel(_, _, domain), let .address(_, domain), let .onramp(_, domain, _):
                     value = domain
-                case .unsupported:
+                case .telegramGift, .unsupported:
                     value = nil
                 }
                 guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
@@ -464,7 +465,7 @@ public extension WalletContext {
                 switch self {
                 case let .user(peer, _, _), let .channel(peer, _, _):
                     return peer
-                case .address, .onramp, .unsupported:
+                case .address, .onramp, .telegramGift, .unsupported:
                     return nil
                 }
             }
@@ -475,7 +476,7 @@ public extension WalletContext {
                     return peer.debugDisplayTitle
                 case let .onramp(_, _, providerName):
                     return providerName
-                case .address, .unsupported:
+                case .address, .telegramGift, .unsupported:
                     return nil
                 }
             }

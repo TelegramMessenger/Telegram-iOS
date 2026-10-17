@@ -2269,7 +2269,7 @@ private final class WalletTransactionContentComponent: Component {
                     transferAnimation: transactionController?.transferAnimation,
                     completed: transactionController?.returnedToWallet
                 )
-            case .channel, .onramp, .unsupported:
+            case .channel, .onramp, .telegramGift, .unsupported:
                 return
             }
             sendScreen.navigationPresentation = .modal
@@ -3022,7 +3022,12 @@ private final class WalletTransactionContentComponent: Component {
                 let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 return value.isEmpty ? nil : value
             }
-            let counterpartyName = peerDisplayName ?? transaction.peer.domain
+            let counterpartyName: String?
+            if case let .telegramGift(ownProfile) = transaction.peer {
+                counterpartyName = ownProfile ? environment.strings.Settings_MyProfile : environment.strings.PeerInfo_PaneGifts
+            } else {
+                counterpartyName = peerDisplayName ?? transaction.peer.domain
+            }
             let addressText: NSAttributedString?
             let addressComponent: AnyComponent<Empty>?
             if let counterparty = transaction.peer.address {
@@ -3106,7 +3111,7 @@ private final class WalletTransactionContentComponent: Component {
                 canSendToPeer = true
             case .address:
                 canSendToPeer = transaction.peer.address != nil
-            case .channel, .onramp, .unsupported:
+            case .channel, .onramp, .telegramGift, .unsupported:
                 canSendToPeer = false
             }
             let displaysSendButton: Bool
@@ -3124,7 +3129,7 @@ private final class WalletTransactionContentComponent: Component {
             switch transaction.peer {
             case .address:
                 alignSendButtonToTop = true
-            case .user, .channel, .onramp, .unsupported:
+            case .user, .channel, .onramp, .telegramGift, .unsupported:
                 alignSendButtonToTop = false
             }
             let counterpartyComponent: AnyComponent<Empty>
@@ -3211,7 +3216,7 @@ private final class WalletTransactionContentComponent: Component {
                 displaysSeparateAddress = true
             case .address:
                 displaysSeparateAddress = transaction.peer.domain != nil
-            case .unsupported:
+            case .telegramGift, .unsupported:
                 displaysSeparateAddress = false
             }
             if displaysSeparateAddress, let addressComponent {

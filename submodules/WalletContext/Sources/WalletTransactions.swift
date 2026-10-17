@@ -152,6 +152,8 @@ func walletTransactions(
             peer = .address(address, domain: domain)
         case let .onramp(address, domain, providerName):
             peer = .onramp(address: address, domain: domain, providerName: providerName)
+        case let .telegramGift(ownProfile):
+            peer = .telegramGift(ownProfile: ownProfile)
         case .unsupported:
             peer = .unsupported
         }

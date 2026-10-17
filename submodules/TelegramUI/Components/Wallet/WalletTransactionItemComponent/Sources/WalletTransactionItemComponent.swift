@@ -787,7 +787,7 @@ public final class WalletTransactionItemComponent: Component {
                 switch transaction.peer {
                 case let .user(peer, _, _), let .channel(peer, _, _):
                     avatarPeer = .transactionPeer(.peer(peer))
-                case .address, .onramp, .unsupported:
+                case .address, .onramp, .telegramGift, .unsupported:
                     break
                 }
             }
@@ -1095,6 +1095,8 @@ public final class WalletTransactionItemComponent: Component {
                 default:
                     peerTitle = component.strings.Wallet_Transaction_CryptoTopUp
                 }
+            case let .telegramGift(ownProfile):
+                peerTitle = ownProfile ? component.strings.Settings_MyProfile : component.strings.PeerInfo_PaneGifts
             case .unsupported:
                 peerTitle = walletTransactionCounterparty(nil, strings: component.strings)
             }

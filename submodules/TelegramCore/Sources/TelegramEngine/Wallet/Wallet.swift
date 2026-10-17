@@ -87,6 +87,7 @@ public enum WalletTransactionPeer: Equatable, @unchecked Sendable {
     case channel(EnginePeer, address: String, domain: String?)
     case address(String, domain: String?)
     case onramp(address: String, domain: String?, providerName: String)
+    case telegramGift(ownProfile: Bool)
     case unsupported
 }
 
@@ -323,6 +324,8 @@ private extension WalletTransactionPeer {
             self = .address(peer.address, domain: peer.domain)
         case let .walletTransactionPeerOnramp(peer):
             self = .onramp(address: peer.address, domain: peer.domain, providerName: peer.providerName)
+        case let .walletTransactionPeerTelegramGift(peer):
+            self = .telegramGift(ownProfile: peer.flags & 1 != 0)
         case .walletTransactionPeerUnsupported:
             self = .unsupported
         case let .walletTransactionPeerUser(apiPeer):
