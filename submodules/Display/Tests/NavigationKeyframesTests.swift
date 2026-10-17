@@ -101,6 +101,22 @@ final class NavigationKeyframesTests: XCTestCase {
         XCTAssertEqual(ended, 1)
     }
 
+    // On screen, nothing the group times has begun until the commit resolves its origin, and that origin is later than
+    // the bake's own now by the rest of the turn. Read from the bake's now, the time would step back when the origin
+    // resolves (a drop's tint, driven per frame, took that step for a stopped clock and froze); it reads 0 until then.
+    func test_awaitingTheCommit_readsZero_soTheTimeNeverStepsBack() {
+        let clock = NavigationAnimationClock(hostView: UIView())
+        clock.isHostOnScreen = { true }
+        let start = self.time.now
+        let _ = clock.start(duration: 0.4, continuing: false)
+        self.time.advance(by: 0.03)
+        XCTAssertEqual(clock.animationTime(), 0.0)
+        self.time.resolveOrigin(of: clock, at: start + 0.045)
+        XCTAssertEqual(clock.animationTime(), 0.0)
+        self.time.advance(by: 0.02)
+        XCTAssertEqual(clock.animationTime(), 0.005, accuracy: 1e-9)
+    }
+
     // A retarget or a release continues motion already on screen: it begins at now, explicitly.
     func test_continuingBake_beginsAtNow() {
         let clock = NavigationAnimationClock(hostView: UIView())

@@ -114,6 +114,9 @@ public final class NavigationAnimationClock {
     }
     /// Nil: the group's end and its marks come from Core Animation's completions. Tests set a manual scheduler.
     public var schedule: ((_ delay: Double, _ action: @escaping () -> Void) -> Void)?
+    /// Nil: the host is on screen while it is in a window, where a commit resolves the origin. Tests standing in for the
+    /// commit set it (no window can be made in their process).
+    public var isHostOnScreen: (() -> Bool)?
 
     /// An empty 1×1 layer in the host view: it draws nothing, so its moving position shows nothing.
     public let layer: CALayer
@@ -192,16 +195,17 @@ public final class NavigationAnimationClock {
     /// The first bake's commit has not happened yet (and will: the host is on screen).
     private var isAwaitingCommit: Bool {
         self.adoptResolvedOrigin()
-        return self.timing != nil && !self.isOriginResolved && self.hostView?.window != nil
+        return self.timing != nil && !self.isOriginResolved && (self.isHostOnScreen?() ?? (self.hostView?.window != nil))
     }
 
     /// Seconds of animation time since the origin at media time `time` (now by default), after adopting a resolved
-    /// origin. 0 when no group runs.
+    /// origin. 0 when no group runs, and while the first commit is pending: nothing the group times has begun on screen
+    /// then, and the origin the commit resolves is later than the bake's now by the rest of the turn (tens of ms in a
+    /// heavy one), so a time read from the bake's now would step back when it resolves.
     public func animationTime(at time: Double? = nil) -> Double {
-        guard let timing = self.timing else {
+        guard let timing = self.timing, !self.isAwaitingCommit else {
             return 0.0
         }
-        self.adoptResolvedOrigin()
         return max(0.0, ((time ?? self.now()) - self.originTime) / timing.factor)
     }
 
