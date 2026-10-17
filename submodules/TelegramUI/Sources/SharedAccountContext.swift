@@ -3731,6 +3731,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
+    public func makeGiftCollectiblesController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
+        guard let starsContext = context.starsContext else {
+            fatalError()
+        }
+        let controller = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peerId, premiumOptions: [], hasBirthday: false, opensCollectibles: true)
+        controller.navigationPresentation = .modal
+        return controller
+    }
+    
         let controller = GiftStoreScreen(context: context, peerId: peerId, gift: gift)
         return controller
     }

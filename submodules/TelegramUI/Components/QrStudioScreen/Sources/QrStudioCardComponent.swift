@@ -9,15 +9,17 @@ final class QrStudioCardComponent: Component {
     let link: String
     let username: String?
     let expires: Int32?
+    let reservesTimer: Bool
     let ink: QrStudioColor
     let isLight: Bool
     let bounceToken: String
     let fillSource: QrStudioThemeBackgroundView?
 
-    init(link: String, username: String?, expires: Int32?, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
+    init(link: String, username: String?, expires: Int32?, reservesTimer: Bool, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
         self.link = link
         self.username = username
         self.expires = expires
+        self.reservesTimer = reservesTimer
         self.ink = ink
         self.isLight = isLight
         self.bounceToken = bounceToken
@@ -32,6 +34,9 @@ final class QrStudioCardComponent: Component {
             return false
         }
         if lhs.expires != rhs.expires {
+            return false
+        }
+        if lhs.reservesTimer != rhs.reservesTimer {
             return false
         }
         if lhs.ink != rhs.ink {
@@ -247,7 +252,7 @@ final class QrStudioCardComponent: Component {
                 }
             }
 
-            let size = CGSize(width: QrStudioCardMetrics.width, height: QrStudioCardMetrics.height(showsUsername: component.username != nil || component.expires != nil))
+            let size = CGSize(width: QrStudioCardMetrics.width, height: QrStudioCardMetrics.height(showsUsername: component.username != nil || component.expires != nil || component.reservesTimer))
 
             self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
             self.layer.shadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: QrStudioCardMetrics.cornerRadius).cgPath

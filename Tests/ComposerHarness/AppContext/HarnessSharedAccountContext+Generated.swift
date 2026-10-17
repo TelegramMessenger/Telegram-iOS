@@ -373,6 +373,9 @@ extension HarnessSharedAccountContext {
     public func makeGiftOptionsController(context: AccountContext, peerId: EnginePeer.Id, premiumOptions: [CachedPremiumGiftOption], hasBirthday: Bool, completion: (() -> Void)?) -> ViewController {
         fatalError("harness: SharedAccountContext.makeGiftOptionsController is not provided")
     }
+    public func makeGiftCollectiblesController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeGiftCollectiblesController is not provided")
+    }
     public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
         fatalError("harness: SharedAccountContext.makeGiftStoreController is not provided")
     }

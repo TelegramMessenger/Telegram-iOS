@@ -134,6 +134,14 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         self.params = Params(size: size, context: context, theme: theme, strings: strings, gifts: gifts, selectedId: selectedId)
         self.scrollView.frame = CGRect(origin: CGPoint(), size: size)
 
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.fadeMask.frame = CGRect(origin: CGPoint(), size: size)
+        self.fadeMask.locations = [0.0, NSNumber(value: Double(14.0 / max(size.height, 1.0))), 1.0]
+        self.fadeMask.startPoint = CGPoint(x: 0.5, y: 0.0)
+        self.fadeMask.endPoint = CGPoint(x: 0.5, y: 1.0)
+        CATransaction.commit()
+
         let isEmpty = gifts.isEmpty
         self.scrollView.isHidden = isEmpty
         self.emptyView.isHidden = !(isEmpty && isLoaded)
@@ -145,15 +153,7 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
             return
         }
 
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        self.fadeMask.frame = CGRect(origin: CGPoint(), size: size)
-        self.fadeMask.locations = [0.0, NSNumber(value: Double(14.0 / max(size.height, 1.0))), 1.0]
-        self.fadeMask.startPoint = CGPoint(x: 0.5, y: 0.0)
-        self.fadeMask.endPoint = CGPoint(x: 0.5, y: 1.0)
-
         let itemSide = self.itemSide(width: size.width)
-        CATransaction.commit()
 
         self.titleLabel.attributedText = NSAttributedString(string: strings.QrStudio_Gifts_Title.uppercased(), attributes: [
             .font: Font.semibold(13.0),
