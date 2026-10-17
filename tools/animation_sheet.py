@@ -1,28 +1,43 @@
 #!/usr/bin/env python3
-"""Turn a simulator screen recording into contact sheets and a per-frame table, to judge an animation from stills.
+"""Turn a simulator screen recording into contact sheets, per-frame numbers and element tracks, to judge an animation.
 
-    python3 tools/animation_sheet.py VIDEO OUT_DIR [--start S] [--end E] [--crop X,Y,W,H] [--tile-width PX]
+    python3 tools/animation_sheet.py VIDEO OUT_DIR [--start S] [--end E] [--scale K] [--crop X,Y,W,H]
+                                     [--track NAME=X,Y,W,H ...] [--track-range PT] [--tile-width PX]
                                      [--columns N] [--rows N]
 
 VIDEO is a recording from `xcrun simctl io <udid> recordVideo` (see AGENTS.md, "Visual features and animations").
+All geometry (--crop, --track, every number printed) is in points: the recording's pixels divided by --scale (3, the
+simulators' screen scale, by default).
+
 Writes into OUT_DIR:
   sheet-NN.png  every frame in [S, E], tiled in time order, each labelled `#index  t=seconds  +ms since previous`;
-                a flagged frame has a red label and frame.
+                a flagged frame has a red label and frame; tracked regions are outlined where they were found.
   motion.png    per frame: how much the picture changed since the previous frame (bars), the interval since the
                 previous frame (dots; dashes at the median interval) and how far the picture still is from the last
                 frame, the resting state (green line).
-  frames.tsv    index, time, interval, change, distance from the last frame, changed region and flags for every frame.
-and prints a summary: when the motion starts, when it settles, every time it passes its resting state and comes back
-out (a spring's overshoot and oscillation), and every flagged frame.
+  tracks.png    with --track: each region's vertical offset from its resting place per frame, one line per region.
+  frames.tsv    index, time, interval, change, distance from the last frame, changed region, flags and each track's
+                offset and match error, for every frame.
+  frames/       the frames themselves, numbered as on the sheets.
+and prints a summary: when the motion starts and settles, every time the picture passes its resting state and comes
+back out, every flagged frame, each track's path (where it starts, how far past its rest it goes, when it settles) and,
+with several tracks, how far apart they ever are.
 
-The distance from the last frame is the automatic read of an animation's shape: an ease-out falls to 0 and stays there;
-a spring falls, touches its rest (a minimum) and rises again by its overshoot before settling; a hitch is a step in it.
-It is unsigned (it says how far, not which way), so a pass through the rest reads as a minimum, and it measures the
-whole picture, so --crop to the element that is supposed to move when other things move too.
+The distance from the last frame is the coarse read of an animation's shape: an ease-out falls to 0 and stays there; a
+spring falls, touches its rest and rises again by its overshoot before settling; a hitch is a step in it. It is
+unsigned and measures the whole picture (or the --crop).
+
+A track is the precise read: a region of the LAST frame (the rest), in points, is looked for in every frame by shifting
+it vertically (within --track-range) to where it matches best, so its offset is signed and in points: negative above
+its rest, positive below. Several tracks answer "do these move together": in every frame where all are found their
+offsets must agree. Pick regions with texture (text, icons, edges), wholly inside the element, and clear of anything
+that moves differently; a flat colour matches anywhere. A region is "not found" in a frame (blank in the table) when its
+best match is still poor (mean error over --track-tolerance), e.g. while it is still faded out or covered.
 
 The recording is variable-rate: the simulator writes a frame only when the screen changed, stamped with its own time
-(1/600 s units), at the display's ~60 Hz while something moves. So the frames are taken as they are (no resampling)
-and time always comes from each frame's own timestamp, never from its index.
+(1/600 s units), at the display's rate while something moves (60 to 120 Hz measured). So the frames are taken as they
+are (no resampling) and time always comes from each frame's own presentation timestamp (ffprobe's; see `extract`),
+never from its index.
 
 Flags (heuristics; look at the frames they point to before believing them):
   gap    the interval since the previous frame is over 1.5x the median interval while the picture is changing: a frame
@@ -38,7 +53,6 @@ stall.
 import argparse
 import csv
 import os
-import re
 import shutil
 import statistics
 import subprocess
@@ -46,45 +60,69 @@ import sys
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageStat
 
-# The size frames are compared at: small enough to be quick, large enough to see a few points of motion.
+# The size frames are compared at for the whole-picture numbers: quick, and still sees a few points of motion.
 COMPARE_WIDTH = 160
 # A frame whose mean absolute change (0...255) is below this is treated as unchanged.
 STILL_THRESHOLD = 0.05
+TRACK_COLOURS = [(220, 60, 60), (40, 120, 220), (30, 160, 60), (200, 130, 0), (150, 60, 200), (0, 160, 170)]
 
 
 def run(args):
     return subprocess.run(args, check=True, capture_output=True, text=True)
 
 
-def extract(video, out_dir, start, end, crop, tile_width):
-    """The frames in [start, end] as PNGs, each with its own timestamp (showinfo's pts_time)."""
+def frame_times(video):
+    """Every frame's presentation time, in the order the decoder emits the frames (ffprobe's frame pts)."""
+    result = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "frame=pts_time,best_effort_timestamp_time", "-of", "csv=p=0", video])
+    times = []
+    for line in result.stdout.splitlines():
+        fields = [f for f in line.split(",") if f]
+        if not fields:
+            continue
+        value = fields[0] if fields[0] != "N/A" else fields[-1]
+        times.append(float(value))
+    return times
+
+
+def extract(video, out_dir, start, end, crop, scale):
+    """The frames in [start, end] as PNGs in points (the recording scaled down by `scale`), in time order, each with its
+    own presentation time.
+
+    The times come from ffprobe, not from ffmpeg's own (showinfo, `select` on `t`): the simulator's H.264 can carry
+    a duplicated timestamp, after which ffmpeg falls back to each frame's decode timestamp, seconds behind its
+    presentation time (measured: 11.66 s, then 8.07 s for the next frame). The frames still come out in presentation
+    order, so the images are taken in ffmpeg's order and the range is applied here."""
     frames_dir = os.path.join(out_dir, "frames")
     if os.path.isdir(frames_dir):
         shutil.rmtree(frames_dir)
+    raw_dir = os.path.join(out_dir, "frames-decoded")
+    if os.path.isdir(raw_dir):
+        shutil.rmtree(raw_dir)
     os.makedirs(frames_dir)
+    os.makedirs(raw_dir)
     filters = []
-    condition = []
-    if start is not None:
-        condition.append(f"gte(t,{start})")
-    if end is not None:
-        condition.append(f"lte(t,{end})")
-    if condition:
-        filters.append("select='" + "*".join(condition) + "'")
     if crop:
-        x, y, w, h = crop
+        x, y, w, h = (round(v * scale) for v in crop)
         filters.append(f"crop={w}:{h}:{x}:{y}")
-    filters.append(f"scale={tile_width}:-2:flags=area")
-    filters.append("showinfo")
-    result = run([
+    filters.append(f"scale=iw/{scale}:-2:flags=area")
+    run([
         "ffmpeg", "-hide_banner", "-nostdin", "-y", "-i", video,
         "-vf", ",".join(filters), "-fps_mode", "passthrough",
-        os.path.join(frames_dir, "%05d.png"),
+        os.path.join(raw_dir, "%05d.png"),
     ])
-    times = [float(m.group(1)) for m in re.finditer(r"\bn:\s*\d+.*?\bpts_time:\s*([0-9.eE+-]+)", result.stderr)]
-    paths = sorted(os.path.join(frames_dir, name) for name in os.listdir(frames_dir) if name.endswith(".png"))
+    times = frame_times(video)
+    paths = sorted(os.path.join(raw_dir, name) for name in os.listdir(raw_dir) if name.endswith(".png"))
     if len(times) != len(paths):
-        sys.exit(f"ffmpeg wrote {len(paths)} frames but reported {len(times)} timestamps")
-    return list(zip(paths, times))
+        sys.exit(f"ffmpeg wrote {len(paths)} frames but ffprobe lists {len(times)}")
+    frames = []
+    for path, time in zip(paths, times):
+        if (start is not None and time < start) or (end is not None and time > end):
+            continue
+        target = os.path.join(frames_dir, f"{len(frames):05d}.png")
+        os.replace(path, target)
+        frames.append((target, time))
+    shutil.rmtree(raw_dir)
+    return frames
 
 
 def compare_image(path):
@@ -95,7 +133,7 @@ def compare_image(path):
 
 def measure(frames):
     """Per frame: interval since the previous one (ms), mean change since it and distance from the last frame (both
-    mean absolute differences, 0...255) and the changed region, in the tile's coordinates."""
+    mean absolute differences, 0...255) and the changed region, in points."""
     rows = []
     previous = None
     previous_time = None
@@ -113,7 +151,7 @@ def measure(frames):
                 scale = Image.open(path).width / COMPARE_WIDTH
                 region = tuple(round(v * scale) for v in box)
         interval = (time - previous_time) * 1000.0 if previous_time is not None else 0.0
-        rows.append({"index": index, "time": time, "interval": interval, "change": change, "to_final": to_final, "region": region, "flags": []})
+        rows.append({"index": index, "time": time, "interval": interval, "change": change, "to_final": to_final, "region": region, "flags": [], "tracks": {}})
         previous = small
         previous_time = time
     return rows
@@ -160,6 +198,84 @@ def settling(rows):
     return start, settled, passes
 
 
+def parse_track(text):
+    name, _, rect = text.partition("=")
+    values = [int(round(float(v))) for v in rect.split(",")]
+    if not name or len(values) != 4:
+        sys.exit(f"--track wants NAME=X,Y,W,H, got {text!r}")
+    return name, tuple(values)
+
+
+def track(frames, rows, name, rect, search, tolerance):
+    """The region `rect` of the last frame looked for in every frame by a vertical shift within ±`search` points: the
+    shift with the least mean absolute difference (coarse in steps of 2, then refined), and that difference."""
+    x, y, w, h = rect
+    template = Image.open(frames[-1][0]).convert("L").crop((x, y, x + w, y + h))
+    for row, (path, _) in zip(rows, frames):
+        image = Image.open(path).convert("L")
+
+        def error(dy):
+            top = y + dy
+            if top < 0 or top + h > image.height:
+                return None
+            return ImageStat.Stat(ImageChops.difference(image.crop((x, top, x + w, top + h)), template)).mean[0]
+
+        best = None
+        for dy in range(-search, search + 1, 2):
+            e = error(dy)
+            if e is not None and (best is None or e < best[1]):
+                best = (dy, e)
+        if best is not None:
+            for dy in range(best[0] - 2, best[0] + 3):
+                e = error(dy)
+                if e is not None and e < best[1]:
+                    best = (dy, e)
+        found = best is not None and best[1] <= tolerance
+        row["tracks"][name] = (best[0] if found else None, best[1] if best else None)
+
+
+def track_summary(rows, name):
+    path = [(r, r["tracks"][name][0]) for r in rows if r["tracks"][name][0] is not None]
+    if not path:
+        return [f"track {name}: never found (raise --track-tolerance, or pick a region with more texture)"]
+    first_row, first = path[0]
+    lines = [f"track {name}: found from #{first_row['index']} t={first_row['time']:.3f} at {first:+d} pt"]
+    # Past the rest: the furthest it goes on the far side from where it was first found, after first reaching the rest.
+    side = 1 if first > 0 else -1 if first < 0 else 0
+    reached = next((i for i, (_, dy) in enumerate(path) if side != 0 and dy * side <= 0), None)
+    if reached is not None:
+        beyond = max(path[reached:], key=lambda p: -p[1] * side)
+        amount = -beyond[1] * side
+        if amount > 0:
+            lines.append(f"  reaches its rest at #{path[reached][0]['index']} t={path[reached][0]['time']:.3f}, goes {amount} pt past it (#{beyond[0]['index']} t={beyond[0]['time']:.3f})")
+        else:
+            lines.append(f"  reaches its rest at #{path[reached][0]['index']} t={path[reached][0]['time']:.3f} without going past it")
+        crossings = sum(1 for (_, a), (_, b) in zip(path[reached:], path[reached + 1:]) if (a > 1 and b < -1) or (a < -1 and b > 1))
+        if crossings:
+            lines.append(f"  crosses its rest {crossings} more time(s) after that")
+    settled = None
+    for r, dy in reversed(path):
+        if abs(dy) > 1:
+            break
+        settled = r
+    if settled is not None:
+        lines.append(f"  within 1 pt of rest from #{settled['index']} t={settled['time']:.3f}")
+    return lines
+
+
+def togetherness(rows, names):
+    lines = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            pairs = [(r, r["tracks"][a][0] - r["tracks"][b][0]) for r in rows if r["tracks"][a][0] is not None and r["tracks"][b][0] is not None]
+            if not pairs:
+                lines.append(f"{a} vs {b}: never both found")
+                continue
+            worst = max(pairs, key=lambda p: abs(p[1]))
+            lines.append(f"{a} vs {b}: {len(pairs)} frames together, apart by at most {abs(worst[1])} pt (#{worst[0]['index']} t={worst[0]['time']:.3f}: {a} {worst[0]['tracks'][a][0]:+d}, {b} {worst[0]['tracks'][b][0]:+d})")
+    return lines
+
+
 def font(size):
     try:
         return ImageFont.load_default(size=size)
@@ -167,9 +283,11 @@ def font(size):
         return ImageFont.load_default()
 
 
-def sheets(frames, rows, out_dir, columns, rows_per_sheet):
+def sheets(frames, rows, out_dir, columns, rows_per_sheet, tile_width, tracks):
     label_font = font(14)
-    tile_w, tile_h = Image.open(frames[0][0]).size
+    source_w, source_h = Image.open(frames[0][0]).size
+    k = tile_width / source_w
+    tile_w, tile_h = tile_width, max(1, round(source_h * k))
     label_h = 20
     per_sheet = columns * rows_per_sheet
     written = []
@@ -188,7 +306,13 @@ def sheets(frames, rows, out_dir, columns, rows_per_sheet):
             if flagged:
                 text += "  " + ",".join(row["flags"])
             draw.text((x + 2, y + 2), text, fill=colour, font=label_font)
-            sheet.paste(Image.open(frames[i][0]).convert("RGB"), (x, y + label_h))
+            sheet.paste(Image.open(frames[i][0]).convert("RGB").resize((tile_w, tile_h), Image.LANCZOS), (x, y + label_h))
+            for t, (name, (rx, ry, rw, rh)) in enumerate(tracks):
+                dy = row["tracks"][name][0]
+                if dy is None:
+                    continue
+                c = TRACK_COLOURS[t % len(TRACK_COLOURS)]
+                draw.rectangle((x + rx * k, y + label_h + (ry + dy) * k, x + (rx + rw) * k, y + label_h + (ry + dy + rh) * k), outline=c, width=1)
             if flagged:
                 draw.rectangle((x - 2, y + label_h - 2, x + tile_w + 1, y + label_h + tile_h + 1), outline=(255, 80, 80), width=2)
         path = os.path.join(out_dir, f"sheet-{sheet_index + 1:02d}.png")
@@ -235,34 +359,92 @@ def chart(rows, median, out_dir):
     return path
 
 
+def track_chart(rows, names, out_dir):
+    """Each track's offset per frame, on one axis: lines that lie on each other moved together."""
+    width = max(640, 8 * len(rows) + 90)
+    height = 420
+    image = Image.new("RGB", (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    small = font(12)
+    left, top, bottom = 60, 30 + 16 * len(names), height - 30
+    step = (width - left - 20) / max(1, len(rows))
+    values = [r["tracks"][n][0] for r in rows for n in names if r["tracks"][n][0] is not None]
+    if not values:
+        return None
+    low, high = min(values + [0]), max(values + [0])
+    pad = max(2.0, (high - low) * 0.05)
+    low, high = low - pad, high + pad
+
+    def y_of(v):
+        return bottom - (bottom - top) * (v - low) / (high - low)
+
+    for x in range(left, width - 20, 8):
+        draw.line((x, y_of(0), x + 4, y_of(0)), fill=(120, 120, 120))
+    draw.text((4, y_of(0) - 7), "rest 0", fill=(80, 80, 80), font=small)
+    draw.text((4, top - 2), f"{high:+.0f} pt", fill=(80, 80, 80), font=small)
+    draw.text((4, bottom - 12), f"{low:+.0f} pt", fill=(80, 80, 80), font=small)
+    for i in range(0, len(rows), 10):
+        draw.text((left + i * step, bottom + 4), f"#{i}", fill=(0, 0, 0), font=small)
+    for t, name in enumerate(names):
+        c = TRACK_COLOURS[t % len(TRACK_COLOURS)]
+        draw.text((left, 6 + 16 * t), f"{name} (positive: below its rest)", fill=c, font=small)
+        segment = []
+        for i, r in enumerate(rows):
+            dy = r["tracks"][name][0]
+            if dy is None:
+                if len(segment) > 1:
+                    draw.line(segment, fill=c, width=2)
+                segment = []
+                continue
+            segment.append((left + i * step + step * 0.5, y_of(dy)))
+        if len(segment) > 1:
+            draw.line(segment, fill=c, width=2)
+    path = os.path.join(out_dir, "tracks.png")
+    image.save(path)
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("video")
     parser.add_argument("out_dir")
     parser.add_argument("--start", type=float, help="first second to keep (the recording's own clock)")
     parser.add_argument("--end", type=float, help="last second to keep")
-    parser.add_argument("--crop", help="X,Y,W,H in the recording's pixels, before scaling")
+    parser.add_argument("--scale", type=float, default=3.0, help="recording pixels per point (default 3)")
+    parser.add_argument("--crop", help="X,Y,W,H in points: look at this part of the screen only")
+    parser.add_argument("--track", action="append", default=[], help="NAME=X,Y,W,H in points (after --crop), as it is at rest in the last frame; repeatable")
+    parser.add_argument("--track-range", type=int, default=260, help="how far, in points, a track is looked for above and below its rest (default 260)")
+    parser.add_argument("--track-tolerance", type=float, default=12.0, help="worst mean error (0...255) a track still counts as found at (default 12)")
     parser.add_argument("--tile-width", type=int, default=200, help="width of one frame on the sheet (default 200)")
     parser.add_argument("--columns", type=int, default=8)
     parser.add_argument("--rows", type=int, default=4, help="rows per sheet (default 4)")
     args = parser.parse_args()
 
-    crop = tuple(int(v) for v in args.crop.split(",")) if args.crop else None
+    crop = tuple(float(v) for v in args.crop.split(",")) if args.crop else None
+    tracks = [parse_track(t) for t in args.track]
     os.makedirs(args.out_dir, exist_ok=True)
-    frames = extract(args.video, args.out_dir, args.start, args.end, crop, args.tile_width)
+    frames = extract(args.video, args.out_dir, args.start, args.end, crop, args.scale)
     if not frames:
         sys.exit("no frames in that range")
     rows = measure(frames)
     median = flag(rows)
+    for name, rect in tracks:
+        track(frames, rows, name, rect, args.track_range, args.track_tolerance)
+    names = [name for name, _ in tracks]
 
     with open(os.path.join(args.out_dir, "frames.tsv"), "w", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
-        writer.writerow(["index", "time_s", "interval_ms", "change", "to_final", "changed_region", "flags"])
+        writer.writerow(["index", "time_s", "interval_ms", "change", "to_final", "changed_region", "flags"] + [c for n in names for c in (f"{n}_dy", f"{n}_err")])
         for row in rows:
-            writer.writerow([row["index"], f"{row['time']:.4f}", f"{row['interval']:.1f}", f"{row['change']:.2f}", f"{row['to_final']:.2f}", row["region"] or "", ",".join(row["flags"])])
+            cells = []
+            for n in names:
+                dy, err = row["tracks"][n]
+                cells += ["-" if dy is None else dy, "-" if err is None else f"{err:.1f}"]
+            writer.writerow([row["index"], f"{row['time']:.4f}", f"{row['interval']:.1f}", f"{row['change']:.2f}", f"{row['to_final']:.2f}", row["region"] or "", ",".join(row["flags"])] + cells)
 
-    written = sheets(frames, rows, args.out_dir, args.columns, args.rows)
+    written = sheets(frames, rows, args.out_dir, args.columns, args.rows, args.tile_width, tracks)
     motion = chart(rows, median, args.out_dir)
+    tracks_png = track_chart(rows, names, args.out_dir) if names else None
 
     moving = [r for r in rows if r["change"] > STILL_THRESHOLD]
     print(f"{len(rows)} frames, {rows[0]['time']:.3f}-{rows[-1]['time']:.3f} s; {len(moving)} changed; median interval while moving {median:.1f} ms")
@@ -280,7 +462,12 @@ def main():
         print(f"  #{row['index']} t={row['time']:.3f} +{row['interval']:.1f}ms change={row['change']:.2f} {','.join(row['flags'])}")
     if not flagged:
         print("  nothing flagged")
-    for path in written + [motion, os.path.join(args.out_dir, "frames.tsv")]:
+    for name in names:
+        for line in track_summary(rows, name):
+            print(line)
+    for line in togetherness(rows, names):
+        print(line)
+    for path in written + [motion] + ([tracks_png] if tracks_png else []) + [os.path.join(args.out_dir, "frames.tsv")]:
         print(path)
 
 
