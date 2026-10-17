@@ -355,11 +355,12 @@ public final class StoryPeerListComponent: Component {
         
         private var animationState: AnimationState?
         private var animator: ConstantDisplayLinkAnimator?
-        /// `maxTitleX` while it moves: a change in an animated update eases there on a spring as long as the update's
-        /// animation (the chat list's right buttons going or coming in Edit mode move it), where the title used to jump.
-        private var maxTitleXCurve: NavigationSpringCurve?
-        /// The `maxTitleX` beyond which the title and its avatars sit centred, as last laid out.
-        private var titleBoundLimit: CGFloat?
+        /// When the band between the buttons changes in an animated update (the chat list's right buttons going or
+        /// coming in Edit mode), the collapsed content eases from where it stood to where the new band places it, on a
+        /// spring as long as the update's animation: this is the remaining distance, springing to zero.
+        private var titleOriginOffsetCurve: NavigationSpringCurve?
+        /// The row and content widths the collapsed content was last placed with.
+        private var titleOriginWidths: (container: CGFloat, content: CGFloat)?
         
         /// Whether the collapsed title shows its text (`StoryPeerListTitleLayout.showsTitleText`), and the fade between.
         private var showsTitleText: Bool?
@@ -933,17 +934,17 @@ public final class StoryPeerListComponent: Component {
             
             let centralContentWidth: CGFloat = collapsedContentWidth + titleContentSpacing + collapsedState.titleWidth
             
-            self.titleBoundLimit = (itemLayout.containerSize.width - centralContentWidth) * 0.5 + centralContentWidth + StoryPeerListTitleLayout.trailingMargin
-            let maxTitleX = self.maxTitleXCurve?.value(at: CACurrentMediaTime()) ?? component.maxTitleX
             // Too narrow a header for all of it (a narrow phone, a long title) goes without the title's text, keeping the
             // stories, the spinner, the lock and the status; the expanded stories leave the title alone on its row, where it
             // fits. Decided from where the layout is headed, so an animation in progress does not flip it midway.
             let targetCentralContentWidth = activityCollapsedContentWidth * targetActivityFraction + targetCollapsedContentWidth * (1.0 - targetActivityFraction) + titleContentSpacing + realTitleContentWidth
-            let showsTitleText = StoryPeerListTitleLayout.showsTitleText(containerWidth: itemLayout.containerSize.width, contentWidth: targetCentralContentWidth, minX: component.minTitleX, maxX: component.maxTitleX)
+            let showsTitleText = StoryPeerListTitleLayout.showsTitleText(contentWidth: targetCentralContentWidth, minX: component.minTitleX, maxX: component.maxTitleX)
             let titleTextFraction = max(self.titleTextFraction(showsTitleText, at: timestamp), min(1.0, max(0.0, collapsedState.maxFraction)))
             let hiddenTitleWidth = titleSize.width * (1.0 - titleTextFraction)
             let titleWidth = collapsedState.titleWidth - hiddenTitleWidth
-            collapsedContentOrigin = StoryPeerListTitleLayout.contentOrigin(containerWidth: itemLayout.containerSize.width, contentWidth: centralContentWidth - hiddenTitleWidth, maxX: maxTitleX)
+            let placedContentWidth = centralContentWidth - hiddenTitleWidth
+            self.titleOriginWidths = (itemLayout.containerSize.width, placedContentWidth)
+            collapsedContentOrigin = StoryPeerListTitleLayout.contentOrigin(containerWidth: itemLayout.containerSize.width, contentWidth: placedContentWidth, minX: component.minTitleX, maxX: component.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: CACurrentMediaTime()) ?? 0.0)
             
             let collapsedContentOriginOffset: CGFloat = 0.0
             collapsedContentOrigin -= collapsedContentOriginOffset
@@ -1625,20 +1626,20 @@ public final class StoryPeerListComponent: Component {
             let animationHint = transition.userData(AnimationHint.self)
 
             let now = CACurrentMediaTime()
-            if let previousComponent = self.component, previousComponent.maxTitleX != component.maxTitleX {
-                if case let .curve(duration, _) = incomingAnimation, duration > 0.0, !(animationHint?.disableAnimations ?? false) {
-                    // Past `titleBoundLimit` the bound no longer moves the title: both ends are taken there, so the
-                    // whole spring is motion rather than its first few frames.
-                    let limit = self.titleBoundLimit ?? .greatestFiniteMagnitude
-                    let from = min(self.maxTitleXCurve?.value(at: now) ?? previousComponent.maxTitleX, limit)
-                    let to = min(component.maxTitleX, limit)
-                    self.maxTitleXCurve = from == to ? nil : NavigationSpringCurve(startTime: now, from: from, velocity: self.maxTitleXCurve?.velocity(at: now) ?? 0.0, target: to, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+            if let previousComponent = self.component, previousComponent.minTitleX != component.minTitleX || previousComponent.maxTitleX != component.maxTitleX {
+                if case let .curve(duration, _) = incomingAnimation, duration > 0.0, !(animationHint?.disableAnimations ?? false), let widths = self.titleOriginWidths {
+                    // Where the content stands now, against where the new band places it. Only the content's actual
+                    // movement springs: a band change that does not move it (content centred far from both sides)
+                    // starts nothing.
+                    let from = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: now) ?? 0.0)
+                    let to = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: component.minTitleX, maxX: component.maxTitleX)
+                    self.titleOriginOffsetCurve = from == to ? nil : NavigationSpringCurve(startTime: now, from: from - to, velocity: self.titleOriginOffsetCurve?.velocity(at: now) ?? 0.0, target: 0.0, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
                 } else {
-                    self.maxTitleXCurve = nil
+                    self.titleOriginOffsetCurve = nil
                 }
             }
-            if let maxTitleXCurve = self.maxTitleXCurve, now >= maxTitleXCurve.restTime {
-                self.maxTitleXCurve = nil
+            if let titleOriginOffsetCurve = self.titleOriginOffsetCurve, now >= titleOriginOffsetCurve.restTime {
+                self.titleOriginOffsetCurve = nil
             }
 
             var useAnimation = false
@@ -1733,7 +1734,7 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.maxTitleXCurve != nil || self.titleTextAnimation != nil {
+            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.titleOriginOffsetCurve != nil || self.titleTextAnimation != nil {
                 self.startAnimatorIfNeeded()
             } else if let animator = self.animator {
                 self.animator = nil
