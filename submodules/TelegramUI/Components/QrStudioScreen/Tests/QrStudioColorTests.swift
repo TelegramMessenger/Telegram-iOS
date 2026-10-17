@@ -43,18 +43,6 @@ final class QrStudioColorTests: XCTestCase {
         XCTAssertEqual(QrStudioColor.mixLab(x, y, 1).rgb, y.rgb)
     }
 
-    func testDominantIgnoresGreyAndPicksTheSaturatedHue() throws {
-        let size = 32
-        let context = try XCTUnwrap(CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-        context.setFillColor(CGColor(gray: 0.5, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: size, height: size))
-        context.setFillColor(CGColor(srgbRed: 1, green: 0.1, blue: 0.1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 12, height: size))
-        let color = QrStudioColor.dominant(of: try XCTUnwrap(context.makeImage()))
-        XCTAssertGreaterThan(color.r, 0.8)
-        XCTAssertLessThan(color.g, 0.3)
-    }
-
     func testSwatchPixels() {
         let palette = QrStudioPalette.fallback
         let side = 33

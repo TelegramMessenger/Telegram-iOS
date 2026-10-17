@@ -345,13 +345,20 @@ struct QrStudioLattice {
 
 enum QrStudioMesh {
     static func points(at time: Double, pull: SIMD2<Double>) -> [SIMD2<Float>] {
-        let px = min(max(pull.x * 0.8, -0.32), 0.32)
-        let py = min(max(pull.y * 0.8, -0.32), 0.32)
+        let px = 0.32 * tanh(pull.x * 2.5)
+        let py = 0.32 * tanh(pull.y * 2.5)
         func p(_ x: Double, _ y: Double) -> SIMD2<Float> {
             return SIMD2(Float(x), Float(y))
         }
         func inner(_ v: Double) -> Double {
-            return min(max(v, 0.08), 0.92)
+            let d = v - 0.5
+            let a = abs(d)
+            let knee = 0.3
+            let room = 0.12
+            guard a > knee else {
+                return v
+            }
+            return 0.5 + (d < 0.0 ? -1.0 : 1.0) * (knee + room * tanh((a - knee) / room))
         }
         let t = time * 0.6
         return [
@@ -410,13 +417,15 @@ struct QrStudioStageStack<Item> {
 
 enum QrStudioSweep {
     static let transition: Double = 1.3
-    static let sweepTime: Double = 0.45
+    static let sweepTime: Double = 0.49
     static let depth: CGFloat = 9.0
     static let lag: CGFloat = 8.0
     static let fade: CGFloat = 26.0
+    static let hot: CGFloat = 22.0
+    static let canvasPad: CGFloat = 16.0
 
     private static func span(_ side: CGFloat) -> CGFloat {
-        return side + self.depth * 2.0 + self.lag + self.fade
+        return side + self.depth * 2.0 + self.lag + self.fade + self.hot
     }
 
     static func front(at s: Double, side: CGFloat) -> CGFloat {
@@ -463,8 +472,11 @@ enum QrStudioSweep {
     }
 }
 
-func qrStudioTokenRefreshDelay(expires: Double, now: Double) -> Double {
-    return max(15.0, expires - now)
+func qrStudioTokenRefreshDelay(expires: Double, now: Double, staleAttempt: Int) -> Double {
+    if expires > now {
+        return expires - now
+    }
+    return min(15.0, pow(2.0, Double(min(staleAttempt, 8))))
 }
 
 func qrStudioTokenIsExpired(expires: Double, now: Double) -> Bool {

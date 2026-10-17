@@ -236,9 +236,13 @@ vertex QrAshOut qrAshVertex(
     point.x += 3.0 * sin(7.0 * tau + 6.283 * qrAshHash(seed, 9.0)) * tau;
     point.y += 34.0 * tau * tau;
 
+    float halfSide = uniforms.side * 0.5;
+    float outside = max(abs(point.x - halfSide), abs(point.y - halfSide)) - halfSide;
+    float edge = clamp((uniforms.origin.x - outside) / 40.0, 0.0, 1.0);
+
     float sizeHash = qrAshHash(seed, 2.0);
     float radius = (spark ? 0.9 + 0.7 * sizeHash : (flake ? 2.2 + 2.0 * sizeHash : 0.6 + 1.3 * sizeHash)) * (1.0 - 0.4 * k);
-    float halo = (spark && k < 0.7) ? 3.4 : 1.0;
+    float halo = (spark && k < 0.7) ? max(1.0, 3.4 * edge) : 1.0;
     float toneHash = qrAshHash(seed, 11.0);
     int tone = (spark || toneHash < 0.5) ? 0 : (toneHash < 0.72 ? 1 : 2);
 
@@ -248,8 +252,8 @@ vertex QrAshOut qrAshVertex(
     float2 position = rect.origin + float2(unit.x, 1.0 - unit.y) * rect.size;
     out.position = float4(position.x * 2.0 - 1.0, position.y * 2.0 - 1.0, 0.0, 1.0);
     out.uv = (quad - 0.5) * 2.0 * halo;
-    out.color = float4(uniforms.tones[tone].rgb, pow(1.0 - k, 1.2));
-    out.glow = halo > 1.0 ? 0.3 * uniforms.fade : 0.0;
+    out.color = float4(uniforms.tones[tone].rgb, pow(1.0 - k, 1.2) * edge);
+    out.glow = halo > 1.0 ? 0.3 * uniforms.fade * edge : 0.0;
     return out;
 }
 

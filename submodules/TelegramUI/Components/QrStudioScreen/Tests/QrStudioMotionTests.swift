@@ -135,8 +135,8 @@ final class QrStudioMotionTests: XCTestCase {
     func testSweepFrontTravelsBottomToTop() {
         let side: CGFloat = 200
         XCTAssertEqual(QrStudioSweep.front(at: 0, side: side), side + 9, accuracy: 0.001)
-        XCTAssertEqual(QrStudioSweep.front(at: 0.45, side: side), 9 - 9 * 2 - 8 - 26, accuracy: 0.001)
-        XCTAssertEqual(QrStudioSweep.front(at: 5, side: side), QrStudioSweep.front(at: 0.45, side: side))
+        XCTAssertEqual(QrStudioSweep.front(at: 0.49, side: side), 9 - 9 * 2 - 8 - 26 - 22, accuracy: 0.001)
+        XCTAssertEqual(QrStudioSweep.front(at: 5, side: side), QrStudioSweep.front(at: 0.49, side: side))
         var previous = CGFloat.greatestFiniteMagnitude
         for i in 0 ... 45 {
             let front = QrStudioSweep.front(at: Double(i) / 100, side: side)
@@ -173,9 +173,11 @@ final class QrStudioMotionTests: XCTestCase {
     }
 
     func testTokenRefreshDelay() {
-        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 1300, now: 1000), 300)
-        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 1005, now: 1000), 15)
-        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 900, now: 1000), 15)
+        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 1300, now: 1000, staleAttempt: 0), 300)
+        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 1005, now: 1000, staleAttempt: 0), 5)
+        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 900, now: 1000, staleAttempt: 0), 1)
+        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 1000, now: 1000, staleAttempt: 3), 8)
+        XCTAssertEqual(qrStudioTokenRefreshDelay(expires: 900, now: 1000, staleAttempt: 10), 15)
         XCTAssertTrue(qrStudioTokenIsExpired(expires: 900, now: 1000))
         XCTAssertFalse(qrStudioTokenIsExpired(expires: 1300, now: 1000))
     }

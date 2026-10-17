@@ -69,7 +69,7 @@ final class QrStudioAshLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         for y in 0 ..< size {
             let centerY = (CGFloat(y) + 0.5) * unit
             let born = Float(QrStudioSweep.time(at: centerY - QrStudioSweep.depth * 0.5, side: side))
-            for x in 0 ..< size where matrix[x, y] {
+            for x in 0 ..< size where matrix[x, y] && !QrStudioCodePaths.isInLogo(x: x, y: y, size: size) {
                 let key = Int32(truncatingIfNeeded: y &* 977 &+ x)
                 let count = 3 + Int(QrStudioSweep.hash(key, 1) * 2.99)
                 for j in 0 ..< count {

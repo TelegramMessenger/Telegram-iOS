@@ -12,6 +12,7 @@ final class QrStudioSheetMotion {
         var spread: CGFloat
         var pull: CGFloat
         var search: CGFloat
+        var height: CGFloat = 0.0
 
         static func openness(rise: CGFloat, pull: CGFloat, travel: CGFloat) -> CGFloat {
             let r = min(max(rise, 0.0), 1.08)
@@ -31,6 +32,7 @@ final class QrStudioSheetMotion {
         case spread
         case pull
         case search
+        case height
     }
 
     private struct Channel {
@@ -46,11 +48,13 @@ final class QrStudioSheetMotion {
     static let riseClose = QrStudioSpring(duration: 0.34, bounce: 0.04)
     static let pullBack = QrStudioSpring(duration: 0.45, bounce: 0.15)
     static let keyboard = QrStudioSpring(duration: 0.38, bounce: 0.0)
+    static let tabHeight = QrStudioSpring(duration: 0.42, bounce: 0.0)
 
     private(set) var rise: CGFloat = 0.0
     private(set) var spread: CGFloat = 0.0
     private(set) var pull: CGFloat = 0.0
     private(set) var search: CGFloat = 0.0
+    private(set) var height: CGFloat = 0.0
     private(set) var isOpen = false
     private(set) var isDragging = false
 
@@ -61,7 +65,7 @@ final class QrStudioSheetMotion {
     }
 
     var sample: Sample {
-        return Sample(rise: self.rise, spread: self.spread, pull: self.pull, search: self.search)
+        return Sample(rise: self.rise, spread: self.spread, pull: self.pull, search: self.search, height: self.height)
     }
 
     func openness(travel: CGFloat) -> CGFloat {
@@ -74,6 +78,7 @@ final class QrStudioSheetMotion {
         result.spread = self.spread
         result.pull = self.pull
         result.search = self.search
+        result.height = self.height
         result.isOpen = self.isOpen
         result.isDragging = self.isDragging
         result.channels = self.channels
@@ -110,6 +115,9 @@ final class QrStudioSheetMotion {
             case .search:
                 channel.value = value.search
                 channel.velocity = velocity.search
+            case .height:
+                channel.value = value.height
+                channel.velocity = velocity.height
             }
             self.channels[key] = channel
         }
@@ -117,6 +125,7 @@ final class QrStudioSheetMotion {
         self.spread = value.spread
         self.pull = value.pull
         self.search = value.search
+        self.height = value.height
         self.step(0.0)
     }
 
@@ -126,6 +135,18 @@ final class QrStudioSheetMotion {
         self.spread = value.spread
         self.pull = value.pull
         self.search = value.search
+        self.height = value.height
+    }
+
+    func setHeight(_ height: CGFloat, animated: Bool) {
+        if self.channels[.height] == nil && self.height == height {
+            return
+        }
+        if animated && self.height > 0.0 {
+            self.animate(.height, to: height, QrStudioSheetMotion.tabHeight)
+        } else {
+            self.set(.height, height)
+        }
     }
 
     func open(animated: Bool) {
@@ -192,7 +213,7 @@ final class QrStudioSheetMotion {
                 continue
             }
             QrStudioSheetMotion.advance(&channel, dt)
-            let scale: CGFloat = key == .pull ? 0.2 : 0.0005
+            let scale: CGFloat = key == .pull || key == .height ? 0.2 : 0.0005
             if abs(channel.value - channel.target) < scale && abs(channel.velocity) < scale * 20.0 {
                 self.write(key, channel.target)
                 self.channels.removeValue(forKey: key)
@@ -219,6 +240,8 @@ final class QrStudioSheetMotion {
             return self.pull
         case .search:
             return self.search
+        case .height:
+            return self.height
         }
     }
 
@@ -232,6 +255,8 @@ final class QrStudioSheetMotion {
             self.pull = value
         case .search:
             self.search = value
+        case .height:
+            self.height = value
         }
     }
 
@@ -300,8 +325,15 @@ struct QrStudioSheetGeometry: Equatable {
         return keyboard > 0.0 ? max(0.0, keyboard + QrStudioSheetGeometry.searchVisible - self.sheet.height) : 0.0
     }
 
-    func frame(rise: CGFloat, spread: CGFloat, pull: CGFloat, lift: CGFloat) -> CGRect {
-        let target = self.sheet.offsetBy(dx: 0.0, dy: pull - lift)
+    func sheetFrame(height: CGFloat) -> CGRect {
+        guard height > 0.0 else {
+            return self.sheet
+        }
+        return CGRect(x: self.sheet.minX, y: self.screen.height - height, width: self.sheet.width, height: height)
+    }
+
+    func frame(rise: CGFloat, spread: CGFloat, pull: CGFloat, lift: CGFloat, height: CGFloat = 0.0) -> CGRect {
+        let target = self.sheetFrame(height: height).offsetBy(dx: 0.0, dy: pull - lift)
         let top = self.capsule.minY + (target.minY - self.capsule.minY) * rise
         let bottom = self.capsule.maxY + (target.maxY - self.capsule.maxY) * rise
         let width = self.capsule.width + (self.sheet.width - self.capsule.width) * spread
@@ -333,7 +365,7 @@ struct QrStudioSheetGeometry: Equatable {
         let fit = min(1.0, max(0.4, (panelTop - gap - below - 108.0) / card))
         let top = panelTop - gap - below - card * fit
         let restTop = groupY - (card + below) / 2.0
-        return (fit, top - restTop - card * (1.0 - fit))
+        return (fit, min(0.0, top - restTop - card * (1.0 - fit)))
     }
 
     private static func smooth(_ value: CGFloat) -> CGFloat {

@@ -104,7 +104,12 @@ final class QrStudioGlassButtonView: UIView {
             self.title = title
             self.isDark = isDark
             let color = isDark ? UIColor(white: 0.96, alpha: 1.0) : UIColor(white: 0.1, alpha: 1.0)
-            self.iconView.image = icon.flatMap { generateTintedImage(image: UIImage(bundleImageName: $0), color: color) }
+            self.iconView.image = icon.flatMap { name -> UIImage? in
+                if name.hasPrefix("sf:") {
+                    return UIImage(systemName: String(name.dropFirst(3)), withConfiguration: UIImage.SymbolConfiguration(pointSize: 17.0, weight: .semibold))?.withTintColor(color, renderingMode: .alwaysOriginal)
+                }
+                return generateTintedImage(image: UIImage(bundleImageName: name), color: color)
+            }
             self.titleLabel.attributedText = title.flatMap { NSAttributedString(string: $0, font: QrStudioGlassButtonView.titleFont, textColor: color) }
         }
         transition.setFrame(view: self.glass, frame: CGRect(origin: CGPoint(), size: size))

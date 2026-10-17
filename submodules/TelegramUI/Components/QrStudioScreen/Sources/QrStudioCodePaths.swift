@@ -33,6 +33,19 @@ struct QrStudioCodePaths {
         return CGFloat(size) * 0.135
     }
 
+    static func eyeParts(rect outer: CGRect, unit: CGFloat) -> (outer: CGPath, inner: CGPath, ball: CGPath) {
+        let inner = outer.insetBy(dx: unit, dy: unit)
+        let ball = outer.insetBy(dx: unit * 2.0, dy: unit * 2.0)
+        let outerRadius = unit * 7.0 * 0.3
+        let innerRadius = unit * 5.0 * 0.24
+        let ballRadius = unit * 3.0 * 0.3
+        return (
+            CGPath(roundedRect: outer, cornerWidth: outerRadius, cornerHeight: outerRadius, transform: nil),
+            CGPath(roundedRect: inner, cornerWidth: innerRadius, cornerHeight: innerRadius, transform: nil),
+            CGPath(roundedRect: ball, cornerWidth: ballRadius, cornerHeight: ballRadius, transform: nil)
+        )
+    }
+
     static func isInLogo(x: Int, y: Int, size: Int) -> Bool {
         let center = CGFloat(size - 1) / 2.0
         return hypot(CGFloat(x) - center, CGFloat(y) - center) < self.logoRadius(size: size) + 0.5
@@ -93,16 +106,10 @@ struct QrStudioCodePaths {
         let balls = CGMutablePath()
         if size >= 21 {
             for eye in matrix.eyes {
-                let outer = CGRect(x: CGFloat(eye.x) * unit, y: CGFloat(eye.y) * unit, width: unit * 7.0, height: unit * 7.0)
-                let inner = outer.insetBy(dx: unit, dy: unit)
-                let outerRadius = unit * 7.0 * 0.3
-                let innerRadius = unit * 5.0 * 0.24
-                frames.addPath(CGPath(roundedRect: outer, cornerWidth: outerRadius, cornerHeight: outerRadius, transform: nil))
-                frames.addPath(CGPath(roundedRect: inner, cornerWidth: innerRadius, cornerHeight: innerRadius, transform: nil))
-
-                let ball = CGRect(x: CGFloat(eye.x + 2) * unit, y: CGFloat(eye.y + 2) * unit, width: unit * 3.0, height: unit * 3.0)
-                let ballRadius = unit * 3.0 * 0.3
-                balls.addPath(CGPath(roundedRect: ball, cornerWidth: ballRadius, cornerHeight: ballRadius, transform: nil))
+                let parts = QrStudioCodePaths.eyeParts(rect: CGRect(x: CGFloat(eye.x) * unit, y: CGFloat(eye.y) * unit, width: unit * 7.0, height: unit * 7.0), unit: unit)
+                frames.addPath(parts.outer)
+                frames.addPath(parts.inner)
+                balls.addPath(parts.ball)
             }
         }
 
