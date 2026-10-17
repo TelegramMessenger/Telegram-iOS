@@ -123,8 +123,8 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             overlayViews: overlays,
             backgroundViews: [background, banner],
             listViews: [node.scrollNode.view] + header.expansionDecorationViews + photoControls,
-            // The page rides the status with the buttons, as the prototype's actions and info card do: the list and the
-            // music strip.
+            // The page rides the status, as the prototype's actions and info card do: the list, the buttons and the music
+            // strip.
             pageViews: [node.scrollNode.view] + header.expansionPageViews,
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,

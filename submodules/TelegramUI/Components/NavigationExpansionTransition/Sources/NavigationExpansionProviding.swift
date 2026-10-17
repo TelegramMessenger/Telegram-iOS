@@ -86,7 +86,8 @@ public final class NavigationExpansionDestinationLoan {
     /// The labels' colours at rest: what the ink runs to.
     public let labelColors: [UIColor]
     public let carriedEdge: CGFloat
-    /// The action buttons, in order, laid out at rest: each appears on its own and rides the page (`pageViews`).
+    /// The action buttons, in order, laid out at rest: each appears on its own; a page view holding them carries them
+    /// with the page (`pageViews`).
     public let appearingViews: [UIView]
     /// Views that appear with each button, by its index: drawn elsewhere (the profile's platters are shapes in a blur's
     /// mask), so the button's own alpha and transform do not reach them.
@@ -98,8 +99,10 @@ public final class NavigationExpansionDestinationLoan {
     public let backgroundViews: [UIView]
     public let listViews: [UIView]
     public let patternViews: [UIView]
-    /// The page below the header, which rides the status with the action buttons (`page`): they stay in their own
-    /// superviews and keep their own transforms. Never a label's follower: it rides its label already.
+    /// The page below the header, which rides the status (`page`): they stay in their own superviews and keep their own
+    /// transforms. A view holding the action buttons carries them, their platters and whatever draws those (the
+    /// profile's blur and its mask, which clip at the blur's own frame); never a button, a platter or a label's follower
+    /// itself, which have transforms of their own.
     public let pageViews: [UIView]
     /// The colour the drops' glass tints toward (the profile's colour; nil: none, the plain profile).
     public let glassTint: UIColor?

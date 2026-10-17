@@ -362,11 +362,6 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return CATransform3DConcat(rider.rest, CATransform3DMakeTranslation(0.0, page / max(rider.unit, 0.0001), 0.0))
     }
 
-    /// An action button's (and its platter's) transform: appearing, rising and growing from below its place, on the page.
-    private func appearTransform(_ a: ExpansionAppearFrame, page: CGFloat) -> CATransform3D {
-        return CATransform3DScale(CATransform3DMakeTranslation(0.0, a.offset + page, 0.0), a.scale, a.scale, 1.0)
-    }
-
     private func color(_ host: LabelHost, ink: CGFloat) -> UIColor {
         return host.sourceColor.mixedWith(host.destinationColor, alpha: min(max(ink, 0.0), 1.0))
     }
@@ -433,7 +428,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let companions = index < destinationLoan.appearingCompanions.count ? destinationLoan.appearingCompanions[index] : []
             for view in [view] + companions {
                 view.alpha = a.alpha
-                view.layer.transform = self.appearTransform(a, page: f.page)
+                view.layer.transform = CATransform3DScale(CATransform3DMakeTranslation(0.0, a.offset, 0.0), a.scale, a.scale, 1.0)
             }
         }
         for rider in self.pageRiders {
@@ -581,10 +576,11 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
 
         // The upper screen's own parts.
         for (index, view) in destinationLoan.appearingViews.enumerated() {
+            let appear = frames.map { $0.appearing[index] }
             let companions = index < destinationLoan.appearingCompanions.count ? destinationLoan.appearingCompanions[index] : []
             for view in [view] + companions {
-                add(view.layer, "opacity", frames.map { number($0.appearing[index].alpha) })
-                add(view.layer, "transform", frames.map { NSValue(caTransform3D: self.appearTransform($0.appearing[index], page: $0.page)) })
+                add(view.layer, "opacity", appear.map { number($0.alpha) })
+                add(view.layer, "transform", appear.map { NSValue(caTransform3D: CATransform3DScale(CATransform3DMakeTranslation(0.0, $0.offset, 0.0), $0.scale, $0.scale, 1.0)) })
             }
         }
         for rider in self.pageRiders {

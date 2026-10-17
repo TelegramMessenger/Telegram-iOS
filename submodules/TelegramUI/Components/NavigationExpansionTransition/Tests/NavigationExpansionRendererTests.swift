@@ -641,8 +641,9 @@ final class NavigationExpansionRendererTests: XCTestCase {
     }
 
     /// The page: one view straight in the upper screen with a transform of its own (the list), one in a container that
-    /// scales it.
-    private func makePage(_ destination: FakeDestination) -> (plain: UIView, scaled: UIView) {
+    /// scales it, and one holding the buttons (the profile's buttons' container, which also carries their platters'
+    /// blur).
+    private func makePage(_ destination: FakeDestination) -> (plain: UIView, scaled: UIView, holder: UIView) {
         let top = destination.top!
         let plain = UIView(frame: CGRect(x: 0.0, y: 360.0, width: 402.0, height: 514.0))
         plain.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
@@ -652,15 +653,20 @@ final class NavigationExpansionRendererTests: XCTestCase {
         top.addSubview(container)
         let scaled = UIView(frame: CGRect(x: 20.0, y: 10.0, width: 300.0, height: 24.0))
         container.addSubview(scaled)
-        destination.pageViews = [plain, scaled]
-        return (plain, scaled)
+        let holder = UIView(frame: top.bounds)
+        top.addSubview(holder)
+        for button in destination.buttons {
+            holder.addSubview(button)
+        }
+        destination.pageViews = [plain, scaled, holder]
+        return (plain, scaled, holder)
     }
 
     // The page below the header rides the status as one piece: wherever the status's host stands, the page views and
-    // the buttons (their platters with them, `test_platters_appearWithTheirButtons`) stand as far from their resting
-    // places, overshoot included, each keeping its own transform. Without it the avatar and the name bounced over a page that held still.
+    // the buttons they hold stand as far from their resting places, overshoot included, each keeping its own transform.
+    // Without it the avatar and the name bounced over a page that held still.
     func test_page_ridesTheStatus() {
-        var page: (plain: UIView, scaled: UIView)?
+        var page: (plain: UIView, scaled: UIView, holder: UIView)?
         var rest: [CGRect] = []
         let (renderer, container, _, _, destination) = self.make(configure: { destination in
             page = self.makePage(destination)
@@ -677,6 +683,7 @@ final class NavigationExpansionRendererTests: XCTestCase {
                 return XCTFail("no status host")
             }
             let delta = host.layer.position.y - statusRest
+            // The buttons only once they have appeared (their own rise and growth are over).
             let views = [page.plain, page.scaled] + (time >= 1.0 ? destination.buttons : [])
             for (view, restRect) in zip(views, rest) {
                 let now = view.convert(view.bounds, to: container)
@@ -694,17 +701,34 @@ final class NavigationExpansionRendererTests: XCTestCase {
         XCTAssertGreaterThan(overshoot, 2.0, "the page goes past its place with the status")
     }
 
+    // A button never takes the page itself: the view holding it carries it, so a button that took it too would move
+    // twice (and a platter moved on its own is clipped by the profile's blur, which stays where it is).
+    func test_page_buttonsTakeOnlyTheirOwnRise() {
+        let (renderer, _, _, _, destination) = self.make(configure: { _ = self.makePage($0) })
+        renderer.update(time: 0.6, isOpening: true, pose: .none)
+        for (button, platter) in zip(destination.buttons, destination.platters) {
+            XCTAssertLessThanOrEqual(button.layer.transform.m42, 14.0 + 1e-6)
+            XCTAssertGreaterThanOrEqual(button.layer.transform.m42, 0.0)
+            XCTAssertTrue(CATransform3DEqualToTransform(platter.layer.transform, button.layer.transform))
+        }
+        renderer.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
+        guard let animation = destination.buttons[0].layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let values = animation.values as? [NSValue] else {
+            return XCTFail("no button keyframes")
+        }
+        XCTAssertEqual(values[0].caTransform3DValue.m42, 14.0, accuracy: 1e-6, "it starts 14 pt below its place, nothing more")
+    }
+
     // On keyframes too, ending where the page rests; and the followers keep theirs beside it.
     func test_page_keyframed() {
-        var page: (plain: UIView, scaled: UIView)?
+        var page: (plain: UIView, scaled: UIView, holder: UIView)?
         var followers: (plain: UIView, scaled: UIView, container: UIView)?
-        let (renderer, _, _, _, destination) = self.make(configure: { destination in
+        let (renderer, _, _, _, _) = self.make(configure: { destination in
             page = self.makePage(destination)
             followers = self.makeFollowers(destination)
         })
         let timeline = self.timeline(from: 0.0, to: 1.0, opening: true)
         renderer.animate(timeline: timeline)
-        for (view, restTransform) in [(page!.plain, CATransform3DMakeScale(0.9, 0.9, 1.0)), (page!.scaled, CATransform3DIdentity), (destination.buttons[0], CATransform3DIdentity)] {
+        for (view, restTransform) in [(page!.plain, CATransform3DMakeScale(0.9, 0.9, 1.0)), (page!.scaled, CATransform3DIdentity), (page!.holder, CATransform3DIdentity)] {
             guard let animation = view.layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let values = animation.values as? [NSValue] else {
                 return XCTFail("no page keyframes")
             }
@@ -722,15 +746,17 @@ final class NavigationExpansionRendererTests: XCTestCase {
     // On every ending the page views keep their own transforms again, with no keyframes left.
     func test_page_restoredOnEveryEnding() {
         for atTop in [true, false] {
-            var page: (plain: UIView, scaled: UIView)?
+            var page: (plain: UIView, scaled: UIView, holder: UIView)?
             let (renderer, _, _, _, _) = self.make(configure: { page = self.makePage($0) })
             renderer.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
             renderer.update(time: 0.7, isOpening: true, pose: .none)
             renderer.end(atTop: atTop)
             XCTAssertEqual(page!.plain.transform, CGAffineTransform(scaleX: 0.9, y: 0.9))
             XCTAssertEqual(page!.scaled.transform, .identity)
-            XCTAssertNil(page!.plain.layer.animation(forKey: "navigationExpansion.transform"))
-            XCTAssertNil(page!.scaled.layer.animation(forKey: "navigationExpansion.transform"))
+            XCTAssertEqual(page!.holder.transform, .identity)
+            for view in [page!.plain, page!.scaled, page!.holder] {
+                XCTAssertNil(view.layer.animation(forKey: "navigationExpansion.transform"))
+            }
         }
     }
 

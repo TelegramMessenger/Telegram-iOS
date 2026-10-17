@@ -145,18 +145,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private(set) var expansionRoundAvatarFrame: CGRect?
     /// What an expansion fades with the list: the header's decorations around the name, which the prototype's header
     /// does not have — those that move with the status (`expansionStatusFollowerViews`), and the music strip and its
-    /// platter, which ride the page (`expansionPageViews`).
+    /// platter, which ride the page.
     var expansionDecorationViews: [UIView] {
-        return self.expansionStatusFollowerViews + self.expansionPageViews
-    }
-    /// The header's part of the page an expansion moves with the status, with the buttons and the list: the music strip
-    /// and its platter (the prototype's music island, in the buttons' row).
-    var expansionPageViews: [UIView] {
-        var views: [UIView] = []
+        var views = self.expansionStatusFollowerViews
         if let view = self.music?.view {
             views.append(view)
         }
         if let view = self.musicBackground {
+            views.append(view)
+        }
+        return views
+    }
+    /// The header's part of the page an expansion moves with the status, with the list (the prototype's actions and
+    /// music island): the buttons' container, which carries the buttons and their blur, whose mask draws the buttons'
+    /// platters and the music strip's (a platter moved on its own is clipped at the blur's frame, sized to the buttons'
+    /// row), and the music strip.
+    var expansionPageViews: [UIView] {
+        var views: [UIView] = [self.buttonsContainerNode.view]
+        if let view = self.music?.view {
             views.append(view)
         }
         return views
