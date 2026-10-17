@@ -126,6 +126,9 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             // The page rides the status, as the prototype's actions and info card do: the list, the buttons and the music
             // strip.
             pageViews: [node.scrollNode.view] + header.expansionPageViews,
+            // The cover clips at the header's bottom, the music strip's band: the edge rides the page with the band, its
+            // gradient and pattern held still, as the prototype's gradient (which has no edge) is.
+            pageEdgeViews: [banner],
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadius: layout.deviceMetrics.screenCornerRadius,

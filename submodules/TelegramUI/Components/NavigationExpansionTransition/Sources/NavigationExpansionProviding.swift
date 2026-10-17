@@ -104,12 +104,16 @@ public final class NavigationExpansionDestinationLoan {
     /// profile's blur and its mask, which clip at the blur's own frame); never a button, a platter or a label's follower
     /// itself, which have transforms of their own.
     public let pageViews: [UIView]
+    /// Views clipping at a bottom edge that is the page's top (the profile's cover, whose bottom band is the music strip):
+    /// the edge rides the page while what they show holds still, so the page never leaves a strip of the cover below it.
+    /// They stay in their own superviews and keep their own transforms and sublayer transforms.
+    public let pageEdgeViews: [UIView]
     /// The colour the drops' glass tints toward (the profile's colour; nil: none, the plain profile).
     public let glassTint: UIColor?
     public let screenCornerRadius: CGFloat
     public let backButtonFrame: CGRect?
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadius: CGFloat, backButtonFrame: CGRect?) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadius: CGFloat, backButtonFrame: CGRect?) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -123,6 +127,7 @@ public final class NavigationExpansionDestinationLoan {
         self.backgroundViews = backgroundViews
         self.listViews = listViews
         self.pageViews = pageViews
+        self.pageEdgeViews = pageEdgeViews
         self.patternViews = patternViews
         self.glassTint = glassTint
         self.screenCornerRadius = screenCornerRadius
