@@ -148,12 +148,12 @@ func walletTransactions(
             peer = .user(enginePeer, address: address, domain: domain)
         case let .channel(enginePeer, address, domain):
             peer = .channel(enginePeer, address: address, domain: domain)
+        case let .telegramGift(ownProfile):
+            peer = .telegramGift(ownProfile: ownProfile)
         case let .address(address, domain):
             peer = .address(address, domain: domain)
         case let .onramp(address, domain, providerName):
             peer = .onramp(address: address, domain: domain, providerName: providerName)
-        case let .telegramGift(ownProfile):
-            peer = .telegramGift(ownProfile: ownProfile)
         case .unsupported:
             peer = .unsupported
         }
@@ -242,10 +242,21 @@ func mergeTransactions(
 
 @available(macOS 10.15, *)
 func walletPendingTransferTransaction(
-    _ pending: WalletContext.PendingTransfer
+    _ pending: WalletContext.PendingTransfer,
+    collectible: WalletContext.Collectible? = nil,
+    isGiftDeposit: Bool = false
 ) -> WalletContext.Transaction? {
-    guard pending.collectibleAddress == nil, pending.amount > 0 else {
-        return nil
+    let collectibleTransfer: WalletContext.Transaction.CollectibleTransfer?
+    if pending.collectibleAddress != nil {
+        guard let collectible else {
+            return nil
+        }
+        collectibleTransfer = WalletContext.Transaction.CollectibleTransfer(collectible: collectible)
+    } else {
+        guard pending.amount > 0 else {
+            return nil
+        }
+        collectibleTransfer = nil
     }
     let status: WalletContext.Transaction.Status
     switch pending.status {
@@ -264,9 +275,10 @@ func walletPendingTransferTransaction(
         amount: -pending.amount,
         fee: pending.fee ?? 0,
         gasless: pending.gasless,
-        peer: .address(pending.recipient, domain: nil),
+        peer: isGiftDeposit ? .telegramGift(ownProfile: true) : .address(pending.recipient, domain: nil),
         comment: pending.comment,
         commentEncrypted: pending.commentEncrypted,
+        collectible: collectibleTransfer,
         status: status
     )
 }

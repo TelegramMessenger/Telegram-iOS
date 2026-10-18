@@ -45,6 +45,7 @@ import MetalEngine
 import RecaptchaEnterprise
 import NavigationBarNode
 import NavigationBarComponent
+import NavigationExpansionTransition
 import ContextUI
 import ContextControllerImpl
 import ProxyServerPreviewScreen
@@ -368,6 +369,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         defaultNavigationBarTransitionRenderer = { bottom, top in
             return makeNavigationBarTransitionRenderer(bottom: bottom, top: top)
+        }
+        defaultNavigationExpansionRenderer = { source, destination, operation in
+            return NavigationExpansionRendererImpl.make(source: source, destination: destination, operation: operation)
         }
         makeContextControllerImpl = { context, presentationData, configuration, recognizer, gesture, workaroundUseLegacyImplementation, disableScreenshots, hideReactionPanelTail in
             return ContextControllerImpl(

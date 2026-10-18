@@ -603,7 +603,11 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                     }
                 case "contact":
                     if let token = params["token"] {
-                        convertedUrl = makeTelegramUrl("/contact/\(token)")
+                        var queryItems: [URLQueryItem] = []
+                        if let noPaidMessagesToken = params["free"], !noPaidMessagesToken.isEmpty {
+                            queryItems.append(URLQueryItem(name: "free", value: noPaidMessagesToken))
+                        }
+                        convertedUrl = makeTelegramUrl("/contact/\(token)", queryItems: queryItems)
                     }
                 case "confirmphone":
                     if let phone = params["phone"], let hash = params["hash"] {
@@ -762,7 +766,7 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                     for queryItem in params.items {
                         if let value = queryItem.value {
                             switch queryItem.name {
-                            case "nopaidtoken":
+                            case "free":
                                 noPaidMessagesToken = value
                             case "phone":
                                 phone = value
@@ -840,7 +844,7 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                             queryItems.append(URLQueryItem(name: "direct", value: nil))
                         }
                         if let noPaidMessagesToken {
-                            queryItems.append(URLQueryItem(name: "nopaidtoken", value: noPaidMessagesToken))
+                            queryItems.append(URLQueryItem(name: "free", value: noPaidMessagesToken))
                         }
                         convertedUrl = makeTelegramUrl("/+\(phone)", queryItems: queryItems)
                     } else if let domain = domain {
@@ -905,7 +909,7 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                             queryItems.append(URLQueryItem(name: "direct", value: nil))
                         }
                         if let noPaidMessagesToken {
-                            queryItems.append(URLQueryItem(name: "nopaidtoken", value: noPaidMessagesToken))
+                            queryItems.append(URLQueryItem(name: "free", value: noPaidMessagesToken))
                         }
                         
                         convertedUrl = makeTelegramUrl(path, queryItems: queryItems)

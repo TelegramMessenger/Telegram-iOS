@@ -336,7 +336,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
                 link = "https://t.me/auction/\(slug)"
             }
             
-            let shareController = self.context.sharedContext.makeShareController(
+            let shareController = self.context.sharedContext.makeShareScreen(
                 context: self.context,
                 params: ShareControllerParams(
                     subject: .url(link),

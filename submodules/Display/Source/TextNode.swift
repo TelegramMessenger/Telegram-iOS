@@ -94,15 +94,19 @@ public final class TextNodeBlockQuoteData: NSObject {
     public let secondaryColor: UIColor?
     public let tertiaryColor: UIColor?
     public let backgroundColor: UIColor
+    /// A fill the block is drawn with instead of its tint (`InteractiveTextNode` otherwise tints its block template with
+    /// `color`, and does not draw `backgroundColor`).
+    public let fillColor: UIColor?
     public let isCollapsible: Bool
     
-    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?, backgroundColor: UIColor, isCollapsible: Bool) {
+    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?, backgroundColor: UIColor, fillColor: UIColor? = nil, isCollapsible: Bool) {
         self.kind = kind
         self.title = title
         self.color = color
         self.secondaryColor = secondaryColor
         self.tertiaryColor = tertiaryColor
         self.backgroundColor = backgroundColor
+        self.fillColor = fillColor
         self.isCollapsible = isCollapsible
         
         super.init()
@@ -138,6 +142,13 @@ public final class TextNodeBlockQuoteData: NSObject {
                 return false
             }
         } else if (self.tertiaryColor == nil) != (other.tertiaryColor == nil) {
+            return false
+        }
+        if let lhsFillColor = self.fillColor, let rhsFillColor = other.fillColor {
+            if !lhsFillColor.isEqual(rhsFillColor) {
+                return false
+            }
+        } else if (self.fillColor == nil) != (other.fillColor == nil) {
             return false
         }
         
@@ -2910,7 +2921,15 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
 
 open class TextView: UIView {
     public internal(set) var cachedLayout: TextNodeLayout?
-    
+    /// What it draws: its text, its emoji, or both (`SplitTintTextView` draws them in two layers).
+    public var renderContentTypes: TextNode.RenderContentTypes = .all {
+        didSet {
+            if self.renderContentTypes != oldValue {
+                self.setNeedsDisplay()
+            }
+        }
+    }
+
     override public init(frame: CGRect) {
         super.init(frame: frame)
         
@@ -2983,7 +3002,7 @@ open class TextView: UIView {
         context.setAllowsFontSubpixelQuantization(true)
         context.setShouldSubpixelQuantizeFonts(true)
         
-        TextNode.draw(rect, withParameters: TextNode.DrawingParameters(cachedLayout: layout, renderContentTypes: .all), isCancelled: { false }, isRasterizing: false)
+        TextNode.draw(rect, withParameters: TextNode.DrawingParameters(cachedLayout: layout, renderContentTypes: self.renderContentTypes), isCancelled: { false }, isRasterizing: false)
     }
     
     public static func asyncLayout(_ maybeView: TextView?) -> (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextView) {

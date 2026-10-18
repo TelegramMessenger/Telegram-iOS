@@ -3617,22 +3617,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
-                if titleLeftOffset.isZero, case .animation = currentVerifiedIconContent {
+                if case .animation = currentVerifiedIconContent {
                     titleLeftOffset += 19.0
-                }
-                
-                if titleIconsWidth.isZero {
-                    titleIconsWidth += 4.0
                 } else {
-                    titleIconsWidth += 2.0
-                }
-                switch currentVerifiedIconContent {
-                case let .text(_, string):
-                    let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
-                    let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
-                    titleIconsWidth += floor(stringRect.width) + 11.0
-                default:
-                    titleIconsWidth += 8.0
+                    if titleIconsWidth.isZero {
+                        titleIconsWidth += 4.0
+                    } else {
+                        titleIconsWidth += 2.0
+                    }
+                    switch currentVerifiedIconContent {
+                    case let .text(_, string):
+                        let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                        let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                        titleIconsWidth += floor(stringRect.width) + 11.0
+                    default:
+                        titleIconsWidth += 8.0
+                    }
                 }
             }
             
@@ -3664,7 +3664,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
                     titleIconsWidth += floor(stringRect.width) + 11.0
                 default:
-                    titleIconsWidth += 8.0
+                    titleIconsWidth += 16.0
                 }
             }
             
@@ -3846,7 +3846,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
             }
                         
-            var titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
+            var titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth - titleLeftOffset
             var titleCutout: TextNodeCutout?
             if !titleLeftCutout.isZero {
                 titleCutout = TextNodeCutout(topLeft: CGSize(width: titleLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)

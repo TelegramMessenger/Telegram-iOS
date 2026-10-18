@@ -95,9 +95,49 @@ final class NavigationTransitionCoordinator {
     private var progressCurve: NavigationSpringCurve?
     /// Runs once the curve's deadline passes.
     private var curveCompletion: (() -> Void)?
+
+    /// The expand style's renderer; nil: the slide.
+    private let expansion: NavigationExpansionRenderer?
+    var isExpansion: Bool {
+        return self.expansion != nil
+    }
+    /// Which windows the expansion's clock runs: the opening's for a push (kept when back reverses it), else the
+    /// closing's.
+    private var expansionIsOpening: Bool
+    /// A swipe's card pose: under the finger, then released into the close.
+    private var expansionPose: NavigationExpansionCardPose = .none
+    private var releasedExpansionPose: NavigationExpansionCardPose?
+    /// A caught expanding push: the expansion time its clock froze at.
+    private var expansionFrozenTime: CGFloat?
+    /// A caught expanding push whose bars still held the chat's capsules: they stay there through the drag.
+    private var expansionCaughtBeforeBars = false
+    /// The expansion time a released pose lets go from (1 for a swipe from the settled profile).
+    private var releasedExpansionFrom: CGFloat = 1.0
+    /// A caught push let go short: the pose springing back while the push runs on.
+    private var springingBackPose: (pose: NavigationExpansionCardPose, weight: NavigationSpringCurve)?
+    /// The bars' glass this transition left lingering above the bar it ended on.
+    private weak var lingeringBarLayer: NavigationBarTransitionLayer?
+    /// Whether a swipe has handed the bars' capsules to the lower screen.
+    private var expansionBarShowsLower = false
+    private var expansionEnded = false
+    /// An expanding push's bars: their release toward the profile's capsules is scheduled at its window, and has run
+    /// (or a reversal settled them on the chat's first).
+    private var expansionBarMorphScheduled = false
+    private var expansionBarMorphReleased = false
+
+    /// The expansion's clock at a progress: a push runs it 0 → 1, a pop 1 → 0.
+    func expansionTime(progress: CGFloat) -> CGFloat {
+        return self.transition == .Push ? progress : 1.0 - progress
+    }
     
-    init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, topTransitionSource: NavigationBarTransitionSource?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, bottomTransitionSource: NavigationBarTransitionSource?, screenCornerRadii: CornerRadii, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil, didStartProgressAnimation: ((NavigationTransitionTimeline) -> Void)? = nil) {
+    init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, topTransitionSource: NavigationBarTransitionSource?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, bottomTransitionSource: NavigationBarTransitionSource?, screenCornerRadii: CornerRadii, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil, didStartProgressAnimation: ((NavigationTransitionTimeline) -> Void)? = nil, style: NavigationTransitionStyle = .slide) {
         self.transition = transition
+        if case let .expand(renderer) = style {
+            self.expansion = renderer
+        } else {
+            self.expansion = nil
+        }
+        self.expansionIsOpening = transition == .Push
         self.isInteractive = isInteractive
         self.isFlat = isFlat
         self.container = container
@@ -148,7 +188,8 @@ final class NavigationTransitionCoordinator {
             }
         }
         
-        if !self.isFlat {
+        // An expansion's screens stay still; its renderer draws the card.
+        if self.expansion == nil, !self.isFlat {
             // UIKit: the dim between the two screens, the top card's shadow above it.
             self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
             self.container.insertSubnode(self.shadowNode, belowSubnode: topNode)
@@ -179,8 +220,24 @@ final class NavigationTransitionCoordinator {
         // The previous transition's glass hands over before this one takes the bars.
         container.endLingeringNavigationBarTransition()
         self.maybeCreateNavigationBarTransition()
+        if let expansion = self.expansion {
+            expansion.view.frame = container.bounds
+            container.view.insertSubview(expansion.view, aboveSubview: topNode.view)
+            expansion.underView.frame = container.bounds
+            container.view.insertSubview(expansion.underView, belowSubview: topNode.view)
+            expansion.begin(topView: topNode.view, bottomView: bottomNode.view, size: container.bounds.size, time: self.expansionTime(progress: 0.0), isOpening: self.expansionIsOpening)
+        }
         self.updateProgress(0.0, transition: .immediate, completion: {})
-        self.navigationBarTransitionLayer?.beginTransition(isInteractive: self.isInteractive, toTop: self.transition == .Push)
+        // The bars take the screens' bars now and draw their glass from now on (the bars no longer draw it themselves).
+        // An expanding push holds the chat's capsules as they are and releases them toward the profile's at its window
+        // (`barGlassStart`, scheduled on the clock).
+        if self.expansion != nil && self.transition == .Push {
+            self.navigationBarTransitionLayer?.beginTransition(isInteractive: true, toTop: true)
+        } else {
+            self.expansionBarMorphScheduled = true
+            self.expansionBarMorphReleased = true
+            self.navigationBarTransitionLayer?.beginTransition(isInteractive: self.isInteractive, toTop: self.transition == .Push)
+        }
         
         self.frameRateLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { _ in })
         self.clock.ended = { [weak self] in
@@ -197,6 +254,19 @@ final class NavigationTransitionCoordinator {
         // morph; without this the lifted bars would never get their contents back.
         self.clock.stop()
         self.endNavigationBarTransition(lingering: false)
+        if let expansion = self.expansion, !self.expansionEnded {
+            let atTop = (self.transition == .Push) == (self._progress >= 0.5)
+            let end = {
+                expansion.end(atTop: atTop)
+                expansion.view.removeFromSuperview()
+                expansion.underView.removeFromSuperview()
+            }
+            if Thread.isMainThread {
+                end()
+            } else {
+                DispatchQueue.main.async(execute: end)
+            }
+        }
         // The screens outlive this coordinator, and the next container lays them out from their model frames (the
         // final ones); keyframes left on them would play this transition on to its end over that layout.
         let layers = self.progressLayers
@@ -239,8 +309,18 @@ final class NavigationTransitionCoordinator {
         self.applyScreenLayout(self.screenLayout(progress: progress), transition: transition, completion: completion)
     }
 
+    /// A screen's frame as bounds and position, whatever transform it has.
+    private func updateStill(node: ASDisplayNode, frame: CGRect, transition: ContainedViewLayoutTransition, completion: ((Bool) -> Void)? = nil) {
+        transition.updateBounds(node: node, bounds: CGRect(origin: node.bounds.origin, size: frame.size))
+        transition.updatePosition(node: node, position: CGPoint(x: frame.minX + frame.width * node.anchorPoint.x, y: frame.minY + frame.height * node.anchorPoint.y), completion: completion)
+    }
+
     /// Where the screens, the dim and the bars are at `progress`.
     func screenLayout(progress: CGFloat) -> NavigationTransitionScreenLayout {
+        if let expansion = self.expansion {
+            let bounds = CGRect(origin: CGPoint(), size: self.container.bounds.size)
+            return NavigationTransitionScreenLayout(topFrame: bounds, bottomFrame: bounds, dimFrame: bounds, dimAlpha: 0.0, fraction: expansion.barFraction(time: self.expansionTime(progress: progress), isOpening: self.expansionIsOpening))
+        }
         let position: CGFloat
         switch self.transition {
         case .Push:
@@ -274,13 +354,22 @@ final class NavigationTransitionCoordinator {
     private func applyScreenLayout(_ layout: NavigationTransitionScreenLayout, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void, updatesBars: Bool = true) {
         var canInvokeCompletion = false
         var hadEarlyCompletion = false
-        transition.updateFrame(node: self.topNode, frame: layout.topFrame, completion: { _ in
+        let topCompletion: (Bool) -> Void = { _ in
             if canInvokeCompletion {
                 completion()
             } else {
                 hadEarlyCompletion = true
             }
-        })
+        }
+        if self.expansion != nil {
+            // An expansion's screens stay where they are, and its renderer transforms the upper one into the swipe's
+            // card: a frame set on a transformed view resizes it (UIKit defines frame only untransformed), so the
+            // screens get their bounds and position.
+            self.updateStill(node: self.bottomNode, frame: layout.bottomFrame, transition: transition)
+            self.updateStill(node: self.topNode, frame: layout.topFrame, transition: transition, completion: topCompletion)
+        } else {
+            transition.updateFrame(node: self.topNode, frame: layout.topFrame, completion: topCompletion)
+        }
         canInvokeCompletion = true
         transition.updateFrame(node: self.dimNode, frame: layout.dimFrame)
         transition.updateFrame(node: self.shadowNode, frame: layout.topFrame)
@@ -289,9 +378,12 @@ final class NavigationTransitionCoordinator {
         }
         transition.updateAlpha(node: self.dimNode, alpha: layout.dimAlpha)
         
-        transition.updateFrame(node: self.bottomNode, frame: layout.bottomFrame)
+        if self.expansion == nil {
+            transition.updateFrame(node: self.bottomNode, frame: layout.bottomFrame)
+        }
         
         if updatesBars {
+            self.expansion?.update(time: self.expansionTime(progress: self.progress), isOpening: self.expansionIsOpening, pose: self.expansionPose)
             self.navigationBarTransitionLayer?.update(fraction: layout.fraction, transition: transition)
             self.didUpdateProgress?(self.progress, transition, layout.topFrame, layout.bottomFrame)
         }
@@ -319,7 +411,10 @@ final class NavigationTransitionCoordinator {
             topSource.putBack()
             return
         }
-        let layer = NavigationBarTransitionLayer(renderer: renderer, bottom: (bottomSource, bottomInfo, self.bottomNode.view), top: (topSource, topInfo, self.topNode.view))
+        if let expansion = self.expansion {
+            renderer.updateExclusions(bottom: expansion.barExclusions)
+        }
+        let layer = NavigationBarTransitionLayer(renderer: renderer, bottom: (bottomSource, bottomInfo, self.bottomNode.view), top: (topSource, topInfo, self.topNode.view), clipsToScreens: self.expansion == nil)
         layer.frame = self.container.bounds
         self.container.insertSubnode(layer, aboveSubnode: self.topNode)
         self.navigationBarTransitionLayer = layer
@@ -329,10 +424,12 @@ final class NavigationTransitionCoordinator {
     /// animating stays above the bar the transition ended on until it settles (`lingering`), as UIKit's capsules
     /// outlive the screens' transition.
     func endNavigationBarTransition(lingering: Bool = true) {
+        self.backHoleView?.removeFromSuperview()
         if let layer = self.navigationBarTransitionLayer {
             self.navigationBarTransitionLayer = nil
             if layer.putBack(lingering: lingering) {
                 self.container.beginLingering(layer)
+                self.lingeringBarLayer = layer
             } else {
                 layer.removeFromSupernode()
             }
@@ -366,6 +463,7 @@ final class NavigationTransitionCoordinator {
             strongSelf.endNavigationBarTransition()
             
             strongSelf.restoreTopNodeCorners()
+            strongSelf.endExpansion(finished: false)
             
             if let currentCompletion = strongSelf.currentCompletion {
                 strongSelf.currentCompletion = nil
@@ -382,13 +480,47 @@ final class NavigationTransitionCoordinator {
     /// Where the progress runs on its own (nil: a swipe steers it, or it has not started or has ended).
     private var runningTarget: CGFloat?
 
+    /// From this long after a transition starts running on its own (its start, a reversal, a swipe's release), touches
+    /// reach the screen it is heading to (a decision, 2026-10-16).
+    static let touchDelay: Double = 0.25
+    /// When the progress last started running on its own; nil while a finger steers it.
+    private var runningSince: Double?
+
+    /// The stack has dropped the top screen of this transition, which runs on to the screen beneath (a swipe's commit,
+    /// back mid-push): the screen beneath is the stack's top.
+    var topLeftStack = false
+
+    /// Whether touches may reach the screen the transition is heading to now. Not while a swipe's commit runs toward the
+    /// screen beneath with its top still in the stack: a push from the screen beneath would stack on the leaving one.
+    var acceptsTouches: Bool {
+        guard let runningSince = self.runningSince else {
+            return false
+        }
+        if self.isInteractive && self.headingNode === self.bottomNode && !self.topLeftStack {
+            return false
+        }
+        return self.clock.now() - runningSince >= NavigationTransitionCoordinator.touchDelay
+    }
+
+    /// The screen the transition is heading to: the top screen of a push running on or a pop springing back, the screen
+    /// beneath for a pop or a push turned back.
+    var headingNode: ASDisplayNode {
+        let target = self.runningTarget ?? self._progress
+        let towardTop = self.transition == .Push ? target >= 0.5 : target < 0.5
+        return towardTop ? self.topNode : self.bottomNode
+    }
+
     /// Whether a swipe back can take this transition over now, as UIKit's interruptible transitions allow: only while it
     /// runs on its own toward the top screen (a tap push, a caught push let go toward its end, or a pop springing back
     /// after a cancelled swipe). A pop running to the screen beneath is not taken over; UIKit starts a second pop
     /// alongside it instead, which this container does not do (measured on the iOS 27 simulator, 2026-10-14).
+    /// An expansion is caught only on its way open (a push): pops are never kept.
     var canBeCaughtBySwipe: Bool {
         guard let runningTarget = self.runningTarget else {
             return false
+        }
+        if self.expansion != nil {
+            return self.transition == .Push && runningTarget == 1.0
         }
         return runningTarget == (self.transition == .Push ? 1.0 : 0.0)
     }
@@ -423,6 +555,41 @@ final class NavigationTransitionCoordinator {
             driver.begin(atMediaTime: cutMediaTime)
         }
         self.trackInteractivePop(popTarget)
+    }
+
+    /// A swipe takes an expanding push mid-flight: its clock freezes at the expansion time it has now, and the finger's
+    /// card pose carries the card from there (`trackExpansionPose`). The ending that was to run stays the ending if the
+    /// transition is completed at once meanwhile (`performCompletion`).
+    func catchExpansionBySwipe() {
+        guard let expansion = self.expansion, let curve = self.progressCurve, self.clock.isRunning else {
+            return
+        }
+        let value = curve.value(at: self.clock.animationTime())
+        self.clock.stop()
+        self.progressCurve = nil
+        self.curveCompletion = nil
+        self.removeProgressKeyframes()
+        self.isInteractive = true
+        self.animatingCompletion = false
+        self.runningTarget = nil
+        self.runningSince = nil
+        self._progress = value
+        // Caught again while running on after a short release: the pose that was springing back is the finger's now.
+        self.springingBackPose = nil
+        self.releasedExpansionPose = nil
+        let time = self.expansionTime(progress: value)
+        self.expansionFrozenTime = time
+        if self.expansionBarMorphReleased {
+            self.navigationBarTransitionLayer?.beginInteraction()
+            self.expansionCaughtBeforeBars = false
+            self.expansionBarShowsLower = false
+        } else {
+            // Before the bars' window: they hold the chat's capsules, and keep them until the release.
+            self.expansionBarMorphReleased = true
+            self.expansionCaughtBeforeBars = true
+            self.expansionBarShowsLower = true
+        }
+        expansion.update(time: time, isOpening: self.expansionIsOpening, pose: .none)
     }
 
     /// While a swipe drags: `target` as a pop's progress (see `popProgress`).
@@ -464,6 +631,7 @@ final class NavigationTransitionCoordinator {
     /// sampled from it, and `completion` runs at its deadline. `continuing`: motion already on screen (a release, a
     /// retarget) goes on from now; otherwise it starts at the commit.
     private func runProgressCurve(_ curve: NavigationSpringCurve, continuing: Bool, completion: @escaping () -> Void) {
+        self.runningSince = self.clock.now()
         self.progressDriver?.stop()
         self.progressDriver = nil
         self.curveCompletion = completion
@@ -513,6 +681,29 @@ final class NavigationTransitionCoordinator {
             }
         )
         self.navigationBarTransitionLayer?.animate(timeline: timeline)
+        if let expansion = self.expansion {
+            let times = timing.sampleTimes.map { self.expansionTime(progress: curve.value(at: $0)) }
+            let poses = zip(timing.sampleTimes, times).map { sampleTime, time -> NavigationExpansionCardPose in
+                if let springing = self.springingBackPose {
+                    return springing.pose.released(springing.weight.value(at: sampleTime))
+                }
+                guard let released = self.releasedExpansionPose else {
+                    return self.expansionPose
+                }
+                return released.released(NavigationExpansionCardPose.releasedWeight(time: time / max(self.releasedExpansionFrom, 0.0001)))
+            }
+            expansion.animate(timeline: NavigationExpansionTimeline(timing: timing, times: times, isOpening: self.expansionIsOpening, poses: poses, animationTime: timeline.animationTime, reinstallTiming: timeline.reinstallTiming, schedule: timeline.schedule))
+            if !self.expansionBarMorphScheduled, let index = times.firstIndex(where: { $0 >= expansion.barGlassStart }) {
+                self.expansionBarMorphScheduled = true
+                timeline.schedule(timing.sampleTimes[index], { [weak self] in
+                    guard let self, !self.expansionBarMorphReleased else {
+                        return
+                    }
+                    self.expansionBarMorphReleased = true
+                    self.navigationBarTransitionLayer?.endInteraction(towardTop: true)
+                })
+            }
+        }
         self.didStartProgressAnimation?(timeline)
     }
 
@@ -538,7 +729,7 @@ final class NavigationTransitionCoordinator {
     /// transition runs on the render server, so a hit test that must follow what is on screen (the swipe's restrictions)
     /// shifts by this.
     func presentedDisplacement(of view: UIView) -> CGPoint {
-        guard self.progressCurve != nil, self.clock.isRunning else {
+        guard self.expansion == nil, self.progressCurve != nil, self.clock.isRunning else {
             return CGPoint()
         }
         let layout = self.screenLayout(progress: self.progress)
@@ -564,6 +755,7 @@ final class NavigationTransitionCoordinator {
     /// than jumping to it. The swipe's springs stop at their target instead of overshooting it (a decision, 2026-10-14).
     func trackInteractiveProgress(_ target: CGFloat) {
         self.runningTarget = nil
+        self.runningSince = nil
         self.runProgress(to: target, spring: .tracking, velocity: nil, overshoots: false, completion: nil)
     }
 
@@ -585,6 +777,7 @@ final class NavigationTransitionCoordinator {
         self.endNavigationBarTransition()
         
         self.restoreTopNodeCorners()
+        self.endExpansion(finished: true)
         
         if let currentCompletion = self.currentCompletion {
             self.currentCompletion = nil
@@ -593,13 +786,16 @@ final class NavigationTransitionCoordinator {
     }
     
     func performCompletion(completion: @escaping () -> ()) {
+        // A transition lands where it is heading: back mid-push and a cancelled swipe head for 0, their endings kept in
+        // `currentCompletion`; a finger holding it (no target) lands it at its end, as before.
+        let target: CGFloat = self.runningTarget ?? 1.0
         self.clock.stop()
         self.progressCurve = nil
         self.curveCompletion = nil
         self.removeProgressKeyframes()
         self.progressDriver?.stop()
         self.runningTarget = nil
-        self.updateProgress(1.0, transition: .immediate, completion: { [weak self] in
+        self.updateProgress(target, transition: .immediate, completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dimNode.removeFromSupernode()
                 strongSelf.shadowNode.removeFromSupernode()
@@ -608,6 +804,11 @@ final class NavigationTransitionCoordinator {
                 strongSelf.endNavigationBarTransition()
                 
                 strongSelf.restoreTopNodeCorners()
+                if target < 0.5 && strongSelf.transition == .Pop {
+                    // A cancelled pop: the screen beneath leaves, as the slide's cancel does.
+                    strongSelf.bottomNode.removeFromSupernode()
+                }
+                strongSelf.endExpansion(finished: target >= 0.5)
                 
                 if let currentCompletion = strongSelf.currentCompletion {
                     strongSelf.currentCompletion = nil
@@ -630,6 +831,7 @@ final class NavigationTransitionCoordinator {
             self.endNavigationBarTransition()
             
             self.restoreTopNodeCorners()
+            self.endExpansion(finished: true)
             
             if let currentCompletion = self.currentCompletion {
                 self.currentCompletion = nil
@@ -638,8 +840,18 @@ final class NavigationTransitionCoordinator {
         }
         
         if abs(velocity) < CGFloat.ulpOfOne && abs(self.progress) < CGFloat.ulpOfOne {
-            // A tap push or pop: UIKit's critically damped spring, from rest, on the render server.
-            self.runProgressCurve(NavigationSpringCurve(from: self.progress, target: 1.0, spring: .noninteractive, rest: .progress), continuing: false, completion: {
+            // A tap push or pop: UIKit's critically damped spring, from rest, on the render server; an expansion's own
+            // spring, overshooting (its landings live past 0 and 1).
+            let spring: NavigationTransitionSpring
+            let rest: NavigationSpringRest
+            if let expansion = self.expansion {
+                spring = self.transition == .Push ? expansion.openSpring : expansion.closeSpring
+                rest = .expansion
+            } else {
+                spring = .noninteractive
+                rest = .progress
+            }
+            self.runProgressCurve(NavigationSpringCurve(from: self.progress, target: 1.0, spring: spring, overshoots: true, rest: rest), continuing: false, completion: {
                 f()
             })
         } else {
@@ -652,6 +864,251 @@ final class NavigationTransitionCoordinator {
         }
     }
     
+    /// A push running toward its top screen on its own can be turned back (back, at any moment).
+    var canReverse: Bool {
+        return self.transition == .Push && self.runningTarget == 1.0 && self.progressCurve != nil && self.clock.isRunning
+    }
+
+    /// Back mid-push: the push runs back to its start from where it is, at its speed — the slide on its tap spring, an
+    /// expansion on its close spring in the opening's windows (changing windows mid-way would jump the colours). The
+    /// push's own ending does not run; `completion` does, once the screen beneath is back.
+    func reverse(completion: @escaping () -> Void) {
+        guard self.canReverse, let running = self.progressCurve else {
+            return
+        }
+        let now = self.clock.animationTime()
+        let value = running.value(at: now)
+        let velocity = running.velocity(at: now)
+        self.clock.stop()
+        self.progressCurve = nil
+        self.curveCompletion = nil
+        // Kept where `performCompletion` finds it: a size change or a new push lands the reversal, not the push.
+        self.currentCompletion = completion
+        self.runningTarget = 0.0
+        self._progress = value
+        if self.expansionBarMorphReleased {
+            self.navigationBarTransitionLayer?.beginInteraction()
+        } else {
+            // Before the bars' window they still hold the chat's capsules: they settle there, and the window does nothing.
+            self.expansionBarMorphReleased = true
+        }
+        self.navigationBarTransitionLayer?.endInteraction(towardTop: false)
+        let curve: NavigationSpringCurve
+        if let expansion = self.expansion {
+            curve = NavigationSpringCurve(from: value, velocity: velocity, target: 0.0, spring: expansion.closeSpring, overshoots: true, rest: .expansion)
+        } else {
+            curve = NavigationSpringCurve(from: value, velocity: velocity, target: 0.0, spring: .noninteractive, overshoots: false, rest: .progress)
+        }
+        self.runProgressCurve(curve, continuing: true, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dimNode.removeFromSupernode()
+            self.shadowNode.removeFromSupernode()
+            self.endNavigationBarTransition()
+            self.restoreTopNodeCorners()
+            self.endExpansion(finished: false)
+            if let currentCompletion = self.currentCompletion {
+                self.currentCompletion = nil
+                currentCompletion()
+            }
+        })
+    }
+
+    /// The back-button hole while a push can be turned back: made on its first touch, in the container's view.
+    private var backHoleView: UIView?
+    /// Run when the back hole is tapped (the container pops through the screen's own back).
+    var backTapped: (() -> Void)?
+
+    /// During a push that can be turned back, the view a touch at `point` (in `view`) reaches on the incoming bar's back
+    /// button: the hole, else nil. The button itself is drawn by the bars' transition, which takes no touches.
+    func backHole(at point: CGPoint, in view: UIView) -> UIView? {
+        guard self.canReverse else {
+            return nil
+        }
+        let host = self.container.view
+        let frame: CGRect?
+        if let expansion = self.expansion {
+            frame = expansion.backButtonFrame.map { expansion.view.convert($0, to: host) }
+        } else if let barFrame = self.topTransitionSource?.backButtonFrame(in: host) {
+            if self.navigationBarTransitionLayer == nil {
+                // A bar outside the morph is drawn with its screen, ahead of the screen's model frame.
+                let shift = self.presentedDisplacement(of: self.topNode.view)
+                frame = barFrame.offsetBy(dx: shift.x, dy: shift.y)
+            } else {
+                frame = barFrame
+            }
+        } else {
+            frame = nil
+        }
+        guard let frame, frame.contains(host.convert(point, from: view)) else {
+            return nil
+        }
+        let hole: UIView
+        if let current = self.backHoleView {
+            hole = current
+        } else {
+            hole = UIView()
+            // A layer that renders nothing gets no real touches on iOS 26/27 though -hitTest: returns it: transparent
+            // contents (docs/ios27-windows-and-touches.md).
+            hole.layer.contents = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+            })?.cgImage
+            let target = NavigationExpansionBackHoleTarget(action: { [weak self] in
+                self?.backTapped?()
+            })
+            self.backHoleTarget = target
+            hole.addGestureRecognizer(UITapGestureRecognizer(target: target, action: #selector(NavigationExpansionBackHoleTarget.tapped)))
+            self.backHoleView = hole
+        }
+        if hole.superview !== host {
+            host.addSubview(hole)
+        }
+        hole.frame = frame
+        return hole
+    }
+
+    private var backHoleTarget: NavigationExpansionBackHoleTarget?
+
+    var expansionPoseForTesting: NavigationExpansionCardPose {
+        return self.expansionPose
+    }
+
+    /// The finger moved the card: one frame, set directly; the bars follow its fade.
+    func trackExpansionPose(_ pose: NavigationExpansionCardPose) {
+        guard let expansion = self.expansion else {
+            return
+        }
+        self.expansionPose = pose
+        let width = self.container.bounds.width
+        // The clock where it is: 1 for a swipe from the settled profile, frozen where a swipe caught a push.
+        let time = self.expansionFrozenTime ?? 1.0
+        expansion.update(time: time, isOpening: self.expansionIsOpening, pose: pose)
+        let barFraction = self.expansionFrozenTime == nil ? 1.0 : expansion.barFraction(time: time, isOpening: self.expansionIsOpening)
+        self.navigationBarTransitionLayer?.update(fraction: barFraction * (1.0 - pose.fade(width: width)), transition: .immediate)
+        // Back takes the lower screen's look by the fade. The capsules run on their own springs (a dragging finger does
+        // not move them), so they are handed over at the status bar's moment and handed back below it; caught before
+        // the bars' window, they stay on the chat's.
+        let showsLower = self.expansionCaughtBeforeBars || pose.fade(width: width) >= 0.3
+        if showsLower != self.expansionBarShowsLower {
+            self.expansionBarShowsLower = showsLower
+            self.navigationBarTransitionLayer?.endInteraction(towardTop: !showsLower)
+        }
+        self.didUpdateProgress?(pose.fade(width: width), .immediate, self.topNode.frame, self.bottomNode.frame)
+    }
+
+    /// Released far enough: the close runs from the released pose, which lets go as the clock falls from where it was
+    /// (1 from the settled profile, the frozen time of a caught push); a caught push turns back to the screen beneath.
+    func commitExpansionPose(completion: @escaping () -> Void) {
+        guard let expansion = self.expansion else {
+            return
+        }
+        self.releasedExpansionPose = self.expansionPose
+        self.releasedExpansionFrom = self.expansionFrozenTime ?? 1.0
+        self.expansionPose = .none
+        self.expansionFrozenTime = nil
+        self.currentCompletion = completion
+        let target: CGFloat = self.transition == .Push ? 0.0 : 1.0
+        self.runningTarget = target
+        self.navigationBarTransitionLayer?.endInteraction(towardTop: false)
+        self.runProgressCurve(NavigationSpringCurve(from: self.progress, target: target, spring: expansion.closeSpring, overshoots: true, rest: .expansion), continuing: true, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.endNavigationBarTransition()
+            if self.transition == .Push {
+                // A push turned back by the swipe: the pushed screen leaves, as the slide's does.
+                self.topNode.removeFromSupernode()
+            }
+            self.endExpansion(finished: self.transition == .Pop)
+            self.restoreTopNodeCorners()
+            if let currentCompletion = self.currentCompletion {
+                self.currentCompletion = nil
+                currentCompletion()
+            }
+        })
+    }
+
+    /// Released short: the pose springs back to rest (0.4 s, bounce 0.12) on the render server; the clock stays at 1.
+    func cancelExpansionPose(completion: @escaping () -> Void) {
+        guard let expansion = self.expansion else {
+            return
+        }
+        if self.transition == .Push, self.expansionFrozenTime != nil {
+            // A caught push let go short: it runs on to the profile from the frozen time on the open spring, the pose
+            // springing back (0.4 s, bounce 0.12) in the same timeline.
+            let weight = NavigationSpringCurve(from: 1.0, target: 0.0, spring: NavigationTransitionSpring(duration: 0.4, bounce: 0.12), overshoots: true, rest: .expansion)
+            self.springingBackPose = (self.expansionPose, weight)
+            self.expansionPose = .none
+            self.expansionFrozenTime = nil
+            self.runningTarget = 1.0
+            self.currentCompletion = completion
+            self.navigationBarTransitionLayer?.endInteraction(towardTop: true)
+            self.runProgressCurve(NavigationSpringCurve(from: self.progress, target: 1.0, spring: expansion.openSpring, overshoots: true, rest: .expansion), continuing: true, completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.springingBackPose = nil
+                self.endNavigationBarTransition()
+                self.restoreTopNodeCorners()
+                self.endExpansion(finished: true)
+                if let currentCompletion = self.currentCompletion {
+                    self.currentCompletion = nil
+                    currentCompletion()
+                }
+            })
+            return
+        }
+        let pose = self.expansionPose
+        let weight = NavigationSpringCurve(from: 1.0, target: 0.0, spring: NavigationTransitionSpring(duration: 0.4, bounce: 0.12), overshoots: true, rest: .expansion)
+        self.expansionPose = .none
+        // Heading back to the start of the pop; kept where `performCompletion` finds it.
+        self.runningTarget = 0.0
+        self.currentCompletion = completion
+        self.navigationBarTransitionLayer?.endInteraction(towardTop: true)
+        let timing = self.clock.start(duration: weight.restTime, continuing: true)
+        self.runningSince = self.clock.now()
+        let clock = self.clock
+        expansion.animate(timeline: NavigationExpansionTimeline(timing: timing, times: timing.sampleTimes.map { _ in 1.0 }, isOpening: false, poses: timing.sampleTimes.map { pose.released(weight.value(at: $0)) }, animationTime: { [weak clock] in clock?.animationTime() ?? 0.0 }, reinstallTiming: { [weak clock] in clock?.reinstallTiming }, schedule: { [weak clock] time, action in clock?.schedule(atAnimationTime: time, action) }))
+        self.curveCompletion = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.runningTarget = nil
+            self.endNavigationBarTransition()
+            // The screen beneath leaves, as the slide's cancel does.
+            self.bottomNode.removeFromSupernode()
+            self.endExpansion(finished: false)
+            if let currentCompletion = self.currentCompletion {
+                self.currentCompletion = nil
+                currentCompletion()
+            }
+        }
+    }
+
+    /// Ends the expansion once: its renderer returns what it lent and its views go. `finished`: the transition reached
+    /// its end (a push on the top screen, a pop on the bottom one).
+    private func endExpansion(finished: Bool) {
+        guard let expansion = self.expansion, !self.expansionEnded else {
+            return
+        }
+        self.expansionEnded = true
+        let atTop = (self.transition == .Push) == finished
+        let end = {
+            expansion.end(atTop: atTop)
+            expansion.view.removeFromSuperview()
+            expansion.underView.removeFromSuperview()
+        }
+        // Ending on the chat while the bars' glass lingers above its bar: that glass leaves out what the expansion drew
+        // (`barExclusions`) and the bar holds its own meanwhile, so the expansion stays, at rest, until the bar takes its
+        // glass back, and ends in that same turn.
+        if !atTop, let layer = self.lingeringBarLayer, layer.isLingering(above: self.bottomTransitionSource) {
+            layer.addLingerHandover(end)
+            return
+        }
+        end()
+    }
+
     private func restoreTopNodeCorners() {
         for (node, parameters) in [(self.topNode, self.topNodeInitialParameters), (self.bottomNode, self.bottomNodeInitialParameters)] {
             guard let (clipsToBounds, cornerRadius, usesCornerRadii) = parameters else {
@@ -668,5 +1125,19 @@ final class NavigationTransitionCoordinator {
         }
         self.topNodeInitialParameters = nil
         self.bottomNodeInitialParameters = nil
+    }
+}
+
+/// The back hole's tap target (a gesture recognizer needs an Objective-C object).
+private final class NavigationExpansionBackHoleTarget: NSObject {
+    private let action: () -> Void
+
+    init(action: @escaping () -> Void) {
+        self.action = action
+        super.init()
+    }
+
+    @objc func tapped() {
+        self.action()
     }
 }

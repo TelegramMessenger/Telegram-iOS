@@ -216,6 +216,10 @@ public extension TelegramEngine {
             return _internal_getUniqueStarGift(account: self.account, slug: slug)
         }
         
+        public func cachedUniqueStarGift(slug: String) -> Signal<StarGift.UniqueGift?, NoError> {
+            return _internal_cachedUniqueStarGift(account: self.account, slug: slug)
+        }
+        
         public func getUniqueStarGiftValueInfo(slug: String) -> Signal<StarGift.UniqueGift.ValueInfo?, NoError> {
             return _internal_getUniqueStarGiftValueInfo(account: self.account, slug: slug)
         }

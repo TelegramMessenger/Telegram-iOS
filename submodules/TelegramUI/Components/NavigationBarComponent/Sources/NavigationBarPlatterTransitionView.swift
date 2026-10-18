@@ -21,7 +21,8 @@ import GlassBackgroundComponent
 ///   appearance (`startMatchedMorph`). Its glass merges with that platter's meanwhile, as iOS 27's does: the bar's
 ///   platters are elements of one SDF layer at smoothness 12, and the collapsing one keeps opacity 1 while its frame
 ///   shrinks into the other (measured). So the two right platters' glass shares one container at that spacing, drawn at
-///   its scaled frame, and only the items fade.
+///   its scaled frame, and only the items fade. A title pill never does: without a platter in its slot on the other bar
+///   it materializes or dematerializes in place.
 ///
 /// Measured against the native reference app on iOS 27 (`Tests/NativeNavigationReference`): Edit → Done swells the
 /// capsule by ~21% (height peak at ~0.11 s, width at ~0.15 s, width undershoot ~5% at ~0.33 s) and cross-fades its
@@ -162,6 +163,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var isMatched = false
         /// The platter a matched one collapses into or grows out of.
         var partner: Role?
+        /// It is a bar's title pill (`SideLayout.titlePillRole`), which only morphs with a platter in its own slot.
+        var isTitlePill = false
 
         init(role: Role, frame: CGRect, tint: GlassBackgroundView.TintColor, isDark: Bool) {
             self.role = role
@@ -284,6 +287,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var tints: [Role: GlassBackgroundView.TintColor] = [:]
         var signatures: [Role: [AnyHashable]] = [:]
         var isDark = false
+        /// The slot the bar's title pill takes, if it has one there.
+        var titlePillRole: Role?
     }
 
     private let bottomContentView = NavigationBarContentView(backPressed: {})
@@ -450,6 +455,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             layout.itemViews[.trailing(1)] = pill.lendContent()
             layout.tints[.trailing(1)] = navigationBarGlassTintColor(.generic, theme: side.theme)
             layout.signatures[.trailing(1)] = ["titlePill", pill.signature]
+            layout.titlePillRole = .trailing(1)
         }
         if let columnFrame = side.columnFrame, let columnLayout = contentView.columnLayout {
             let roles: [(Role, CGRect?, UIView, GlassBackgroundView.TintColor)] = [
@@ -577,6 +583,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 platter.glowView = glowView
             }
             platter.items = [Items(side: self.fromSide, view: itemView, frame: frame, appearance: 0.0, motion: self.motion)]
+            platter.isTitlePill = from.titlePillRole == role
             self.platters[role] = platter
             self.addViews(of: platter)
         }
@@ -629,6 +636,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     // (this bar's capsule arrived late) is taken over, as SwiftUI's resolver reuses a removed entry
                     // matching an insertion (`Resolver.updateInsertion` -> `reuseEntry`).
                     platter.isLeaving = false
+                    platter.isTitlePill = target.titlePillRole == role
                     platter.animateFrame(to: frame, spring: motion.transition, at: self.time)
                     platter.dematerialization = platter.dematerialization.retargeted(at: self.time, to: 0.0, spring: motion.transition)
                     platter.isDark = target.isDark
@@ -670,11 +678,13 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     // Only this bar has it: it materializes in place, on the transition spring (bouncy; measured on
                     // iOS 27, glass RE §2.2: not the critically damped `.materialize` resolution).
                     let platter = Platter(role: role, frame: frame, tint: tint, isDark: target.isDark)
+                    platter.isTitlePill = target.titlePillRole == role
                     let oldPartners = oldRight.filter { ($0.role.rightIndex ?? 0) < (role.rightIndex ?? 0) }
-                    if role.rightIndex != nil, !motion.reduce, let partnerIndex = navigationBarNearestPartner(of: frame, among: oldPartners.map { $0.platter.frame(at: self.time) }) {
+                    if role.rightIndex != nil, !motion.reduce, !platter.isTitlePill, let partnerIndex = navigationBarNearestPartner(of: frame, among: oldPartners.map { $0.platter.frame(at: self.time) }) {
                         // Grows out of the other bar's nearest platter nearer the edge, as UIKit's inserted section matched
                         // to an old one (UIKit's sections are contiguous, so an inserted one's partners are all nearer the
-                        // edge; a title pill in the second slot beside no button keeps the outermost platter partnerless).
+                        // edge). Not a title pill: with no platter in its slot to morph from (Contacts has only its "+"),
+                        // it materializes in place (asked 2026-10-18).
                         let partner = oldPartners[partnerIndex]
                         let partnerTarget = target.frames[partner.role] ?? partner.platter.frame(at: self.time)
                         let start = self.startMatchedMorph(platter, source: partner.platter.frame(at: self.time), target: frame, appearing: true, containerWidth: containerWidth)
@@ -691,9 +701,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 }
             } else if let platter = existing, !platter.isLeaving {
                 let targetPartners = targetRight.filter { ($0.role.rightIndex ?? 0) < (role.rightIndex ?? 0) }
-                if role.rightIndex != nil, !motion.reduce, let partnerIndex = navigationBarNearestPartner(of: platter.frame(at: self.time), among: targetPartners.map(\.frame)) {
+                if role.rightIndex != nil, !motion.reduce, !platter.isTitlePill, let partnerIndex = navigationBarNearestPartner(of: platter.frame(at: self.time), among: targetPartners.map(\.frame)) {
                     // Collapses into this bar's nearest platter nearer the edge, as UIKit's removed section matched to a
-                    // new one.
+                    // new one. A title pill dematerializes in place instead, as it materializes.
                     let partner = targetPartners[partnerIndex]
                     let own = platter.frame(at: self.time)
                     let start = self.startMatchedMorph(platter, source: own, target: partner.frame, appearing: false, containerWidth: containerWidth)

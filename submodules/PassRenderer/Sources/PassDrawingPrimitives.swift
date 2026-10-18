@@ -29,13 +29,15 @@ private func passLine(_ string: String, fontSize: CGFloat, weight: CGFloat, colo
 func passFittedText(_ string: String, fontSize: CGFloat, minFontSize: CGFloat, weight: CGFloat, maxWidth: CGFloat, color: CGColor? = nil) -> (line: CTLine, width: CGFloat, fontSize: CGFloat) {
     let string = string.replacingOccurrences(of: "\n", with: " ")
     var size = fontSize
+    var attempts = 0
     while true {
+        attempts += 1
         let line = passLine(string, fontSize: size, weight: weight, color: color)
         let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
         if width <= maxWidth {
             return (line, width, size)
         }
-        if size <= minFontSize {
+        if size <= minFontSize || attempts >= 48 {
             let token = passLine("\u{2026}", fontSize: size, weight: weight, color: color)
             let truncated = CTLineCreateTruncatedLine(line, Double(maxWidth), .end, token) ?? token
             return (truncated, min(maxWidth, CGFloat(CTLineGetTypographicBounds(truncated, nil, nil, nil))), size)

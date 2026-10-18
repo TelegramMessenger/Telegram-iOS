@@ -5,18 +5,14 @@ internal import TelegramApi
 
 public enum TelegramShareTheme: Equatable {
     case `default`
-    case emoji([MessageReaction.Reaction])
-    case color(Int32)
+    case emojiBackdrop(emojis: [MessageReaction.Reaction]?, backdropId: Int32?)
     case gift(StarGift)
-    case backdrop(Int32)
 }
 
 public enum TelegramShareThemeUpdate: Equatable {
     case `default`
-    case emoji([MessageReaction.Reaction])
-    case color(Int32)
+    case emojiBackdrop(emojis: [MessageReaction.Reaction]?, backdropId: Int32?)
     case gift(StarGiftReference)
-    case backdrop(Int32)
 }
 
 public enum SetShareThemeError {
@@ -68,18 +64,18 @@ func _internal_getShareTheme(account: Account, peerId: PeerId) -> Signal<Telegra
             switch result {
             case .shareThemeDefault:
                 return .default
-            case let .shareThemeEmoji(data):
-                let reactions = data.emojis.compactMap(MessageReaction.Reaction.init(apiReaction:))
-                return reactions.isEmpty ? .default : .emoji(reactions)
-            case let .shareThemeColor(data):
-                return .color(data.colorId)
+            case let .shareThemeEmojiBackdrop(data):
+                let reactions = data.emojis?.compactMap(MessageReaction.Reaction.init(apiReaction:))
+                let emojis = reactions.flatMap { $0.isEmpty ? nil : $0 }
+                if emojis == nil && data.backdropId == nil {
+                    return .default
+                }
+                return .emojiBackdrop(emojis: emojis, backdropId: data.backdropId)
             case let .shareThemeGift(data):
                 guard let gift = StarGift(apiStarGift: data.stargift) else {
                     return .default
                 }
                 return .gift(gift)
-            case let .shareThemeBackdrop(data):
-                return .backdrop(data.backdropId)
             case .inputShareThemeGift:
                 return nil
             }
@@ -96,17 +92,25 @@ func _internal_setShareTheme(account: Account, peerId: PeerId, theme: TelegramSh
         switch theme {
         case .default:
             apiTheme = .shareThemeDefault
-        case let .emoji(reactions):
-            apiTheme = .shareThemeEmoji(.init(emojis: reactions.map(\.apiReaction)))
-        case let .color(colorId):
-            apiTheme = .shareThemeColor(.init(colorId: colorId))
+        case let .emojiBackdrop(emojis, backdropId):
+            let emojis = emojis.flatMap { $0.isEmpty ? nil : $0 }
+            if emojis == nil && backdropId == nil {
+                apiTheme = .shareThemeDefault
+            } else {
+                var flags: Int32 = 0
+                if backdropId != nil {
+                    flags |= 1 << 0
+                }
+                if emojis != nil {
+                    flags |= 1 << 1
+                }
+                apiTheme = .shareThemeEmojiBackdrop(.init(flags: flags, backdropId: backdropId, emojis: emojis?.map(\.apiReaction)))
+            }
         case let .gift(reference):
             guard let input = reference.apiStarGiftReference(transaction: transaction) else {
                 return nil
             }
             apiTheme = .inputShareThemeGift(.init(stargift: input))
-        case let .backdrop(backdropId):
-            apiTheme = .shareThemeBackdrop(.init(backdropId: backdropId))
         }
         return (inputPeer, apiTheme)
     }

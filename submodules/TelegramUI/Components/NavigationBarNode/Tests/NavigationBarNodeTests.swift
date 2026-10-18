@@ -1091,6 +1091,146 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertNil(rowView.inPlaceStateForTesting(isLeft: false))
     }
 
+    // The profile puts its search in the row's place. A row its screen hides stays hidden through the controller's
+    // layouts (each calls `setHidden(!displayNavigationBar)`), its Duo column with it, and the bar still takes part
+    // in a transition, handing it no capsules.
+    func test_rowHiddenByScreen_survivesTheControllersSetHidden() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setHidden(false, animated: false)
+        self.layout(node)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        XCTAssertEqual(node.columnHostAlphaForTesting, 0.0)
+        XCTAssertNotNil(node.takeView())
+        node.putBack()
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+        XCTAssertEqual(node.columnHostAlphaForTesting, 1.0)
+    }
+
+    // A capsule's native glass ignores its ancestors' alpha below the glass container (seen on the profile: a hidden
+    // row left its tinted glass on screen under the search field), so a row its screen hides fades the glass
+    // container, as a replacement content node does.
+    func test_rowHiddenByScreen_hidesTheGlass() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 1.0)
+    }
+
+    private func glassTheme(_ tint: UIColor?, buttonColor: UIColor = .black) -> NavigationBarPresentationData {
+        let theme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: buttonColor, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white, glassTintColor: tint)
+        return NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"))
+    }
+
+    // UIKit's glass keeps how it adapted to the backdrop when it joined the bar's container: the profile's Edit, back
+    // while the bar was plain over its white header, stayed light over the cover once the bar turned tinted. A change of
+    // the bar's glass makes the glass adapt again once its transition is over.
+    func test_glassChange_readaptsTheGlass_onceAfterItsTransition() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 0)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
+    // The row's request to adapt the glass again (a capsule that appeared in place has settled) reaches the glass.
+    func test_rowRequest_readaptsTheGlass() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.rowViewForTesting?.glassNeedsReadaptation?()
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
+    // A new theme that keeps the glass (a colour of the buttons) leaves the glass as it adapted.
+    func test_themeChangeKeepingTheGlass_doesNotReadapt() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(nil, buttonColor: .blue), transition: .immediate)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 0)
+    }
+
+    // Plain and tinted in quick succession (a finger resting at the profile's threshold) adapt once, after the last.
+    func test_quickGlassChanges_readaptOnce() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        node.updatePresentationData(self.glassTheme(nil), transition: .animated(duration: 0.2, curve: .easeInOut))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
+    // A replacement content node leaving while the screen still hides the row does not bring the glass back.
+    func test_rowHiddenByScreen_outlastsAReplacementContentNode() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setContentNode(ReplacementContentNode(), animated: false)
+        node.setContentNode(nil, animated: false)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.glassContainerAlphaForTesting, 1.0)
+    }
+
+    // The controller hides the bar while a replacement content node holds the row's place: the row is still hidden
+    // when the node leaves. The node fades the glass container and `setHidden` the row, so neither overrides the other.
+    func test_setHidden_duringAReplacementContentNode_holdsWhenItLeaves() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setContentNode(ReplacementContentNode(), animated: false)
+        node.setHidden(true, animated: false)
+        node.setContentNode(nil, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setHidden(false, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+    }
+
+    // Hidden before the bar has made its row (a profile laid out with its search already open): the row comes up hidden.
+    func test_rowHiddenByScreen_beforeTheFirstLayout() {
+        let node = self.makeNode()
+        let item = UINavigationItem(title: "Profile")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        node.item = item
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        self.layout(node)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+    }
+
+    // The controller's own hiding still works, and showing the bar again does not show a row its screen hides.
+    func test_setHidden_andRowHiddenByScreen_combine() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.setHidden(true, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setRowHiddenByScreen(true, transition: .immediate)
+        node.setHidden(false, animated: false)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 0.0)
+        node.setRowHiddenByScreen(false, transition: .immediate)
+        XCTAssertEqual(node.componentTransitionState?.rowAlpha, 1.0)
+    }
+
+    // A screen finds the view of a bar item it set: the anchor for its tooltip or its camera transition.
+    func test_rightButtonView_isTheItemsButton() {
+        let edit = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: edit)
+        guard let view = node.rightButtonView(for: edit), let capsule = node.rowViewForTesting?.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no button view")
+            return
+        }
+        XCTAssertTrue(view.isDescendant(of: capsule))
+        XCTAssertNil(node.rightButtonView(for: UIBarButtonItem(title: "Other", style: .plain, target: nil, action: nil)))
+    }
+
+    // The profile's glass over a cover colour reaches the bar's capsules.
+    func test_themeGlassTint_reachesTheCapsules() {
+        let theme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white, glassTintColor: .orange)
+        let node = NavigationBarNode(presentationData: NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More")))
+        let item = UINavigationItem(title: "Profile")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
+        node.item = item
+        self.layout(node)
+        XCTAssertEqual(node.rowViewForTesting?.rightPillBackgroundContainer(at: 0)?.glassTintColor, navigationBarGlassTintColor(.generic, theme: theme))
+        let plain = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white)
+        XCTAssertNotEqual(navigationBarGlassTintColor(.generic, theme: theme), navigationBarGlassTintColor(.generic, theme: plain))
+    }
+
     // A change made without animation is applied as is.
     func test_unanimatedItemChange_isImmediate() {
         let item = UINavigationItem(title: "Text Replacement")
@@ -1102,6 +1242,29 @@ final class NavigationBarNodeTests: XCTestCase {
         node.layout()
         XCTAssertNil(node.rowViewForTesting?.inPlaceStateForTesting(isLeft: false))
         XCTAssertEqual(node.rowViewForTesting?.plattersDetached, false)
+    }
+
+    // An expansion takes the chat's pill and avatar: the bar morph draws neither for the lower bar, so the upper bar's
+    // Edit has no counterpart and materializes in place (without the exclusion it morphs out of the avatar capsule).
+    func test_transitionRenderer_exclusions_dropThePillAndTheNode() {
+        let avatarNode = ASDisplayNode()
+        let (bottom, _) = self.makePillNode(rightItems: [UIBarButtonItem(customDisplayNode: avatarNode)!])
+        let top = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        guard let renderer = makeNavigationBarTransitionRenderer(bottom: bottom, top: top) as? NavigationBarTransitionRendererImpl else {
+            return XCTFail("no renderer")
+        }
+        renderer.updateExclusions(bottom: NavigationBarTransitionExclusions(titlePill: true, nodes: [avatarNode]))
+        let size = CGSize(width: 390.0, height: 844.0)
+        let frame = CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0)
+        renderer.update(size: size, fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        guard let platterView = renderer.platterViewForTesting else {
+            return XCTFail("no platter view")
+        }
+        renderer.beginTransition(isInteractive: false, toTop: true)
+        let edit = platterView.platterStateForTesting(.trailing(0))
+        XCTAssertEqual(edit?.opacity ?? 1.0, 0.0, accuracy: 0.001, "Edit materializes")
+        XCTAssertGreaterThan(edit?.scale.height ?? 0.0, 1.0, "in place")
+        XCTAssertNil(platterView.platterStateForTesting(.trailing(1)), "no pill platter")
     }
 }
 

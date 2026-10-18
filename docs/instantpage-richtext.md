@@ -1598,3 +1598,92 @@ Validation on 2026-09-29: 23 collector tests and 8 selection/composition tests p
 the full simulator app build passed after the review fixes. Live screen appearance,
 VoiceOver playback, and attribute-only message-edit invalidation still need manual
 verification; helper tests do not establish those UI behaviors.
+
+## Rich reply quotes (`quote_rich`)
+
+Replying with a quote of a selected fragment of a rich message sends `quote_rich` (layer 232): one
+`RichText` per covered text node, the first a suffix of its node, the last a prefix, every node
+between whole; the server checks it is a contiguous fragment of the original.
+
+The server contract, in short: `quote_rich` is `inputReplyToMessage` flag 8 and
+`messageReplyHeader` flag 14, accepted by the send methods and drafts (a draft stores it unchecked;
+validation happens at send). Formatting is compared exactly (nesting, custom emoji `document_id`,
+whole formula `source`, `textDate` values); links, anchors, mentions, `textFixed`, `textMarked` and
+inline buttons are compared as text only. Merging two nodes into one fragment, skipping text inside
+a node, non-adjacent nodes or an edited original all fail with `QUOTE_TEXT_INVALID`, as do more than
+32 fragments or more than 1024 characters; a non-rich, service or restricted original is
+`QUOTED_MESSAGE_INVALID`. `quote_offset` is a display hint the server stores without checking.
+Clients below layer 232 receive the reply with no quote at all.
+
+Client decisions beyond the invariants below: the server's node table is followed literally, so
+document captions, covers, embeds, related articles, channel banners and the legacy title,
+subtitle, header, subheader, kicker and author/date blocks contribute nothing (one place to change:
+`InstantPageBlock.isRichQuoteSource` and the enumerator); a whole `pageBlockMath` is quoted as
+`textMath(source)`; the length limit (`quote_length_max`, default 1024 UTF-16 units) counts the `\n`
+separators, which is stricter than the server's sum; and the Api → `RichText` mapping's losses
+(`textEmpty` → `textPlain("")`, `textDiff` dropped, contradictory `textDate` flags) are accepted.
+
+Measured on the server (2026-10-16): a cross-chat reply **without** a quote to a rich message comes
+back with no quote, where a plain target gets its text as `quote_text`, so its header shows the
+generic "Message".
+
+### Where things live
+
+| File | Responsibility |
+|---|---|
+| `TelegramCore/Sources/Utils/RichReplyQuote.swift` | The pure core: `InstantPage.quotableNodes` (the spec's node table, `InstantPageBlock.isRichQuoteSource`), slicing by flat offsets, `makeRichReplyQuote` (atoms, normalization, trimming, limits, `quote_offset`), `richReplyQuoteMatches` (the server's rule; used by the pre-send check and as the tests' oracle), `richReplyQuoteNodeRanges`, and the flat form (`richReplyQuoteTextAndEntities`). Tests: `RichReplyQuoteTests`, `RichReplyQuoteModelTests`. |
+| `TelegramCore/Sources/PendingMessages/EnqueueMessage.swift` | `EngineMessageReplyQuote.richText`, stored as Postbox data under Codable key `"r"`. |
+| `TelegramCore/Sources/ApiUtils/ReplyQuoteApi.swift` | `apiReplyQuoteFields` (every send path and the draft sync) and `engineReplyQuote` (reply headers, fetched drafts). Tests: `ReplyQuoteApiTests`. |
+| `InstantPageUI/Sources/InstantPageQuoteSource.swift` + `attributedStringForRichText`'s `quoteSource` | Every laid-out run carries `InstantPageQuoteLeafAttribute`: the node it shows and the flat range it stands for. |
+| `InstantPageUI/Sources/InstantPageV2Layout.swift` | `LayoutContext.quoteBlockPath` / `quoteNodeOverride` / `quoteSource(_:subpath:)` give each text call site its node id. |
+| `InstantPageUI/Sources/InstantPageMultiTextAdapter.swift` | `richQuoteRuns(for:)` (selection → the runs it touches; `richQuoteSelectionBoundaries` in TelegramCore orders them by document position) and `ranges(showing:)` (quote → display ranges). Tests: `InstantPageQuoteSourceTests`. |
+| `ChatMessageBubbleContentNode/Sources/ChatMessageQuoteSourceContentNode.swift` | What reply options, the context-menu Quote action and quote highlighting need from a content node; the text and rich-data bubbles implement it. |
+
+### Non-obvious invariants
+
+- **The node id scheme is shared by the enumerator and the renderer, and nothing checks the pair.**
+  A block's id is its index path (quote, details, collage and slideshow children extend it; a list
+  item's text is `listPath + [item]`, its blocks `listPath + [item, block]`) plus a part. Table
+  cells are addressed by their index in `row.cells`, NOT the grid column `k` the layout tracks,
+  and the table's title and cells go through `layoutBlockSequence`, whose own path would be wrong,
+  hence `quoteNodeOverride`. A cover's inner block is not a source. Change both sides together.
+- **The flat axis is `RichText.plainText` in UTF-16** (custom emoji: alt, formula: source, button:
+  label, image: nothing), which is what `quote_offset` indexes, joined by `\n` across nodes.
+  Display offsets are not flat offsets: an emoji, formula or pill is one U+FFFC, a formatted date
+  is its formatted string. The leaf stamp is the only bridge; never map by counting characters.
+- **Atoms are never cut** (formula, custom emoji, date, button): a selection boundary inside one
+  includes it, a length cut excludes it. **Every fragment, middles included, is normalized:**
+  `textButton` → `textPlain(label)` (the server rejects the constructor), `textImage` dropped.
+- **The flat form is derived and is what every consumer reads.** `text` (fragments joined by `\n`)
+  and `entities` (bold, italic, underline, strikethrough, spoiler, custom emoji) feed the reply
+  header, the composer panels, search highlighting and quote navigation unchanged. A rich target
+  reports `isText == false` to the reply header, which therefore takes the quote branch on
+  `quote.richText` too.
+- **A rich quote never sends `quote_text`/`quote_entities`** (`QUOTE_TEXT_INVALID`); one helper
+  builds the fields for every path.
+- **The quoted page is the original as displayed** (`instantPage`, or `fullInstantPage` after
+  Show more). Quote is off under translation and a pending edit. Hidden nodes (collapsed details
+  or quote lines, thinking blocks) inside a selection are included whole: contiguity is the rule.
+- **Display order is not document order.** A table's spanning cell is laid out (and collected
+  for selection) after its last row's cells, so a selection's first and last runs are not its
+  boundaries: `richQuoteSelectionBoundaries` takes the earliest and latest touched node by
+  document position, and pre-selection spans the outermost display ranges.
+- **A partial page is checked as far as it goes.** Before Show more the page's last node may be
+  cut short and the rest is missing: the pre-send check locates the quote by `quote_offset`,
+  checks the shown nodes strictly, the cut node by prefix, and lets through what it cannot see.
+- **No quote crosses content this build cannot read.** An undecodable block or a list item of
+  unknown kind may hold text the server counts, so the node after it carries
+  `followsOpaqueContent` and the builder ends the quote before it.
+- **Boundaries and length cuts snap to whole grapheme clusters** (Swift `Character`s: skin tones,
+  flags, joined emoji), and a length cut is trimmed like the selection's ends.
+- **Quote is offered only while the selection maps to a quote** (the bubble's `updateRange`), so
+  text no quote can hold (a document caption, a title block) never turns Quote into a plain reply.
+- **A resend keeps a reply's quote only if the original asked for one** (`resentReplySubject`): a
+  cross-chat reply's display-only quote (`isQuote == false`) is never sent.
+- **Highlight goes through the same stamps**: the quote's flat text is found among the page's
+  nodes (nearest to `quote_offset`) and mapped back to display ranges, adjacent runs joined into
+  one span (`LinkHighlightingNode` takes one rect per line, so a range per run split a line of an
+  emoji and bold text into two half-height pieces); the adapter is built on demand when no
+  selection is active. The bubble re-applies a shown highlight after every layout,
+  and a quote missing from a collapsed partial page expands Show more (fetching the full page if
+  needed) and is highlighted there; the "quote not found" toast never fires for a partial page.

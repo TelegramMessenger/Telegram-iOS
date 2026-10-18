@@ -472,7 +472,6 @@ private final class BrowserScreenComponent: CombinedComponent {
             )
 
             // iPhone Duo: the bar's close button, centred in the side strip's navigation button frame, above the bar.
-            // It fades as the bar collapses, as it did in the bar.
             if showsSideColumnClose, let sideColumnFrame = environment.sideColumnNavigationButtonFrame {
                 let sideColumnCloseButton = sideColumnCloseButton.update(
                     component: GlassBarButtonComponent(
@@ -492,7 +491,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                 )
                 context.add(sideColumnCloseButton
                     .position(CGPoint(x: sideColumnFrame.midX, y: sideColumnFrame.midY))
-                    .opacity(1.0 - collapseFraction)
                 )
             }
 
@@ -695,7 +693,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     } else {
                         subject = .url(url)
                     }
-                    let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, actionCompleted: { [weak self] in
+                    let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: subject, actionCompleted: { [weak self] in
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }, completed: { [weak self] peerIds in
                         guard let self else {

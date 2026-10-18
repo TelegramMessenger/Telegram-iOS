@@ -183,7 +183,7 @@ final class NonMemberChannelReadStateTests: XCTestCase {
         if left {
             flags |= 1 << 2
         }
-        return Api.Chat.channel(.init(flags: flags, flags2: 0, id: 1234, accessHash: 5678, title: "Channel", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil))
+        return Api.Chat.channel(.init(flags: flags, flags2: 0, id: 1234, accessHash: 5678, title: "Channel", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil, pinnedMsgId: nil))
     }
 
     func testAFolderDialogsReadStateIsSkippedForANonMember() {

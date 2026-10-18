@@ -642,7 +642,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         let previousParams = self.params
         self.params = params
 
-        if previousParams?.primaryColor != params.primaryColor || previousParams?.secondaryColor != params.secondaryColor {
+        if previousParams?.primaryColor != params.primaryColor || previousParams?.secondaryColor != params.secondaryColor || previousParams?.backgroundColor != params.backgroundColor {
             for patternContentLayer in self.patternContentLayers {
                 patternContentLayer.layerTintColor = primaryColor.cgColor
             }

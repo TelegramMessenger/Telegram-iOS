@@ -147,7 +147,7 @@ public enum ParsedInternalUrl {
     case theme(String)
     case phone(String, String?, String?, String?, String?)
     case startAttach(String, String?, String?)
-    case contactToken(String)
+    case contactToken(String, String?)
     case chatFolder(slug: String)
     case premiumOffer(reference: String)
     case premiumGiftCode(slug: String)
@@ -219,7 +219,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                     startAttach = value
                                 } else if queryItem.name == "text" {
                                     text = value
-                                } else if queryItem.name == "nopaidtoken" {
+                                } else if queryItem.name == "free" {
                                     noPaidMessagesToken = value
                                 }
                             }
@@ -347,7 +347,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                             return .oauth(url: "https://t.me/\(query)")
                         }
                     } else {
-                        if let value = queryItems.first(where: { $0.name == "nopaidtoken" })?.value, !value.isEmpty {
+                        if let value = queryItems.first(where: { $0.name == "free" })?.value, !value.isEmpty {
                             return .peer(.name(peerName), .noPaidMessagesToken(value))
                         }
                         for queryItem in queryItems {
@@ -532,7 +532,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                         return .confirmationCode(code)
                     }
                 } else if peerName == "contact" {
-                    return .contactToken(pathComponents[1])
+                    let noPaidMessagesToken = components.queryItems?.first(where: { $0.name == "free" })?.value
+                    return .contactToken(pathComponents[1], noPaidMessagesToken.flatMap { $0.isEmpty ? nil : $0 })
                 } else if pathComponents[0] == "share" && pathComponents[1] == "url" {
                     if let queryItems = components.queryItems {
                         var url: String?
@@ -1226,9 +1227,12 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     return .single(.result(.inaccessiblePeer))
                 }
             }
-        case let .contactToken(token):
+        case let .contactToken(token, noPaidMessagesToken):
         return .single(.progress) |> then(context.engine.peers.importContactToken(token: token)
             |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
+                if let noPaidMessagesToken, let peer {
+                    return resolveNoPaidMessagesToken(context: context, peer: peer, token: noPaidMessagesToken)
+                }
                 if let peer = peer {
                     return .single(.result(.peer(peer._asPeer(), .info(nil))))
                 } else {

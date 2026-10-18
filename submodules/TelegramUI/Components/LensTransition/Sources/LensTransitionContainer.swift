@@ -15,7 +15,16 @@ public final class LensTransitionContainer: UIView {
     private var menuVisibilityAssertion: AnyObject?
     private weak var originalSourceView: UIView?
     private var isPresenting = false
-    private var pendingLayout: (CGSize, CGFloat, Bool)?
+    private var pendingLayout: (CGSize, CGFloat, Bool, GlassBackgroundView.TintColor)?
+
+    public var nativeBlurRadius: CGFloat? {
+        get {
+            return self.backgroundView.nativeBlurRadius
+        }
+        set {
+            self.backgroundView.nativeBlurRadius = newValue
+        }
+    }
     private var cornerRadius: CGFloat = 30.0
     private var sourceLease: ContextMenuSourceLease?
     private var replacementVisibilityAssertion: AnyObject?
@@ -49,17 +58,17 @@ public final class LensTransitionContainer: UIView {
         self.sourceLease = nil
     }
 
-    public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, transition: ComponentTransition) {
+    public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor = .init(kind: .panel), transition: ComponentTransition) {
         self.cornerRadius = cornerRadius
         // UIKit temporarily owns the presentation geometry during a morph. Keep the
         // destination model geometry stable until it has returned the view to us.
         if #available(iOS 26.0, *), let morph = self.morph as? LiquidMorphTransition, morph.isAnimating {
-            self.pendingLayout = (size, cornerRadius, isDark)
+            self.pendingLayout = (size, cornerRadius, isDark, tintColor)
             return
         }
         transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: .zero, size: size))
         transition.setPosition(view: self.backgroundView, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
-        self.backgroundView.update(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: .init(kind: .panel), transition: transition)
+        self.backgroundView.update(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, transition: transition)
         transition.setCornerRadius(layer: self.contentsView.layer, cornerRadius: cornerRadius)
     }
 
@@ -86,25 +95,31 @@ public final class LensTransitionContainer: UIView {
         let morph = LiquidMorphTransition()
         self.morph = morph
         self.isPresenting = true
+        GlassBackgroundView.morphBlurRadius = self.nativeBlurRadius
         if !morph.animate(from: source, to: menu, attachment: sourceAttachment, in: self, sourceIdentity: sourceView, alongsideAnimations: { [weak self] in
             if let self {
                 self.sourceVisibilityAssertion = LiquidMorphTransition.sourceVisibilityAssertion(for: source.view)
             }
             alongsideAnimations()
         }, completion: { [weak self] in
+            if self?.nativeBlurRadius != nil {
+                GlassBackgroundView.morphBlurRadius = nil
+            }
             // A close that took over this opening owns the menu from then on.
             guard let self, self.isPresenting else { return }
             self.isPresenting = false
-            if let (size, radius, dark) = self.pendingLayout {
+            if let (size, radius, dark, tint) = self.pendingLayout {
                 self.pendingLayout = nil
-                self.update(size: size, cornerRadius: radius, isDark: dark, transition: .immediate)
+                self.update(size: size, cornerRadius: radius, isDark: dark, tintColor: tint, transition: .immediate)
             }
         }) {
+            GlassBackgroundView.morphBlurRadius = nil
             self.isPresenting = false
             self.morph = nil
             self.sourceVisibilityAssertion = nil
             self.restoreSourceViews()
             self.fadeIn(alongsideAnimations: alongsideAnimations)
+            return
         }
     }
 
@@ -132,6 +147,8 @@ public final class LensTransitionContainer: UIView {
             // source transform, as UIKit does for its dismissal preview.
             let attachment = destination.target.container.convert(destination.target.center, to: self)
             let menu = self.makeMenuPreview()
+            let blurRadius = self.nativeBlurRadius
+            GlassBackgroundView.morphBlurRadius = blurRadius
             if morph.animate(from: menu, to: destination, attachment: attachment, in: self, sourceIdentity: originalSourceView, interruptingCurrent: interruptsPresentation, alongsideAnimations: { [weak self] in
                 // The menu is this morph's source. UIKit puts it back on screen, fully open,
                 // when it tears the morph down, and our completion (which hides it) only runs
@@ -144,11 +161,15 @@ public final class LensTransitionContainer: UIView {
                 }
                 alongsideAnimations()
             }, completion: { [weak self] in
+                if blurRadius != nil {
+                    GlassBackgroundView.morphBlurRadius = nil
+                }
                 self?.finishDismissal()
                 completion()
             }) {
                 return
             }
+            GlassBackgroundView.morphBlurRadius = nil
         }
         // A source can disappear because the action removed it or navigation
         // changed. In that case finish normally without constructing an invalid preview.

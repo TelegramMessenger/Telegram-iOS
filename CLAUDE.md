@@ -138,6 +138,12 @@ Do **not** fall back to `cliclick` / `osascript` / `screencapture -R` for this. 
 
 If the `mcp__XcodeBuildMCP__*` tools are absent from a session's tool list (it has happened — the server is configured but its tools weren't exposed), say so and hand the interactive checks to the user rather than attempting the privilege-blocked fallbacks.
 
+### Visual features and animations: verify from recorded frames
+
+Any visual change, and always an animated one, is verified by recording the simulator and reading its frames, not by
+a green build: [`AGENTS.md`](AGENTS.md), "Visual features and animations" (`simctl io recordVideo`, then
+`tools/animation_sheet.py` for labelled frame sheets, per-frame numbers and per-element tracks in points).
+
 ### CI builds in tart VMs (and why every download needs a checksum)
 
 GitLab CI (`.gitlab-ci.yml`) builds, uploads to TestFlight and verifies in tart VMs on the runner host:
@@ -935,9 +941,9 @@ The public surface is being narrowed incrementally (e.g. `scroller` is fully rem
 
 ## Message send transition (`ChatMessageTransitionNode`)
 
-The send animation (`submodules/TelegramUI/Sources/ChatMessageTransitionNode.swift`) is spring-driven: the vertical axis, the horizontal axis and the bubble scale (a text message squashes from 100% to `scaleDipScale` on one spring, then returns to 100% on another, as additive `transform.scale` phases paired with anchor-keeping position offsets, all four removed together on completion or the bubble blinks at 90% for a frame) each run their own `ContainedViewLayoutTransitionCurve.customSpring`, tuned through the `SpringParameters` constants on `ChatMessageTransitionNodeImpl`. Springs are time-scaled by `CALayer.makeAnimation` to settle within the duration they run with, so only the damping ratio shapes a curve; `animationDuration` is the single knob for overall speed, and a text message's horizontal spring runs for `horizontalAnimationDuration` (half of it). When animating a layer directly with these curves, pass `timingFunction: curve.timingFunction` as well as `mediaTimingFunction` — the latter is `nil` for springs, and the default silently falls back to ease-in-out (the mic button's sent-message decoration is one such consumer).
+The send animation (`submodules/TelegramUI/Sources/ChatMessageTransitionNode.swift`) takes its timing from one `ChatMessageTransitionNodeImpl.AnimationParameters` preset per chat, picked when the chat's node is created. **The default is `.bezier`**: 0.3 s on two cubic beziers, no scale. The spring version (2026-10-09) was rolled back to it on 2026-10-16 and is now `.spring`, behind Debug Settings ▸ "Chat: spring send animation" (`ExperimentalUISettings.springSendAnimation`; reopen the chat after toggling). Under `.spring` the vertical axis, the horizontal axis and the bubble scale (a text message squashes from 100% to `scaleDipScale` on one spring, then returns to 100% on another, as additive `transform.scale` phases paired with anchor-keeping position offsets, all four removed together on completion or the bubble blinks at 90% for a frame) each run their own `ContainedViewLayoutTransitionCurve.customSpring`, tuned through the `SpringParameters` constants on `ChatMessageTransitionNodeImpl`. Springs are time-scaled by `CALayer.makeAnimation` to settle within the duration they run with, so only the damping ratio shapes a curve; the preset's `duration` is the single knob for overall speed, and a text message's horizontal spring runs for `textHorizontalDuration` (half of it). When animating a layer directly with these curves, pass `timingFunction: curve.timingFunction` as well as `mediaTimingFunction` — the latter is `nil` for springs, and the default silently falls back to ease-in-out (the mic button's sent-message decoration is one such consumer). For a bezier the non-nil `mediaTimingFunction` wins, so the same call serves both presets.
 
-**Invariant: the history list must scroll with the same vertical spring as the bubble**, or the new bubble drifts relative to its neighbours. `ChatControllerLoadDisplayNode` passes `ChatMessageTransitionNodeImpl.verticalListAnimationCurve` (`ListViewAnimationCurve.CustomSpring`) to `ListViewScrollToItem`; `listViewAnimationDurationAndCurve` maps `.customSpring` to it (not to the system `.Spring`), and `ListViewImpl` builds the scroll through `CALayer.makeAnimation` so it is configured exactly like the content springs. `ContainedViewLayoutTransitionCurve.solve(at:)` samples the real spring for `.customSpring` (one cached `CASpringAnimation` per parameter set), so display-link consumers follow it too; the animated gradient wallpaper clamps the overshoot. **CoreList, the default backend, holds it too:** `CoreListChatHistoryBackend` maps both `ListViewAnimationCurve.CustomSpring` (scroll and size/inset passes) and `ContainedViewLayoutTransitionCurve.customSpring` (item transitions) to `CoreListTransition.Curve.customSpring`, which emits the same `CASpringAnimation` Display builds — Float-quantized parameters, `duration = settlingDuration`, linear timing, settle mapped onto the pass as `speed` — and whose model `solve(at:)` is the closed-form oscillator, pinned against CA's own solver in `CustomSpringParityTests`. That closed form has **no overdamped branch** on purpose: Display never sets `allowsOverdamping`, and at its default `false` CA renders any damping ratio above 1 as critically damped. The reverse bridge (CoreList curve → ComponentFlow `Curve`, for item internals) still degrades `.customSpring` to `.spring`, since ComponentFlow has no custom spring.
+**Invariant: the history list must scroll with the same vertical curve as the bubble**, or the new bubble drifts relative to its neighbours. `ChatControllerLoadDisplayNode` passes the preset's `verticalListCurve` to `ListViewScrollToItem` (`.Custom` with the bubble's control points under `.bezier`, `ListViewAnimationCurve.CustomSpring` under `.spring`); `listViewAnimationDurationAndCurve` maps `.customSpring` to it (not to the system `.Spring`), and `ListViewImpl` builds the scroll through `CALayer.makeAnimation` so it is configured exactly like the content springs. `ContainedViewLayoutTransitionCurve.solve(at:)` samples the real spring for `.customSpring` (one cached `CASpringAnimation` per parameter set), so display-link consumers follow it too; the animated gradient wallpaper clamps the overshoot. **CoreList, the default backend, holds it too:** `CoreListChatHistoryBackend` maps both `ListViewAnimationCurve.CustomSpring` (scroll and size/inset passes) and `ContainedViewLayoutTransitionCurve.customSpring` (item transitions) to `CoreListTransition.Curve.customSpring`, which emits the same `CASpringAnimation` Display builds — Float-quantized parameters, `duration = settlingDuration`, linear timing, settle mapped onto the pass as `speed` — and whose model `solve(at:)` is the closed-form oscillator, pinned against CA's own solver in `CustomSpringParityTests`. That closed form has **no overdamped branch** on purpose: Display never sets `allowsOverdamping`, and at its default `false` CA renders any damping ratio above 1 as critically damped. The reverse bridge (CoreList curve → ComponentFlow `Curve`, for item internals) still degrades `.customSpring` to `.spring`, since ComponentFlow has no custom spring.
 
 ## InstantPage V2 & rich-text messages
 
@@ -990,6 +996,14 @@ unsupported-media bubble also draws (its constants are load-bearing for that bub
 A run of adjacent unsupported blocks collapses to one pill, and the chat wallpaper reaches the
 renderer through `InstantPageV2RenderContext.wallpaperBackgroundNode`. Details in
 [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Unsupported blocks".
+
+**Rich reply quotes** — a reply quoting a selection of a rich message sends `quote_rich`, one
+`RichText` per covered text node (`EngineMessageReplyQuote.richText`; `text`/`entities` are its
+derived flat form, so every quote consumer reads those unchanged). The pure core (node table,
+builder, the server's validation rule) is `TelegramCore/Sources/Utils/RichReplyQuote.swift`; the
+renderer stamps each laid-out run with its node and flat range so a selection maps to nodes. The
+node-id scheme is shared by the enumerator and the V2 layout and nothing checks the pair. Details
+in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Rich reply quotes".
 
 ## Rust MTProto engine on iOS
 
@@ -1262,8 +1276,46 @@ come from TelegramCore around it. Four facts keep the critical path at one `mess
   fill that closes the hole to the top advances the channel state's `synchronizedUntilMessageId`, so
   the chat's re-subscription after a fill does not wipe it and the poll does not seed a gap hole over it.
 
+## News feed: parked at layer 232 (`TELEGRAM_NEWS_FEED_API`)
+
+Since 2026-10-16 the news feed is parked server-side and the app talks layer 232, whose schema has no feed API:
+no `feed.*` types or methods, no `updateReadFeed`, no `channels.editChannelNews`, `channels.joinChannel` without
+`for_news`, and a `channel` constructor without `in_news`. That constructor keeps `pinned_msg_id` and is still
+`#7ad15240`: a TL constructor id ignores `?true` fields. All News code stays in the app, so the feature comes back
+by defining one compile-time condition, not by restoring code. None of this shows up as a build error:
+
+- **`TELEGRAM_NEWS_FEED_API` is defined nowhere.** TelegramCore wraps only the lines that use a removed API symbol,
+  or read the removed `in_news` bit, in `#if TELEGRAM_NEWS_FEED_API`. Each `#else` sends nothing and answers with an
+  empty success (an empty For you batch, an empty Added page, a read mark kept local, interests left unchanged), so
+  no context retries. The feed models, contexts, page storage, grouping, caches and read state stay compiled. Code
+  inside an inactive `#if` is not type-checked, which is why the blocks are kept that small.
+- **One gate hides News.** TelegramCore exports `newsFeedApiIsAvailable` (Swift defines are per module, so the app
+  cannot test the condition itself), and `isNewsFeedEnabled(appConfiguration:apiIsAvailable:)` in `NewsFeedSupport`
+  returns false while it is false, before the `dev` flag and the `news_feed_enabled` kill switch. Every News surface
+  outside the News modules reads that gate: the tab (`ApplicationContext` → `TelegramRootController`), the channel
+  bar (Join or Mute/Unmute instead of the island, also for a channel a 233 build stored with `in_news`) and the
+  title's mute badge. `NewsScreen` is still created, like the hidden Calls tab, but never loads, so no feed context
+  starts. There is no `#if` on the app side: a new News entry point must go through the gate.
+- **A raw bit read compiles silently.** The parse of a channel's `flags2` bit 21 is a bit test, not an accessor, so
+  nothing would have caught it; `ParkedNewsFeedApiTests` pins that the parked build ignores it.
+- **Stays on:** the pinned-message skeleton (fed by the constructor's `pinned_msg_id` and by `channelFull`'s), no
+  read state for unjoined channels (below), and the history-open request chain (above).
+
+To bring the feed back:
+
+1. restore its entries in `swift_scheme.tl`, with `in_news`, `for_news` and `editChannelNews` as the server has them;
+2. define the condition for **both** TelegramCore and its tests: `"-DTELEGRAM_NEWS_FEED_API"` in the `copts` of
+   `TelegramCore` and `TelegramCoreTestsLib` in `submodules/TelegramCore/BUILD`, and
+   `.define("TELEGRAM_NEWS_FEED_API")` in the `swiftSettings` of both the `TelegramCore` and `TelegramCoreTests`
+   targets in its `Package.swift`. The tests are their own module. Without the define there, the parked tests
+   (`FeedApiConversionTests`, the `in_news` cases of `ChannelInNewsFlagTests` and `ChannelInNewsLocalChangeTests`)
+   stay compiled out, `ParkedNewsFeedApiTests` skips itself, and bit 21 is tested by nothing;
+3. set `Serialization.currentLayer()` to the server's layer;
+4. run `submodules/TelegramApi/generate-swiftpm.sh`.
+
 ## Opening a post from the News feed: the cached post first
 
+Reachable only while the feed is on (see "News feed: parked at layer 232" above).
 The feed stores every post it shows into the channel's history (inside the hole). Opening a post
 from the feed passes `cachedAnchor: true` in `ChatControllerSubject.message`, which the history
 view turns into `includeAnchorWhileLoading`: a Postbox view opened around a message that is stored

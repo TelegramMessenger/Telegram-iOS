@@ -40,7 +40,7 @@ struct PassZipReader {
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: path), let fileSize = (attributes[.size] as? NSNumber)?.intValue, fileSize >= 22, fileSize <= passArchiveMaxFileSize else {
             return nil
         }
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), data.count == fileSize else {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)), data.count == fileSize else {
             return nil
         }
         self.data = data

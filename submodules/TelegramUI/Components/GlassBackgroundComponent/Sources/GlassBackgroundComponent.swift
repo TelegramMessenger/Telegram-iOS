@@ -506,6 +506,14 @@ public class GlassBackgroundView: UIView {
     private var nativeView: UIVisualEffectView?
     private var nativeViewClippingContext: ClippingShapeContext?
     private let nativeParamsView: EffectSettingsContainerView?
+
+    public var nativeBlurRadius: CGFloat? {
+        didSet {
+            if self.nativeBlurRadius != oldValue {
+                self.applyNativeBlurRadius()
+            }
+        }
+    }
     
     private let foregroundView: UIImageView?
     private let shadowView: UIImageView?
@@ -877,6 +885,28 @@ public class GlassBackgroundView: UIView {
     override public func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
     }
+
+    private func applyNativeBlurRadius() {
+        guard let nativeParamsView = self.nativeParamsView else {
+            return
+        }
+        let radius = Double(self.nativeBlurRadius ?? 0.0)
+        if radius == 0.0 && nativeParamsView.glassBlurRadius == 0.0 {
+            return
+        }
+        nativeParamsView.glassBlurRadius = radius
+        EffectSettingsContainerView.applyGlassBlurRadius(radius, toLayerTree: nativeParamsView.layer, depth: 0)
+    }
+
+    public static var morphBlurRadius: CGFloat? {
+        get {
+            let value = EffectSettingsContainerView.morphGlassBlurRadius
+            return value > 0.0 ? CGFloat(value) : nil
+        }
+        set {
+            EffectSettingsContainerView.morphGlassBlurRadius = Double(newValue ?? 0.0)
+        }
+    }
 }
 
 public final class GlassBackgroundContainerView: UIView {
@@ -1000,6 +1030,26 @@ public final class GlassBackgroundContainerView: UIView {
         return result
     }
     
+    public var nativeBlurRadius: CGFloat? {
+        didSet {
+            if self.nativeBlurRadius != oldValue {
+                self.applyNativeBlurRadius()
+            }
+        }
+    }
+
+    private func applyNativeBlurRadius() {
+        guard let nativeParamsView = self.nativeParamsView else {
+            return
+        }
+        let radius = Double(self.nativeBlurRadius ?? 0.0)
+        if radius == 0.0 && nativeParamsView.glassBlurRadius == 0.0 {
+            return
+        }
+        nativeParamsView.glassBlurRadius = radius
+        EffectSettingsContainerView.applyGlassBlurRadius(radius, toLayerTree: nativeParamsView.layer, depth: 0)
+    }
+
     public func update(size: CGSize, isDark: Bool, transition: ComponentTransition) {
         if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
             nativeParamsView.lumaMin = isDark ? 0.0 : 0.8
@@ -1016,7 +1066,21 @@ public final class GlassBackgroundContainerView: UIView {
             transition.setFrame(view: legacyView, frame: CGRect(origin: CGPoint(), size: size))
         }
     }
-    
+
+    /// Makes every glass in the container adapt again to the backdrop it is over now. UIKit's glass keeps how it adapted
+    /// to its backdrop when it joined the container (measured on iOS 27: a capsule that came over a white backdrop stayed
+    /// light over a coloured one later, whatever its tint, effect or luminance limits were set to since); setting the
+    /// container's effect again is what makes it look again. A glass that already matches its backdrop does not change.
+    public func readaptToBackdrop() {
+        guard let nativeView = self.nativeView, let effect = nativeView.effect else {
+            return
+        }
+        UIView.performWithoutAnimation {
+            nativeView.effect = nil
+            nativeView.effect = effect
+        }
+    }
+
     override public func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
     }
@@ -1648,6 +1712,15 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     }
     
     private let glassView: GlassBackgroundView
+
+    public var nativeBlurRadius: CGFloat? {
+        get {
+            return self.glassView.nativeBlurRadius
+        }
+        set {
+            self.glassView.nativeBlurRadius = newValue
+        }
+    }
     /// The tint the glass was last given.
     public var glassTintColor: GlassBackgroundView.TintColor? {
         return self.normalParams?.tintColor
@@ -1760,6 +1833,25 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
             mappedTransition = ComponentTransition(animation: .curve(duration: duration, curve: .bounce(stiffness: stiffness, damping: damping)))
         }
         
+        let glassSize: CGSize
+        switch self.state {
+        case .normal:
+            glassSize = normalParams.size
+        case let .extracted(size, _, extractionState):
+            switch extractionState {
+            case .animatedOut:
+                glassSize = normalParams.size
+            case .animatedIn:
+                glassSize = size
+            }
+        }
+        let glassFrame = CGRect(origin: CGPoint(), size: glassSize)
+        if self.isGlassLent {
+            self.glassFrameBeforeLending = glassFrame
+        } else {
+            mappedTransition.setFrame(view: self.glassView, frame: glassFrame)
+        }
+        
         switch self.state {
         case .normal:
             mappedTransition.setAlpha(view: self.normalContentView, alpha: 1.0)
@@ -1870,6 +1962,20 @@ private func glassCornerRadiusKeyframes(_ view: UIView?, sizes: [CGSize], timing
     addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: sizes.map { NSNumber(value: Float(radius($0))) }, timing: timing)
 }
 
+private func glassCornerRadiusKeyframes(_ view: UIView?, radii: [CGFloat], timing: NavigationKeyframeTiming) {
+    guard let view else {
+        return
+    }
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadius", keyPath: "cornerRadius", values: radii.map { NSNumber(value: Float(max(0.0, $0))) }, timing: timing)
+}
+
+private func glassCornerRadiiKeyframes(_ view: UIView?, radii: [GlassBackgroundView.CornerRadii], timing: NavigationKeyframeTiming) {
+    guard let view, CALayer.cornerRadiiSupported else {
+        return
+    }
+    addNavigationKeyframes(to: view.layer, key: "navigationGlass.cornerRadii", keyPath: view.layer.cornerRadiiKeyPath, values: radii.map { Display.CornerRadii(topLeft: max(0.0, $0.topLeft), topRight: max(0.0, $0.topRight), bottomLeft: max(0.0, $0.bottomLeft), bottomRight: max(0.0, $0.bottomRight)).boxedValue }, timing: timing)
+}
+
 extension GlassBackgroundView {
     /// Changes the glass's size along `width`/`height` (animation time from `timing`'s origin; corner radius half the
     /// shorter side) on the render server. The model takes the final size, and every view the glass lays out by its size
@@ -1881,22 +1987,64 @@ extension GlassBackgroundView {
 
     /// The same, from a size per sample of `timing`.
     public func animateShape(sizes: [CGSize], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
-        guard let last = sizes.last else {
+        self.animateShape(sizes: sizes, cornerRadii: sizes.map { min($0.width, $0.height) * 0.5 }, timing: timing, isDark: isDark, tintColor: tintColor)
+    }
+
+    /// The same with a corner radius per sample (an expansion's card: a capsule while short, the screen's corners once
+    /// tall). The legacy glass's rim image is made once for the last radius.
+    public func animateShape(sizes: [CGSize], cornerRadii: [CGFloat], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        guard let last = sizes.last, let lastRadius = cornerRadii.last, sizes.count == cornerRadii.count else {
             return
         }
-        self.update(size: last, cornerRadius: min(last.width, last.height) * 0.5, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        self.update(size: last, cornerRadius: lastRadius, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        self.addShapeKeyframes(sizes: sizes, timing: timing, tintColor: tintColor)
+        glassCornerRadiusKeyframes(self.nativeView, radii: cornerRadii, timing: timing)
+        if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
+            let inset = tintColor.innerInset
+            glassCornerRadiusKeyframes(innerBackgroundView, radii: cornerRadii.map { $0 - inset }, timing: timing)
+        }
+        glassCornerRadiusKeyframes(self.legacyView, radii: cornerRadii, timing: timing)
+    }
+
+    /// The same with four corner radii per sample (an expansion's card on a screen whose corners differ: iPhone Duo's
+    /// cover screen). The model takes the last radii as a custom shape. Native glass draws a custom shape with its
+    /// layer's own per-corner radii (`cornerConfiguration` writes them, measured on iOS 27), so those take the keyframes;
+    /// the legacy glass clips a custom shape with a mask, whose path does.
+    public func animateShape(sizes: [CGSize], cornerRadii: [CornerRadii], timing: NavigationKeyframeTiming, isDark: Bool, tintColor: TintColor) {
+        guard let last = sizes.last, let lastRadii = cornerRadii.last, sizes.count == cornerRadii.count else {
+            return
+        }
+        self.update(size: last, cornerRadii: lastRadii, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        // UIKit resolves a corner configuration against the view's bounds when it is set, which is before the update
+        // gives the view its new size, and again when it lays the view out (measured on iOS 27: 59 pt corners set on a
+        // 44 pt tall view read 22 until then). The model is written as that layout will resolve it, so it is the last
+        // keyframe at once; laying the view out here would lay out its dirty ancestors too, mid-transition.
+        if CALayer.cornerRadiiSupported {
+            self.nativeView?.layer.setCornerRadii(Display.CornerRadii(topLeft: lastRadii.topLeft, topRight: lastRadii.topRight, bottomLeft: lastRadii.bottomLeft, bottomRight: lastRadii.bottomRight))
+        }
+        self.addShapeKeyframes(sizes: sizes, timing: timing, tintColor: tintColor)
+        glassCornerRadiiKeyframes(self.nativeView, radii: cornerRadii, timing: timing)
+        if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
+            let inset = tintColor.innerInset
+            glassCornerRadiiKeyframes(innerBackgroundView, radii: cornerRadii.map { $0.insetBy(inset) }, timing: timing)
+        }
+        if let legacyMask = self.legacyView?.layer.mask as? CAShapeLayer {
+            addNavigationKeyframes(to: legacyMask, key: "navigationGlass.path", keyPath: "path", values: zip(sizes, cornerRadii).map { GlassBackgroundView.generateRoundedRectPath(size: $0.0, cornerRadii: $0.1) }, timing: timing)
+        }
+    }
+
+    /// Keyframes for every view the glass lays out by its size.
+    private func addShapeKeyframes(sizes: [CGSize], timing: NavigationKeyframeTiming, tintColor: TintColor) {
         let shadowInset: CGFloat = 32.0
         let filling: (CGSize) -> CGRect = { CGRect(origin: CGPoint(), size: $0) }
         glassShapeKeyframes(self.nativeParamsView, sizes: sizes, timing: timing, frame: filling)
         glassShapeKeyframes(self.nativeView, sizes: sizes, timing: timing, frame: filling)
-        glassCornerRadiusKeyframes(self.nativeView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 })
         glassShapeKeyframes(self.maskContainerView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: CGSize(width: $0.width + shadowInset * 2.0, height: $0.height + shadowInset * 2.0)) })
         glassShapeKeyframes(self.maskContentView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: $0) })
         glassShapeKeyframes(self.contentContainer, sizes: sizes, timing: timing, frame: filling)
         if tintColor.innerColor != nil, let innerBackgroundView = self.innerBackgroundView {
             let inset = tintColor.innerInset
             glassShapeKeyframes(innerBackgroundView, sizes: sizes, timing: timing, frame: { CGRect(origin: CGPoint(), size: $0).insetBy(dx: inset, dy: inset) })
-            glassCornerRadiusKeyframes(innerBackgroundView, sizes: sizes, timing: timing, radius: { min($0.width, $0.height) * 0.5 - inset })
         }
         glassShapeKeyframes(self.legacyView, sizes: sizes, timing: timing, frame: filling)
         glassShapeKeyframes(self.legacyHighlightContainerView, sizes: sizes, timing: timing, frame: filling)

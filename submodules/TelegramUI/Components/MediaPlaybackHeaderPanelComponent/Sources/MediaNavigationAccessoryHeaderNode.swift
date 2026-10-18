@@ -195,7 +195,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
             self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
             self.rateButton.accessibilityValue = playbackBaseRate.stringValue
             
-             self.rateButton.setContent(.image(optionsRateImage(rate: playbackBaseRate.stringValue.uppercased(), color: self.theme.rootController.navigationBar.controlColor)))
+             self.rateButton.setContent(.image(optionsRateImage(rate: playbackBaseRate.stringValue.uppercased(), color: self.theme.rootController.navigationBar.secondaryTextColor)))
         }
     }
     
@@ -385,7 +385,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.chat.inputPanel.panelControlColor, bufferingColor: self.theme.chat.inputPanel.panelControlColor.withAlphaComponent(0.5), chapters: []))
         
         if let playbackBaseRate = self.playbackBaseRate {
-            self.rateButton.setContent(.image(optionsRateImage(rate: playbackBaseRate.stringValue.uppercased(), color: self.theme.rootController.navigationBar.controlColor)))
+            self.rateButton.setContent(.image(optionsRateImage(rate: playbackBaseRate.stringValue.uppercased(), color: self.theme.rootController.navigationBar.secondaryTextColor)))
         }
         if let (size, leftInset, rightInset) = self.validLayout {
             self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)

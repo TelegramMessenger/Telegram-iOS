@@ -118,6 +118,81 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
         return (allRects, start, end)
     }
 
+    /// Every stamped run (`InstantPageQuoteLeafAttribute`) a selection of the combined text touches,
+    /// as the node it shows and the flat range of that node the selection covers. A run of an atom
+    /// counts whole. In display order, which is not document order (a table's spanning cell is laid
+    /// out after its last row's cells): `richQuoteSelectionBoundaries` orders them.
+    ///
+    /// V2 lays one node's string into exactly one text item (`layoutTextItem`), so a run never spans
+    /// two entries; `longestEffectiveRange` recovers a run's full extent when another attribute splits it.
+    public func richQuoteRuns(for range: NSRange) -> [(id: InstantPageTextNodeId, range: Range<Int>)] {
+        var result: [(id: InstantPageTextNodeId, range: Range<Int>)] = []
+        for entry in self.entries {
+            let string = entry.item.attributedString
+            let intersection = NSIntersectionRange(range, NSRange(location: entry.charOffset, length: string.length))
+            if intersection.length == 0 {
+                continue
+            }
+            let localRange = NSRange(location: intersection.location - entry.charOffset, length: intersection.length)
+            string.enumerateAttribute(InstantPageQuoteLeafAttribute, in: localRange, options: []) { value, runRange, _ in
+                guard let leaf = value as? InstantPageQuoteLeaf else {
+                    return
+                }
+                var leafRange = NSRange()
+                let _ = string.attribute(InstantPageQuoteLeafAttribute, at: runRange.location, longestEffectiveRange: &leafRange, in: NSRange(location: 0, length: string.length))
+                let lower: Int
+                let upper: Int
+                if leaf.isAtomic {
+                    lower = leaf.flatStart
+                    upper = leaf.flatStart + leaf.flatLength
+                } else {
+                    lower = leaf.flatStart + min(leaf.flatLength, runRange.location - leafRange.location)
+                    upper = leaf.flatStart + min(leaf.flatLength, runRange.location + runRange.length - leafRange.location)
+                }
+                result.append((id: leaf.node, range: lower ..< max(lower, upper)))
+            }
+        }
+        return result
+    }
+
+    /// The combined-text ranges showing the given flat range of each node, adjacent runs joined: a
+    /// highlight measures each range on its own and takes one rect per line (`LinkHighlightingNode`
+    /// reads consecutive rects as consecutive lines), so a range per run split a line of an emoji and
+    /// bold text into the emoji's top half and the text's bottom half.
+    public func ranges(showing nodeRanges: [(id: InstantPageTextNodeId, range: Range<Int>)]) -> [NSRange] {
+        var result: [NSRange] = []
+        func append(_ range: NSRange) {
+            if let last = result.last, last.location + last.length == range.location {
+                result[result.count - 1].length += range.length
+            } else {
+                result.append(range)
+            }
+        }
+        for entry in self.entries {
+            let string = entry.item.attributedString
+            string.enumerateAttribute(InstantPageQuoteLeafAttribute, in: NSRange(location: 0, length: string.length), options: []) { value, runRange, _ in
+                guard let leaf = value as? InstantPageQuoteLeaf, let quoted = nodeRanges.first(where: { $0.id == leaf.node })?.range else {
+                    return
+                }
+                let leafLower = leaf.flatStart
+                let leafUpper = leaf.flatStart + leaf.flatLength
+                if leaf.isAtomic {
+                    let overlaps = leafLower == leafUpper ? (quoted.lowerBound < leafLower && leafLower < quoted.upperBound) : (leafLower < quoted.upperBound && leafUpper > quoted.lowerBound)
+                    if overlaps {
+                        append(NSRange(location: entry.charOffset + runRange.location, length: runRange.length))
+                    }
+                    return
+                }
+                let lower = max(leafLower, quoted.lowerBound)
+                let upper = min(leafUpper, quoted.upperBound)
+                if lower < upper {
+                    append(NSRange(location: entry.charOffset + runRange.location + (lower - leafLower), length: upper - lower))
+                }
+            }
+        }
+        return result
+    }
+
     public func markdownForRange(_ range: NSRange) -> String {
         struct Segment {
             let context: InstantPageMarkdownBlockContext?

@@ -3,18 +3,23 @@ import UIKit
 import Display
 import ComponentFlow
 import QrCode
+import AnimatedTextComponent
 
 final class QrStudioCardComponent: Component {
     let link: String
     let username: String?
+    let expires: Int32?
+    let reservesTimer: Bool
     let ink: QrStudioColor
     let isLight: Bool
     let bounceToken: String
     let fillSource: QrStudioThemeBackgroundView?
 
-    init(link: String, username: String?, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
+    init(link: String, username: String?, expires: Int32?, reservesTimer: Bool, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
         self.link = link
         self.username = username
+        self.expires = expires
+        self.reservesTimer = reservesTimer
         self.ink = ink
         self.isLight = isLight
         self.bounceToken = bounceToken
@@ -26,6 +31,12 @@ final class QrStudioCardComponent: Component {
             return false
         }
         if lhs.username != rhs.username {
+            return false
+        }
+        if lhs.expires != rhs.expires {
+            return false
+        }
+        if lhs.reservesTimer != rhs.reservesTimer {
             return false
         }
         if lhs.ink != rhs.ink {
@@ -118,6 +129,10 @@ final class QrStudioCardComponent: Component {
         private let backgroundView = UIView()
         private let codeView = QrStudioCodeView()
         private let usernameLabel = UILabel()
+        private let timerText = ComponentView<Empty>()
+        private var timerLabel: UIView?
+        private var timerTicker: Foundation.Timer?
+        private var timerFrame = CGRect()
 
         private var component: QrStudioCardComponent?
         private var fill: Fill?
@@ -141,13 +156,17 @@ final class QrStudioCardComponent: Component {
             self.addSubview(self.usernameLabel)
 
             self.layer.shadowColor = UIColor.black.cgColor
-            self.layer.shadowRadius = 22.0
-            self.layer.shadowOffset = CGSize(width: 0.0, height: 12.0)
+            self.layer.shadowRadius = 46.0
+            self.layer.shadowOffset = CGSize(width: 0.0, height: 22.0)
             self.layer.shadowOpacity = 0.0
         }
 
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+
+        deinit {
+            self.timerTicker?.invalidate()
         }
 
         func exportImage(scale: CGFloat, staticPlane: Bool) -> (image: CGImage, planeRect: CGRect)? {
@@ -233,11 +252,11 @@ final class QrStudioCardComponent: Component {
                 }
             }
 
-            let size = CGSize(width: QrStudioCardMetrics.width, height: QrStudioCardMetrics.height(showsUsername: component.username != nil))
+            let size = CGSize(width: QrStudioCardMetrics.width, height: QrStudioCardMetrics.height(showsUsername: component.username != nil || component.expires != nil || component.reservesTimer))
 
             self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
             self.layer.shadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: QrStudioCardMetrics.cornerRadius).cgPath
-            let shadowOpacity: Float = component.isLight ? 0.12 : 0.0
+            let shadowOpacity: Float = component.isLight ? 0.13 : 0.0
             if self.layer.shadowOpacity != shadowOpacity {
                 if !transition.animation.isImmediate {
                     let animation = CABasicAnimation(keyPath: "shadowOpacity")
@@ -258,6 +277,7 @@ final class QrStudioCardComponent: Component {
             let usernameHeight = ceil(usernameFont.lineHeight)
             let usernameY = usernameBaseline - usernameFont.ascender - (usernameHeight - usernameFont.lineHeight) * 0.5
             self.usernameLabel.frame = CGRect(x: 20.0, y: (usernameY * UIScreenScale).rounded() / UIScreenScale, width: size.width - 40.0, height: usernameHeight)
+            self.timerFrame = self.usernameLabel.frame
 
             let animated = previousComponent != nil && !transition.animation.isImmediate
             self.updateFill(component: component, previousInk: previousComponent?.ink, size: size, animated: animated)
@@ -327,6 +347,10 @@ final class QrStudioCardComponent: Component {
             self.fill?.layout(size: size)
         }
 
+        func playCodeReveal(delay: Double) {
+            self.codeView.playReveal(delay: delay)
+        }
+
         private func removeFill() {
             self.fill?.container.removeFromSuperview()
             self.fill = nil
@@ -342,6 +366,13 @@ final class QrStudioCardComponent: Component {
             self.appliedInkUsesFill = usesFill
             self.codeView.update(matrix: self.matrix, ink: ink, cardColor: .white, transition: canAnimate || animatesCode ? .easeInOut(duration: 0.5) : .immediate, animatesInk: canAnimate)
 
+            if component.username == nil, component.expires != nil {
+                self.usernameLabel.isHidden = true
+                self.updateTimer(transition: animatesCode ? .easeInOut(duration: 0.3) : .immediate)
+                self.startTimerTicker()
+                return
+            }
+            self.stopTimer()
             guard let username = component.username else {
                 self.usernameLabel.isHidden = true
                 return
@@ -366,6 +397,71 @@ final class QrStudioCardComponent: Component {
                 self.usernameLabel.attributedText = text
             }
             self.usernameLabel.isHidden = false
+        }
+
+        private func startTimerTicker() {
+            guard self.timerTicker == nil else {
+                return
+            }
+            let now = Date().timeIntervalSince1970
+            let ticker = Foundation.Timer(fire: Date(timeIntervalSince1970: floor(now) + 1.0), interval: 1.0, repeats: true, block: { [weak self] _ in
+                self?.updateTimer(transition: .easeInOut(duration: 0.3))
+            })
+            RunLoop.main.add(ticker, forMode: .common)
+            self.timerTicker = ticker
+        }
+
+        private func stopTimer() {
+            self.timerTicker?.invalidate()
+            self.timerTicker = nil
+            self.timerText.view?.isHidden = true
+            self.timerLabel?.isHidden = true
+        }
+
+        private func updateTimer(transition: ComponentTransition) {
+            guard let component = self.component, let expires = component.expires else {
+                return
+            }
+            let remaining = Int(max(0.0, Double(expires) - Date().timeIntervalSince1970).rounded(.up))
+            let usesFill = self.fill != nil
+            let color = (usesFill ? QrStudioColor(rgb: 0x000000) : component.ink).uiColor
+            if #available(iOS 17.0, *) {
+                let label: QrStudioTimerLabel
+                if let current = self.timerLabel as? QrStudioTimerLabel {
+                    label = current
+                } else {
+                    label = QrStudioTimerLabel()
+                    self.timerLabel = label
+                    self.addSubview(label)
+                }
+                let wasHidden = label.isHidden
+                label.isHidden = false
+                label.frame = self.timerFrame.insetBy(dx: -8.0, dy: -4.0)
+                label.update(remaining: remaining, color: color, animated: !transition.animation.isImmediate && !wasHidden)
+                return
+            }
+            let size = self.timerText.update(
+                transition: transition,
+                component: AnyComponent(AnimatedTextComponent(
+                    font: Font.with(size: 24.0, design: .round, weight: .bold, traits: .monospacedNumbers),
+                    color: color,
+                    items: [
+                        AnimatedTextComponent.Item(id: AnyHashable(0), content: .number(remaining / 60, minDigits: 1)),
+                        AnimatedTextComponent.Item(id: AnyHashable(1), content: .text(":")),
+                        AnimatedTextComponent.Item(id: AnyHashable(2), content: .number(remaining % 60, minDigits: 2))
+                    ],
+                    preferredDirectionIsDown: true
+                )),
+                environment: {},
+                containerSize: self.timerFrame.size
+            )
+            if let view = self.timerText.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                view.isHidden = false
+                view.frame = CGRect(x: floor(self.timerFrame.midX - size.width * 0.5), y: floor(self.timerFrame.midY - size.height * 0.5), width: size.width, height: size.height)
+            }
         }
 
         func updateFillPosition() {

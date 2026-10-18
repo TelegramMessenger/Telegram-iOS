@@ -4,12 +4,116 @@ import Display
 import ComponentFlow
 import GlassBackgroundComponent
 import UIKitRuntimeUtils
-import LottieAnimationComponent
+import LottieComponent
+import LottieSettings
 
-struct QrStudioToast: Equatable {
-    var icon: String
+enum QrStudioToastIcon: Equatable {
+    case star
+    case success
+    case save
+    case copy
+    case clock
+    case timer
+    case image(String)
+
+    fileprivate var animationName: String? {
+        switch self {
+        case .star:
+            return "QrStudioToastStar"
+        case .success:
+            return "QrStudioToastSuccess"
+        case .save:
+            return "QrStudioToastSave"
+        default:
+            return nil
+        }
+    }
+
+    fileprivate var imageName: String? {
+        switch self {
+        case .copy:
+            return "QrStudio/ToastCopy"
+        case .clock:
+            return "QrStudio/ToastClock"
+        case let .image(name):
+            return name
+        default:
+            return nil
+        }
+    }
+}
+
+struct QrStudioToast {
+    struct Action {
+        var title: String
+        var perform: () -> Void
+    }
+
+    var icon: QrStudioToastIcon
     var text: String
-    var animation: String? = nil
+    var action: Action? = nil
+}
+
+private final class QrStudioToastTimerView: UIView {
+    private let ringLayer = CAShapeLayer()
+    private let handLayer = CAShapeLayer()
+    private let dotLayer = CAShapeLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        for layer in [self.ringLayer, self.handLayer] {
+            layer.fillColor = nil
+            layer.lineWidth = 2.2
+            layer.lineCap = .round
+            self.layer.addSublayer(layer)
+        }
+        self.layer.addSublayer(self.dotLayer)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func play(color: UIColor, delay: Double) {
+        let side: CGFloat = 24.0
+        let frame = CGRect(x: (self.bounds.width - side) * 0.5, y: (self.bounds.height - side) * 0.5, width: side, height: side)
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let radius = side * 0.5 - 2.5
+
+        self.ringLayer.frame = self.bounds
+        self.ringLayer.strokeColor = color.cgColor
+        self.ringLayer.path = UIBezierPath(arcCenter: center, radius: radius, startAngle: -.pi * 0.5, endAngle: .pi * 1.5, clockwise: true).cgPath
+
+        let hand = UIBezierPath()
+        hand.move(to: CGPoint(x: side * 0.5, y: side * 0.5))
+        hand.addLine(to: CGPoint(x: side * 0.5, y: side * 0.5 - radius * 0.62))
+        self.handLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: side, height: side))
+        self.handLayer.position = center
+        self.handLayer.strokeColor = color.cgColor
+        self.handLayer.path = hand.cgPath
+
+        self.dotLayer.fillColor = color.cgColor
+        self.dotLayer.path = UIBezierPath(ovalIn: CGRect(x: center.x - 1.6, y: center.y - 1.6, width: 3.2, height: 3.2)).cgPath
+
+        let beginTime = CACurrentMediaTime() + delay
+        let ring = CABasicAnimation(keyPath: "strokeEnd")
+        ring.fromValue = 0.0
+        ring.toValue = 1.0
+        ring.duration = 0.7
+        ring.beginTime = beginTime
+        ring.fillMode = .backwards
+        ring.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        self.ringLayer.add(ring, forKey: "progress")
+
+        let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
+        rotation.fromValue = 0.0
+        rotation.toValue = Double.pi * 2.0
+        rotation.duration = 0.7
+        rotation.beginTime = beginTime
+        rotation.fillMode = .backwards
+        rotation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        self.handLayer.add(rotation, forKey: "progress")
+    }
 }
 
 final class QrStudioToastView: UIView {
@@ -26,22 +130,19 @@ final class QrStudioToastView: UIView {
     private let contentMask = CAShapeLayer()
     private let iconView = UIImageView()
     private let label = UILabel()
-    private let progressLayer = CAShapeLayer()
-    private let cancelIconView = UIImageView()
-    private let doneIcon = ComponentView<Empty>()
+    private let animationIcon = ComponentView<Empty>()
+    private let timerView = QrStudioToastTimerView()
+    private let actionLabel = UILabel()
+    private var action: QrStudioToast.Action?
     private var phase: Phase?
     private var contentSize = CGSize()
     private var glassWidth: CGFloat = 0.0
     private var lastTick: Double?
     private var tint = GlassBackgroundView.TintColor(kind: .panel)
+    private var isLight = false
+    private var foregroundColor = UIColor.white
     private var displayLink: SharedDisplayLinkDriver.Link?
-    private var cancel: (() -> Void)?
-
-    private(set) var isShowingProgress = false
-
-    static func glassColor(ink: QrStudioColor, isLight: Bool) -> UIColor {
-        return (isLight ? UIColor.black : ink.uiColor).withAlphaComponent(0.55)
-    }
+    var lottieSettings: LottieRenderingSettings = .noAccountFallback
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -52,177 +153,104 @@ final class QrStudioToastView: UIView {
         self.addSubview(self.glass)
 
         self.iconView.contentMode = .center
-        self.iconView.tintColor = .white
         self.contentView.addSubview(self.iconView)
 
-        let lineWidth: CGFloat = 2.5
-        let ringSide = QrStudioToastView.iconFrame.width
-        self.progressLayer.path = CGPath(ellipseIn: CGRect(x: 0.0, y: 0.0, width: ringSide, height: ringSide).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5), transform: nil)
-        self.progressLayer.bounds = CGRect(x: 0.0, y: 0.0, width: ringSide, height: ringSide)
-        self.progressLayer.lineWidth = lineWidth
-        self.progressLayer.strokeColor = UIColor.white.cgColor
-        self.progressLayer.fillColor = UIColor.clear.cgColor
-        self.progressLayer.lineCap = .round
-        self.progressLayer.isHidden = true
-        self.contentView.layer.addSublayer(self.progressLayer)
-
-        self.cancelIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Close"), color: .white)
-        self.cancelIconView.contentMode = .scaleAspectFit
-        self.cancelIconView.isHidden = true
-        self.contentView.addSubview(self.cancelIconView)
-
         self.label.font = UIFont.systemFont(ofSize: 14.0)
-        self.label.textColor = .white
         self.label.numberOfLines = 2
         self.contentView.addSubview(self.label)
 
+        self.actionLabel.font = Font.semibold(15.0)
+        self.actionLabel.textColor = UIColor(red: 0.45, green: 0.73, blue: 1.0, alpha: 1.0)
+        self.contentView.addSubview(self.actionLabel)
+
+        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
+
         self.contentView.layer.mask = self.contentMask
         self.addSubview(self.contentView)
-
-        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped(_:))))
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        guard self.isShowingProgress else {
-            return false
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard self.action != nil, let phase = self.phase, !self.isHidden else {
+            return nil
         }
-        return self.cancelArea.contains(point)
+        if case .closing = phase {
+            return nil
+        }
+        let area = CGRect(x: self.bounds.width - 120.0, y: 0.0, width: 120.0, height: self.bounds.height)
+        return area.contains(point) ? self : nil
     }
 
-    private var cancelArea: CGRect {
-        let icon = self.iconView.frame
-        return CGRect(x: icon.minX - 12.0, y: 0.0, width: icon.width + 24.0, height: self.bounds.height)
-    }
-
-    @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
-        guard self.isShowingProgress, self.cancelArea.contains(recognizer.location(in: self)) else {
+    @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
+        guard case .ended = recognizer.state, let action = self.action else {
             return
         }
-        let cancel = self.cancel
-        self.cancel = nil
-        self.isShowingProgress = false
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        self.action = nil
         self.isUserInteractionEnabled = false
-        self.dismiss()
-        cancel?()
+        self.phase = .closing(QrStudioClock.now)
+        action.perform()
     }
 
-    func show(_ toast: QrStudioToast, ink: QrStudioColor, isLight: Bool) {
-        self.isShowingProgress = false
-        self.cancel = nil
-        self.isUserInteractionEnabled = false
-        if let animation = toast.animation {
-            self.setIcon(.animation(animation))
-        } else {
-            self.iconView.image = UIImage(bundleImageName: toast.icon)?.withRenderingMode(.alwaysTemplate)
-            self.setIcon(.image)
-        }
-        self.present(text: toast.text, ink: ink, isLight: isLight)
-    }
-
-    func showProgress(text: String, ink: QrStudioColor, isLight: Bool, cancel: @escaping () -> Void) {
-        self.isShowingProgress = true
-        self.cancel = cancel
-        self.isUserInteractionEnabled = true
-        self.progressLayer.strokeEnd = 0.027
-        self.setIcon(.progress)
-        self.present(text: text, ink: ink, isLight: isLight)
-        if self.progressLayer.animation(forKey: "rotation") == nil {
-            let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
-            rotation.duration = 2.0
-            rotation.fromValue = 0.0 as NSNumber
-            rotation.toValue = (Double.pi * 2.0) as NSNumber
-            rotation.repeatCount = Float.infinity
-            rotation.timingFunction = CAMediaTimingFunction(name: .linear)
-            self.progressLayer.add(rotation, forKey: "rotation")
-        }
-    }
-
-    func updateProgress(_ value: Float) {
-        guard self.isShowingProgress else {
-            return
-        }
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.2)
-        self.progressLayer.strokeEnd = CGFloat(max(0.027, min(1.0, value)))
-        CATransaction.commit()
-    }
-
-    func completeProgress(text: String) {
-        guard self.isShowingProgress else {
-            return
-        }
-        self.isShowingProgress = false
-        self.cancel = nil
-        self.isUserInteractionEnabled = false
-        self.setIcon(.animation("anim_savemedia"))
-        self.label.text = text
+    func show(_ toast: QrStudioToast, isLight: Bool, glassTint: GlassBackgroundView.TintColor) {
+        self.action = toast.action
+        self.isUserInteractionEnabled = toast.action != nil
+        self.actionLabel.text = toast.action?.title
+        self.actionLabel.isHidden = toast.action == nil
+        self.isLight = isLight
+        self.tint = glassTint
+        let color = isLight ? UIColor(white: 0.1, alpha: 1.0) : UIColor(white: 0.96, alpha: 1.0)
+        self.foregroundColor = color
+        self.iconView.tintColor = color
+        self.label.textColor = color
+        self.label.text = toast.text
         self.layoutContent()
-        let fade = CATransition()
-        fade.type = .fade
-        fade.duration = 0.2
-        self.label.layer.add(fade, forKey: "text")
-        self.phase = .holding(QrStudioClock.now)
-        self.startDisplayLink()
+        self.setIcon(toast.icon)
+        self.present()
     }
 
-    func dismiss() {
-        switch self.phase {
-        case .opening, .holding:
-            self.phase = .closing(QrStudioClock.now)
-            self.startDisplayLink()
-        default:
-            break
+    private func setIcon(_ icon: QrStudioToastIcon) {
+        let iconDelay = 0.08
+        self.iconView.image = icon.imageName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }
+        self.iconView.isHidden = self.iconView.image == nil
+
+        if case .timer = icon {
+            if self.timerView.superview == nil {
+                self.contentView.addSubview(self.timerView)
+            }
+            self.timerView.isHidden = false
+            self.timerView.frame = self.iconView.frame
+            self.timerView.play(color: self.foregroundColor, delay: iconDelay)
+        } else {
+            self.timerView.isHidden = true
         }
-    }
 
-    private enum IconMode: Equatable {
-        case image
-        case progress
-        case animation(String)
-    }
-
-    private func setIcon(_ mode: IconMode) {
-        self.iconView.isHidden = mode != .image
-        self.progressLayer.isHidden = mode != .progress
-        self.cancelIconView.isHidden = mode != .progress
-        if mode != .progress {
-            self.progressLayer.removeAnimation(forKey: "rotation")
-        }
-        if case let .animation(name) = mode {
-            let _ = self.doneIcon.update(
+        if let name = icon.animationName {
+            let _ = self.animationIcon.update(
                 transition: .immediate,
-                component: AnyComponent(LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: name, mode: .animating(loop: false)), colors: [:], size: CGSize(width: 30.0, height: 30.0))),
+                component: AnyComponent(LottieComponent(content: LottieComponent.AppBundleContent(name: name), color: self.foregroundColor, startingPosition: .begin, size: CGSize(width: 30.0, height: 30.0), lottieSettings: self.lottieSettings)),
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
-            if let view = self.doneIcon.view {
+            if let view = self.animationIcon.view as? LottieComponent.View {
                 if view.superview == nil {
                     self.contentView.addSubview(view)
                 }
                 view.frame = self.iconView.frame
                 view.isHidden = false
-                view.alpha = 0.0
-                UIView.animate(withDuration: 0.2, animations: {
-                    view.alpha = 1.0
-                })
-                (view as? LottieAnimationComponent.View)?.playOnce()
+                view.playOnce(delay: iconDelay, force: true)
             }
         } else {
-            self.doneIcon.view?.removeFromSuperview()
-            self.doneIcon.view?.isHidden = true
+            self.animationIcon.view?.isHidden = true
         }
     }
 
-    private func present(text: String, ink: QrStudioColor, isLight: Bool) {
-        self.label.text = text
-        self.layoutContent()
+    private func present() {
         self.glassWidth = self.contentSize.width
         self.contentView.transform = .identity
-        self.tint = GlassBackgroundView.TintColor(kind: .custom(style: .default, color: QrStudioToastView.glassColor(ink: ink, isLight: isLight)))
         self.isHidden = false
         self.phase = .opening(QrStudioClock.now)
         self.startDisplayLink()
@@ -230,11 +258,17 @@ final class QrStudioToastView: UIView {
     }
 
     private func layoutContent() {
-        let textSize = self.label.sizeThatFits(CGSize(width: 270.0, height: CGFloat.greatestFiniteMagnitude))
-        let textWidth = min(270.0, ceil(textSize.width))
-        let textHeight = ceil(textSize.height)
+        let textCount = self.label.text?.count ?? 0
+        let maxTextWidth: CGFloat = self.action != nil ? 200.0 : (textCount > 36 ? 260.0 : 270.0)
+        let textSize = self.label.sizeThatFits(CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude))
+        let textWidth = self.action != nil || textCount > 36 ? maxTextWidth : min(maxTextWidth, ceil(textSize.width))
+        let textHeight = ceil(self.label.sizeThatFits(CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude)).height)
         let height = max(48.0, textHeight + 18.0)
-        self.contentSize = CGSize(width: 14.0 + 30.0 + 12.0 + textWidth + 20.0, height: height)
+        var actionWidth: CGFloat = 0.0
+        if self.action != nil {
+            actionWidth = 12.0 + ceil(self.actionLabel.sizeThatFits(CGSize(width: 200.0, height: 40.0)).width)
+        }
+        self.contentSize = CGSize(width: 14.0 + 30.0 + 12.0 + textWidth + actionWidth + 20.0, height: height)
         let iconFrame = CGRect(x: QrStudioToastView.iconFrame.minX, y: floor((height - 30.0) * 0.5), width: 30.0, height: 30.0)
         let transform = self.contentView.transform
         self.contentView.transform = .identity
@@ -242,10 +276,13 @@ final class QrStudioToastView: UIView {
         self.contentView.frame = self.bounds
         self.contentView.transform = transform
         self.iconView.frame = iconFrame
-        self.progressLayer.position = CGPoint(x: iconFrame.midX, y: iconFrame.midY)
-        self.cancelIconView.frame = iconFrame.insetBy(dx: 8.0, dy: 8.0)
-        self.doneIcon.view?.frame = iconFrame
+        self.animationIcon.view?.frame = iconFrame
+        self.timerView.frame = iconFrame
         self.label.frame = CGRect(x: 14.0 + 30.0 + 12.0, y: floor((height - textHeight) * 0.5), width: textWidth, height: textHeight)
+        if self.action != nil {
+            let actionSize = self.actionLabel.sizeThatFits(CGSize(width: 200.0, height: 40.0))
+            self.actionLabel.frame = CGRect(x: self.label.frame.maxX + 12.0, y: floor((height - ceil(actionSize.height)) * 0.5), width: ceil(actionSize.width), height: ceil(actionSize.height))
+        }
     }
 
     private func startDisplayLink() {
@@ -274,19 +311,16 @@ final class QrStudioToastView: UIView {
             }
         case let .holding(start):
             p = 1.0
-            if QrStudioLens.closesAfterHold(holding: now - start, isPersistent: self.isShowingProgress) {
+            if QrStudioLens.closesAfterHold(holding: now - start) {
                 self.phase = .closing(now)
-            } else if self.isShowingProgress && self.glassWidth == self.contentSize.width {
-                self.displayLink = nil
             }
         case let .closing(start):
             if now - start >= QrStudioLens.closeDuration {
                 self.phase = nil
+                self.action = nil
+                self.isUserInteractionEnabled = false
                 self.displayLink = nil
                 self.isHidden = true
-                self.isShowingProgress = false
-                self.isUserInteractionEnabled = false
-                self.progressLayer.removeAnimation(forKey: "rotation")
                 return
             }
             p = QrStudioLens.closing(now - start)
@@ -304,7 +338,8 @@ final class QrStudioToastView: UIView {
         CATransaction.setDisableActions(true)
 
         self.glass.frame = glassFrame
-        self.glass.update(size: size, cornerRadius: cornerRadius, isDark: true, tintColor: self.tint, transition: .immediate)
+        self.glass.nativeBlurRadius = QrStudioGlass.blurRadius(self.tint)
+        self.glass.update(size: size, cornerRadius: cornerRadius, isDark: !self.isLight, tintColor: self.tint, transition: .immediate)
 
         let scale = 1.0 + 0.85 * (1.0 - c)
         self.contentView.transform = CGAffineTransform(scaleX: scale, y: scale)

@@ -103,6 +103,12 @@ final class NavigationBarTransitionRendererImpl: NavigationBarTransitionRenderer
     private(set) var currentBackdropHeight: CGFloat = 0.0
     private(set) var currentBackdropAlpha: CGFloat = 1.0
     private(set) var currentFraction: CGFloat = 0.0
+    /// What an expansion took from the lower bar (its pill and avatar), which the capsules leave out.
+    private var bottomExclusions = NavigationBarTransitionExclusions.none
+
+    func updateExclusions(bottom: NavigationBarTransitionExclusions) {
+        self.bottomExclusions = bottom
+    }
 
     // Tests.
     var edgeEffectViewForTesting: EdgeEffectView { return self.edgeEffectView }
@@ -214,10 +220,19 @@ final class NavigationBarTransitionRendererImpl: NavigationBarTransitionRenderer
         // bar's materialize or dematerialize in place. The capsules are never faded as a whole: this view is their
         // glass's ancestor, and pushing a chat from a search with it starting transparent, the chat's glass was not drawn
         // through the push and the linger after it.
-        let bottomContent = navigationBarTransitionCapsuleContent(bottomState)
+        var bottomContent = navigationBarTransitionCapsuleContent(bottomState)
+        if !self.bottomExclusions.nodes.isEmpty {
+            let excluded = Set(self.bottomExclusions.nodes.map { ObjectIdentifier($0) })
+            bottomContent = NavigationBarComponent.Content(title: bottomContent.title, back: bottomContent.back, leftButton: bottomContent.leftButton, rightButtons: bottomContent.rightButtons.filter { button in
+                if case let .node(node) = button.content {
+                    return !excluded.contains(ObjectIdentifier(node))
+                }
+                return true
+            }, backPressed: bottomContent.backPressed, badge: bottomContent.badge, backContextAction: bottomContent.backContextAction)
+        }
         let topContent = navigationBarTransitionCapsuleContent(topState)
         self.lendNodes(bottom: bottomContent, top: topContent)
-        let bottomSide = NavigationBarPlatterTransitionView.Side(content: bottomContent, theme: bottomState.theme, strings: bottomState.strings, leftInset: bottomState.leftInset, rightInset: bottomState.rightInset, trailingButtonsInset: bottomState.trailingButtonsInset, rowFrame: bottomState.rowFrame.offsetBy(dx: bottomFrame.minX, dy: bottomFrame.minY), leadingPressScale: bottomState.leadingPressScale, leadingPressGlow: bottomState.leadingPressGlow, trailingPressScales: bottomState.trailingPressScales, trailingPressGlows: bottomState.trailingPressGlows, columnFrame: navigationBarTransitionRowIsHidden(bottomState) ? nil : bottomState.sideColumnFrame?.offsetBy(dx: bottomFrame.minX, dy: bottomFrame.minY), hidesColumnButtons: bottomState.hidesSideColumnButtons, titlePill: navigationBarTransitionTitlePill(bottomState, offset: bottomFrame.origin))
+        let bottomSide = NavigationBarPlatterTransitionView.Side(content: bottomContent, theme: bottomState.theme, strings: bottomState.strings, leftInset: bottomState.leftInset, rightInset: bottomState.rightInset, trailingButtonsInset: bottomState.trailingButtonsInset, rowFrame: bottomState.rowFrame.offsetBy(dx: bottomFrame.minX, dy: bottomFrame.minY), leadingPressScale: bottomState.leadingPressScale, leadingPressGlow: bottomState.leadingPressGlow, trailingPressScales: bottomState.trailingPressScales, trailingPressGlows: bottomState.trailingPressGlows, columnFrame: navigationBarTransitionRowIsHidden(bottomState) ? nil : bottomState.sideColumnFrame?.offsetBy(dx: bottomFrame.minX, dy: bottomFrame.minY), hidesColumnButtons: bottomState.hidesSideColumnButtons, titlePill: self.bottomExclusions.titlePill ? nil : navigationBarTransitionTitlePill(bottomState, offset: bottomFrame.origin))
         let topSide = NavigationBarPlatterTransitionView.Side(content: topContent, theme: topState.theme, strings: topState.strings, leftInset: topState.leftInset, rightInset: topState.rightInset, trailingButtonsInset: topState.trailingButtonsInset, rowFrame: topState.rowFrame.offsetBy(dx: topFrame.minX, dy: topFrame.minY), leadingPressScale: topState.leadingPressScale, leadingPressGlow: topState.leadingPressGlow, trailingPressScales: topState.trailingPressScales, trailingPressGlows: topState.trailingPressGlows, columnFrame: navigationBarTransitionRowIsHidden(topState) ? nil : topState.sideColumnFrame?.offsetBy(dx: topFrame.minX, dy: topFrame.minY), hidesColumnButtons: topState.hidesSideColumnButtons, titlePill: navigationBarTransitionTitlePill(topState, offset: topFrame.origin))
         if let applied = self.appliedPlatterSides, platterSidesEqual(applied.bottom, bottomSide), platterSidesEqual(applied.top, topSide) {
         } else {

@@ -1828,12 +1828,16 @@ private final class CommunityViewScreenComponent: Component {
     let communityId: EnginePeer.Id
     let mode: CommunityViewScreenMode
     let selectionOptions: CommunityPeerSelectionOptions?
+    /// Set once the community's first data is laid out: the screen's header (title, settings button) is lifted as it
+    /// is when a navigation transition starts, so a push must not start before it.
+    let ready: Promise<Bool>
 
-    init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions?) {
+    init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions?, ready: Promise<Bool>) {
         self.context = context
         self.communityId = communityId
         self.mode = mode
         self.selectionOptions = selectionOptions
+        self.ready = ready
     }
 
     static func ==(lhs: CommunityViewScreenComponent, rhs: CommunityViewScreenComponent) -> Bool {
@@ -1847,6 +1851,9 @@ private final class CommunityViewScreenComponent: Component {
             return false
         }
         if lhs.selectionOptions !== rhs.selectionOptions {
+            return false
+        }
+        if lhs.ready !== rhs.ready {
             return false
         }
         return true
@@ -1868,8 +1875,13 @@ private final class CommunityViewScreenComponent: Component {
         private let bottomEdgeEffectView = EdgeEffectView()
         private let navigationBarView = ComponentView<Empty>()
 
-        /// The chat-list-style header, for navigation transitions.
+        /// The chat-list-style header, for navigation transitions. None for the sheet: its header lies on the sheet, below
+        /// the top of the screen, and a transition would fly its buttons to the other screen's bar; it slides with the
+        /// sheet instead.
         var navigationTransitionHeader: ChatListNavigationBar.View? {
+            guard let component = self.component, component.mode.usesFullscreenPresentation else {
+                return nil
+            }
             return self.navigationBarView.view as? ChatListNavigationBar.View
         }
         private let searchOverlayNode = ASDisplayNode()
@@ -1911,6 +1923,8 @@ private final class CommunityViewScreenComponent: Component {
         private var isAddActionInProgress = false
         private var removingPeerId: EnginePeer.Id?
         private var didRequestInitialData = false
+        private var didReceiveInitialData = false
+        private var didSetReady = false
         private var didRequestJoinedChats = false
 
         private var dataDisposable: Disposable?
@@ -2291,6 +2305,7 @@ private final class CommunityViewScreenComponent: Component {
                     if component.selectionOptions == nil {
                         self.updatePendingRequestsSignal(component: component)
                     }
+                    self.didReceiveInitialData = true
                     self.state?.updated(transition: transition)
                 })
             }
@@ -3411,6 +3426,16 @@ private final class CommunityViewScreenComponent: Component {
                 controller.presentationContext.containerLayoutUpdated(presentationContextLayout, transition: transition.containedViewLayoutTransition)
             }
 
+            if self.didReceiveInitialData && !self.didSetReady {
+                self.didSetReady = true
+                // After this update returns: ready can start the transition right away, and that lays the screen out
+                // again.
+                let ready = component.ready
+                DispatchQueue.main.async {
+                    ready.set(.single(true))
+                }
+            }
+
             return availableSize
         }
     }
@@ -3433,14 +3458,24 @@ public final class CommunityViewScreenImpl: ViewControllerComponentContainer, Co
         }
         return (self.node.hostView.componentView as? CommunityViewScreenComponent.View)?.navigationTransitionHeader
     }
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+
     public init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions? = nil) {
+        let componentReady = Promise<Bool>()
         super.init(
             context: context,
-            component: CommunityViewScreenComponent(context: context, communityId: communityId, mode: mode, selectionOptions: selectionOptions),
+            component: CommunityViewScreenComponent(context: context, communityId: communityId, mode: mode, selectionOptions: selectionOptions, ready: componentReady),
             navigationBarAppearance: .none,
             theme: .default,
             updatedPresentationData: nil
         )
+
+        // Pushed once its header shows the community's first data (a push lifts the header as it is); a screen that
+        // is never laid out or never gets data does not hold the push up for long.
+        self.readyValue.set(componentReady.get() |> timeout(1.0, queue: .mainQueue(), alternate: .single(true)))
 
         self.automaticallyControlPresentationContextLayout = false
 

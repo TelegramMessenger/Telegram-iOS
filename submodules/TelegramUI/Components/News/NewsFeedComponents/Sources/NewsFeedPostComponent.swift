@@ -15,6 +15,8 @@ import AvatarComponent
 import EmojiStatusComponent
 import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
+import AsyncDisplayKit
+import ItemListUI
 import NewsFeedSupport
 
 private enum NewsPostThumbnail {
@@ -97,9 +99,15 @@ public final class NewsFeedPostComponent: Component {
     /// The post was just revealed by a pull to refresh: it sits on the new-posts block and lenses in (spec §4).
     public let fresh: NewsFreshSegment?
     public let reduceMotion: Bool
+    /// Not Interested, or a hidden channel's post leaving: the content fades out in place (spec §3).
+    public let fading: Bool
+    /// When Undo brought the post back: a row created right after fades in and rises.
+    public let appearTime: Double?
+    /// The row's swipe actions; nil for rows that do not swipe (search results).
+    public let swipe: NewsPostSwipe?
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, fresh: NewsFreshSegment? = nil, reduceMotion: Bool = false, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, fresh: NewsFreshSegment? = nil, reduceMotion: Bool = false, fading: Bool = false, appearTime: Double? = nil, swipe: NewsPostSwipe? = nil, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -111,6 +119,9 @@ public final class NewsFeedPostComponent: Component {
         self.loading = loading
         self.fresh = fresh
         self.reduceMotion = reduceMotion
+        self.fading = fading
+        self.appearTime = appearTime
+        self.swipe = swipe
         self.action = action
     }
 
@@ -148,6 +159,16 @@ public final class NewsFeedPostComponent: Component {
         if lhs.reduceMotion != rhs.reduceMotion {
             return false
         }
+        if lhs.fading != rhs.fading {
+            return false
+        }
+        if lhs.appearTime != rhs.appearTime {
+            return false
+        }
+        // The closures are per post and the list's; only whether the row swipes changes how it looks.
+        if (lhs.swipe == nil) != (rhs.swipe == nil) {
+            return false
+        }
         return true
     }
 
@@ -160,8 +181,13 @@ public final class NewsFeedPostComponent: Component {
         private let thumbnailView = TransformImageView()
         private let videoLabel = UILabel()
         private let separatorLayer = SimpleLayer()
-        /// Our lists' full-width press highlight.
-        private let highlightView = UIView()
+        /// The swipe (spec §1). It holds the content, which slides, and the full-width press highlight, which it turns
+        /// into the swipe surface; the fresh block and the separator stay outside it.
+        private let revealNode = NewsPostRevealNode()
+        /// Its own swipe fades the separator, and so does the swipe of the row below (`setRowBelowSeparatorAlpha`).
+        private var rowBelowSeparatorAlpha: CGFloat = 1.0
+        /// The content has faded out for the "Post hidden" panel (spec §3).
+        private var isFadedOut = false
         /// Everything but the highlight, the block and the separator. It carries a fresh row's clip and is never
         /// transformed, so the clip stays the card while `lensView` inside it is magnified.
         private let contentView = UIView()
@@ -185,11 +211,28 @@ public final class NewsFeedPostComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.highlightView.alpha = 0.0
-            self.highlightView.isUserInteractionEnabled = false
-            self.addSubview(self.highlightView)
-            self.addSubview(self.contentView)
+            self.addSubview(self.revealNode.view)
+            self.revealNode.contentNode.view.addSubview(self.contentView)
             self.contentView.addSubview(self.lensView)
+            self.revealNode.opened = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.component?.swipe?.opened(self)
+            }
+            self.revealNode.separatorAlphaChanged = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateSeparatorAlpha()
+                self.component?.swipe?.separatorAlphaChanged(self)
+            }
+            self.revealNode.selected = { [weak self] action in
+                self?.component?.swipe?.action(action)
+            }
+            // One element, so VoiceOver offers the swipe's actions on it (spec §6).
+            self.isAccessibilityElement = true
+            self.accessibilityTraits = .button
             // Continuous corners (Feed2 FeedRow.swift:430-445): the layer clips, the image is drawn without corners.
             self.thumbnailView.layer.cornerRadius = NewsPostRowMetrics.thumbnailCornerRadius
             self.thumbnailView.layer.cornerCurve = .continuous
@@ -241,7 +284,86 @@ public final class NewsFeedPostComponent: Component {
         }
 
         @objc private func tapped() {
+            // A tap on an open row only closes it. The control's own tap does that too; whichever of the two taps
+            // wins, the row closes and nothing opens.
+            guard !self.revealNode.isRevealOptionsActive else {
+                self.closeSwipe(animated: true)
+                return
+            }
             self.component?.action()
+        }
+
+        // MARK: Swipe (spec §1, §5)
+
+        public var hasSwipeActions: Bool {
+            return self.component?.swipe != nil
+        }
+
+        /// 1 closed, 0 open: the row's own separator, and the separator of the row above, fade with it.
+        public var swipeSeparatorAlpha: CGFloat {
+            return self.revealNode.revealOptionsSeparatorAlpha
+        }
+
+        /// The swipe separator alpha of the post row directly below (1 when there is none).
+        public func setRowBelowSeparatorAlpha(_ alpha: CGFloat) {
+            guard self.rowBelowSeparatorAlpha != alpha else {
+                return
+            }
+            self.rowBelowSeparatorAlpha = alpha
+            self.updateSeparatorAlpha()
+        }
+
+        public func closeSwipe(animated: Bool) {
+            self.revealNode.setRevealOptionsOpened(false, animated: animated)
+        }
+
+        private func updateSeparatorAlpha() {
+            self.separatorLayer.opacity = self.isFadedOut ? 0.0 : Float(min(self.swipeSeparatorAlpha, self.rowBelowSeparatorAlpha))
+        }
+
+        /// The content (and separator) fades out in place over 0.16 s with a 6 pt blur (Feed3 `fading`).
+        /// The fresh block under the row goes with it. A row created already fading (scrolled in mid-fade) is just
+        /// faded, without replaying the fade (`animated`).
+        private func updateFading(_ fading: Bool, animated: Bool) {
+            guard fading != self.isFadedOut else {
+                return
+            }
+            self.isFadedOut = fading
+            let layer = self.revealNode.layer
+            if fading {
+                self.revealNode.alpha = 0.0
+                self.freshBlockView?.alpha = 0.0
+                if animated {
+                    let duration = NewsFeedbackTiming.fadeOut
+                    let timing = CAMediaTimingFunctionName.easeOut.rawValue
+                    self.separatorLayer.animateAlpha(from: CGFloat(self.separatorLayer.opacity), to: 0.0, duration: duration, timingFunction: timing)
+                    layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timing)
+                    self.freshBlockView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timing)
+                    if let filter = CALayer.blur() {
+                        filter.setValue(6.0 as NSNumber, forKey: "inputRadius")
+                        layer.filters = [filter]
+                        layer.animate(from: 0.0 as NSNumber, to: 6.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: timing, duration: duration)
+                    }
+                }
+            } else {
+                self.revealNode.alpha = 1.0
+                self.freshBlockView?.alpha = 1.0
+                layer.filters = nil
+            }
+            self.updateSeparatorAlpha()
+        }
+
+        /// A post Undo brought back fades in and rises 12 pt after 0.08 s (`Motion.appear`); under Reduce Motion it
+        /// only fades. Animations only, on the row's own layer: its frame stays CoreList's.
+        private func playReturnAppear(appearTime: Double, rises: Bool) {
+            let delay = max(0.0, appearTime + NewsFeedbackTiming.appearDelay - CACurrentMediaTime())
+            let spring = NewsSpring.appear
+            self.layer.add(spring.makeAnimation(keyPath: "opacity", from: 0.0 as NSNumber, to: 1.0 as NSNumber, delay: delay), forKey: "newsReturnAlpha")
+            if rises {
+                let rise = spring.makeAnimation(keyPath: "position.y", from: 12.0 as NSNumber, to: 0.0 as NSNumber, delay: delay)
+                rise.isAdditive = true
+                self.layer.add(rise, forKey: "newsReturnRise")
+            }
         }
 
         /// As our lists highlight (`ListView`: shown 0.08 s after touch-down unless a scroll starts first;
@@ -251,19 +373,17 @@ public final class NewsFeedPostComponent: Component {
                 return
             }
             self.isHighlighted = highlighted
-            if highlighted {
-                self.highlightView.layer.removeAllAnimations()
-                self.highlightView.alpha = 1.0
-            } else {
-                self.highlightView.alpha = 0.0
-                if animated {
-                    self.highlightView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4)
-                }
-            }
+            // The control owns the highlight's alpha (pressed, and the swipe surface), as in the chat list.
+            let transition: ContainedViewLayoutTransition = highlighted || !animated ? .immediate : .animated(duration: 0.4, curve: .easeInOut)
+            self.revealNode.updateRevealOptionsHighlightedBackgroundNode(self.revealNode.highlightNode, isHighlighted: highlighted, transition: transition, aboveNodes: [])
         }
 
         override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             super.touchesBegan(touches, with: event)
+            // An open row shows its swipe surface; a tap only closes it.
+            if self.revealNode.isRevealOptionsActive {
+                return
+            }
             self.highlightTimer?.invalidate()
             let timer = SwiftSignalKit.Timer(timeout: 0.08, repeat: false, completion: { [weak self] in
                 self?.setHighlighted(true, animated: false)
@@ -274,6 +394,9 @@ public final class NewsFeedPostComponent: Component {
 
         override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             super.touchesEnded(touches, with: event)
+            if self.revealNode.isRevealOptionsActive {
+                return
+            }
             self.highlightTimer?.invalidate()
             self.highlightTimer = nil
             // A quick tap still flashes, as in the chat list.
@@ -310,6 +433,7 @@ public final class NewsFeedPostComponent: Component {
         }
 
         func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
+            let isFirstUpdate = self.component == nil
             self.component = component
             self.state = state
             let theme = component.theme
@@ -356,6 +480,9 @@ public final class NewsFeedPostComponent: Component {
                 containerSize: CGSize(width: newsPostTitleMaxWidth(textWidth: textWidth, credibilityWidth: credibilitySize.width, timeWidth: timeSize.width), height: 100.0)
             )
 
+            // Three lines hold under one character per point of width (the narrowest glyphs are 3.5 pt wide); twice
+            // the width leaves room for characters of several UTF-16 units.
+            let postText = newsPostText(component: component, maxLength: Int(textWidth * 2.0))
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextWithEntitiesComponent(
@@ -363,9 +490,7 @@ public final class NewsFeedPostComponent: Component {
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
                     placeholderColor: theme.list.mediaPlaceholderColor,
-                    // Three lines hold under one character per point of width (the narrowest glyphs are
-                    // 3.5 pt wide); twice the width leaves room for characters of several UTF-16 units.
-                    text: .plain(newsPostText(component: component, maxLength: Int(textWidth * 2.0))),
+                    text: .plain(postText),
                     maximumNumberOfLines: 3,
                     lineSpacing: 0.12,
                     displaysAsynchronously: false
@@ -480,10 +605,26 @@ public final class NewsFeedPostComponent: Component {
 
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor
             transition.setFrame(layer: self.separatorLayer, frame: layout.separator)
-            self.highlightView.backgroundColor = theme.list.itemHighlightedBackgroundColor
-            self.highlightView.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: layout.height))
-            self.contentView.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: layout.height))
+            self.updateSeparatorAlpha()
+            let rowSize = CGSize(width: availableSize.width, height: layout.height)
+            // The row places the node; the node lays out inside it (a size change closes an open swipe).
+            self.revealNode.frame = CGRect(origin: CGPoint(), size: rowSize)
+            self.revealNode.update(size: rowSize, options: component.swipe != nil ? newsPostRevealOptions(theme: theme, strings: component.strings) : [], highlightColor: theme.list.itemHighlightedBackgroundColor)
+            self.contentView.frame = CGRect(origin: CGPoint(), size: rowSize)
             self.lensView.frame = self.contentView.bounds
+
+            self.accessibilityLabel = component.peer.compactDisplayTitle
+            self.accessibilityValue = postText.string.isEmpty ? timeText : "\(timeText), \(postText.string)"
+            if component.swipe != nil {
+                self.accessibilityCustomActions = newsPostSwipeActions.map { action in
+                    return UIAccessibilityCustomAction(name: newsPostSwipeTitle(action, strings: component.strings), actionHandler: { [weak self] _ in
+                        self?.component?.swipe?.action(action)
+                        return true
+                    })
+                }
+            } else {
+                self.accessibilityCustomActions = nil
+            }
 
             if let fresh = component.fresh {
                 let blockView: NewsFreshBlockView
@@ -494,7 +635,6 @@ public final class NewsFeedPostComponent: Component {
                     self.insertSubview(blockView, at: 0)
                     self.freshBlockView = blockView
                 }
-                let rowSize = CGSize(width: availableSize.width, height: layout.height)
                 blockView.frame = CGRect(origin: CGPoint(), size: rowSize)
                 blockView.update(size: rowSize, segment: fresh, accentColor: theme.list.itemAccentColor)
 
@@ -527,6 +667,10 @@ public final class NewsFeedPostComponent: Component {
                 self.lensRevealTime = nil
             }
             self.separatorLayer.isHidden = component.fresh?.isLast == true
+            self.updateFading(component.fading, animated: !isFirstUpdate)
+            if isFirstUpdate, let appearTime = component.appearTime, NewsFeedbackTiming.playsAppear(appearTime: appearTime, now: CACurrentMediaTime()) {
+                self.playReturnAppear(appearTime: appearTime, rises: !component.reduceMotion)
+            }
             return CGSize(width: availableSize.width, height: layout.height)
         }
 

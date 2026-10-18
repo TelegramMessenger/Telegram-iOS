@@ -927,7 +927,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     text: .plain(textString),
                     insets: textRenderInsets,
                     spoilerColor: environment.theme.chat.inputPanel.primaryTextColor,
-                    handleSpoilers: true
+                    handleSpoilers: true,
+                    displaysAsynchronously: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
@@ -944,7 +945,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     text: .plain(tintTextString),
                     insets: textRenderInsets,
                     spoilerColor: .black,
-                    handleSpoilers: true
+                    handleSpoilers: true,
+                    displaysAsynchronously: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)

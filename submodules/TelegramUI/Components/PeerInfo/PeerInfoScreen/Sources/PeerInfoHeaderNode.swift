@@ -45,24 +45,6 @@ import BundleIconComponent
 import MarqueeComponent
 import EdgeEffect
 
-final class PeerInfoHeaderNavigationTransition {
-    let sourceNavigationBar: NavigationBar
-    let sourceTitleView: ChatTitleView
-    let sourceTitleFrame: CGRect
-    let sourceSubtitleFrame: CGRect
-    let previousAvatarView: UIView?
-    let fraction: CGFloat
-    
-    init(sourceNavigationBar: NavigationBar, sourceTitleView: ChatTitleView, sourceTitleFrame: CGRect, sourceSubtitleFrame: CGRect, previousAvatarView: UIView?, fraction: CGFloat) {
-        self.sourceNavigationBar = sourceNavigationBar
-        self.sourceTitleView = sourceTitleView
-        self.sourceTitleFrame = sourceTitleFrame
-        self.sourceSubtitleFrame = sourceSubtitleFrame
-        self.previousAvatarView = previousAvatarView
-        self.fraction = fraction
-    }
-}
-
 final class PeerInfoHeaderRegularContentNode: SparseNode {
 }
 
@@ -79,8 +61,8 @@ protocol PeerInfoHeaderTextFieldNode: ASDisplayNode {
     func update(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat
 }
 
-private let TitleNodeStateRegular = 0
-private let TitleNodeStateExpanded = 1
+let TitleNodeStateRegular = 0
+let TitleNodeStateExpanded = 1
 
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
@@ -152,10 +134,56 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let usernameNode: MultiScaleTextNode
     var actionButtonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderActionButtonNode] = [:]
     var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
+    /// The action buttons in their on-screen order.
+    var orderedButtonNodes: [PeerInfoHeaderButtonNode] {
+        return self.buttonNodes.values.sorted(by: { $0.frame.minX < $1.frame.minX })
+    }
+    /// The colour the bar's glass is tinted with (the cover's), nil while it is plain: what an expansion's drops tint
+    /// toward.
+    private(set) var expansionGlassTint: UIColor?
+    /// The round avatar's frame in `avatarClippingNode`, also while the photo is expanded (where it would be).
+    private(set) var expansionRoundAvatarFrame: CGRect?
+    /// What an expansion fades with the list: the header's decorations around the name, which the prototype's header
+    /// does not have — those that move with the status (`expansionStatusFollowerViews`), and the music strip and its
+    /// platter, which ride the page.
+    var expansionDecorationViews: [UIView] {
+        var views = self.expansionStatusFollowerViews
+        if let view = self.music?.view {
+            views.append(view)
+        }
+        if let view = self.musicBackground {
+            views.append(view)
+        }
+        return views
+    }
+    /// The header's part of the page an expansion moves with the status, with the list (the prototype's actions and
+    /// music island): the buttons' container, which carries the buttons and their blur, whose mask draws the buttons'
+    /// platters and the music strip's (a platter moved on its own is clipped at the blur's frame, sized to the buttons'
+    /// row), and the music strip.
+    var expansionPageViews: [UIView] {
+        var views: [UIView] = [self.buttonsContainerNode.view]
+        if let view = self.music?.view {
+            views.append(view)
+        }
+        return views
+    }
+    /// The decorations an expansion moves with the status: the level badge and rating, the username and the balance.
+    var expansionStatusFollowerViews: [UIView] {
+        var views: [UIView] = [self.usernameNodeContainer.view]
+        if let view = self.subtitleBadgeView {
+            views.append(view)
+        }
+        if let view = self.subtitleRating?.view {
+            views.append(view)
+        }
+        if let view = self.walletBalance?.view {
+            views.append(view)
+        }
+        return views
+    }
     let headerEdgeEffectContainer: UIView
     let headerEdgeEffectView: EdgeEffectView
     var navigationTitle: String?
-    let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     let searchContainer: ASDisplayNode
     var searchEdgeEffectView: EdgeEffectView?
     let searchBarContainer: SparseNode
@@ -164,6 +192,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var musicBackground: UIView?
     var music: ComponentView<Empty>?
     var walletBalance: ComponentView<Empty>?
+    private var walletBalanceCutoutIcon: (color: UIColor, image: UIImage)?
     var hasBottomStrip: Bool {
         return self.music != nil
     }
@@ -190,12 +219,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var navigateToForum: (() -> Void)?
     
-    var navigationTransition: PeerInfoHeaderNavigationTransition?
-    
     var backgroundAlpha: CGFloat = 1.0
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    /// The glass under the bar's buttons, reported on every update; the screen applies a change.
+    var updateNavigationGlass: ((PeerInfoNavigationGlass, ContainedViewLayoutTransition) -> Void)?
+    /// Whether the header puts something in the bar's row place (its search, a pane's own navigation content).
+    var updateNavigationRowHidden: ((Bool, ContainedViewLayoutTransition) -> Void)?
+    /// The bar's right buttons in its row, both sets (the title clears them when the header is collapsed).
+    var navigationRowRightButtonCount: Int = 0
     
-    private(set) var walletSourceBackgroundColor: UIColor?
     private(set) var contentButtonBackgroundColor: UIColor?
     
     let animationCache: AnimationCache
@@ -292,7 +324,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
         self.avatarOverlayNode.isUserInteractionEnabled = false
         
-        self.navigationButtonContainer = PeerInfoHeaderNavigationButtonContainerNode()
         self.searchBarContainer = SparseNode()
         self.searchContainer = ASDisplayNode()
         
@@ -339,7 +370,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
         self.view.addSubview(self.editingEdgeEffectView)
-        self.addSubnode(self.navigationButtonContainer)
         
         self.addSubnode(self.searchContainer)
         self.addSubnode(self.searchBarContainer)
@@ -372,7 +402,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.navigationButtonContainer.layer.animateAlpha(from: 0.0, to: strongSelf.navigationButtonContainer.alpha, duration: 0.25)
             strongSelf.avatarListNode.listContainerNode.topShadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.topShadowNode.alpha, duration: 0.25)
             
             strongSelf.avatarListNode.listContainerNode.bottomShadowNode.alpha = 1.0
@@ -648,9 +677,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateAlpha(node: self.regularContentNode, alpha: (state.isEditing || self.customNavigationContentNode != nil) ? 0.0 : 1.0)
-        if self.navigationTransition == nil {
-            transition.updateAlpha(node: self.navigationButtonContainer, alpha: (self.customNavigationContentNode != nil || isSearching) ? 0.0 : 1.0)
-        }
+        self.updateNavigationRowHidden?(self.customNavigationContentNode != nil || isSearching, transition)
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
@@ -659,12 +686,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let avatarOverlayFarme = self.editingContentNode.convert(self.editingContentNode.avatarNode.frame, to: self)
         transition.updateFrame(node: self.avatarOverlayNode, frame: avatarOverlayFarme)
-        
-        let transitionSourceHeight: CGFloat = 0.0
-        let transitionFraction: CGFloat = 0.0
-        let transitionSourceAvatarFrame: CGRect? = nil
-        let transitionSourceTitleFrame = CGRect()
-        let transitionSourceSubtitleFrame = CGRect()
         
         let avatarFrame = CGRect(origin: CGPoint(x: hasStrip ? bandCenteredOrigin(width: avatarSize, margin: 16.0) : floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
         
@@ -688,13 +709,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
         let expandedAvatarContentButtonForegroundColor: UIColor = .white
         
-        self.walletSourceBackgroundColor = nil
         var hasCoverColor = false
         let regularNavigationContentsSecondaryColor: UIColor
         if let emojiStatus = peer?.emojiStatus, case let .starGift(_, _, _, _, _, innerColor, outerColor, _, _) = emojiStatus.content {
             let mainColor = UIColor(rgb: UInt32(bitPattern: innerColor))
             let secondaryColor = UIColor(rgb: UInt32(bitPattern: outerColor))
-            self.walletSourceBackgroundColor = secondaryColor.mixedWith(mainColor, alpha: 0.1)
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(mainColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -703,13 +722,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
+            let baseContentButtonBackgroundColor = presentationData.theme.overallDarkAppearance ? baseButtonBackgroundColor : UIColor(white: 1.0, alpha: 0.35)
+            regularContentButtonBackgroundColor = baseContentButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
             
             hasCoverColor = true
         } else if let profileColor = peer?.effectiveProfileColor {
             let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance)
-            self.walletSourceBackgroundColor = backgroundColors.main
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             let baseButtonBackgroundColor: UIColor
@@ -718,7 +737,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.main)
+            let baseContentButtonBackgroundColor = presentationData.theme.overallDarkAppearance ? baseButtonBackgroundColor : UIColor(white: 1.0, alpha: 0.35)
+            regularContentButtonBackgroundColor = baseContentButtonBackgroundColor.blendOver(background: backgroundColors.main)
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: (backgroundColors.secondary ?? backgroundColors.main).mixedWith(backgroundColors.main, alpha: 0.1))
             
             hasCoverColor = true
@@ -1152,10 +1172,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.titleExpandedVerifiedIconSize = expandedIconSize
         }
         
-        var actualNavigationContentsColor = navigationContentsAccentColor
-        actualNavigationContentsColor = presentationData.theme.chat.inputPanel.panelControlColor
-        
-        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: actualNavigationContentsColor, isOverColoredContents: !navigationContentsCanBeExpanded, transition: navigationTransition)
+        self.expansionGlassTint = navigationContentsCanBeExpanded ? nil : headerButtonBackgroundColor
+        self.updateNavigationGlass?(navigationContentsCanBeExpanded ? .plain : .tinted(headerButtonBackgroundColor), navigationTransition)
         
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
         self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
@@ -1168,9 +1186,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.controller?.setStatusBarStyle(titleBrightness > 0.5 ? .White : .Black, animated: !isFirstTime && animateHeader)
         }
         
-        self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
-        self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
-        self.avatarOverlayNode.updateTransitionFraction(transitionFraction, transition: transition)
+        self.avatarListNode.avatarContainerNode.updateTransitionFraction(0.0, transition: transition)
+        self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(0.0, transition: transition)
+        self.avatarOverlayNode.updateTransitionFraction(0.0, transition: transition)
         
         let expandedAvatarControlsHeight: CGFloat = 61.0
         var expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
@@ -1366,7 +1384,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
         
         var titleConstrainedSize = CGSize(width: width - stripLeft - stripRight - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
-        if self.navigationButtonContainer.rowRightButtonCount > 1 {
+        if self.navigationRowRightButtonCount > 1 {
             titleConstrainedSize.width -= 60.0
         }
         
@@ -1594,12 +1612,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.usernameNode.accessibilityLabel = usernameString.text
         
-        let avatarCenter: CGPoint
-        if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-            avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
-        } else {
-            avatarCenter = avatarFrame.center
-        }
+        let avatarCenter = avatarFrame.center
         
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
@@ -1640,12 +1653,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let leftExpandedOffset: CGFloat = nextExpandedIconX + 4.0
             titleHorizontalOffset -= offset
             
-            var collapsedTransitionOffset: CGFloat = 0.0
-            if let navigationTransition = self.navigationTransition {
-                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
-            }
-            
-            transition.updateFrame(view: self.titleStatusIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - statusIconSize.height) / 2.0)), size: statusIconSize))
+            transition.updateFrame(view: self.titleStatusIconView, frame: CGRect(origin: CGPoint(x: leftOffset, y: floor((titleSize.height - statusIconSize.height) / 2.0)), size: statusIconSize))
             transition.updateFrame(view: self.titleExpandedStatusIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedStatusIconSize.height) / 2.0) + 1.0), size: titleExpandedStatusIconSize))
             
             nextIconX += 4.0 + statusIconSize.width
@@ -1659,12 +1667,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let leftExpandedOffset: CGFloat = nextExpandedIconX + 4.0
             titleHorizontalOffset -= offset
             
-            var collapsedTransitionOffset: CGFloat = 0.0
-            if let navigationTransition = self.navigationTransition {
-                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
-            }
-            
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: leftOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
             
             nextIconX += 4.0 + credibilityIconSize.width
@@ -1687,12 +1690,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 leftExpandedOffset = -titleExpandedVerifiedIconSize.width - 4.0
             }
            
-            var collapsedTransitionOffset: CGFloat = 0.0
-            if let navigationTransition = self.navigationTransition {
-                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
-            }
-            
-            transition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - verifiedIconSize.height) / 2.0)), size: verifiedIconSize))
+            transition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftOffset, y: floor((titleSize.height - verifiedIconSize.height) / 2.0)), size: verifiedIconSize))
             transition.updateFrame(view: self.titleExpandedVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedVerifiedIconSize.height) / 2.0) + 1.0), size: titleExpandedVerifiedIconSize))
             
             if case .verified = verifiedIcon {
@@ -1725,7 +1723,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
-            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft, y: expandedAvatarHeight - bottomInset - balanceInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft, y: expandedAvatarHeight - bottomInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
             if !self.isSettings && !self.isMyProfile {
                 minTitleFrame.origin.y -= 83.0
             }
@@ -1808,7 +1806,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         transition.updateAlpha(node: self.titleNode, alpha: isSearching ? 0.0 : 1.0)
         
         var subtitleAlpha: CGFloat
-        var subtitleOffset: CGFloat = 0.0
         var panelSubtitleAlpha: CGFloat
         var panelSubtitleOffset: CGFloat = 0.0
         if self.isSettings {
@@ -1819,20 +1816,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleAlpha = 1.0 - effectiveAreaExpansionFraction
                 panelSubtitleAlpha = effectiveAreaExpansionFraction
                 
-                subtitleOffset = -effectiveAreaExpansionFraction * 5.0
                 panelSubtitleOffset = (1.0 - effectiveAreaExpansionFraction) * 5.0
             } else {
-                if self.navigationTransition != nil {
+                if effectiveAreaExpansionFraction == 1.0 {
+                    subtitleAlpha = 0.0
+                    panelSubtitleAlpha = 1.0
+                } else {
                     subtitleAlpha = 1.0
                     panelSubtitleAlpha = 0.0
-                } else {
-                    if effectiveAreaExpansionFraction == 1.0 {
-                        subtitleAlpha = 0.0
-                        panelSubtitleAlpha = 1.0
-                    } else {
-                        subtitleAlpha = 1.0
-                        panelSubtitleAlpha = 0.0
-                    }
                 }
             }
         }
@@ -1859,32 +1850,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let avatarScale: CGFloat
         let avatarOffset: CGFloat
-        if self.navigationTransition != nil {
-            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                var trueAvatarSize = transitionSourceAvatarFrame.size
-                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
-                    trueAvatarSize.width -= 1.33 * 4.0
-                    trueAvatarSize.height -= 1.33 * 4.0
-                }
-                
-                avatarScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * trueAvatarSize.width) / avatarFrame.width
-            } else {
-                avatarScale = 1.0
-            }
-            avatarOffset = 0.0
-        } else {
-            //
-            avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
-            avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
-        }
-        
-        if let previousAvatarView = self.navigationTransition?.previousAvatarView, let transitionSourceAvatarFrame {
-            let previousScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * transitionSourceAvatarFrame.width) / transitionSourceAvatarFrame.width
-            
-            transition.updateAlpha(layer: previousAvatarView.layer, alpha: transitionFraction)
-            transition.updateTransformScale(layer: previousAvatarView.layer, scale: previousScale)
-            transition.updatePosition(layer: previousAvatarView.layer, position: self.view.convert(CGPoint(x: avatarCenter.x - (27.0 * (1.0 - transitionFraction) + 10 * transitionFraction), y: avatarCenter.y - (2.66 * (1.0 - transitionFraction) + 1.0 * transitionFraction)), to: previousAvatarView.superview))
-        }
+        //
+        avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
+        avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         
         if subtitleIsButton {
             subtitleFrame.origin.y += 11.0 * (1.0 - titleCollapseFraction)
@@ -1903,19 +1871,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
  
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
-            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                var trueAvatarSize = transitionSourceAvatarFrame.size
-                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
-                    trueAvatarSize.width -= 1.33 * 4.0
-                    trueAvatarSize.height -= 1.33 * 4.0
-                }
-                
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: transitionFraction * trueAvatarSize.width / 2.0)
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: transitionFraction * trueAvatarSize.width / 2.0)
-            } else {
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0)
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0)
-            }
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0)
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0)
         } else if self.avatarListNode.listContainerNode.cornerRadius != avatarCornerRadius {
             transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: avatarCornerRadius)
             transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: avatarCornerRadius, completion: { [weak self] _ in
@@ -1944,39 +1901,32 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if let avatarStoryView = self.avatarListNode.avatarContainerNode.avatarStoryView?.view {
-            transition.updateAlpha(layer: avatarStoryView.layer, alpha: 1.0 - transitionFraction)
+            transition.updateAlpha(layer: avatarStoryView.layer, alpha: 1.0)
         }
         
+        // Where the round avatar is, or would be with the photo collapsed (an expansion's circle flies there on its way
+        // into the expanded photo).
+        var roundAvatarSize = avatarFrame.size
+        if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.totalCount != 0 {
+            roundAvatarSize.width -= 3.0 * 4.0
+            roundAvatarSize.height -= 3.0 * 4.0
+        }
+        let roundAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - roundAvatarSize.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - roundAvatarSize.height / 2.0), size: roundAvatarSize)
+        self.expansionRoundAvatarFrame = roundAvatarFrame
+
         var apparentAvatarFrame: CGRect
         var apparentAvatarListFrame: CGRect
         let controlsClippingFrame: CGRect
         if self.isAvatarExpanded {
             let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.width / 2.0 - contentOffset / 2.0)
-            apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
+            apparentAvatarFrame = CGRect(origin: expandedAvatarCenter, size: CGSize())
             
             let expandedAvatarListCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
-            apparentAvatarListFrame = CGRect(origin: CGPoint(x: expandedAvatarListCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarListCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
+            apparentAvatarListFrame = CGRect(origin: expandedAvatarListCenter, size: CGSize())
             
-            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                var trueAvatarSize = transitionSourceAvatarFrame.size
-                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
-                    trueAvatarSize.width -= 1.33 * 4.0
-                    trueAvatarSize.height -= 1.33 * 4.0
-                }
-                let trueAvatarFrame = trueAvatarSize.centered(around: transitionSourceAvatarFrame.center)
-                
-                let expandedFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
-                controlsClippingFrame = CGRect(origin: CGPoint(x: transitionFraction * trueAvatarFrame.minX + (1.0 - transitionFraction) * expandedFrame.minX, y: transitionFraction * trueAvatarFrame.minY + (1.0 - transitionFraction) * expandedFrame.minY), size: CGSize(width: transitionFraction * trueAvatarFrame.width + (1.0 - transitionFraction) * expandedFrame.width, height: transitionFraction * trueAvatarFrame.height + (1.0 - transitionFraction) * expandedFrame.height))
-            } else {
-                controlsClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
-            }
+            controlsClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
         } else {
-            var trueAvatarSize = avatarFrame.size
-            if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.totalCount != 0 {
-                trueAvatarSize.width -= 3.0 * 4.0
-                trueAvatarSize.height -= 3.0 * 4.0
-            }
-            apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - trueAvatarSize.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - trueAvatarSize.height / 2.0), size: trueAvatarSize)
+            apparentAvatarFrame = roundAvatarFrame
             apparentAvatarListFrame = apparentAvatarFrame
             controlsClippingFrame = apparentAvatarFrame
         }
@@ -1989,19 +1939,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarListContainerScale: CGFloat
         var avatarListVerticalOffset: CGFloat = 0.0
         if self.isAvatarExpanded {
-            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                let neutralAvatarListContainerSize = expandedAvatarListSize
-                var avatarListContainerSize = CGSize(width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction, height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
-                
-                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
-                    avatarListContainerSize.width -= 1.33 * 5.0
-                    avatarListContainerSize.height -= 1.33 * 5.0
-                }
-                
-                avatarListContainerFrame = CGRect(origin: CGPoint(x: -avatarListContainerSize.width / 2.0, y: -avatarListContainerSize.width / 2.0), size: avatarListContainerSize)
-            } else {
-                avatarListContainerFrame = CGRect(origin: CGPoint(x: -expandedAvatarListSize.width / 2.0, y: -expandedAvatarListSize.width / 2.0), size: expandedAvatarListSize)
-            }
+            avatarListContainerFrame = CGRect(origin: CGPoint(x: -expandedAvatarListSize.width / 2.0, y: -expandedAvatarListSize.width / 2.0), size: expandedAvatarListSize)
             avatarListContainerScale = 1.0 + max(0.0, -contentOffset / avatarListContainerFrame.width)
             // Keep the scaled avatar's bottom edge aligned with the stretched header.
             avatarListVerticalOffset = (avatarListContainerFrame.width - avatarListContainerFrame.height) * (avatarListContainerScale - 1.0)
@@ -2036,7 +1974,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.avatarListNode.listContainerNode.topShadowNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: expandedAvatarListSize.width, height: navigationHeight + 20.0)))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.stripContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight < 25.0 ? (statusBarHeight + 2.0) : (statusBarHeight - 3.0)), size: CGSize(width: expandedAvatarListSize.width, height: 2.0)))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.highlightContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: expandedAvatarListSize.width, height: expandedAvatarListSize.height)))
-        transition.updateAlpha(node: self.avatarListNode.listContainerNode.controlsContainerNode, alpha: self.isAvatarExpanded ? (1.0 - transitionFraction) : 0.0)
+        transition.updateAlpha(node: self.avatarListNode.listContainerNode.controlsContainerNode, alpha: self.isAvatarExpanded ? 1.0 : 0.0)
         
         if additive {
             transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.listContainerTransformNode, scale: avatarListContainerScale)
@@ -2044,7 +1982,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateSublayerTransformScale(node: self.avatarListNode.listContainerTransformNode, scale: avatarListContainerScale)
         }
         
-        if deviceMetrics.hasDynamicIsland && statusBarHeight > 0.0 && self.forumTopicThreadId == nil && self.navigationTransition == nil && !isLandscape {
+        if deviceMetrics.hasDynamicIsland && statusBarHeight > 0.0 && self.forumTopicThreadId == nil && !isLandscape {
             let maskValue = max(0.0, min(1.0, contentOffset / 120.0))
             self.avatarListNode.containerNode.view.mask = self.avatarListNode.maskNode.view
             if maskValue > 0.03 {
@@ -2123,119 +2061,70 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         let _ = maxY
         
-        let apparentHeight = (1.0 - transitionFraction) * backgroundHeight + transitionFraction * transitionSourceHeight
-        let apparentBackgroundHeight = (1.0 - transitionFraction) * backgroundHeight + transitionFraction * transitionSourceHeight
+        let apparentHeight = backgroundHeight
+        let apparentBackgroundHeight = backgroundHeight
         
         if !titleSize.width.isZero && !titleSize.height.isZero {
-            if self.navigationTransition != nil {
-                var neutralTitleScale: CGFloat = 1.0
-                var neutralSubtitleScale: CGFloat = 1.0
-                if self.isAvatarExpanded {
-                    neutralTitleScale = expandedTitleScale
-                    neutralSubtitleScale = 1.0
-                }
-                                
-                let titleScale = (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * titleFrame.height * neutralTitleScale) / (titleFrame.height)
-                let subtitleScale = max(0.01, min(10.0, (transitionFraction * transitionSourceSubtitleFrame.height + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)))
-                
-                var titleFrame = titleFrame
-                if !self.isAvatarExpanded {
-                    titleFrame = titleFrame.offsetBy(dx: titleHorizontalOffset * titleScale, dy: 0.0)
-                } else {
-                    titleFrame = titleFrame.offsetBy(dx: titleExpandedHorizontalOffset, dy: 0.0)
-                }
-                
-                let titleCenter = CGPoint(x: transitionFraction * transitionSourceTitleFrame.midX + (1.0 - transitionFraction) * titleFrame.midX, y: transitionFraction * transitionSourceTitleFrame.midY + (1.0 - transitionFraction) * titleFrame.midY)
-                let subtitleCenter = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX, y: transitionFraction * transitionSourceSubtitleFrame.midY + (1.0 - transitionFraction) * subtitleFrame.midY)
-                
-                let rawTitleFrame = CGRect(origin: CGPoint(x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0, y: titleCenter.y - titleFrame.size.height * neutralTitleScale / 2.0), size: CGSize(width: titleFrame.size.width * neutralTitleScale, height: titleFrame.size.height * neutralTitleScale))
-                self.titleNodeRawContainer.frame = rawTitleFrame
-                transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()))
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
-                let rawSubtitleFrame = CGRect(origin: CGPoint(x: subtitleCenter.x - subtitleFrame.size.width / 2.0, y: subtitleCenter.y - subtitleFrame.size.height / 2.0), size: subtitleFrame.size)
-                self.subtitleNodeRawContainer.frame = rawSubtitleFrame
-                transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()))
-                transition.updatePosition(node: self.subtitleNode, position: CGPoint(x: 0.0, y: subtitleOffset))
-                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset - 1.0), size: CGSize()))
-                transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
-                transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
-                transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
-                transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
-                
-                if let subtitleBadgeView = self.subtitleBadgeView, let subtitleBadgeSize {
-                    let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (subtitleSize.width + 8.0) * 0.5, y: floor((-subtitleBadgeSize.height) * 0.5)), size: subtitleBadgeSize)
-                    transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
-                    transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: (1.0 - transitionFraction))
-                }
-                
-                if let subtitleRatingView = self.subtitleRating?.view, let subtitleRatingSize {
-                    let subtitleBadgeFrame: CGRect
-                    subtitleBadgeFrame = CGRect(origin: CGPoint(x: (-subtitleSize.width) * 0.5 - subtitleRatingInset, y: subtitleOffset + floor((-subtitleRatingSize.height) * 0.5)), size: subtitleRatingSize)
-                    transition.updateFrameAdditive(view: subtitleRatingView, frame: subtitleBadgeFrame)
-                    transition.updateAlpha(layer: subtitleRatingView.layer, alpha: subtitleAlpha * (1.0 - transitionFraction))
-                }
+            let titleScale: CGFloat
+            let subtitleScale: CGFloat
+            var subtitleOffset: CGFloat = 0.0
+            let subtitleBadgeFraction: CGFloat
+            if self.isAvatarExpanded {
+                titleScale = expandedTitleScale
+                subtitleScale = 1.0
+                subtitleBadgeFraction = 1.0
             } else {
-                let titleScale: CGFloat
-                let subtitleScale: CGFloat
-                var subtitleOffset: CGFloat = 0.0
-                let subtitleBadgeFraction: CGFloat
-                if self.isAvatarExpanded {
-                    titleScale = expandedTitleScale
-                    subtitleScale = 1.0
-                    subtitleBadgeFraction = 1.0
+                titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
+                subtitleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * subtitleMinScale
+                subtitleOffset = titleCollapseFraction * -1.0
+                subtitleBadgeFraction = (1.0 - titleCollapseFraction)
+            }
+            
+            let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? titleExpandedHorizontalOffset : titleHorizontalOffset * titleScale, dy: 0.0)
+            self.titleNodeRawContainer.frame = rawTitleFrame
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+            let rawSubtitleFrame = subtitleFrame
+            self.subtitleNodeRawContainer.frame = rawSubtitleFrame
+            let rawUsernameFrame = usernameFrame
+            self.usernameNodeRawContainer.frame = rawUsernameFrame
+            if self.isAvatarExpanded {
+                transition.updateFrameAdditive(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                transition.updateFrameAdditive(node: self.usernameNodeContainer, frame: CGRect(origin: rawUsernameFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+            } else {
+                transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                
+                var subtitleCenter = rawSubtitleFrame.center
+                subtitleCenter.x = rawTitleFrame.center.x + (subtitleCenter.x - rawTitleFrame.center.x) * subtitleScale
+                subtitleCenter.y += subtitleOffset
+                transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: subtitleCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                
+                var usernameCenter = rawUsernameFrame.center
+                usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
+                transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+            }
+            transition.updatePosition(node: self.subtitleNode, position: CGPoint(x: 0.0, y: subtitleOffset))
+            transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset - 1.0), size: CGSize()))
+            transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+            transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
+            transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
+            transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
+            
+            if let subtitleBadgeView = self.subtitleBadgeView, let subtitleBadgeSize {
+                let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (subtitleSize.width + 8.0) * 0.5, y: floor((-subtitleBadgeSize.height) * 0.5)), size: subtitleBadgeSize)
+                transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
+                transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: subtitleBadgeFraction)
+            }
+            
+            if let subtitleRatingView = self.subtitleRating?.view, let subtitleRatingSize {
+                let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (-subtitleSize.width) * 0.5 - subtitleRatingInset, y: floor((-subtitleRatingSize.height) * 0.5)), size: subtitleRatingSize)
+                
+                if subtitleRatingView.frame.isEmpty {
+                    subtitleRatingView.frame = subtitleBadgeFrame
+                    subtitleRatingView.alpha = subtitleAlpha
                 } else {
-                    titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
-                    subtitleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * subtitleMinScale
-                    subtitleOffset = titleCollapseFraction * -1.0
-                    subtitleBadgeFraction = (1.0 - titleCollapseFraction)
-                }
-                
-                let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? titleExpandedHorizontalOffset : titleHorizontalOffset * titleScale, dy: 0.0)
-                self.titleNodeRawContainer.frame = rawTitleFrame
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
-                let rawSubtitleFrame = subtitleFrame
-                self.subtitleNodeRawContainer.frame = rawSubtitleFrame
-                let rawUsernameFrame = usernameFrame
-                self.usernameNodeRawContainer.frame = rawUsernameFrame
-                if self.isAvatarExpanded {
-                    transition.updateFrameAdditive(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
-                    transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
-                    transition.updateFrameAdditive(node: self.usernameNodeContainer, frame: CGRect(origin: rawUsernameFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
-                } else {
-                    transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
-                    
-                    var subtitleCenter = rawSubtitleFrame.center
-                    subtitleCenter.x = rawTitleFrame.center.x + (subtitleCenter.x - rawTitleFrame.center.x) * subtitleScale
-                    subtitleCenter.y += subtitleOffset
-                    transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: subtitleCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
-                    
-                    var usernameCenter = rawUsernameFrame.center
-                    usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
-                    transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
-                }
-                transition.updatePosition(node: self.subtitleNode, position: CGPoint(x: 0.0, y: subtitleOffset))
-                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset - 1.0), size: CGSize()))
-                transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
-                transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
-                transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
-                transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
-                
-                if let subtitleBadgeView = self.subtitleBadgeView, let subtitleBadgeSize {
-                    let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (subtitleSize.width + 8.0) * 0.5, y: floor((-subtitleBadgeSize.height) * 0.5)), size: subtitleBadgeSize)
-                    transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
-                    transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: (1.0 - transitionFraction) * subtitleBadgeFraction)
-                }
-                
-                if let subtitleRatingView = self.subtitleRating?.view, let subtitleRatingSize {
-                    let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (-subtitleSize.width) * 0.5 - subtitleRatingInset, y: floor((-subtitleRatingSize.height) * 0.5)), size: subtitleRatingSize)
-                    
-                    if subtitleRatingView.frame.isEmpty {
-                        subtitleRatingView.frame = subtitleBadgeFrame
-                        subtitleRatingView.alpha = subtitleAlpha
-                    } else {
-                        transition.updateFrameAdditive(view: subtitleRatingView, frame: subtitleBadgeFrame)
-                        transition.updateAlpha(layer: subtitleRatingView.layer, alpha: subtitleAlpha)
-                    }
+                    transition.updateFrameAdditive(view: subtitleRatingView, frame: subtitleBadgeFrame)
+                    transition.updateAlpha(layer: subtitleRatingView.layer, alpha: subtitleAlpha)
                 }
             }
         }
@@ -2523,7 +2412,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 avatarScale: avatarScale,
                 defaultHeight: backgroundDefaultHeight,
                 gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),
-                avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
+                avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction)),
                 patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
             )),
             environment: {},
@@ -2562,7 +2451,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     avatarCenter: apparentAvatarFrame.center,
                     avatarSize: apparentAvatarFrame.size,
                     defaultHeight: backgroundDefaultHeight,
-                    avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
+                    avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction)),
                     statusBarHeight: statusBarHeight,
                     topLeftButtonsSize: CGSize(width: (self.isSettings ? 57.0 : 47.0), height: 46.0),
                     topRightButtonsSize: CGSize(width: 76.0 + (self.isMyProfile ? 38.0 : 0.0), height: 46.0),
@@ -2647,7 +2536,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let decimalSeparator = presentationData.dateTimeFormat.decimalSeparator
             let isOverlay = self.isAvatarExpanded || hasBackground
             let primaryColor = isOverlay ? UIColor.white : presentationData.theme.list.itemPrimaryTextColor
-            let iconColor = isOverlay ? navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45) : presentationData.theme.list.itemAccentColor
+            let isColoredBackground = hasBackground && !self.isAvatarExpanded
+            let iconColor: UIColor
+            if isColoredBackground {
+                iconColor = UIColor(white: 1.0, alpha: 0.3)
+            } else if isOverlay {
+                iconColor = navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45)
+            } else {
+                iconColor = presentationData.theme.list.itemAccentColor
+            }
             let balanceTitle = presentationData.strings.Wallet_Send_Balance("").string.trimmingCharacters(in: .whitespacesAndNewlines)
             // Shrink unusually long amounts/localizations to fit the profile band.
             let maximumBalanceWidth = max(1.0, width - stripLeft - stripRight - 32.0)
@@ -2664,8 +2561,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: balanceTitle, font: Font.regular(12.0 * textScale), textColor: primaryColor))))
                         ),
                         AnyComponentWithIdentity(
-                            id: "iconWithStar",
-                            component: AnyComponent(ZStack([
+                            id: self.isAvatarExpanded ? "iconCutout" : "iconWithStar",
+                            component: self.isAvatarExpanded ? AnyComponent(Image(image: self.walletBalanceCutoutIcon(color: iconColor), size: CGSize(width: 14.0, height: 14.0), contentMode: .center)) : AnyComponent(ZStack([
                                 AnyComponentWithIdentity(
                                     id: "base",
                                     component: AnyComponent(BundleIconComponent(name: "Wallet/TopGram", tintColor: iconColor, maxSize: CGSize(width: 14.0, height: 14.0)))
@@ -2695,10 +2592,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 environment: {},
                 containerSize: CGSize(width: maximumBalanceWidth, height: 20.0)
             )
-            let balanceFrame = CGRect(origin: CGPoint(
-                x: self.isAvatarExpanded ? stripLeft + 16.0 : stripLeft + floor((width - stripLeft - stripRight - balanceSize.width) * 0.5),
-                y: max(subtitleFrame.maxY, usernameFrame.maxY) + titleOffset + 8.0
-            ), size: balanceSize)
+            let balanceFrame: CGRect
+            if self.isAvatarExpanded {
+                let lastRowFrame = usernameFrame.maxY > subtitleFrame.maxY ? usernameFrame : subtitleFrame
+                balanceFrame = CGRect(origin: CGPoint(
+                    x: width - stripRight - 16.0 - balanceSize.width,
+                    y: floor(lastRowFrame.midY + titleOffset - balanceSize.height * 0.5)
+                ), size: balanceSize)
+            } else {
+                balanceFrame = CGRect(origin: CGPoint(
+                    x: stripLeft + floor((width - stripLeft - stripRight - balanceSize.width) * 0.5),
+                    y: max(subtitleFrame.maxY, usernameFrame.maxY) + titleOffset + 8.0
+                ), size: balanceSize)
+            }
             if let balanceView = balance.view {
                 balanceView.isAccessibilityElement = true
                 balanceView.accessibilityLabel = presentationData.strings.Wallet_Send_Balance(formattedBalance).string
@@ -2715,11 +2621,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     transition.updateFrame(view: balanceView, frame: balanceFrame)
                 }
-                if self.navigationTransition != nil {
-                    transition.updateAlpha(layer: balanceView.layer, alpha: (1.0 - transitionFraction) * (1.0 - titleCollapseFraction))
-                } else {
-                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: balanceView.layer, alpha: backgroundBannerAlpha * (1.0 - titleCollapseFraction))
-                }
+                ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: balanceView.layer, alpha: backgroundBannerAlpha * (1.0 - titleCollapseFraction))
             }
         }
 
@@ -2741,11 +2643,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }()
                 musicTransition.updateFrame(view: musicBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: backgroundHeight - 24.0 - buttonRightOrigin.y), size: CGSize(width: backgroundFrame.width, height: 24.0)))
 
-                if let _ = self.navigationTransition {
-                    transition.updateAlpha(layer: musicBackground.layer, alpha: 1.0 - transitionFraction)
-                } else {
-                    musicTransition.updateAlpha(layer: musicBackground.layer, alpha: 1.0)
-                }
+                musicTransition.updateAlpha(layer: musicBackground.layer, alpha: 1.0)
             } else if let musicBackground = self.musicBackground {
                 self.musicBackground = nil
                 if transition.isAnimated {
@@ -2835,11 +2733,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         musicTransition.updateFrame(view: musicView, frame: musicFrame)
                     }
 
-                    if let _ = self.navigationTransition {
-                        transition.updateAlpha(layer: musicView.layer, alpha: 1.0 - transitionFraction)
-                    } else {
-                        ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: musicView.layer, alpha: backgroundBannerAlpha)
-                    }
+                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: musicView.layer, alpha: backgroundBannerAlpha)
                 }
             }
         } else {
@@ -2894,6 +2788,29 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.performButtonAction?(buttonNode.key, nil, gesture)
     }
     
+    private func walletBalanceCutoutIcon(color: UIColor) -> UIImage? {
+        if let current = self.walletBalanceCutoutIcon, current.color == color {
+            return current.image
+        }
+        guard let base = UIImage(bundleImageName: "Wallet/TopGram"), let highlight = UIImage(bundleImageName: "Wallet/TransactionGramHighlight") else {
+            return nil
+        }
+        let maxSize = CGSize(width: 14.0, height: 14.0)
+        let size = base.size.aspectFitted(maxSize)
+        let highlightSize = highlight.size.aspectFitted(maxSize)
+        guard let image = generateImage(size, rotatedContext: { size, context in
+            context.clear(CGRect(origin: .zero, size: size))
+            UIGraphicsPushContext(context)
+            generateTintedImage(image: base, color: color)?.draw(in: CGRect(origin: .zero, size: size))
+            highlight.draw(in: CGRect(origin: CGPoint(x: (size.width - highlightSize.width) * 0.5, y: (size.height - highlightSize.height) * 0.5), size: highlightSize), blendMode: .destinationOut, alpha: 1.0)
+            UIGraphicsPopContext()
+        }) else {
+            return nil
+        }
+        self.walletBalanceCutoutIcon = (color, image)
+        return image
+    }
+
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         var result = super.point(inside: point, with: event)
         for stripView in [self.music?.view, self.walletBalance?.view].compactMap({ $0 }) {
@@ -2966,10 +2883,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if let subtitleRatingView = self.subtitleRating?.view, let result = subtitleRatingView.hitTest(self.view.convert(point, to: subtitleRatingView), with: event) {
-            return result
-        }
-        
-        if result.isDescendant(of: self.navigationButtonContainer.view) {
             return result
         }
         

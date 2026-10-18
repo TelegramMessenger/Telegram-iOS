@@ -28,6 +28,7 @@ import WalletAuthorizationUI
 import PasscodeCore
 import QrCodeUI
 import UndoUI
+import TelegramUIPreferences
 
 private enum WalletSendAmountSource: Equatable {
     case manual
@@ -125,6 +126,19 @@ public typealias WalletSendTransferAnimation = (String, WalletSendTransferAnimat
 public protocol WalletSendTransferAnimationController: AnyObject {
     var transferAnimation: WalletSendTransferAnimation? { get set }
 }
+
+/// Debug Settings ▸ "Wallet: fake transfers", which only a dev account is offered and only a dev account is held to: the
+/// form shows a fixed balance (`walletFakeTransferBalance`), and a send closes it as a registered transfer would, with
+/// nothing sent.
+private func walletFakesTransfers(context: AccountContext) -> Bool {
+    guard context.sharedContext.immediateExperimentalUISettings.fakeWalletTransfers, let data = context.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 else {
+        return false
+    }
+    return true
+}
+
+/// The balance a form shows while transfers are faked: 5 041.36 Grams, in nanograms.
+private let walletFakeTransferBalance: Int64 = 5_041_360_000_000
 
 @MainActor
 private func walletPresentSubmissionUnknown(on controller: ViewController, context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)) -> ViewController {
@@ -1501,6 +1515,10 @@ private final class WalletSendScreenComponent: Component {
         }
 
         private func send() {
+            if let component = self.component, walletFakesTransfers(context: component.context) {
+                self.sendFake(component: component)
+                return
+            }
             guard let component = self.component,
                   self.isVisible, self.transferPreviewController == nil, self.commentSessionAvailable,
                   self.amount > 0,
@@ -1546,6 +1564,23 @@ private final class WalletSendScreenComponent: Component {
             self.amountField.endEditing(true)
             self.requestUpdate(transition: .immediate)
             self.performSend(component: component)
+        }
+
+        /// A send while transfers are faked (`walletFakesTransfers`): the form shows its progress as a send does, then
+        /// closes as after a registered transfer, with nothing sent.
+        private func sendFake(component: WalletSendScreenComponent) {
+            guard let controller = self.environment?.controller() as? WalletSendScreen, self.amount > 0, !self.isPreparingTransfer else {
+                return
+            }
+            self.isPreparingTransfer = true
+            self.amountField.isUserInteractionEnabled = false
+            self.requestUpdate(transition: .immediate)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak controller] in
+                guard let self, let controller else {
+                    return
+                }
+                self.closeAfterTransferRegistration(nil, component: component, controller: controller)
+            }
         }
 
         private func resolveSigningAccess(walletInfo: WalletContext.WalletInfo) {
@@ -2101,7 +2136,11 @@ private final class WalletSendScreenComponent: Component {
                             self.lastKnownFee = nil
                         }
                     }
-                    self.walletBalance = walletState.balance.currentValue
+                    if let component = self.component, walletFakesTransfers(context: component.context) {
+                        self.walletBalance = walletFakeTransferBalance
+                    } else {
+                        self.walletBalance = walletState.balance.currentValue
+                    }
                     self.gaslessInfo = walletState.gaslessInfo
                     if case .idle = walletState.gaslessInfo {
                         observedWalletContext.ensureGaslessInfo()

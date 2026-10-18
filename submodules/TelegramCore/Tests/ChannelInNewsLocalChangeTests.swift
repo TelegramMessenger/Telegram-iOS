@@ -16,8 +16,16 @@ final class ChannelInNewsLocalChangeTests: XCTestCase {
         if verified {
             flags |= 1 << 7
         }
-        let chat = Api.Chat.channel(.init(flags: flags, flags2: inNews ? 1 << 21 : 0, id: 1234, accessHash: 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil))
-        return parseTelegramGroupOrChannel(chat: chat) as! TelegramChannel
+        let chat = Api.Chat.channel(.init(flags: flags, flags2: 0, id: 1234, accessHash: 5678, title: "News", username: nil, photo: .chatPhotoEmpty, date: 0, restrictionReason: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, participantsCount: nil, usernames: nil, storiesMaxId: nil, color: nil, profileColor: nil, emojiStatus: nil, level: nil, subscriptionUntilDate: nil, botVerificationIcon: nil, sendPaidMessagesStars: nil, linkedMonoforumId: nil, linkedCommunityId: nil, pinnedMsgId: nil))
+        let channel = parseTelegramGroupOrChannel(chat: chat) as! TelegramChannel
+        guard inNews else {
+            return channel
+        }
+        // Set directly: the parse of `in_news` is parked with the feed API (layer 232), and these cases test what the
+        // client does with the flag, not the parse.
+        var channelFlags = channel.flags
+        channelFlags.insert(.isInNews)
+        return channel.withUpdatedFlags(channelFlags)
     }
 
     func testARecordedChangeHoldsForTheWindow() {
@@ -47,6 +55,7 @@ final class ChannelInNewsLocalChangeTests: XCTestCase {
     }
 
     func testAStaleServerChannelKeepsTheLocalRemoveFromNews() {
+        XCTAssertTrue(self.serverChannel(inNews: true).flags.contains(.isInNews), "an in-News server channel")
         let stored = channelApplyingLocalInNews(self.serverChannel(inNews: true), localInNews: false)
         XCTAssertFalse(stored.flags.contains(.isInNews))
     }

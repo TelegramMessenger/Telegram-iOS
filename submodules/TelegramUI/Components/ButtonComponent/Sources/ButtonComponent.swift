@@ -316,6 +316,8 @@ public final class ButtonTextContentComponent: Component {
                             badgeView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak badgeView] _ in
                                 badgeView?.removeFromSuperview()
                             })
+                            badgeView.layer.rasterizationScale = UIScreenScale
+                            badgeView.layer.shouldRasterize = true
                             badgeView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
                         } else {
                             badgeView.removeFromSuperview()
@@ -545,6 +547,8 @@ public final class ButtonComponent: Component {
         private var shimmeringView: ButtonShimmeringView?
         private var gradientBackgroundView: AnimatedGradientBackgroundView?
         private var chromeView: UIImageView?
+        private var chromeTintView: UIImageView?
+        private var chromeImageKey: ButtonRimImageKey?
         private var contentItem: ContentItem?
         
         private var activityIndicator: ActivityIndicator?
@@ -567,6 +571,7 @@ public final class ButtonComponent: Component {
             self.addSubview(self.button)
             self.addGestureRecognizer(self.glassHighlightRecognizer)
             self.glassHighlightRecognizer.isEnabled = false
+            self.glassHighlightRecognizer.pressedScale = 1.05
             
             self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
 
@@ -924,13 +929,41 @@ public final class ButtonComponent: Component {
                     }
                     
                     chromeView.layer.compositingFilter = "overlayBlendMode"
-                    chromeView.alpha = 0.8
-                    chromeView.image = GlassBackgroundView.generateForegroundImage(size: CGSize(width: size.height, height: size.height), isDark: component.background.color.lightness < 0.36, fillColor: .clear)
+                    chromeView.alpha = 0.75
+                }
+                let chromeTintView: UIImageView
+                if let current = self.chromeTintView {
+                    chromeTintView = current
+                } else {
+                    chromeTintView = UIImageView()
+                    chromeTintView.alpha = 0.17
+                    self.chromeTintView = chromeTintView
+                    contentContainerView.insertSubview(chromeTintView, aboveSubview: chromeView)
+                }
+                let chromeIsDark = component.background.color.lightness < 0.36
+                let chromeImageKey = ButtonRimImageKey(size: size, cornerRadius: cornerRadius, isDark: chromeIsDark)
+                if self.chromeImageKey != chromeImageKey {
+                    self.chromeImageKey = chromeImageKey
+                    let rimImage = buttonRimImage(key: chromeImageKey)
+                    chromeView.image = rimImage
+                    chromeTintView.image = rimImage
                 }
                 chromeTransition.setFrame(view: chromeView, frame: CGRect(origin: .zero, size: size))
+                chromeTransition.setFrame(view: chromeTintView, frame: CGRect(origin: .zero, size: size))
+                
+                self.containerView.layer.borderWidth = UIScreenPixel
+                self.containerView.layer.borderColor = UIColor(white: 0.0, alpha: chromeIsDark ? 0.2 : 0.1).cgColor
             } else if let chromeView = self.chromeView {
                 self.chromeView = nil
-                chromeView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+                self.chromeImageKey = nil
+                self.containerView.layer.borderWidth = 0.0
+                if let chromeTintView = self.chromeTintView {
+                    self.chromeTintView = nil
+                    chromeTintView.layer.animateAlpha(from: chromeTintView.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+                        chromeTintView.removeFromSuperview()
+                    })
+                }
+                chromeView.layer.animateAlpha(from: chromeView.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
                     chromeView.removeFromSuperview()
                 })
             }
@@ -955,6 +988,110 @@ public final class ButtonComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+private struct ButtonRimImageKey: Hashable {
+    let width: CGFloat
+    let height: CGFloat
+    let cornerRadius: CGFloat
+    let isDark: Bool
+    let stretchesHorizontally: Bool
+    let stretchesVertically: Bool
+    
+    init(size: CGSize, cornerRadius: CGFloat, isDark: Bool) {
+        let stretchableSize = ButtonRimImageKey.capSize(cornerRadius: cornerRadius) * 2.0 + 1.0
+        self.stretchesHorizontally = size.width > stretchableSize
+        self.stretchesVertically = size.height > stretchableSize
+        self.width = self.stretchesHorizontally ? stretchableSize : size.width
+        self.height = self.stretchesVertically ? stretchableSize : size.height
+        self.cornerRadius = cornerRadius
+        self.isDark = isDark
+    }
+    
+    static func capSize(cornerRadius: CGFloat) -> CGFloat {
+        return ceil(cornerRadius * 1.6)
+    }
+}
+
+private var buttonRimImageCache: [ButtonRimImageKey: UIImage] = [:]
+
+private func buttonRimImage(key: ButtonRimImageKey) -> UIImage? {
+    if let image = buttonRimImageCache[key] {
+        return image
+    }
+    let image = generateButtonRimImage(key: key)
+    buttonRimImageCache[key] = image
+    return image
+}
+
+private let buttonRimBands: [(depth: CGFloat, intensity: CGFloat)] = [
+    (0.5, 0.5),
+    (0.83, 0.38),
+    (1.17, 0.255),
+    (1.5, 0.14),
+    (2.0, 0.06),
+    (3.0, 0.041),
+    (4.5, 0.023),
+    (6.0, 0.008)
+]
+
+private func generateButtonRimImage(key: ButtonRimImageKey) -> UIImage? {
+    let imageSize = CGSize(width: key.width, height: key.height)
+    if imageSize.width <= 0.0 || imageSize.height <= 0.0 {
+        return nil
+    }
+    let bounds = CGRect(origin: .zero, size: imageSize)
+    
+    let rootLayer = CALayer()
+    rootLayer.frame = bounds
+    let intensityScale: CGFloat = key.isDark ? 0.5 : 1.0
+    var innerIntensity: CGFloat = 0.0
+    for band in buttonRimBands.reversed() {
+        let target = band.intensity * intensityScale
+        let alpha = 1.0 - (1.0 - target) / (1.0 - innerIntensity)
+        innerIntensity = target
+        
+        let layer = CALayer()
+        layer.frame = bounds
+        layer.cornerRadius = key.cornerRadius
+        layer.cornerCurve = .continuous
+        layer.borderWidth = band.depth
+        layer.borderColor = UIColor(white: 1.0, alpha: max(0.0, alpha)).cgColor
+        rootLayer.insertSublayer(layer, at: 0)
+    }
+    
+    let image = generateImage(imageSize, rotatedContext: { size, context in
+        context.clear(bounds)
+        rootLayer.render(in: context)
+        
+        let capWidth = min(key.cornerRadius, size.width * 0.5)
+        let steps = 16
+        var locations: [CGFloat] = []
+        var colors: [CGColor] = []
+        for i in 0 ... steps {
+            let x = capWidth * CGFloat(i) / CGFloat(steps)
+            let distance = (capWidth - x) / max(1.0, capWidth)
+            let verticalFacing = sqrt(max(0.0, 1.0 - distance * distance))
+            locations.append(x / size.width)
+            colors.append(UIColor(white: 1.0, alpha: pow(verticalFacing, 3.0)).cgColor)
+        }
+        for i in (0 ... steps).reversed() {
+            locations.append(1.0 - locations[i])
+            colors.append(colors[i])
+        }
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: &locations) {
+            context.setBlendMode(.destinationIn)
+            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: size.width, y: 0.0), options: [])
+        }
+    })
+    
+    let capSize = Int(ButtonRimImageKey.capSize(cornerRadius: key.cornerRadius))
+    let capWidth = key.stretchesHorizontally ? capSize : 0
+    let capHeight = key.stretchesVertically ? capSize : 0
+    if capWidth == 0 && capHeight == 0 {
+        return image
+    }
+    return image?.stretchableImage(withLeftCapWidth: capWidth, topCapHeight: capHeight)
 }
 
 private final class AnimatedGradientBackgroundView: UIView {

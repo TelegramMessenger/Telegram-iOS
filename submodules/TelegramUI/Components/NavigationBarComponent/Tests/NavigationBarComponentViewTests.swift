@@ -75,6 +75,50 @@ final class NavigationBarComponentViewTests: XCTestCase {
         return NavigationBarTheme(overallDarkAppearance: false, buttonColor: .black, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white)
     }
 
+    private func makeTintedTheme(_ color: UIColor, glassStyle: NavigationBar.GlassStyle = .default) -> NavigationBarTheme {
+        return NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .gray, accentForegroundColor: .white, glassStyle: glassStyle, glassTintColor: color)
+    }
+
+    private func updateBar(_ bar: ComponentView<Empty>, theme: NavigationBarTheme, right: [NavigationBarComponent.Button], transition: ComponentTransition) -> NavigationBarComponent.View {
+        let content = NavigationBarComponent.Content(title: .text("Profile"), back: .back, leftButton: nil, rightButtons: right, backPressed: {})
+        let size = bar.update(
+            transition: transition,
+            component: AnyComponent(NavigationBarComponent(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, primaryContent: content, secondaryContent: nil, secondaryTransition: 0.0)),
+            environment: {},
+            containerSize: CGSize(width: 390.0, height: 44.0)
+        )
+        let view = bar.view as! NavigationBarComponent.View
+        view.frame = CGRect(origin: CGPoint(), size: size)
+        return view
+    }
+
+    // A theme's glass tint (the profile over a cover colour) is the glass of capsules that ask for no tint; accent
+    // capsules keep the accent; without a tint generic capsules are the panel glass.
+    func test_glassTintColor_isTheGenericCapsulesGlass() {
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: self.makeTheme()), GlassBackgroundView.TintColor(kind: .panel))
+        let tinted = self.makeTintedTheme(.orange)
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: tinted), GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .orange)))
+        XCTAssertEqual(navigationBarGlassTintColor(.accent, theme: tinted), GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .blue)))
+        XCTAssertEqual(navigationBarGlassTintColor(.generic, theme: self.makeTintedTheme(.orange, glassStyle: .clear)), GlassBackgroundView.TintColor(kind: .custom(style: .clear, color: .orange)))
+    }
+
+    // The profile's header steps its glass colour while its buttons stay: the kept capsule takes the new glass, and a
+    // colour change alone is not an item change (no in-place animation, no pulse).
+    func test_glassTintChange_retintsTheKeptCapsule_withoutAnInPlaceChange() {
+        let bar = ComponentView<Empty>()
+        let edit = NavigationBarComponent.Button(id: "edit", content: .text(title: "Edit", isBold: false), action: { _ in })
+        let before = self.updateBar(bar, theme: self.makeTheme(), right: [edit], transition: .immediate)
+        guard let capsule = before.rightPillBackgroundContainer(at: 0) else {
+            XCTFail("no capsule")
+            return
+        }
+        let tinted = self.makeTintedTheme(.orange)
+        let view = self.updateBar(bar, theme: tinted, right: [edit], transition: .easeInOut(duration: 0.2))
+        XCTAssertTrue(view.rightPillBackgroundContainer(at: 0) === capsule)
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(capsule.glassTintColor, GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .orange)))
+    }
+
     private func makeBar(content: NavigationBarComponent.Content) -> NavigationBarComponent.View {
         let bar = ComponentView<Empty>()
         let size = bar.update(
@@ -109,7 +153,7 @@ final class NavigationBarComponentViewTests: XCTestCase {
     func test_titleBand_clearsTheButtons() {
         let view = self.makeBar(content: NavigationBarComponent.Content(title: .text("Chats"), back: .back, leftButton: nil, rightButtons: [NavigationBarComponent.Button(id: "a", content: .custom(AnyComponent(FixedButtonContentComponent())), action: { _ in })], backPressed: {}))
         // Back is 44pt wide, the right button 44pt: each extent is 16 + 44.
-        XCTAssertEqual(view.primaryCenterContentInsets.left, 48.0)
+        XCTAssertEqual(view.primaryCenterContentInsets.left, 64.0)
         XCTAssertEqual(view.primaryCenterContentInsets.right, 64.0)
         XCTAssertEqual(view.centeredContentFrame, CGRect(x: 0.0, y: 0.0, width: 390.0, height: 44.0))
         XCTAssertNotNil(view.rightButtonViews["a"])
@@ -156,6 +200,66 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertNotNil(view.columnTrailingBackgroundContainer)
         XCTAssertEqual(view.primaryRightButtonsWidth, 0.0)
         XCTAssertTrue(view.isBackInSideColumn)
+    }
+
+    // iPhone Duo's side column: the chat's avatar (a node, generic tint) is the column capsule's only item, so its glass
+    // is a 48 pt circle around the 44 pt button. An expansion asks for it, and for the press UIKit drew on it, before the
+    // bar detaches its platters: the press comes from the sampler (UIKit takes a tap's off before the action runs).
+    // Measured 2026-10-18: the expansion took the 44 pt button for the circle and lost the lifted circle's press.
+    func test_rightButtonCapsule_columnItem_isTheColumnsCapsule_withTheSampledPress() {
+        let node = HostedNode()
+        let content = NavigationBarComponent.Content(title: .text("Chat"), back: .back, leftButton: nil, rightButtons: [NavigationBarComponent.Button(id: "avatar", content: .node(node), action: { _ in })], backPressed: {})
+        let view = self.makeBar(content: content, sideColumnLength: 400.0)
+        guard let capsule = view.columnButtonsBackgroundContainer, let glass = navigationBarTestGlassEffectView(content: capsule.contentView, container: capsule), let button = view.rightButtonViews["avatar"] else {
+            XCTFail("no column capsule")
+            return
+        }
+        XCTAssertNil(view.columnTrailingBackgroundContainer)
+        XCTAssertEqual(capsule.bounds.size, CGSize(width: 48.0, height: 48.0))
+        XCTAssertTrue(view.rightButtonCapsule(containing: button)?.container === capsule)
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 0.0, 1.0, accuracy: 0.001)
+
+        var now = 100.0
+        view.pressSamplerClock = {
+            return now
+        }
+        let restBounds = glass.bounds
+        let center = glass.center
+        // The column hangs outside the bar: its host hit-tests it through the bar.
+        XCTAssertNotNil(view.sideColumnHitTest(capsule.convert(CGPoint(x: capsule.bounds.midX, y: capsule.bounds.midY), to: view.sideColumnView), with: nil))
+        for frame in 1 ... 10 {
+            now = 100.0 + Double(frame) / 60.0
+            let size = 48.0 + 16.0 * Double(frame) / 10.0
+            glass.bounds = CGRect(x: 0.0, y: 0.0, width: size, height: size)
+            glass.center = center
+            view.tickPressSampler()
+        }
+        // Held: the live press.
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 1.0, 64.0 / 48.0, accuracy: 0.001)
+        // The touch ends: UIKit takes the press off, then the action starts the expansion, which asks at once.
+        now += 1.0 / 120.0
+        glass.bounds = restBounds
+        glass.center = center
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 1.0, 64.0 / 48.0, accuracy: 0.001)
+        // Long after: no press.
+        now += 1.0
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 0.0, 1.0, accuracy: 0.001)
+    }
+
+    // The row's circle is its own capsule: 44 pt, with the press UIKit draws on it.
+    func test_rightButtonCapsule_rowCircle_isItsPill_withTheLivePress() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
+        guard let circle = view.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: circle.contentView, container: circle), let compose = view.rightButtonViews["compose"] else {
+            XCTFail("no circle")
+            return
+        }
+        XCTAssertTrue(view.rightButtonCapsule(containing: compose)?.container === circle)
+        XCTAssertEqual(circle.bounds.height, 44.0)
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: 60.0, height: 60.0)
+        glass.center = center
+        XCTAssertEqual(view.rightButtonCapsule(containing: compose)?.pressScale ?? 1.0, 60.0 / 44.0, accuracy: 0.001)
     }
 
     func test_withoutColumn_backIsInTheRow() {
@@ -589,6 +693,90 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertFalse(view.rightButtonViews["search"]?.isDescendant(of: leaving.first ?? UIView()) ?? true)
     }
 
+    // A node kept across an in-place change stays in the button the bar shows it in. The profile's more/search slot is
+    // one node: [search, more] -> [more] (a swipe from its Chats tab to Media) hands the old pill's "more" button to
+    // the leaving items and lays out a new one, which takes the node. The leaving button, put on screen with the
+    // leaving items, took the node back and took it away when it left: the pill stayed empty.
+    func test_inPlaceItemChange_keptNode_staysInTheShownButton() {
+        let node = HostedNode()
+        let bar = ComponentView<Empty>()
+        let more = NavigationBarComponent.Button(id: "more", content: .node(node), action: { _ in })
+        let before = self.updateBar(bar, back: .back, right: [self.fixedButton("search"), more], transition: .immediate)
+        testWindow.addSubview(before)
+        defer {
+            before.removeFromSuperview()
+        }
+        XCTAssertNotNil(node.view.window)
+
+        let view = self.updateBar(bar, back: .back, right: [more], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertFalse(view.inPlaceLeavingViewsForTesting(slot: .right(0)).isEmpty)
+        guard let shown = view.rightButtonViews["more"] else {
+            XCTFail("no more button")
+            return
+        }
+        XCTAssertTrue(node.view.isDescendant(of: shown))
+
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertTrue(view.rightButtonViews["more"] === shown)
+        XCTAssertTrue(node.view.isDescendant(of: shown))
+        XCTAssertNotNil(node.view.window)
+    }
+
+    // Work that must not cut a capsule's change short (the bar's glass adapting again) waits until every capsule has
+    // settled, and runs at once when none animates.
+    func test_afterInPlaceAnimations_waitsForTheCapsulesToSettle() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: nil, right: [self.fixedButton("edit")], transition: .immediate)
+        var runs = 0
+        before.afterInPlaceAnimations {
+            runs += 1
+        }
+        XCTAssertEqual(runs, 1)
+
+        let view = self.updateBar(bar, back: nil, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        view.afterInPlaceAnimations {
+            runs += 1
+        }
+        XCTAssertEqual(runs, 1)
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(runs, 2)
+    }
+
+    // A capsule that appears in place (the profile's "…" coming with its Media tab) is glass UIKit only half takes in:
+    // a context menu morphing out of it left its glass behind the menu. Once the change has settled the bar asks its
+    // host to make the glass adapt again, once; a change that adds no capsule does not ask.
+    func test_capsuleAppearingInPlace_asksForReadaptation_onceSettled() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: [], transition: .immediate)
+        var requests = 0
+        before.glassNeedsReadaptation = {
+            requests += 1
+        }
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("more")], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(requests, 0)
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(requests, 1)
+
+        let _ = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertEqual(requests, 1)
+    }
+
     // A capsule the change removes (the back button entering edit mode) dematerializes, then leaves.
     func test_inPlaceCapsuleRemoval_dematerializes() {
         let bar = ComponentView<Empty>()
@@ -702,6 +890,13 @@ final class NavigationBarComponentViewTests: XCTestCase {
         view.plattersDetached = true
         XCTAssertEqual((view.detachedRightPressScales.first ?? 1.0), 60.0 / 44.0, accuracy: 0.001)
         XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 55.0 / 44.0, accuracy: 0.001)
+        // Detached, the circle's button finds its capsule with the press handed to the transition.
+        if let compose = view.rightButtonViews["compose"] {
+            XCTAssertTrue(view.rightButtonCapsule(containing: compose)?.container === circle)
+            XCTAssertEqual(view.rightButtonCapsule(containing: compose)?.pressScale ?? 1.0, 60.0 / 44.0, accuracy: 0.001)
+        } else {
+            XCTFail("no compose button")
+        }
         view.plattersDetached = false
         XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 1.0)
     }
@@ -1550,6 +1745,21 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertTrue(edit.morphsIntoContextMenu)
         XCTAssertTrue(search.morphsIntoContextMenu)
         XCTAssertTrue(view.navigationButtonContextContainer(sourceView: searchButton) === search)
+    }
+
+    // Saved Messages' [search, …]: two buttons in one pill. A menu from either morphs the whole pill, its other button
+    // with it, and closes back into it, as UIKit's does with a section of several items (measured on iOS 27).
+    func test_twoButtonPill_morphsWholeIntoEitherButtonsMenu() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("more"), self.fixedButton("search")], transition: .immediate)
+        guard let pill = view.rightPillBackgroundContainer(at: 0), let more = view.rightButtonViews["more"], let search = view.rightButtonViews["search"] else {
+            XCTFail("not one pill")
+            return
+        }
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 1))
+        XCTAssertTrue(pill.morphsIntoContextMenu)
+        XCTAssertTrue(view.navigationButtonContextContainer(sourceView: more) === pill)
+        XCTAssertTrue(view.navigationButtonContextContainer(sourceView: search) === pill)
     }
 
     // The title clears both pills and the gap between them.

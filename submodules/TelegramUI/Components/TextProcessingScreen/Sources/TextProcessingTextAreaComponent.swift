@@ -494,7 +494,7 @@ final class TextProcessingTextAreaComponent: Component {
                         case .copy:
                             storeAttributedTextInPasteboard(text)
                         case .share:
-                            let shareController = component.context.sharedContext.makeShareController(context: component.context, params: ShareControllerParams(subject: .text(text.string)))
+                            let shareController = component.context.sharedContext.makeShareScreen(context: component.context, params: ShareControllerParams(subject: .text(text.string)))
                             component.present(shareController, nil)
                         case .lookup:
                             let controller = UIReferenceLibraryViewController(term: text.string)

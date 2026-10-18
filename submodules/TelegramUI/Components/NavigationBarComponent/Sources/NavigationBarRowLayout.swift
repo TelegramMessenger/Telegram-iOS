@@ -65,8 +65,12 @@ func navigationBarIsColumnItem(_ button: NavigationBarComponent.Button) -> Bool 
 
 /// Whether UIKit gives a bar button a section (a glass pill) of its own: `-[UIBarButtonItem _requiresOwnSection]`,
 /// asked of UIKit on iOS 27 (spec 2026-10-15-navbar-split-right-buttons-design.md): true for every text item and every
-/// prominent one (the Done checkmark included); false for image, system-image and custom-view items.
+/// prominent one (the Done checkmark included); false for image, system-image and custom-view items, unless the button
+/// asks for one (`Button.requiresOwnSection`, UIKit's `sharesBackground = false`).
 func navigationBarButtonRequiresOwnSection(_ button: NavigationBarComponent.Button) -> Bool {
+    if button.requiresOwnSection {
+        return true
+    }
     if case .text = button.content {
         return true
     }
@@ -164,10 +168,14 @@ func navigationBarCapsuleTint(_ buttons: [NavigationBarComponent.Button]) -> Nav
     return buttons.allSatisfy({ $0.tint == first.tint }) ? first.tint : .generic
 }
 
-/// The glass of a capsule or circle with `tint`, as the old glass bar drew it.
+/// The glass of a capsule or circle with `tint`, as the old glass bar drew it: a generic one takes the theme's glass
+/// tint when it has one.
 func navigationBarGlassTintColor(_ tint: NavigationBarComponent.Button.Tint, theme: NavigationBarTheme) -> GlassBackgroundView.TintColor {
     switch tint {
     case .generic:
+        if let glassTintColor = theme.glassTintColor {
+            return .init(kind: .custom(style: theme.glassStyle == .clear ? .clear : .default, color: glassTintColor))
+        }
         return .init(kind: theme.glassStyle == .clear ? .clear : .panel)
     case .accent:
         return .init(kind: .custom(style: theme.glassStyle == .clear ? .clear : .default, color: theme.accentButtonColor))
@@ -200,10 +208,11 @@ func navigationBarCenteredFrame(size: CGSize, rowSize: CGSize) -> CGRect {
 }
 
 /// The band the chat list's story list centers its title in, measured from the row's edges (each side includes
-/// its own inset; they differ where the system reserves one side, e.g. iPhone Duo's vertical status bar). With the
-/// standard 16pt inset these equal the former `nextLeftButtonX + 4.0` / `nextRightButtonX + 20.0`.
+/// its own inset; they differ where the system reserves one side, e.g. iPhone Duo's vertical status bar): 4 pt clear
+/// of each side's capsules. (The left used to be the text-button bar's `nextLeftButtonX + 4.0`, 12 pt under the left
+/// capsule.)
 func navigationBarCenterContentInsets(leftExtent: CGFloat, rightExtent: CGFloat) -> (left: CGFloat, right: CGFloat) {
-    return (leftExtent - 12.0, rightExtent + 4.0)
+    return (leftExtent + 4.0, rightExtent + 4.0)
 }
 
 public extension NavigationBarComponent {

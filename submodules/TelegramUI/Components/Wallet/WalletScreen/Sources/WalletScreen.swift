@@ -775,6 +775,7 @@ private final class WalletScreenComponent: Component {
         private var isUpdatingTransferAnimations = false
 
         private let collectiblesSection = WalletCollectiblesGridView()
+        private let collectiblesFooter = ComponentView<Empty>()
         private lazy var giftStickers = WalletGiftStickerCoordinator(host: self, scrollView: self.scrollView, grid: self.collectiblesSection)
         private let emptyTransactionsInfo = ComponentView<Empty>()
         private let emptyTransactionsFooter = ComponentView<Empty>()
@@ -1165,6 +1166,17 @@ private final class WalletScreenComponent: Component {
             self.waltBalanceBotAppDisposable.set(nil)
         }
 
+        private func presentStickerTutorialToast() {
+            guard self.environment?.isVisible == true, let component = self.component, let controller = self.environment?.controller() else { return }
+            let data = self.currentPresentationData(for: component)
+            controller.present(UndoOverlayController(
+                presentationData: data.initial,
+                content: .info(title: nil, text: data.initial.strings.Wallet_Sticker_TutorialDone, timeout: nil, customUndoText: nil),
+                position: .bottom,
+                action: { _ in false }
+            ), in: .current)
+        }
+
         private func presentStickerLimitError() {
             guard self.environment?.isVisible == true, let component = self.component, let controller = self.environment?.controller() else { return }
             let data = self.currentPresentationData(for: component)
@@ -1186,6 +1198,7 @@ private final class WalletScreenComponent: Component {
             case .limitExceeded: text = strings.Wallet_Sticker_LimitError("\(WalletGiftStickerCoordinator.maxStickers)").string
             case .backgroundNotAllowed: text = strings.Common_ActionNotAllowedError
             case .savedInProfile: text = strings.Wallet_Sticker_ProfileError
+            case .backgroundNotAllowed: text = strings.Wallet_Sticker_BackgroundNotAllowedError
             case .invalidSticker, .notOwned, .duplicate, .invalidAddress, .invalidNft: text = strings.Wallet_Sticker_InvalidError
             case .unavailable, .generic: text = strings.Login_UnknownError
             case .floodWait: text = nil
@@ -1696,7 +1709,7 @@ private final class WalletScreenComponent: Component {
                 cardView.addSubview(tooltipView)
             }
             tooltipView.isHidden = cardView.gramIconFrame.isEmpty
-            let sourceFrame = cardView.gramIconFrame.offsetBy(dx: 0.0, dy: -4.0)
+            let sourceFrame = cardView.gramIconFrame.offsetBy(dx: 0.0, dy: 4.0)
             let availableFrame = cardView.convert(CGRect(x: leftInset, y: 0.0, width: availableWidth, height: 0.0), from: self)
             let tooltipFrame = CGRect(
                 origin: CGPoint(
@@ -1873,7 +1886,7 @@ private final class WalletScreenComponent: Component {
             )
             let tabsFrame = CGRect(
                 origin: CGPoint(
-                    x: floorToScreenPixels((availableWidth - tabsSize.width) / 2.0),
+                    x: environment.safeInsets.left + floorToScreenPixels((availableWidth - environment.safeInsets.left - environment.safeInsets.right - tabsSize.width) / 2.0),
                     y: originY
                 ),
                 size: tabsSize
@@ -1948,9 +1961,9 @@ private final class WalletScreenComponent: Component {
             self.newTransferPresentationIds.formIntersection(transactions.keys)
             for transaction in state.transactions.items where transaction.status == .pending && transaction.currency == .ton
                 && transaction.direction == .outgoing && transaction.kind != .deployContract && transaction.kind != .keyChange
-                && transaction.collectible == nil && transaction.isVisibleInWalletHistory {
+                && transaction.isVisibleInWalletHistory {
                 guard self.pendingTransferAnimations[transaction.presentationId] == nil else { continue }
-                self.pendingTransferAnimations[transaction.presentationId] = WalletPendingTransferAnimation(id: transaction.presentationId)
+                self.pendingTransferAnimations[transaction.presentationId] = WalletPendingTransferAnimation(id: transaction.presentationId, isCollectible: transaction.collectible != nil)
                 if let previous = self.walletState, !previous.transactions.items.contains(where: { $0.presentationId == transaction.presentationId }) {
                     self.newTransferPresentationIds.insert(transaction.presentationId)
                 }
@@ -1962,7 +1975,7 @@ private final class WalletScreenComponent: Component {
                   let transaction = self.walletState?.transactions.items.first(where: { $0.presentationId == id }),
                   transaction.status != .failed, transaction.isVisibleInWalletHistory else { return false }
             if let source, source.window == nil { return false }
-            let animation = self.pendingTransferAnimations[id] ?? WalletPendingTransferAnimation(id: id)
+            let animation = self.pendingTransferAnimations[id] ?? WalletPendingTransferAnimation(id: id, isCollectible: transaction.collectible != nil)
             animation.isPending = transaction.status == .pending
             self.pendingTransferAnimations[id] = animation
             self.pendingTransferToReveal = id
@@ -3672,6 +3685,33 @@ private final class WalletScreenComponent: Component {
                 gridTransition.setPosition(view: self.collectiblesSection, position: CGPoint(x: collectiblesFrame.midX, y: collectiblesFrame.minY))
                 gridTransition.setBounds(view: self.collectiblesSection, bounds: CGRect(origin: .zero, size: collectiblesSectionSize))
                 contentHeight = collectiblesOriginY + collectiblesSectionSize.height
+                var isOwnWallet = false
+                if case .wallet? = self.walletState?.phase { isOwnWallet = true }
+                if isOwnWallet, collectibles.contains(where: { $0.kind == .gift }) {
+                    let footerSize = self.collectiblesFooter.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: environment.strings.Wallet_Sticker_GridFooter, font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: max(0.0, cardWidth - 32.0), height: 1000.0)
+                    )
+                    if let footerView = self.collectiblesFooter.view {
+                        var footerTransition = gridTransition
+                        if footerView.superview !== self.collectiblesSection {
+                            footerView.isUserInteractionEnabled = false
+                            self.collectiblesSection.addSubview(footerView)
+                            footerTransition = .immediate
+                        }
+                        footerTransition.setFrame(view: footerView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((cardWidth - footerSize.width) / 2.0), y: collectiblesSectionSize.height + 16.0), size: footerSize))
+                    }
+                    contentHeight += 16.0 + footerSize.height
+                } else {
+                    self.collectiblesFooter.view?.removeFromSuperview()
+                }
 
                 transition.setBackgroundColor(view: self, color: environment.theme.list.blocksBackgroundColor)
             } else {
@@ -3870,8 +3910,7 @@ private final class WalletScreenComponent: Component {
             self.revealPendingTransferIfNeeded()
             self.updatePendingTransferAnimations()
             self.giftStickers.limitReached = { [weak self] in self?.presentStickerLimitError() }
-            self.giftStickers.removeTitle = component.context.sharedContext.currentPresentationData.with { $0 }.strings.Wallet_Sticker_Remove
-            self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, placementAction, styleAction, dismissed in
+            self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, placementAction, styleAction, dismissed, passthrough in
                 guard let self, let component = self.component, let controller = self.environment?.controller() else { return nil }
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                 let strings = presentationData.strings
@@ -3894,8 +3933,28 @@ private final class WalletScreenComponent: Component {
                     source: .reference(WalletContextReferenceContentSource(sourceView: source, bottomInset: -10.0 / 1.15)),
                     items: .single(ContextController.Items(content: .list(items))), gesture: nil)
                 menu.dismissed = dismissed
+                menu.passthroughHitTest = passthrough
                 controller.presentInGlobalOverlay(menu)
                 return { [weak menu] in menu?.dismiss(completion: nil) }
+            }
+            let tutorialStrings = environment.strings
+            self.giftStickers.tutorialTexts = (tutorialStrings.Wallet_Sticker_TutorialTile, tutorialStrings.Wallet_Sticker_TutorialCard)
+            self.giftStickers.tutorialAvailable = { [weak self] completion in
+                guard let self, let component = self.component else { return }
+                let _ = (ApplicationSpecificNotice.getWalletCardStickersTutorial(accountManager: component.context.sharedContext.accountManager)
+                |> deliverOnMainQueue).startStandalone(next: { shown in
+                    completion(!shown)
+                })
+            }
+            self.giftStickers.tutorialStarted = { [weak self] in
+                guard let self, let component = self.component else { return }
+                let _ = ApplicationSpecificNotice.setWalletCardStickersTutorial(accountManager: component.context.sharedContext.accountManager).startStandalone()
+            }
+            self.giftStickers.presentTooltip = { [weak self] tooltip in
+                self?.environment?.controller()?.present(tooltip, in: .current)
+            }
+            self.giftStickers.tutorialFinished = { [weak self] in
+                self?.presentStickerTutorialToast()
             }
             if let cardView = self.card.view as? WalletCardComponent.View {
                 let buttons = [self.addFundsButton.view, self.sendButton.view].compactMap { $0 as? ButtonComponent.View }

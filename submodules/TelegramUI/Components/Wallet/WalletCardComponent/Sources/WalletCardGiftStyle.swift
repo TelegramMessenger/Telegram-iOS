@@ -160,86 +160,44 @@ struct WalletCardStyleUniforms {
     }
 }
 
-struct WalletPatternRng {
-    private var seed: Float
-
-    private static func taus(_ z: UInt32, _ s1: UInt32, _ s2: UInt32, _ s3: UInt32, _ m: UInt32) -> UInt32 {
-        let b = ((z << s1) ^ z) >> s2
-        return ((z & m) << s3) ^ b
-    }
-
-    private static func mix(_ s: UInt32) -> UInt32 {
-        let z1 = taus(s, 13, 19, 12, 429496729), z2 = taus(s, 2, 25, 4, 4294967288)
-        let z3 = taus(s, 3, 11, 17, 429496280), z4 = 1664525 &* s &+ 1013904223
-        return z1 ^ z2 ^ z3 ^ z4
-    }
-
-    init(seed0: UInt32, seed1: UInt32, seed2: UInt32) {
-        let r1 = Self.mix(seed0 &* 1099087573) ^ (seed1 &* 1099087573)
-        let r2 = Self.mix(r1) ^ (seed2 &* 1099087573)
-        seed = Float(Self.mix(r2)) * Float(2.3283064365387e-10)
-    }
-
-    mutating func next() -> Float {
-        let hashed = UInt32(seed * Float(1099087573 as UInt32))
-        let old = seed
-        seed = Float(Self.mix(hashed)) * Float(2.3283064365387e-10)
-        return old
-    }
-}
-
-
 enum WalletGiftPattern {
     struct Item {
         var center: CGPoint
         var size: CGFloat
     }
 
-    static func items(center: CGPoint, width: CGFloat, avatar: CGFloat = 100) -> [Item] {
-        var baseDistance = avatar / 2 + 22, rowDistance: CGFloat = 28, itemSize: CGFloat = 26
-        if width <= 60 {
-            baseDistance *= 0.35; rowDistance *= 0.3; itemSize *= 0.4
-        } else if width < 150 {
-            baseDistance *= 0.6; rowDistance *= 0.6; itemSize *= 0.83
-        }
-        var rng = WalletPatternRng(seed0: 123, seed1: 0, seed2: 0)
+    static let alpha: CGFloat = 0.18
+
+    static func items(size: CGSize, maxX: CGFloat = .greatestFiniteMagnitude) -> [Item] {
+        let k = size.width / 370
+        let columnPitch = 84 * k, rowPitch = 25 * k, itemSize = floor(20 * k)
+        guard rowPitch > 0 else { return [] }
+        let center = CGPoint(x: size.width / 2 + 4 * k, y: size.height / 2)
+        let rows = Int(ceil(size.height / 2 / rowPitch)) + 1
+        let columns = Int(ceil(size.width / 2 / columnPitch)) + 1
         var list: [Item] = []
-        let span = CGFloat.pi * 2 / 6
-        for row in 0..<5 {
-            for i in 0..<6 {
-                let distance = baseDistance + CGFloat(row) * rowDistance
-                var angle = -CGFloat.pi / 2 + CGFloat(i) * span
-                if row % 2 != 0 { angle += span / 2 }
-                let scale = 0.7 + CGFloat(rng.next()) * 0.3
-                list.append(Item(center: CGPoint(x: center.x + cos(angle) * distance, y: center.y + sin(angle) * distance),
-                                 size: floor(itemSize * scale)))
+        for row in -rows...rows {
+            let shift: CGFloat = row % 2 == 0 ? 0 : columnPitch / 2
+            for column in -columns...columns {
+                let point = CGPoint(x: center.x + CGFloat(column) * columnPitch + shift, y: center.y + CGFloat(row) * rowPitch)
+                if point.x < -itemSize || point.x > min(size.width + itemSize, maxX) || point.y < -itemSize || point.y > size.height + itemSize {
+                    continue
+                }
+                list.append(Item(center: point, size: itemSize))
             }
         }
         return list
     }
 
-    static func alpha(at p: CGPoint, center: CGPoint, height: CGFloat) -> CGFloat {
-        let dx = (p.x - center.x) / 190, dy = (p.y - center.y) / max(height / 2, 1)
-        return 0.6 * 0.8 * max(0, 1 - sqrt(dx * dx + dy * dy))
-    }
-
-    static func draw(_ symbol: UIImage, color: UIColor, center: CGPoint, width: CGFloat, height: CGFloat,
-                     in ctx: CGContext) {
+    static func draw(_ symbol: UIImage, color: UIColor, size: CGSize, in ctx: CGContext) {
         ctx.beginTransparencyLayer(auxiliaryInfo: nil)
-        for item in items(center: center, width: width) {
+        for item in items(size: size) {
             symbol.draw(in: CGRect(x: item.center.x - item.size / 2, y: item.center.y - item.size / 2,
                                    width: item.size, height: item.size))
         }
         ctx.setBlendMode(.sourceIn)
-        let colors = [color.withAlphaComponent(0.6 * 0.8).cgColor, color.withAlphaComponent(0).cgColor] as CFArray
-        if let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: colors, locations: [0, 1]) {
-            ctx.saveGState()
-            ctx.translateBy(x: center.x, y: center.y)
-            ctx.scaleBy(x: 1, y: max(height / 2, 1) / 190)
-            ctx.drawRadialGradient(gradient, startCenter: .zero, startRadius: 0, endCenter: .zero, endRadius: 190,
-                                   options: [.drawsAfterEndLocation])
-            ctx.restoreGState()
-        }
+        ctx.setFillColor(color.withAlphaComponent(alpha).cgColor)
+        ctx.fill(CGRect(origin: .zero, size: size))
         ctx.endTransparencyLayer()
     }
 }

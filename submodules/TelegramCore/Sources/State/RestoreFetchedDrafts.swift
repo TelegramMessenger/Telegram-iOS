@@ -20,20 +20,12 @@ func _internal_synchronizeableChatInputState(accountPeerId: PeerId, peerId: Peer
         if let replyToMsgHeader {
             switch replyToMsgHeader {
             case let .inputReplyToMessage(inputReplyToMessageData):
-                let (replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId, todoItemId, pollOption) = (inputReplyToMessageData.replyToMsgId, inputReplyToMessageData.topMsgId, inputReplyToMessageData.replyToPeerId, inputReplyToMessageData.quoteText, inputReplyToMessageData.quoteEntities, inputReplyToMessageData.quoteOffset, inputReplyToMessageData.monoforumPeerId, inputReplyToMessageData.todoItemId, inputReplyToMessageData.pollOption)
+                let (replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId, todoItemId, pollOption, quoteRich) = (inputReplyToMessageData.replyToMsgId, inputReplyToMessageData.topMsgId, inputReplyToMessageData.replyToPeerId, inputReplyToMessageData.quoteText, inputReplyToMessageData.quoteEntities, inputReplyToMessageData.quoteOffset, inputReplyToMessageData.monoforumPeerId, inputReplyToMessageData.todoItemId, inputReplyToMessageData.pollOption, inputReplyToMessageData.quoteRich)
                 let _ = topMsgId
                 let _ = monoforumPeerId
 
-                var quote: EngineMessageReplyQuote?
-                if quoteText != nil || inputReplyToMessageData.quoteRich != nil {
-                    quote = EngineMessageReplyQuote(
-                        text: quoteText ?? "",
-                        offset: quoteOffset.flatMap(Int.init),
-                        entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
-                        media: nil,
-                        richText: inputReplyToMessageData.quoteRich?.map { RichText(apiText: $0) }
-                    )
-                }
+                // A draft keeps `quote_rich` as it was saved; the server validates it only on send.
+                let quote = engineReplyQuote(text: quoteText, entities: quoteEntities, offset: quoteOffset, rich: quoteRich, media: nil)
 
                 var parsedReplyToPeerId: PeerId?
                 switch replyToPeerId {

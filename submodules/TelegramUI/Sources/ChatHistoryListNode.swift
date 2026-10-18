@@ -2635,7 +2635,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 
                 var rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, source: source, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, scrollAnimationCurve: scrollAnimationCurve, initialData: initialData?.initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode(), allUpdated: !isSavedMusic || forceUpdateAll)
                 if !updatedScrollPositionHolds, let scrollToItem = rawTransition.scrollToItem {
-                    rawTransition.scrollToItem = scrollToItem.withHoldsPosition(false)
+                    rawTransition.scrollToItem = scrollToItem.withHold(.none)
                 }
                 var mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, isSavedMusic: isSavedMusic, canReorder: processedView.filteredEntries.count > 1 && canReorder, richMessageQueueId: richMessageQueueId, animateFromPreviousFilter: resetScrolling, transition: rawTransition, systemStyle: systemStyle)
                 
@@ -2777,6 +2777,15 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 }
             }
         }).strict()
+    }
+    
+    /// Plays the unseen reactions of messages the caller has just brought on screen (the unseen-reactions jump) and
+    /// marks them seen, on the same path the history plays them on, so they don't play again when they come into view.
+    func displayUnseenReactionAnimationsAndMarkSeen(messageIds: [MessageId]) {
+        let displayedMessageIds = self.displayUnseenReactionAnimations(messageIds: messageIds)
+        if !displayedMessageIds.isEmpty {
+            self.unseenReactionsProcessingManager.add(displayedMessageIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+        }
     }
     
     private func attemptReadingReactions() {
@@ -3533,7 +3542,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -4743,7 +4752,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     // must not move with it.
                     let contentHeight = strongSelf.listView.visibleSize.height - strongSelf.listView.insets.top - strongSelf.listView.insets.bottom
                     if frame.height - itemNode.attachedDateHeaderInset > contentHeight + CGFloat.ulpOfOne {
-                        strongSelf.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: listIndex, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down, holdsPosition: true, excludesAttachedHeaderSpace: true), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        strongSelf.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: listIndex, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down, hold: .always, excludesAttachedHeaderSpace: true), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     }
                 }
                 strongSelf.hasActiveTransition = false
@@ -4818,12 +4827,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private func displayUnseenReactionAnimations(messageIds: [MessageId], forceMapping: [MessageId: [ReactionsMessageAttribute.RecentPeer]] = [:]) -> [MessageId] {
         let timestamp = CACurrentMediaTime()
+        // Stamped when a message plays, not when it is asked for: a call that finds the message off screen (a
+        // jump's completion while the scroll is still landing) must not suppress the play once it is on screen.
         var messageIds = messageIds
         for i in (0 ..< messageIds.count).reversed() {
             if let previousTimestamp = self.displayUnseenReactionAnimationsTimestamps[messageIds[i]], previousTimestamp + 1.0 > timestamp {
                 messageIds.remove(at: i)
-            } else {
-                self.displayUnseenReactionAnimationsTimestamps[messageIds[i]] = timestamp
             }
         }
         
@@ -4899,6 +4908,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
             
             if let reactionItem = reactionItem, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                self.displayUnseenReactionAnimationsTimestamps[item.content.firstMessage.id] = timestamp
+                
                 let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
                 
                 chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
@@ -5174,7 +5185,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                             
                             var scrollToItem: ListViewScrollToItem?
                             if scroll {
-                                scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, holdsPosition: true)
+                                scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, hold: .always)
                             }
                             
                             self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })
@@ -5195,7 +5206,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                             
                             var scrollToItem: ListViewScrollToItem?
                             if scroll {
-                                scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, holdsPosition: true)
+                                scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true, hold: .always)
                             }
                             
                             self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion, .Synchronous], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, customAnimationTransition: customTransition, updateOpaqueState: nil, completion: { _ in })

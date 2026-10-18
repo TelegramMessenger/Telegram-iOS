@@ -23,6 +23,14 @@ final class NavigationBarRightPill {
 /// The navigation bar's 44pt row and iPhone Duo side column: title, back, left and right buttons in glass
 /// capsules, and the in-bar slide between a primary and a secondary content. Hosts own the backdrop, where the
 /// row sits, and the container the column hangs in (`sideColumnView`).
+public struct NavigationBarLentCapsule {
+    public let frame: CGRect
+    public let pressScale: CGFloat
+    public let tint: GlassBackgroundView.TintColor
+    public let isDark: Bool
+    public let content: UIView?
+}
+
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -156,6 +164,15 @@ public final class NavigationBarComponent: Component {
         var inPlaceCapsules: [NavigationBarInPlaceCapsule] = []
         var inPlaceLink: SharedDisplayLinkDriver.Link?
         var inPlaceLastTime: Double?
+        /// Run when the last capsule animating in place settles (`afterInPlaceAnimations`).
+        var inPlaceEndActions: [() -> Void] = []
+        /// A capsule appeared in place since the capsules last settled (`glassNeedsReadaptation`).
+        var inPlaceCapsuleAppeared = false
+        /// Asks the host to make its glass adapt again (`GlassBackgroundContainerView.readaptToBackdrop`). A capsule
+        /// whose glass appeared in place (UIKit materializing it, or growing out of a neighbour's) is glass UIKit only
+        /// half takes in: a context menu morphing out of it left the capsule's glass on screen behind the menu (the
+        /// profile's "…" with its Media tab). Asked once the capsules have settled.
+        public var glassNeedsReadaptation: (() -> Void)?
         /// The animation duration factor (Slow Animations): the in-place springs run this many times slower.
         public var inPlaceDurationFactor: () -> Double = {
             return UIView.animationDurationFactor()
@@ -217,13 +234,45 @@ public final class NavigationBarComponent: Component {
         public private(set) var detachedRightPressScales: [CGFloat] = []
         public private(set) var detachedRightPressGlows: [CGFloat] = []
 
+        /// The glass capsule a right button's view sits in (a right pill; on iPhone Duo the side column's capsule, a 48 pt
+        /// circle around a single button, or its trailing circle), and the press UIKit draws on it: the one handed to a
+        /// transition while the platters are detached, else the live one, else the sampler's while UIKit has only just
+        /// taken it off (a tap's press is gone before the button's action runs, and an expansion asks before the bar
+        /// detaches).
+        public func rightButtonCapsule(containing view: UIView) -> (container: UIView, pressScale: CGFloat)? {
+            for (index, pill) in self.rightPills.enumerated() {
+                if let background = pill.background, view.isDescendant(of: background) {
+                    if self.plattersDetached {
+                        return (background, index < self.detachedRightPressScales.count ? self.detachedRightPressScales[index] : 1.0)
+                    }
+                    return (background, self.pressScale(of: background))
+                }
+            }
+            for container in [self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer].compactMap({ $0 }) where view.isDescendant(of: container) {
+                return (container, self.pressScale(of: container))
+            }
+            return nil
+        }
+
+        /// The press UIKit draws on `container`, or the sampler's last one while it is recent (see `rightButtonCapsule`).
+        private func pressScale(of container: GlassContextExtractableContainer) -> CGFloat {
+            let live = navigationBarCapsulePressScale(container)
+            if abs(live - 1.0) >= 0.0005 {
+                return live
+            }
+            if let sample = self.lastPressSample, self.pressSamplerClock() - sample.time < 0.1, let sampled = sample.byContainer[ObjectIdentifier(container)] {
+                return sampled
+            }
+            return 1.0
+        }
+
         /// UIKit draws a capsule's press (on a short tap) only as a running animation on its glass, which it takes off
         /// when the touch ends, before the button's action runs (measured 2026-10-14): when that action starts a
         /// transition there is nothing left to read. So while a touch is in a capsule the press is sampled every frame,
-        /// and detaching takes the last pressed sample.
+        /// and detaching (and `rightButtonCapsule`, asked before it) takes the last pressed sample.
         private var pressSamplerLink: SharedDisplayLinkDriver.Link?
         private var pressSamplerDeadline: Double = 0.0
-        private var lastPressSample: (left: CGFloat, right: [CGFloat], time: Double)?
+        private var lastPressSample: (left: CGFloat, right: [CGFloat], byContainer: [ObjectIdentifier: CGFloat], time: Double)?
         /// The press sampler's clock (tests replace it).
         var pressSamplerClock: () -> Double = {
             return CACurrentMediaTime()
@@ -233,7 +282,13 @@ public final class NavigationBarComponent: Component {
             let now = self.pressSamplerClock()
             let left = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
             let right = self.rightPills.map { $0.background.flatMap(navigationBarCapsulePressScale) ?? 1.0 }
-            if abs(left - 1.0) < 0.0005 && right.allSatisfy({ abs($0 - 1.0) < 0.0005 }) {
+            // Every capsule's, by its glass, for `rightButtonCapsule`; the column's (iPhone Duo) are only here.
+            var byContainer: [ObjectIdentifier: CGFloat] = [:]
+            let containers = ([self.leftButtonsBackgroundContainer, self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer] + self.rightPills.map(\.background)).compactMap { $0 }
+            for container in containers {
+                byContainer[ObjectIdentifier(container)] = navigationBarCapsulePressScale(container)
+            }
+            if byContainer.values.allSatisfy({ abs($0 - 1.0) < 0.0005 }) {
                 if let sample = self.lastPressSample, now - sample.time < 0.1 {
                     // The press was just taken off: keep the last pressed sample for the hand-over.
                     return
@@ -242,7 +297,7 @@ public final class NavigationBarComponent: Component {
                 // A press held past the first window: its end is what the hand-over needs.
                 self.pressSamplerDeadline = max(self.pressSamplerDeadline, now + 0.5)
             }
-            self.lastPressSample = (left, right, now)
+            self.lastPressSample = (left, right, byContainer, now)
         }
 
         private func beginPressSampling() {
@@ -265,10 +320,73 @@ public final class NavigationBarComponent: Component {
             self.samplePress()
         }
 
+        public private(set) var isLeftCapsuleLent: Bool = false
+
+        private weak var lentColumnButtonView: UIView?
+
+        private func lendColumnLeftButton(in view: UIView, component: NavigationBarComponent) -> NavigationBarLentCapsule? {
+            guard let capsule = self.columnButtonsBackgroundContainer, capsule.superview != nil, capsule.alpha > 0.0, let contentView = self.effectiveContentView else {
+                return nil
+            }
+            guard let buttonView = contentView.leftButtonViews.values.compactMap({ $0.view }).first(where: { $0.isDescendant(of: capsule) && !$0.isHidden }) else {
+                return nil
+            }
+            let buttonFrame = buttonView.convert(buttonView.bounds, to: view)
+            let capsuleFrame = capsule.convert(capsule.bounds, to: view)
+            let side = capsuleFrame.width
+            let frame = CGRect(x: capsuleFrame.minX, y: buttonFrame.midY - side * 0.5, width: side, height: side)
+            var content: UIView?
+            if let snapshot = buttonView.snapshotView(afterScreenUpdates: false) {
+                snapshot.frame = buttonFrame
+                content = snapshot
+            }
+            let tint = navigationBarGlassTintColor(.generic, theme: component.theme)
+            buttonView.isHidden = true
+            self.lentColumnButtonView = buttonView
+            self.isLeftCapsuleLent = true
+            return NavigationBarLentCapsule(frame: frame, pressScale: 1.0, tint: tint, isDark: component.theme.overallDarkAppearance, content: content)
+        }
+
+        public func lendLeftCapsule(in view: UIView) -> NavigationBarLentCapsule? {
+            guard !self.isLeftCapsuleLent, let component = self.component else {
+                return nil
+            }
+            guard let container = self.leftButtonsBackgroundContainer, container.superview != nil else {
+                return self.lendColumnLeftButton(in: view, component: component)
+            }
+            let barPress = self.inPlaceCapsule(for: container)?.press?.value(at: self.inPlaceTime) ?? 1.0
+            var scale = navigationBarCapsulePressScale(container)
+            if abs(scale - 1.0) < 0.0005, abs(barPress - 1.0) < 0.0005, let sample = self.lastPressSample, self.pressSamplerClock() - sample.time < 0.1 {
+                scale = sample.left
+            }
+            let frame = container.convert(container.bounds, to: view)
+            var content: UIView?
+            if let snapshot = self.leftButtonsContainer.snapshotView(afterScreenUpdates: false) {
+                snapshot.frame = self.leftButtonsContainer.convert(self.leftButtonsContainer.bounds, to: view)
+                content = snapshot
+            }
+            let tint = navigationBarGlassTintColor(self.effectiveContentView?.leftCapsuleTint ?? .generic, theme: component.theme)
+            self.isLeftCapsuleLent = true
+            self.applyPlattersDetached()
+            return NavigationBarLentCapsule(frame: frame, pressScale: scale * barPress, tint: tint, isDark: component.theme.overallDarkAppearance, content: content)
+        }
+
+        public func returnLeftCapsule() {
+            guard self.isLeftCapsuleLent else {
+                return
+            }
+            self.isLeftCapsuleLent = false
+            if let buttonView = self.lentColumnButtonView {
+                self.lentColumnButtonView = nil
+                buttonView.isHidden = false
+            }
+            self.applyPlattersDetached()
+        }
+
         private func applyPlattersDetached() {
             let containers: [UIView] = ([self.leftButtonsBackgroundContainer].compactMap { $0 } as [UIView]) + self.rightBackgroundContainers
             for container in containers {
-                if self.plattersDetached {
+                if self.plattersDetached || (self.isLeftCapsuleLent && container === self.leftButtonsBackgroundContainer) {
                     container.removeFromSuperview()
                 } else if container.superview == nil {
                     self.addSubview(container)
@@ -294,6 +412,11 @@ public final class NavigationBarComponent: Component {
 
         private var effectiveContentView: NavigationBarContentView? {
             return self.secondaryContentView ?? self.primaryContentView
+        }
+
+        /// The row's back (or close) button, if it shows one.
+        public var backButtonView: UIView? {
+            return self.effectiveContentView?.backButtonView
         }
 
         public var rightButtonViews: [AnyHashable: UIView] {
@@ -420,6 +543,23 @@ public final class NavigationBarComponent: Component {
                 return columnTrailingBackgroundContainer
             }
             return nil
+        }
+
+        /// Hit-tests the side column (`point` in `sideColumnView`), which hangs outside this view and is asked by its host:
+        /// a touch in one of its capsules (the chat's avatar) may be about to be pressed by UIKit, as one in a row capsule.
+        public func sideColumnHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = self.sideColumnView.hitTest(point, with: event) else {
+                return nil
+            }
+            if event.flatMap({ $0.type == .touches }) ?? true, [self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer].contains(where: { container in
+                guard let container else {
+                    return false
+                }
+                return result.isDescendant(of: container) || result.isDescendant(of: container.contentView)
+            }) {
+                self.beginPressSampling()
+            }
+            return result
         }
 
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -678,7 +818,8 @@ public final class NavigationBarComponent: Component {
                     leftButtonsBackgroundContainer.update(size: leftButtonsContainerFrame.size, cornerRadius: leftButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: leftCapsuleTintColor, isInteractive: true, transition: leftButtonsBackgroundContainerTransition)
                     leftButtonsBackgroundContainerTransition.setFrame(view: self.leftButtonsContainer, frame: CGRect(origin: CGPoint(), size: leftButtonsContainerFrame.size))
                 }
-                leftButtonsBackgroundContainer.morphsIntoContextMenu = leftButtonCount == 1
+                // A menu from any of its buttons morphs the whole capsule, as UIKit's does with a section of several items.
+                leftButtonsBackgroundContainer.morphsIntoContextMenu = leftButtonCount != 0
             } else {
                 if let leftButtonsBackgroundContainer = self.leftButtonsBackgroundContainer {
                     self.leftButtonsBackgroundContainer = nil
@@ -786,7 +927,7 @@ public final class NavigationBarComponent: Component {
                     let partnerTint = partnerSlot.map { navigationBarGlassTintColor(self.rightPills[$0].appliedTint, theme: component.theme) } ?? tintColor
                     let partnerMove = (from: partnerSlot.flatMap { $0 < previousRightPills.count ? previousRightPills[$0]?.frame : nil } ?? partnerFrame, to: rightPillTargets.first(where: { $0.slot == partnerSlot })?.frame ?? partnerFrame)
                     self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, source: returning.frame(at: self.inPlaceTime), partner: partner, partnerFrame: partnerFrame, partnerMove: partnerMove, partnerTintColor: partnerTint, tintColor: tintColor, isDark: isDark, leaving: nil)
-                    background.morphsIntoContextMenu = buttonCount == 1
+                    background.morphsIntoContextMenu = buttonCount != 0
                     continue
                 } else {
                     isNew = true
@@ -818,7 +959,9 @@ public final class NavigationBarComponent: Component {
                     background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
                     backgroundTransition.setFrame(view: pill.itemsContainer, frame: CGRect(origin: CGPoint(), size: frame.size))
                 }
-                background.morphsIntoContextMenu = buttonCount == 1
+                // A menu from any of its buttons morphs the whole pill, its other buttons with it, and closes back into it:
+                // UIKit's with a section of several items (measured on iOS 27, Saved Messages' [search, …]).
+                background.morphsIntoContextMenu = buttonCount != 0
             }
             // Pills the row no longer has.
             for slot in rightPillMetrics.count ..< self.rightPills.count {
@@ -847,7 +990,7 @@ public final class NavigationBarComponent: Component {
             }
 
             self.updateSideColumn(component: component, transition: transition)
-            if self.plattersDetached {
+            if self.plattersDetached || self.isLeftCapsuleLent {
                 // Capsules this layout created stay out too.
                 self.applyPlattersDetached()
             }

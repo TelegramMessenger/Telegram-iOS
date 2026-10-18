@@ -381,6 +381,7 @@ extension NavigationBarComponent.View {
         capsule.isDark = isDark
         capsule.itemsTravelWithShape = false
         if isNew {
+            self.inPlaceCapsuleAppeared = true
             capsule.setFrame(frame)
             capsule.maxScale = motion.materializeScale(size: frame.size)
             capsule.dematerialization.set(1.0)
@@ -510,6 +511,9 @@ extension NavigationBarComponent.View {
     func startInPlaceMatched(container: GlassContextExtractableContainer, slot: NavigationBarCapsuleSlot, isRemoval: Bool, frame: CGRect, source insertionSource: CGRect? = nil, partner: GlassContextExtractableContainer, partnerFrame: CGRect, partnerMove: (from: CGRect, to: CGRect), partnerTintColor: GlassBackgroundView.TintColor, tintColor: GlassBackgroundView.TintColor, isDark: Bool, leaving: NavigationBarInPlaceCapsule.Items?) {
         let motion = self.inPlaceMotion
         let time = self.inPlaceTime
+        if !isRemoval {
+            self.inPlaceCapsuleAppeared = true
+        }
         let capsule: NavigationBarInPlaceCapsule
         if let current = self.inPlaceCapsule(for: container) {
             capsule = current
@@ -810,6 +814,25 @@ extension NavigationBarComponent.View {
         self.inPlaceLink?.invalidate()
         self.inPlaceLink = nil
         self.inPlaceLastTime = nil
+        let actions = self.inPlaceEndActions
+        self.inPlaceEndActions = []
+        for action in actions {
+            action()
+        }
+        if self.inPlaceCapsuleAppeared {
+            self.inPlaceCapsuleAppeared = false
+            self.glassNeedsReadaptation?()
+        }
+    }
+
+    /// Runs `action` once no capsule animates in place: at once when none does, else when the last one settles. For
+    /// work that would cut a capsule's change short (the bar's glass adapting again to its backdrop).
+    public func afterInPlaceAnimations(_ action: @escaping () -> Void) {
+        if self.inPlaceCapsules.isEmpty {
+            action()
+        } else {
+            self.inPlaceEndActions.append(action)
+        }
     }
 
     /// One frame, `dt` seconds of animation time.

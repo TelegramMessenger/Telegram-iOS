@@ -267,7 +267,7 @@ final class TextProcessingContentComponent: Component {
             guard let slug = style.slug else {
                 return
             }
-            let shareController = component.context.sharedContext.makeShareController(context: component.context, params: ShareControllerParams(
+            let shareController = component.context.sharedContext.makeShareScreen(context: component.context, params: ShareControllerParams(
                 subject: .url("https://t.me/addstyle/\(slug)"),
                 completed: { [weak self] peerIds in
                     Task { @MainActor in

@@ -426,10 +426,19 @@ public extension WalletContext {
         public enum Peer: Equatable, @unchecked Sendable {
             case user(EnginePeer, address: String, domain: String?)
             case channel(EnginePeer, address: String, domain: String?)
+            case telegramGift(ownProfile: Bool)
             case address(String, domain: String?)
             case onramp(address: String, domain: String?, providerName: String)
-            case telegramGift(ownProfile: Bool)
             case unsupported
+
+            public var peer: EnginePeer? {
+                switch self {
+                case let .user(peer, _, _), let .channel(peer, _, _):
+                    return peer
+                case .telegramGift, .address, .onramp, .unsupported:
+                    return nil
+                }
+            }
 
             public var address: String? {
                 let value: String
@@ -461,22 +470,13 @@ public extension WalletContext {
                 return value
             }
 
-            public var counterpartyPeer: EnginePeer? {
-                switch self {
-                case let .user(peer, _, _), let .channel(peer, _, _):
-                    return peer
-                case .address, .onramp, .telegramGift, .unsupported:
-                    return nil
-                }
-            }
-
             public var displayName: String? {
                 switch self {
                 case let .user(peer, _, _), let .channel(peer, _, _):
                     return peer.debugDisplayTitle
                 case let .onramp(_, _, providerName):
                     return providerName
-                case .address, .telegramGift, .unsupported:
+                case .telegramGift, .address, .unsupported:
                     return nil
                 }
             }

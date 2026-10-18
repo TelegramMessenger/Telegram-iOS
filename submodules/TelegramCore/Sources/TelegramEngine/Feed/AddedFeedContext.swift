@@ -16,7 +16,7 @@ private struct AddedFeedPage {
 
 /// One `feed.getFeed` page, stored and grouped (newest first). nil on a network error.
 private func fetchAddedFeedPage(account: Account, filterId: Int32, offsetToMaxRead: Bool, offsetPosition: EngineFeedPosition?, addOffset: Int32, limit: Int32) -> Signal<AddedFeedPage?, NoError> {
-    #if TELEGRAM_API_LAYER_233
+#if TELEGRAM_NEWS_FEED_API
     var flags: Int32 = 0
     if offsetPosition != nil {
         flags |= 1 << 0
@@ -44,9 +44,10 @@ private func fetchAddedFeedPage(account: Account, filterId: Int32, offsetToMaxRe
             }
         }
     }
-    #else
-    return .single(nil)
-    #endif
+#else
+    // The feed API is parked (layer 232): an empty page with no read mark, nothing sent.
+    return .single(AddedFeedPage(entries: [], readMaxPosition: nil))
+#endif
 }
 
 private final class AddedFeedContextImpl {
@@ -318,16 +319,17 @@ private final class AddedFeedContextImpl {
     }
 
     private func commitRead() {
-        #if TELEGRAM_API_LAYER_233
         guard let position = self.pendingReadPosition else {
             return
         }
         self.pendingReadPosition = nil
         let account = self.account
         let filterId = self.filterId
-        self.readRequestDisposables.add((account.postbox.transaction { transaction -> Void in
+        let applyLocally = account.postbox.transaction { transaction -> Void in
             applyFeedReadState(transaction: transaction, filterId: filterId, maxPosition: position)
         }
+#if TELEGRAM_NEWS_FEED_API
+        self.readRequestDisposables.add((applyLocally
         |> mapToSignal { _ -> Signal<Api.Updates?, NoError> in
             return account.network.request(Api.functions.feed.readFeed(filterId: filterId, maxPosition: position.apiPosition))
             |> map(Optional.init)
@@ -339,10 +341,11 @@ private final class AddedFeedContextImpl {
                 account.stateManager.addUpdates(updates)
             }
         }))
+#else
+        // The feed API is parked (layer 232): the read mark stays local.
+        self.readRequestDisposables.add(applyLocally.start())
+#endif
         self.persist()
-        #else
-        self.pendingReadPosition = nil
-        #endif
     }
 
     private func persist() {

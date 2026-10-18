@@ -1080,6 +1080,8 @@ struct WalletStreamingPresentationOverlay {
         peerByAddress: [String: EnginePeer],
         presentationIdByTraceId: [String: String],
         presentationIdByTransactionHash: [String: String],
+        collectibleByPendingId: [String: WalletContext.Collectible] = [:],
+        giftDepositPendingIds: Set<String> = [],
         log: ((String) -> Void)? = nil
     ) -> WalletContext.State {
         let balance: WalletContext.Resource<Int64>
@@ -1103,7 +1105,7 @@ struct WalletStreamingPresentationOverlay {
             if let traceId = pending.streamingTraceId, self.traces[traceId] != nil {
                 return nil
             }
-            return walletPendingTransferTransaction(pending)
+            return walletPendingTransferTransaction(pending, collectible: collectibleByPendingId[pending.id], isGiftDeposit: giftDepositPendingIds.contains(pending.id))
         }
         let streamingTransactions = self.traces.sorted(by: { $0.key < $1.key }).flatMap { traceId, trace in
             let transactions = self.transactionsWithPendingDetails(
@@ -1130,9 +1132,14 @@ struct WalletStreamingPresentationOverlay {
                 )
             }
         }
-        let overlayTransactions = streamingTransactions + localTransactions
-        let presentedTransactions = transactionsWithStreamingOverlay(
+        let (collectibleAuthoritative, collectibleLocal) = walletTransactionsMergingPendingCollectibleTransfers(
             authoritative: authoritativeTransactions,
+            local: localTransactions,
+            pendingTransfers: state.pendingTransfers
+        )
+        let overlayTransactions = streamingTransactions + collectibleLocal
+        let presentedTransactions = transactionsWithStreamingOverlay(
+            authoritative: collectibleAuthoritative,
             streaming: overlayTransactions,
             peerByAddress: peerByAddress,
             log: log
@@ -1165,6 +1172,57 @@ struct WalletStreamingPresentationOverlay {
             cardStickerSaveError: state.cardStickerSaveError
         )
     }
+}
+
+@available(macOS 10.15, *)
+func walletTransactionMatchesPendingCollectibleTransfer(_ transaction: WalletContext.Transaction, pending: WalletContext.PendingTransfer) -> Bool {
+    guard let collectibleAddress = pending.collectibleAddress, let collectible = transaction.collectible,
+          walletEngineAddressesEqual(collectible.address, collectibleAddress) else {
+        return false
+    }
+    if let messageHash = pending.sentTransfer?.msgHash, walletTransactionMatchesMessageHash(transaction, messageHash) {
+        return true
+    }
+    return transaction.timestamp >= pending.createdAt - 60
+}
+
+@available(macOS 10.15, *)
+func walletTransactionsMergingPendingCollectibleTransfers(
+    authoritative: [WalletContext.Transaction],
+    local: [WalletContext.Transaction],
+    pendingTransfers: [WalletContext.PendingTransfer]
+) -> (authoritative: [WalletContext.Transaction], local: [WalletContext.Transaction]) {
+    var authoritative = authoritative
+    var local = local
+    var claimed = Set<String>()
+    for pending in pendingTransfers {
+        guard let collectibleAddress = pending.collectibleAddress else {
+            continue
+        }
+        let presentationId = "pending:\(pending.id)"
+        let messageHash = pending.sentTransfer?.msgHash
+        func matches(_ transaction: WalletContext.Transaction) -> Bool {
+            guard transaction.direction == .outgoing, transaction.status != .pending,
+                  !transaction.presentationId.hasPrefix("pending:") || transaction.presentationId == presentationId,
+                  !claimed.contains(transaction.id),
+                  let collectible = transaction.collectible,
+                  walletEngineAddressesEqual(collectible.address, collectibleAddress) else {
+                return false
+            }
+            if let messageHash, walletTransactionMatchesMessageHash(transaction, messageHash) {
+                return true
+            }
+            return transaction.timestamp >= pending.createdAt - 60
+        }
+        guard let index = authoritative.firstIndex(where: matches) else {
+            continue
+        }
+        let replacement = walletTransactionWithPresentationId(authoritative[index], presentationId: presentationId)
+        authoritative[index] = replacement
+        claimed.insert(replacement.id)
+        local.removeAll { $0.presentationId == presentationId }
+    }
+    return (authoritative, local)
 }
 
 @available(macOS 10.15, *)
@@ -1416,12 +1474,13 @@ private func walletStreamingHash(_ hash: String?) -> Data? {
 
 @available(macOS 10.15, *)
 func walletHistoryTransactionForPending(_ pending: WalletContext.PendingTransfer, transactions: [WalletContext.Transaction]) -> WalletContext.Transaction? {
-    let matches = transactions.filter {
-        ($0.presentationId == "pending:\(pending.id)" || (pending.transactionHash != nil && $0.transactionHash == pending.transactionHash))
-            && !$0.id.isEmpty
-            && ($0.status == .failed || $0.status == .completed)
-            && $0.direction == .outgoing
-            && $0.peer.address.map { walletEngineAddressesEqual($0, pending.recipient) } == true
+    let matches = transactions.filter { transaction in
+        (transaction.presentationId == "pending:\(pending.id)" || (pending.transactionHash != nil && transaction.transactionHash == pending.transactionHash)
+            || walletTransactionMatchesPendingCollectibleTransfer(transaction, pending: pending))
+            && !transaction.id.isEmpty
+            && (transaction.status == .failed || transaction.status == .completed)
+            && transaction.direction == .outgoing
+            && (transaction.peer.address.map { walletEngineAddressesEqual($0, pending.recipient) } ?? (pending.collectibleAddress != nil))
     }
     return matches.count == 1 ? matches.first : nil
 }
@@ -1755,7 +1814,7 @@ extension WalletContextImpl {
                 if let key = walletAddressMappingKey(address) {
                     peerlessAddresses.insert(key)
                 }
-            case .channel, .onramp, .telegramGift, .unsupported:
+            case .channel, .telegramGift, .onramp, .unsupported:
                 break
             }
         }
@@ -1767,7 +1826,7 @@ extension WalletContextImpl {
             case let .address(address, _):
                 guard let key = walletAddressMappingKey(address), peerlessAddresses.contains(key) else { return nil }
                 return transaction
-            case .onramp, .telegramGift, .unsupported:
+            case .telegramGift, .onramp, .unsupported:
                 return nil
             }
         }

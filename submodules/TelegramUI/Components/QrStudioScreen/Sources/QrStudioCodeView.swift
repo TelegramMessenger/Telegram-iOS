@@ -110,6 +110,13 @@ private final class QrStudioCodeSweep {
         self.coreLayer.lineWidth = 1.6
         self.coreLayer.opacity = 0.9
 
+        for layer in [self.glowLayer, self.coreLayer] {
+            let clip = SimpleLayer()
+            clip.backgroundColor = UIColor.black.cgColor
+            clip.frame = frame.insetBy(dx: -QrStudioSweep.canvasPad, dy: -QrStudioSweep.canvasPad)
+            layer.mask = clip
+        }
+
         let margin = QrStudioAshLayer.margin
         self.ashLayer.frame = frame.insetBy(dx: -margin, dy: -margin)
         self.ashLayer.start(matrix: oldMatrix, side: side, ink: ink, at: startedAt)
@@ -168,7 +175,7 @@ private final class QrStudioCodeSweep {
         self.newMask.startPoint = CGPoint(x: 0.5, y: top / side)
         self.newMask.endPoint = CGPoint(x: 0.5, y: bottom / side)
         self.hotMask.startPoint = CGPoint(x: 0.5, y: top / side)
-        self.hotMask.endPoint = CGPoint(x: 0.5, y: (bottom + 22.0) / side)
+        self.hotMask.endPoint = CGPoint(x: 0.5, y: (bottom + QrStudioSweep.hot) / side)
 
         self.ashLayer.tick(time: time)
     }
@@ -200,6 +207,13 @@ final class QrStudioCodeView: UIView {
 
     private var sweep: QrStudioCodeSweep?
     private var sweepLink: SharedDisplayLinkDriver.Link?
+    private var pendingMatrix: QrCodeMatrix?
+
+    private var revealLink: SharedDisplayLinkDriver.Link?
+    private var revealElapsed: Double = 0.0
+    private var revealLastTick: Double?
+    private let revealMask = CAShapeLayer()
+    private var revealEyes: [(layer: CAShapeLayer, distance: Double)] = []
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -237,6 +251,7 @@ final class QrStudioCodeView: UIView {
     }
 
     private func startSweep(oldMatrix: QrCodeMatrix, oldPaths: QrStudioCodePaths, newPaths: QrStudioCodePaths, ink: QrStudioColor, side: CGFloat) {
+        self.endReveal()
         self.endSweep()
 
         let sweep = QrStudioCodeSweep(startedAt: QrStudioClock.now, side: side, oldPaths: oldPaths, oldMatrix: oldMatrix, newPaths: newPaths, ink: ink)
@@ -257,6 +272,11 @@ final class QrStudioCodeView: UIView {
                 return
             }
             let time = QrStudioClock.now
+            if let pendingMatrix = self.pendingMatrix, time - sweep.startedAt >= QrStudioSweep.sweepTime {
+                self.pendingMatrix = nil
+                self.applyPendingMatrix(pendingMatrix)
+                return
+            }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             if sweep.isCodeSettled(at: time) {
@@ -272,6 +292,23 @@ final class QrStudioCodeView: UIView {
             }
             CATransaction.commit()
         })
+    }
+
+    private func applyPendingMatrix(_ matrix: QrCodeMatrix) {
+        let size = self.bounds.size
+        let side = min(size.width, size.height)
+        guard let previousMatrix = self.matrix, let previousPaths = self.paths, let ink = self.ink, previousMatrix != matrix, side > 0.0 else {
+            return
+        }
+        let paths = QrStudioCodePaths(matrix: matrix, side: side)
+        self.matrix = matrix
+        self.pathsSize = size
+        self.paths = paths
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.codeLayer.update(paths: paths, color: ink.uiColor.cgColor, size: size)
+        self.startSweep(oldMatrix: previousMatrix, oldPaths: previousPaths, newPaths: paths, ink: ink, side: side)
+        CATransaction.commit()
     }
 
     private func animateLogoDip() {
@@ -297,9 +334,147 @@ final class QrStudioCodeView: UIView {
         self.planeHostView.layer.add(group, forKey: "dip")
     }
 
+    static let revealTime: Double = 0.6
+    private static let logoRevealTime: Double = 0.9
+
+    private static func logoSpring(_ t: Double) -> Double {
+        let zeta = 0.7
+        let omega = 2.0 * Double.pi / 0.6
+        let damped = omega * (1.0 - zeta * zeta).squareRoot()
+        return 1.0 - exp(-zeta * omega * t) * (cos(damped * t) + zeta * omega / damped * sin(damped * t))
+    }
+
+    func playReveal(delay: Double) {
+        self.endReveal()
+        let size = self.bounds.size
+        let side = min(size.width, size.height)
+        guard let matrix = self.matrix, let ink = self.ink, side > 0.0 else {
+            return
+        }
+        let n = matrix.size
+        let unit = side / CGFloat(max(1, n))
+        let center = Double(n - 1) / 2.0
+        let reach = hypot(center, center)
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.revealMask.frame = CGRect(origin: CGPoint(), size: size)
+        self.revealMask.path = nil
+        self.codeLayer.bodyLayer.mask = self.revealMask
+        self.codeLayer.framesLayer.isHidden = true
+        self.codeLayer.ballsLayer.isHidden = true
+        for eye in matrix.eyes {
+            let rect = CGRect(x: CGFloat(eye.x) * unit, y: CGFloat(eye.y) * unit, width: unit * 7.0, height: unit * 7.0)
+            let local = CGRect(origin: CGPoint(), size: rect.size)
+            let parts = QrStudioCodePaths.eyeParts(rect: local, unit: unit)
+            let path = CGMutablePath()
+            path.addPath(parts.outer)
+            path.addPath(parts.inner)
+            path.addPath(parts.ball)
+            let layer = CAShapeLayer()
+            layer.fillRule = .evenOdd
+            layer.fillColor = ink.uiColor.cgColor
+            layer.path = path
+            layer.bounds = local
+            layer.position = CGPoint(x: rect.midX, y: rect.midY)
+            layer.transform = CATransform3DMakeScale(0.001, 0.001, 1.0)
+            self.codeLayer.addSublayer(layer)
+            self.revealEyes.append((layer, hypot(Double(eye.x) + 3.0 - center, Double(eye.y) + 3.0 - center) / reach))
+        }
+        for layer in [self.logoBackgroundLayer, self.planeHostView.layer] {
+            layer.transform = CATransform3DMakeScale(0.55, 0.55, 1.0)
+            layer.opacity = 0.0
+        }
+        CATransaction.commit()
+
+        var cells: [(x: Int, y: Int, distance: Double)] = []
+        for y in 0 ..< n {
+            for x in 0 ..< n where matrix[x, y] && !QrCodeMatrix.isEye(x: x, y: y, size: n) && !QrStudioCodePaths.isInLogo(x: x, y: y, size: n) {
+                cells.append((x, y, hypot(Double(x) - center, Double(y) - center) / reach))
+            }
+        }
+
+        self.revealElapsed = -delay
+        self.revealLastTick = nil
+        self.revealLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let now = QrStudioClock.now
+            if let lastTick = self.revealLastTick {
+                self.revealElapsed += min(now - lastTick, 1.0 / 30.0)
+            }
+            self.revealLastTick = now
+            let k = min(1.0, max(0.0, self.revealElapsed / QrStudioCodeView.revealTime))
+            if self.revealElapsed >= QrStudioCodeView.logoRevealTime {
+                self.endReveal()
+                return
+            }
+            let logoTime = max(0.0, self.revealElapsed)
+            let logoScale = 0.55 + 0.45 * QrStudioCodeView.logoSpring(logoTime)
+            let logoAlpha = 1.0 - pow(1.0 - min(1.0, logoTime / 0.25), 2.0)
+            func grow(_ distance: Double) -> Double {
+                return QrStudioCurve.backOut(QrStudioCurve.clamp01((k - 0.5 * distance) / 0.5))
+            }
+            let windows = CGMutablePath()
+            for cell in cells {
+                let s = grow(cell.distance)
+                guard s > 0.01 else {
+                    continue
+                }
+                let w = unit * 1.5 * CGFloat(s)
+                let r = min(w * 0.5, w * 0.5 * CGFloat(1.0 - 0.7 * QrStudioCurve.clamp01(s)))
+                windows.addRoundedRect(in: CGRect(x: (CGFloat(cell.x) + 0.5) * unit - w * 0.5, y: (CGFloat(cell.y) + 0.5) * unit - w * 0.5, width: w, height: w), cornerWidth: r, cornerHeight: r)
+            }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.revealMask.path = windows
+            for layer in [self.logoBackgroundLayer, self.planeHostView.layer] {
+                layer.transform = CATransform3DMakeScale(CGFloat(logoScale), CGFloat(logoScale), 1.0)
+                layer.opacity = Float(logoAlpha)
+            }
+            for eye in self.revealEyes {
+                let s = max(0.001, CGFloat(grow(eye.distance)))
+                eye.layer.transform = CATransform3DMakeScale(s, s, 1.0)
+            }
+            CATransaction.commit()
+        })
+    }
+
+    private func endReveal() {
+        guard self.revealLink != nil || !self.revealEyes.isEmpty else {
+            return
+        }
+        self.revealLink = nil
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if self.codeLayer.bodyLayer.mask === self.revealMask {
+            self.codeLayer.bodyLayer.mask = nil
+        }
+        self.codeLayer.framesLayer.isHidden = false
+        self.codeLayer.ballsLayer.isHidden = false
+        for layer in [self.logoBackgroundLayer, self.planeHostView.layer] {
+            layer.transform = CATransform3DIdentity
+            layer.opacity = 1.0
+        }
+        for eye in self.revealEyes {
+            eye.layer.removeFromSuperlayer()
+        }
+        self.revealEyes = []
+        CATransaction.commit()
+    }
+
     func update(matrix: QrCodeMatrix?, ink: QrStudioColor, cardColor: UIColor, transition: ComponentTransition, animatesInk: Bool = true) {
         let size = self.bounds.size
         let side = min(size.width, size.height)
+
+        var matrix = matrix
+        if let incoming = matrix, let sweep = self.sweep, self.matrix != nil, self.pathsSize == size, !transition.animation.isImmediate, QrStudioClock.now - sweep.startedAt < QrStudioSweep.sweepTime {
+            self.pendingMatrix = incoming == self.matrix ? nil : incoming
+            matrix = self.matrix
+        } else {
+            self.pendingMatrix = nil
+        }
 
         let previousMatrix = self.matrix
         let previousPaths = self.paths
@@ -323,6 +498,9 @@ final class QrStudioCodeView: UIView {
             }
             var targets: [(CALayer, String)] = self.codeLayer.shapeLayers.map { ($0, "fillColor") }
             targets.append((self.logoBackgroundLayer, "backgroundColor"))
+            for eye in self.revealEyes {
+                targets.append((eye.layer, "fillColor"))
+            }
             for (targetLayer, keyPath) in targets {
                 let animation = CAKeyframeAnimation(keyPath: keyPath)
                 animation.values = values
@@ -332,6 +510,9 @@ final class QrStudioCodeView: UIView {
             }
         }
         self.codeLayer.update(paths: self.paths, color: inkColor, size: size)
+        for eye in self.revealEyes {
+            eye.layer.fillColor = inkColor
+        }
 
         let hasCode = self.paths != nil
         let logoDiameter = self.paths?.logoDiameter ?? 0.0

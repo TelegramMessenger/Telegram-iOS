@@ -14,10 +14,11 @@ final class NewsChannelBarTests: XCTestCase {
         XCTAssertEqual(self.action(.left, feature: false), .existing)
     }
 
-    // A light join can always be moved or removed, so it does not depend on the feature.
-    func testLightJoinShowsAddedToNewsWithTheFeatureOnOrOff() {
+    // With the feature off a channel shows Join, as before News, even when it was added to News while the feature was
+    // on (user decision, 2026-10-16).
+    func testLightJoinShowsAddedToNewsOnlyWithTheFeatureOn() {
         XCTAssertEqual(self.action(inNews: true, .left), .addedToNews)
-        XCTAssertEqual(self.action(inNews: true, .left, feature: false), .addedToNews)
+        XCTAssertEqual(self.action(inNews: true, .left, feature: false), .existing)
     }
 
     // The mockup has no Mute/Unmute: every joined channel is "Added to Chats", in News or not.
@@ -43,6 +44,7 @@ final class NewsChannelBarTests: XCTestCase {
 
     func testAddingShowsAddedToNewsAtOnce() {
         XCTAssertEqual(self.action(.left, pending: NewsChannelBarPending(isAddingToNews: true)), .addedToNews)
+        XCTAssertEqual(self.action(.left, feature: false, pending: NewsChannelBarPending(isAddingToNews: true)), .existing)
     }
 
     // Add to Chats mutes the channel before its request ends, so the island never shows the bell in between.

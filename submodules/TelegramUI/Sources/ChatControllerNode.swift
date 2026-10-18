@@ -818,7 +818,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
-        self.messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, getContentAreaInScreenSpace: {
+        self.messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, animationParameters: context.sharedContext.immediateExperimentalUISettings.springSendAnimation ? .spring : .bezier, getContentAreaInScreenSpace: {
             return getContentAreaInScreenSpaceImpl?() ?? CGRect()
         }, onTransitionEvent: { transition in
             onTransitionEventImpl?(transition)
@@ -2148,7 +2148,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             
             previousHistoryNode.supernode?.insertSubnode(self.historyNode, aboveSubnode: previousHistoryNode)
             
-            let messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, getContentAreaInScreenSpace: { [weak self] in
+            let messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, animationParameters: self.messageTransitionNode.animationParameters, getContentAreaInScreenSpace: { [weak self] in
                 guard let self else {
                     return CGRect()
                 }
@@ -5203,21 +5203,30 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     let nsText = replyMessage.text as NSString
                     var startIndex = 0
                     var found = false
-                    while true {
-                        let range = nsText.range(of: quote.text, range: NSRange(location: startIndex, length: nsText.length - startIndex))
-                        if range.location != NSNotFound {
-                            let subEntities = messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: range, onlyQuoteable: true)
-                            if subEntities == quote.entities {
-                                found = true
+                    if let richText = quote.richText {
+                        // A rich quote is checked by the server's own rule against the page it was cut
+                        // from; a page still partial (before Show more) is checked as far as it goes.
+                        if let attribute = replyMessage.richText {
+                            let page = attribute.fullInstantPage ?? attribute.instantPage
+                            found = richReplyQuoteMatches(richText, nodes: page.quotableNodes, isPartialPage: !page.isComplete, offset: quote.offset)
+                        }
+                    } else {
+                        while true {
+                            let range = nsText.range(of: quote.text, range: NSRange(location: startIndex, length: nsText.length - startIndex))
+                            if range.location != NSNotFound {
+                                let subEntities = messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: range, onlyQuoteable: true)
+                                if subEntities == quote.entities {
+                                    found = true
+                                    break
+                                }
+
+                                startIndex = range.upperBound
+                            } else {
                                 break
                             }
-                            
-                            startIndex = range.upperBound
-                        } else {
-                            break
                         }
                     }
-                    
+
                     if !found, let controller = self.controller {
                         let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
                         let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)

@@ -24,6 +24,8 @@ public struct PassContents {
 }
 
 private let passImageMaxDimension = 4096
+private let passImageMaxDecodedDimension = 1024
+private let passDrawnImageKinds: [PassImageKind] = [.logo, .strip, .background, .thumbnail]
 
 func passImageFileName(kind: PassImageKind, scale: Int, available: Set<String>) -> String? {
     func name(_ scale: Int) -> String {
@@ -34,7 +36,7 @@ func passImageFileName(kind: PassImageKind, scale: Int, available: Set<String>) 
 }
 
 private func decodePassImage(_ data: Data) -> CGImage? {
-    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil), let type = CGImageSourceGetType(source), type as String == "public.png" else {
         return nil
     }
     guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any], let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue, let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue else {
@@ -43,7 +45,13 @@ private func decodePassImage(_ data: Data) -> CGImage? {
     guard width > 0, height > 0, width <= passImageMaxDimension, height <= passImageMaxDimension else {
         return nil
     }
-    return CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+    let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: false,
+        kCGImageSourceThumbnailMaxPixelSize: min(passImageMaxDecodedDimension, max(width, height)),
+        kCGImageSourceShouldCacheImmediately: true
+    ]
+    return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
 }
 
 public func loadPassContents(path: String, scale: Int) -> PassContents? {
@@ -67,7 +75,7 @@ public func loadPassContents(path: String, scale: Int) -> PassContents? {
     }
 
     var images: [PassImageKind: CGImage] = [:]
-    for kind in PassImageKind.allCases {
+    for kind in passDrawnImageKinds {
         guard let name = passImageFileName(kind: kind, scale: scale, available: names), let data = archive.contents(of: name), let image = decodePassImage(data) else {
             continue
         }

@@ -487,7 +487,7 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
                 }
                 if !currentAddressName.isEmpty {
                     dismissInputImpl?()
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(currentAddressName)"), actionCompleted: {
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(currentAddressName)"), actionCompleted: {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }))

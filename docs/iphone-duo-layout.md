@@ -94,6 +94,9 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - `UIScreen.main` used for layout while unfolded.
 - `widthClass == .regular` treated as iPad.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
+- Something parked just past the content's edge, off-screen on a phone, shows in the strip beside a band: the story
+  viewer's resting cube neighbours sat 40pt into FP's strip. Clip to the band (the stories turn the clip off while
+  opening and closing, which can start or end at an avatar in the strip).
 - A layout that computes the right value and never applies it (dead code), or that fixes a legacy node while the
   visible control is a different one: verify each fix on screen, not only by build and review.
 

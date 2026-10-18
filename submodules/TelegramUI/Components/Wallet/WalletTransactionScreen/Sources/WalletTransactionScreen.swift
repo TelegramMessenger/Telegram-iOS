@@ -40,6 +40,7 @@ import TelegramUIPreferences
 import TelegramNotices
 import InvisibleInkDustNode
 import WalletAuthorizationUI
+import GiftAnimationComponent
 
 private struct WalletTransactionPreviewSource: Equatable {
     let id: String
@@ -984,6 +985,12 @@ private final class WalletTransactionContentComponent: Component {
         private var controlsCornerRightInset: CGFloat = 0.0
         private let keyUpdateHeader = ComponentView<Empty>()
         private let collectibleHeader = ComponentView<Empty>()
+        private let giftComposition = ComponentView<Empty>()
+        private let giftCompositionState = GiftCompositionComponent.ExternalState()
+        private let giftTitle = ComponentView<Empty>()
+        private let giftSubtitle = ComponentView<Empty>()
+        private var accountPeer: EnginePeer?
+        private var accountPeerDisposable: Disposable?
         private var gramAnimation = ComponentView<Empty>()
         private var pagerPosition: WalletPagerView.ItemPosition?
         private var roll = Roll()
@@ -1099,6 +1106,7 @@ private final class WalletTransactionContentComponent: Component {
             self.transferDisposable.dispose()
             self.discardTransferDisposables.dispose()
             self.commentDecryptionDisposable.dispose()
+            self.accountPeerDisposable?.dispose()
             self.commentAuthorizationDisposable.dispose()
         }
 
@@ -2269,7 +2277,7 @@ private final class WalletTransactionContentComponent: Component {
                     transferAnimation: transactionController?.transferAnimation,
                     completed: transactionController?.returnedToWallet
                 )
-            case .channel, .onramp, .telegramGift, .unsupported:
+            case .channel, .telegramGift, .onramp, .unsupported:
                 return
             }
             sendScreen.navigationPresentation = .modal
@@ -2310,7 +2318,7 @@ private final class WalletTransactionContentComponent: Component {
                     in: .current
                 )
             case .share:
-                let shareController = component.context.sharedContext.makeShareController(
+                let shareController = component.context.sharedContext.makeShareScreen(
                     context: component.context,
                     params: ShareControllerParams(
                         subject: .text(text.string),
@@ -2555,6 +2563,57 @@ private final class WalletTransactionContentComponent: Component {
             let displayedDirection: WalletContext.Transaction.Direction = displaysIncomingSelfTransfer ? .incoming : transaction.direction
             let displayedAmount = displaysIncomingSelfTransfer ? abs(transaction.amount) : transaction.amount
             let showsMore = !self.isPreview || (self.isFinishedPreview && self.transaction != nil)
+            if self.accountPeerDisposable == nil {
+                let accountPeerId = component.context.account.peerId
+                self.accountPeerDisposable = (component.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId))
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    self.accountPeer = peer
+                    self.componentState?.updated(transition: .immediate)
+                })
+            }
+            let headerGift: StarGift.UniqueGift? = transaction.kind == .keyChange ? nil : transaction.collectible?.nft?.gift
+            let isOwnProfileGiftTransfer: Bool
+            if case .telegramGift(true) = transaction.peer {
+                isOwnProfileGiftTransfer = true
+            } else {
+                isOwnProfileGiftTransfer = false
+            }
+            let giftHeaderHeight: CGFloat = 240.0
+            var controlsBackground: GlassControlGroupComponent.Background = .panel
+            var giftVibrantColor = UIColor.white.withAlphaComponent(0.6)
+            if let headerGift {
+                let compositionSize = self.giftComposition.update(
+                    transition: transition,
+                    component: AnyComponent(GiftCompositionComponent(
+                        context: component.context,
+                        theme: theme,
+                        subject: .unique(nil, headerGift),
+                        externalState: self.giftCompositionState
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: giftHeaderHeight)
+                )
+                if let compositionView = self.giftComposition.view {
+                    if compositionView.superview == nil {
+                        self.insertSubview(compositionView, at: 0)
+                    }
+                    transition.setFrame(view: compositionView, frame: CGRect(origin: .zero, size: compositionSize))
+                    compositionView.alpha = 1.0
+                }
+                if let backgroundColor = self.giftCompositionState.backgroundColor {
+                    controlsBackground = .color(backgroundColor.mixedWith(.white, alpha: 0.2))
+                }
+                if let patternColor = self.giftCompositionState.previewPatternColor {
+                    giftVibrantColor = patternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
+                }
+            } else {
+                self.giftComposition.view?.alpha = 0.0
+                self.giftTitle.view?.isHidden = true
+                self.giftSubtitle.view?.isHidden = true
+            }
             let controlsComponent = AnyComponent(GlassControlPanelComponent(
                 theme: theme,
                 leftItem: GlassControlPanelComponent.Item(
@@ -2565,7 +2624,7 @@ private final class WalletTransactionContentComponent: Component {
                             self?.close()
                         }
                     )],
-                    background: .panel
+                    background: controlsBackground
                 ),
                 centralItem: nil,
                 rightItem: showsMore ? GlassControlPanelComponent.Item(
@@ -2581,10 +2640,10 @@ private final class WalletTransactionContentComponent: Component {
                             self.openExplorer(sourceView: sourceView)
                         }
                     )],
-                    background: .panel
+                    background: controlsBackground
                 ) : nil,
                 centerAlignmentIfPossible: true,
-                isDark: theme.overallDarkAppearance
+                isDark: headerGift != nil ? true : theme.overallDarkAppearance
             ))
             let controlsSize = self.controlButtons.update(
                 transition: transition,
@@ -2618,7 +2677,7 @@ private final class WalletTransactionContentComponent: Component {
             if !isKeyChange, let headerView = self.keyUpdateHeader.view {
                 transition.setAlpha(view: headerView, alpha: 0.0)
             }
-            if isKeyChange || transaction.collectible == nil, let headerView = self.collectibleHeader.view {
+            if isKeyChange || transaction.collectible == nil || headerGift != nil, let headerView = self.collectibleHeader.view {
                 transition.setAlpha(view: headerView, alpha: 0.0)
                 (headerView as? WalletCollectibleHeaderComponent.View)?.setAnimationVisible(false)
             }
@@ -2654,6 +2713,57 @@ private final class WalletTransactionContentComponent: Component {
                     transition.setAlpha(view: headerView, alpha: 1.0)
                 }
                 contentHeight = headerSize.height
+            } else if let headerGift {
+                let titleFont = Font.bold(20.0)
+                let numberFont = headerGift.number < 1000 ? titleFont : Font.bold(15.0)
+                let titleString = NSMutableAttributedString(string: headerGift.title + " ", font: titleFont, textColor: .white)
+                titleString.append(NSAttributedString(string: "#" + formatCollectibleNumber(headerGift.number, dateTimeFormat: environment.dateTimeFormat), font: numberFont, textColor: giftVibrantColor))
+                let titleSize = self.giftTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(titleString),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - 32.0 - 60.0, height: 100.0)
+                )
+                var subtitleText: String?
+                if isOwnProfileGiftTransfer {
+                    subtitleText = displayedDirection == .incoming ? environment.strings.Wallet_Transaction_MovedFromProfile : environment.strings.Wallet_Transaction_MovedToProfile
+                }
+                let titleCenterY: CGFloat = subtitleText == nil ? 200.0 : 190.0
+                if let titleView = self.giftTitle.view {
+                    if titleView.superview == nil {
+                        titleView.isUserInteractionEnabled = false
+                        self.addSubview(titleView)
+                    }
+                    titleView.isHidden = false
+                    titleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels(titleCenterY - titleSize.height / 2.0)), size: titleSize)
+                }
+                if let subtitleText {
+                    let subtitleSize = self.giftSubtitle.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(13.0), textColor: giftVibrantColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 1
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - 32.0, height: 100.0)
+                    )
+                    if let subtitleView = self.giftSubtitle.view {
+                        if subtitleView.superview == nil {
+                            subtitleView.isUserInteractionEnabled = false
+                            self.addSubview(subtitleView)
+                        }
+                        subtitleView.isHidden = false
+                        subtitleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subtitleSize.width) / 2.0), y: floorToScreenPixels(213.0 - subtitleSize.height / 2.0)), size: subtitleSize)
+                    }
+                } else {
+                    self.giftSubtitle.view?.isHidden = true
+                }
+                contentHeight = giftHeaderHeight - 6.0
             } else if let collectible = transaction.collectible {
                 let headerSize = self.collectibleHeader.update(
                     transition: transition,
@@ -2858,7 +2968,10 @@ private final class WalletTransactionContentComponent: Component {
                 contentHeight += usdSize.height
             }
 
-            let displaysCommentBubble = !self.isPreview || self.isFinishedPreview
+            var displaysCommentBubble = !self.isPreview || self.isFinishedPreview
+            if case .telegramGift = transaction.peer {
+                displaysCommentBubble = false
+            }
             let displayedComment = transaction.commentEncrypted ? self.decryptedComment : walletTransactionComment(transaction.comment)
             let isCommentConcealed = transaction.commentEncrypted && transaction.comment?.isEmpty == false && self.decryptedComment == nil
             self.commentButton.view?.isHidden = !displaysCommentBubble || !isCommentConcealed
@@ -3022,11 +3135,9 @@ private final class WalletTransactionContentComponent: Component {
                 let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 return value.isEmpty ? nil : value
             }
-            let counterpartyName: String?
-            if case let .telegramGift(ownProfile) = transaction.peer {
-                counterpartyName = ownProfile ? environment.strings.Settings_MyProfile : environment.strings.PeerInfo_PaneGifts
-            } else {
-                counterpartyName = peerDisplayName ?? transaction.peer.domain
+            var counterpartyName = peerDisplayName ?? transaction.peer.domain
+            if case .telegramGift = transaction.peer {
+                counterpartyName = environment.strings.Wallet_Transaction_Telegram
             }
             let addressText: NSAttributedString?
             let addressComponent: AnyComponent<Empty>?
@@ -3055,7 +3166,7 @@ private final class WalletTransactionContentComponent: Component {
             }
             let counterpartyContentId: CounterpartyContentId
             let counterpartyContent: AnyComponent<Empty>
-            if let peer = transaction.peer.counterpartyPeer {
+            if let peer = transaction.peer.peer ?? (isOwnProfileGiftTransfer ? self.accountPeer : nil) {
                 counterpartyContentId = .peer(peer.id)
                 let peerItems: [AnyComponentWithIdentity<Empty>] = [
                     AnyComponentWithIdentity(
@@ -3111,7 +3222,7 @@ private final class WalletTransactionContentComponent: Component {
                 canSendToPeer = true
             case .address:
                 canSendToPeer = transaction.peer.address != nil
-            case .channel, .onramp, .telegramGift, .unsupported:
+            case .channel, .telegramGift, .onramp, .unsupported:
                 canSendToPeer = false
             }
             let displaysSendButton: Bool
@@ -3129,7 +3240,7 @@ private final class WalletTransactionContentComponent: Component {
             switch transaction.peer {
             case .address:
                 alignSendButtonToTop = true
-            case .user, .channel, .onramp, .telegramGift, .unsupported:
+            case .user, .channel, .telegramGift, .onramp, .unsupported:
                 alignSendButtonToTop = false
             }
             let counterpartyComponent: AnyComponent<Empty>

@@ -1858,8 +1858,8 @@ extension WalletContextImpl {
             }
             let transfer = PreparedTransfer(
                 id: UUID().uuidString.lowercased(),
-                recipient: destination.address,
-                amount: amount,
+                recipient: walletNftTransferNewOwner(payload) ?? destination.address,
+                amount: 0,
                 comment: nil,
                 collectible: collectible,
                 fee: fee,
@@ -1868,7 +1868,9 @@ extension WalletContextImpl {
             self.preparedTransfers[transfer.id] = PreparedEngineTransferRecord(
                 walletAddress: info.address,
                 transfer: transfer,
-                request: .send(intent)
+                request: .send(intent),
+                allowsGasless: false,
+                isGiftDeposit: true
             )
             self.removeExpiredPreparedTransfers()
             return transfer
@@ -2005,7 +2007,7 @@ extension WalletContextImpl {
                 throw WalletError.unavailable
             }
             let expectedGasless: Bool
-            if WalletContext.useWalletTransferApi, case .send = record.request,
+            if WalletContext.useWalletTransferApi, case .send = record.request, record.allowsGasless,
                !WalletContext.isSelfTransfer(recipient: prepared.recipient, walletAddress: info.address) {
                 expectedGasless = WalletContext.isGaslessEligible(
                     amount: prepared.amount,
@@ -2029,6 +2031,12 @@ extension WalletContextImpl {
                 createdAt: createdAt,
                 status: .broadcasting
             )
+            if let collectible = prepared.collectible {
+                self.pendingTransferCollectibles[pending.id] = collectible
+            }
+            if record.isGiftDeposit {
+                self.pendingGiftDepositIds.insert(pending.id)
+            }
             if WalletContext.useWalletTransferApi, case let .send(intent) = record.request {
                 let submission = try await self.beginWalletApiSubmission(
                     prepared: prepared,
@@ -2041,7 +2049,8 @@ extension WalletContextImpl {
                     control: control,
                     minimumSeqno: minimumSeqno,
                     pendingRegistration: registration?.registration,
-                    registrationSession: registration?.session
+                    registrationSession: registration?.session,
+                    allowsGasless: record.allowsGasless
                 )
                 if pendingMessage != nil { await pendingMessageCreated?() }
                 return .api(submission)

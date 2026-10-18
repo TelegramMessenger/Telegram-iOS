@@ -1074,6 +1074,13 @@ public protocol MediaPickerScreen: ViewController {
 }
 
 public protocol ChatQrCodeScreen: ViewController {
+    func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void)
+}
+
+public extension ChatQrCodeScreen {
+    func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void) {
+        ready()
+    }
 }
 
 public protocol MediaEditorScreenResult {
@@ -1567,8 +1574,9 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, forceDark: Bool, action: @escaping () -> Void, dismissed: (() -> Void)?) -> ViewController
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     func makeStarsGiftController(context: AccountContext, birthdays: [EnginePeer.Id: TelegramBirthday]?, completion: @escaping (([EnginePeer.Id]) -> Void)) -> ViewController
-    func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?) -> ViewController
+    func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?, withdraw: ((StarGiftReference, String?) -> Signal<Never, WithdrawStarGiftError>)?) -> ViewController
     func makeGiftOptionsController(context: AccountContext, peerId: EnginePeer.Id, premiumOptions: [CachedPremiumGiftOption], hasBirthday: Bool, completion: (() -> Void)?) -> ViewController
+    func makeGiftCollectiblesController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController
     func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
     func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
@@ -1643,6 +1651,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController
     func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?)
     func makeShareController(context: AccountContext, params: ShareControllerParams) -> ViewController
+    func makeShareScreen(context: AccountContext, params: ShareControllerParams) -> ViewController
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController
@@ -2193,11 +2202,13 @@ public struct WalletCollectibleStickerMenuState {
     public let isOnCard: Bool
     public let isStyled: Bool
     public let canStyle: Bool
+    public let isStyleRestricted: Bool
 
-    public init(isOnCard: Bool, isStyled: Bool, canStyle: Bool) {
+    public init(isOnCard: Bool, isStyled: Bool, canStyle: Bool, isStyleRestricted: Bool) {
         self.isOnCard = isOnCard
         self.isStyled = isStyled
         self.canStyle = canStyle
+        self.isStyleRestricted = isStyleRestricted
     }
 }
 
@@ -2209,4 +2220,10 @@ public protocol WalletCollectibleStickerHost: AnyObject {
     func beginStickerTearOff(collectible: WalletContext.Collectible, sourceView: UIView, location: CGPoint) -> Bool
     func updateStickerTearOff(location: CGPoint)
     func endStickerTearOff()
+}
+
+public extension SharedAccountContext {
+    func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?) -> ViewController {
+        return self.makePremiumGiftController(context: context, source: source, completion: completion, withdraw: nil)
+    }
 }

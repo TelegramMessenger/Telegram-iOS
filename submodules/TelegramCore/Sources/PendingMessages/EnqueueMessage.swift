@@ -57,10 +57,13 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
     public var offset: Int?
     public var entities: [MessageTextEntity]
     public var media: Media?
+    /// The fragments of a quote of a rich message, one per quoted text node, as sent in
+    /// `quote_rich`. `text` and `entities` are then their flat form (`richReplyQuoteTextAndEntities`),
+    /// which is what every display and search path reads.
     public var richText: [RichText]?
     
     public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?, richText: [RichText]? = nil) {
-        self.text = text.isEmpty ? richText?.map { $0.plainText }.joined(separator: "\n") ?? text : text
+        self.text = text
         self.offset = offset
         self.entities = entities
         self.media = media
@@ -73,20 +76,17 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         self.text = try container.decode(String.self, forKey: .text)
         self.offset = (try container.decodeIfPresent(Int32.self, forKey: .offset)).flatMap(Int.init)
         self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
-        if let richTextData = try container.decodeIfPresent(Data.self, forKey: .richText) {
-            let richTextDecoder = PostboxDecoder(buffer: MemoryBuffer(data: richTextData))
-            self.richText = richTextDecoder.decodeObjectArrayWithDecoderForKey("r")
-        } else {
-            self.richText = nil
-        }
-        if self.text.isEmpty, let richText = self.richText {
-            self.text = richText.map { $0.plainText }.joined(separator: "\n")
-        }
         
         if let mediaData = try container.decodeIfPresent(Data.self, forKey: .media) {
             self.media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as? Media
         } else {
             self.media = nil
+        }
+        
+        if let richTextData = try container.decodeIfPresent(Data.self, forKey: .richText) {
+            self.richText = PostboxDecoder(buffer: MemoryBuffer(data: richTextData)).decodeObjectArrayWithDecoderForKey("f") as [RichText]
+        } else {
+            self.richText = nil
         }
     }
     
@@ -96,15 +96,15 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         try container.encode(self.text, forKey: .text)
         try container.encodeIfPresent(self.offset.flatMap(Int32.init(clamping:)), forKey: .offset)
         try container.encode(self.entities, forKey: .entities)
-        if let richText = self.richText {
-            let richTextEncoder = PostboxEncoder()
-            richTextEncoder.encodeObjectArray(richText, forKey: "r")
-            try container.encode(richTextEncoder.makeData(), forKey: .richText)
-        }
         if let media = self.media {
             let mediaEncoder = PostboxEncoder()
             mediaEncoder.encodeRootObject(media)
             try container.encode(mediaEncoder.makeData(), forKey: .media)
+        }
+        if let richText = self.richText {
+            let richTextEncoder = PostboxEncoder()
+            richTextEncoder.encodeObjectArray(richText, forKey: "f")
+            try container.encode(richTextEncoder.makeData(), forKey: .richText)
         }
     }
     
@@ -115,10 +115,10 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         if lhs.offset != rhs.offset {
             return false
         }
-        if lhs.richText != rhs.richText {
+        if lhs.entities != rhs.entities {
             return false
         }
-        if lhs.entities != rhs.entities {
+        if lhs.richText != rhs.richText {
             return false
         }
         if let lhsMedia = lhs.media, let rhsMedia = rhs.media {
@@ -144,6 +144,13 @@ public struct EngineMessageReplySubject: Codable, Equatable {
         self.quote = quote
         self.innerSubject = innerSubject
     }
+}
+
+/// The reply a resend asks for: the stored attribute's, keeping its quote only if the original asked
+/// for one. A cross-chat reply stores the replied message's text as a display-only quote
+/// (`isQuote == false`), which the original send never sent.
+func resentReplySubject(_ attribute: ReplyMessageAttribute) -> EngineMessageReplySubject {
+    return EngineMessageReplySubject(messageId: attribute.messageId, quote: attribute.isQuote ? attribute.quote : nil, innerSubject: attribute.innerSubject)
 }
 
 public enum EnqueueMessage {
@@ -542,7 +549,13 @@ private func replyMessageAttributeForEphemeralOutgoingMessage(transaction: Trans
                     break
                 }
             }
-            quote = EngineMessageReplyQuote(text: replyMessage.text, offset: nil, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
+            if let richText = replyMessage.richText {
+                // A rich message has no `text`: show the head of its page instead. Display only, like the
+                // flat quote below: `isQuote` was settled above and only `isQuote` quotes are sent.
+                quote = richText.instantPage.wholeRichReplyQuote(maxLength: quoteMaxLength(appConfig: currentAppConfiguration(transaction: transaction)), media: replyMedia)
+            } else {
+                quote = EngineMessageReplyQuote(text: replyMessage.text, offset: nil, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
+            }
         }
     }
 
@@ -819,7 +832,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                     var forwardSource: MessageId?
                     inner: for attribute in message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
-                            replyToMessageId = EngineMessageReplySubject(messageId: attribute.messageId, quote: attribute.quote, innerSubject: attribute.innerSubject)
+                            replyToMessageId = resentReplySubject(attribute)
                         } else if let attribute = attribute as? ReplyStoryAttribute {
                             replyToStoryId = attribute.storyId
                         } else if let attribute = attribute as? OutgoingMessageInfoAttribute {
@@ -1051,7 +1064,13 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                         break
                                     }
                                 }
-                                quote = EngineMessageReplyQuote(text: replyMessage.text, offset: nil, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
+                                if let richText = replyMessage.richText {
+                                    // A rich message has no `text`: show the head of its page instead. Display only, like the
+                                    // flat quote below: `isQuote` was settled above and only `isQuote` quotes are sent.
+                                    quote = richText.instantPage.wholeRichReplyQuote(maxLength: quoteMaxLength(appConfig: currentAppConfiguration(transaction: transaction)), media: replyMedia)
+                                } else {
+                                    quote = EngineMessageReplyQuote(text: replyMessage.text, offset: nil, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
+                                }
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote, isQuote: isQuote, innerSubject: replyToMessageId.innerSubject))

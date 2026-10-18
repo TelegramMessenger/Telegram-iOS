@@ -12,6 +12,9 @@ final class QrStudioBackgroundStage: UIView {
     private var revealCenter = CGPoint()
     private var activeReveals = 0
     private var isVisible = true
+    private var holders: [Int: UIView] = [:]
+    private var fadingContents: [QrStudioBackgroundContent] = []
+    private var topReveal: (id: Int, startedAt: Double)?
 
     var isRevealing: Bool {
         return self.activeReveals > 0
@@ -35,9 +38,12 @@ final class QrStudioBackgroundStage: UIView {
         self.size = size
         self.revealCenter = revealCenter
 
-        for layer in self.stack.layers {
-            layer.item.frame = CGRect(origin: CGPoint(), size: size)
-            layer.item.update(size: size, revealCenter: revealCenter)
+        for (_, holder) in self.holders {
+            holder.frame = CGRect(origin: CGPoint(), size: size)
+        }
+        for content in self.stack.layers.map({ $0.item }) + self.fadingContents {
+            content.frame = CGRect(origin: CGPoint(), size: size)
+            content.update(size: size, revealCenter: revealCenter)
         }
 
         guard let makeContent = self.makeContent else {
@@ -60,20 +66,49 @@ final class QrStudioBackgroundStage: UIView {
         content.frame = CGRect(origin: CGPoint(), size: size)
         content.update(size: size, revealCenter: revealCenter)
         content.setVisible(self.isVisible)
-        self.addSubview(content)
+
+        if animated, let topReveal = self.topReveal, let top = self.stack.layers.last, top.id == topReveal.id, let holder = self.holders[top.id], QrStudioClock.now - topReveal.startedAt < QrStudioReveal.duration * 0.6 {
+            self.crossfade(from: top.item, to: content, in: holder)
+            return
+        }
+
+        let holder = UIView(frame: CGRect(origin: CGPoint(), size: size))
+        holder.isUserInteractionEnabled = false
+        holder.addSubview(content)
+        self.addSubview(holder)
         let id = self.stack.push(content)
+        self.holders[id] = holder
 
         if isFirst || !animated || size.width <= 0.0 || size.height <= 0.0 {
+            self.topReveal = nil
             self.revealCompleted(id: id)
         } else {
+            self.topReveal = (id, QrStudioClock.now)
             content.beginReveal(at: QrStudioClock.now)
-            self.runReveal(on: content, id: id, center: revealCenter, size: size)
+            self.runReveal(on: holder, id: id, center: revealCenter, size: size)
         }
     }
 
+    private func crossfade(from previous: QrStudioBackgroundContent, to content: QrStudioBackgroundContent, in holder: UIView) {
+        holder.addSubview(content)
+        self.stack.replaceTop(content)
+        self.fadingContents.append(previous)
+        content.alpha = 0.0
+        UIView.animate(withDuration: 0.25, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction], animations: {
+            content.alpha = 1.0
+        }, completion: { [weak self, weak previous] _ in
+            guard let self, let previous else {
+                return
+            }
+            self.fadingContents.removeAll(where: { $0 === previous })
+            previous.setVisible(false)
+            previous.removeFromSuperview()
+        })
+    }
+
     func tick(time: Double, pan: QrStudioPan, drift: QrStudioDrift, tilt: SIMD2<Double>) {
-        for layer in self.stack.layers {
-            layer.item.tick(time: time, pan: pan, drift: drift, tilt: tilt)
+        for content in self.stack.layers.map({ $0.item }) + self.fadingContents {
+            content.tick(time: time, pan: pan, drift: drift, tilt: tilt)
         }
     }
 
@@ -85,22 +120,25 @@ final class QrStudioBackgroundStage: UIView {
 
     func setVisible(_ isVisible: Bool) {
         self.isVisible = isVisible
-        for layer in self.stack.layers {
-            layer.item.setVisible(isVisible)
+        for content in self.stack.layers.map({ $0.item }) + self.fadingContents {
+            content.setVisible(isVisible)
         }
     }
 
     private func revealCompleted(id: Int) {
-        let removedIds = Set(self.stack.revealCompleted(id: id))
-        guard !removedIds.isEmpty else {
-            return
+        if self.topReveal?.id == id {
+            self.topReveal = nil
         }
-        let remaining = Set(self.stack.layers.map { ObjectIdentifier($0.item) })
-        for subview in self.subviews {
-            if let content = subview as? QrStudioBackgroundContent, !remaining.contains(ObjectIdentifier(content)) {
-                content.setVisible(false)
-                content.removeFromSuperview()
+        let removedIds = self.stack.revealCompleted(id: id)
+        for removedId in removedIds {
+            guard let holder = self.holders.removeValue(forKey: removedId) else {
+                continue
             }
+            for case let content as QrStudioBackgroundContent in holder.subviews {
+                content.setVisible(false)
+                self.fadingContents.removeAll(where: { $0 === content })
+            }
+            holder.removeFromSuperview()
         }
     }
 

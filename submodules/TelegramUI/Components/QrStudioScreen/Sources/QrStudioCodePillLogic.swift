@@ -106,9 +106,12 @@ enum QrStudioBurn {
         return "\(value / 60):" + String(format: "%02d", value % 60)
     }
 
-    static func menu(for state: QrStudioCodeState) -> [[QrStudioCodeAction]] {
+    static func menu(for state: QrStudioCodeState, allowsPermanent: Bool = true) -> [[QrStudioCodeAction]] {
         guard state.removeFee else {
             return []
+        }
+        if !allowsPermanent {
+            return [[.renew], [.restore]]
         }
         return [[.renew, state.expires ? .permanent : .expire], [.restore]]
     }

@@ -5,10 +5,10 @@ import SwiftSignalKit
 
 public struct ExportedNoPaidMessagesToken: Equatable {
     public let token: String
-    public let url: String?
+    public let url: String
     public let expires: Int32?
 
-    public init(token: String, url: String?, expires: Int32?) {
+    public init(token: String, url: String, expires: Int32?) {
         self.token = token
         self.url = url
         self.expires = expires

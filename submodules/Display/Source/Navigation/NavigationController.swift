@@ -1155,7 +1155,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         case .compact:
             // Beside a status island (iPhone Duo, unfolded portrait) the screens behind a modal stay where they are:
             // no slide back into a framed card, so no black frame above the modal either; the modal dims them.
-            if (visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero) && layout.topBarStatusIsland == nil {
+            if (visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero) && layout.topBarStatusIsland == nil && !self.keepsRootInPlaceUnderModals {
                 let effectiveRootModalDismissProgress: CGFloat
                 let visibleRootModalDismissProgress: CGFloat
                 var additionalModalFrameProgress: CGFloat
@@ -1251,9 +1251,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 if let rootModalFrame = self.rootModalFrame {
                     self.rootModalFrame = nil
-                    rootModalFrame.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
-                        rootModalFrame?.removeFromSupernode()
-                    })
+                    rootModalFrame.dismissAndRemove(transition: transition)
                 }
                 if let rootContainer = self.rootContainer {
                     var rootContainerNode: ASDisplayNode
@@ -1572,6 +1570,29 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.setViewControllers(controllers, animated: animated)
     }
     
+    private var verticalExpansionPopContainer: NavigationContainer?
+
+    public func beginVerticalExpansionPop(from controller: ViewController, anchor: CGPoint) -> Bool {
+        guard let rootContainer = self.rootContainer, case let .flat(container) = rootContainer, container.controllers.last === controller else {
+            return false
+        }
+        guard container.beginVerticalExpansionPop(anchor: anchor) else {
+            return false
+        }
+        self.verticalExpansionPopContainer = container
+        return true
+    }
+
+    public func updateVerticalExpansionPop(translation: CGPoint) {
+        self.verticalExpansionPopContainer?.updateVerticalExpansionPop(translation: translation)
+    }
+
+    public func endVerticalExpansionPop(translation: CGPoint, velocity: CGPoint, isCancelled: Bool) {
+        let container = self.verticalExpansionPopContainer
+        self.verticalExpansionPopContainer = nil
+        container?.endVerticalExpansionPop(translation: translation, velocity: velocity, isCancelled: isCancelled)
+    }
+
     public func filterController(_ controller: ViewController, animated: Bool) {
         let controllers = self.viewControllers.filter({ $0 !== controller })
         if controllers.count != self.viewControllers.count {
@@ -1786,6 +1807,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public var _keepModalDismissProgress = false
+    public var keepsRootInPlaceUnderModals = false
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
         let container = NavigationOverlayContainer(controller: controller, blocksInteractionUntilReady: blockInteraction, controllerRemoved: { [weak self] controller in
             guard let strongSelf = self else {

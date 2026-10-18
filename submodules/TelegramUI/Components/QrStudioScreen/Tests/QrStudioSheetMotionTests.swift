@@ -224,6 +224,12 @@ final class QrStudioSheetMotionTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(liftedTop, 108 - 0.001)
     }
 
+    func testCardStaysWhenShortSheetLeavesRoom() {
+        let result = QrStudioSheetGeometry.raise(card: 319, groupY: 874 / 2 - 9.5, panelTop: 874 - 200, gap: 35)
+        XCTAssertEqual(result.fit, 1)
+        XCTAssertEqual(result.lift, 0)
+    }
+
     func testCardScalesOnShortScreen() {
         let geometry = self.makeGeometry(height: 568)
         let result = QrStudioSheetGeometry.raise(card: 319, groupY: 568 / 2 - 9.5, panelTop: geometry.sheet.minY, gap: 35)

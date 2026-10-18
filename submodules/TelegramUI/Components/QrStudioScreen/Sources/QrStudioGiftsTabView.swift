@@ -6,6 +6,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import GiftItemComponent
+import LottieAnimationComponent
 
 final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
     private struct Params {
@@ -20,6 +21,14 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
     let scrollView = UIScrollView()
     var selected: ((Int64) -> Void)?
     var loadMore: (() -> Void)?
+    var browse: (() -> Void)?
+
+    private let emptyView = UIView()
+    private let emptySticker = ComponentView<Empty>()
+    private let emptyTitleLabel = UILabel()
+    private let emptyTextLabel = UILabel()
+    private let browseButton = HighlightTrackingButton()
+    private let browseLabel = UILabel()
 
     private let titleLabel = UILabel()
     private let vibrantHeaders = QrStudioVibrantHeaders()
@@ -37,6 +46,21 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
     private static let spacing: CGFloat = 10.0
     private static let columns = 3
     private static let top: CGFloat = 16.0 + 17.0 + 12.0
+    private static let bannerHeight: CGFloat = 150.0
+
+    static func compactHeight(count: Int, width: CGFloat, bottomInset: CGFloat) -> CGFloat? {
+        switch count {
+        case 0:
+            return 312.0
+        case 1, 2:
+            return QrStudioGiftsTabView.top + QrStudioGiftsTabView.bannerHeight + 12.0 + bottomInset
+        case 3:
+            let side = floor((width - QrStudioGiftsTabView.sideInset * 2.0 - QrStudioGiftsTabView.spacing * 2.0) / 3.0)
+            return ceil(QrStudioGiftsTabView.top + side + 12.0 + bottomInset)
+        default:
+            return nil
+        }
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -53,10 +77,33 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         self.fadeMask.colors = [UIColor.clear.cgColor, UIColor.black.cgColor, UIColor.black.cgColor]
         self.layer.mask = self.fadeMask
 
+        self.emptyView.isHidden = true
+        self.addSubview(self.emptyView)
+        self.emptyTitleLabel.font = Font.semibold(20.0)
+        self.emptyTitleLabel.textAlignment = .center
+        self.emptyView.addSubview(self.emptyTitleLabel)
+        self.emptyTextLabel.font = Font.regular(15.0)
+        self.emptyTextLabel.textAlignment = .center
+        self.emptyTextLabel.numberOfLines = 0
+        self.emptyView.addSubview(self.emptyTextLabel)
+        self.browseButton.clipsToBounds = true
+        self.browseButton.addSubview(self.browseLabel)
+        self.browseLabel.font = Font.semibold(15.0)
+        self.browseLabel.textColor = .white
+        self.browseButton.addTarget(self, action: #selector(self.browsePressed), for: .touchUpInside)
+        self.browseButton.highligthedChanged = { [weak self] highlighted in
+            self?.browseButton.alpha = highlighted ? 0.7 : 1.0
+        }
+        self.emptyView.addSubview(self.browseButton)
+
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func browsePressed() {
+        self.browse?()
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -73,12 +120,17 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
     }
 
     private func itemFrame(index: Int, itemSide: CGFloat) -> CGRect {
+        if let params = self.params, params.gifts.count <= 2 {
+            let count = CGFloat(params.gifts.count)
+            let width = floor((params.size.width - QrStudioGiftsTabView.sideInset * 2.0 - QrStudioGiftsTabView.spacing * (count - 1.0)) / count)
+            return CGRect(x: QrStudioGiftsTabView.sideInset + CGFloat(index) * (width + QrStudioGiftsTabView.spacing), y: QrStudioGiftsTabView.top, width: width, height: QrStudioGiftsTabView.bannerHeight)
+        }
         let column = index % QrStudioGiftsTabView.columns
         let row = index / QrStudioGiftsTabView.columns
         return CGRect(x: QrStudioGiftsTabView.sideInset + CGFloat(column) * (itemSide + QrStudioGiftsTabView.spacing), y: QrStudioGiftsTabView.top + CGFloat(row) * (itemSide + QrStudioGiftsTabView.spacing), width: itemSide, height: itemSide)
     }
 
-    func update(size: CGSize, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, gifts: [QrStudioGift], selectedId: Int64?, revealSelection: Bool, scrollsToSelection: Bool) {
+    func update(size: CGSize, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, gifts: [QrStudioGift], isLoaded: Bool, selectedId: Int64?, revealSelection: Bool, scrollsToSelection: Bool) {
         self.params = Params(size: size, context: context, theme: theme, strings: strings, gifts: gifts, selectedId: selectedId)
         self.scrollView.frame = CGRect(origin: CGPoint(), size: size)
 
@@ -88,9 +140,20 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         self.fadeMask.locations = [0.0, NSNumber(value: Double(14.0 / max(size.height, 1.0))), 1.0]
         self.fadeMask.startPoint = CGPoint(x: 0.5, y: 0.0)
         self.fadeMask.endPoint = CGPoint(x: 0.5, y: 1.0)
+        CATransaction.commit()
+
+        let isEmpty = gifts.isEmpty
+        self.scrollView.isHidden = isEmpty
+        self.emptyView.isHidden = !(isEmpty && isLoaded)
+        if isEmpty {
+            self.vibrantHeaders.update(size: size, headers: [], isEnabled: false)
+            if isLoaded {
+                self.updateEmptyState(size: size, theme: theme, strings: strings)
+            }
+            return
+        }
 
         let itemSide = self.itemSide(width: size.width)
-        CATransaction.commit()
 
         self.titleLabel.attributedText = NSAttributedString(string: strings.QrStudio_Gifts_Title.uppercased(), attributes: [
             .font: Font.semibold(13.0),
@@ -104,7 +167,8 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         }
 
         let rows = (gifts.count + QrStudioGiftsTabView.columns - 1) / QrStudioGiftsTabView.columns
-        let contentHeight = QrStudioGiftsTabView.top + CGFloat(rows) * itemSide + CGFloat(max(0, rows - 1)) * QrStudioGiftsTabView.spacing + 12.0 + 40.0
+        let rowsHeight = gifts.count <= 2 ? QrStudioGiftsTabView.bannerHeight : CGFloat(rows) * itemSide + CGFloat(max(0, rows - 1)) * QrStudioGiftsTabView.spacing
+        let contentHeight = QrStudioGiftsTabView.top + rowsHeight + 12.0 + (gifts.count <= 3 ? 0.0 : 40.0)
         let contentSize = CGSize(width: size.width, height: contentHeight)
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
@@ -126,12 +190,51 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         self.updateVisibleItems()
     }
 
+    private func updateEmptyState(size: CGSize, theme: PresentationTheme, strings: PresentationStrings) {
+        self.emptyView.frame = CGRect(origin: CGPoint(), size: size)
+        let stickerSide: CGFloat = 100.0
+        let _ = self.emptySticker.update(
+            transition: .immediate,
+            component: AnyComponent(LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: "QrStudioNoGifts", mode: .animating(loop: true)), colors: [:], size: CGSize(width: stickerSide, height: stickerSide))),
+            environment: {},
+            containerSize: CGSize(width: stickerSide, height: stickerSide)
+        )
+        var y: CGFloat = 28.0
+        if let stickerView = self.emptySticker.view {
+            if stickerView.superview == nil {
+                self.emptyView.addSubview(stickerView)
+            }
+            stickerView.frame = CGRect(x: floor((size.width - stickerSide) * 0.5), y: y, width: stickerSide, height: stickerSide)
+        }
+        y += stickerSide + 12.0
+
+        self.emptyTitleLabel.text = strings.QrStudio_Gifts_EmptyTitle
+        self.emptyTitleLabel.textColor = theme.list.itemPrimaryTextColor
+        let titleSize = self.emptyTitleLabel.sizeThatFits(CGSize(width: size.width - 32.0, height: 100.0))
+        self.emptyTitleLabel.frame = CGRect(x: 16.0, y: y, width: size.width - 32.0, height: ceil(titleSize.height))
+        y += ceil(titleSize.height) + 6.0
+
+        self.emptyTextLabel.text = strings.QrStudio_Gifts_EmptyText
+        self.emptyTextLabel.textColor = theme.list.itemSecondaryTextColor
+        let textSize = self.emptyTextLabel.sizeThatFits(CGSize(width: size.width - 32.0, height: 200.0))
+        self.emptyTextLabel.frame = CGRect(x: 16.0, y: y, width: size.width - 32.0, height: ceil(textSize.height))
+        y += ceil(textSize.height) + 18.0
+
+        self.browseLabel.text = strings.QrStudio_Gifts_Browse
+        let labelSize = self.browseLabel.sizeThatFits(CGSize(width: size.width, height: 40.0))
+        let buttonWidth = ceil(labelSize.width) + 44.0
+        self.browseButton.backgroundColor = theme.list.itemCheckColors.fillColor
+        self.browseButton.layer.cornerRadius = 20.0
+        self.browseButton.frame = CGRect(x: floor((size.width - buttonWidth) * 0.5), y: y, width: buttonWidth, height: 40.0)
+        self.browseLabel.frame = CGRect(x: 22.0, y: floor((40.0 - ceil(labelSize.height)) * 0.5), width: ceil(labelSize.width), height: ceil(labelSize.height))
+    }
+
     private func updateVisibleItems() {
         guard let params = self.params, params.size.width > 0.0 else {
             return
         }
         let itemSide = self.itemSide(width: params.size.width)
-        let itemSize = CGSize(width: itemSide, height: itemSide)
+        let isWide = params.gifts.count <= 2
         let visibleRect = self.scrollView.bounds.insetBy(dx: 0.0, dy: -itemSide)
 
         var validIds = Set<Int64>()
@@ -168,14 +271,14 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
                     subject: .uniqueGift(gift: gift.gift, price: nil),
                     ribbon: GiftItemComponent.Ribbon(text: "#\(gift.gift.number)", font: .monospaced, color: ribbonColor),
                     isSelected: gift.id == params.selectedId,
-                    mode: .grid,
+                    mode: isWide ? .profile : .grid,
                     selectionStyle: .trimmedBackground(color: gift.outer.uiColor),
                     action: { [weak self] in
                         self?.selected?(giftId)
                     }
                 )),
                 environment: {},
-                containerSize: itemSize
+                containerSize: frame.size
             )
             if let itemView = item.view {
                 if itemView.superview == nil {

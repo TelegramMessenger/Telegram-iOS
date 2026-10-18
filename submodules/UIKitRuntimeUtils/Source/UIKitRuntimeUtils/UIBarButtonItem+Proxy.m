@@ -8,6 +8,7 @@ static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 static const void *customDisplayNodeKey = &customDisplayNodeKey;
 static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
 static const void *customActionKey = &customActionKey;
+static const void *requiresOwnSectionKey = &requiresOwnSectionKey;
 
 @implementation UIBarButtonItem (Proxy)
 
@@ -43,6 +44,14 @@ static const void *customActionKey = &customActionKey;
 
 - (bool)backButtonAppearance {
     return [[self associatedObjectForKey:backButtonAppearanceKey] boolValue];
+}
+
+- (bool)requiresOwnSection {
+    return [[self associatedObjectForKey:requiresOwnSectionKey] boolValue];
+}
+
+- (void)setRequiresOwnSection:(bool)requiresOwnSection {
+    [self setAssociatedObject:@(requiresOwnSection) forKey:requiresOwnSectionKey];
 }
 
 - (void)setCustomAction:(void (^)())customAction {

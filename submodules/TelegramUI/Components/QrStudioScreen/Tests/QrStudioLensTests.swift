@@ -41,12 +41,8 @@ final class QrStudioLensTests: XCTestCase {
     }
 
     func testOrdinaryToastClosesAfterTheHold() {
-        XCTAssertFalse(QrStudioLens.closesAfterHold(holding: 1.0, isPersistent: false))
-        XCTAssertTrue(QrStudioLens.closesAfterHold(holding: 2.0, isPersistent: false))
-    }
-
-    func testProgressToastNeverClosesByItself() {
-        XCTAssertFalse(QrStudioLens.closesAfterHold(holding: 100.0, isPersistent: true))
+        XCTAssertFalse(QrStudioLens.closesAfterHold(holding: 1.0))
+        XCTAssertTrue(QrStudioLens.closesAfterHold(holding: 2.0))
     }
 
     func testWidthApproachesTheTarget() {

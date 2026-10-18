@@ -10,9 +10,9 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
     enum Peer: Codable, Equatable, @unchecked Sendable {
         case user(id: EnginePeer.Id)
         case channel(id: EnginePeer.Id)
+        case telegramGift(ownProfile: Bool)
         case address(String)
         case onramp(address: String, providerName: String)
-        case telegramGift(ownProfile: Bool)
         case unsupported
 
         private enum Kind: Int32 {
@@ -27,7 +27,6 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
         private enum CodingKeys: String, CodingKey {
             case kind
             case userId
-            case channelId
             case address
             case providerName
             case ownProfile
@@ -50,8 +49,10 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                 )
             case .channel:
                 self = .channel(
-                    id: EnginePeer.Id(try container.decode(Int64.self, forKey: .channelId))
+                    id: EnginePeer.Id(try container.decode(Int64.self, forKey: .userId))
                 )
+            case .telegramGift:
+                self = .telegramGift(ownProfile: try container.decodeIfPresent(Bool.self, forKey: .ownProfile) ?? false)
             case .address:
                 self = .address(try container.decode(String.self, forKey: .address))
             case .onramp:
@@ -59,8 +60,6 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                     address: try container.decode(String.self, forKey: .address),
                     providerName: try container.decode(String.self, forKey: .providerName)
                 )
-            case .telegramGift:
-                self = .telegramGift(ownProfile: try container.decode(Bool.self, forKey: .ownProfile))
             case .unsupported:
                 self = .unsupported
             }
@@ -74,7 +73,10 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                 try container.encode(id.toInt64(), forKey: .userId)
             case let .channel(id):
                 try container.encode(Kind.channel.rawValue, forKey: .kind)
-                try container.encode(id.toInt64(), forKey: .channelId)
+                try container.encode(id.toInt64(), forKey: .userId)
+            case let .telegramGift(ownProfile):
+                try container.encode(Kind.telegramGift.rawValue, forKey: .kind)
+                try container.encode(ownProfile, forKey: .ownProfile)
             case let .address(address):
                 try container.encode(Kind.address.rawValue, forKey: .kind)
                 try container.encode(address, forKey: .address)
@@ -82,9 +84,6 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                 try container.encode(Kind.onramp.rawValue, forKey: .kind)
                 try container.encode(address, forKey: .address)
                 try container.encode(providerName, forKey: .providerName)
-            case let .telegramGift(ownProfile):
-                try container.encode(Kind.telegramGift.rawValue, forKey: .kind)
-                try container.encode(ownProfile, forKey: .ownProfile)
             case .unsupported:
                 try container.encode(Kind.unsupported.rawValue, forKey: .kind)
             }
@@ -94,7 +93,7 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             switch self {
             case let .user(id), let .channel(id):
                 return id
-            case .address, .onramp, .telegramGift, .unsupported:
+            case .telegramGift, .address, .onramp, .unsupported:
                 return nil
             }
         }
@@ -139,6 +138,10 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             self.peer = .channel(id: peer.id)
             self.peerAddress = address
             self.peerDomain = domain
+        case let .telegramGift(ownProfile):
+            self.peer = .telegramGift(ownProfile: ownProfile)
+            self.peerAddress = nil
+            self.peerDomain = nil
         case let .address(address, domain):
             self.peer = .address(address)
             self.peerAddress = nil
@@ -147,10 +150,6 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             self.peer = .onramp(address: address, providerName: providerName)
             self.peerAddress = nil
             self.peerDomain = domain
-        case let .telegramGift(ownProfile):
-            self.peer = .telegramGift(ownProfile: ownProfile)
-            self.peerAddress = nil
-            self.peerDomain = nil
         case .unsupported:
             self.peer = .unsupported
             self.peerAddress = nil
@@ -182,12 +181,12 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
             } else {
                 peer = .unsupported
             }
+        case let .telegramGift(ownProfile):
+            peer = .telegramGift(ownProfile: ownProfile)
         case let .address(address):
             peer = .address(address, domain: self.peerDomain)
         case let .onramp(address, providerName):
             peer = .onramp(address: address, domain: self.peerDomain, providerName: providerName)
-        case let .telegramGift(ownProfile):
-            peer = .telegramGift(ownProfile: ownProfile)
         case .unsupported:
             peer = .unsupported
         }

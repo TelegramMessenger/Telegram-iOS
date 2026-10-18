@@ -56,7 +56,7 @@ final class QrStudioThemeTests: XCTestCase {
     func testEveryBackdropUsesUntintedRegularGlass() {
         let untinted = GlassBackgroundView.TintColor(kind: .custom(style: .default, color: .clear))
         XCTAssertEqual(QrStudioGlass.tint(.theme(self.theme("b", [0x1c2b40, 0x0d1520]))), untinted)
-        XCTAssertEqual(QrStudioGlass.tint(.emoji([], isDark: false)), untinted)
+        XCTAssertEqual(QrStudioGlass.tint(.emoji([], palette: QrStudioPalette.fallback)), untinted)
         XCTAssertEqual(QrStudioGlass.tint(.color(QrStudioPalette.fallback)), untinted)
         XCTAssertTrue(QrStudioBackdrop.theme(self.theme("b", [0x1c2b40, 0x0d1520])).isLight)
     }

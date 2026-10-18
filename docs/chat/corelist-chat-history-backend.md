@@ -1303,7 +1303,7 @@ next frame — has not been established.
 ## Holding a scrolled-to message
 
 Every chat scroll to a message holds it where it lands until a drag begins or the chat scrolls elsewhere
-(`ListViewScrollToItem.holdsPosition`, set in `preparedChatHistoryViewTransition` for `.unread`,
+(`ListViewScrollToItem.hold`, set in `preparedChatHistoryViewTransition` for `.unread`,
 `.positionRestoration`, `.pinnedAnchor` and `.index` to a message; also the feed post's tall-post
 re-align and `requestMessageUpdate(andScrollToItem:)`). The playing-message follow scroll (round-video
 autoplay) and the `scrollToMessageId` scroll are scrolls to a message, so they hold too. The backend
@@ -1315,9 +1315,17 @@ holds the message rather than its row: `placementOffset` leaves out
 `ChatMessageItemView.attachedDateHeaderInset`, re-read on every held pass, at the row end the node's
 top inset is on (maxY under the rotated chat, so `.bottom`), so the content stays put when the date
 header moves to an older row. A landing CoreList clamped against one of its ends is held against that
-end instead: opening at the unread line with a few unread lands the
-separator's `.bottom` resting on the newest edge, so it is held by its minY from the input-panel edge
-and the keyboard carries the newest messages rather than covering them. Node-issued scrolls never
+end instead, by its minY from the input-panel edge at the newest edge, so the keyboard carries the
+newest messages rather than covering them. **The unread line is the exception
+(`ListViewScrollHold.yieldingToNewestEdge`, 2026-10-16):** opening at it with a few unread lands the
+separator's `.bottom` resting on the newest edge, and that landing holds nothing. The chat is then at
+the bottom, so a message arriving pushes it up, and a message under the line that grows (a reaction)
+grows upward instead of sinking the newest messages under the input panel, which also made the
+context menu's close animation land the message somewhere it had not grown towards. Nothing is lost
+at the keyboard: an unheld list resting on the newest edge follows it the same way. An unread line
+that lands off the newest edge still holds. Jumps to a message and position restoration still hold at
+the newest edge, and so does the feed's cached post, whose sponsored-message fix depends on it.
+Node-issued scrolls never
 hold (the first sponsored message, a join, the bot-reply pin), scroll to either end releases explicitly
 (`releaseScrollHold()`, because scroll-to-end issues no scroll at the newest edge), and three scrolls
 are skipped while `isHoldingScrollTarget`: keep-in-place, the first-sponsored-message tuck, and the

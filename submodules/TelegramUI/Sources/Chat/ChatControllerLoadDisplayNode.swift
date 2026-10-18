@@ -375,6 +375,9 @@ extension ChatControllerImpl {
         if previousState.pinnedMessage != contentData.state.pinnedMessage {
             animated = true
         }
+        if previousState.pinnedMessageSkeletonId != contentData.state.pinnedMessageSkeletonId {
+            animated = true
+        }
         if previousState.translationState?.isEnabled != contentData.state.translationState?.isEnabled {
             animated = true
         }
@@ -436,6 +439,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedKeyboardButtonsMessage(contentData.state.keyboardButtonsMessage)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageId(contentData.state.pinnedMessageId)
             presentationInterfaceState = presentationInterfaceState.updatedPinnedMessage(contentData.state.pinnedMessage)
+            presentationInterfaceState = presentationInterfaceState.updatedPinnedMessageSkeletonId(contentData.state.pinnedMessageSkeletonId)
             presentationInterfaceState = presentationInterfaceState.updatedPeerIsBlocked(contentData.state.peerIsBlocked)
             presentationInterfaceState = presentationInterfaceState.updatedCallsAvailable(contentData.state.callsAvailable)
             presentationInterfaceState = presentationInterfaceState.updatedCallsPrivate(contentData.state.callsPrivate)
@@ -921,10 +925,11 @@ extension ChatControllerImpl {
                         isScheduledMessages = false
                     }
                     let hasScheduledTransitions = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions
-                    let duration: Double = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.animationDuration : 0.18
-                    let curve: ContainedViewLayoutTransitionCurve = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationCurve : .easeInOut
-                    // The list scrolls on the bubble's own vertical spring, or the new bubble drifts against its neighbours.
-                    let listCurve: ListViewAnimationCurve = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalListAnimationCurve : .Custom(duration: duration, 0.5, 0.33, 0.0, 0.0)
+                    let sendAnimationParameters = strongSelf.chatDisplayNode.messageTransitionNode.animationParameters
+                    let duration: Double = hasScheduledTransitions ? sendAnimationParameters.duration : 0.18
+                    let curve: ContainedViewLayoutTransitionCurve = hasScheduledTransitions ? sendAnimationParameters.verticalCurve : .easeInOut
+                    // The list scrolls on the bubble's own vertical curve, or the new bubble drifts against its neighbours.
+                    let listCurve: ListViewAnimationCurve = hasScheduledTransitions ? sendAnimationParameters.verticalListCurve : .Custom(duration: duration, 0.5, 0.33, 0.0, 0.0)
 
                     let shouldUseFastMessageSendAnimation = strongSelf.chatDisplayNode.shouldUseFastMessageSendAnimation
                     
@@ -1465,110 +1470,9 @@ extension ChatControllerImpl {
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                                            guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item else {
-                                                return
-                                            }
-                                            guard item.message.id == messageId else {
-                                                return
-                                            }
-                                            var maybeUpdatedReaction: (MessageReaction.Reaction, Bool, EnginePeer?)?
-                                            if let attribute = item.message.reactionsAttribute {
-                                                for recentPeer in attribute.recentPeers {
-                                                    if recentPeer.isUnseen {
-                                                        maybeUpdatedReaction = (recentPeer.value, recentPeer.isLarge, item.message.peers[recentPeer.peerId].flatMap(EnginePeer.init))
-                                                        break
-                                                    }
-                                                }
-                                            }
-                                            
-                                            guard let (updatedReaction, updatedReactionIsLarge, updatedReactionPeer) = maybeUpdatedReaction else {
-                                                return
-                                            }
-                                            
-                                            guard let availableReactions = item.associatedData.availableReactions else {
-                                                return
-                                            }
-                                            
-                                            var avatarPeers: [EnginePeer] = []
-                                            if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updatedReactionPeer = updatedReactionPeer {
-                                                avatarPeers.append(updatedReactionPeer)
-                                            }
-                                            
-                                            var reactionItem: ReactionItem?
-                                            
-                                            switch updatedReaction {
-                                            case .builtin, .stars:
-                                                for reaction in availableReactions.reactions {
-                                                    guard let centerAnimation = reaction.centerAnimation else {
-                                                        continue
-                                                    }
-                                                    guard let aroundAnimation = reaction.aroundAnimation else {
-                                                        continue
-                                                    }
-                                                    if reaction.value == updatedReaction {
-                                                        reactionItem = ReactionItem(
-                                                            reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                                            appearAnimation: reaction.appearAnimation,
-                                                            stillAnimation: reaction.selectAnimation,
-                                                            listAnimation: centerAnimation,
-                                                            largeListAnimation: reaction.activateAnimation,
-                                                            applicationAnimation: aroundAnimation,
-                                                            largeApplicationAnimation: reaction.effectAnimation,
-                                                            isCustom: false
-                                                        )
-                                                        break
-                                                    }
-                                                }
-                                            case let .custom(fileId):
-                                                if let itemFile = item.message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
-                                                    let itemFile = TelegramMediaFile.Accessor(itemFile)
-                                                    reactionItem = ReactionItem(
-                                                        reaction: ReactionItem.Reaction(rawValue: updatedReaction),
-                                                        appearAnimation: itemFile,
-                                                        stillAnimation: itemFile,
-                                                        listAnimation: itemFile,
-                                                        largeListAnimation: itemFile,
-                                                        applicationAnimation: nil,
-                                                        largeApplicationAnimation: nil,
-                                                        isCustom: true
-                                                    )
-                                                }
-                                            }
-                                            
-                                            guard let targetView = itemNode.targetReactionView(value: updatedReaction) else {
-                                                return
-                                            }
-                                            if let reactionItem = reactionItem {
-                                                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: strongSelf.chatDisplayNode.historyNode.takeGenericReactionEffect())
-                                                
-                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                                
-                                                strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                                standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                                standaloneReactionAnimation.animateReactionSelection(
-                                                    context: strongSelf.context,
-                                                    theme: strongSelf.presentationData.theme,
-                                                    animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
-                                                    reaction: reactionItem,
-                                                    avatarPeers: avatarPeers,
-                                                    playHaptic: true,
-                                                    isLarge: updatedReactionIsLarge,
-                                                    targetView: targetView,
-                                                    addStandaloneReactionAnimation: { standaloneReactionAnimation in
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                                        standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                                        strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                                    },
-                                                    completion: { [weak standaloneReactionAnimation] in
-                                                        standaloneReactionAnimation?.removeFromSupernode()
-                                                    }
-                                                )
-                                            }
-                                        }
+                                        // The history node plays it and marks the message seen, so it does not play again when
+                                        // the message is reported on screen.
+                                        strongSelf.chatDisplayNode.historyNode.displayUnseenReactionAnimationsAndMarkSeen(messageIds: [messageId])
                                         
                                         strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
                                     })
@@ -2128,7 +2032,7 @@ extension ChatControllerImpl {
                     if let strongSelf = self, !messages.isEmpty {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                         
-                        let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages.sorted(by: { lhs, rhs in
+                        let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages.sorted(by: { lhs, rhs in
                             return lhs.index < rhs.index
                         }).map { $0._asMessage() }), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData))
                         strongSelf.chatDisplayNode.dismissInput()
@@ -5471,7 +5375,17 @@ extension ChatControllerImpl {
                         
                         var extendHighlight = false
                         if let quote = toSubject.quote {
-                            if message.text.contains(quote.string) {
+                            // A rich message's text is its page's quotable nodes, which a rich quote's flat
+                            // text is cut from; `message.text` is empty. A partial page (before Show more)
+                            // may hold the quote in its unseen tail: the bubble expands to find it.
+                            let quoteFound: Bool
+                            if let richText = message.richText {
+                                let page = richText.fullInstantPage ?? richText.instantPage
+                                quoteFound = !page.isComplete || richReplyQuoteFlatText(page.quotableNodes).contains(quote.string)
+                            } else {
+                                quoteFound = message.text.contains(quote.string)
+                            }
+                            if quoteFound {
                                 extendHighlight = true
                             } else {
                                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)

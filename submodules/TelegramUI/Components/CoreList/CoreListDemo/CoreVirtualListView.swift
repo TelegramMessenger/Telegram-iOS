@@ -124,6 +124,11 @@ public enum CoreListAnchorMode: Equatable {
 /// when both hold. That end, not the request, decided where the row is, so a bar or panel appearing at
 /// the other edge must not move it off the end it rests on.
 ///
+/// A hold that `yieldsToNewestEdge` is not armed at all by a landing resting on the newest edge: the
+/// list follows that edge from then on, exactly as it does when no scroll ran, so a row arriving there
+/// pushes the content away from it and a row under the landing grows away from it. Held instead, the
+/// arrival would land under the top inset and the growth would sink the newest rows under it.
+///
 /// Released when a drag begins (`ScrollEngine.onWillBeginDragging`: under `PhysicsScrollEngine` the
 /// pan's `.began` — after its movement hysteresis, or at once for a finger landing on moving content —
 /// and under `UIKitScrollEngine`, `scrollViewWillBeginDragging`; a tap that never becomes a drag keeps
@@ -140,13 +145,17 @@ public struct CoreListScrollHold {
     }
 
     public let edge: Edge
+    /// Arm nothing when the landing rests on the newest edge (see above).
+    public let yieldsToNewestEdge: Bool
     /// A point inside the row, in the row's own coordinates (0 = its minY), for its current measured
     /// height and view. Evaluated on every held pass, so the row's re-measure keeps THIS point still.
     public let rowPoint: (_ measuredHeight: CGFloat, _ view: UIView & CoreListItemView) -> CGFloat
 
     public init(edge: Edge,
+                yieldsToNewestEdge: Bool = false,
                 rowPoint: @escaping (_ measuredHeight: CGFloat, _ view: UIView & CoreListItemView) -> CGFloat) {
         self.edge = edge
+        self.yieldsToNewestEdge = yieldsToNewestEdge
         self.rowPoint = rowPoint
     }
 }
@@ -1821,11 +1830,13 @@ public final class CoreVirtualListView: UIView {
             if let minimum = naturalEdges.min, let rawMaximum = naturalMaximum, rawMaximum < minimum {
                 naturalMaximum = minimum
             }
-            let hold: CoreListScrollHold
+            // A hold that yields to the newest edge arms nothing there: this pass is a scroll, so no
+            // earlier hold survives it and `holdSlack` is already zero — not arming IS the unheld state.
+            let hold: CoreListScrollHold?
             if newWindow.startIndex == 0,
                let minimum = naturalEdges.min,
                abs(newSettledOffset - minimum) <= 1e-6 {
-                hold = CoreListScrollHold(edge: .topInset) { _, _ in 0 }
+                hold = requestedHold.yieldsToNewestEdge ? nil : CoreListScrollHold(edge: .topInset) { _, _ in 0 }
             } else if newWindow.endIndex == effectiveItems.count - 1,
                       let maximum = naturalMaximum,
                       abs(newSettledOffset - maximum) <= 1e-6 {
@@ -1833,13 +1844,15 @@ public final class CoreVirtualListView: UIView {
             } else {
                 hold = requestedHold
             }
-            // Measured from THIS pass's settled geometry, i.e. after `buildWindow`'s edge alignment:
-            // a scroll the edges clamped is held where it landed, not where it was asked to go.
-            let landedMinY = containerOriginY - newWindow.minY + landed.frame.minY - newSettledOffset
-            heldRow = HeldRow(identity: effectiveItems[scrollTo.index].identity,
-                              hold: hold,
-                              distance: landedMinY + hold.rowPoint(landed.frame.height, landed.view)
-                                  - holdEdgeY(hold.edge))
+            if let hold {
+                // Measured from THIS pass's settled geometry, i.e. after `buildWindow`'s edge alignment:
+                // a scroll the edges clamped is held where it landed, not where it was asked to go.
+                let landedMinY = containerOriginY - newWindow.minY + landed.frame.minY - newSettledOffset
+                heldRow = HeldRow(identity: effectiveItems[scrollTo.index].identity,
+                                  hold: hold,
+                                  distance: landedMinY + hold.rowPoint(landed.frame.height, landed.view)
+                                      - holdEdgeY(hold.edge))
+            }
         }
         retireHoldSlack()
         if absorbsEdgeChangeIntoOverscroll {

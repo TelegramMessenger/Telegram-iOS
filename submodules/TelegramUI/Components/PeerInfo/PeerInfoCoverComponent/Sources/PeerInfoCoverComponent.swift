@@ -292,14 +292,16 @@ public final class PeerInfoCoverComponent: Component {
         }
         
         public func animateIn() {
-            guard let _ = self.currentSize, let component = self.component else {
+            guard let _ = self.currentSize, let _ = self.component else {
                 return
             }
-            
+
+            let patternBounds = self.avatarBackgroundPatternContentsLayer.bounds
+            let avatarCenter = CGPoint(x: patternBounds.midX, y: patternBounds.midY)
             for layer in self.avatarPatternContentLayers {
                 layer.opacity = 1.0
                 layer.animatePosition(
-                    from: component.avatarCenter,
+                    from: avatarCenter,
                     to: layer.position,
                     duration: 0.4,
                     timingFunction: kCAMediaTimingFunctionSpring
@@ -494,7 +496,8 @@ public final class PeerInfoCoverComponent: Component {
             }
             
             let gradientWidth: CGFloat
-            let gradientHeight: CGFloat = component.defaultHeight + component.topBackgroundExtension
+            var gradientHeight: CGFloat = component.defaultHeight + component.topBackgroundExtension
+            var gradientOriginY: CGFloat = component.gradientOnTop ? 0.0 : availableSize.height - gradientHeight
             if case .custom = component.subject {
                 gradientWidth = component.defaultHeight
                 self.backgroundView.backgroundColor = backgroundColor
@@ -504,8 +507,10 @@ public final class PeerInfoCoverComponent: Component {
                 self.backgroundGradientLayer.colors = [secondaryBackgroundColor.cgColor, backgroundColor.cgColor]
             } else if case .status = component.subject {
                 gradientWidth = availableSize.width
+                gradientHeight = 2.0 * (1.0 - component.gradientCenter.y) * gradientHeight
+                gradientOriginY = component.avatarCenter.y - gradientHeight * 0.5
                 self.backgroundView.backgroundColor = secondaryBackgroundColor
-                self.backgroundGradientLayer.startPoint = component.gradientCenter
+                self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
                 self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
                 self.backgroundGradientLayer.type = .radial
                 self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
@@ -519,7 +524,7 @@ public final class PeerInfoCoverComponent: Component {
             }
             self.backgroundGradientLayer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             
-            let backgroundGradientFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - gradientWidth) / 2.0), y: component.gradientOnTop ? 0.0 : availableSize.height - gradientHeight), size: CGSize(width: gradientWidth, height: gradientHeight))
+            let backgroundGradientFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - gradientWidth) / 2.0), y: gradientOriginY), size: CGSize(width: gradientWidth, height: gradientHeight))
             if !transition.animation.isImmediate {
                 let previousPosition = self.backgroundGradientLayer.position
                 let updatedPosition = CGPoint(x: backgroundGradientFrame.minX, y: backgroundGradientFrame.maxY)

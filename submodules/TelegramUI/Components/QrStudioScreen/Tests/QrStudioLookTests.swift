@@ -10,8 +10,8 @@ final class QrStudioLookTests: XCTestCase {
             XCTAssertTrue(qrStudioToggle(&ids, id, limit: 6))
         }
         XCTAssertEqual(ids, [1, 2, 3, 4, 5, 6])
-        XCTAssertFalse(qrStudioToggle(&ids, 7, limit: 6))
-        XCTAssertEqual(ids, [1, 2, 3, 4, 5, 6])
+        XCTAssertTrue(qrStudioToggle(&ids, 7, limit: 6))
+        XCTAssertEqual(ids, [2, 3, 4, 5, 6, 7])
     }
 
     func testEmojiToggleKeepsOrderOnRemoval() {

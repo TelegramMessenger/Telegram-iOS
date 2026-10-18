@@ -20,8 +20,6 @@ final class WalletCollectiblesGridView: UIView {
         private var decorationModel: Data?
         private var decorationAttributes: [StarGift.UniqueGift.Attribute] = []
         private(set) var stickerReady = false
-        let badge = UIImageView(image: UIImage(systemName: "creditcard.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)))
-        private var isOnCard = false
         var action: (() -> Void)?
 
         override init(frame: CGRect) {
@@ -29,30 +27,15 @@ final class WalletCollectiblesGridView: UIView {
             self.addSubview(self.media)
             self.giftTile.isUserInteractionEnabled = false
             self.addSubview(self.giftTile)
-            self.badge.tintColor = .white
-            self.badge.contentMode = .center
-            self.badge.isHidden = true
-            self.addSubview(self.badge)
             self.isAccessibilityElement = true
             self.accessibilityTraits = .button
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
 
-        func setOnCard(_ onCard: Bool) {
-            guard self.isOnCard != onCard else { return }
-            self.isOnCard = onCard
-            if self.badge.isHidden {
-                self.badge.alpha = 0
-                self.badge.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
-                self.badge.isHidden = false
-            }
-            UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut, .beginFromCurrentState]) {
-                self.badge.alpha = onCard ? 1 : 0
-                self.badge.transform = onCard ? .identity : CGAffineTransform(scaleX: 0.5, y: 0.5)
-            } completion: { [weak self] finished in
-                guard let self, finished, !self.isOnCard else { return }
-                self.badge.isHidden = true
-            }
+        func setModelWiggle(angle: CGFloat, scale: CGFloat) {
+            var transform = CATransform3DMakeRotation(angle, 0, 0, 1)
+            transform = CATransform3DScale(transform, scale, scale, 1)
+            (self.giftContent.view as? GiftItemComponent.View)?.setModelTransform(transform)
         }
 
         required init?(coder: NSCoder) {
@@ -124,8 +107,8 @@ final class WalletCollectiblesGridView: UIView {
                 self.giftTile.addSubview(self.modelSilhouette)
             }
             if let style = self.decorationStyle {
-                self.modelSilhouette.tintColor = UIColor(rgb: UInt32(bitPattern: style.patternColor))
-                    .mixedWith(UIColor(rgb: UInt32(bitPattern: style.innerColor)), alpha: 0.5)
+                self.modelSilhouette.tintColor = UIColor(rgb: UInt32(bitPattern: style.outerColor))
+                    .withMultiplied(hue: 1.0, saturation: 1.1, brightness: 0.86)
             }
             self.modelSilhouette.frame = frame
             self.modelSilhouette.isHidden = !showSilhouette
@@ -160,9 +143,6 @@ final class WalletCollectiblesGridView: UIView {
         self.giftMedia = media
         for (id, view) in self.itemViews {
             let lifted = self.lifted.contains(id)
-            view.badge.bounds = CGRect(x: 0, y: 0, width: 24, height: 24)
-            view.badge.center = CGPoint(x: 15, y: 15)
-            view.setOnCard(occupied.contains(id))
             if let item = self.items.first(where: { $0.address == id }), item.kind == .gift,
                let context = self.context, let theme = self.theme {
                 view.updateGiftTile(context: context, theme: theme, item: item, media: media[id], side: self.itemSide)
@@ -198,6 +178,12 @@ final class WalletCollectiblesGridView: UIView {
     }
 
     func stickerSourceView(address: String) -> UIView? { self.itemViews[address] }
+
+    var isShown: Bool { self.superview != nil && !self.isHidden && self.alpha > 0.5 && self.isUserInteractionEnabled }
+
+    func setStickerWiggle(address: String, angle: CGFloat, scale: CGFloat) {
+        self.itemViews[address]?.setModelWiggle(angle: angle, scale: scale)
+    }
 
     func setStickerReturnScale(address: String, scale: CGFloat) {
         self.itemViews[address]?.transform = CGAffineTransform(scaleX: scale, y: scale)

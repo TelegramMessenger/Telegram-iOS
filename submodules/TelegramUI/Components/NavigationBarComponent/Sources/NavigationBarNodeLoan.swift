@@ -64,4 +64,13 @@ public enum NavigationBarNodeLoan {
     static func setHome(_ home: NavigationButtonComponent.View, of node: ASDisplayNode) {
         self.entry(node, create: true)?.home = home
     }
+
+    /// Whether `button` may take `node` as its home: it is the recorded home, or none is recorded. A button the bar
+    /// has replaced (an in-place change hands the old one to the leaving items) is not.
+    static func isHome(_ button: NavigationButtonComponent.View, of node: ASDisplayNode) -> Bool {
+        guard let home = self.entry(node, create: false)?.home else {
+            return true
+        }
+        return home === button
+    }
 }

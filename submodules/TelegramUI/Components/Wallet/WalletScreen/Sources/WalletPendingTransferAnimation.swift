@@ -71,6 +71,7 @@ final class WalletPendingTransferAnimation {
     private var bands: [CAGradientLayer] = []
     private var starLayers: [CALayer] = []
     private var diamond: InteractiveDiamondComponent.View?
+    private var giftIcon: UIImageView?
     private let diamondComponent = ComponentView<Empty>()
     private var flightSource: WalletSendTransferAnimationSource?
     private var flightOverlay: UIView?
@@ -89,8 +90,11 @@ final class WalletPendingTransferAnimation {
         return true
     }
 
-    init(id: String) {
+    private let isCollectible: Bool
+
+    init(id: String, isCollectible: Bool = false) {
         self.id = id
+        self.isCollectible = isCollectible
         self.separatorMask.backgroundColor = UIColor.white.cgColor
         self.separatorMask.opacity = 0.0
         self.surface.cornerRadius = 22.0
@@ -158,6 +162,7 @@ final class WalletPendingTransferAnimation {
         self.sheen.removeFromSuperlayer()
         self.particles.removeFromSuperlayer()
         if !self.isFlying { self.diamond?.removeFromSuperview() }
+        self.giftIcon?.removeFromSuperview()
         self.row = nil
         self.content = nil
     }
@@ -191,7 +196,22 @@ final class WalletPendingTransferAnimation {
                 (band.mask as? CAShapeLayer)?.path = UIBezierPath(roundedRect: bounds, cornerRadius: 22.0).cgPath
             }
         }
-        if self.diamond == nil && !UIAccessibility.isReduceMotionEnabled {
+        if self.isCollectible {
+            if self.giftIcon == nil {
+                let giftIcon = UIImageView()
+                giftIcon.isUserInteractionEnabled = false
+                giftIcon.accessibilityElementsHidden = true
+                self.giftIcon = giftIcon
+            }
+            if let giftIcon = self.giftIcon {
+                giftIcon.image = generateTintedImage(image: UIImage(bundleImageName: "Wallet/TransactionCollectibleLarge"), color: theme.list.itemSecondaryTextColor)
+                giftIcon.bounds = CGRect(origin: .zero, size: giftIcon.image?.size ?? .zero)
+                if giftIcon.superview !== row {
+                    row.addSubview(giftIcon)
+                }
+            }
+        }
+        if !self.isCollectible && self.diamond == nil && !UIAccessibility.isReduceMotionEnabled {
             let _ = self.diamondComponent.update(transition: .immediate,
                 component: AnyComponent(InteractiveDiamondComponent(size: CGSize(width: 150.0, height: 150.0), diamondWidth: 34.0,
                     isVisible: false, theme: theme)), environment: {}, containerSize: CGSize(width: 150.0, height: 150.0))
@@ -269,7 +289,11 @@ final class WalletPendingTransferAnimation {
 
         let icon = content.transferIconFrame
         let normal = content.convert(CGPoint(x: icon.midX, y: icon.midY), to: row)
-        let pending = CGPoint(x: row.bounds.width - 34.5, y: row.bounds.height * 0.5)
+        var pending = CGPoint(x: row.bounds.width - 34.5, y: row.bounds.height * 0.5)
+        if let giftIcon = self.giftIcon {
+            let amountFrame = content.convert(content.transferAmountFrame, to: row)
+            pending = CGPoint(x: amountFrame.maxX + 2.0 + giftIcon.bounds.width * 0.5, y: amountFrame.midY)
+        }
         var slot = CGPoint(x: normal.x + (pending.x - normal.x) * big, y: normal.y + (pending.y - normal.y) * big)
         if let finish, finish < 0.34 { slot.y -= CGFloat(sin(.pi * finish / 0.34)) * 11.0 }
         if let source = self.flightSource, let start = self.flightStart, let overlay = self.flightOverlay, let diamond = self.diamond {
@@ -315,6 +339,21 @@ final class WalletPendingTransferAnimation {
             diamond.alpha = reduced ? 0.0 : finish.map { CGFloat(max(0.0, min(1.0, 1.0 - ($0 - 0.35) / 0.1))) } ?? 1.0
             diamond.updateWalletTransfer(width: width, rotationSpeed: 6.5, completion: finish != nil, isDark: self.isDark)
             diamond.isRenderingEnabled = !reduced && diamond.alpha > 0.0
+        }
+        if let giftIcon = self.giftIcon {
+            let largeWidth = max(1.0, giftIcon.bounds.width)
+            var scale: CGFloat
+            if let finish {
+                let pop = CGFloat(sin(.pi * min(1.0, finish / 0.26))) * 0.3
+                let shrink = CGFloat(max(0.0, min(1.0, (finish - 0.18) / 0.16)))
+                scale = (1.0 + pop) * (1.0 - shrink) + icon.width / largeWidth * shrink
+            } else {
+                scale = reduced ? 1.0 : 1.0 + 0.08 * CGFloat(sin(2.0 * .pi * elapsed / 1.1))
+            }
+            if giftIcon.superview !== row { row.addSubview(giftIcon) }
+            giftIcon.center = slot
+            giftIcon.transform = CGAffineTransform(scaleX: max(0.001, scale), y: max(0.001, scale))
+            giftIcon.alpha = reduced ? 0.0 : finish.map { CGFloat(max(0.0, min(1.0, 1.0 - ($0 - 0.35) / 0.1))) } ?? 1.0
         }
         self.updateStars(time: reduced ? nil : finish, origin: pending)
         if let finish, finish >= (reduced ? 0.15 : 1.3) { self.finished = true }

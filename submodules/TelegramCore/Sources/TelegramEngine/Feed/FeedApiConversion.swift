@@ -3,6 +3,10 @@ import Foundation
 import Postbox
 internal import TelegramApi
 
+// The feed API is parked (layer 232): what converts a removed type is behind TELEGRAM_NEWS_FEED_API, the parsed
+// shapes and forYouBatchElements stay compiled.
+
+#if TELEGRAM_NEWS_FEED_API
 private func apiFeedPeer(_ peerId: PeerId) -> Api.Peer {
     switch peerId.namespace {
     case Namespaces.Peer.CloudUser:
@@ -26,6 +30,7 @@ extension EngineFeedPosition {
         return .feedPosition(.init(date: self.date, peer: apiFeedPeer(self.peerId), id: self.id))
     }
 }
+#endif
 
 struct ParsedFeedPage {
     let messages: [Api.Message]
@@ -41,6 +46,7 @@ enum ParsedFeedMessages {
     case page(ParsedFeedPage)
 }
 
+#if TELEGRAM_NEWS_FEED_API
 func parseFeedMessages(_ result: Api.feed.FeedMessages) -> ParsedFeedMessages {
     switch result {
     case .feedMessagesNotModified:
@@ -56,6 +62,7 @@ func parseFeedMessages(_ result: Api.feed.FeedMessages) -> ParsedFeedMessages {
         ))
     }
 }
+#endif
 
 enum ParsedForYouElement {
     case message(Api.Message)
@@ -70,6 +77,7 @@ struct ParsedForYouFeed {
     let users: [Api.User]
 }
 
+#if TELEGRAM_NEWS_FEED_API
 func parseForYouFeed(_ result: Api.feed.ForYouFeed) -> ParsedForYouFeed {
     switch result {
     case let .forYouFeed(data):
@@ -87,6 +95,7 @@ func parseForYouFeed(_ result: Api.feed.ForYouFeed) -> ParsedForYouFeed {
         return ParsedForYouFeed(elements: elements, chats: data.chats, users: data.users)
     }
 }
+#endif
 
 /// The batch in server order, as stored: a message that was not stored is left out, and a group keeps the
 /// messages that were (none left drops it).
@@ -112,6 +121,7 @@ func forYouBatchElements(_ elements: [ParsedForYouElement], storedById: [Message
     return batch
 }
 
+#if TELEGRAM_NEWS_FEED_API
 /// nil for `interestCategoriesNotModified`.
 func parseInterestCategories(_ result: Api.feed.InterestCategories) -> EngineInterestCategories? {
     switch result {

@@ -36,6 +36,7 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let highlight: ContactListActionItemHighlight
     let clearHighlightAutomatically: Bool
     let accessible: Bool
+    let hideBackground: Bool
     let action: () -> Void
     public let header: ListViewItemHeader?
 
@@ -43,7 +44,8 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .contactList))
     }
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, systemStyle: ItemListSystemStyle = .legacy, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, actionStyle: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, systemStyle: ItemListSystemStyle = .legacy, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, actionStyle: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, hideBackground: Bool = false, header: ListViewItemHeader?, action: @escaping () -> Void) {
+        self.hideBackground = hideBackground
         self.presentationData = presentationData
         self.style = style
         self.systemStyle = systemStyle
@@ -265,7 +267,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                        strongSelf.backgroundNode.backgroundColor = item.hideBackground ? .clear : item.presentationData.theme.list.plainBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
                         if case .generic = item.actionStyle {

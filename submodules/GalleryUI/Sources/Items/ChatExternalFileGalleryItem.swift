@@ -331,7 +331,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     @objc func actionButtonPressed() {
         if let (context, _) = self.contextAndFile, let message = self.message, let status = self.status, case .Local = status {
             let baseNavigationController = self.baseNavigationController()
-            (baseNavigationController?.topViewController as? ViewController)?.present(context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true)), in: .window(.root))
+            (baseNavigationController?.topViewController as? ViewController)?.present(context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true)), in: .window(.root))
         }
     }
 }
