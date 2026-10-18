@@ -292,7 +292,7 @@ private func giftMovePathIcon(_ name: String, color: UIColor?, side: CGFloat) ->
 private func giftMovePathString(items: [(String, String, Bool)], theme: PresentationTheme) -> NSAttributedString {
     let accentColor = theme.actionSheet.controlAccentColor
     let font = Font.regular(13.0)
-    let textColor = theme.actionSheet.secondaryTextColor
+    let textColor = theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.5)
     let result = NSMutableAttributedString()
     result.append(NSAttributedString(string: " "))
     for (i, item) in items.enumerated() {
