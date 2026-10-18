@@ -194,8 +194,16 @@ public final class StoryPeerListComponent: Component {
             self.containerSize = containerSize
             self.containerInsets = containerInsets
             self.itemSize = itemSize
-            self.itemSpacing = itemSpacing
             self.itemCount = itemCount
+            
+            // Whether the row scrolls is decided at the base spacing; a row that scrolls widens its spacing when only a
+            // sliver of the avatar its edge cuts would show.
+            var itemSpacing = itemSpacing
+            let baseContentWidth = containerInsets.left + containerInsets.right + CGFloat(itemCount) * itemSize.width + CGFloat(max(0, itemCount - 1)) * itemSpacing
+            if itemCount > 1 && baseContentWidth >= containerSize.width {
+                itemSpacing = StoryPeerListRowLayout.itemSpacing(containerWidth: containerSize.width, leadingInset: containerInsets.left, itemWidth: itemSize.width, baseSpacing: itemSpacing, itemCount: itemCount)
+            }
+            self.itemSpacing = itemSpacing
             
             self.contentSize = CGSize(width: containerInsets.left + containerInsets.right + CGFloat(itemCount) * itemSize.width + CGFloat(max(0, itemCount - 1)) * itemSpacing, height: containerSize.height)
         }
