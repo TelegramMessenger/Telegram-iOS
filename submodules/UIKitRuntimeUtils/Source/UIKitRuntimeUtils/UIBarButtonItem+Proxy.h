@@ -8,6 +8,9 @@ typedef void (^UIBarButtonItemSetEnabledListener)(BOOL);
 
 @property (nonatomic, strong, readonly) ASDisplayNode *customDisplayNode;
 @property (nonatomic, readonly) bool backButtonAppearance;
+/// The glass navigation bar gives this item a pill of its own, as it does a text item; by default an image item shares
+/// one with the image items beside it (UIKit's `sharesBackground = false`, which exists only from iOS 26).
+@property (nonatomic) bool requiresOwnSection;
 
 - (instancetype)initWithCustomDisplayNode:(ASDisplayNode *)customDisplayNode;
 - (instancetype)initWithBackButtonAppearanceWithTitle:(NSString *)title target:(id)target action:(SEL)action;

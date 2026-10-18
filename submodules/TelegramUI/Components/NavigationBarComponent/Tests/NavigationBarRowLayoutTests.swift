@@ -194,6 +194,14 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertEqual(self.sectionIds(sections), [["node", "custom"], ["t"], ["more"]])
     }
 
+    // A button asking for a pill of its own (the profile's search beside its "…") splits its icon neighbours, on both
+    // sides.
+    func test_rightSections_ownSectionIcon_splitsItsNeighbours() {
+        let search = NavigationBarComponent.Button(id: "search", content: .icon(imageName: "S"), requiresOwnSection: true, action: { _ in })
+        let sections = navigationBarRightSections([self.button("more", .node(ASDisplayNode())), search, self.button("add", .icon(imageName: "A"))])
+        XCTAssertEqual(self.sectionIds(sections), [["more"], ["search"], ["add"]])
+    }
+
     func test_rightSections_none() {
         XCTAssertTrue(navigationBarRightSections([]).isEmpty)
     }

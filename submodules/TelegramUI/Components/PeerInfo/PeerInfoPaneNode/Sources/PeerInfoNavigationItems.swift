@@ -111,10 +111,11 @@ public final class PeerInfoNavigationItems {
             item = self.imageItem(resources.qrCodeImage, label: resources.qrCodeLabel)
         case .postStory:
             item = self.imageItem(resources.postStoryImage, label: resources.postStoryLabel)
-        case .standaloneSearch:
-            item = self.imageItem(resources.standaloneSearchImage, label: resources.searchLabel)
-        case .searchWithTags:
-            item = self.imageItem(resources.searchWithTagsImage, label: resources.searchLabel)
+        case .standaloneSearch, .searchWithTags:
+            item = self.imageItem(itemKey == .searchWithTags ? resources.searchWithTagsImage : resources.standaloneSearchImage, label: resources.searchLabel)
+            // A pill of its own beside the "…": a pane without search (Media) keeps the "…" pill as it is, and only
+            // the search pill comes and goes.
+            item.requiresOwnSection = true
         case .back, .select, .editPhoto, .editVideo, .more, .search, .sort:
             // Back is the bar's own; the others are produced by no set (more/search/sort map to the slot above).
             return nil

@@ -66,6 +66,18 @@ final class PeerInfoNavigationItemsTests: XCTestCase {
         }
     }
 
+    // Saved Messages' Chats tab: search is a pill of its own beside the "…" (the bar would otherwise put the two icons in
+    // one), so switching to Media leaves the "…" pill as it is and only the search pill comes and goes.
+    func test_searchItems_haveTheirOwnPill_theSlotDoesNot() {
+        let items = PeerInfoNavigationItems(slotNode: ASDisplayNode())
+        let navigationItem = UINavigationItem()
+        items.apply(self.set([], [.searchWithTags, .more]), resources: self.resources(), to: navigationItem, animated: false)
+        XCTAssertEqual(items.existingItem(for: .searchWithTags)?.requiresOwnSection, true)
+        XCTAssertEqual(items.existingItem(for: .more)?.requiresOwnSection, false)
+        items.apply(self.set([], [.standaloneSearch, .more]), resources: self.resources(), to: navigationItem, animated: false)
+        XCTAssertEqual(items.existingItem(for: .standaloneSearch)?.requiresOwnSection, true)
+    }
+
     // Switching panes while the pane set shows: the same item throughout, the slot's key and label following.
     func test_slotKeys_shareOneItem() {
         let slotNode = ASDisplayNode()

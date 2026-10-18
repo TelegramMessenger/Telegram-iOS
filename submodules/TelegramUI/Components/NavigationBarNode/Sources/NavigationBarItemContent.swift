@@ -52,6 +52,7 @@ func navigationBarButton(for item: UIBarButtonItem) -> NavigationBarComponent.Bu
         isEnabled: item.isEnabled,
         tint: tint,
         overflow: overflow,
+        requiresOwnSection: item.requiresOwnSection,
         action: { _ in
             item.performActionOnTarget()
         }

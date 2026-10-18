@@ -131,6 +131,14 @@ final class NavigationBarItemContentTests: XCTestCase {
         XCTAssertEqual(navigationBarButton(for: UIBarButtonItem(customDisplayNode: node)).content, .node(node))
     }
 
+    // An item that asks for its own pill says so to the bar; by default an item does not.
+    func test_requiresOwnSection_reachesTheButton() {
+        let item = UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)
+        XCTAssertFalse(navigationBarButton(for: item).requiresOwnSection)
+        item.requiresOwnSection = true
+        XCTAssertTrue(navigationBarButton(for: item).requiresOwnSection)
+    }
+
     func test_label_isAccessibilityLabelElseTitle_neverASentinel() {
         let titled = UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil)
         XCTAssertEqual(navigationBarButton(for: titled).overflow?.title, "Edit")

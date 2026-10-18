@@ -65,8 +65,12 @@ func navigationBarIsColumnItem(_ button: NavigationBarComponent.Button) -> Bool 
 
 /// Whether UIKit gives a bar button a section (a glass pill) of its own: `-[UIBarButtonItem _requiresOwnSection]`,
 /// asked of UIKit on iOS 27 (spec 2026-10-15-navbar-split-right-buttons-design.md): true for every text item and every
-/// prominent one (the Done checkmark included); false for image, system-image and custom-view items.
+/// prominent one (the Done checkmark included); false for image, system-image and custom-view items, unless the button
+/// asks for one (`Button.requiresOwnSection`, UIKit's `sharesBackground = false`).
 func navigationBarButtonRequiresOwnSection(_ button: NavigationBarComponent.Button) -> Bool {
+    if button.requiresOwnSection {
+        return true
+    }
     if case .text = button.content {
         return true
     }
