@@ -166,6 +166,13 @@ public final class NavigationBarComponent: Component {
         var inPlaceLastTime: Double?
         /// Run when the last capsule animating in place settles (`afterInPlaceAnimations`).
         var inPlaceEndActions: [() -> Void] = []
+        /// A capsule appeared in place since the capsules last settled (`glassNeedsReadaptation`).
+        var inPlaceCapsuleAppeared = false
+        /// Asks the host to make its glass adapt again (`GlassBackgroundContainerView.readaptToBackdrop`). A capsule
+        /// whose glass appeared in place (UIKit materializing it, or growing out of a neighbour's) is glass UIKit only
+        /// half takes in: a context menu morphing out of it left the capsule's glass on screen behind the menu (the
+        /// profile's "…" with its Media tab). Asked once the capsules have settled.
+        public var glassNeedsReadaptation: (() -> Void)?
         /// The animation duration factor (Slow Animations): the in-place springs run this many times slower.
         public var inPlaceDurationFactor: () -> Double = {
             return UIView.animationDurationFactor()

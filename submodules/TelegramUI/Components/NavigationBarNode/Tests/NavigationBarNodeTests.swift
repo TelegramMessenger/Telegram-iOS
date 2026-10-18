@@ -1135,6 +1135,13 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
     }
 
+    // The row's request to adapt the glass again (a capsule that appeared in place has settled) reaches the glass.
+    func test_rowRequest_readaptsTheGlass() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.rowViewForTesting?.glassNeedsReadaptation?()
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
     // A new theme that keeps the glass (a colour of the buttons) leaves the glass as it adapted.
     func test_themeChangeKeepingTheGlass_doesNotReadapt() {
         let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))

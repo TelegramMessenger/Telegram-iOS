@@ -2114,7 +2114,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     switch currentPaneKey {
                     case .savedMessagesChats:
                         if let controller = strongSelf.controller {
-                            PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: source.view, gesture: gesture)
+                            PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: strongSelf.navigationMenuSourceView(source), gesture: gesture)
                         }
                     default:
                         strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)

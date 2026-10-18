@@ -488,6 +488,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         if rowView.superview == nil {
             // Its host is below the title view's: the row answers hits on its whole frame, the title view takes its own.
             self.rowHost.addSubview(rowView)
+            rowView.glassNeedsReadaptation = { [weak self] in
+                self?.readaptGlass()
+            }
             rowView.plattersDetached = self.transitionRole != nil || self.glassHold.isHeld
             rowView.frame = rowFrame
             rowView.alpha = self.rowTargetAlpha

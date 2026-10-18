@@ -750,6 +750,33 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertEqual(runs, 2)
     }
 
+    // A capsule that appears in place (the profile's "…" coming with its Media tab) is glass UIKit only half takes in:
+    // a context menu morphing out of it left its glass behind the menu. Once the change has settled the bar asks its
+    // host to make the glass adapt again, once; a change that adds no capsule does not ask.
+    func test_capsuleAppearingInPlace_asksForReadaptation_onceSettled() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: .back, right: [], transition: .immediate)
+        var requests = 0
+        before.glassNeedsReadaptation = {
+            requests += 1
+        }
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("more")], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(requests, 0)
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(requests, 1)
+
+        let _ = self.updateBar(bar, back: .back, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertEqual(requests, 1)
+    }
+
     // A capsule the change removes (the back button entering edit mode) dematerializes, then leaves.
     func test_inPlaceCapsuleRemoval_dematerializes() {
         let bar = ComponentView<Empty>()

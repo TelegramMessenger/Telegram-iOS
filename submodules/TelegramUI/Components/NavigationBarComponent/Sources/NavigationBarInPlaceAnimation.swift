@@ -381,6 +381,7 @@ extension NavigationBarComponent.View {
         capsule.isDark = isDark
         capsule.itemsTravelWithShape = false
         if isNew {
+            self.inPlaceCapsuleAppeared = true
             capsule.setFrame(frame)
             capsule.maxScale = motion.materializeScale(size: frame.size)
             capsule.dematerialization.set(1.0)
@@ -510,6 +511,9 @@ extension NavigationBarComponent.View {
     func startInPlaceMatched(container: GlassContextExtractableContainer, slot: NavigationBarCapsuleSlot, isRemoval: Bool, frame: CGRect, source insertionSource: CGRect? = nil, partner: GlassContextExtractableContainer, partnerFrame: CGRect, partnerMove: (from: CGRect, to: CGRect), partnerTintColor: GlassBackgroundView.TintColor, tintColor: GlassBackgroundView.TintColor, isDark: Bool, leaving: NavigationBarInPlaceCapsule.Items?) {
         let motion = self.inPlaceMotion
         let time = self.inPlaceTime
+        if !isRemoval {
+            self.inPlaceCapsuleAppeared = true
+        }
         let capsule: NavigationBarInPlaceCapsule
         if let current = self.inPlaceCapsule(for: container) {
             capsule = current
@@ -814,6 +818,10 @@ extension NavigationBarComponent.View {
         self.inPlaceEndActions = []
         for action in actions {
             action()
+        }
+        if self.inPlaceCapsuleAppeared {
+            self.inPlaceCapsuleAppeared = false
+            self.glassNeedsReadaptation?()
         }
     }
 
