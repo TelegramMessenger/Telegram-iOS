@@ -1885,7 +1885,7 @@ private final class WalletScreenComponent: Component {
             )
             let tabsFrame = CGRect(
                 origin: CGPoint(
-                    x: floorToScreenPixels((availableWidth - tabsSize.width) / 2.0),
+                    x: environment.safeInsets.left + floorToScreenPixels((availableWidth - environment.safeInsets.left - environment.safeInsets.right - tabsSize.width) / 2.0),
                     y: originY
                 ),
                 size: tabsSize
