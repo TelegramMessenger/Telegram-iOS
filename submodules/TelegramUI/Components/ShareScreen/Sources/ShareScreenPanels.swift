@@ -316,7 +316,7 @@ final class BottomPanelComponent: Component {
                 containerSize: CGSize(width: availableSize.width + inputPanelInset * 2.0, height: 160.0)
             )
             let panelSlidesOut = !mainActionIsVisible && component.actionTitle == nil
-            let slideTransition: ComponentTransition = previousInputIsVisible != nil && previousInputIsVisible != mainActionIsVisible ? .spring(duration: 0.4) : transition
+            let slideTransition: ComponentTransition = previousInputIsVisible != nil && previousInputIsVisible != mainActionIsVisible && transition.animation.isImmediate ? .spring(duration: 0.4) : transition
             let slideOffset: CGFloat = panelSlidesOut ? component.hiddenActionOffset : 0.0
             let inputPanelFrame = CGRect(origin: CGPoint(x: -inputPanelInset, y: accessoryOffset), size: inputPanelSize)
             if let inputPanelView = self.inputPanel.view {
