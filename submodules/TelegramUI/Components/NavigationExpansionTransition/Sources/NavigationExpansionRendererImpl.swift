@@ -29,7 +29,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     /// first frames on screen: ~50 ms measured on the simulator; margin for slower devices).
     static let glassContainerWarmUp: Double = 0.1
     public let openSpring: NavigationTransitionSpring
-    public let closeSpring = NavigationTransitionSpring(duration: 0.5, bounce: 0.22)
+    public let closeSpring: NavigationTransitionSpring
     public private(set) var backButtonFrame: CGRect?
 
     private var sourceLoan: NavigationExpansionSourceLoan?
@@ -146,7 +146,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.underView = UIView()
         self.underView.isUserInteractionEnabled = false
         self.barExclusions = source.expansionBarExclusions
-        self.openSpring = destination.expansionPath == .photo ? NavigationTransitionSpring(duration: 0.6, bounce: 0.2) : NavigationTransitionSpring(duration: 0.55, bounce: 0.28)
+        self.openSpring = destination.expansionOpenSpring ?? (destination.expansionPath == .photo ? NavigationTransitionSpring(duration: 0.6, bounce: 0.2) : NavigationTransitionSpring(duration: 0.55, bounce: 0.28))
+        self.closeSpring = destination.expansionCloseSpring ?? NavigationTransitionSpring(duration: 0.5, bounce: 0.22)
         self.cardMask.backgroundColor = UIColor.black.cgColor
         self.overlayMask.backgroundColor = UIColor.black.cgColor
         if #available(iOS 13.0, *) {
@@ -791,6 +792,12 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             })
         }
         self.startTint(timeline: timeline, fills: frames.map { min(max($0.tint / 0.55, 0.0), 1.0) })
+        if !timeline.isOpening || timeline.times.last.map({ $0 < 0.5 }) == true, let index = timeline.times.firstIndex(where: { $0 <= 0.05 }), index < timing.sampleTimes.count {
+            let destination = self.destination
+            timeline.schedule(timing.sampleTimes[index], {
+                destination.expansionDidLand()
+            })
+        }
     }
 
     // MARK: The drops' tint, per frame

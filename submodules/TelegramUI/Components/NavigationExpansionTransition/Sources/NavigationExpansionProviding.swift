@@ -149,4 +149,20 @@ public protocol NavigationExpansionDestinationProviding: NavigationExpansionDest
     var expansionPath: ExpansionPath { get }
     func lendExpansionDestination(in screenView: UIView) -> NavigationExpansionDestinationLoan?
     func returnExpansionDestination()
+    var expansionOpenSpring: NavigationTransitionSpring? { get }
+    var expansionCloseSpring: NavigationTransitionSpring? { get }
+    func expansionDidLand()
+}
+
+public extension NavigationExpansionDestinationProviding {
+    var expansionOpenSpring: NavigationTransitionSpring? {
+        return nil
+    }
+
+    var expansionCloseSpring: NavigationTransitionSpring? {
+        return nil
+    }
+
+    func expansionDidLand() {
+    }
 }

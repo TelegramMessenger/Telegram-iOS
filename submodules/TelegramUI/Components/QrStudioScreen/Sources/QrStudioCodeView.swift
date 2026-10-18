@@ -334,7 +334,7 @@ final class QrStudioCodeView: UIView {
         self.planeHostView.layer.add(group, forKey: "dip")
     }
 
-    static let revealTime: Double = 0.45
+    static let revealTime: Double = 0.6
     private static let logoRevealTime: Double = 0.9
 
     private static func logoSpring(_ t: Double) -> Double {

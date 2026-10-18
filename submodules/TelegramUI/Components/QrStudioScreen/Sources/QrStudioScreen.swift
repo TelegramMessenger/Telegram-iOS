@@ -1266,18 +1266,17 @@ final class QrStudioScreenComponent: Component {
             self.presentationContainer.insertSubview(backgroundView, at: 0)
             self.expansionBackgroundView = backgroundView
             let background: [UIView] = isOpening ? [backgroundView] : [backgroundView, self.stage]
-            let candidates: [UIView] = (isOpening ? [self.stage] : []) + [self.closeButton, self.scanButton, self.shareButtonView, self.saveButton, self.emojiStripView, self.sheetView]
-            var controls = candidates.filter { $0.superview != nil && !$0.isHidden && $0.alpha == 1.0 }
-            var card: [UIView] = []
-            if let cardView = self.card.view, cardView.superview != nil, cardView.alpha == 1.0 {
-                card.append(cardView)
+            func isShown(_ view: UIView) -> Bool {
+                return view.superview != nil && !view.isHidden && view.alpha == 1.0
             }
-            if self.codePill.superview != nil, !self.codePill.isHidden, self.codePill.alpha == 1.0 {
-                if card.isEmpty {
-                    controls.append(self.codePill)
-                } else {
-                    card.append(self.codePill)
-                }
+            let buttons = [self.codePill, self.closeButton, self.scanButton, self.shareButtonView, self.saveButton, self.emojiStripView, self.sheetView].filter(isShown)
+            var controls: [UIView] = isOpening && isShown(self.stage) ? [self.stage] : []
+            var card: [UIView] = []
+            if let cardView = self.card.view, isShown(cardView) {
+                card.append(cardView)
+                card.append(contentsOf: buttons)
+            } else {
+                controls.append(contentsOf: buttons)
             }
             return ExpansionViews(background: background, card: card, controls: controls, closeButton: self.closeButton, screenCornerRadii: self.environment?.screenCornerRadii ?? CornerRadii(uniform: self.screenCornerRadius))
         }
@@ -2478,7 +2477,11 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
         return self.opensByExpansion || self.opensAsModal
     }
 
+    private let hapticFeedback = HapticFeedback()
+
     public func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void) {
+        self.hapticFeedback.impact(.light, intensity: 0.7)
+        self.hapticFeedback.prepareImpact(.light)
         if let layout, layout.deviceMetrics.type == .tablet {
             self.opensAsModal = true
             self.navigationPresentation = .modal
@@ -2516,7 +2519,9 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
         if case .push = operation {
             view.beginExpansionAppearance()
         }
-        return QrStudioExpansionDestination(view: view, isOpening: operation == .push)
+        return QrStudioExpansionDestination(view: view, isOpening: operation == .push, landed: { [weak self] in
+            self?.hapticFeedback.impact(.light, intensity: 0.7)
+        })
     }
 
     private func underlyingStatusBarStyle() -> Display.StatusBarStyle? {

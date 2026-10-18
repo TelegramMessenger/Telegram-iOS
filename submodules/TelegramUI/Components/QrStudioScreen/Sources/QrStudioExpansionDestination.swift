@@ -7,12 +7,20 @@ final class QrStudioExpansionDestination: NavigationExpansionDestinationProvidin
     private weak var view: QrStudioScreenComponent.View?
     private var heldView: QrStudioScreenComponent.View?
     private let isOpening: Bool
+    private let landed: () -> Void
 
     let expansionPath: ExpansionPath = .origin
+    let expansionOpenSpring: NavigationTransitionSpring? = NavigationTransitionSpring(duration: 0.38, bounce: 0.0)
+    let expansionCloseSpring: NavigationTransitionSpring? = NavigationTransitionSpring(duration: 0.32, bounce: 0.0)
 
-    init(view: QrStudioScreenComponent.View, isOpening: Bool) {
+    init(view: QrStudioScreenComponent.View, isOpening: Bool, landed: @escaping () -> Void) {
         self.view = view
         self.isOpening = isOpening
+        self.landed = landed
+    }
+
+    func expansionDidLand() {
+        self.landed()
     }
 
     func lendExpansionDestination(in screenView: UIView) -> NavigationExpansionDestinationLoan? {
