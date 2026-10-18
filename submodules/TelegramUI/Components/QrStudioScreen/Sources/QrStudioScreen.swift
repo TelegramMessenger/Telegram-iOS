@@ -1237,7 +1237,7 @@ final class QrStudioScreenComponent: Component {
 
         struct ExpansionViews {
             let background: [UIView]
-            let card: UIView?
+            let card: [UIView]
             let controls: [UIView]
             let closeButton: UIView
             let screenCornerRadii: CornerRadii
@@ -1266,11 +1266,18 @@ final class QrStudioScreenComponent: Component {
             self.presentationContainer.insertSubview(backgroundView, at: 0)
             self.expansionBackgroundView = backgroundView
             let background: [UIView] = isOpening ? [backgroundView] : [backgroundView, self.stage]
-            let candidates: [UIView] = (isOpening ? [self.stage] : []) + [self.closeButton, self.scanButton, self.shareButtonView, self.saveButton, self.codePill, self.emojiStripView, self.sheetView]
-            let controls = candidates.filter { $0.superview != nil && !$0.isHidden && $0.alpha == 1.0 }
-            var card: UIView?
+            let candidates: [UIView] = (isOpening ? [self.stage] : []) + [self.closeButton, self.scanButton, self.shareButtonView, self.saveButton, self.emojiStripView, self.sheetView]
+            var controls = candidates.filter { $0.superview != nil && !$0.isHidden && $0.alpha == 1.0 }
+            var card: [UIView] = []
             if let cardView = self.card.view, cardView.superview != nil, cardView.alpha == 1.0 {
-                card = cardView
+                card.append(cardView)
+            }
+            if self.codePill.superview != nil, !self.codePill.isHidden, self.codePill.alpha == 1.0 {
+                if card.isEmpty {
+                    controls.append(self.codePill)
+                } else {
+                    card.append(self.codePill)
+                }
             }
             return ExpansionViews(background: background, card: card, controls: controls, closeButton: self.closeButton, screenCornerRadii: self.environment?.screenCornerRadii ?? CornerRadii(uniform: self.screenCornerRadius))
         }

@@ -498,6 +498,9 @@ final class QrStudioCodeView: UIView {
             }
             var targets: [(CALayer, String)] = self.codeLayer.shapeLayers.map { ($0, "fillColor") }
             targets.append((self.logoBackgroundLayer, "backgroundColor"))
+            for eye in self.revealEyes {
+                targets.append((eye.layer, "fillColor"))
+            }
             for (targetLayer, keyPath) in targets {
                 let animation = CAKeyframeAnimation(keyPath: keyPath)
                 animation.values = values
@@ -507,6 +510,9 @@ final class QrStudioCodeView: UIView {
             }
         }
         self.codeLayer.update(paths: self.paths, color: inkColor, size: size)
+        for eye in self.revealEyes {
+            eye.layer.fillColor = inkColor
+        }
 
         let hasCode = self.paths != nil
         let logoDiameter = self.paths?.logoDiameter ?? 0.0

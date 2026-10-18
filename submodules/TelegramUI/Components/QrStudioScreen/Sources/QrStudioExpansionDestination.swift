@@ -39,7 +39,7 @@ final class QrStudioExpansionDestination: NavigationExpansionDestinationProvidin
             backButtonFrame: closeFrame,
             backgroundOpening: 0.05 ... 0.9,
             backgroundClosing: 0.1 ... 0.9,
-            flyingViews: views.card.flatMap { [$0] } ?? []
+            flyingViews: views.card
         )
     }
 

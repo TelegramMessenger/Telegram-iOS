@@ -438,13 +438,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
 
     private func flyerTransform(_ flyer: Flyer, _ frame: ExpansionFrame) -> CATransform3D {
-        guard let origin = self.sourceLoan?.origin, flyer.restSize.width > 0.0, flyer.restSize.height > 0.0 else {
+        guard let origin = self.sourceLoan?.origin, let lead = self.flyers.first, lead.restSize.width > 0.0, lead.restSize.height > 0.0 else {
             return flyer.rest
         }
         let p = frame.flight
-        let startScale = min(origin.width / flyer.restSize.width, origin.height / flyer.restSize.height)
+        let startScale = min(origin.width / lead.restSize.width, origin.height / lead.restSize.height)
         let scale = ExpansionCurve.mix(startScale, 1.0, p)
-        let center = ExpansionCurve.mix(CGPoint(x: origin.midX, y: origin.midY), flyer.restCenter, p)
+        let leadCenter = ExpansionCurve.mix(CGPoint(x: origin.midX, y: origin.midY), lead.restCenter, p)
+        let center = CGPoint(x: leadCenter.x + (flyer.restCenter.x - lead.restCenter.x) * scale, y: leadCenter.y + (flyer.restCenter.y - lead.restCenter.y) * scale)
         let dx = (center.x - flyer.restCenter.x) / max(flyer.unit.width, 0.0001)
         let dy = (center.y - flyer.restCenter.y) / max(flyer.unit.height, 0.0001)
         return CATransform3DConcat(CATransform3DConcat(flyer.rest, CATransform3DMakeScale(scale, scale, 1.0)), CATransform3DMakeTranslation(dx, dy, 0.0))
