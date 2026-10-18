@@ -361,7 +361,7 @@ public final class AnimatedTextComponent: Component {
                             }
                             
                             if component.animateScale {
-                                motionTransition.animateScale(layer: characterComponentView.layer, from: 0.001, to: 1.0, delay: delayNorm * delayWidth)
+                                motionTransition.animateScale(layer: characterComponentView.layer, from: 0.001, to: 1.0, delay: delayNorm * delayWidth, completion: characterComponentView.layer.beginRasterizedAnimation())
                             }
                             if component.blur {
                                 ComponentTransition.easeInOut(duration: 0.2).animateBlur(layer: characterComponentView.layer, from: transitionBlurRadius, to: 0.0, delay: delayNorm * delayWidth)
@@ -399,6 +399,8 @@ public final class AnimatedTextComponent: Component {
                             delayWidth = max(0.0, delayWidth)
                             
                             if component.animateScale {
+                                characterComponentView.layer.rasterizationScale = UIScreenScale
+                                characterComponentView.layer.shouldRasterize = true
                                 motionTransition.setScale(view: characterComponentView, scale: 0.01, delay: delayNorm * delayWidth)
                             }
                             let targetY: CGFloat

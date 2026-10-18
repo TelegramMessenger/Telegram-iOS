@@ -319,7 +319,13 @@ public final class MessageInputActionButtonComponent: Component {
                 let scale: CGFloat = highlighted ? 0.6 : 1.0
                 
                 let transition = ComponentTransition(animation: .curve(duration: highlighted ? 0.5 : 0.3, curve: .spring))
-                transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                var endRasterization: [(Bool) -> Void] = []
+                if self.component?.style == .accent {
+                    endRasterization = self.subviews.map { $0.layer.beginRasterizedAnimation() }
+                }
+                transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0), completion: { finished in
+                    endRasterization.forEach { $0(finished) }
+                })
             }
             
             self.button.addTarget(self, action: #selector(self.touchDown), forControlEvents: .touchDown)

@@ -6,6 +6,11 @@ import LegacyComponents
 import TelegramPresentationData
 
 public struct CheckNodeTheme: Equatable {
+    public enum CheckmarkStyle {
+        case regular
+        case narrow
+    }
+
     public var backgroundColor: UIColor
     public var strokeColor: UIColor
     public var borderColor: UIColor
@@ -15,9 +20,10 @@ public struct CheckNodeTheme: Equatable {
     public var filledBorder: Bool
     public var borderWidth: CGFloat?
     public var checkmarkLineWidth: CGFloat?
+    public var checkmarkStyle: CheckmarkStyle
     public var isDottedBorder: Bool
     
-    public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil, checkmarkLineWidth: CGFloat? = nil, isDottedBorder: Bool = false) {
+    public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil, checkmarkLineWidth: CGFloat? = nil, isDottedBorder: Bool = false, checkmarkStyle: CheckmarkStyle = .regular) {
         self.backgroundColor = backgroundColor
         self.strokeColor = strokeColor
         self.borderColor = borderColor
@@ -27,6 +33,7 @@ public struct CheckNodeTheme: Equatable {
         self.filledBorder = filledBorder
         self.borderWidth = borderWidth
         self.checkmarkLineWidth = checkmarkLineWidth
+        self.checkmarkStyle = checkmarkStyle
         self.isDottedBorder = isDottedBorder
     }
 }
@@ -575,9 +582,19 @@ public class CheckLayer: CALayer {
             case .check:
                 let scale = (size.width - inset) / 18.0
                 let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
-                let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
-                let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
-                let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+                let s: CGPoint
+                let p1: CGPoint
+                let p2: CGPoint
+                switch parameters.theme.checkmarkStyle {
+                    case .regular:
+                        s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
+                        p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
+                        p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+                    case .narrow:
+                        s = CGPoint(x: center.x - 3.0 * scale, y: center.y + 1.0 * scale)
+                        p1 = CGPoint(x: 2.0 * scale, y: 2.5 * scale)
+                        p2 = CGPoint(x: 3.8 * scale, y: -6.7 * scale)
+                }
 
                 if !firstSegment.isZero {
                     if firstSegment < 1.0 {

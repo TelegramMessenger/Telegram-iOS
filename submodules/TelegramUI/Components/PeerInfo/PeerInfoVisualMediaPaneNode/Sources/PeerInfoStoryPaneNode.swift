@@ -2768,7 +2768,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             return
                         }
                         
-                        let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(
+                        let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(
                             subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: EngineStoryId(peerId: peer.id, id: item.id), isMention: false)), nil),
                             externalShare: false
                         ))
@@ -5364,7 +5364,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 urlBase = "\(peer.id.id._internalGetInt64Value())"
             }
             
-            let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(
+            let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(
                 subject: .url("https://t.me/\(urlBase)/a/\(id)"),
                 externalShare: false,
                 actionCompleted: { [weak self] in

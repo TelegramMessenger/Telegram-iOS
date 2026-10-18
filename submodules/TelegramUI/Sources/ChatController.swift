@@ -560,6 +560,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var walletTransferAnimation: ChatWalletTransferAnimation?
     var walletTransferAnimationsVisible = false
     weak var attachmentController: AttachmentController?
+    weak var shareSheetController: UIViewController?
     
     weak var currentImportMessageTooltip: UndoOverlayController?
     
@@ -4454,7 +4455,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let self else {
                         return
                     }
-                    let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: self.updatedPresentationData))
+                    let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: self.updatedPresentationData))
                     self.chatDisplayNode.dismissInput()
                     self.present(shareController, in: .window(.root))
                 }
@@ -8483,6 +8484,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         // Wherever the attachment menu is a phone sheet over the chat (also on iPhone Duo's regular-width unfolded screen),
         // its keyboard belongs to the sheet.
         if !layout.presentsFloatingPanels, let attachmentController = self.attachmentController, attachmentController.window != nil {
+            layout = layout.withUpdatedInputHeight(nil)
+        } else if !layout.presentsFloatingPanels, let shareSheetController = self.shareSheetController, shareSheetController.view.window != nil {
             layout = layout.withUpdatedInputHeight(nil)
         }
                 

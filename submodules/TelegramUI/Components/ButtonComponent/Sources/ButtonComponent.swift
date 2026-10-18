@@ -316,6 +316,8 @@ public final class ButtonTextContentComponent: Component {
                             badgeView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak badgeView] _ in
                                 badgeView?.removeFromSuperview()
                             })
+                            badgeView.layer.rasterizationScale = UIScreenScale
+                            badgeView.layer.shouldRasterize = true
                             badgeView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
                         } else {
                             badgeView.removeFromSuperview()

@@ -758,7 +758,7 @@ func openResolvedUrlImpl(
                 }
             } else {
                 if let url = url, !url.isEmpty {
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(url), presetText: text, externalShare: false, immediateExternalShare: false, actionCompleted: {
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(url), presetText: text, externalShare: false, immediateExternalShare: false, actionCompleted: {
                         present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }))
                     present(shareController, nil)

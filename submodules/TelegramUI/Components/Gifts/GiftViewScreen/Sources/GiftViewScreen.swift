@@ -866,7 +866,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 guard canCopy else {
                     return
                 }
-                let shareController = self.context.sharedContext.makeShareController(
+                let shareController = self.context.sharedContext.makeShareScreen(
                     context: self.context,
                     params: ShareControllerParams(
                         subject: .text(text.string),
@@ -1440,7 +1440,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
             }
             let link = "https://t.me/nft/\(gift.slug)"
-            let shareController = self.context.sharedContext.makeShareController(
+            let shareController = self.context.sharedContext.makeShareScreen(
                 context: self.context,
                 params: ShareControllerParams(
                     subject: .url(link),
