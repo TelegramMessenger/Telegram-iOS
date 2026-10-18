@@ -139,6 +139,9 @@ scenario's timer without a touch (for a real tap see below); times from the firs
   `geometryResult` among the other side's entries) rather than always its outermost. The transition state carries the
   press per right index instead of per fixed role. `ChatListNavigationBar` and `NewsHeaderView` are built on the same
   component and fill the same state, so they follow.
+  *Update 2026-10-18:* a title pill is never a leftover that merges. Without a platter in its slot on the other bar
+  (Contacts has only its "+"), it materializes or dematerializes in place (asked by the user). It still morphs with a
+  platter in its slot (Chats' story/proxy capsule, another screen's title pill).
 
 ### 2. Animation of an in-place change
 

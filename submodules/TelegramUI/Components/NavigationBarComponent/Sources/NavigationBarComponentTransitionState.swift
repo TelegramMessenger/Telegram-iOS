@@ -3,7 +3,8 @@ import UIKit
 import Display
 
 /// A title drawn on a glass pill (the chat header), which a navigation transition treats as its bar's second right
-/// platter (asked 2026-10-15): the pill morphs with the other bar's platter at that index, its contents swapping.
+/// platter (asked 2026-10-15): the pill morphs with the other bar's platter at that index, its contents swapping. When the
+/// other bar has none there (Contacts: only its "+"), it materializes or dematerializes in place (asked 2026-10-18).
 public struct NavigationBarTransitionTitlePill {
     /// The pill's frame, in the same coordinates as the row's.
     public var frame: CGRect

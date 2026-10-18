@@ -470,6 +470,48 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, CGRect(x: 230.0, y: 0.0, width: 88.0, height: 44.0))
     }
 
+    // Contacts -> a chat: Contacts has no platter in the pill's slot (only its "+"), so the pill has nothing to morph from
+    // (asked 2026-10-18). It materializes in place instead of growing out of the "+", whose glass it does not merge with.
+    func test_titlePill_withoutACounterpart_materializesInPlace() {
+        let pillFrame = CGRect(x: 110.0, y: 0.0, width: 170.0, height: 44.0)
+        var chat = self.chatSide()
+        chat.titlePill = self.titlePill(pillFrame, contents: UIView())
+        let view = self.makeView(bottom: self.side(back: nil, left: self.text("Sort"), right: [self.button("add")]), top: chat)
+        view.beginTransition(isInteractive: false, toTop: true)
+        let start = view.platterStateForTesting(.trailing(1))
+        XCTAssertEqual(start?.frame, pillFrame)
+        XCTAssertEqual(start?.opacity ?? 1.0, 0.0, accuracy: 0.001)
+        XCTAssertEqual(start?.scale.width ?? 0.0, 186.0 / 170.0, accuracy: 0.0001)
+        XCTAssertFalse(view.glassContainerForTesting(.trailing(1)) === view.glassContainerForTesting(.trailing(0)))
+        self.time.advance(by: 0.1)
+        let moving = view.platterStateForTesting(.trailing(1))
+        XCTAssertEqual(moving?.frame, pillFrame)
+        XCTAssertEqual(moving?.kick, CGSize())
+        XCTAssertGreaterThan(moving?.opacity ?? 0.0, 0.0)
+        self.time.advance(by: 1.5)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.frame, pillFrame)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+    }
+
+    // The pop back to Contacts: the pill dematerializes where it is instead of collapsing into the "+".
+    func test_titlePill_withoutACounterpart_dematerializesInPlace() {
+        let pillFrame = CGRect(x: 110.0, y: 0.0, width: 170.0, height: 44.0)
+        var chat = self.chatSide()
+        chat.titlePill = self.titlePill(pillFrame, contents: UIView())
+        let view = self.makeView(bottom: self.side(back: nil, left: self.text("Sort"), right: [self.button("add")]), top: chat)
+        view.beginTransition(isInteractive: false, toTop: false)
+        XCTAssertFalse(view.glassContainerForTesting(.trailing(1)) === view.glassContainerForTesting(.trailing(0)))
+        self.time.advance(by: 0.1)
+        let leaving = view.platterStateForTesting(.trailing(1))
+        XCTAssertEqual(leaving?.frame, pillFrame)
+        XCTAssertEqual(leaving?.kick, CGSize())
+        XCTAssertLessThan(leaving?.opacity ?? 1.0, 1.0)
+        XCTAssertLessThan(leaving?.glassOpacity ?? 1.0, 1.0)
+        XCTAssertGreaterThan(leaving?.scale.width ?? 0.0, 1.0)
+        self.time.advance(by: 1.5)
+        XCTAssertNil(view.platterStateForTesting(.trailing(1)))
+    }
+
     // Once it has collapsed, the capsule's glass leaves the container it merged in.
     func test_leftoverInnerCapsule_collapsed_leavesTheContainerItMergedIn() {
         let view = self.makeView(bottom: self.chatsSide(), top: self.chatSide())
