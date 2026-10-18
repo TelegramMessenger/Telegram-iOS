@@ -196,6 +196,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var hasBottomStrip: Bool {
         return self.music != nil
     }
+
+    /// The track the music strip shows for `peer` and `screenData` (`peerInfoProfileMusic`): none on Settings and on the
+    /// account's own peer opened as a profile.
+    func profileMusic(peer: EnginePeer?, screenData: PeerInfoScreenData?) -> TelegramMediaFile? {
+        guard let peer, peer.id != self.context.account.peerId || self.isMyProfile, let screenData else {
+            return nil
+        }
+        let list = screenData.savedMusicState.map { state -> (files: [TelegramMediaFile], isLoading: Bool) in
+            return (state.files, state.dataState == .loading)
+        }
+        return peerInfoProfileMusic(list: list, fullUserMusic: (screenData.cachedData as? CachedUserData)?.savedMusic)
+    }
     
     var performButtonAction: ((PeerInfoHeaderButtonKey, PeerInfoHeaderButtonNode?, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
@@ -622,14 +634,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             backgroundCoverSubject = nil
         }
         
-        var currentSavedMusic: TelegramMediaFile?
-        if let peer, peer.id != self.context.account.peerId || self.isMyProfile, let screenData {
-            if let savedMusicState = screenData.savedMusicState {
-                currentSavedMusic = savedMusicState.files.first
-            } else if let cachedUserData = screenData.cachedData as? CachedUserData {
-                currentSavedMusic = cachedUserData.savedMusic
-            }
-        }
+        let currentSavedMusic = self.profileMusic(peer: peer, screenData: screenData)
         let currentWalletBalance: Int64?
         if !self.isSettings, let balance = (screenData?.cachedData as? CachedUserData)?.walletCard?.balance, balance >= 100_000_000 {
             currentWalletBalance = balance
