@@ -379,6 +379,9 @@ private final class StoryContainerScreenComponent: Component {
         
         private let storyItemSharedState = StoryContentItem.SharedState()
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
+        // Holds the item set views. It keeps this view's coordinate space (bounds origin = frame origin) and, on
+        // iPhone Duo, clips the cube to the band beside the side strip.
+        private let itemSetsContainerView: UIView
         
         private var itemSetPinchState: StoryItemSetContainerComponent.PinchState?
         private var itemSetPanState: ItemSetPanState?
@@ -447,9 +450,12 @@ private final class StoryContainerScreenComponent: Component {
             transitionCloneMasterView.isUserInteractionEnabled = false
             self.transitionCloneMasterView = transitionCloneMasterView
             
+            self.itemSetsContainerView = UIView()
+            
             super.init(frame: frame)
             
             self.addSubview(transitionCloneMasterView)
+            self.addSubview(self.itemSetsContainerView)
             
             self.layer.addSublayer(self.backgroundLayer)
             
@@ -970,9 +976,9 @@ private final class StoryContainerScreenComponent: Component {
                     continue
                 }
                 
-                if subview is ItemSetView {
-                    if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], itemSetView === subview {
-                        if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                if subview === self.itemSetsContainerView {
+                    if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], itemSetView.isUserInteractionEnabled, !itemSetView.isHidden, itemSetView.alpha != 0.0 {
+                        if let result = itemSetView.hitTest(self.convert(point, to: itemSetView), with: event) {
                             return result
                         }
                     }
@@ -1541,6 +1547,21 @@ private final class StoryContainerScreenComponent: Component {
             
             var centerDismissFraction: CGFloat = 0.0
             
+            // iPhone Duo: the band clips the stories the way the screen's edge does on a phone. The cube's resting
+            // neighbours sit just past the story's edge, which is inside the side strip here. The clip is off while
+            // the story opens and closes, so it can fly from and to an avatar in the strip, and the neighbours are
+            // hidden while it closes.
+            var itemSetsContainerFrame = CGRect(origin: CGPoint(), size: availableSize)
+            var isItemSetsContainerBand = false
+            if case .regular = environment.metrics.widthClass {
+            } else if environment.safeInsets.left != environment.safeInsets.right {
+                itemSetsContainerFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left, y: 0.0), size: CGSize(width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: availableSize.height))
+                isItemSetsContainerBand = true
+            }
+            self.itemSetsContainerView.center = itemSetsContainerFrame.center
+            self.itemSetsContainerView.bounds = itemSetsContainerFrame
+            self.itemSetsContainerView.clipsToBounds = isItemSetsContainerBand && self.didAnimateIn && !self.isAnimatingOut
+            
             var presentationContextInsets = UIEdgeInsets()
             if !currentSlices.isEmpty, let focusedIndex {
                 for i in max(0, focusedIndex - 1) ... min(focusedIndex + 1, currentSlices.count - 1) {
@@ -1833,9 +1854,10 @@ private final class StoryContainerScreenComponent: Component {
                         let itemFrame = CGRect(origin: CGPoint(x: itemSetContainerOriginX ?? floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
-                                self.addSubview(itemSetView)
+                                self.itemSetsContainerView.addSubview(itemSetView)
                                 //print("init time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                             }
+                            itemSetView.isHidden = isItemSetsContainerBand && self.isAnimatingOut && i != focusedIndex
                             if itemSetComponentView.superview == nil {
                                 itemSetView.tintLayer.isDoubleSided = false
                                 itemSetComponentView.layer.isDoubleSided = false

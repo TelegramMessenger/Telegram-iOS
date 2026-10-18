@@ -88,3 +88,16 @@ swift_test(
         "-warnings-as-errors",
     ],
 )
+
+# Host (macOS) test of the expanded row's spacing when its avatars do not all fit, built the same way.
+# Run with `./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TelegramUI/Components/Stories/StoryPeerListComponent:StoryPeerListRowLayoutTests`.
+swift_test(
+    name = "StoryPeerListRowLayoutTests",
+    srcs = [
+        "Sources/StoryPeerListRowLayout.swift",
+        "Tests/StoryPeerListRowLayoutTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
+    ],
+)
