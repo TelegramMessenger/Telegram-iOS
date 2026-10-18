@@ -1,4 +1,3 @@
-#if TELEGRAM_API_LAYER_233
 import Foundation
 import Postbox
 internal import TelegramApi
