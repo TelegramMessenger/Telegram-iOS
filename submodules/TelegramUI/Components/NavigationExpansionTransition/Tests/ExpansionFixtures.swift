@@ -1,15 +1,16 @@
 import Foundation
 import UIKit
+import Display
 @testable import NavigationExpansionTransition
 
 /// A chat → profile pair on a 402 × 874 screen, measured from the app: the pill 140 × 44 at the bar's centre (y 64),
 /// the avatar capsule 44 at the right edge (inset 16), its photo 38; the profile's avatar 100 at y 76 (status bar 54 +
 /// 22); title and status in the pill (17/12 pt) and in the profile (28/17 pt); the cover's bottom at 327.
-func makeExpansionGeometry() -> ExpansionGeometry {
+func makeExpansionGeometry(screenCornerRadii: CornerRadii = CornerRadii(uniform: 62.0)) -> ExpansionGeometry {
     let width: CGFloat = 402.0
     return ExpansionGeometry(
         screenSize: CGSize(width: width, height: 874.0),
-        screenCornerRadius: 62.0,
+        screenCornerRadii: screenCornerRadii,
         origin: CGRect(x: width * 0.5 - 70.0, y: 64.0, width: 140.0, height: 44.0),
         companion: CGRect(x: width - 16.0 - 44.0, y: 64.0, width: 44.0, height: 44.0),
         companionPhotoDiameter: 38.0,
@@ -23,3 +24,6 @@ func makeExpansionGeometry() -> ExpansionGeometry {
         appearing: (0 ..< 4).map { i in CGRect(x: 16.0 + CGFloat(i) * 94.0, y: 262.0, width: 86.0, height: 58.0) }
     )
 }
+
+/// iPhone Duo's cover screen in portrait: 8 pt on the hinge side, 59 pt outside (`iPhoneDuoScreenCornerRadii`).
+let duoCoverScreenCornerRadii = CornerRadii(topLeft: 8.0, topRight: 59.0, bottomLeft: 8.0, bottomRight: 59.0)

@@ -110,10 +110,11 @@ public final class NavigationExpansionDestinationLoan {
     public let pageEdgeViews: [UIView]
     /// The colour the drops' glass tints toward (the profile's colour; nil: none, the plain profile).
     public let glassTint: UIColor?
-    public let screenCornerRadius: CGFloat
+    /// The screen's corner radii (`ContainerViewLayout.screenCornerRadii`), which differ on iPhone Duo's cover screen.
+    public let screenCornerRadii: CornerRadii
     public let backButtonFrame: CGRect?
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadius: CGFloat, backButtonFrame: CGRect?) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -130,7 +131,7 @@ public final class NavigationExpansionDestinationLoan {
         self.pageEdgeViews = pageEdgeViews
         self.patternViews = patternViews
         self.glassTint = glassTint
-        self.screenCornerRadius = screenCornerRadius
+        self.screenCornerRadii = screenCornerRadii
         self.backButtonFrame = backButtonFrame
     }
 }

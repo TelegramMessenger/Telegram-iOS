@@ -131,7 +131,7 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             pageEdgeViews: [banner],
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
-            screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
+            screenCornerRadii: layout.screenCornerRadii,
             backButtonFrame: backButtonFrame
         )
     }

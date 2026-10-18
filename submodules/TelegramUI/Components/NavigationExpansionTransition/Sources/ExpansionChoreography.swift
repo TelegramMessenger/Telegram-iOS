@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 /// A press still lifting the origin or the companion when the transition starts: 0…1 with the release spring's
 /// overshoot (the prototype's `pill`/`avatar` channels).
@@ -12,6 +13,13 @@ public struct ExpansionPress: Equatable {
     public init(origin: CGFloat, companion: CGFloat) {
         self.origin = origin
         self.companion = companion
+    }
+}
+
+extension CornerRadii {
+    /// The roundest of the four.
+    var maximum: CGFloat {
+        return max(max(self.topLeft, self.topRight), max(self.bottomLeft, self.bottomRight))
     }
 }
 
@@ -50,14 +58,14 @@ public struct ExpansionAppearFrame: Equatable {
 public struct ExpansionFrame: Equatable {
     /// The origin's glass growing into the card that shows the upper screen.
     public var card: CGRect
-    public var cardCornerRadius: CGFloat
+    /// The card's corners: the pill's capsule turning into the screen's corners.
+    public var cardCornerRadii: CornerRadii
     /// The companion's glass ring; nil without a companion.
     public var circle: CGRect?
     /// The upper screen's avatar (or photo) view's frame; nil without a companion.
     public var photo: CGRect?
-    public var photoCornerRadius: CGFloat
-    /// The photo's top corners (they keep the screen's once it is expanded).
-    public var photoTopCornerRadius: CGFloat
+    /// The photo's corners: the circle's, square at the bottom once it is expanded, the top ones keeping the screen's.
+    public var photoCornerRadii: CornerRadii
     public var labels: [ExpansionLabelFrame]
     /// The upper screen's background seen through the card (`paint`).
     public var background: CGFloat
@@ -194,7 +202,12 @@ public struct ExpansionChoreography {
         card = card.offsetBy(dx: hit, dy: 0.0).insetBy(dx: abs(hit) * 0.35, dy: -abs(hit) * 0.3)
         let lifted = self.originLift * press.origin * (1.0 - fillC) - (1.0 - bounce)
         card = card.insetBy(dx: -card.width * lifted * 0.5, dy: -card.height * lifted * 0.5).offsetBy(dx: 0.0, dy: rise)
-        let cardCornerRadius = min(min(card.width, card.height) * 0.5, g.screenCornerRadius)
+        // Each corner turns from the capsule into its screen corner as the card fills the screen. The screen's corners can
+        // differ (iPhone Duo's cover screen: 8 pt on the hinge side, 59 pt outside), so each starts from the roundest of
+        // them: the card starts as the pill whatever the screen.
+        let capsule = min(card.width, card.height) * 0.5
+        let roundest = g.screenCornerRadii.maximum
+        let cardCornerRadii = g.screenCornerRadii.mapRadii { min(capsule, ExpansionCurve.mix(roundest, $0, fillC)) }
 
         // The circle: along the arc, from the companion's photo to the avatar.
         var circle: CGRect?
@@ -227,8 +240,14 @@ public struct ExpansionChoreography {
                 circle = ExpansionCurve.mix(ring, grown, expandC)
             }
         }
-        let photoRadius = (photo?.width ?? 0.0) * 0.5 * (1.0 - expandC)
-        let photoTopRadius = ExpansionCurve.mix((photo?.width ?? 0.0) * 0.5, min((photo?.width ?? 0.0) * 0.5, g.screenCornerRadius), expandC)
+        let photoHalf = (photo?.width ?? 0.0) * 0.5
+        let photoRadius = photoHalf * (1.0 - expandC)
+        let photoCornerRadii = CornerRadii(
+            topLeft: ExpansionCurve.mix(photoHalf, min(photoHalf, g.screenCornerRadii.topLeft), expandC),
+            topRight: ExpansionCurve.mix(photoHalf, min(photoHalf, g.screenCornerRadii.topRight), expandC),
+            bottomLeft: photoRadius,
+            bottomRight: photoRadius
+        )
 
         // The labels ride the card's edge (the anchor, the last label, is carried; the others keep their offset from it,
         // mixing between the two layouts' offsets), sway with the knock, and are lifted and landed with the card.
@@ -299,11 +318,10 @@ public struct ExpansionChoreography {
 
         return ExpansionFrame(
             card: card,
-            cardCornerRadius: cardCornerRadius,
+            cardCornerRadii: cardCornerRadii,
             circle: circle,
             photo: photo,
-            photoCornerRadius: photoRadius,
-            photoTopCornerRadius: photoTopRadius,
+            photoCornerRadii: photoCornerRadii,
             labels: labelFrames,
             background: clock.phase((0.06, 0.45), (0.30, 0.85)),
             ink: clock.phase((0.10, 0.45), (0.30, 0.80)),

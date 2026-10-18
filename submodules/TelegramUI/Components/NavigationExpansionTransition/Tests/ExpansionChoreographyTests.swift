@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import Display
 @testable import NavigationExpansionTransition
 
 final class ExpansionChoreographyTests: XCTestCase {
@@ -12,7 +13,7 @@ final class ExpansionChoreographyTests: XCTestCase {
         let g = makeExpansionGeometry()
         let frame = self.choreography().frame(ExpansionClock(time: 0.0, isOpening: true), press: .none)
         XCTAssertEqual(frame.card, g.origin)
-        XCTAssertEqual(frame.cardCornerRadius, 22.0, accuracy: 1e-9)
+        XCTAssertEqual(frame.cardCornerRadii, CornerRadii(uniform: 22.0))
         XCTAssertEqual(frame.circle, g.companion)
         XCTAssertEqual(frame.photo?.width ?? 0.0, 38.0, accuracy: 1e-9)
         XCTAssertEqual(frame.photo?.midX ?? 0.0, g.companion!.midX, accuracy: 1e-9)
@@ -24,11 +25,35 @@ final class ExpansionChoreographyTests: XCTestCase {
         let g = makeExpansionGeometry()
         let frame = self.choreography().frame(ExpansionClock(time: 1.0, isOpening: true), press: .none, wobble: 0.0)
         XCTAssertEqual(frame.card, CGRect(origin: CGPoint(), size: g.screenSize))
-        XCTAssertEqual(frame.cardCornerRadius, 62.0, accuracy: 1e-9)
+        XCTAssertEqual(frame.cardCornerRadii, CornerRadii(uniform: 62.0))
         XCTAssertEqual(frame.circle?.width ?? 0.0, 100.0, accuracy: 1e-9)
         XCTAssertEqual(frame.circle?.midX ?? 0.0, g.avatar!.midX, accuracy: 1e-9)
         XCTAssertEqual(frame.circle?.midY ?? 0.0, g.avatar!.midY, accuracy: 1e-9)
         XCTAssertEqual(frame.photo, g.avatar)
+    }
+
+    // A screen whose corners differ (iPhone Duo's cover screen): the card still starts as the pill, a capsule in every
+    // corner, and ends with each of the screen's own corners; on the way a hinge corner turns from the one into the other.
+    func test_differingScreenCorners_cardStartsAsThePill_endsWithTheScreensCorners() {
+        let c = ExpansionChoreography(geometry: makeExpansionGeometry(screenCornerRadii: duoCoverScreenCornerRadii), path: .origin, duration: 0.55)
+        XCTAssertEqual(c.frame(ExpansionClock(time: 0.0, isOpening: true), press: .none).cardCornerRadii, CornerRadii(uniform: 22.0))
+        XCTAssertEqual(c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none, wobble: 0.0).cardCornerRadii, duoCoverScreenCornerRadii)
+        XCTAssertEqual(c.frame(ExpansionClock(time: 0.0, isOpening: false), press: .none).cardCornerRadii, CornerRadii(uniform: 22.0))
+        var previous: CGFloat = 59.0
+        for time: CGFloat in [0.2, 0.4, 0.6, 0.8] {
+            let radii = c.frame(ExpansionClock(time: time, isOpening: true), press: .none, wobble: 0.0).cardCornerRadii
+            XCTAssertEqual(radii.topRight, 59.0, accuracy: 1e-9, "t=\(time)")
+            XCTAssertEqual(radii.topLeft, radii.bottomLeft, accuracy: 1e-9, "t=\(time)")
+            XCTAssertLessThan(radii.topLeft, previous, "t=\(time)")
+            XCTAssertGreaterThan(radii.topLeft, 8.0, "t=\(time)")
+            previous = radii.topLeft
+        }
+    }
+
+    func test_photoPath_differingScreenCorners_topCornersAreTheScreens() {
+        let c = ExpansionChoreography(geometry: makeExpansionGeometry(screenCornerRadii: duoCoverScreenCornerRadii), path: .photo, duration: 0.55)
+        let end = c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none)
+        XCTAssertEqual(end.photoCornerRadii, CornerRadii(topLeft: 8.0, topRight: 59.0, bottomLeft: 0.0, bottomRight: 0.0))
     }
 
     // The sides and the top lead; the bottom follows the clock linearly (`capsuleRect`, ProfileMorph.swift:1392).
@@ -240,8 +265,7 @@ final class ExpansionChoreographyTests: XCTestCase {
         let c = self.choreography(.photo)
         let end = c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none)
         XCTAssertEqual(end.photo, g.photo)
-        XCTAssertEqual(end.photoCornerRadius, 0.0, accuracy: 1e-9)
-        XCTAssertEqual(end.photoTopCornerRadius, 62.0, accuracy: 1e-9)
+        XCTAssertEqual(end.photoCornerRadii, CornerRadii(topLeft: 62.0, topRight: 62.0, bottomLeft: 0.0, bottomRight: 0.0))
         XCTAssertEqual(end.labels[0].center.x, g.labels[0].photoCenter!.x, accuracy: 1e-6)
         XCTAssertEqual(end.labels[0].center.y, g.labels[0].photoCenter!.y, accuracy: 1e-6)
         XCTAssertEqual(end.labels[0].destinationScale, 1.0, accuracy: 1e-9)

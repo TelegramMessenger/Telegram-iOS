@@ -73,6 +73,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     /// Views clipping at the page's top edge (the profile's cover).
     var pageEdgeViews: [UIView] = []
     var path: ExpansionPath = .origin
+    var screenCornerRadii = makeExpansionGeometry().screenCornerRadii
     var lends = 0
     var returns = 0
     private(set) weak var top: UIView?
@@ -104,7 +105,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: self.path == .photo ? g.photo! : g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
-        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, patternViews: [], glassTint: .purple, screenCornerRadius: g.screenCornerRadius, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
+        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, patternViews: [], glassTint: .purple, screenCornerRadii: self.screenCornerRadii, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
     }
 
     func returnExpansionDestination() {
@@ -321,8 +322,8 @@ final class NavigationExpansionRendererTests: XCTestCase {
             let wrapper = renderer.photoMaskForTesting.wrapper
             // The left corners, top and bottom: around each one's centre, just inside its radius and just outside.
             let corners: [(center: CGPoint, radius: CGFloat, down: CGFloat)] = [
-                (CGPoint(x: photo.minX + frame.photoTopCornerRadius, y: photo.minY + frame.photoTopCornerRadius), frame.photoTopCornerRadius, -1.0),
-                (CGPoint(x: photo.minX + frame.photoCornerRadius, y: photo.maxY - frame.photoCornerRadius), frame.photoCornerRadius, 1.0)
+                (CGPoint(x: photo.minX + frame.photoCornerRadii.topLeft, y: photo.minY + frame.photoCornerRadii.topLeft), frame.photoCornerRadii.topLeft, -1.0),
+                (CGPoint(x: photo.minX + frame.photoCornerRadii.bottomLeft, y: photo.maxY - frame.photoCornerRadii.bottomLeft), frame.photoCornerRadii.bottomLeft, 1.0)
             ]
             for corner in corners where corner.radius > 2.0 {
                 for degrees in stride(from: 5.0, through: 85.0, by: 10.0) {
@@ -398,8 +399,8 @@ final class NavigationExpansionRendererTests: XCTestCase {
     // be its last keyframe, after the per-frame tint as well (it re-applies the drops' shape). The close's pill was
     // square for two frames when the tint applied the drop view's own corner radius (0) to the glass.
     func test_models_areTheLastKeyframes_afterTheTint() {
-        for isOpening in [true, false] {
-            let (renderer, container, top, _, _) = self.make()
+        for (isOpening, screenCornerRadii) in [(true, CornerRadii(uniform: 62.0)), (false, CornerRadii(uniform: 62.0)), (true, duoCoverScreenCornerRadii), (false, duoCoverScreenCornerRadii)] {
+            let (renderer, container, top, _, _) = self.make(configure: { $0.screenCornerRadii = screenCornerRadii })
             let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
             let times = timing.sampleTimes.map { t -> CGFloat in
                 let u = CGFloat(t / 0.5)
@@ -512,7 +513,28 @@ final class NavigationExpansionRendererTests: XCTestCase {
         let g = makeExpansionGeometry()
         renderer.update(time: 1.0, isOpening: false, pose: NavigationExpansionCardPose(dx: 120.0, dy: 10.0, anchor: CGPoint(x: 40.0, y: 520.0), weight: 1.0))
         XCTAssertEqual(top.layer.mask?.frame ?? .zero, CGRect(origin: CGPoint(), size: g.screenSize))
-        XCTAssertEqual(top.layer.mask?.cornerRadius ?? 0.0, g.screenCornerRadius, accuracy: 0.01)
+        XCTAssertEqual(top.layer.mask?.cornerRadius ?? 0.0, g.screenCornerRadii.topLeft, accuracy: 0.01)
+    }
+
+    // A screen whose corners differ (iPhone Duo's cover screen): the card's mask takes four radii, the pill's capsule at 0
+    // and the screen's own at 1, and keyframes them from the one to the other; it keeps no single radius.
+    func test_differingScreenCorners_cardMaskTakesTheScreensCorners() {
+        let (renderer, _, top, _, _) = self.make(configure: { $0.screenCornerRadii = duoCoverScreenCornerRadii })
+        guard let mask = top.layer.mask else {
+            return XCTFail("no card mask")
+        }
+        XCTAssertEqual(mask.cornerRadii, CornerRadii(uniform: 22.0))
+        renderer.update(time: 1.0, isOpening: true, pose: .none)
+        XCTAssertEqual(mask.cornerRadii, duoCoverScreenCornerRadii)
+        let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
+        let times = timing.sampleTimes.map { CGFloat($0 / 0.5) }
+        renderer.animate(timeline: NavigationExpansionTimeline(timing: timing, times: times, isOpening: true, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in }))
+        guard let animation = mask.animation(forKey: "navigationExpansion." + mask.cornerRadiiKeyPath) as? CAKeyframeAnimation, let values = animation.values as? [NSValue] else {
+            return XCTFail("no corner radii keyframes")
+        }
+        XCTAssertEqual(values.first.flatMap { CornerRadii(boxedValue: $0) }, CornerRadii(uniform: 22.0))
+        XCTAssertEqual(values.last.flatMap { CornerRadii(boxedValue: $0) }, duoCoverScreenCornerRadii)
+        XCTAssertNil(mask.animation(forKey: "navigationExpansion.cornerRadius"))
     }
 
     // The drops are part of the card: they carry the pose too (the prototype's liquid is inside the transformed profile).
@@ -941,6 +963,8 @@ private func assertModelsAreLastKeyframes(_ layer: CALayer, file: StaticString =
                 XCTAssertEqual(current.bounds.height, r.height, accuracy: 0.01, name, file: file, line: line)
             case "cornerRadius":
                 XCTAssertEqual(current.cornerRadius, CGFloat((last as! NSNumber).doubleValue), accuracy: 0.01, name, file: file, line: line)
+            case current.cornerRadiiKeyPath:
+                XCTAssertEqual(current.cornerRadii, CornerRadii(boxedValue: last as! NSValue), name, file: file, line: line)
             case "opacity":
                 XCTAssertEqual(Double(current.opacity), (last as! NSNumber).doubleValue, accuracy: 0.001, name, file: file, line: line)
             case "transform":

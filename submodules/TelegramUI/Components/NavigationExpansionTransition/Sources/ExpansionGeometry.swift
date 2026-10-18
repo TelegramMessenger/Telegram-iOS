@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 /// Which way the upper screen arrives: out of the origin (the pill), or straight into its expanded photo (a tap on the
 /// avatar), where everything follows the photo.
@@ -32,8 +33,9 @@ public struct ExpansionLabelGeometry: Equatable {
 /// screen's avatar, photo, labels and appearing items.
 public struct ExpansionGeometry: Equatable {
     public var screenSize: CGSize
-    /// The device's corner radius: the card's corners once it is taller than two of them.
-    public var screenCornerRadius: CGFloat
+    /// The screen's corner radii (`ContainerViewLayout.screenCornerRadii`): the card's corners once it fills the screen.
+    /// They differ per corner on iPhone Duo's cover screen.
+    public var screenCornerRadii: CornerRadii
     /// The glass shape that becomes the card (the chat's title pill).
     public var origin: CGRect
     /// The companion's glass capsule (the chat's avatar button, 44 pt); nil without one.
@@ -64,9 +66,9 @@ public struct ExpansionGeometry: Equatable {
         return min(maximum, (dx * dx + dy * dy).squareRoot())
     }
 
-    public init(screenSize: CGSize, screenCornerRadius: CGFloat, origin: CGRect, companion: CGRect?, companionPhotoDiameter: CGFloat, avatar: CGRect?, photo: CGRect?, labels: [ExpansionLabelGeometry], carriedEdge: CGFloat, appearing: [CGRect]) {
+    public init(screenSize: CGSize, screenCornerRadii: CornerRadii, origin: CGRect, companion: CGRect?, companionPhotoDiameter: CGFloat, avatar: CGRect?, photo: CGRect?, labels: [ExpansionLabelGeometry], carriedEdge: CGFloat, appearing: [CGRect]) {
         self.screenSize = screenSize
-        self.screenCornerRadius = screenCornerRadius
+        self.screenCornerRadii = screenCornerRadii
         self.origin = origin
         self.companion = companion
         self.companionPhotoDiameter = companionPhotoDiameter

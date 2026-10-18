@@ -45,7 +45,10 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     private var glassContainerShownAt: Double = 0.0
     /// The origin drop's model shape, as last given to it: its view's own layer has no corner radius, the glass inside
     /// it does.
-    private var originDropCornerRadius: CGFloat = 0.0
+    private var originDropCornerRadii = CornerRadii(uniform: 0.0)
+    /// The screen's corners differ (iPhone Duo's cover screen): the card's shapes take four radii. Elsewhere they take
+    /// one, as they always have.
+    private var cornersDiffer = false
     private let companionDrop = GlassBackgroundView()
     private let shadowView = UIView()
     private let cardMask = CALayer()
@@ -199,8 +202,9 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let destinationLabel = destinationLoan.labels[index]
             labels.append(ExpansionLabelGeometry(sourceCenter: sourceLabel.screenCenter, sourceSize: sourceLabel.textSize, destinationCenter: destinationLabel.screenCenter, destinationSize: destinationLabel.textSize, photoCenter: destinationLabel.screenCenter, photoSize: destinationLabel.textSize))
         }
-        let geometry = ExpansionGeometry(screenSize: size, screenCornerRadius: destinationLoan.screenCornerRadius, origin: sourceLoan.origin, companion: sourceLoan.companion, companionPhotoDiameter: sourceLoan.companionPhotoDiameter, avatar: destinationLoan.avatar, photo: destinationLoan.photo, labels: labels, carriedEdge: destinationLoan.carriedEdge, appearing: destinationLoan.appearingViews.map { $0.convert($0.bounds, to: screen) })
+        let geometry = ExpansionGeometry(screenSize: size, screenCornerRadii: destinationLoan.screenCornerRadii, origin: sourceLoan.origin, companion: sourceLoan.companion, companionPhotoDiameter: sourceLoan.companionPhotoDiameter, avatar: destinationLoan.avatar, photo: destinationLoan.photo, labels: labels, carriedEdge: destinationLoan.carriedEdge, appearing: destinationLoan.appearingViews.map { $0.convert($0.bounds, to: screen) })
         self.choreography = ExpansionChoreography(geometry: geometry, path: self.destination.expansionPath, duration: self.openSpring.response)
+        self.cornersDiffer = !geometry.screenCornerRadii.isUniform
 
         // Under the upper screen: the drops, merging.
         if self.glassContainer.spacing != geometry.dropMergeSpacing {
@@ -209,7 +213,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.glassContainer.frame = CGRect(origin: CGPoint(), size: size)
         self.glassContainer.update(size: size, isDark: sourceLoan.isDark, transition: .immediate)
         self.shadowView.frame = CGRect(origin: CGPoint(), size: size)
-        self.shadowView.layer.shadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: destinationLoan.screenCornerRadius).cgPath
+        let screenRadii = destinationLoan.screenCornerRadii
+        if self.cornersDiffer {
+            func corner(_ radius: CGFloat) -> CGSize {
+                return CGSize(width: radius, height: radius)
+            }
+            self.shadowView.layer.shadowPath = navigationExpansionRoundedPath(rect: CGRect(origin: CGPoint(), size: size), topLeft: corner(screenRadii.topLeft), topRight: corner(screenRadii.topRight), bottomLeft: corner(screenRadii.bottomLeft), bottomRight: corner(screenRadii.bottomRight))
+        } else {
+            self.shadowView.layer.shadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: screenRadii.topLeft).cgPath
+        }
         self.underView.addSubview(self.shadowView)
         self.underView.addSubview(self.glassContainer)
         // A new merging container draws nothing for its first frames on screen: drops that show from the start (the
@@ -348,9 +360,11 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         let scaleX = max(0.0001, photo.width / rest.width)
         let scaleY = max(0.0001, photo.height / rest.height)
-        let top = CGSize(width: frame.photoTopCornerRadius / scaleX, height: frame.photoTopCornerRadius / scaleY)
-        let bottom = CGSize(width: frame.photoCornerRadius / scaleX, height: frame.photoCornerRadius / scaleY)
-        return navigationExpansionRoundedPath(rect: CGRect(origin: CGPoint(), size: rest.size), top: top, bottom: bottom)
+        func corner(_ radius: CGFloat) -> CGSize {
+            return CGSize(width: radius / scaleX, height: radius / scaleY)
+        }
+        let radii = frame.photoCornerRadii
+        return navigationExpansionRoundedPath(rect: CGRect(origin: CGPoint(), size: rest.size), topLeft: corner(radii.topLeft), topRight: corner(radii.topRight), bottomLeft: corner(radii.bottomLeft), bottomRight: corner(radii.bottomRight))
     }
 
     private func photoTransform(_ frame: ExpansionFrame, rest: CGRect) -> (center: CGPoint, transform: CATransform3D)? {
@@ -399,6 +413,20 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return GlassBackgroundView.TintColor.blended(from: sourceLoan.originTint, to: .init(kind: .custom(style: .default, color: glassTint.withAlphaComponent(0.55))), fraction: min(max(fill, 0.0), 1.0), isDark: sourceLoan.isDark)
     }
 
+    private func updateOriginDrop(size: CGSize, radii: CornerRadii, isDark: Bool, tintColor: GlassBackgroundView.TintColor) {
+        if self.cornersDiffer {
+            self.originDrop.update(size: size, cornerRadii: glassCornerRadii(radii), isDark: isDark, tintColor: tintColor, transition: .immediate)
+        } else {
+            self.originDrop.update(size: size, cornerRadius: radii.topLeft, isDark: isDark, tintColor: tintColor, transition: .immediate)
+        }
+    }
+
+    /// Whether the card's masks take four radii: where the screen's corners differ and the OS has per-corner radii. Else
+    /// one, the roundest.
+    private var masksTakeCornerRadii: Bool {
+        return self.cornersDiffer && CALayer.cornerRadiiSupported
+    }
+
     /// One frame, set directly.
     private func apply(_ f: ExpansionFrame, pose: NavigationExpansionCardPose) {
         guard let sourceLoan = self.sourceLoan, let destinationLoan = self.destinationLoan else {
@@ -409,8 +437,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let fill = min(max(f.tint / 0.55, 0.0), 1.0)
         self.appliedTintFill = fill
         self.originDrop.frame = f.card
-        self.originDropCornerRadius = f.cardCornerRadius
-        self.originDrop.update(size: f.card.size, cornerRadius: f.cardCornerRadius, isDark: sourceLoan.isDark, tintColor: self.dropTint(fill: fill), transition: .immediate)
+        self.originDropCornerRadii = f.cardCornerRadii
+        self.updateOriginDrop(size: f.card.size, radii: f.cardCornerRadii, isDark: sourceLoan.isDark, tintColor: self.dropTint(fill: fill))
         if let circle = f.circle {
             self.companionDrop.frame = circle
             self.companionDrop.update(size: circle.size, cornerRadius: circle.width * 0.5, isDark: sourceLoan.isDark, tintColor: self.dropTint(fill: fill), transition: .immediate)
@@ -419,7 +447,11 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         // The card follows the clock (the screen at 1, while a finger holds the swipe); the pose carries it.
         for mask in [self.cardMask, self.overlayMask] {
             mask.frame = f.card
-            mask.cornerRadius = f.cardCornerRadius
+            if self.masksTakeCornerRadii {
+                mask.setCornerRadii(f.cardCornerRadii)
+            } else {
+                mask.cornerRadius = f.cardCornerRadii.maximum
+            }
         }
         if let (center, transform) = self.photoTransform(f, rest: destinationLoan.avatarRestFrame) {
             self.photoWrapper.layer.position = center
@@ -551,8 +583,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         // The drops. Their glass is laid out from each drop's top-left, so the drops' own bounds move with their shape.
         add(self.originDrop.layer, "position", frames.map { point(CGPoint(x: $0.card.midX, y: $0.card.midY)) })
         add(self.originDrop.layer, "bounds", frames.map { bounds($0.card) })
-        self.originDropCornerRadius = last.cardCornerRadius
-        self.originDrop.animateShape(sizes: frames.map { $0.card.size }, cornerRadii: frames.map { $0.cardCornerRadius }, timing: timing, isDark: sourceLoan.isDark, tintColor: self.dropTint(fill: min(max(last.tint / 0.55, 0.0), 1.0)))
+        self.originDropCornerRadii = last.cardCornerRadii
+        let lastDropTint = self.dropTint(fill: min(max(last.tint / 0.55, 0.0), 1.0))
+        if self.cornersDiffer {
+            self.originDrop.animateShape(sizes: frames.map { $0.card.size }, cornerRadii: frames.map { glassCornerRadii($0.cardCornerRadii) }, timing: timing, isDark: sourceLoan.isDark, tintColor: lastDropTint)
+        } else {
+            self.originDrop.animateShape(sizes: frames.map { $0.card.size }, cornerRadii: frames.map { $0.cardCornerRadii.topLeft }, timing: timing, isDark: sourceLoan.isDark, tintColor: lastDropTint)
+        }
         if last.circle != nil {
             add(self.companionDrop.layer, "position", frames.map { point(CGPoint(x: $0.circle?.midX ?? 0.0, y: $0.circle?.midY ?? 0.0)) })
             add(self.companionDrop.layer, "bounds", frames.map { bounds($0.circle ?? CGRect()) })
@@ -562,11 +599,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
 
         // The card, on the clock: a released swipe's card shrinks into the pill while its pose lets go.
         let cardRects = frames.map { $0.card }
-        let cardRadii = frames.map { $0.cardCornerRadius }
+        let cardRadii = frames.map { $0.cardCornerRadii }
         for mask in destinationLoan.overlayViews.isEmpty ? [self.cardMask] : [self.cardMask, self.overlayMask] {
             add(mask, "position", cardRects.map { point(CGPoint(x: $0.midX, y: $0.midY)) })
             add(mask, "bounds", cardRects.map { bounds($0) })
-            add(mask, "cornerRadius", cardRadii.map { number($0) })
+            if self.masksTakeCornerRadii {
+                add(mask, mask.cornerRadiiKeyPath, cardRadii.map { $0.boxedValue })
+            } else {
+                add(mask, "cornerRadius", cardRadii.map { number($0.maximum) })
+            }
         }
 
         // The photo.
@@ -684,7 +725,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         self.appliedTintFill = fill
         let tint = self.dropTint(fill: fill)
-        self.originDrop.update(size: self.originDrop.bounds.size, cornerRadius: self.originDropCornerRadius, isDark: sourceLoan.isDark, tintColor: tint, transition: .immediate)
+        self.updateOriginDrop(size: self.originDrop.bounds.size, radii: self.originDropCornerRadii, isDark: sourceLoan.isDark, tintColor: tint)
         self.companionDrop.update(size: self.companionDrop.bounds.size, cornerRadius: self.companionDrop.bounds.width * 0.5, isDark: sourceLoan.isDark, tintColor: tint, transition: .immediate)
     }
 
@@ -839,27 +880,33 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
 }
 
-/// A rectangle with its own top and bottom corner radii, across and down (elliptical corners), drawn with the same
-/// elements whatever the radii (one cubic per corner, zero-radius ones included), so Core Animation can interpolate
-/// between two of them.
-func navigationExpansionRoundedPath(rect: CGRect, top: CGSize, bottom: CGSize) -> CGPath {
+private func glassCornerRadii(_ radii: CornerRadii) -> GlassBackgroundView.CornerRadii {
+    return GlassBackgroundView.CornerRadii(topLeft: radii.topLeft, topRight: radii.topRight, bottomLeft: radii.bottomLeft, bottomRight: radii.bottomRight)
+}
+
+/// A rectangle with its own radius at each corner, across and down (elliptical corners), drawn with the same elements
+/// whatever the radii (one cubic per corner, zero-radius ones included), so Core Animation can interpolate between two of
+/// them.
+func navigationExpansionRoundedPath(rect: CGRect, topLeft: CGSize, topRight: CGSize, bottomLeft: CGSize, bottomRight: CGSize) -> CGPath {
     func clamped(_ radius: CGSize) -> CGSize {
         return CGSize(width: min(max(radius.width, 0.0), rect.width * 0.5), height: min(max(radius.height, 0.0), rect.height * 0.5))
     }
-    let t = clamped(top)
-    let b = clamped(bottom)
+    let tl = clamped(topLeft)
+    let tr = clamped(topRight)
+    let bl = clamped(bottomLeft)
+    let br = clamped(bottomRight)
     // A quarter ellipse's control points lie this far along its tangents (a cubic's quarter circle).
     let k: CGFloat = 0.5522847498
     let path = CGMutablePath()
-    path.move(to: CGPoint(x: rect.minX + t.width, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.maxX - t.width, y: rect.minY))
-    path.addCurve(to: CGPoint(x: rect.maxX, y: rect.minY + t.height), control1: CGPoint(x: rect.maxX - t.width * (1.0 - k), y: rect.minY), control2: CGPoint(x: rect.maxX, y: rect.minY + t.height * (1.0 - k)))
-    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - b.height))
-    path.addCurve(to: CGPoint(x: rect.maxX - b.width, y: rect.maxY), control1: CGPoint(x: rect.maxX, y: rect.maxY - b.height * (1.0 - k)), control2: CGPoint(x: rect.maxX - b.width * (1.0 - k), y: rect.maxY))
-    path.addLine(to: CGPoint(x: rect.minX + b.width, y: rect.maxY))
-    path.addCurve(to: CGPoint(x: rect.minX, y: rect.maxY - b.height), control1: CGPoint(x: rect.minX + b.width * (1.0 - k), y: rect.maxY), control2: CGPoint(x: rect.minX, y: rect.maxY - b.height * (1.0 - k)))
-    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + t.height))
-    path.addCurve(to: CGPoint(x: rect.minX + t.width, y: rect.minY), control1: CGPoint(x: rect.minX, y: rect.minY + t.height * (1.0 - k)), control2: CGPoint(x: rect.minX + t.width * (1.0 - k), y: rect.minY))
+    path.move(to: CGPoint(x: rect.minX + tl.width, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX - tr.width, y: rect.minY))
+    path.addCurve(to: CGPoint(x: rect.maxX, y: rect.minY + tr.height), control1: CGPoint(x: rect.maxX - tr.width * (1.0 - k), y: rect.minY), control2: CGPoint(x: rect.maxX, y: rect.minY + tr.height * (1.0 - k)))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - br.height))
+    path.addCurve(to: CGPoint(x: rect.maxX - br.width, y: rect.maxY), control1: CGPoint(x: rect.maxX, y: rect.maxY - br.height * (1.0 - k)), control2: CGPoint(x: rect.maxX - br.width * (1.0 - k), y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX + bl.width, y: rect.maxY))
+    path.addCurve(to: CGPoint(x: rect.minX, y: rect.maxY - bl.height), control1: CGPoint(x: rect.minX + bl.width * (1.0 - k), y: rect.maxY), control2: CGPoint(x: rect.minX, y: rect.maxY - bl.height * (1.0 - k)))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + tl.height))
+    path.addCurve(to: CGPoint(x: rect.minX + tl.width, y: rect.minY), control1: CGPoint(x: rect.minX, y: rect.minY + tl.height * (1.0 - k)), control2: CGPoint(x: rect.minX + tl.width * (1.0 - k), y: rect.minY))
     path.closeSubpath()
     return path
 }
