@@ -734,6 +734,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case inputDecEngineEditor(Bool)
     case coreListChatBackend(Bool)
     case springSendAnimation(Bool)
+    case fakeWalletTransfers(Bool)
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -787,7 +788,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -943,6 +944,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .springSendAnimation:
             // Appended right after `inputDecTextBackend`; see the ordering note above.
             return 73
+        case .fakeWalletTransfers:
+            // Appended right after `springSendAnimation`; see the ordering note above.
+            return 74
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1439,6 +1443,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.springSendAnimation = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .fakeWalletTransfers(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Wallet: fake transfers", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.fakeWalletTransfers = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -1971,6 +1985,9 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         }
         #endif
         entries.append(.springSendAnimation(experimentalSettings.springSendAnimation))
+        if let data = context?.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 {
+            entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
+        }
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

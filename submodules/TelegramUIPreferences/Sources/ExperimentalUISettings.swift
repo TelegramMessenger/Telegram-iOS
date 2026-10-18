@@ -88,6 +88,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var forceRLottieBackend: Bool
     public var respectSystemMicrophone: Bool
     public var springSendAnimation: Bool
+    /// Debug Settings ▸ "Wallet: fake transfers", offered to dev accounts only (and only honoured for them): a send
+    /// from the transfer form sends nothing and closes as a registered transfer would, against a fixed balance.
+    public var fakeWalletTransfers: Bool
     public var showCrashReportAlerts: Bool?
     public var useModernVideoMessagePipeline: Bool?
     public var videoMessageCameraMode: VideoMessageCameraMode
@@ -147,6 +150,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             forceRLottieBackend: false,
             respectSystemMicrophone: false,
             springSendAnimation: false,
+            fakeWalletTransfers: false,
             useModernVideoMessagePipeline: nil,
             showCrashReportAlerts: nil
         )
@@ -206,6 +210,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         forceRLottieBackend: Bool,
         respectSystemMicrophone: Bool,
         springSendAnimation: Bool,
+        fakeWalletTransfers: Bool,
         useModernVideoMessagePipeline: Bool? = nil,
         videoMessageCameraMode: VideoMessageCameraMode = .hdBilinear,
         showCrashReportAlerts: Bool? = nil
@@ -263,6 +268,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceRLottieBackend = forceRLottieBackend
         self.respectSystemMicrophone = respectSystemMicrophone
         self.springSendAnimation = springSendAnimation
+        self.fakeWalletTransfers = fakeWalletTransfers
         self.showCrashReportAlerts = showCrashReportAlerts
         self.useModernVideoMessagePipeline = useModernVideoMessagePipeline
         self.videoMessageCameraMode = videoMessageCameraMode
@@ -326,6 +332,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceRLottieBackend = try container.decodeIfPresent(Bool.self, forKey: "forceRLottieBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
         self.springSendAnimation = try container.decodeIfPresent(Bool.self, forKey: "springSendAnimation") ?? false
+        self.fakeWalletTransfers = try container.decodeIfPresent(Bool.self, forKey: "fakeWalletTransfers") ?? false
         self.showCrashReportAlerts = try container.decodeIfPresent(Bool.self, forKey: "showCrashReportAlerts")
         self.useModernVideoMessagePipeline = try container.decodeIfPresent(Bool.self, forKey: "useModernVideoMessagePipeline")
         self.videoMessageCameraMode = (try container.decodeIfPresent(String.self, forKey: "videoMessageCameraMode")).flatMap(VideoMessageCameraMode.init(rawValue:)) ?? .hdBilinear
@@ -387,6 +394,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.forceRLottieBackend, forKey: "forceRLottieBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")
         try container.encodeIfPresent(self.springSendAnimation, forKey: "springSendAnimation")
+        try container.encodeIfPresent(self.fakeWalletTransfers, forKey: "fakeWalletTransfers")
         try container.encodeIfPresent(self.showCrashReportAlerts, forKey: "showCrashReportAlerts")
         try container.encodeIfPresent(self.useModernVideoMessagePipeline, forKey: "useModernVideoMessagePipeline")
         try container.encode(self.videoMessageCameraMode.rawValue, forKey: "videoMessageCameraMode")
