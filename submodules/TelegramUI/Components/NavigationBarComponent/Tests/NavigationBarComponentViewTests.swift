@@ -202,6 +202,66 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertTrue(view.isBackInSideColumn)
     }
 
+    // iPhone Duo's side column: the chat's avatar (a node, generic tint) is the column capsule's only item, so its glass
+    // is a 48 pt circle around the 44 pt button. An expansion asks for it, and for the press UIKit drew on it, before the
+    // bar detaches its platters: the press comes from the sampler (UIKit takes a tap's off before the action runs).
+    // Measured 2026-10-18: the expansion took the 44 pt button for the circle and lost the lifted circle's press.
+    func test_rightButtonCapsule_columnItem_isTheColumnsCapsule_withTheSampledPress() {
+        let node = HostedNode()
+        let content = NavigationBarComponent.Content(title: .text("Chat"), back: .back, leftButton: nil, rightButtons: [NavigationBarComponent.Button(id: "avatar", content: .node(node), action: { _ in })], backPressed: {})
+        let view = self.makeBar(content: content, sideColumnLength: 400.0)
+        guard let capsule = view.columnButtonsBackgroundContainer, let glass = navigationBarTestGlassEffectView(content: capsule.contentView, container: capsule), let button = view.rightButtonViews["avatar"] else {
+            XCTFail("no column capsule")
+            return
+        }
+        XCTAssertNil(view.columnTrailingBackgroundContainer)
+        XCTAssertEqual(capsule.bounds.size, CGSize(width: 48.0, height: 48.0))
+        XCTAssertTrue(view.rightButtonCapsule(containing: button)?.container === capsule)
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 0.0, 1.0, accuracy: 0.001)
+
+        var now = 100.0
+        view.pressSamplerClock = {
+            return now
+        }
+        let restBounds = glass.bounds
+        let center = glass.center
+        // The column hangs outside the bar: its host hit-tests it through the bar.
+        XCTAssertNotNil(view.sideColumnHitTest(capsule.convert(CGPoint(x: capsule.bounds.midX, y: capsule.bounds.midY), to: view.sideColumnView), with: nil))
+        for frame in 1 ... 10 {
+            now = 100.0 + Double(frame) / 60.0
+            let size = 48.0 + 16.0 * Double(frame) / 10.0
+            glass.bounds = CGRect(x: 0.0, y: 0.0, width: size, height: size)
+            glass.center = center
+            view.tickPressSampler()
+        }
+        // Held: the live press.
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 1.0, 64.0 / 48.0, accuracy: 0.001)
+        // The touch ends: UIKit takes the press off, then the action starts the expansion, which asks at once.
+        now += 1.0 / 120.0
+        glass.bounds = restBounds
+        glass.center = center
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 1.0, 64.0 / 48.0, accuracy: 0.001)
+        // Long after: no press.
+        now += 1.0
+        XCTAssertEqual(view.rightButtonCapsule(containing: button)?.pressScale ?? 0.0, 1.0, accuracy: 0.001)
+    }
+
+    // The row's circle is its own capsule: 44 pt, with the press UIKit draws on it.
+    func test_rightButtonCapsule_rowCircle_isItsPill_withTheLivePress() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: nil, right: self.chatsButtons(), transition: .immediate)
+        guard let circle = view.rightPillBackgroundContainer(at: 0), let glass = navigationBarTestGlassEffectView(content: circle.contentView, container: circle), let compose = view.rightButtonViews["compose"] else {
+            XCTFail("no circle")
+            return
+        }
+        XCTAssertTrue(view.rightButtonCapsule(containing: compose)?.container === circle)
+        XCTAssertEqual(circle.bounds.height, 44.0)
+        let center = glass.center
+        glass.bounds = CGRect(x: 0.0, y: 0.0, width: 60.0, height: 60.0)
+        glass.center = center
+        XCTAssertEqual(view.rightButtonCapsule(containing: compose)?.pressScale ?? 1.0, 60.0 / 44.0, accuracy: 0.001)
+    }
+
     func test_withoutColumn_backIsInTheRow() {
         let view = self.makeBar(content: NavigationBarComponent.Content(title: .text("Edit"), back: .back, leftButton: nil, rightButtons: [], backPressed: {}), sideColumnLength: nil)
         XCTAssertFalse(view.isBackInSideColumn)
@@ -746,6 +806,13 @@ final class NavigationBarComponentViewTests: XCTestCase {
         view.plattersDetached = true
         XCTAssertEqual((view.detachedRightPressScales.first ?? 1.0), 60.0 / 44.0, accuracy: 0.001)
         XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 55.0 / 44.0, accuracy: 0.001)
+        // Detached, the circle's button finds its capsule with the press handed to the transition.
+        if let compose = view.rightButtonViews["compose"] {
+            XCTAssertTrue(view.rightButtonCapsule(containing: compose)?.container === circle)
+            XCTAssertEqual(view.rightButtonCapsule(containing: compose)?.pressScale ?? 1.0, 60.0 / 44.0, accuracy: 0.001)
+        } else {
+            XCTFail("no compose button")
+        }
         view.plattersDetached = false
         XCTAssertEqual((view.detachedRightPressScales.count > 1 ? view.detachedRightPressScales[1] : 1.0), 1.0)
     }

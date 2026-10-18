@@ -38,9 +38,10 @@ public struct ExpansionGeometry: Equatable {
     public var screenCornerRadii: CornerRadii
     /// The glass shape that becomes the card (the chat's title pill).
     public var origin: CGRect
-    /// The companion's glass capsule (the chat's avatar button, 44 pt); nil without one.
+    /// The companion's glass circle (the chat's avatar button: 44 pt in the bar's row, 48 pt in iPhone Duo's side
+    /// column); nil without one.
     public var companion: CGRect?
-    /// The photo inside the companion's capsule (38 pt).
+    /// The photo inside the companion's circle (38 pt).
     public var companionPhotoDiameter: CGFloat
     /// Where the companion lands (the profile's avatar circle).
     public var avatar: CGRect?
@@ -52,6 +53,14 @@ public struct ExpansionGeometry: Equatable {
     public var carriedEdge: CGFloat
     /// The upper screen's appearing items in order (the action buttons), at rest.
     public var appearing: [CGRect]
+
+    /// The glass ring around the companion's photo: 3 pt in the bar's row (44 around 38), 5 pt in the side column.
+    public var companionRing: CGFloat {
+        guard let companion = self.companion else {
+            return 0.0
+        }
+        return max(0.0, (companion.width - self.companionPhotoDiameter) * 0.5)
+    }
 
     /// How close the drops come before they merge (the glass container's spacing): the prototype's 30 pt, but no more
     /// than the origin and the companion stand apart at rest, or they would join in a neck where the transition starts

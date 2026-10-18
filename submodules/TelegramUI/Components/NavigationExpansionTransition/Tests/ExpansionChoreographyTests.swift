@@ -56,6 +56,41 @@ final class ExpansionChoreographyTests: XCTestCase {
         XCTAssertEqual(end.photoCornerRadii, CornerRadii(topLeft: 8.0, topRight: 59.0, bottomLeft: 0.0, bottomRight: 0.0))
     }
 
+    /// iPhone Duo's side column: the avatar's circle is 48 pt (around the same 38 pt photo) and hangs below the bar at the
+    /// screen's right edge.
+    private func sideColumnGeometry() -> ExpansionGeometry {
+        var g = makeExpansionGeometry()
+        g.companion = CGRect(x: g.screenSize.width - 22.0 - 48.0, y: 240.0, width: 48.0, height: 48.0)
+        return g
+    }
+
+    // Measured on the Duo (2026-10-18): the circle started at 44 pt where the column's is 48, and a close landed at 44 and
+    // popped to 48 when the bar took it back. It is the column's circle at either end now.
+    func test_sideColumnCompanion_circleIsTheColumnsCircleAtRest() {
+        let g = self.sideColumnGeometry()
+        let c = ExpansionChoreography(geometry: g, path: .origin, duration: 0.55)
+        for isOpening in [true, false] {
+            let circle = c.frame(ExpansionClock(time: 0.0, isOpening: isOpening), press: .none).circle ?? CGRect()
+            XCTAssertEqual(circle.minX, g.companion!.minX, accuracy: 1e-9)
+            XCTAssertEqual(circle.minY, g.companion!.minY, accuracy: 1e-9)
+            XCTAssertEqual(circle.width, 48.0, accuracy: 1e-9)
+            XCTAssertEqual(circle.height, 48.0, accuracy: 1e-9)
+        }
+        XCTAssertEqual(makeExpansionGeometry().companionRing, 3.0)
+        XCTAssertEqual(g.companionRing, 5.0)
+    }
+
+    // The column's circle starts below the pill: it comes within 6 pt across while still far below (78 pt on the Duo,
+    // where the card swung sideways with nothing touching it), and the card then grows over it. Nothing knocks the pill.
+    func test_sideColumnCompanion_doesNotKnockThePill() {
+        let c = ExpansionChoreography(geometry: self.sideColumnGeometry(), path: .origin, duration: 0.55)
+        XCTAssertNil(c.impactMoment)
+        for i in 0 ... 20 {
+            XCTAssertEqual(c.wobble(ExpansionClock(time: CGFloat(i) / 20.0, isOpening: true)), 0.0)
+        }
+        XCTAssertNotNil(self.choreography().impactMoment)
+    }
+
     // The sides and the top lead; the bottom follows the clock linearly (`capsuleRect`, ProfileMorph.swift:1392).
     func test_card_sidesAndTopLead_bottomFollows() {
         let g = makeExpansionGeometry()

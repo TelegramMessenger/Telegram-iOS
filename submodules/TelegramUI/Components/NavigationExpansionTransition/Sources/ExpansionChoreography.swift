@@ -99,8 +99,6 @@ public struct ExpansionFrame: Equatable {
 
 /// The prototype's scene as a function: one geometry, one path, one clock value → one frame.
 public struct ExpansionChoreography {
-    /// The glass ring around the companion's photo (44 around 38).
-    public static let ring: CGFloat = 3.0
     /// A pressed glass button's lift across its width (measured: pill 128 → ×1.125, circle 44 → ×1.36).
     public static let liftPoints: CGFloat = 16.0
     /// How far the card rises per unit of the close's overshoot past 0.
@@ -130,7 +128,11 @@ public struct ExpansionChoreography {
                 let time = CGFloat(i) / 600.0
                 let frame = probe.frame(ExpansionClock(time: time, isOpening: true), press: .none, wobble: 0.0)
                 if let circle = frame.circle, circle.minX - frame.card.maxX <= 6.0 {
-                    moment = time
+                    // Only a circle beside the pill hits it. One below it (iPhone Duo's side column) comes within 6 pt
+                    // across while it is still far away, and the card then grows over it: no knock.
+                    if circle.maxY > frame.card.minY && circle.minY < frame.card.maxY {
+                        moment = time
+                    }
                     break
                 }
             }
@@ -216,7 +218,7 @@ public struct ExpansionChoreography {
             let size = ExpansionCurve.mix(g.companionPhotoDiameter, avatar.width, t)
             let center = CGPoint(x: ExpansionCurve.mix(companion.midX, avatar.midX, slide), y: ExpansionCurve.mix(companion.midY, avatar.midY, lift))
             let photoRect = CGRect(x: center.x - size * 0.5, y: center.y - size * 0.5, width: size, height: size)
-            let ringSize = size + 2.0 * ExpansionChoreography.ring * (1.0 - fillC)
+            let ringSize = size + 2.0 * g.companionRing * (1.0 - fillC)
             var ringRect = CGRect(x: center.x - ringSize * 0.5, y: center.y - ringSize * 0.5, width: ringSize, height: ringSize)
             let ringLift = self.companionLift * press.companion * (1.0 - fillC)
             ringRect = ringRect.insetBy(dx: -ringRect.width * ringLift * 0.5, dy: -ringRect.height * ringLift * 0.5)

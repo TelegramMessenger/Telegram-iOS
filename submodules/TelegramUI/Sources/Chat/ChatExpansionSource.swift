@@ -49,19 +49,29 @@ final class ChatExpansionSource: NavigationExpansionSourceProviding {
             let statusScreen = screen(labels.statusFrame)
             expansionLabels.append(NavigationExpansionLabel(view: status, textCenter: CGPoint(x: labels.statusFrame.width * 0.5, y: labels.statusFrame.height * 0.5), textSize: labels.statusFrame.size, screenCenter: CGPoint(x: statusScreen.midX, y: statusScreen.midY), coloring: .recolor(labels.statusColor)))
         }
+        // The avatar's glass circle: a square as thick as the capsule the button sits in, centred on the button (the bar's
+        // row draws a 44 pt circle around the 44 pt button; iPhone Duo's side column a 48 pt capsule).
         var companion: CGRect?
+        var companionPressScale: CGFloat = 1.0
         if let avatarItem = self.avatarItem, let buttonView = self.navigationBar?.rightButtonView(for: avatarItem) {
-            companion = buttonView.convert(buttonView.bounds, to: screenView)
+            let button = buttonView.convert(buttonView.bounds, to: screenView)
+            var side = button.height
+            if let capsule = (self.navigationBar as? NavigationBarNode)?.rightButtonCapsule(for: avatarItem) {
+                let capsuleFrame = capsule.container.convert(capsule.container.bounds, to: screenView)
+                side = min(capsuleFrame.width, capsuleFrame.height)
+                companionPressScale = capsule.pressScale
+            }
+            companion = CGRect(x: button.midX - side * 0.5, y: button.midY - side * 0.5, width: side, height: side)
         }
-        // A tap's press, released on the pill's spring from the tap until now; the avatar capsule's press is the bar's
-        // own (UIKit's lift on that capsule when the bar gave it up, 1 + 16/44 at full press).
+        // A tap's press, released on the pill's spring from the tap until now; the avatar circle's press is the bar's own
+        // (UIKit's lift on that circle when the bar gave it up, 1 + 16/44 at full press on a 44 pt circle).
         var press = ExpansionPress.none
         if let tapTime = titleView.lastTapTime {
             let release = NavigationSpringCurve(from: 1.0, target: 0.0, spring: NavigationTransitionSpring(duration: 0.4, bounce: 0.5), overshoots: true, rest: .expansion)
             press.origin = release.value(at: CACurrentMediaTime() - tapTime)
         }
-        if let state = (self.navigationBar as? NavigationBarNode)?.componentTransitionState, let scale = state.trailingPressScales.first {
-            press.companion = max(0.0, (scale - 1.0) / (ExpansionChoreography.liftPoints / 44.0))
+        if let companion {
+            press.companion = max(0.0, (companionPressScale - 1.0) / (ExpansionChoreography.liftPoints / companion.width))
         }
         return NavigationExpansionSourceLoan(origin: origin, originTint: .init(kind: self.preferClearGlass ? .clear : .panel), isDark: self.isDark, companion: companion, companionPhotoDiameter: 38.0, companionView: self.avatarNode?.view, labels: expansionLabels, press: press)
     }

@@ -782,6 +782,15 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         return self.rowView?.rightButtonViews[AnyHashable(ObjectIdentifier(item))]
     }
 
+    /// The glass capsule a right button sits in (a right pill, or one of iPhone Duo's side column capsules, which are
+    /// wider than the button), and the press UIKit draws or has just drawn on it.
+    public func rightButtonCapsule(for item: UIBarButtonItem) -> (container: UIView, pressScale: CGFloat)? {
+        guard let rowView = self.rowView, let buttonView = self.rightButtonView(for: item) else {
+            return nil
+        }
+        return rowView.rightButtonCapsule(containing: buttonView)
+    }
+
     public func updateEdgeEffectExtension(value: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.edgeEffectExtension == value {
             return
@@ -926,7 +935,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         // iPhone Duo: the column hangs below the bar; only its shapes take touches (`sideColumnView` is sparse).
         if let sideColumnContainer = self.sideColumnContainer, sideColumnContainer.isUserInteractionEnabled, sideColumnContainer.alpha > 0.0, let rowView = self.rowView {
             let columnView = rowView.sideColumnView
-            if let result = columnView.hitTest(self.view.convert(point, to: columnView), with: event) {
+            if let result = rowView.sideColumnHitTest(self.view.convert(point, to: columnView), with: event) {
                 return result
             }
         }

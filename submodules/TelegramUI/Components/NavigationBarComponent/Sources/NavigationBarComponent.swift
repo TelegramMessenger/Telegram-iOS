@@ -217,13 +217,45 @@ public final class NavigationBarComponent: Component {
         public private(set) var detachedRightPressScales: [CGFloat] = []
         public private(set) var detachedRightPressGlows: [CGFloat] = []
 
+        /// The glass capsule a right button's view sits in (a right pill; on iPhone Duo the side column's capsule, a 48 pt
+        /// circle around a single button, or its trailing circle), and the press UIKit draws on it: the one handed to a
+        /// transition while the platters are detached, else the live one, else the sampler's while UIKit has only just
+        /// taken it off (a tap's press is gone before the button's action runs, and an expansion asks before the bar
+        /// detaches).
+        public func rightButtonCapsule(containing view: UIView) -> (container: UIView, pressScale: CGFloat)? {
+            for (index, pill) in self.rightPills.enumerated() {
+                if let background = pill.background, view.isDescendant(of: background) {
+                    if self.plattersDetached {
+                        return (background, index < self.detachedRightPressScales.count ? self.detachedRightPressScales[index] : 1.0)
+                    }
+                    return (background, self.pressScale(of: background))
+                }
+            }
+            for container in [self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer].compactMap({ $0 }) where view.isDescendant(of: container) {
+                return (container, self.pressScale(of: container))
+            }
+            return nil
+        }
+
+        /// The press UIKit draws on `container`, or the sampler's last one while it is recent (see `rightButtonCapsule`).
+        private func pressScale(of container: GlassContextExtractableContainer) -> CGFloat {
+            let live = navigationBarCapsulePressScale(container)
+            if abs(live - 1.0) >= 0.0005 {
+                return live
+            }
+            if let sample = self.lastPressSample, self.pressSamplerClock() - sample.time < 0.1, let sampled = sample.byContainer[ObjectIdentifier(container)] {
+                return sampled
+            }
+            return 1.0
+        }
+
         /// UIKit draws a capsule's press (on a short tap) only as a running animation on its glass, which it takes off
         /// when the touch ends, before the button's action runs (measured 2026-10-14): when that action starts a
         /// transition there is nothing left to read. So while a touch is in a capsule the press is sampled every frame,
-        /// and detaching takes the last pressed sample.
+        /// and detaching (and `rightButtonCapsule`, asked before it) takes the last pressed sample.
         private var pressSamplerLink: SharedDisplayLinkDriver.Link?
         private var pressSamplerDeadline: Double = 0.0
-        private var lastPressSample: (left: CGFloat, right: [CGFloat], time: Double)?
+        private var lastPressSample: (left: CGFloat, right: [CGFloat], byContainer: [ObjectIdentifier: CGFloat], time: Double)?
         /// The press sampler's clock (tests replace it).
         var pressSamplerClock: () -> Double = {
             return CACurrentMediaTime()
@@ -233,7 +265,13 @@ public final class NavigationBarComponent: Component {
             let now = self.pressSamplerClock()
             let left = self.leftButtonsBackgroundContainer.flatMap(navigationBarCapsulePressScale) ?? 1.0
             let right = self.rightPills.map { $0.background.flatMap(navigationBarCapsulePressScale) ?? 1.0 }
-            if abs(left - 1.0) < 0.0005 && right.allSatisfy({ abs($0 - 1.0) < 0.0005 }) {
+            // Every capsule's, by its glass, for `rightButtonCapsule`; the column's (iPhone Duo) are only here.
+            var byContainer: [ObjectIdentifier: CGFloat] = [:]
+            let containers = ([self.leftButtonsBackgroundContainer, self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer] + self.rightPills.map(\.background)).compactMap { $0 }
+            for container in containers {
+                byContainer[ObjectIdentifier(container)] = navigationBarCapsulePressScale(container)
+            }
+            if byContainer.values.allSatisfy({ abs($0 - 1.0) < 0.0005 }) {
                 if let sample = self.lastPressSample, now - sample.time < 0.1 {
                     // The press was just taken off: keep the last pressed sample for the hand-over.
                     return
@@ -242,7 +280,7 @@ public final class NavigationBarComponent: Component {
                 // A press held past the first window: its end is what the hand-over needs.
                 self.pressSamplerDeadline = max(self.pressSamplerDeadline, now + 0.5)
             }
-            self.lastPressSample = (left, right, now)
+            self.lastPressSample = (left, right, byContainer, now)
         }
 
         private func beginPressSampling() {
@@ -425,6 +463,23 @@ public final class NavigationBarComponent: Component {
                 return columnTrailingBackgroundContainer
             }
             return nil
+        }
+
+        /// Hit-tests the side column (`point` in `sideColumnView`), which hangs outside this view and is asked by its host:
+        /// a touch in one of its capsules (the chat's avatar) may be about to be pressed by UIKit, as one in a row capsule.
+        public func sideColumnHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = self.sideColumnView.hitTest(point, with: event) else {
+                return nil
+            }
+            if event.flatMap({ $0.type == .touches }) ?? true, [self.columnButtonsBackgroundContainer, self.columnTrailingBackgroundContainer].contains(where: { container in
+                guard let container else {
+                    return false
+                }
+                return result.isDescendant(of: container) || result.isDescendant(of: container.contentView)
+            }) {
+                self.beginPressSampling()
+            }
+            return result
         }
 
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
