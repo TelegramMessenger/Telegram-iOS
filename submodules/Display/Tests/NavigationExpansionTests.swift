@@ -1070,6 +1070,40 @@ final class NavigationExpansionTests: XCTestCase {
         XCTAssertEqual(bottom.events.filter { $0 == "didAppear" }.count, 1)
     }
 
+    // Measured in the app (2026-10-18): a caught expanding push let go toward the chat left the profile's light status
+    // bar over the chat until the next navigation. The release gives the chat's, and the container's updates right after
+    // it (the commit drops the profile from the stack; the status bar's change lays the containers out again) took the
+    // pop progress, which for an expansion is the card's clock and has not moved at the release, and put the profile's
+    // back.
+    func test_caughtExpansionCommit_keepsTheChatsStatusBar_throughTheStacksUpdates() {
+        let renderer = FakeExpansionRenderer()
+        let (top, bottom) = self.pair()
+        top.statusBar.statusBarStyle = .White
+        bottom.statusBar.statusBarStyle = .Black
+        let stack = self.expandingStack([bottom], renderer: renderer)
+        let container = stack.container
+        // The navigation controller lays its containers out again when one's status bar changes.
+        container.statusBarStyleUpdated = { [weak stack] _ in
+            guard let stack else {
+                return
+            }
+            stack.set(stack.controllers, animated: false)
+        }
+        stack.set([bottom, top], animated: true)
+        self.tick(container, seconds: 0.3)
+        XCTAssertEqual(container.statusBarStyle, .White, "turned to the profile's")
+        container.interactivePopBegan(translation: 0.0, velocity: 300.0, time: 0.0, translationY: 0.0, anchor: CGPoint(x: 40.0, y: 520.0))
+        container.interactivePopChanged(translation: 160.0, velocity: 300.0, time: 0.1, translationY: 0.0)
+        container.interactivePopEnded(translation: 160.0, velocity: 300.0, isCancelled: false, time: 0.2, translationY: 0.0)
+        XCTAssertTrue(stack.removed.first === top)
+        XCTAssertEqual(container.statusBarStyle, .Black)
+        self.tick(container, seconds: 0.1)
+        XCTAssertEqual(container.statusBarStyle, .Black)
+        self.tick(container, seconds: 2.0)
+        XCTAssertNil(container.transitionCoordinatorForTesting)
+        XCTAssertEqual(container.statusBarStyle, .Black)
+    }
+
     // A caught expanding push committed back to the chat: the profile leaves the stack at the release too.
     func test_caughtExpansionCommit_dropsTheProfileAtTheRelease() {
         let renderer = FakeExpansionRenderer()

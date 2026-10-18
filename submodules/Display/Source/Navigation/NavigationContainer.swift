@@ -674,7 +674,13 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                 case .push:
                     // A push a swipe caught, steered as a pop. The swiped screen is the transition's (a commit drops it
                     // from the stack before it lands).
-                    if childTransition.coordinator.popProgress >= 0.3 {
+                    if childTransition.coordinator.isExpansion {
+                        // A caught expansion sets its status bar itself: from the card's fade while the finger holds it,
+                        // the chat's at a release toward it, the profile's once the card covers it again otherwise. Its
+                        // pop progress is the card's clock, which has not moved when a release is decided, so this rule
+                        // put the profile's back over the chat until the next navigation.
+                        updatedStatusBarStyle = self.statusBarStyle
+                    } else if childTransition.coordinator.popProgress >= 0.3 {
                         updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
                     } else {
                         updatedStatusBarStyle = childTransition.destination.value.statusBar.statusBarStyle
