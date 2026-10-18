@@ -1196,7 +1196,6 @@ private final class WalletScreenComponent: Component {
             let text: String?
             switch error {
             case .limitExceeded: text = strings.Wallet_Sticker_LimitError("\(WalletGiftStickerCoordinator.maxStickers)").string
-            case .backgroundNotAllowed: text = strings.Common_ActionNotAllowedError
             case .savedInProfile: text = strings.Wallet_Sticker_ProfileError
             case .backgroundNotAllowed: text = strings.Wallet_Sticker_BackgroundNotAllowedError
             case .invalidSticker, .notOwned, .duplicate, .invalidAddress, .invalidNft: text = strings.Wallet_Sticker_InvalidError
