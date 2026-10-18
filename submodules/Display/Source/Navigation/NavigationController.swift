@@ -1570,6 +1570,29 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.setViewControllers(controllers, animated: animated)
     }
     
+    private var verticalExpansionPopContainer: NavigationContainer?
+
+    public func beginVerticalExpansionPop(from controller: ViewController, anchor: CGPoint) -> Bool {
+        guard let rootContainer = self.rootContainer, case let .flat(container) = rootContainer, container.controllers.last === controller else {
+            return false
+        }
+        guard container.beginVerticalExpansionPop(anchor: anchor) else {
+            return false
+        }
+        self.verticalExpansionPopContainer = container
+        return true
+    }
+
+    public func updateVerticalExpansionPop(translation: CGPoint) {
+        self.verticalExpansionPopContainer?.updateVerticalExpansionPop(translation: translation)
+    }
+
+    public func endVerticalExpansionPop(translation: CGPoint, velocity: CGPoint, isCancelled: Bool) {
+        let container = self.verticalExpansionPopContainer
+        self.verticalExpansionPopContainer = nil
+        container?.endVerticalExpansionPop(translation: translation, velocity: velocity, isCancelled: isCancelled)
+    }
+
     public func filterController(_ controller: ViewController, animated: Bool) {
         let controllers = self.viewControllers.filter({ $0 !== controller })
         if controllers.count != self.viewControllers.count {

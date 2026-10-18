@@ -155,6 +155,7 @@ private final class PeerWalletOverlayComponent: Component {
         private var progress: CGFloat = 0.0
         private var usesFlight = false
         private var backgroundHidden = false
+        private var noticeVisible = false
         private var isDismissing = false
         private let card = ComponentView<Empty>()
         private let sendButton = ComponentView<Empty>()
@@ -274,7 +275,6 @@ private final class PeerWalletOverlayComponent: Component {
             let backgroundAlpha = self.backgroundHidden ? 0.0 : self.backgroundProgress
             self.blurView.alpha = backgroundAlpha
             self.dimView.alpha = backgroundAlpha
-            self.noticeContainer.alpha = backgroundAlpha
             guard let card = self.card.view as? WalletCardComponent.View else { return }
             var transform = CATransform3DIdentity
             var center = self.cardFrame.center
@@ -424,6 +424,9 @@ private final class PeerWalletOverlayComponent: Component {
                 let backgroundFraction = min(1.0, elapsed / (target == 0.0 ? min(0.32, CGFloat(duration)) : 0.25))
                 self.backgroundProgress = initialBackground + (target - initialBackground) * backgroundFraction
                 self.applyProgress()
+                if target == 1.0 && elapsed >= 0.3 {
+                    self.setNoticeVisible(true, duration: 0.2)
+                }
             }, completion: { [weak self] in
                 guard let self else { return }
                 self.animator = nil
@@ -444,8 +447,17 @@ private final class PeerWalletOverlayComponent: Component {
             self.blurView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
             self.dimView.alpha = 0.0
             self.dimView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
-            self.noticeContainer.alpha = 0.0
-            self.noticeContainer.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
+            self.setNoticeVisible(false, duration: 0.2)
+        }
+
+        private func setNoticeVisible(_ visible: Bool, duration: Double) {
+            guard self.noticeVisible != visible else { return }
+            self.noticeVisible = visible
+            guard let noticeView = self.notice.view else { return }
+            let alpha: CGFloat = visible ? 1.0 : 0.0
+            let previousAlpha = noticeView.layer.presentation()?.opacity ?? noticeView.layer.opacity
+            noticeView.alpha = alpha
+            noticeView.layer.animateAlpha(from: CGFloat(previousAlpha), to: alpha, duration: duration)
         }
 
         func animateIn(source: PeerWalletTransitionSource?) {
@@ -463,7 +475,9 @@ private final class PeerWalletOverlayComponent: Component {
             self.applyProgress()
             self.alpha = 1.0
             self.isDismissing = false
-            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: {})
+            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: { [weak self] in
+                self?.setNoticeVisible(true, duration: 0.2)
+            })
         }
 
         override func layoutSubviews() {
@@ -475,6 +489,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.pendingAnimateIn = false
             self.initialSource = nil
             self.isUserInteractionEnabled = false
+            self.setNoticeVisible(false, duration: 0.2)
             if !UIAccessibility.isReduceMotionEnabled && self.prepareShutter() {
                 self.usesFlight = true
                 self.isDismissing = self.progress >= 1.0
@@ -556,6 +571,7 @@ private final class PeerWalletOverlayComponent: Component {
                 let noticeFrame = CGRect(origin: CGPoint(x: floor(centerX - noticeSize.width * 0.5), y: cardTopLimit + 24.0), size: noticeSize)
                 if let noticeView = self.notice.view {
                     if noticeView.superview == nil {
+                        noticeView.alpha = self.noticeVisible ? 1.0 : 0.0
                         self.noticeContainer.addSubview(noticeView)
                     }
                     noticeView.isHidden = false
@@ -664,13 +680,13 @@ private final class PeerWalletOverlayComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, availableSize.width - 60.0), height: 52.0)
+                containerSize: CGSize(width: max(1.0, min(430.0, availableSize.width - 60.0)), height: 52.0)
             )
             if let buttonView = self.sendButton.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                self.buttonFrame = CGRect(x: 30.0, y: buttonTop, width: buttonSize.width, height: buttonSize.height)
+                self.buttonFrame = CGRect(x: floor((availableSize.width - buttonSize.width) * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
                 transition.setFrame(view: buttonView, frame: self.buttonFrame)
             }
             self.animationSize = availableSize

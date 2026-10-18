@@ -23,14 +23,16 @@ public final class ShareScreenExternalConfiguration {
 
 final class ShareScreenAccountReferenceSource: ContextReferenceContentSource {
     private let sourceView: UIView
+    private let actionsPosition: ContextControllerReferenceViewInfo.ActionsPosition
     let forceDisplayBelowKeyboard = true
 
-    init(sourceView: UIView) {
+    init(sourceView: UIView, actionsPosition: ContextControllerReferenceViewInfo.ActionsPosition = .bottom) {
         self.sourceView = sourceView
+        self.actionsPosition = actionsPosition
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: self.actionsPosition)
     }
 }
 
@@ -110,6 +112,8 @@ final class ShareScreenBodyComponent: Component {
 
         func update(component: ShareScreenBodyComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let environmentValue = environment[EnvironmentType.self].value
+            let bandMinX = environmentValue.safeInsets.left
+            let bandSize = CGSize(width: max(0.0, availableSize.width - environmentValue.safeInsets.left - environmentValue.safeInsets.right), height: availableSize.height)
             self.content.parentState = state
             self.loading.parentState = state
             let size: CGSize
@@ -120,19 +124,21 @@ final class ShareScreenBodyComponent: Component {
             }
             self.hadLoadingNode = component.loadingNode != nil
             if let node = component.loadingNode {
-                size = self.loading.update(transition: transition, component: AnyComponent(ShareScreenLoadingComponent(node: node, visibleHeight: component.loadingHeight, topInset: 60.0, bottomInset: environmentValue.safeInsets.bottom)), environment: { environmentValue }, containerSize: availableSize)
+                let loadingSize = self.loading.update(transition: transition, component: AnyComponent(ShareScreenLoadingComponent(node: node, visibleHeight: component.loadingHeight, topInset: 60.0, bottomInset: environmentValue.safeInsets.bottom)), environment: { environmentValue }, containerSize: bandSize)
                 if let view = self.loading.view {
                     if view.superview == nil { self.addSubview(view) }
-                    view.frame = CGRect(origin: .zero, size: size)
+                    view.frame = CGRect(origin: CGPoint(x: bandMinX, y: 0.0), size: loadingSize)
                 }
+                size = CGSize(width: availableSize.width, height: loadingSize.height)
             } else {
                 self.loading.view?.removeFromSuperview()
                 self.loading = ComponentView<EnvironmentType>()
-                size = self.content.update(transition: transition, component: component.content, environment: { environmentValue }, containerSize: availableSize)
+                let contentSize = self.content.update(transition: transition, component: component.content, environment: { environmentValue }, containerSize: bandSize)
                 if let view = self.content.view {
                     if view.superview == nil { self.insertSubview(view, at: 0) }
-                    view.frame = CGRect(origin: .zero, size: size)
+                    view.frame = CGRect(origin: CGPoint(x: bandMinX, y: 0.0), size: contentSize)
                 }
+                size = CGSize(width: availableSize.width, height: contentSize.height)
             }
             if let view = self.content.view {
                 view.isUserInteractionEnabled = component.loadingNode == nil

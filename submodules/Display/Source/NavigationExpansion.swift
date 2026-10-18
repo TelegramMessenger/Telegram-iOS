@@ -33,16 +33,22 @@ public struct NavigationExpansionCardPose: Equatable {
     public var dy: CGFloat
     public var anchor: CGPoint
     public var weight: CGFloat
+    public var isVertical: Bool
 
     public static let none = NavigationExpansionCardPose(dx: 0.0, dy: 0.0, anchor: CGPoint(), weight: 0.0)
     /// The smallest scale under the finger.
     public static let minScale: CGFloat = 0.45
 
-    public init(dx: CGFloat, dy: CGFloat, anchor: CGPoint, weight: CGFloat) {
+    public init(dx: CGFloat, dy: CGFloat, anchor: CGPoint, weight: CGFloat, isVertical: Bool = false) {
         self.dx = dx
         self.dy = dy
         self.anchor = anchor
         self.weight = weight
+        self.isVertical = isVertical
+    }
+
+    private var travel: CGFloat {
+        return max(self.isVertical ? self.dy : self.dx, 0.0)
     }
 
     public var isActive: Bool {
@@ -52,14 +58,14 @@ public struct NavigationExpansionCardPose: Equatable {
     /// 1 − 0.7 of the travel over the width, not below `minScale` (measured from iMessage: 0.85 at 76 pt, 0.6 at
     /// 227 pt).
     public func scale(width: CGFloat) -> CGFloat {
-        let s = max(1.0 - 0.7 * max(self.dx, 0.0) / max(1.0, width), NavigationExpansionCardPose.minScale)
+        let s = max(1.0 - 0.7 * self.travel / max(1.0, width), NavigationExpansionCardPose.minScale)
         return 1.0 - (1.0 - s) * self.weight
     }
 
     /// How far the upper screen has gone into the card (0…1): the lower screen takes the status bar and the back
     /// button's look by it.
     public func fade(width: CGFloat) -> CGFloat {
-        return min(max(self.dx, 0.0) / (max(1.0, width) * 0.35), 1.0) * self.weight
+        return min(self.travel / (max(1.0, width) * 0.35), 1.0) * self.weight
     }
 
     public func transform(width: CGFloat) -> CGAffineTransform {

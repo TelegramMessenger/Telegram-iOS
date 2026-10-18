@@ -23,6 +23,14 @@ final class NavigationBarRightPill {
 /// The navigation bar's 44pt row and iPhone Duo side column: title, back, left and right buttons in glass
 /// capsules, and the in-bar slide between a primary and a secondary content. Hosts own the backdrop, where the
 /// row sits, and the container the column hangs in (`sideColumnView`).
+public struct NavigationBarLentCapsule {
+    public let frame: CGRect
+    public let pressScale: CGFloat
+    public let tint: GlassBackgroundView.TintColor
+    public let isDark: Bool
+    public let content: UIView?
+}
+
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -303,10 +311,73 @@ public final class NavigationBarComponent: Component {
             self.samplePress()
         }
 
+        public private(set) var isLeftCapsuleLent: Bool = false
+
+        private weak var lentColumnButtonView: UIView?
+
+        private func lendColumnLeftButton(in view: UIView, component: NavigationBarComponent) -> NavigationBarLentCapsule? {
+            guard let capsule = self.columnButtonsBackgroundContainer, capsule.superview != nil, capsule.alpha > 0.0, let contentView = self.effectiveContentView else {
+                return nil
+            }
+            guard let buttonView = contentView.leftButtonViews.values.compactMap({ $0.view }).first(where: { $0.isDescendant(of: capsule) && !$0.isHidden }) else {
+                return nil
+            }
+            let buttonFrame = buttonView.convert(buttonView.bounds, to: view)
+            let capsuleFrame = capsule.convert(capsule.bounds, to: view)
+            let side = capsuleFrame.width
+            let frame = CGRect(x: capsuleFrame.minX, y: buttonFrame.midY - side * 0.5, width: side, height: side)
+            var content: UIView?
+            if let snapshot = buttonView.snapshotView(afterScreenUpdates: false) {
+                snapshot.frame = buttonFrame
+                content = snapshot
+            }
+            let tint = navigationBarGlassTintColor(.generic, theme: component.theme)
+            buttonView.isHidden = true
+            self.lentColumnButtonView = buttonView
+            self.isLeftCapsuleLent = true
+            return NavigationBarLentCapsule(frame: frame, pressScale: 1.0, tint: tint, isDark: component.theme.overallDarkAppearance, content: content)
+        }
+
+        public func lendLeftCapsule(in view: UIView) -> NavigationBarLentCapsule? {
+            guard !self.isLeftCapsuleLent, let component = self.component else {
+                return nil
+            }
+            guard let container = self.leftButtonsBackgroundContainer, container.superview != nil else {
+                return self.lendColumnLeftButton(in: view, component: component)
+            }
+            let barPress = self.inPlaceCapsule(for: container)?.press?.value(at: self.inPlaceTime) ?? 1.0
+            var scale = navigationBarCapsulePressScale(container)
+            if abs(scale - 1.0) < 0.0005, abs(barPress - 1.0) < 0.0005, let sample = self.lastPressSample, self.pressSamplerClock() - sample.time < 0.1 {
+                scale = sample.left
+            }
+            let frame = container.convert(container.bounds, to: view)
+            var content: UIView?
+            if let snapshot = self.leftButtonsContainer.snapshotView(afterScreenUpdates: false) {
+                snapshot.frame = self.leftButtonsContainer.convert(self.leftButtonsContainer.bounds, to: view)
+                content = snapshot
+            }
+            let tint = navigationBarGlassTintColor(self.effectiveContentView?.leftCapsuleTint ?? .generic, theme: component.theme)
+            self.isLeftCapsuleLent = true
+            self.applyPlattersDetached()
+            return NavigationBarLentCapsule(frame: frame, pressScale: scale * barPress, tint: tint, isDark: component.theme.overallDarkAppearance, content: content)
+        }
+
+        public func returnLeftCapsule() {
+            guard self.isLeftCapsuleLent else {
+                return
+            }
+            self.isLeftCapsuleLent = false
+            if let buttonView = self.lentColumnButtonView {
+                self.lentColumnButtonView = nil
+                buttonView.isHidden = false
+            }
+            self.applyPlattersDetached()
+        }
+
         private func applyPlattersDetached() {
             let containers: [UIView] = ([self.leftButtonsBackgroundContainer].compactMap { $0 } as [UIView]) + self.rightBackgroundContainers
             for container in containers {
-                if self.plattersDetached {
+                if self.plattersDetached || (self.isLeftCapsuleLent && container === self.leftButtonsBackgroundContainer) {
                     container.removeFromSuperview()
                 } else if container.superview == nil {
                     self.addSubview(container)
@@ -907,7 +978,7 @@ public final class NavigationBarComponent: Component {
             }
 
             self.updateSideColumn(component: component, transition: transition)
-            if self.plattersDetached {
+            if self.plattersDetached || self.isLeftCapsuleLent {
                 // Capsules this layout created stay out too.
                 self.applyPlattersDetached()
             }

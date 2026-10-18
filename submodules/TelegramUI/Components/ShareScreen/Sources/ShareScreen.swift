@@ -497,7 +497,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
         }
         items.append(item(data.strings.Conversation_SendMessage_SendSilently, icon: "Chat/Input/Menu/SilentIcon", silently: true))
         items.append(item(data.strings.Conversation_ForwardOptions_SendMessage, icon: "Chat/Context Menu/Resend", silently: false))
-        self.presentInGlobalOverlay(makeContextController(presentationData: data, source: .reference(ShareScreenAccountReferenceSource(sourceView: source)), items: .single(ContextController.Items(content: .list(items))), gesture: nil))
+        self.presentInGlobalOverlay(makeContextController(presentationData: data, source: .reference(ShareScreenAccountReferenceSource(sourceView: source, actionsPosition: .top)), items: .single(ContextController.Items(content: .list(items))), gesture: nil))
     }
 
     private func updateExternalStatus(_ status: ShareControllerExternalStatus) {

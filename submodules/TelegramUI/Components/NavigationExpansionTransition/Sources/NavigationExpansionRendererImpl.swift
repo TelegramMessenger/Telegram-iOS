@@ -63,6 +63,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     /// The photo's screen-sized host: it carries the swipe card's pose, as the card's content does.
     private let photoHost = UIView()
     private let photoMask = CAShapeLayer()
+    private var originContentHome: CGRect?
 
     private final class LabelHost {
         let source: NavigationExpansionLabel?
@@ -123,6 +124,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let content: (unit: CGFloat, rest: CATransform3D)?
     }
     private var pageRiders: [PageRider] = []
+    private struct Flyer {
+        let layer: CALayer
+        let restCenter: CGPoint
+        let restSize: CGSize
+        let unit: CGSize
+        let rest: CATransform3D
+    }
+    private var flyers: [Flyer] = []
     private var tintLink: SharedDisplayLinkDriver.Link?
     private var tintTimeline: (timeline: NavigationExpansionTimeline, fills: [CGFloat])?
     private var appliedTintFill: CGFloat = -1.0
@@ -186,6 +195,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 self.touchedLayers.append(view.layer)
             }
         }
+        for view in destinationLoan.flyingViews {
+            guard let superlayer = view.layer.superlayer else {
+                continue
+            }
+            let unit = superlayer.convert(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0), to: screen.layer).size
+            let restFrame = view.convert(view.bounds, to: screen)
+            self.flyers.append(Flyer(layer: view.layer, restCenter: CGPoint(x: restFrame.midX, y: restFrame.midY), restSize: restFrame.size, unit: unit, rest: view.layer.transform))
+            self.touchedLayers.append(view.layer)
+        }
         for (view, isEdge) in destinationLoan.pageViews.map({ ($0, false) }) + destinationLoan.pageEdgeViews.map({ ($0, true) }) {
             guard let superlayer = view.layer.superlayer else {
                 continue
@@ -202,7 +220,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let destinationLabel = destinationLoan.labels[index]
             labels.append(ExpansionLabelGeometry(sourceCenter: sourceLabel.screenCenter, sourceSize: sourceLabel.textSize, destinationCenter: destinationLabel.screenCenter, destinationSize: destinationLabel.textSize, photoCenter: destinationLabel.screenCenter, photoSize: destinationLabel.textSize))
         }
-        let geometry = ExpansionGeometry(screenSize: size, screenCornerRadii: destinationLoan.screenCornerRadii, origin: sourceLoan.origin, companion: sourceLoan.companion, companionPhotoDiameter: sourceLoan.companionPhotoDiameter, avatar: destinationLoan.avatar, photo: destinationLoan.photo, labels: labels, carriedEdge: destinationLoan.carriedEdge, appearing: destinationLoan.appearingViews.map { $0.convert($0.bounds, to: screen) })
+        var geometry = ExpansionGeometry(screenSize: size, screenCornerRadii: destinationLoan.screenCornerRadii, origin: sourceLoan.origin, companion: sourceLoan.companion, companionPhotoDiameter: sourceLoan.companionPhotoDiameter, avatar: destinationLoan.avatar, photo: destinationLoan.photo, labels: labels, carriedEdge: destinationLoan.carriedEdge, appearing: destinationLoan.appearingViews.map { $0.convert($0.bounds, to: screen) })
+        if let backgroundOpening = destinationLoan.backgroundOpening {
+            geometry.backgroundOpening = backgroundOpening
+        }
+        if let backgroundClosing = destinationLoan.backgroundClosing {
+            geometry.backgroundClosing = backgroundClosing
+        }
         self.choreography = ExpansionChoreography(geometry: geometry, path: self.destination.expansionPath, duration: self.openSpring.response)
         self.cornersDiffer = !geometry.screenCornerRadii.isUniform
 
@@ -281,6 +305,11 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 companionView.alpha = choreography.frame(ExpansionClock(time: time, isOpening: isOpening), press: sourceLoan.press).companionContent
                 self.photoWrapper.addSubview(companionView)
             }
+        }
+        if let originContent = sourceLoan.originContent {
+            self.originContentHome = originContent.frame
+            originContent.isUserInteractionEnabled = false
+            self.view.addSubview(originContent)
         }
         for (index, label) in sourceLoan.labels.enumerated() {
             let destinationLabel = index < destinationLoan.labels.count ? destinationLoan.labels[index] : nil
@@ -399,6 +428,48 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         return rider.content.map { CATransform3DConcat($0.rest, CATransform3DMakeTranslation(0.0, -page / max($0.unit, 0.0001), 0.0)) }
     }
 
+    private func originContentPlacement(_ frame: ExpansionFrame) -> (center: CGPoint, transform: CATransform3D)? {
+        guard let home = self.originContentHome, let origin = self.sourceLoan?.origin, origin.width > 0.0, origin.height > 0.0 else {
+            return nil
+        }
+        let scale = min(frame.card.height / origin.height, 1.3)
+        let center = CGPoint(x: frame.card.midX + (home.midX - origin.midX) * scale, y: frame.card.midY + (home.midY - origin.midY) * scale)
+        return (center, CATransform3DMakeScale(scale, scale, 1.0))
+    }
+
+    private func flyerTransform(_ flyer: Flyer, _ frame: ExpansionFrame) -> CATransform3D {
+        guard let origin = self.sourceLoan?.origin, flyer.restSize.width > 0.0, flyer.restSize.height > 0.0 else {
+            return flyer.rest
+        }
+        let p = frame.flight
+        let startScale = min(origin.width / flyer.restSize.width, origin.height / flyer.restSize.height)
+        let scale = ExpansionCurve.mix(startScale, 1.0, p)
+        let center = ExpansionCurve.mix(CGPoint(x: origin.midX, y: origin.midY), flyer.restCenter, p)
+        let dx = (center.x - flyer.restCenter.x) / max(flyer.unit.width, 0.0001)
+        let dy = (center.y - flyer.restCenter.y) / max(flyer.unit.height, 0.0001)
+        return CATransform3DConcat(CATransform3DConcat(flyer.rest, CATransform3DMakeScale(scale, scale, 1.0)), CATransform3DMakeTranslation(dx, dy, 0.0))
+    }
+
+    private func holdOpacity(_ layer: CALayer, _ value: CGFloat) {
+        let key = NavigationExpansionRendererImpl.keyPrefix + "opacity"
+        if !self.touchedLayers.contains(where: { $0 === layer }) {
+            self.touchedLayers.append(layer)
+        }
+        let fraction = Float(min(max(value, 0.0), 1.0))
+        if fraction >= 0.9999 {
+            layer.removeAnimation(forKey: key)
+            return
+        }
+        let opacity = layer.opacity * fraction
+        let animation = CABasicAnimation(keyPath: "opacity")
+        animation.fromValue = NSNumber(value: opacity)
+        animation.toValue = NSNumber(value: opacity + 0.0001)
+        animation.duration = 1000.0
+        animation.fillMode = .forwards
+        animation.isRemovedOnCompletion = false
+        layer.add(animation, forKey: key)
+    }
+
     private func color(_ host: LabelHost, ink: CGFloat) -> UIColor {
         return host.sourceColor.mixedWith(host.destinationColor, alpha: min(max(ink, 0.0), 1.0))
     }
@@ -461,6 +532,11 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         if self.companionHome != nil {
             sourceLoan.companionView?.alpha = f.companionContent
         }
+        if let originContent = sourceLoan.originContent, let placement = self.originContentPlacement(f) {
+            originContent.layer.position = placement.center
+            originContent.layer.transform = placement.transform
+            originContent.alpha = f.originContent
+        }
         for (index, host) in self.labelHosts.enumerated() where index < f.labels.count {
             let label = f.labels[index]
             host.sourceHost.layer.position = label.center
@@ -482,9 +558,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let a = f.appearing[index]
             let companions = index < destinationLoan.appearingCompanions.count ? destinationLoan.appearingCompanions[index] : []
             for view in [view] + companions {
-                view.alpha = a.alpha
+                self.holdOpacity(view.layer, a.alpha)
                 view.layer.transform = CATransform3DScale(CATransform3DMakeTranslation(0.0, a.offset, 0.0), a.scale, a.scale, 1.0)
             }
+        }
+        for flyer in self.flyers {
+            flyer.layer.transform = self.flyerTransform(flyer, f)
+            self.holdOpacity(flyer.layer, f.flightAlpha)
         }
         for rider in self.pageRiders {
             rider.layer.transform = self.pageTransform(rider, page: f.page)
@@ -493,13 +573,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             }
         }
         for view in destinationLoan.backgroundViews {
-            view.alpha = f.background
+            self.holdOpacity(view.layer, f.background)
         }
         for view in destinationLoan.listViews {
-            view.alpha = f.list
+            self.holdOpacity(view.layer, f.list)
         }
         for view in destinationLoan.patternViews {
-            view.alpha = f.pattern
+            self.holdOpacity(view.layer, f.pattern)
         }
         let transform = self.viewTransform(pose)
         self.topView?.transform = transform
@@ -579,6 +659,18 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         func number(_ v: CGFloat) -> NSNumber {
             return NSNumber(value: Float(v))
         }
+        func heldOpacity(_ layer: CALayer, _ values: [CGFloat]) {
+            if !self.touchedLayers.contains(where: { $0 === layer }) {
+                self.touchedLayers.append(layer)
+            }
+            guard let first = values.first, values.contains(where: { abs($0 - first) > 0.0001 }) else {
+                self.holdOpacity(layer, values.last ?? 1.0)
+                return
+            }
+            let animation = makeNavigationKeyframeAnimation(keyPath: "opacity", values: values.map { NSNumber(value: layer.opacity * Float($0)) }, timing: timing, layer: layer)
+            animation.isRemovedOnCompletion = false
+            layer.add(animation, forKey: NavigationExpansionRendererImpl.keyPrefix + "opacity")
+        }
 
         // The drops. Their glass is laid out from each drop's top-left, so the drops' own bounds move with their shape.
         add(self.originDrop.layer, "position", frames.map { point(CGPoint(x: $0.card.midX, y: $0.card.midY)) })
@@ -621,6 +713,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         if self.companionHome != nil, let companionView = sourceLoan.companionView {
             add(companionView.layer, "opacity", frames.map { number($0.companionContent) })
         }
+        if let originContent = sourceLoan.originContent {
+            let placements = frames.compactMap { self.originContentPlacement($0) }
+            if placements.count == frames.count {
+                add(originContent.layer, "position", placements.map { point($0.center) })
+                add(originContent.layer, "transform", placements.map { NSValue(caTransform3D: $0.transform) })
+            }
+            add(originContent.layer, "opacity", frames.map { number($0.originContent) })
+        }
 
         // The labels.
         for (index, host) in self.labelHosts.enumerated() {
@@ -646,9 +746,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let appear = frames.map { $0.appearing[index] }
             let companions = index < destinationLoan.appearingCompanions.count ? destinationLoan.appearingCompanions[index] : []
             for view in [view] + companions {
-                add(view.layer, "opacity", appear.map { number($0.alpha) })
+                heldOpacity(view.layer, appear.map { $0.alpha })
                 add(view.layer, "transform", appear.map { NSValue(caTransform3D: CATransform3DScale(CATransform3DMakeTranslation(0.0, $0.offset, 0.0), $0.scale, $0.scale, 1.0)) })
             }
+        }
+        for flyer in self.flyers {
+            add(flyer.layer, "transform", frames.map { NSValue(caTransform3D: self.flyerTransform(flyer, $0)) })
+            heldOpacity(flyer.layer, frames.map { $0.flightAlpha })
         }
         for rider in self.pageRiders {
             add(rider.layer, "transform", frames.map { NSValue(caTransform3D: self.pageTransform(rider, page: $0.page)) })
@@ -657,13 +761,13 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             }
         }
         for view in destinationLoan.backgroundViews {
-            add(view.layer, "opacity", frames.map { number($0.background) })
+            heldOpacity(view.layer, frames.map { $0.background })
         }
         for view in destinationLoan.listViews {
-            add(view.layer, "opacity", frames.map { number($0.list) })
+            heldOpacity(view.layer, frames.map { $0.list })
         }
         for view in destinationLoan.patternViews {
-            add(view.layer, "opacity", frames.map { number($0.pattern) })
+            heldOpacity(view.layer, frames.map { $0.pattern })
         }
 
         // The swipe's card.
@@ -755,15 +859,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             }
         }
         self.pageRiders = []
+        for flyer in self.flyers {
+            flyer.layer.transform = flyer.rest
+        }
+        self.flyers = []
         self.topView?.layer.mask = nil
         self.topView?.transform = .identity
         if let destinationLoan = self.destinationLoan {
             for view in destinationLoan.appearingViews + destinationLoan.appearingCompanions.flatMap({ $0 }) {
-                view.alpha = 1.0
                 view.layer.transform = CATransform3DIdentity
-            }
-            for view in destinationLoan.backgroundViews + destinationLoan.listViews + destinationLoan.patternViews {
-                view.alpha = 1.0
             }
             for host in self.labelHosts {
                 if case let .multiply(layers, color)? = host.destination?.coloring {
@@ -813,6 +917,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         }
         self.companionHome = nil
         self.sourceLoan?.companionView?.alpha = 1.0
+        self.sourceLoan?.originContent?.removeFromSuperview()
+        self.originContentHome = nil
         if self.sourceLoan != nil {
             self.source.returnExpansionSource()
         }

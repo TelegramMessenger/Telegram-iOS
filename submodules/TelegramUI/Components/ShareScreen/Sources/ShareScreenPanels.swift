@@ -262,7 +262,10 @@ final class BottomPanelComponent: Component {
                     presentController: component.present,
                     presentInGlobalOverlay: component.present,
                     sendMessageAction: { [weak self] _ in self?.send() },
-                    sendMessageOptionsAction: nil,
+                    sendMessageOptionsAction: component.actionOptions == nil ? nil : { [weak self] view, _ in
+                        guard let self, let component = self.component, !component.isSending, (component.actionBadge ?? 0) > 0 else { return }
+                        component.actionOptions?(view)
+                    },
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: nil,
                     lockMediaRecording: {

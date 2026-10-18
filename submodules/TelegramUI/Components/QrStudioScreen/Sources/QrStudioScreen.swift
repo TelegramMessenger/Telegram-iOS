@@ -17,7 +17,7 @@ import WallpaperResources
 import Photos
 import DeviceAccess
 
-private final class QrStudioScreenComponent: Component {
+final class QrStudioScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
     let context: AccountContext
@@ -141,6 +141,13 @@ private final class QrStudioScreenComponent: Component {
             self.alpha = 0.0
             self.addSubview(self.presentationContainer)
             self.prepareAnimateIn()
+
+            self.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                return self.look.kind != .color && !self.lastHitIsInsideCode
+            }
 
             self.stage.makeContent = { [weak self] backdrop in
                 switch backdrop {
@@ -1104,7 +1111,31 @@ private final class QrStudioScreenComponent: Component {
             return true
         }
 
+        private var expansionReadyHandler: (() -> Void)?
+
+        func whenReadyForExpansion(_ f: @escaping () -> Void) {
+            if self.isLookReady {
+                f()
+                return
+            }
+            self.expansionReadyHandler = f
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: { [weak self] in
+                self?.fireExpansionReady()
+            })
+        }
+
+        private func fireExpansionReady() {
+            let handler = self.expansionReadyHandler
+            self.expansionReadyHandler = nil
+            handler?()
+        }
+
         private func revealIfReady() {
+            if self.expansionReadyHandler != nil, self.isLookReady {
+                DispatchQueue.main.async { [weak self] in
+                    self?.fireExpansionReady()
+                }
+            }
             guard self.pendingAnimateIn != nil, self.isLookReady else {
                 return
             }
@@ -1192,6 +1223,72 @@ private final class QrStudioScreenComponent: Component {
             }
         }
 
+        private var expansionBackgroundView: UIView?
+        private var lastHitIsInsideCode = false
+
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let cardView = self.card.view, cardView.superview != nil {
+                self.lastHitIsInsideCode = cardView.point(inside: self.convert(point, to: cardView), with: event)
+            } else {
+                self.lastHitIsInsideCode = false
+            }
+            return super.hitTest(point, with: event)
+        }
+
+        struct ExpansionViews {
+            let background: [UIView]
+            let card: UIView?
+            let controls: [UIView]
+            let closeButton: UIView
+            let screenCornerRadii: CornerRadii
+        }
+
+        func beginExpansionAppearance() {
+            guard !self.didStartAnimateIn else {
+                return
+            }
+            self.pendingAnimateIn?.cancel()
+            self.pendingAnimateIn = nil
+            self.alpha = 1.0
+            self.didStartAnimateIn = true
+            self.updateVisibility(true)
+            self.setPresentationOffset(0.0)
+            self.setPresentationRounded(false)
+            self.updateStatusBar()
+            (self.card.view as? QrStudioCardComponent.View)?.playCodeReveal(delay: 0.03)
+        }
+
+        func lendForExpansion(isOpening: Bool) -> ExpansionViews {
+            let backgroundView = UIView(frame: self.presentationContainer.bounds)
+            backgroundView.isUserInteractionEnabled = false
+            backgroundView.backgroundColor = self.presentationContainer.backgroundColor
+            self.presentationContainer.backgroundColor = .clear
+            self.presentationContainer.insertSubview(backgroundView, at: 0)
+            self.expansionBackgroundView = backgroundView
+            let background: [UIView] = isOpening ? [backgroundView] : [backgroundView, self.stage]
+            let candidates: [UIView] = (isOpening ? [self.stage] : []) + [self.closeButton, self.scanButton, self.shareButtonView, self.saveButton, self.codePill, self.emojiStripView, self.sheetView]
+            let controls = candidates.filter { $0.superview != nil && !$0.isHidden && $0.alpha == 1.0 }
+            var card: UIView?
+            if let cardView = self.card.view, cardView.superview != nil, cardView.alpha == 1.0 {
+                card = cardView
+            }
+            return ExpansionViews(background: background, card: card, controls: controls, closeButton: self.closeButton, screenCornerRadii: self.environment?.screenCornerRadii ?? CornerRadii(uniform: self.screenCornerRadius))
+        }
+
+        func returnFromExpansion() {
+            if let backgroundView = self.expansionBackgroundView {
+                self.expansionBackgroundView = nil
+                self.presentationContainer.backgroundColor = backgroundView.backgroundColor
+                backgroundView.removeFromSuperview()
+            }
+        }
+
+        func prepareExpansionDismiss() {
+            self.codeMenuCooldown.cancel()
+            self.shareMenuCooldown.cancel()
+            self.sheetView.close()
+        }
+
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             guard gestureRecognizer === self.cardDismissRecognizer, let recognizer = gestureRecognizer as? UIPanGestureRecognizer else {
                 return super.gestureRecognizerShouldBegin(gestureRecognizer)
@@ -1203,9 +1300,51 @@ private final class QrStudioScreenComponent: Component {
             return velocity.y > 0.0 && abs(velocity.y) > abs(velocity.x)
         }
 
+        private weak var expansionPopNavigationController: NavigationController?
+
+        private func handleExpansionPop(_ recognizer: UIPanGestureRecognizer, controller: QrStudioScreen) {
+            if recognizer.state == .began {
+                guard let navigationController = controller.navigationController as? NavigationController else {
+                    return
+                }
+                let location = recognizer.location(in: navigationController.view)
+                let translation = recognizer.translation(in: navigationController.view)
+                guard navigationController.beginVerticalExpansionPop(from: controller, anchor: CGPoint(x: location.x - translation.x, y: location.y - translation.y)) else {
+                    return
+                }
+                self.expansionPopNavigationController = navigationController
+                self.codeMenuCooldown.cancel()
+                self.shareMenuCooldown.cancel()
+                navigationController.updateVerticalExpansionPop(translation: translation)
+                return
+            }
+            guard let navigationController = self.expansionPopNavigationController else {
+                return
+            }
+            let translation = recognizer.translation(in: navigationController.view)
+            switch recognizer.state {
+            case .changed:
+                navigationController.updateVerticalExpansionPop(translation: translation)
+            case .ended, .cancelled, .failed:
+                self.expansionPopNavigationController = nil
+                navigationController.endVerticalExpansionPop(translation: translation, velocity: recognizer.velocity(in: navigationController.view), isCancelled: recognizer.state != .ended)
+            default:
+                break
+            }
+        }
+
         @objc private func handleCardDismissPan(_ recognizer: UIPanGestureRecognizer) {
             guard !self.isDismissing else {
                 return
+            }
+            if let controller = self.environment?.controller() as? QrStudioScreen {
+                if controller.opensByExpansion {
+                    self.handleExpansionPop(recognizer, controller: controller)
+                    return
+                }
+                if controller.opensAsModal {
+                    return
+                }
             }
             let translation = recognizer.translation(in: self).y
             switch recognizer.state {
@@ -1959,7 +2098,11 @@ private final class QrStudioScreenComponent: Component {
             self.state = state
             self.environment = environment
             self.presentationContainer.bounds = CGRect(origin: CGPoint(), size: availableSize)
-            self.presentationContainer.backgroundColor = self.look.backdrop.baseColor.uiColor
+            if let expansionBackgroundView = self.expansionBackgroundView {
+                expansionBackgroundView.backgroundColor = self.look.backdrop.baseColor.uiColor
+            } else {
+                self.presentationContainer.backgroundColor = self.look.backdrop.baseColor.uiColor
+            }
             self.presentationContainer.center = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
 
             if component.temporary && !self.didRequestContactToken {
@@ -1995,11 +2138,27 @@ private final class QrStudioScreenComponent: Component {
             } : nil
             let reservesTimer = username == nil && component.temporary
             let cardCenterY = QrStudioCardMetrics.cardCenterY(screenHeight: availableSize.height, showsUsername: username != nil || linkExpires != nil || reservesTimer)
-            let cardCenter = CGPoint(x: availableSize.width * 0.5, y: cardCenterY)
+            let cardCenter = CGPoint(x: environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) * 0.5, y: cardCenterY)
             self.cardRestCenter = cardCenter
 
             let rowInset: CGFloat = 34.0
-            let bottomInset = rowInset
+            let rowSide: CGFloat = 44.0
+            let topRowY: CGFloat
+            let bottomInset: CGFloat
+            if environment.metrics.widthClass == .regular {
+                topRowY = 16.0
+                bottomInset = rowInset
+            } else if environment.reservedCorners == .none {
+                topRowY = max(64.0, environment.statusBarHeight + 8.0)
+                bottomInset = rowInset
+            } else {
+                if environment.navigationBarTrailingButtonsInset > 0.0 {
+                    topRowY = environment.statusBarHeight + 31.0 - rowSide * 0.5
+                } else {
+                    topRowY = max(environment.statusBarHeight, environment.safeInsets.top) + 16.0
+                }
+                bottomInset = max(topRowY, environment.safeInsets.bottom)
+            }
             self.sheetView.frame = CGRect(origin: CGPoint(), size: availableSize)
             self.sheetView.isHidden = !self.canEdit(component)
             self.sheetView.compactHeights[.gift] = self.areGiftsLoaded ? QrStudioGiftsTabView.compactHeight(count: self.look.gifts.count, width: availableSize.width, bottomInset: environment.safeInsets.bottom) : nil
@@ -2060,14 +2219,20 @@ private final class QrStudioScreenComponent: Component {
             }
             self.cardSize = cardSize
 
-            let buttonSide: CGFloat = 44.0
-            let closeTop = max(64.0, environment.statusBarHeight + 8.0)
+            let buttonSide = rowSide
+            let closeTop = topRowY
+            let closeFrame: CGRect
+            if let sideColumnFrame = environment.sideColumnNavigationButtonFrame {
+                closeFrame = CGRect(x: sideColumnFrame.midX - buttonSide * 0.5, y: sideColumnFrame.midY - buttonSide * 0.5, width: buttonSide, height: buttonSide)
+            } else {
+                closeFrame = CGRect(x: 16.5 + environment.safeInsets.left, y: closeTop, width: buttonSide, height: buttonSide)
+            }
             self.updateGlassButton(
                 self.closeButton,
                 icon: "Navigation/Close",
                 isDark: isDark,
                 glassTint: glassTint,
-                frame: CGRect(x: 16.5 + environment.safeInsets.left, y: closeTop, width: buttonSide, height: buttonSide),
+                frame: closeFrame,
                 transition: transition,
                 action: { [weak self] in
                     self?.dismiss()
@@ -2081,7 +2246,7 @@ private final class QrStudioScreenComponent: Component {
                 title: scanTitle,
                 isDark: isDark,
                 glassTint: glassTint,
-                frame: CGRect(x: availableSize.width - 16.5 - environment.safeInsets.right - scanWidth, y: closeTop, width: scanWidth, height: buttonSide),
+                frame: CGRect(x: availableSize.width - 16.5 - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - scanWidth, y: closeTop, width: scanWidth, height: buttonSide),
                 transition: transition,
                 action: { [weak self] in
                     self?.scan()
@@ -2090,6 +2255,7 @@ private final class QrStudioScreenComponent: Component {
 
             let bottomRowY = availableSize.height - bottomInset - buttonSide
             let sideInset = rowInset
+            let bottomSideInsets = environment.bottomEdgeSideInsets()
             if self.shareButtonView.superview == nil {
                 self.presentationContainer.addSubview(self.shareButtonView)
                 self.shareButtonView.action = { [weak self] sourceView in
@@ -2100,14 +2266,14 @@ private final class QrStudioScreenComponent: Component {
                     }
                 }
             }
-            transition.setFrame(view: self.shareButtonView, frame: CGRect(x: sideInset + environment.safeInsets.left, y: bottomRowY, width: buttonSide, height: buttonSide))
+            transition.setFrame(view: self.shareButtonView, frame: CGRect(x: sideInset + bottomSideInsets.left, y: bottomRowY, width: buttonSide, height: buttonSide))
             self.shareButtonView.update(size: CGSize(width: buttonSide, height: buttonSide), isDark: isDark, glassTint: glassTint, icon: "Navigation/Share", transition: transition)
             self.updateGlassButton(
                 self.saveButton,
                 icon: "sf:arrow.down.to.line",
                 isDark: isDark,
                 glassTint: glassTint,
-                frame: CGRect(x: availableSize.width - sideInset - environment.safeInsets.right - buttonSide, y: bottomRowY, width: buttonSide, height: buttonSide),
+                frame: CGRect(x: availableSize.width - sideInset - bottomSideInsets.right - buttonSide, y: bottomRowY, width: buttonSide, height: buttonSide),
                 transition: transition,
                 action: { [weak self] in
                     self?.saveImage()
@@ -2298,6 +2464,53 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
 
     private var didAnimateIn = false
     private var isAnimatingOut = false
+    fileprivate private(set) var opensByExpansion = false
+    fileprivate private(set) var opensAsModal = false
+
+    private var skipsOwnPresentation: Bool {
+        return self.opensByExpansion || self.opensAsModal
+    }
+
+    public func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void) {
+        if let layout, layout.deviceMetrics.type == .tablet {
+            self.opensAsModal = true
+            self.navigationPresentation = .modal
+        } else {
+            self.opensByExpansion = true
+            self.navigationPresentation = .default
+        }
+        guard let layout else {
+            ready()
+            return
+        }
+        let _ = self.view
+        self.containerLayoutUpdated(layout, transition: ContainedViewLayoutTransition.immediate)
+        guard let view = self.studioView else {
+            ready()
+            return
+        }
+        view.whenReadyForExpansion(ready)
+    }
+
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard self.opensAsModal, layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(800.0, min(layout.size.width, layout.size.height) - 88.0)
+        )
+    }
+
+    override public func navigationExpansionDestination(below controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionDestination? {
+        guard self.opensByExpansion, let view = self.studioView else {
+            return nil
+        }
+        if case .push = operation {
+            view.beginExpansionAppearance()
+        }
+        return QrStudioExpansionDestination(view: view, isOpening: operation == .push)
+    }
 
     private func underlyingStatusBarStyle() -> Display.StatusBarStyle? {
         guard let navigationController = self.navigationController as? NavigationController, let index = navigationController.viewControllers.firstIndex(where: { $0 === self }), index > 0, let previous = navigationController.viewControllers[index - 1] as? ViewController else {
@@ -2323,13 +2536,17 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        if !self.didAnimateIn, let style = self.underlyingStatusBarStyle() {
+        if !self.didAnimateIn, !self.skipsOwnPresentation, let style = self.underlyingStatusBarStyle() {
             self.statusBar.statusBarStyle = style
         }
 
         self.studioView?.updateVisibility(true)
         if !self.didAnimateIn {
-            self.studioView?.prepareAnimateIn()
+            if self.skipsOwnPresentation {
+                self.studioView?.beginExpansionAppearance()
+            } else {
+                self.studioView?.prepareAnimateIn()
+            }
         }
     }
 
@@ -2338,7 +2555,11 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
 
         if !self.didAnimateIn {
             self.didAnimateIn = true
-            self.studioView?.animateIn()
+            if self.skipsOwnPresentation {
+                self.studioView?.beginExpansionAppearance()
+            } else {
+                self.studioView?.animateIn()
+            }
         }
     }
 
@@ -2348,6 +2569,11 @@ public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeS
             return
         }
         self.isAnimatingOut = true
+        if self.skipsOwnPresentation {
+            view.prepareExpansionDismiss()
+            super.dismiss(completion: completion)
+            return
+        }
         view.animateOut(velocity: nil, completion: { [weak self] in
             self?.dismissImmediately(completion: completion)
         })

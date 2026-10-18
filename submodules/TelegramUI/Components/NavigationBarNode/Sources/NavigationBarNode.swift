@@ -790,6 +790,17 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         }
         return rowView.rightButtonCapsule(containing: buttonView)
     }
+    
+    public func lendLeftCapsule(in view: UIView) -> NavigationBarLentCapsule? {
+        guard self.glassContainer.alpha > 0.0, self.transitionRole == nil else {
+            return nil
+        }
+        return self.rowView?.lendLeftCapsule(in: view)
+    }
+
+    public func returnLeftCapsule() {
+        self.rowView?.returnLeftCapsule()
+    }
 
     public func updateEdgeEffectExtension(value: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.edgeEffectExtension == value {

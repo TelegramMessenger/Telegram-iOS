@@ -52,8 +52,9 @@ public final class NavigationExpansionSourceLoan {
     /// Title, then status (the status is the anchor the card's edge carries).
     public let labels: [NavigationExpansionLabel]
     public let press: ExpansionPress
+    public let originContent: UIView?
 
-    public init(origin: CGRect, originTint: GlassBackgroundView.TintColor, isDark: Bool, companion: CGRect?, companionPhotoDiameter: CGFloat, companionView: UIView?, labels: [NavigationExpansionLabel], press: ExpansionPress) {
+    public init(origin: CGRect, originTint: GlassBackgroundView.TintColor, isDark: Bool, companion: CGRect?, companionPhotoDiameter: CGFloat, companionView: UIView?, labels: [NavigationExpansionLabel], press: ExpansionPress, originContent: UIView? = nil) {
         self.origin = origin
         self.originTint = originTint
         self.isDark = isDark
@@ -62,6 +63,7 @@ public final class NavigationExpansionSourceLoan {
         self.companionView = companionView
         self.labels = labels
         self.press = press
+        self.originContent = originContent
     }
 }
 
@@ -113,8 +115,11 @@ public final class NavigationExpansionDestinationLoan {
     /// The screen's corner radii (`ContainerViewLayout.screenCornerRadii`), which differ on iPhone Duo's cover screen.
     public let screenCornerRadii: CornerRadii
     public let backButtonFrame: CGRect?
+    public let backgroundOpening: ClosedRange<CGFloat>?
+    public let backgroundClosing: ClosedRange<CGFloat>?
+    public let flyingViews: [UIView]
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?, backgroundOpening: ClosedRange<CGFloat>? = nil, backgroundClosing: ClosedRange<CGFloat>? = nil, flyingViews: [UIView] = []) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -133,6 +138,9 @@ public final class NavigationExpansionDestinationLoan {
         self.glassTint = glassTint
         self.screenCornerRadii = screenCornerRadii
         self.backButtonFrame = backButtonFrame
+        self.backgroundOpening = backgroundOpening
+        self.backgroundClosing = backgroundClosing
+        self.flyingViews = flyingViews
     }
 }
 

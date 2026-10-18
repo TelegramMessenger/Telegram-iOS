@@ -11,9 +11,63 @@ import AppBundle
 import AlertComponent
 import AvatarComponent
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import PhoneNumberFormat
 import UndoUI
 import WalletContext
+
+private final class GiftMovePathAlertComponent: Component {
+    typealias EnvironmentType = AlertComponentEnvironment
+
+    let text: NSAttributedString
+    let topInset: CGFloat
+
+    init(text: NSAttributedString, topInset: CGFloat) {
+        self.text = text
+        self.topInset = topInset
+    }
+
+    static func ==(lhs: GiftMovePathAlertComponent, rhs: GiftMovePathAlertComponent) -> Bool {
+        return lhs.text.isEqual(to: rhs.text) && lhs.topInset == rhs.topInset
+    }
+
+    final class View: UIView {
+        private let text = ComponentView<Empty>()
+
+        func update(component: GiftMovePathAlertComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let textSize = self.text.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: nil,
+                    animationCache: nil,
+                    animationRenderer: nil,
+                    placeholderColor: nil,
+                    text: .plain(component.text),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
+            )
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    self.addSubview(textView)
+                }
+                transition.setFrame(view: textView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textSize.width) / 2.0), y: component.topInset), size: textSize))
+            }
+            return CGSize(width: availableSize.width, height: textSize.height + component.topInset)
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: .zero)
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<AlertComponentEnvironment>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
 
 private final class GiftMoveAddressAlertComponent: Component {
     typealias EnvironmentType = AlertComponentEnvironment
@@ -246,16 +300,16 @@ private func giftMovePathString(items: [(String, String, Bool)], theme: Presenta
             if let chevron = giftMovePathIcon("Item List/InlineTextRightArrow", color: textColor, side: 10.0) {
                 result.append(NSAttributedString(string: "\u{00A0}", font: font, textColor: textColor))
                 result.append(NSAttributedString(string: ">", attributes: [.attachment: chevron, .font: font, .foregroundColor: textColor]))
-                result.append(NSAttributedString(string: "\u{00A0}\u{00A0}", font: font, textColor: textColor))
+                result.append(NSAttributedString(string: "\u{00A0} ", font: font, textColor: textColor))
             } else {
-                result.append(NSAttributedString(string: " > ", font: font, textColor: textColor))
+                result.append(NSAttributedString(string: "\u{00A0}> ", font: font, textColor: textColor))
             }
         }
         if let icon = giftMovePathIcon(item.0, color: item.2 ? textColor : accentColor, side: 16.0) {
             result.append(NSAttributedString(string: "#", attributes: [.attachment: icon, .font: font, .foregroundColor: item.2 ? textColor : accentColor, .baselineOffset: 1.0]))
             result.append(NSAttributedString(string: "\u{00A0}\u{00A0}", font: font, textColor: textColor))
         }
-        result.append(NSAttributedString(string: item.1, font: font, textColor: textColor))
+        result.append(NSAttributedString(string: item.1.replacingOccurrences(of: " ", with: "\u{00A0}"), font: font, textColor: textColor))
     }
     return result
 }
@@ -296,11 +350,11 @@ public func giftMoveToWalletAlertController(
     content.append(AnyComponentWithIdentity(
         id: "path",
         component: AnyComponent(
-            AlertTextComponent(content: .attributed(giftMovePathString(items: [
+            GiftMovePathAlertComponent(text: giftMovePathString(items: [
                 ("Wallet/PathSettings", strings.Settings_Title, true),
                 ("Wallet/PathGram", strings.Settings_Money, false),
                 ("Wallet/PathGift", strings.Wallet_Collectibles, true)
-            ], theme: presentationData.theme)), alignment: .center, insets: UIEdgeInsets(top: -6.0, left: 0.0, bottom: 0.0, right: 0.0))
+            ], theme: presentationData.theme), topInset: -6.0)
         )
     ))
 
@@ -385,10 +439,10 @@ public func giftMoveToProfileAlertController(
     content.append(AnyComponentWithIdentity(
         id: "path",
         component: AnyComponent(
-            AlertTextComponent(content: .attributed(giftMovePathString(items: [
+            GiftMovePathAlertComponent(text: giftMovePathString(items: [
                 ("Wallet/PathUser", strings.Settings_MyProfile, true),
                 ("Wallet/PathGift", strings.PeerInfo_PaneGifts, true)
-            ], theme: presentationData.theme)), alignment: .center, insets: UIEdgeInsets(top: -6.0, left: 0.0, bottom: 0.0, right: 0.0))
+            ], theme: presentationData.theme), topInset: -6.0)
         )
     ))
 

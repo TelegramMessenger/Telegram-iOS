@@ -53,6 +53,8 @@ public struct ExpansionGeometry: Equatable {
     public var carriedEdge: CGFloat
     /// The upper screen's appearing items in order (the action buttons), at rest.
     public var appearing: [CGRect]
+    public var backgroundOpening: ClosedRange<CGFloat> = 0.06 ... 0.45
+    public var backgroundClosing: ClosedRange<CGFloat> = 0.30 ... 0.85
 
     /// The glass ring around the companion's photo: 3 pt in the bar's row (44 around 38), 5 pt in the side column.
     public var companionRing: CGFloat {

@@ -95,6 +95,9 @@ public struct ExpansionFrame: Equatable {
     /// The companion's own photo (the chat's live avatar) in the flying circle, above the upper screen's: 1 at the lower
     /// screen's end of the clock, gone from 0.3, so the two avatars cross-fade instead of one replacing the other.
     public var companionContent: CGFloat
+    public var originContent: CGFloat
+    public var flight: CGFloat
+    public var flightAlpha: CGFloat
 }
 
 /// The prototype's scene as a function: one geometry, one path, one clock value → one frame.
@@ -325,7 +328,7 @@ public struct ExpansionChoreography {
             photo: photo,
             photoCornerRadii: photoCornerRadii,
             labels: labelFrames,
-            background: clock.phase((0.06, 0.45), (0.30, 0.85)),
+            background: clock.phase((g.backgroundOpening.lowerBound, g.backgroundOpening.upperBound), (g.backgroundClosing.lowerBound, g.backgroundClosing.upperBound)),
             ink: clock.phase((0.10, 0.45), (0.30, 0.80)),
             more: clock.phase((0.25, 0.60), (0.00, 0.14)),
             glass: 1.0 - ExpansionCurve.smooth(ExpansionCurve.ramp(fill, 0.75, 0.97)),
@@ -337,7 +340,10 @@ public struct ExpansionChoreography {
             flooded: clock.phase((0.96, 1.00), (0.00, 0.03)),
             originLight: min(max(press.origin, 0.0), 1.0) * (1.0 - fillC),
             companionLight: min(max(press.companion, 0.0), 1.0) * (1.0 - fillC),
-            companionContent: 1.0 - ExpansionCurve.smooth(ExpansionCurve.ramp(fill, 0.0, 0.3))
+            companionContent: 1.0 - ExpansionCurve.smooth(ExpansionCurve.ramp(fill, 0.0, 0.3)),
+            originContent: 1.0 - ExpansionCurve.smooth(ExpansionCurve.ramp(fill, 0.0, 0.3)),
+            flight: edge,
+            flightAlpha: clock.phase((0.05, 0.6), (0.1, 0.6))
         )
     }
 }

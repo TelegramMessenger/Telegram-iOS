@@ -1092,7 +1092,8 @@ private final class WalletCollectibleContentComponent: Component {
             component: WalletCollectibleContentComponent,
             theme: PresentationTheme,
             strings: PresentationStrings,
-            dateTimeFormat: PresentationDateTimeFormat
+            dateTimeFormat: PresentationDateTimeFormat,
+            displaysOwner: Bool
         ) -> [TableComponent.Item] {
             let ownerFont = Font.monospace(15.0)
             let ownerAddress = component.context.walletContext?.stateValue.walletAddress ?? ""
@@ -1168,6 +1169,9 @@ private final class WalletCollectibleContentComponent: Component {
                     ))
                 )
             ]
+            if !displaysOwner {
+                items.removeAll(where: { $0.id == AnyHashable("owner") })
+            }
             if let uniqueGift = self.uniqueGift {
                 let issuedString = presentationStringsFormattedNumber(uniqueGift.availability.issued, dateTimeFormat.groupingSeparator)
                 let totalString = presentationStringsFormattedNumber(uniqueGift.availability.total, dateTimeFormat.groupingSeparator)
@@ -1561,11 +1565,15 @@ private final class WalletCollectibleContentComponent: Component {
 
             if component.collectible.kind == .gift {
                 contentHeight += 20.0
+                var isDuo = false
+                if case .iPhoneDuo = environment.deviceMetrics {
+                    isDuo = true
+                }
                 let tableSize = self.table.update(
                     transition: transition,
                     component: AnyComponent(TableComponent(
                         theme: theme,
-                        items: self.giftTableItems(component: component, theme: theme, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
+                        items: self.giftTableItems(component: component, theme: theme, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat, displaysOwner: !isDuo)
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)

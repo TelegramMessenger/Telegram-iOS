@@ -292,14 +292,16 @@ public final class PeerInfoCoverComponent: Component {
         }
         
         public func animateIn() {
-            guard let _ = self.currentSize, let component = self.component else {
+            guard let _ = self.currentSize, let _ = self.component else {
                 return
             }
-            
+
+            let patternBounds = self.avatarBackgroundPatternContentsLayer.bounds
+            let avatarCenter = CGPoint(x: patternBounds.midX, y: patternBounds.midY)
             for layer in self.avatarPatternContentLayers {
                 layer.opacity = 1.0
                 layer.animatePosition(
-                    from: component.avatarCenter,
+                    from: avatarCenter,
                     to: layer.position,
                     duration: 0.4,
                     timingFunction: kCAMediaTimingFunctionSpring

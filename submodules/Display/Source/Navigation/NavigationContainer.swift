@@ -149,8 +149,40 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         var anchor: CGPoint = CGPoint()
         /// A caught expanding push: whether the status bar had turned to the pushed screen's (then it follows the fade).
         var expansionStatusBarTurned: Bool = true
+        var isVertical: Bool = false
     }
     private var interactivePop: InteractivePop?
+
+    public func beginVerticalExpansionPop(anchor: CGPoint) -> Bool {
+        guard self.interactivePop == nil else {
+            return false
+        }
+        self.interactivePopBegan(translation: 0.0, velocity: 0.0, anchor: anchor)
+        guard var pop = self.interactivePop else {
+            return false
+        }
+        if !pop.transition.coordinator.isExpansion {
+            self.interactivePopEnded(translation: 0.0, velocity: 0.0, isCancelled: true)
+            return false
+        }
+        pop.isVertical = true
+        self.interactivePop = pop
+        return true
+    }
+
+    public func updateVerticalExpansionPop(translation: CGPoint) {
+        guard let pop = self.interactivePop, pop.isVertical else {
+            return
+        }
+        self.interactivePopChanged(translation: translation.x, velocity: 0.0, translationY: translation.y)
+    }
+
+    public func endVerticalExpansionPop(translation: CGPoint, velocity: CGPoint, isCancelled: Bool) {
+        guard let pop = self.interactivePop, pop.isVertical else {
+            return
+        }
+        self.interactivePopEnded(translation: translation.x, velocity: velocity.x, isCancelled: isCancelled, translationY: translation.y, velocityY: velocity.y)
+    }
     
     public init(isFlat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.isFlat = isFlat
@@ -376,6 +408,12 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             return
         }
         if transition.coordinator.isExpansion {
+            if pop.isVertical {
+                let dy = translationY >= 0.0 ? translationY : 0.25 * translationY
+                transition.coordinator.trackExpansionPose(NavigationExpansionCardPose(dx: translation, dy: dy, anchor: pop.anchor, weight: 1.0, isVertical: true))
+                self.interactivePop = pop
+                return
+            }
             let dx = translation >= 0.0 ? translation : 0.25 * translation
             transition.coordinator.trackExpansionPose(NavigationExpansionCardPose(dx: dx, dy: translationY, anchor: pop.anchor, weight: 1.0))
             self.interactivePop = pop
@@ -390,16 +428,18 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         coordinator.trackInteractivePop(pop.target)
     }
 
-    func interactivePopEnded(translation: CGFloat, velocity: CGFloat, isCancelled: Bool, time: Double = CACurrentMediaTime(), translationY: CGFloat = 0.0) {
+    func interactivePopEnded(translation: CGFloat, velocity: CGFloat, isCancelled: Bool, time: Double = CACurrentMediaTime(), translationY: CGFloat = 0.0, velocityY: CGFloat = 0.0) {
         guard var pop = self.interactivePop, let transition = self.state.transition, transition === pop.transition else {
             self.interactivePop = nil
             return
         }
         self.interactivePop = nil
+        let travel = pop.isVertical ? translationY : translation
+        let travelVelocity = pop.isVertical ? velocityY : velocity
         if transition.coordinator.isExpansion, case .push = transition.type {
             // A caught expanding push: the swipe turns it back, or it runs on to the pushed screen.
             let width = max(1.0, self.view.bounds.width)
-            if !isCancelled && navigationExpansionCommits(dx: translation, velocity: velocity, width: width) {
+            if !isCancelled && navigationExpansionCommits(dx: travel, velocity: travelVelocity, width: width) {
                 let leaving = self.state.top?.value
                 if let leaving {
                     // Heading for the chat: its status bar at once.
@@ -429,7 +469,7 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         }
         if transition.coordinator.isExpansion, case .pop = transition.type {
             let width = max(1.0, self.view.bounds.width)
-            if !isCancelled && navigationExpansionCommits(dx: translation, velocity: velocity, width: width) {
+            if !isCancelled && navigationExpansionCommits(dx: travel, velocity: travelVelocity, width: width) {
                 let leaving = self.state.top?.value
                 leaving?.viewWillLeaveNavigation()
                 transition.coordinator.commitExpansionPose(completion: { [weak self, weak transition] in

@@ -1074,6 +1074,13 @@ public protocol MediaPickerScreen: ViewController {
 }
 
 public protocol ChatQrCodeScreen: ViewController {
+    func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void)
+}
+
+public extension ChatQrCodeScreen {
+    func prepareForNavigationExpansion(layout: ContainerViewLayout?, ready: @escaping () -> Void) {
+        ready()
+    }
 }
 
 public protocol MediaEditorScreenResult {

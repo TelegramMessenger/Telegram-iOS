@@ -2128,7 +2128,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     strongSelf.displayGiftsContextMenu(source: source, gesture: gesture)
                 }
             case .qrCode:
-                strongSelf.openQrCode()
+                strongSelf.openQrCode(fromNavigationButton: true)
             case .postStory:
                 var sourceFrame: CGRect?
                 if let source {
@@ -4741,7 +4741,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         presentAddMembersImpl(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, parentController: controller, groupPeer: groupPeer, selectAddMemberDisposable: self.selectAddMemberDisposable, addMemberDisposable: self.addMemberDisposable)
     }
     
-    func openQrCode() {
+    private var isPreparingQrCode = false
+
+    func openQrCode(fromNavigationButton: Bool = false) {
         guard let data = self.data, let peer = data.peer, let controller = self.controller else {
             return
         }
@@ -4756,6 +4758,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             temporary = true
         }
         let qrController = self.context.sharedContext.makeChatQrCodeScreen(context: self.context, peer: peer, threadId: threadId, temporary: temporary)
+        if fromNavigationButton, self.isSettings, let qrController = qrController as? ChatQrCodeScreen {
+            guard !self.isPreparingQrCode else {
+                return
+            }
+            self.isPreparingQrCode = true
+            let layout = (controller.parent as? ViewController)?.currentlyAppliedLayout ?? controller.currentlyAppliedLayout
+            qrController.prepareForNavigationExpansion(layout: layout, ready: { [weak self, weak controller] in
+                self?.isPreparingQrCode = false
+                guard let controller, controller.view.window != nil else {
+                    return
+                }
+                controller.expansionQrCodeToPush = qrController
+                controller.push(qrController)
+            })
+            return
+        }
         controller.push(qrController)
     }
     
@@ -7187,6 +7205,30 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    fileprivate weak var expansionQrCodeToPush: ViewController?
+    private weak var expandedQrCode: ViewController?
+
+    override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        switch operation {
+        case .push:
+            guard let qrCode = self.expansionQrCodeToPush, qrCode === controller else {
+                return nil
+            }
+            self.expansionQrCodeToPush = nil
+        case .pop, .interactivePop:
+            guard let qrCode = self.expandedQrCode, qrCode === controller else {
+                return nil
+            }
+        }
+        guard self.isSettings, self.isNodeLoaded, let navigationBar = self.navigationBar as? NavigationBarNode else {
+            return nil
+        }
+        if case .push = operation {
+            self.expandedQrCode = controller
+        }
+        return PeerInfoQrCodeExpansionSource(navigationBar: navigationBar)
+    }
+
     override public func navigationExpansionDestination(below controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionDestination? {
         guard self.isNodeLoaded else {
             return nil
