@@ -2779,6 +2779,15 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }).strict()
     }
     
+    /// Plays the unseen reactions of messages the caller has just brought on screen (the unseen-reactions jump) and
+    /// marks them seen, on the same path the history plays them on, so they don't play again when they come into view.
+    func displayUnseenReactionAnimationsAndMarkSeen(messageIds: [MessageId]) {
+        let displayedMessageIds = self.displayUnseenReactionAnimations(messageIds: messageIds)
+        if !displayedMessageIds.isEmpty {
+            self.unseenReactionsProcessingManager.add(displayedMessageIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+        }
+    }
+    
     private func attemptReadingReactions() {
         if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
@@ -3533,7 +3542,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -4818,12 +4827,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private func displayUnseenReactionAnimations(messageIds: [MessageId], forceMapping: [MessageId: [ReactionsMessageAttribute.RecentPeer]] = [:]) -> [MessageId] {
         let timestamp = CACurrentMediaTime()
+        // Stamped when a message plays, not when it is asked for: a call that finds the message off screen (a
+        // jump's completion while the scroll is still landing) must not suppress the play once it is on screen.
         var messageIds = messageIds
         for i in (0 ..< messageIds.count).reversed() {
             if let previousTimestamp = self.displayUnseenReactionAnimationsTimestamps[messageIds[i]], previousTimestamp + 1.0 > timestamp {
                 messageIds.remove(at: i)
-            } else {
-                self.displayUnseenReactionAnimationsTimestamps[messageIds[i]] = timestamp
             }
         }
         
@@ -4899,6 +4908,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
             
             if let reactionItem = reactionItem, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                self.displayUnseenReactionAnimationsTimestamps[item.content.firstMessage.id] = timestamp
+                
                 let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
                 
                 chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)

@@ -1166,6 +1166,17 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 animatesInsertions: animatesInsertions,
                 transition: transition
             )
+            // The range reported at the end of this transaction is where the rows are drawn now, before the pass has
+            // moved them, and nothing reports it again when a programmatic pass lands (`onVisibleWindowChanged` fires
+            // only on user scrolls). Without this report, what an animated jump brings on screen would stay
+            // unprocessed (read marks, unseen mentions and reactions) until the next drag or the history's 10 s refresh. ListViewImpl
+            // reports the landed range at the transaction itself, where its model is already final; here that would
+            // be the settled geometry, which mid-fling is the fling's destination (see `forEachVisibleItemNode`).
+            if !transition.isImmediate {
+                Queue.mainQueue().after(transition.duration * UIView.animationDurationFactor(), { [weak self] in
+                    self?.updateVisibleItemRange(force: false)
+                })
+            }
         }
 
         // Messages arriving at the newest edge slide in from beyond it, rather than fading into place
