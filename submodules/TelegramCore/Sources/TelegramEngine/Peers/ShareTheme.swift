@@ -44,15 +44,56 @@ private struct CachedShareThemeBackdrops: Codable {
 
 private let cachedShareThemeBackdropsEntryId = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.shareThemeBackdrops, key: ValueBoxKey(length: 0))
 
-func _internal_getShareTheme(account: Account, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    }
-    |> mapToSignal { inputPeer -> Signal<TelegramShareTheme?, NoError> in
-        guard let inputPeer else {
-            return .single(nil)
+private struct CachedShareTheme: Codable {
+    let emojis: [MessageReaction.Reaction]?
+    let backdropId: Int32?
+    let gift: StarGift?
+
+    init(_ theme: TelegramShareTheme) {
+        switch theme {
+        case .default:
+            self.emojis = nil
+            self.backdropId = nil
+            self.gift = nil
+        case let .emojiBackdrop(emojis, backdropId):
+            self.emojis = emojis
+            self.backdropId = backdropId
+            self.gift = nil
+        case let .gift(gift):
+            self.emojis = nil
+            self.backdropId = nil
+            self.gift = gift
         }
-        return account.network.request(Api.functions.messages.getShareTheme(peer: inputPeer))
+    }
+
+    var theme: TelegramShareTheme {
+        if let gift = self.gift {
+            return .gift(gift)
+        }
+        if self.emojis == nil && self.backdropId == nil {
+            return .default
+        }
+        return .emojiBackdrop(emojis: self.emojis, backdropId: self.backdropId)
+    }
+}
+
+private func cachedShareThemeEntryId(peerId: PeerId) -> ItemCacheEntryId {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: peerId.toInt64())
+    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.shareThemes, key: key)
+}
+
+func _internal_getShareTheme(account: Account, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
+    let postbox = account.postbox
+    return postbox.transaction { transaction -> (Api.InputPeer?, TelegramShareTheme?) in
+        let cached = transaction.retrieveItemCacheEntry(id: cachedShareThemeEntryId(peerId: peerId))?.get(CachedShareTheme.self)?.theme
+        return (transaction.getPeer(peerId).flatMap(apiInputPeer), cached)
+    }
+    |> mapToSignal { inputPeer, cached -> Signal<TelegramShareTheme?, NoError> in
+        guard let inputPeer else {
+            return .single(cached)
+        }
+        let remote = account.network.request(Api.functions.messages.getShareTheme(peer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.ShareTheme?, NoError> in
             return .single(nil)
@@ -79,6 +120,22 @@ func _internal_getShareTheme(account: Account, peerId: PeerId) -> Signal<Telegra
             case .inputShareThemeGift:
                 return nil
             }
+        }
+        |> mapToSignal { theme -> Signal<TelegramShareTheme?, NoError> in
+            guard let theme else {
+                return .single(cached)
+            }
+            return postbox.transaction { transaction -> TelegramShareTheme? in
+                if let entry = CodableEntry(CachedShareTheme(theme)) {
+                    transaction.putItemCacheEntry(id: cachedShareThemeEntryId(peerId: peerId), entry: entry)
+                }
+                return theme
+            }
+        }
+        if let cached {
+            return .single(cached) |> then(remote)
+        } else {
+            return remote
         }
     }
 }

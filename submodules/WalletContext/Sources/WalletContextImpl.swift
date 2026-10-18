@@ -94,6 +94,7 @@ actor WalletContextImpl {
     var preparedTransfers: [String: PreparedEngineTransferRecord] = [:]
     var pendingTransferCollectibles: [String: Collectible] = [:]
     var pendingGiftDepositIds = Set<String>()
+    var transferRecipientPeerIds: [String: EnginePeer.Id] = [:]
     var pendingTransferRegistrations: [String: WalletPendingTransferRegistrationRecord] = [:]
     var outgoingTransactionPresentationIdentities: [String: OutgoingTransactionPresentationIdentity] = [:]
     

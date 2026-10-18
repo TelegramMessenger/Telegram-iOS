@@ -119,6 +119,39 @@ final class QrStudioScreenComponent: Component {
         private var pendingServerLook: QrStudioServerLook?
         private var shareThemeDisposable: Disposable?
         private var didReceiveServerLook = false
+        private var isResolvingCustomEmoji = false
+        private var didResolveServerEmoji = false
+        private let serverEmojiDisposable = MetaDisposable()
+        private var isResolvingServerEmoji = false
+
+        private func resolveServerEmoji(context: AccountContext, fileIds: [Int64]) {
+            guard !self.isResolvingServerEmoji else {
+                return
+            }
+            self.isResolvingServerEmoji = true
+            self.serverEmojiDisposable.set((context.engine.stickers.resolveInlineStickers(fileIds: fileIds)
+            |> take(1)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] files in
+                guard let self else {
+                    return
+                }
+                for (id, file) in files {
+                    self.customEmojiFiles[id] = file
+                }
+                self.didResolveServerEmoji = true
+                self.isResolvingServerEmoji = false
+                self.applyServerLookIfNeeded()
+                self.revealIfReady()
+            }, completed: { [weak self] in
+                guard let self, !self.didResolveServerEmoji else {
+                    return
+                }
+                self.didResolveServerEmoji = true
+                self.isResolvingServerEmoji = false
+                self.applyServerLookIfNeeded()
+                self.revealIfReady()
+            }))
+        }
         private var serverGift: QrStudioGift?
         private var localGift: QrStudioGift?
         private var loadedGifts: [QrStudioGift]?
@@ -237,6 +270,7 @@ final class QrStudioScreenComponent: Component {
             self.backdropsDisposable?.dispose()
             self.customEmojiDisposable?.dispose()
             self.giftsDisposable?.dispose()
+            self.serverEmojiDisposable.dispose()
         }
 
         private func loadGifts(component: QrStudioScreenComponent) {
@@ -521,6 +555,21 @@ final class QrStudioScreenComponent: Component {
             if case .emojiBackdrop(_, .some) = serverLook, !self.areBackdropsLoaded {
                 return
             }
+            if !self.canEdit(component), case let .emojiBackdrop(emoji?, _) = serverLook {
+                if emoji.contains(where: { if case .unicode = $0 { return true } else { return false } }), self.unicodeEmojiFiles.isEmpty {
+                    return
+                }
+                let missingFileIds = emoji.compactMap { item -> Int64? in
+                    if case let .custom(fileId) = item, self.customEmojiFiles[fileId] == nil {
+                        return fileId
+                    }
+                    return nil
+                }
+                if !missingFileIds.isEmpty && !self.didResolveServerEmoji {
+                    self.resolveServerEmoji(context: component.context, fileIds: missingFileIds)
+                    return
+                }
+            }
             self.pendingServerLook = nil
             guard !self.isLookModified else {
                 return
@@ -552,18 +601,29 @@ final class QrStudioScreenComponent: Component {
             guard !missingFileIds.isEmpty else {
                 return
             }
+            self.isResolvingCustomEmoji = true
             self.customEmojiDisposable?.dispose()
             self.customEmojiDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: missingFileIds)
             |> take(1)
             |> deliverOnMainQueue).startStrict(next: { [weak self] files in
-                guard let self, !files.isEmpty else {
+                guard let self else {
                     return
                 }
+                self.isResolvingCustomEmoji = false
                 for (id, file) in files {
                     self.customEmojiFiles[id] = file
                 }
-                self.applyRawSettings(context: context)
-                self.requestUpdate(transition: .easeInOut(duration: 0.45))
+                if !files.isEmpty {
+                    self.applyRawSettings(context: context)
+                    self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                }
+                self.revealIfReady()
+            }, completed: { [weak self] in
+                guard let self, self.isResolvingCustomEmoji else {
+                    return
+                }
+                self.isResolvingCustomEmoji = false
+                self.revealIfReady()
             })
         }
 
@@ -680,12 +740,16 @@ final class QrStudioScreenComponent: Component {
                 }
                 let wasEmpty = self.unicodeEmojiFiles.isEmpty
                 self.unicodeEmojiFiles = unicodeFiles
+                if wasEmpty && self.pendingServerLook != nil {
+                    self.applyServerLookIfNeeded()
+                }
                 if wasEmpty && self.isLookLoaded {
                     self.applyRawSettings(context: context)
                     if self.look.kind == .emoji {
                         self.ensureEmojiSelection()
                     }
-                    self.requestUpdate(transition: .easeInOut(duration: 0.45))
+                    self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                    self.revealIfReady()
                 }
             })
         }
@@ -1104,6 +1168,15 @@ final class QrStudioScreenComponent: Component {
             }
             if let component = self.component, !self.canEdit(component), !self.didReceiveServerLook || self.pendingServerLook != nil {
                 return false
+            }
+            if let component = self.component, !self.canEdit(component), let settings = self.rawSettings, settings.kind == QrStudioLook.Kind.emoji.rawValue {
+                let hasUnicode = settings.emoji.contains(where: { if case .unicode = $0 { return true } else { return false } })
+                if hasUnicode && self.unicodeEmojiFiles.isEmpty {
+                    return false
+                }
+                if self.isResolvingCustomEmoji {
+                    return false
+                }
             }
             if self.look.kind == .color, self.look.backdropId != nil, !self.areBackdropsLoaded {
                 return false

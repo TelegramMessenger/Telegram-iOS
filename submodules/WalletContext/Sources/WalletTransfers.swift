@@ -519,6 +519,14 @@ extension WalletContextImpl {
 
     func markWalletTransferConsumed(_ operationId: String, successful: Bool = true) {
         guard self.transferSubmissions.resolve(operationId, as: .consumed, confirmed: successful) else { return }
+        if let recipientPeerId = self.transferRecipientPeerIds.removeValue(forKey: operationId), successful {
+            let engine = self.engine
+            let _ = (Signal<Void, NoError>.single(Void())
+            |> delay(5.0, queue: Queue.concurrentDefaultQueue())
+            |> mapToSignal { _ -> Signal<Bool, NoError> in
+                return engine.peers.fetchAndUpdateCachedPeerData(peerId: recipientPeerId)
+            }).start()
+        }
         Task {
             do { try await self.persistWalletTransferResolution(operationId) }
             catch { self.logger.error("wallet_transfer_confirmation_persist_failed", error) }

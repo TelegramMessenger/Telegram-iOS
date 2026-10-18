@@ -2052,6 +2052,9 @@ extension WalletContextImpl {
                     registrationSession: registration?.session,
                     allowsGasless: record.allowsGasless
                 )
+                if let recipientPeerId, prepared.collectible == nil {
+                    self.transferRecipientPeerIds[prepared.id] = recipientPeerId
+                }
                 if pendingMessage != nil { await pendingMessageCreated?() }
                 return .api(submission)
             }
