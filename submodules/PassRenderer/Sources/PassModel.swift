@@ -109,8 +109,12 @@ private func parseColor(_ value: Any?) -> PassColor? {
     return nil
 }
 
-private func capped(_ string: String) -> String {
-    return string.count > passMaxStringLength ? String(string.prefix(passMaxStringLength)) : string
+func passCappedString(_ string: String) -> String {
+    let scalars = string.unicodeScalars
+    guard let end = scalars.index(scalars.startIndex, offsetBy: passMaxStringLength, limitedBy: scalars.endIndex), end != scalars.endIndex else {
+        return string
+    }
+    return String(scalars[scalars.startIndex ..< end])
 }
 
 private func parseFields(_ value: Any?) -> [PassField] {
@@ -123,7 +127,7 @@ private func parseFields(_ value: Any?) -> [PassField] {
         }
         let fieldValue: PassFieldValue
         if let string = item["value"] as? String {
-            fieldValue = .string(capped(string))
+            fieldValue = .string(passCappedString(string))
         } else if let number = item["value"] as? NSNumber {
             fieldValue = .number(number.doubleValue)
         } else {
@@ -140,7 +144,7 @@ private func parseFields(_ value: Any?) -> [PassField] {
         default:
             alignment = .natural
         }
-        return PassField(key: key, label: (item["label"] as? String).flatMap(capped), value: fieldValue, textAlignment: alignment, dateStyle: item["dateStyle"] as? String, timeStyle: item["timeStyle"] as? String, ignoresTimeZone: (item["ignoresTimeZone"] as? Bool) ?? false, currencyCode: item["currencyCode"] as? String, numberStyle: item["numberStyle"] as? String)
+        return PassField(key: key, label: (item["label"] as? String).flatMap(passCappedString), value: fieldValue, textAlignment: alignment, dateStyle: item["dateStyle"] as? String, timeStyle: item["timeStyle"] as? String, ignoresTimeZone: (item["ignoresTimeZone"] as? Bool) ?? false, currencyCode: item["currencyCode"] as? String, numberStyle: item["numberStyle"] as? String)
     }
 }
 
@@ -178,6 +182,6 @@ extension Pass {
             return nil
         }
         let foreground = parseColor(root["foregroundColor"]) ?? PassColor(red: 0.0, green: 0.0, blue: 0.0)
-        return Pass(style: style, backgroundColor: parseColor(root["backgroundColor"]) ?? PassColor(red: 1.0, green: 1.0, blue: 1.0), foregroundColor: foreground, labelColor: parseColor(root["labelColor"]) ?? foreground, logoText: (root["logoText"] as? String).flatMap(capped), headerFields: parseFields(body["headerFields"]), primaryFields: parseFields(body["primaryFields"]), secondaryFields: parseFields(body["secondaryFields"]), auxiliaryFields: parseFields(body["auxiliaryFields"]))
+        return Pass(style: style, backgroundColor: parseColor(root["backgroundColor"]) ?? PassColor(red: 1.0, green: 1.0, blue: 1.0), foregroundColor: foreground, labelColor: parseColor(root["labelColor"]) ?? foreground, logoText: (root["logoText"] as? String).flatMap(passCappedString), headerFields: parseFields(body["headerFields"]), primaryFields: parseFields(body["primaryFields"]), secondaryFields: parseFields(body["secondaryFields"]), auxiliaryFields: parseFields(body["auxiliaryFields"]))
     }
 }

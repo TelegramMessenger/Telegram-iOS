@@ -15,6 +15,14 @@ private enum PassImageState {
     case unreadable
 }
 
+private func passCappedFileName(_ fileName: String) -> String {
+    let scalars = fileName.unicodeScalars
+    guard let end = scalars.index(scalars.startIndex, offsetBy: 128, limitedBy: scalars.endIndex), end != scalars.endIndex else {
+        return fileName
+    }
+    return String(scalars[scalars.startIndex ..< end])
+}
+
 private func unreadablePassImage(size: CGSize, fileName: String) -> CGImage? {
     return generateImage(size, rotatedContext: { size, context in
         context.setFillColor(UIColor(rgb: 0x8e8e93).cgColor)
@@ -24,7 +32,7 @@ private func unreadablePassImage(size: CGSize, fileName: String) -> CGImage? {
         defer {
             UIGraphicsPopContext()
         }
-        let title = NSAttributedString(string: fileName, font: Font.medium(15.0), textColor: .white, paragraphAlignment: .center)
+        let title = NSAttributedString(string: passCappedFileName(fileName), font: Font.medium(15.0), textColor: .white, paragraphAlignment: .center)
         let titleSize = title.boundingRect(with: CGSize(width: size.width - 32.0, height: 40.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil).size
         let icon = UIImage(systemName: "wallet.pass", withConfiguration: UIImage.SymbolConfiguration(pointSize: 34.0))?.withTintColor(.white, renderingMode: .alwaysOriginal)
         let iconSize = icon?.size ?? CGSize()

@@ -253,6 +253,8 @@ private func passTransitGlyph(_ type: PassTransitType) -> CGImage? {
     return UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 56.0, weight: .regular))?.cgImage
 }
 
+private let passRenderingQueue = Queue(name: "org.telegram.passRendering", qos: .utility)
+
 private func fetchPassImageRepresentation(resourceData: MediaResourceData, representation: CachedPassImageRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         let data = renderPassPNG(path: resourceData.path, options: PassRenderOptions(language: representation.language, scale: representation.scale, transitGlyph: passTransitGlyph)) ?? Data()
@@ -262,7 +264,7 @@ private func fetchPassImageRepresentation(resourceData: MediaResourceData, repre
         }
         subscriber.putCompletion()
         return EmptyDisposable
-    }) |> runOn(Queue.concurrentDefaultQueue())
+    }) |> runOn(passRenderingQueue)
 }
 
 private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int64) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

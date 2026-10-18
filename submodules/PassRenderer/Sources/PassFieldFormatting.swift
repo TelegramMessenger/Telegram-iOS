@@ -31,7 +31,7 @@ public struct PassStringTables {
         candidates.append("en")
         for candidate in candidates {
             if let value = self.tables[candidate]?[string] {
-                return value.count > passMaxStringLength ? String(value.prefix(passMaxStringLength)) : value
+                return passCappedString(value)
             }
         }
         return string
@@ -105,6 +105,10 @@ public func passFieldLabel(_ field: PassField, strings: PassStringTables, contex
 }
 
 public func passFieldText(_ field: PassField, strings: PassStringTables, context: PassFormattingContext) -> String {
+    return passCappedString(passFormattedFieldText(field, strings: strings, context: context))
+}
+
+private func passFormattedFieldText(_ field: PassField, strings: PassStringTables, context: PassFormattingContext) -> String {
     let locale = Locale(identifier: context.language)
     switch field.value {
     case let .string(string):
