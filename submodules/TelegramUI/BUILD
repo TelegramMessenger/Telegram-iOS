@@ -512,6 +512,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/AccountFreezeInfoScreen",
         "//submodules/TelegramUI/Components/JoinSubjectScreen",
         "//submodules/TelegramUI/Components/Chat/QuickShareScreen",
+        "//submodules/TelegramUI/Components/ShareScreen",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/CheckComponent",

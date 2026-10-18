@@ -2318,7 +2318,7 @@ private final class WalletTransactionContentComponent: Component {
                     in: .current
                 )
             case .share:
-                let shareController = component.context.sharedContext.makeShareController(
+                let shareController = component.context.sharedContext.makeShareScreen(
                     context: component.context,
                     params: ShareControllerParams(
                         subject: .text(text.string),

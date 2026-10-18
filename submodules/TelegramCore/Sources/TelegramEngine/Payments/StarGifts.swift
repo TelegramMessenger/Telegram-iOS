@@ -3863,7 +3863,7 @@ func _internal_checkStarGiftWithdrawalAvailability(account: Account, reference: 
         guard let starGift else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 0, stargift: starGift, tmpPassword: nil))
+        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 0, stargift: starGift, tmpPassword: Buffer()))
         |> mapError { error -> RequestStarGiftWithdrawalError in
             if error.errorDescription == "PASSWORD_HASH_INVALID" || error.errorDescription.hasPrefix("TMP_PASSWORD") {
                 return .requestPassword
@@ -4004,7 +4004,7 @@ private func _internal_performStarGiftWithdrawalRequest<T>(account: Account, ref
 
 func _internal_requestStarGiftWithdrawalUrl(account: Account, reference: StarGiftReference, password: String?) -> Signal<String, RequestStarGiftWithdrawalError> {
     return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, temporaryPassword in
-        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 1 << 0, stargift: starGift, tmpPassword: temporaryPassword), automaticFloodWait: false)
+        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(flags: 0, stargift: starGift, tmpPassword: temporaryPassword), automaticFloodWait: false)
         |> map { result -> String in
             switch result {
             case let .starGiftWithdrawalUrl(starGiftWithdrawalUrlData):
@@ -4027,7 +4027,7 @@ public enum WithdrawStarGiftError: Equatable {
 
 func _internal_withdrawStarGift(account: Account, reference: StarGiftReference, keepOnProfile: Bool, password: String?) -> Signal<Never, WithdrawStarGiftError> {
     return _internal_performStarGiftWithdrawalRequest(account: account, reference: reference, password: password, request: { starGift, temporaryPassword in
-        var flags: Int32 = 1 << 1
+        var flags: Int32 = 0
         if keepOnProfile {
             flags |= (1 << 0)
         }

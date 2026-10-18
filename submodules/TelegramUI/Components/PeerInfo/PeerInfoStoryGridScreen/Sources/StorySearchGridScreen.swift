@@ -254,7 +254,7 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            self.present(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .mapMedia(locationMap), externalShare: true)), in: .window(.root), with: nil)
+            self.present(self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .mapMedia(locationMap), externalShare: true)), in: .window(.root), with: nil)
         })
         self.push(OpenInOptionsScreen(context: self.context, updatedPresentationData: nil, item: .location(location: locationMap, directions: nil), additionalAction: shareAction, openUrl: { [weak self] url in
             guard let self else {

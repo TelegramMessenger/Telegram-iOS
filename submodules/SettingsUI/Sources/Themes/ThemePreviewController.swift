@@ -524,7 +524,7 @@ public final class ThemePreviewController: ViewController {
                 subject = .media(media, nil)
                 preferredAction = .default
         }
-        let controller = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction))
+        let controller = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction))
         self.present(controller, in: .window(.root), blockInteraction: true)
     }
 }
