@@ -726,6 +726,30 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertNotNil(node.view.window)
     }
 
+    // Work that must not cut a capsule's change short (the bar's glass adapting again) waits until every capsule has
+    // settled, and runs at once when none animates.
+    func test_afterInPlaceAnimations_waitsForTheCapsulesToSettle() {
+        let bar = ComponentView<Empty>()
+        let before = self.updateBar(bar, back: nil, right: [self.fixedButton("edit")], transition: .immediate)
+        var runs = 0
+        before.afterInPlaceAnimations {
+            runs += 1
+        }
+        XCTAssertEqual(runs, 1)
+
+        let view = self.updateBar(bar, back: nil, right: [self.fixedButton("done", tint: .accent)], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        view.afterInPlaceAnimations {
+            runs += 1
+        }
+        XCTAssertEqual(runs, 1)
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertEqual(runs, 2)
+    }
+
     // A capsule the change removes (the back button entering edit mode) dematerializes, then leaves.
     func test_inPlaceCapsuleRemoval_dematerializes() {
         let bar = ComponentView<Empty>()

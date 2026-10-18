@@ -1066,7 +1066,21 @@ public final class GlassBackgroundContainerView: UIView {
             transition.setFrame(view: legacyView, frame: CGRect(origin: CGPoint(), size: size))
         }
     }
-    
+
+    /// Makes every glass in the container adapt again to the backdrop it is over now. UIKit's glass keeps how it adapted
+    /// to its backdrop when it joined the container (measured on iOS 27: a capsule that came over a white backdrop stayed
+    /// light over a coloured one later, whatever its tint, effect or luminance limits were set to since); setting the
+    /// container's effect again is what makes it look again. A glass that already matches its backdrop does not change.
+    public func readaptToBackdrop() {
+        guard let nativeView = self.nativeView, let effect = nativeView.effect else {
+            return
+        }
+        UIView.performWithoutAnimation {
+            nativeView.effect = nil
+            nativeView.effect = effect
+        }
+    }
+
     override public func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
     }

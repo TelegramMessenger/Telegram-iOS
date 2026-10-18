@@ -66,6 +66,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     private var backdropAlpha: CGFloat = 1.0
     private var edgeEffectExtension: CGFloat = 0.0
     private let glassContainer: GlassBackgroundContainerView
+    /// Advanced by each change of the bar's glass: only the latest change's readaptation runs (`readaptGlass`).
+    private var glassReadaptationGeneration = 0
+    private(set) var glassReadaptationCountForTesting = 0
     private let row = ComponentView<Empty>()
     private var sideColumnContainer: GlassBackgroundContainerView?
     private var appliedSideColumn: SideColumnRegion?
@@ -615,9 +618,49 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
     public func updatePresentationData(_ presentationData: NavigationBarPresentationData, transition: ContainedViewLayoutTransition) {
         if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
+            let glassChanged = presentationData.theme.glassTintColor != self.presentationData.theme.glassTintColor
             self.presentationData = presentationData
             self.requestLayout(transition: transition)
+            if glassChanged {
+                self.readaptGlass(after: transition)
+            }
         }
+    }
+
+    /// UIKit's glass keeps how it adapted to the backdrop when it joined the bar's container (`readaptToBackdrop`). A
+    /// change of the bar's glass comes with one of the backdrop behind it, on the same transition: the profile's bar turns
+    /// tinted as its white header gives way to the cover. Once that transition is over and no capsule is still animating
+    /// its change, the glass adapts again; otherwise a capsule that came while the bar was plain (the profile's Edit, back
+    /// from its media tabs) stayed light over the cover.
+    private func readaptGlass(after transition: ContainedViewLayoutTransition) {
+        self.glassReadaptationGeneration += 1
+        let generation = self.glassReadaptationGeneration
+        var delay: Double = 0.0
+        if case let .animated(duration, _) = transition {
+            delay = duration * UIView.animationDurationFactor()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: { [weak self] in
+            guard let self, self.glassReadaptationGeneration == generation else {
+                return
+            }
+            let readapt: () -> Void = { [weak self] in
+                guard let self, self.glassReadaptationGeneration == generation else {
+                    return
+                }
+                self.readaptGlass()
+            }
+            if let rowView = self.rowView {
+                rowView.afterInPlaceAnimations(readapt)
+            } else {
+                readapt()
+            }
+        })
+    }
+
+    private func readaptGlass() {
+        self.glassContainer.readaptToBackdrop()
+        self.sideColumnContainer?.readaptToBackdrop()
+        self.glassReadaptationCountForTesting += 1
     }
 
     public func navigationButtonContextContainer(sourceView: UIView) -> ContextExtractableContainer? {

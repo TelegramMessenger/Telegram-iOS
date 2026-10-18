@@ -810,6 +810,21 @@ extension NavigationBarComponent.View {
         self.inPlaceLink?.invalidate()
         self.inPlaceLink = nil
         self.inPlaceLastTime = nil
+        let actions = self.inPlaceEndActions
+        self.inPlaceEndActions = []
+        for action in actions {
+            action()
+        }
+    }
+
+    /// Runs `action` once no capsule animates in place: at once when none does, else when the last one settles. For
+    /// work that would cut a capsule's change short (the bar's glass adapting again to its backdrop).
+    public func afterInPlaceAnimations(_ action: @escaping () -> Void) {
+        if self.inPlaceCapsules.isEmpty {
+            action()
+        } else {
+            self.inPlaceEndActions.append(action)
+        }
     }
 
     /// One frame, `dt` seconds of animation time.

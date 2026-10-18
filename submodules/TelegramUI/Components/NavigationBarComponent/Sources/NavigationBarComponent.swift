@@ -164,6 +164,8 @@ public final class NavigationBarComponent: Component {
         var inPlaceCapsules: [NavigationBarInPlaceCapsule] = []
         var inPlaceLink: SharedDisplayLinkDriver.Link?
         var inPlaceLastTime: Double?
+        /// Run when the last capsule animating in place settles (`afterInPlaceAnimations`).
+        var inPlaceEndActions: [() -> Void] = []
         /// The animation duration factor (Slow Animations): the in-place springs run this many times slower.
         public var inPlaceDurationFactor: () -> Double = {
             return UIView.animationDurationFactor()

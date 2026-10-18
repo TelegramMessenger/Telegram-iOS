@@ -1119,6 +1119,40 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertEqual(node.glassContainerAlphaForTesting, 1.0)
     }
 
+    private func glassTheme(_ tint: UIColor?, buttonColor: UIColor = .black) -> NavigationBarPresentationData {
+        let theme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: buttonColor, disabledButtonColor: .gray, primaryTextColor: .black, badgeBackgroundColor: .red, badgeTextColor: .white, accentButtonColor: .blue, accentDisabledButtonColor: .lightGray, accentForegroundColor: .white, glassTintColor: tint)
+        return NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"))
+    }
+
+    // UIKit's glass keeps how it adapted to the backdrop when it joined the bar's container: the profile's Edit, back
+    // while the bar was plain over its white header, stayed light over the cover once the bar turned tinted. A change of
+    // the bar's glass makes the glass adapt again once its transition is over.
+    func test_glassChange_readaptsTheGlass_onceAfterItsTransition() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 0)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
+    // A new theme that keeps the glass (a colour of the buttons) leaves the glass as it adapted.
+    func test_themeChangeKeepingTheGlass_doesNotReadapt() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(nil, buttonColor: .blue), transition: .immediate)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 0)
+    }
+
+    // Plain and tinted in quick succession (a finger resting at the profile's threshold) adapt once, after the last.
+    func test_quickGlassChanges_readaptOnce() {
+        let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        node.updatePresentationData(self.glassTheme(nil), transition: .animated(duration: 0.2, curve: .easeInOut))
+        node.updatePresentationData(self.glassTheme(.purple, buttonColor: .white), transition: .animated(duration: 0.2, curve: .easeInOut))
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
+        XCTAssertEqual(node.glassReadaptationCountForTesting, 1)
+    }
+
     // A replacement content node leaving while the screen still hides the row does not bring the glass back.
     func test_rowHiddenByScreen_outlastsAReplacementContentNode() {
         let node = self.makeLaidOutNode(title: "Profile", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
