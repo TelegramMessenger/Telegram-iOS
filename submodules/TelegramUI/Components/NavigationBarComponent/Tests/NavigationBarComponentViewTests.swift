@@ -693,6 +693,39 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertFalse(view.rightButtonViews["search"]?.isDescendant(of: leaving.first ?? UIView()) ?? true)
     }
 
+    // A node kept across an in-place change stays in the button the bar shows it in. The profile's more/search slot is
+    // one node: [search, more] -> [more] (a swipe from its Chats tab to Media) hands the old pill's "more" button to
+    // the leaving items and lays out a new one, which takes the node. The leaving button, put on screen with the
+    // leaving items, took the node back and took it away when it left: the pill stayed empty.
+    func test_inPlaceItemChange_keptNode_staysInTheShownButton() {
+        let node = HostedNode()
+        let bar = ComponentView<Empty>()
+        let more = NavigationBarComponent.Button(id: "more", content: .node(node), action: { _ in })
+        let before = self.updateBar(bar, back: .back, right: [self.fixedButton("search"), more], transition: .immediate)
+        testWindow.addSubview(before)
+        defer {
+            before.removeFromSuperview()
+        }
+        XCTAssertNotNil(node.view.window)
+
+        let view = self.updateBar(bar, back: .back, right: [more], transition: .easeInOut(duration: 0.3))
+        XCTAssertNotNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertFalse(view.inPlaceLeavingViewsForTesting(slot: .right(0)).isEmpty)
+        guard let shown = view.rightButtonViews["more"] else {
+            XCTFail("no more button")
+            return
+        }
+        XCTAssertTrue(node.view.isDescendant(of: shown))
+
+        for _ in 0 ..< 240 {
+            view.inPlaceTickForTesting(dt: 1.0 / 120.0)
+        }
+        XCTAssertNil(view.inPlaceStateForTesting(isLeft: false))
+        XCTAssertTrue(view.rightButtonViews["more"] === shown)
+        XCTAssertTrue(node.view.isDescendant(of: shown))
+        XCTAssertNotNil(node.view.window)
+    }
+
     // A capsule the change removes (the back button entering edit mode) dematerializes, then leaves.
     func test_inPlaceCapsuleRemoval_dematerializes() {
         let bar = ComponentView<Empty>()

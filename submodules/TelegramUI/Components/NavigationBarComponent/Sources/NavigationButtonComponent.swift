@@ -135,8 +135,14 @@ final class NavigationButtonComponent: Component {
             guard self.window != nil, let node = self.hostedNode, let component = self.component else {
                 return
             }
-            // The node waited for this button to be on screen (`host`); a lent one belongs to the borrowing button.
-            if component.borrowsNode == NavigationBarNodeLoan.isLent(node) {
+            // The node waited for this button to be on screen (`host`); a lent one belongs to the borrowing button. A
+            // button the bar has replaced keeps its node as `hostedNode` but is no longer its home: put on screen with
+            // an in-place change's leaving items, it would take the node out of the new button and away with it.
+            if component.borrowsNode {
+                if NavigationBarNodeLoan.isLent(node) {
+                    self.host(node)
+                }
+            } else if !NavigationBarNodeLoan.isLent(node) && NavigationBarNodeLoan.isHome(self, of: node) {
                 self.host(node)
             }
         }
