@@ -2,6 +2,17 @@
 
 ## Scope (2026-09-29): single-button header capsules only
 
+**Update 2026-10-18: navigation bar row capsules of any number of buttons.** UIKit morphs a menu out of a whole
+section of several bar items: filmed on iOS 27 with the reference app (`Tests/NativeNavigationReference`,
+`-menuPair 1`: `[search, …]` in one pill, `…` carrying a `UIMenu`), the pill with both glyphs becomes the menu
+(search's glyph visible, blurred, inside the morphing blob), nothing of the pill stays behind, and the menu closes
+back into the whole pill with both glyphs. Content sharp ~0.21 s after the touch, closed ~0.28 s after it.
+`NavigationBarComponent` now sets `morphsIntoContextMenu` on its left capsule and every right pill whatever their
+button count, so a menu from any button morphs the whole pill (the menu's source is the pill:
+`navigationButtonContextContainer(sourceView:)`). Ours measured on Saved Messages' `[search, …]`: sharp ~0.25 s,
+closed ~0.27 s. The iPhone Duo side column's capsule keeps the single-button rule (UIKit has no counterpart to
+measure). The rest of this section describes the 2026-09-29 state.
+
 The morph is opt-in per source view. `ContextControllerExtractedPresentationNode` morphs a `.reference` menu only when its reference view has `morphsIntoContextMenu` set (a `UIView` property in `Display/ContextContentSourceNode.swift`); every other source uses the standard presentation.
 
 Only navigation-header glass capsules that hold exactly one button set it, and they recompute it on every layout:

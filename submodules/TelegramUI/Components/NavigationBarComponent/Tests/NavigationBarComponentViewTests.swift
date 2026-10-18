@@ -1747,6 +1747,21 @@ final class NavigationBarComponentViewTests: XCTestCase {
         XCTAssertTrue(view.navigationButtonContextContainer(sourceView: searchButton) === search)
     }
 
+    // Saved Messages' [search, …]: two buttons in one pill. A menu from either morphs the whole pill, its other button
+    // with it, and closes back into it, as UIKit's does with a section of several items (measured on iOS 27).
+    func test_twoButtonPill_morphsWholeIntoEitherButtonsMenu() {
+        let bar = ComponentView<Empty>()
+        let view = self.updateBar(bar, back: .back, right: [self.fixedButton("more"), self.fixedButton("search")], transition: .immediate)
+        guard let pill = view.rightPillBackgroundContainer(at: 0), let more = view.rightButtonViews["more"], let search = view.rightButtonViews["search"] else {
+            XCTFail("not one pill")
+            return
+        }
+        XCTAssertNil(view.rightPillBackgroundContainer(at: 1))
+        XCTAssertTrue(pill.morphsIntoContextMenu)
+        XCTAssertTrue(view.navigationButtonContextContainer(sourceView: more) === pill)
+        XCTAssertTrue(view.navigationButtonContextContainer(sourceView: search) === pill)
+    }
+
     // The title clears both pills and the gap between them.
     func test_rightPills_titleBand_clearsEveryPill() {
         let bar = ComponentView<Empty>()

@@ -818,7 +818,8 @@ public final class NavigationBarComponent: Component {
                     leftButtonsBackgroundContainer.update(size: leftButtonsContainerFrame.size, cornerRadius: leftButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: leftCapsuleTintColor, isInteractive: true, transition: leftButtonsBackgroundContainerTransition)
                     leftButtonsBackgroundContainerTransition.setFrame(view: self.leftButtonsContainer, frame: CGRect(origin: CGPoint(), size: leftButtonsContainerFrame.size))
                 }
-                leftButtonsBackgroundContainer.morphsIntoContextMenu = leftButtonCount == 1
+                // A menu from any of its buttons morphs the whole capsule, as UIKit's does with a section of several items.
+                leftButtonsBackgroundContainer.morphsIntoContextMenu = leftButtonCount != 0
             } else {
                 if let leftButtonsBackgroundContainer = self.leftButtonsBackgroundContainer {
                     self.leftButtonsBackgroundContainer = nil
@@ -926,7 +927,7 @@ public final class NavigationBarComponent: Component {
                     let partnerTint = partnerSlot.map { navigationBarGlassTintColor(self.rightPills[$0].appliedTint, theme: component.theme) } ?? tintColor
                     let partnerMove = (from: partnerSlot.flatMap { $0 < previousRightPills.count ? previousRightPills[$0]?.frame : nil } ?? partnerFrame, to: rightPillTargets.first(where: { $0.slot == partnerSlot })?.frame ?? partnerFrame)
                     self.startInPlaceMatched(container: background, slot: .right(slot), isRemoval: false, frame: frame, source: returning.frame(at: self.inPlaceTime), partner: partner, partnerFrame: partnerFrame, partnerMove: partnerMove, partnerTintColor: partnerTint, tintColor: tintColor, isDark: isDark, leaving: nil)
-                    background.morphsIntoContextMenu = buttonCount == 1
+                    background.morphsIntoContextMenu = buttonCount != 0
                     continue
                 } else {
                     isNew = true
@@ -958,7 +959,9 @@ public final class NavigationBarComponent: Component {
                     background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
                     backgroundTransition.setFrame(view: pill.itemsContainer, frame: CGRect(origin: CGPoint(), size: frame.size))
                 }
-                background.morphsIntoContextMenu = buttonCount == 1
+                // A menu from any of its buttons morphs the whole pill, its other buttons with it, and closes back into it:
+                // UIKit's with a section of several items (measured on iOS 27, Saved Messages' [search, …]).
+                background.morphsIntoContextMenu = buttonCount != 0
             }
             // Pills the row no longer has.
             for slot in rightPillMetrics.count ..< self.rightPills.count {

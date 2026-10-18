@@ -44,6 +44,8 @@
 // -adminsRight 1 (2026-10-15): the root's right items are Channel Administrators': [Edit (text), search (image)] <->
 //   [the system Done item], toggled by -scenario editDone, each change with new items (as ItemListController makes).
 //   For UIKit's in-place split and merge of a text pill and an image pill.
+// -menuPair 1 (2026-10-18): the root's right items are Saved Messages' [search, …], two plain image items sharing one
+//   pill, the outer one ("…") opening a menu on tap. For how UIKit morphs a menu out of one item of a multi-item pill.
 // -searchBar 1 gives the root screen a stacked search bar (`navigationItem.searchController`, not hidden on scroll), for
 //   UIKit's search bar on push and pop (bar RE §7; docs/superpowers/specs/2026-10-15-chat-list-header-transitions-design.md).
 //   -searchBarAt <depth> puts it on the screen at that depth instead (1: the pushed screen).
@@ -190,6 +192,17 @@ final class ReferenceViewController: UIViewController {
 
     private func applyRightItems(animated: Bool) {
         var items: [UIBarButtonItem] = []
+        if UserDefaults.standard.bool(forKey: "menuPair") && self.depth == 0 {
+            // Saved Messages' [search, …]: two plain image items in one pill, the outer one opening a menu on tap.
+            let menu = UIMenu(children: [
+                UIAction(title: "View as Chats", image: UIImage(systemName: "bubble.left.and.bubble.right"), state: .on, handler: { _ in }),
+                UIAction(title: "View as Messages", image: UIImage(systemName: "bubble.left"), handler: { _ in })
+            ])
+            items.append(UIBarButtonItem(title: nil, image: UIImage(systemName: "ellipsis"), primaryAction: nil, menu: menu))
+            items.append(UIBarButtonItem(image: UIImage(systemName: "magnifyingglass"), style: .plain, target: nil, action: nil))
+            self.navigationItem.setRightBarButtonItems(items, animated: animated)
+            return
+        }
         if UserDefaults.standard.bool(forKey: "adminsRight") && self.depth == 0 {
             if self.isEditingState {
                 items.append(UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(self.toggleEditDone)))
