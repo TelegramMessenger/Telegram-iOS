@@ -228,44 +228,44 @@ public final class WalletCardComponent: Component {
             if self.giftPatternLayer.superlayer == nil {
                 self.foregroundView.layer.insertSublayer(self.giftPatternLayer, at: 0)
                 self.giftPatternLayer.masksToBounds = true
-                for _ in 0..<30 { let layer = CALayer(); self.giftPatternLayer.addSublayer(layer); self.giftPatternSymbols.append(layer) }
+            }
+            let patternItems = WalletGiftPattern.items(size: size, maxX: self.address.view?.frame.minX ?? .greatestFiniteMagnitude)
+            var addedPatternSymbols = false
+            while self.giftPatternSymbols.count < patternItems.count {
+                let layer = CALayer(); self.giftPatternLayer.addSublayer(layer); self.giftPatternSymbols.append(layer)
+                addedPatternSymbols = true
+            }
+            while self.giftPatternSymbols.count > patternItems.count {
+                self.giftPatternSymbols.removeLast().removeFromSuperlayer()
             }
             let style = to ?? from
-            if self.giftPatternImage !== pattern || self.giftPatternColor != style?.patternColor {
+            if addedPatternSymbols || self.giftPatternImage !== pattern || self.giftPatternColor != style?.patternColor {
                 self.giftPatternImage = pattern; self.giftPatternColor = style?.patternColor
                 let image = pattern.flatMap { image in style.map { generateTintedImage(image: image, color: UIColor(rgb: UInt32(bitPattern: $0.patternColor))) } } ?? nil
                 for layer in self.giftPatternSymbols { layer.contents = image?.cgImage }
             }
             self.giftPatternLayer.frame = self.foregroundView.bounds
             self.giftPatternLayer.cornerRadius = 20 * size.width / 370
-            self.giftPatternLayer.mask = self.makeGiftPatternMask()
-            self.giftPatternLayer.isHidden = style == nil
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let revealing = progress < 1 && (to != nil || receding)
+            self.giftPatternLayer.mask = self.makeGiftPatternMask(circle: revealing ? (origin, radius, true) : nil)
+            self.giftPatternLayer.isHidden = style == nil || (to == nil && progress >= 1)
             let t = frame.patternTime
             let fly = progress >= 1 || to == nil ? 1 : 1 + 2.2 * pow(t - 1, 3) + 1.2 * pow(t - 1, 2)
-            for (index, item) in WalletGiftPattern.items(center: center, width: size.width).enumerated() {
+            let approach = 0.8 + 0.2 * (to == nil ? min(1, max(0, frame.contraction)) : fly)
+            for (index, item) in patternItems.enumerated() {
                 let layer = self.giftPatternSymbols[index]
-                let alpha = WalletGiftPattern.alpha(at: item.center, center: center, height: size.height)
-                if to == nil {
-                    let k = max(0, frame.contraction)
-                    let side = item.size * (0.35 + 0.65 * min(1, k))
-                    layer.bounds = CGRect(x: 0, y: 0, width: side, height: side)
-                    layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * k, y: origin.y + (item.center.y - origin.y) * k)
-                    let vanish = min(1, max(0, (frame.progress - 0.6) / 0.4))
-                    layer.opacity = Float(alpha * (1 - vanish * vanish * (3 - 2 * vanish)))
-                } else {
-                    layer.bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
-                    layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * fly, y: origin.y + (item.center.y - origin.y) * fly)
-                    layer.opacity = Float(alpha * min(1, t * 2))
-                }
+                let side = to == nil ? item.size * (0.35 + 0.65 * approach) : item.size
+                layer.bounds = CGRect(x: 0, y: 0, width: side, height: side)
+                layer.position = CGPoint(x: origin.x + (item.center.x - origin.x) * approach, y: origin.y + (item.center.y - origin.y) * approach)
+                layer.opacity = Float(WalletGiftPattern.alpha)
             }
             if let old = self.oldGiftPatternLayer {
-                old.mask = self.makeGiftPatternMask()
-                    for (index, item) in WalletGiftPattern.items(center: center, width: size.width).enumerated() {
-                    old.sublayers?[index].position = item.center
-                    old.sublayers?[index].bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
-                    old.sublayers?[index].opacity = hypot(item.center.x - origin.x, item.center.y - origin.y) < radius
-                        ? 0 : Float(WalletGiftPattern.alpha(at: item.center, center: center, height: size.height))
+                old.mask = self.makeGiftPatternMask(circle: (origin, radius, false))
+                for (index, item) in patternItems.enumerated() {
+                    guard let sublayers = old.sublayers, index < sublayers.count else { break }
+                    sublayers[index].position = item.center
+                    sublayers[index].bounds = CGRect(x: 0, y: 0, width: item.size, height: item.size)
+                    sublayers[index].opacity = Float(WalletGiftPattern.alpha)
                 }
                 if progress >= 1 { old.removeFromSuperlayer(); self.oldGiftPatternLayer = nil }
             }
@@ -281,7 +281,7 @@ public final class WalletCardComponent: Component {
             return UIColor(red: ar + (br-ar)*t, green: ag + (bg-ag)*t, blue: ab + (bb-ab)*t, alpha: aa + (ba-aa)*t)
         }
 
-        private func makeGiftPatternMask() -> CALayer {
+        private func makeGiftPatternMask(circle: (center: CGPoint, radius: CGFloat, inside: Bool)? = nil) -> CALayer {
             let mask = CAShapeLayer(); mask.fillRule = .evenOdd
             let bounds = self.foregroundView.bounds
             let path = UIBezierPath(roundedRect: bounds, cornerRadius: 20 * bounds.width / 370)
@@ -289,7 +289,16 @@ public final class WalletCardComponent: Component {
                 path.append(UIBezierPath(roundedRect: qr.convert(qr.bounds, to: self.foregroundView).insetBy(dx: -2, dy: -2), cornerRadius: 10 * bounds.width / 370))
             }
             mask.frame = bounds; mask.path = path.cgPath
-            return mask
+            guard let circle else { return mask }
+            let clip = CAShapeLayer(); clip.fillRule = .evenOdd
+            let radius = max(0, circle.radius)
+            let clipPath = UIBezierPath(ovalIn: CGRect(x: circle.center.x - radius, y: circle.center.y - radius, width: radius * 2, height: radius * 2))
+            if !circle.inside { clipPath.append(UIBezierPath(rect: bounds)) }
+            clip.frame = bounds; clip.path = clipPath.cgPath
+            clip.mask = mask
+            let container = CALayer(); container.frame = bounds
+            container.addSublayer(clip)
+            return container
         }
 
         public struct StickerLive {
