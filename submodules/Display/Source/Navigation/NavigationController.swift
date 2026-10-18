@@ -1155,7 +1155,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         case .compact:
             // Beside a status island (iPhone Duo, unfolded portrait) the screens behind a modal stay where they are:
             // no slide back into a framed card, so no black frame above the modal either; the modal dims them.
-            if (visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero) && layout.topBarStatusIsland == nil {
+            if (visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero) && layout.topBarStatusIsland == nil && !self.keepsRootInPlaceUnderModals {
                 let effectiveRootModalDismissProgress: CGFloat
                 let visibleRootModalDismissProgress: CGFloat
                 var additionalModalFrameProgress: CGFloat
@@ -1784,6 +1784,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public var _keepModalDismissProgress = false
+    public var keepsRootInPlaceUnderModals = false
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
         let container = NavigationOverlayContainer(controller: controller, blocksInteractionUntilReady: blockInteraction, controllerRemoved: { [weak self] controller in
             guard let strongSelf = self else {

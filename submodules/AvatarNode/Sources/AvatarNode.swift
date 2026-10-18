@@ -537,7 +537,7 @@ public final class AvatarNode: ASDisplayNode {
             self.imageNode.isHidden = true
         }
         
-        public func playRepostAnimation() {
+        public func playRepostAnimation(animated: Bool = true) {
             let animationNode = AnimationNode(animation: "anim_storyrepost", colors: [:], scale: 0.11)
             animationNode.isUserInteractionEnabled = false
             self.addSubnode(animationNode)
@@ -545,9 +545,13 @@ public final class AvatarNode: ASDisplayNode {
             if var size = animationNode.preferredSize() {
                 size = CGSize(width: ceil(size.width), height: ceil(size.height))
                 animationNode.frame = CGRect(x: floor((self.bounds.width - size.width) / 2.0), y: floor((self.bounds.height - size.height) / 2.0) + 1.0, width: size.width, height: size.height)
-                Queue.mainQueue().after(0.15, {
-                    animationNode.play()
-                })
+                if animated {
+                    Queue.mainQueue().after(0.15, {
+                        animationNode.play()
+                    })
+                } else {
+                    animationNode.seekToEnd()
+                }
             }
         }
         
@@ -1277,8 +1281,8 @@ public final class AvatarNode: ASDisplayNode {
         self.contentNode.playArchiveAnimation()
     }
     
-    public func playRepostAnimation() {
-        self.contentNode.playRepostAnimation()
+    public func playRepostAnimation(animated: Bool = true) {
+        self.contentNode.playRepostAnimation(animated: animated)
     }
     
     public func playCameraAnimation() {

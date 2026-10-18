@@ -95,6 +95,7 @@ import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
 import ShareController
+import ShareScreen
 import AccountFreezeInfoScreen
 import JoinSubjectScreen
 import OldChannelsController
@@ -4590,6 +4591,60 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
+    public func makeShareScreen(context: AccountContext, params: ShareControllerParams) -> ViewController {
+        if params.immediateExternalShare {
+            return self.makeShareController(context: context, params: params)
+        }
+        func mapSubject(_ subject: ShareControllerSubject) -> (ShareScreenSubject, ShareControllerSubject.MediaParameters?) {
+            switch subject {
+            case let .url(url): return (.url(url), nil)
+            case let .text(text): return (.text(text), nil)
+            case let .quote(text, url): return (.quote(text: text, url: url), nil)
+            case let .messages(messages): return (.messages(messages), nil)
+            case let .image(representations): return (.image(representations), nil)
+            case let .media(reference, parameters): return (.media(reference), parameters)
+            case let .mapMedia(media): return (.mapMedia(media), nil)
+            case let .fromExternal(count, send): return (.fromExternal(count, send), nil)
+            }
+        }
+        let (subject, mediaParameters) = mapSubject(params.subject)
+        let segmentedValues = params.segmentedValues?.map { value in
+            ShareScreenSegmentedValue(title: value.title, subject: mapSubject(value.subject).0, actionTitle: value.actionTitle)
+        }
+        let screen = ShareScreen(
+            context: context,
+            subject: subject,
+            externalShare: params.externalShare,
+            presetText: params.presetText,
+            shareStory: params.shareStory,
+            preferredAction: params.preferredAction,
+            externalShareSubject: segmentedValues == nil ? params.subject : nil,
+            shareAsLink: params.shareAsLink,
+            forceTheme: params.forceTheme,
+            updatedPresentationData: params.updatedPresentationData,
+            mediaParameters: mediaParameters,
+            segmentedValues: segmentedValues,
+            collectibleItemInfo: params.collectibleItemInfo,
+            forcedActionTitle: params.forcedActionTitle,
+            showInChat: params.showInChat,
+            immediatePeerId: params.immediatePeerId
+        )
+        var shared = false
+        if let linkCopied = params.onMediaTimestampLinkCopied {
+            screen.linkCopied = linkCopied
+        }
+        screen.canSendInHighQuality = params.canSendInHighQuality
+        screen.actionCompleted = params.actionCompleted
+        screen.enqueued = { ids, correlationIds in
+            shared = true
+            params.enqueued?(ids, correlationIds)
+            params.completed?(ids)
+        }
+        screen.dismissed = { params.dismissed?(shared) }
+        let theme = params.forceTheme ?? params.updatedPresentationData?.initial.theme ?? self.currentPresentationData.with { $0 }.theme
+        return ShareScreenHostController(screen: screen, theme: theme)
+    }
+
     public func makeShareController(context: AccountContext, params: ShareControllerParams) -> ViewController {
         let controller = ShareController(context: context, subject: params.subject, presetText: params.presetText, preferredAction: params.preferredAction, showInChat: params.showInChat, fromForeignApp: params.fromForeignApp, segmentedValues: params.segmentedValues, externalShare: params.externalShare, immediateExternalShare: params.immediateExternalShare, immediatePeerId: params.immediatePeerId, updatedPresentationData: params.updatedPresentationData, forceTheme: params.forceTheme, forcedActionTitle: params.forcedActionTitle, shareAsLink: params.shareAsLink, collectibleItemInfo: params.collectibleItemInfo)
         controller.actionCompleted = params.actionCompleted

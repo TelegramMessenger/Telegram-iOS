@@ -392,7 +392,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                         case .share:
                             if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData)))
+                                let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData)))
                                 controller.present(shareController, in: .window(.root))
                             }
                         case .lookup:

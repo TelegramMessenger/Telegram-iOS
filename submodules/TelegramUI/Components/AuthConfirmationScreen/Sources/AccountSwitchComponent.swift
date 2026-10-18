@@ -10,7 +10,7 @@ import AvatarComponent
 import BundleIconComponent
 import AccountContext
 
-final class AccountSwitchComponent: Component {
+public final class AccountSwitchComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peer: EnginePeer
@@ -18,7 +18,7 @@ final class AccountSwitchComponent: Component {
     let isVisible: Bool
     let action: ((GlassContextExtractableContainer) -> Void)
 
-    init(
+    public init(
         context: AccountContext,
         theme: PresentationTheme,
         peer: EnginePeer,
@@ -34,7 +34,7 @@ final class AccountSwitchComponent: Component {
         self.action = action
     }
 
-    static func ==(lhs: AccountSwitchComponent, rhs: AccountSwitchComponent) -> Bool {
+    public static func ==(lhs: AccountSwitchComponent, rhs: AccountSwitchComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -53,7 +53,7 @@ final class AccountSwitchComponent: Component {
         return true
     }
 
-    final class View: UIView {
+    public final class View: UIView {
         private let backgroundView = GlassContextExtractableContainer()
         private let avatar = ComponentView<Empty>()
         private let arrow = ComponentView<Empty>()
@@ -69,7 +69,7 @@ final class AccountSwitchComponent: Component {
             self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
         }
         
-        required init?(coder: NSCoder) {
+        required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
@@ -82,6 +82,11 @@ final class AccountSwitchComponent: Component {
         func update(component: AccountSwitchComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
+            self.isUserInteractionEnabled = component.isVisible && component.canSwitch
+            self.accessibilityElementsHidden = !component.isVisible
+            self.button.isAccessibilityElement = component.canSwitch
+            self.button.accessibilityLabel = component.peer.compactDisplayTitle
+            self.button.accessibilityTraits = .button
             self.button.isUserInteractionEnabled = component.canSwitch
             
             let size = CGSize(width: component.canSwitch ? 76.0 : 44.0, height: 44.0)
@@ -125,6 +130,7 @@ final class AccountSwitchComponent: Component {
             }
             
             self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: component.canSwitch, isVisible: component.isVisible, transition: transition)
+            transition.setAlpha(view: self.backgroundView.contentView, alpha: component.isVisible ? 1.0 : 0.0)
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: size))
             transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: size))
             
@@ -132,11 +138,11 @@ final class AccountSwitchComponent: Component {
         }
     }
 
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -962,7 +962,7 @@ private final class WalletCollectibleContentComponent: Component {
                 return
             }
             let context = component.context
-            let shareController = context.sharedContext.makeShareController(
+            let shareController = context.sharedContext.makeShareScreen(
                 context: context,
                 params: ShareControllerParams(
                     subject: .url(link),

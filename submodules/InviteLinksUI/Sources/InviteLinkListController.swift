@@ -432,7 +432,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         guard let inviteLink = invite.link else {
             return
         }
-        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(inviteLink), updatedPresentationData: updatedPresentationData, actionCompleted: {
+        let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(inviteLink), updatedPresentationData: updatedPresentationData, actionCompleted: {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         }, completed: { peerIds in
@@ -681,7 +681,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                         return
                     }
                 
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(inviteLink), updatedPresentationData: updatedPresentationData, actionCompleted: {
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(inviteLink), updatedPresentationData: updatedPresentationData, actionCompleted: {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }, completed: { peerIds in
