@@ -6586,6 +6586,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         return self.controllerNode.notificationExceptions
     }
     
+    public var isGiftsBottomPanelVisible: Bool {
+        guard let pane = self.controllerNode.paneContainerNode.currentPane?.node as? PeerInfoGiftsPaneNode else {
+            return false
+        }
+        return pane.isBottomPanelVisible
+    }
+    
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if !self.isSettings {
