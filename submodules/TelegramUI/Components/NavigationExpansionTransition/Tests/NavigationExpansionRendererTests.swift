@@ -20,6 +20,8 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     var origin: CGRect?
     /// A view whose frame is the title pill, measured in the space it is lent in (as the chat's pill is).
     var originView: UIView?
+    /// False as in a forum, whose bar has its menu button where a chat has its avatar.
+    var hasCompanion = true
 
     init(screen: UIView) {
         self.titleView.layer.addSublayer(self.titleTintLayer)
@@ -40,7 +42,7 @@ private final class FakeSource: NavigationExpansionSourceProviding {
         self.lends += 1
         let g = makeExpansionGeometry()
         let measuredOrigin = self.originView.map { $0.convert($0.bounds, to: screenView) }
-        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
+        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: self.hasCompanion ? g.companion : nil, companionPhotoDiameter: 38.0, companionView: self.hasCompanion ? self.avatarView : nil, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
         ], press: .none)
@@ -76,6 +78,8 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     var landingViews: [UIView] = []
     var path: ExpansionPath = .origin
     var screenCornerRadii = makeExpansionGeometry().screenCornerRadii
+    /// The avatar's corner radius over its side (a forum's is a rounded square).
+    var avatarCornerFraction: CGFloat = 0.5
     var lends = 0
     var returns = 0
     private(set) weak var top: UIView?
@@ -107,7 +111,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: self.path == .photo ? g.photo! : g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
-        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, landingViews: self.landingViews, patternViews: [], glassTint: .purple, screenCornerRadii: self.screenCornerRadii, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
+        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, landingViews: self.landingViews, patternViews: [], glassTint: .purple, screenCornerRadii: self.screenCornerRadii, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0), avatarCornerFraction: self.avatarCornerFraction)
     }
 
     func returnExpansionDestination() {
@@ -599,6 +603,47 @@ final class NavigationExpansionRendererTests: XCTestCase {
         let timing = NavigationKeyframeTiming(origin: .explicit(CACurrentMediaTime()), duration: 0.5, factor: 1.0)
         let times = timing.sampleTimes.map { from + (to - from) * CGFloat($0 / 0.5) }
         return NavigationExpansionTimeline(timing: timing, times: times, isOpening: opening, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in })
+    }
+
+    // Without a companion (a forum's bar has its menu button where a chat has its avatar) the profile's avatar is drawn
+    // all the way: a point above the chat's title at the start, growing above the title mid-way under an unmasked
+    // circle, at its place at rest. It used to be lent and never placed, so it showed only once the profile had it back.
+    func test_noCompanion_avatarIsDrawnAllTheWay() {
+        let (renderer, container, _, _, destination) = self.make(configureSource: { $0.hasCompanion = false })
+        let g = makeExpansionGeometry()
+        for time: CGFloat in [0.0, 0.5, 1.0] {
+            renderer.update(time: time, isOpening: true, pose: .none)
+            XCTAssertNotNil(renderer.photoMaskForTesting.path, "t=\(time): the avatar is not masked out")
+            let frame = destination.avatarView.convert(destination.avatarView.bounds, to: container)
+            guard let title = renderer.labelHostCentersForTesting.first else {
+                return XCTFail("no title host")
+            }
+            switch time {
+            case 0.0:
+                XCTAssertLessThan(frame.width, 1.0, "a point")
+                XCTAssertLessThan(frame.midY, g.labels[0].sourceCenter.y, "above the title")
+            case 0.5:
+                XCTAssertGreaterThan(frame.width, 1.0)
+                XCTAssertLessThan(frame.width, g.avatar!.width)
+                XCTAssertLessThan(frame.maxY, title.y, "above the title")
+            default:
+                XCTAssertEqual(frame.minX, g.avatar!.minX, accuracy: 0.5)
+                XCTAssertEqual(frame.minY, g.avatar!.minY, accuracy: 0.5)
+                XCTAssertEqual(frame.width, g.avatar!.width, accuracy: 0.5)
+            }
+        }
+    }
+
+    // A forum's avatar is a rounded square, and so is the photo's mask while it flies: a point 10 pt in from the corner of
+    // the 100 pt avatar is inside a quarter-side rounding and outside a circle. It used to fly as a circle.
+    func test_roundedSquareAvatar_flyingMaskKeepsItsCorners() {
+        let (renderer, _, _, _, _) = self.make(configureSource: { $0.hasCompanion = false }, configure: { $0.avatarCornerFraction = 0.25 })
+        renderer.update(time: 1.0, isOpening: true, pose: .none)
+        guard let path = renderer.photoMaskForTesting.path else {
+            return XCTFail("no mask")
+        }
+        XCTAssertTrue(path.contains(CGPoint(x: 10.0, y: 10.0)), "a rounded square, not a circle")
+        XCTAssertFalse(path.contains(CGPoint(x: 3.0, y: 3.0)), "still rounded")
     }
 
     // The chat's avatar (live, animated avatars included) rides the flying circle above the profile's: at the open's

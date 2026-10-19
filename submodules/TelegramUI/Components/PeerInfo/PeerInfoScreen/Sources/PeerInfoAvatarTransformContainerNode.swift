@@ -48,6 +48,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     private var isFirstAvatarLoading = true
     var item: PeerInfoAvatarListItem?
+    /// The avatar's corner radius over its side, as last laid out: 0.5 round, 0.25 a forum's rounded square.
+    private(set) var cornerFraction: CGFloat = 0.5
     
     private let playbackStartDisposable = MetaDisposable()
     
@@ -339,6 +341,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
+            self.cornerFraction = isForum ? 0.25 : 0.5
             if self.avatarNode.layer.cornerRadius != 0.0 {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.contentNode.layer, cornerRadius: avatarCornerRadius)
             } else {

@@ -53,6 +53,8 @@ public struct ExpansionGeometry: Equatable {
     public var carriedEdge: CGFloat
     /// The upper screen's appearing items in order (the action buttons), at rest.
     public var appearing: [CGRect]
+    /// The avatar's corner radius over its side (`NavigationExpansionDestinationLoan.avatarCornerFraction`).
+    public var avatarCornerFraction: CGFloat = 0.5
     public var backgroundOpening: ClosedRange<CGFloat> = 0.06 ... 0.45
     public var backgroundClosing: ClosedRange<CGFloat> = 0.30 ... 0.85
 

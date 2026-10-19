@@ -106,6 +106,8 @@ public struct ExpansionChoreography {
     public static let liftPoints: CGFloat = 16.0
     /// How far the card rises per unit of the close's overshoot past 0.
     public static let swing: CGFloat = 140.0
+    /// Without a companion, how far above the title's text the avatar starts, as a point.
+    public static let titleRiseGap: CGFloat = 4.0
     /// A pressed glass's light and the content's wash under it.
     public static let glassLight: CGFloat = 0.1
     public static let originWash: CGFloat = 0.3
@@ -231,28 +233,17 @@ public struct ExpansionChoreography {
         }
 
         // The photo path: everything follows the photo, which grows from the flying circle into the expanded photo by a
-        // geometric pace behind a gate (`expand`, `photoGrowth`, ProfileMorph.swift:1263, 1552).
+        // geometric pace behind a gate (`expand`, `photoGrowth`, ProfileMorph.swift:1263, 1552). The labels follow its
+        // growth, so it is known before them; the photo itself grows below, once the circle is known.
         var photoGrowth: CGFloat = 0.0
         var expandC: CGFloat = 0.0
-        if self.path == .photo, let target = g.photo, let flying = photo {
+        let growsIntoPhoto = self.path == .photo && g.photo != nil && g.avatar != nil
+        if growsIntoPhoto {
             let gate = clock.isOpening ? max(0.0, (clock.time - 0.05) / 0.95) : min(max(clock.time, 0.0), 1.0)
             let expand = gate
             expandC = min(max(expand, 0.0), 1.0)
             photoGrowth = ExpansionCurve.geometric(min(max(expand, 0.0), 1.2), ratio: 6.0) + min(expand, 0.0) * 0.8
-            let grown = ExpansionCurve.mix(flying, target, photoGrowth)
-            photo = grown
-            if let ring = circle {
-                circle = ExpansionCurve.mix(ring, grown, expandC)
-            }
         }
-        let photoHalf = (photo?.width ?? 0.0) * 0.5
-        let photoRadius = photoHalf * (1.0 - expandC)
-        let photoCornerRadii = CornerRadii(
-            topLeft: ExpansionCurve.mix(photoHalf, min(photoHalf, g.screenCornerRadii.topLeft), expandC),
-            topRight: ExpansionCurve.mix(photoHalf, min(photoHalf, g.screenCornerRadii.topRight), expandC),
-            bottomLeft: photoRadius,
-            bottomRight: photoRadius
-        )
 
         // The labels ride the card's edge (the anchor, the last label, is carried; the others keep their offset from it,
         // mixing between the two layouts' offsets), sway with the knock, and are lifted and landed with the card.
@@ -303,6 +294,35 @@ public struct ExpansionChoreography {
                 ))
             }
         }
+
+        // Without a companion (a forum's bar has its menu button where a chat has its avatar) there is no circle to fly
+        // from: the avatar rises from a point just above the title and rides it, growing and leaving it to stand where
+        // it rests above it, the title's spring (and its overshoot) included.
+        if photo == nil, let avatar = g.avatar, let title = g.labels.first, let titleFrame = labelFrames.first {
+            let titleRest = self.path == .photo ? (title.photoCenter ?? title.destinationCenter) : title.destinationCenter
+            let restOffset = CGPoint(x: avatar.midX - titleRest.x, y: avatar.midY - titleRest.y)
+            let start = CGPoint(x: 0.0, y: -(title.sourceSize.height * 0.5 + ExpansionChoreography.titleRiseGap))
+            let offset = ExpansionCurve.mix(start, restOffset, text)
+            let size = max(0.01, avatar.width * text)
+            photo = CGRect(x: titleFrame.center.x + offset.x - size * 0.5, y: titleFrame.center.y + offset.y - size * 0.5, width: size, height: size)
+        }
+        if growsIntoPhoto, let target = g.photo, let flying = photo {
+            let grown = ExpansionCurve.mix(flying, target, photoGrowth)
+            photo = grown
+            if let ring = circle {
+                circle = ExpansionCurve.mix(ring, grown, expandC)
+            }
+        }
+        // The avatar's own corners (a circle's, or a forum's rounded square's), scaled with it as it flies.
+        let photoHalf = (photo?.width ?? 0.0) * 0.5
+        let photoCorner = (photo?.width ?? 0.0) * min(0.5, max(0.0, g.avatarCornerFraction))
+        let photoRadius = photoCorner * (1.0 - expandC)
+        let photoCornerRadii = CornerRadii(
+            topLeft: ExpansionCurve.mix(photoCorner, min(photoHalf, g.screenCornerRadii.topLeft), expandC),
+            topRight: ExpansionCurve.mix(photoCorner, min(photoHalf, g.screenCornerRadii.topRight), expandC),
+            bottomLeft: photoRadius,
+            bottomRight: photoRadius
+        )
 
         let appearing = g.appearing.indices.map { i -> ExpansionAppearFrame in
             let delay = CGFloat(i) * 0.04
