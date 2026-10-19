@@ -84,7 +84,10 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         }
         
         if let richTextData = try container.decodeIfPresent(Data.self, forKey: .richText) {
-            self.richText = PostboxDecoder(buffer: MemoryBuffer(data: richTextData)).decodeObjectArrayWithDecoderForKey("f") as [RichText]
+            let richText = PostboxDecoder(buffer: MemoryBuffer(data: richTextData)).decodeObjectArrayWithDecoderForKey("f") as [RichText]
+            // Beta builds of 2026-10-16..18 stored the fragments under "r", which reads here as an empty array. An empty
+            // quote_rich would be sent in place of the quote's text, so such a quote is a flat one.
+            self.richText = richText.isEmpty ? nil : richText
         } else {
             self.richText = nil
         }
