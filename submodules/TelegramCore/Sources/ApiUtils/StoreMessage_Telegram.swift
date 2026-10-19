@@ -686,7 +686,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     isSafe: (flags & (1 << 4)) != 0
                 ), nil)
             }
-        case .messageMediaUnsupported:
+        case .messageMediaUnsupported, .messageMediaWidget:
+            // Widgets (layer 233) are not supported yet: shown as the server sent them to layer 232.
             return (TelegramMediaUnsupported(), nil, nil, nil, nil, nil)
         case .messageMediaEmpty:
             break

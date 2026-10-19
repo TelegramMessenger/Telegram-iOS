@@ -48,6 +48,7 @@ inputMediaWebPage#c21b8849 flags:# force_large_media:flags.0?true force_small_me
 inputMediaPaidMedia#c4103386 flags:# stars_amount:long extended_media:Vector<InputMedia> payload:flags.0?string = InputMedia;
 inputMediaTodo#9fc55fde todo:TodoList = InputMedia;
 inputMediaStakeDice#f3a9244a game_hash:string ton_amount:long client_seed:bytes = InputMedia;
+inputMediaWidget#297da8f8 width:int height:int html:string = InputMedia;
 
 inputChatPhotoEmpty#1ca48f57 = InputChatPhoto;
 inputChatUploadedPhoto#bdcdaec0 flags:# file:flags.0?InputFile video:flags.1?InputFile video_start_ts:flags.2?double video_emoji_markup:flags.3?VideoSize = InputChatPhoto;
@@ -143,6 +144,7 @@ messageMediaGiveawayResults#ceaa3ea1 flags:# only_new_subscribers:flags.0?true r
 messageMediaPaidMedia#a8852491 stars_amount:long extended_media:Vector<MessageExtendedMedia> = MessageMedia;
 messageMediaToDo#8a53b014 flags:# todo:TodoList completions:flags.0?Vector<TodoCompletion> = MessageMedia;
 messageMediaVideoStream#ca5cab89 flags:# rtmp_stream:flags.0?true call:InputGroupCall = MessageMedia;
+messageMediaWidget#b7ed7b0d width:int height:int payload:bytes = MessageMedia;
 
 messageActionEmpty#b6aef7b0 = MessageAction;
 messageActionChatCreate#bd47cbad title:string users:Vector<long> = MessageAction;
@@ -491,6 +493,7 @@ updateSentWalletTransaction#b1434d4a flags:# gasless:flags.0?true msg_hash:strin
 updateWalletGaslessInfo#a8ae1cac flags:# available:flags.0?true left:int reset_at:int min_amount:long relayer_address:string = Update;
 updateWalletTonConnectSession#50a38e0e session:TonConnectSession = Update;
 updateWalletTonConnectPendingDisconnect#d1ee8199 session_ids:Vector<long> = Update;
+updateReadFeed#74585fb1 flags:# filter_id:int max_position:FeedPosition unread_count:flags.0?int unread_muted_count:flags.0?int = Update;
 
 updates.state#a56c2a3e pts:int qts:int date:int seq:int unread_count:int = updates.State;
 
@@ -2377,6 +2380,22 @@ wallet.card#8ed043b1 flags:# stickers:flags.0?Vector<wallet.CardSticker> bg_nft_
 
 payments.starGiftDepositPayload#725bb4eb nft_address:string payload:bytes amount:long = payments.StarGiftDepositPayload;
 
+feedPosition#5059dc73 date:int peer:Peer id:int = FeedPosition;
+
+feed.feedMessagesNotModified#db1a3503 = feed.FeedMessages;
+feed.feedMessages#dcf754b9 flags:# max_position:flags.0?FeedPosition min_position:flags.1?FeedPosition read_max_position:flags.2?FeedPosition messages:Vector<Message> chats:Vector<Chat> users:Vector<User> = feed.FeedMessages;
+
+feedItemMessage#7e73b3a5 message:Message = FeedItem;
+feedItemMessageGroup#652f4c71 messages:Vector<Message> = FeedItem;
+feedItemInterestCategories#6be7187b = FeedItem;
+
+feed.forYouFeed#52577805 flags:# items:Vector<FeedItem> chats:Vector<Chat> users:Vector<User> = feed.ForYouFeed;
+
+feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string emoji_document_id:flags.1?long = feed.InterestCategory;
+
+feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
+feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
+
 ---functions---
 
 invokeAfterMsg#cb9f372d {X:Type} msg_id:long query:!X = X;
@@ -2911,7 +2930,7 @@ channels.editTitle#566decd0 channel:InputChannel title:string = Updates;
 channels.editPhoto#f12e57c9 channel:InputChannel photo:InputChatPhoto = Updates;
 channels.checkUsername#10e6bd2c channel:InputChannel username:string = Bool;
 channels.updateUsername#3514b3de channel:InputChannel username:string = Bool;
-channels.joinChannel#7f6a1e22 channel:InputChannel = messages.ChatInviteJoinResult;
+channels.joinChannel#416cb50c flags:# for_news:flags.0?true channel:InputChannel = messages.ChatInviteJoinResult;
 channels.leaveChannel#f836aa95 channel:InputChannel = Updates;
 channels.inviteToChannel#c9e33d54 channel:InputChannel users:Vector<InputUser> = messages.InvitedUsers;
 channels.deleteChannel#c0111fe3 channel:InputChannel = Updates;
@@ -2955,6 +2974,7 @@ channels.toggleAutotranslation#167fc0a1 channel:InputChannel enabled:Bool = Upda
 channels.getMessageAuthor#ece2a0e6 channel:InputChannel id:int = User;
 channels.checkSearchPostsFlood#22567115 flags:# query:flags.0?string = SearchPostsFlood;
 channels.setMainProfileTab#3583fcb1 channel:InputChannel tab:ProfileTab = Bool;
+channels.editChannelNews#d704f985 channel:InputChannel news:Bool = Updates;
 
 bots.sendCustomRequest#aa2769ed custom_method:string params:DataJSON = DataJSON;
 bots.answerWebhookJSONQuery#e6213f4d query_id:long data:DataJSON = Bool;
@@ -3264,3 +3284,9 @@ wallet.tonConnectNextEventId#775d7244 session_id:long = TonConnectNextEventId;
 wallet.tonConnectCloseSession#d63f61ce flags:# session_id:long body:flags.0?bytes = Bool;
 wallet.tonConnectGetSessions#a7ffb56e = wallet.TonConnectSessions;
 wallet.setCardStickers#68509ac flags:# stickers:Vector<InputWalletCardSticker> bg_nft_address:flags.0?string = wallet.Card;
+
+feed.getFeed#7e76d7d3 flags:# offset_to_max_read:flags.3?true filter_id:int offset_position:flags.0?FeedPosition add_offset:int limit:int max_position:flags.1?FeedPosition min_position:flags.2?FeedPosition hash:long = feed.FeedMessages;
+feed.readFeed#b436c1ff filter_id:int max_position:FeedPosition = Updates;
+feed.getForYou#33b8e5eb flags:# query:flags.0?string limit:int = feed.ForYouFeed;
+feed.getInterestCategories#ba7a1dba hash:long = feed.InterestCategories;
+feed.setInterestCategories#9f2958dc category_ids:Vector<int> = Bool;
