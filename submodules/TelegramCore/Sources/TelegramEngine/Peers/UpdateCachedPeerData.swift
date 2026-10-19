@@ -516,6 +516,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedSavedMusic(mappedSavedMusic)
                                             .withUpdatedNote(mappedNote)
                                             .withUpdatedWalletCard(userFullData.walletCard.map(WalletCard.init(apiCard:)))
+                                            .withUpdatedShareTheme(userFullData.shareTheme.flatMap(TelegramShareTheme.init(apiShareTheme:)) ?? .default)
                                             .withUpdatedBotManagerId(botManagerId.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
                                 }
                             })
@@ -964,6 +965,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedSendPaidMessageStars(mappedSendPaidMessageStars)
                                                     .withUpdatedMainProfileTab(mappedMainProfileTab)
                                                     .withUpdatedGuardBotId(mappedGuardBotId)
+                                                    .withUpdatedShareTheme(channelFullData.shareTheme.flatMap(TelegramShareTheme.init(apiShareTheme:)) ?? .default)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

@@ -447,7 +447,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.blurView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
             self.dimView.alpha = 0.0
             self.dimView.layer.animateAlpha(from: backgroundAlpha, to: 0.0, duration: 0.15)
-            self.setNoticeVisible(false, duration: 0.2)
+            self.setNoticeVisible(false, duration: 0.06)
         }
 
         private func setNoticeVisible(_ visible: Bool, duration: Double) {
@@ -489,7 +489,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.pendingAnimateIn = false
             self.initialSource = nil
             self.isUserInteractionEnabled = false
-            self.setNoticeVisible(false, duration: 0.2)
+            self.setNoticeVisible(false, duration: 0.06)
             if !UIAccessibility.isReduceMotionEnabled && self.prepareShutter() {
                 self.usesFlight = true
                 self.isDismissing = self.progress >= 1.0

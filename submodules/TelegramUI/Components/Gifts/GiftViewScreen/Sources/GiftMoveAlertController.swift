@@ -591,7 +591,7 @@ public func presentGiftMovedToast(context: AccountContext, navigationController:
                 return true
             }
             if toWallet {
-                navigationController.pushViewController(context.sharedContext.makeWalletScreen(context: context), animated: true)
+                navigationController.pushViewController(context.sharedContext.makeWalletScreen(context: context, opensCollectibles: true), animated: true)
             } else {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                 |> deliverOnMainQueue).start(next: { [weak navigationController] peer in

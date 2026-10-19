@@ -67,6 +67,7 @@ final class QrStudioScreenComponent: Component {
         private var codePillSize = CGSize()
         private var codeState = QrStudioCodeState()
         private var paidPrice: Int64?
+        private var didLoadPaidPrice = false
         private var privacyDisposable: Disposable?
         private var noPaidToken: ExportedNoPaidMessagesToken?
         private let noPaidTokenDisposable = MetaDisposable()
@@ -350,16 +351,17 @@ final class QrStudioScreenComponent: Component {
                 return
             }
             self.pinGiftIfNeeded(self.rememberedGiftId)
-            let gifts = self.mergedGifts(loadedGifts, isComplete: loadedGifts.count < QrStudioScreenComponent.View.giftsFirstPageSize)
+            let isListLoaded = self.component.flatMap { self.canEdit($0) } ?? false
+            let gifts = self.mergedGifts(loadedGifts, isComplete: isListLoaded && loadedGifts.count < QrStudioScreenComponent.View.giftsFirstPageSize)
             let wasLoaded = self.areGiftsLoaded
             self.areGiftsLoaded = true
             if self.look.gifts != gifts {
                 let previousBackdrop = self.look.backdrop
                 self.look.gifts(gifts)
                 let backdropChanged = previousBackdrop != self.look.backdrop
-                self.requestUpdate(transition: (backdropChanged && !self.isLookModified) || self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                self.requestUpdate(transition: (backdropChanged && !self.isLookModified) || !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
             } else if !wasLoaded {
-                self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
             }
             if !wasLoaded {
                 self.revealIfReady()
@@ -450,7 +452,7 @@ final class QrStudioScreenComponent: Component {
                 }
                 if themes != self.look.themes {
                     self.look.themes = themes
-                    let isPending = self.pendingAnimateIn != nil
+                    let isPending = !self.didStartAnimateIn
                     self.requestUpdate(transition: isPending || !self.isLookModified ? .immediate : .easeInOut(duration: 0.35))
                     self.revealIfReady()
                 }
@@ -589,7 +591,7 @@ final class QrStudioScreenComponent: Component {
             let storedSettings = self.currentSettings()
             self.savedSettings = storedSettings
             self.storeLookSettings(storedSettings)
-            self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+            self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
             self.revealIfReady()
         }
 
@@ -615,7 +617,7 @@ final class QrStudioScreenComponent: Component {
                 }
                 if !files.isEmpty {
                     self.applyRawSettings(context: context)
-                    self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                    self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
                 }
                 self.revealIfReady()
             }, completed: { [weak self] in
@@ -682,7 +684,7 @@ final class QrStudioScreenComponent: Component {
                 self.areBackdropsLoaded = true
                 if self.look.backdrops != palettes {
                     self.look.backdrops = palettes
-                    self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                    self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
                 }
                 if !wasLoaded {
                     self.applyServerLookIfNeeded()
@@ -748,7 +750,7 @@ final class QrStudioScreenComponent: Component {
                     if self.look.kind == .emoji {
                         self.ensureEmojiSelection()
                     }
-                    self.requestUpdate(transition: self.pendingAnimateIn != nil ? .immediate : .easeInOut(duration: 0.45))
+                    self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.45))
                     self.revealIfReady()
                 }
             })
@@ -775,9 +777,14 @@ final class QrStudioScreenComponent: Component {
                 if case let .paidMessages(amount) = settings.nonContactChatsPrivacy, amount.value > 0 {
                     price = amount.value
                 }
+                let wasLoaded = self.didLoadPaidPrice
+                self.didLoadPaidPrice = true
                 if self.paidPrice != price {
                     self.paidPrice = price
-                    self.requestUpdate(transition: .easeInOut(duration: 0.35))
+                    self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.35))
+                }
+                if !wasLoaded {
+                    self.revealIfReady()
                 }
             })
         }
@@ -817,7 +824,8 @@ final class QrStudioScreenComponent: Component {
                     self.codeState.perform(.restore, at: QrStudioClock.now)
                     self.presentNoPaidTokenError()
                 }
-                self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.3))
+                self.revealIfReady()
             }))
         }
 
@@ -844,6 +852,7 @@ final class QrStudioScreenComponent: Component {
                         self.codeState.perform(.restore, at: QrStudioClock.now)
                         self.presentNoPaidTokenError()
                         self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                        self.revealIfReady()
                     }
                     return
                 }
@@ -854,7 +863,8 @@ final class QrStudioScreenComponent: Component {
                 }
                 self.temporaryNoPaidToken = token
                 self.codeState.adopt(deadline: now + max(1.0, remaining), at: now)
-                self.requestUpdate(transition: .easeInOut(duration: 0.3))
+                self.requestUpdate(transition: !self.didStartAnimateIn ? .immediate : .easeInOut(duration: 0.3))
+                self.revealIfReady()
             }))
         }
 
@@ -1180,6 +1190,24 @@ final class QrStudioScreenComponent: Component {
             }
             if self.look.kind == .color, self.look.backdropId != nil, !self.areBackdropsLoaded {
                 return false
+            }
+            if let component = self.component, component.peer.id == component.context.account.peerId, self.codeState.removeFee {
+                if !self.didLoadPaidPrice {
+                    return false
+                }
+                if self.paidPrice != nil {
+                    let hasToken: Bool
+                    if component.temporary {
+                        hasToken = self.temporaryNoPaidToken != nil
+                    } else if self.codeState.expires {
+                        hasToken = self.temporaryNoPaidToken != nil || self.noPaidToken != nil
+                    } else {
+                        hasToken = self.noPaidToken != nil
+                    }
+                    if !hasToken {
+                        return false
+                    }
+                }
             }
             return true
         }
@@ -2277,6 +2305,7 @@ final class QrStudioScreenComponent: Component {
                     username: username,
                     expires: linkExpires,
                     reservesTimer: reservesTimer,
+                    animatesLinkChange: self.didStartAnimateIn,
                     ink: ink,
                     isLight: backdrop.isLight,
                     bounceToken: backdrop.cardSignature + link,

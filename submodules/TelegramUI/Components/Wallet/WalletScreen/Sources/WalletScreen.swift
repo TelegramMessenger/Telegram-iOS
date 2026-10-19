@@ -693,15 +693,18 @@ private final class WalletScreenComponent: Component {
     let context: AccountContext
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)
     let walletContext: WalletContext
+    let opensCollectibles: Bool
 
     init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
-        walletContext: WalletContext
+        walletContext: WalletContext,
+        opensCollectibles: Bool
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.walletContext = walletContext
+        self.opensCollectibles = opensCollectibles
     }
 
     static func ==(lhs: WalletScreenComponent, rhs: WalletScreenComponent) -> Bool {
@@ -709,6 +712,7 @@ private final class WalletScreenComponent: Component {
             && lhs.updatedPresentationData.initial === rhs.updatedPresentationData.initial
             && lhs.updatedPresentationData.signal === rhs.updatedPresentationData.signal
             && lhs.walletContext === rhs.walletContext
+            && lhs.opensCollectibles == rhs.opensCollectibles
     }
 
     private final class ScrollView: UIScrollView {
@@ -828,6 +832,7 @@ private final class WalletScreenComponent: Component {
         private var gramTooltipWalletAddress: String?
         private var isResolvingSigningAccess = false
         private var selectedSection: SelectedSection = .transactions
+        private var pendingCollectiblesSection = false
         private var cardExpandedFrame: CGRect?
         private var cardTransitionStart: CGFloat = 0.0
 
@@ -1854,6 +1859,7 @@ private final class WalletScreenComponent: Component {
                                 guard let self, self.selectedSection != .transactions, !self.giftStickers.isDragging else {
                                     return
                                 }
+                                self.pendingCollectiblesSection = false
                                 self.selectedSection = .transactions
                                 self.componentState?.updated(transition: .easeInOut(duration: 0.25))
                             }
@@ -1870,6 +1876,7 @@ private final class WalletScreenComponent: Component {
                                 guard let self, self.selectedSection != .collectibles, !self.giftStickers.isDragging else {
                                     return
                                 }
+                                self.pendingCollectiblesSection = false
                                 self.selectedSection = .collectibles
                                 self.componentState?.updated(transition: .easeInOut(duration: 0.25))
                             }
@@ -3133,6 +3140,9 @@ private final class WalletScreenComponent: Component {
             } else if !environment.isVisible {
                 self.dismissGramTooltip(animated: false)
             }
+            if self.component == nil && component.opensCollectibles {
+                self.pendingCollectiblesSection = true
+            }
             self.component = component
             self.environment = environment
             self.componentState = state
@@ -3283,6 +3293,10 @@ private final class WalletScreenComponent: Component {
             }
             let collectibles = (self.walletState?.collectibles.items ?? []).filter {
                 !self.suppressedCollectibleAddresses.contains($0.address)
+            }
+            if self.pendingCollectiblesSection && !collectibles.isEmpty {
+                self.pendingCollectiblesSection = false
+                self.selectedSection = .collectibles
             }
             if collectibles.isEmpty && self.selectedSection == .collectibles {
                 self.selectedSection = .transactions
@@ -4014,7 +4028,8 @@ public final class WalletScreen: ViewControllerComponentContainer {
 
     public init(
         context: AccountContext,
-        walletContext: WalletContext
+        walletContext: WalletContext,
+        opensCollectibles: Bool = false
     ) {
         self.walletContext = walletContext
         let updatedPresentationData = presentationDataWithDefaultAccent((
@@ -4026,7 +4041,8 @@ public final class WalletScreen: ViewControllerComponentContainer {
             component: WalletScreenComponent(
                 context: context,
                 updatedPresentationData: updatedPresentationData,
-                walletContext: walletContext
+                walletContext: walletContext,
+                opensCollectibles: opensCollectibles
             ),
             navigationBarAppearance: .transparent,
             statusBarStyle: .default,

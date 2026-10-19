@@ -4262,14 +4262,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsIntroScreen(context: context)
     }
 
-    public func makeWalletScreen(context: AccountContext) -> ViewController {
+    public func makeWalletScreen(context: AccountContext, opensCollectibles: Bool) -> ViewController {
         guard let walletContext = context.walletContext else {
             fatalError()
         }
 
         return WalletScreen(
             context: context,
-            walletContext: walletContext
+            walletContext: walletContext,
+            opensCollectibles: opensCollectibles
         )
     }
 

@@ -2699,6 +2699,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
+        self.shareThemePreloadDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
@@ -2784,9 +2785,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private let walletStickersPreloadDisposable = MetaDisposable()
     private var preloadedWalletCard: WalletCard?
+    private let shareThemePreloadDisposable = MetaDisposable()
+    private var didPreloadShareTheme = false
 
     private func updateData(_ data: PeerInfoScreenData) {
         let previousData = self.data
+        if !self.didPreloadShareTheme, let peer = data.peer, peer.id != self.context.account.peerId, let addressName = peer.addressName, !addressName.isEmpty {
+            self.didPreloadShareTheme = true
+            self.shareThemePreloadDisposable.set(self.context.engine.peers.preloadShareTheme(peerId: peer.id).startStrict())
+        }
         let walletCard = (data.cachedData as? CachedUserData)?.walletCard
         if walletCard != self.preloadedWalletCard {
             self.preloadedWalletCard = walletCard
