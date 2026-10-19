@@ -48,7 +48,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var suppressesBottomCorners = false {
         didSet {
             if self.suppressesBottomCorners != oldValue {
-                self.applyBottomCornerRadii()
+                self.applyCornerRadii()
             }
         }
     }
@@ -92,6 +92,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var presentationData: PresentationData {
         didSet {
             self.pillView.tintColor = self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(self.presentationData.theme.overallDarkAppearance ? 0.2 : 0.07)
+        }
+    }
+    
+    var isAnimatingTransition: Bool = false {
+        didSet {
+            self.applyCornerRadii()
         }
     }
     
@@ -473,7 +479,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     bounds.origin.y = 0.0
                     self.bounds = bounds
                     if !minimizing {
-                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                            self?.applyCornerRadii()
+                        })
                     }
                 }
             case .cancelled:
@@ -486,7 +494,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let previousBounds = bounds
                 bounds.origin.y = 0.0
                 self.bounds = bounds
-                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                    self?.applyCornerRadii()
+                })
             default:
                 break
         }
@@ -514,11 +524,25 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
     }
                 
-    /// The sheet's bottom corners, each independent where the OS has per-corner radii; otherwise one
-    /// radius for both (the larger).
-    private func applyBottomCornerRadii() {
-        let bottomLeft = self.suppressesBottomCorners ? 0.0 : self.sheetCornerRadii.bottomLeft
-        let bottomRight = self.suppressesBottomCorners ? 0.0 : self.sheetCornerRadii.bottomRight
+    /// The sheet's corners, each independent where the OS has per-corner radii; otherwise one radius
+    /// for each pair (the larger). A fullscreen sheet is square when not moving, so the compositor skips
+    /// what it covers.
+    private func applyCornerRadii() {
+        guard let (layout, controllers, _) = self.validLayout else {
+            return
+        }
+        let isMoving = [self.layer, self.wrappingNode.layer].contains { $0.animation(forKey: "position") != nil || $0.animation(forKey: "bounds") != nil }
+        let isSquare = controllers.last?.isFullscreen == true && self.bounds.minY.isZero && self.wrappingNode.frame.minY.isZero && !self.isAnimatingTransition && !isMoving
+        let radii = isSquare ? CornerRadii(uniform: 0.0) : self.sheetCornerRadii
+        if layout.metrics.widthClass == .compact || self.roundsTopCornersInRegularLayout {
+            if CALayer.cornerRadiiSupported {
+                self.clipNode.layer.setCornerRadii(CornerRadii(topLeft: radii.topLeft, topRight: radii.topRight, bottomLeft: 0.0, bottomRight: 0.0))
+            } else {
+                self.clipNode.cornerRadius = max(radii.topLeft, radii.topRight)
+            }
+        }
+        let bottomLeft = self.suppressesBottomCorners ? 0.0 : radii.bottomLeft
+        let bottomRight = self.suppressesBottomCorners ? 0.0 : radii.bottomRight
         if CALayer.cornerRadiiSupported {
             self.bottomClipNode.layer.setCornerRadii(CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: bottomLeft, bottomRight: bottomRight))
         } else {
@@ -565,16 +589,17 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         } else {
             topInset = effectiveExpanded ? 0.0 : edgeTopInset
         }
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: { _ in
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: { [weak self] _ in
             completion()
+            self?.applyCornerRadii()
         })
         
         let modalProgress: CGFloat
         let scaleProgress: CGFloat
         if isLandscape {
             modalProgress = 0.0
-            // Filling the screen beside a status island, the sheet's clip is not drawn in as a landscape sheet's is.
-            scaleProgress = fillsScreenBesideStatusIsland ? 0.0 : 1.0
+            // A landscape sheet fills the screen, as one beside a status island does, so its clip is not drawn in.
+            scaleProgress = 0.0
         } else {
             if isFullSize, self.panGestureArguments != nil {
                 modalProgress = 1.0 - min(1.0, max(0.0, -1.0 * self.bounds.minY / defaultTopInset))
@@ -622,12 +647,10 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             self.sheetCornerRadii = CornerRadii(topLeft: topRadius, topRight: topRadius, bottomLeft: bottomLeft, bottomRight: bottomRight)
             if CALayer.cornerRadiiSupported {
                 self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-                self.clipNode.layer.setCornerRadii(CornerRadii(topLeft: self.sheetCornerRadii.topLeft, topRight: self.sheetCornerRadii.topRight, bottomLeft: 0.0, bottomRight: 0.0))
             } else {
                 if self.roundsTopCornersInRegularLayout {
                     self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                 }
-                self.clipNode.cornerRadius = topRadius
             }
 
             if #available(iOS 11.0, *) {
@@ -687,9 +710,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.clipNode.clipsToBounds = !isFullscreen
                 if CALayer.cornerRadiiSupported {
                     self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-                    self.clipNode.layer.setCornerRadii(CornerRadii(topLeft: self.sheetCornerRadii.topLeft, topRight: self.sheetCornerRadii.topRight, bottomLeft: 0.0, bottomRight: 0.0))
                 } else {
-                    self.clipNode.cornerRadius = topRadius
                     self.clipNode.layer.maskedCorners = isFullscreen
                         ? [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                         : [.layerMinXMinYCorner, .layerMaxXMinYCorner]
@@ -702,7 +723,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             containerFrame = unscaledFrame
             clipFrame = unscaledFrame
         }
-        self.applyBottomCornerRadii()
+        self.applyCornerRadii()
         transition.updateFrameAsPositionAndBounds(node: self.clipNode, frame: clipFrame)
         
         let clipDeltaScale: CGFloat = 1.0 - (clipFrame.width - 10.0) / clipFrame.width
