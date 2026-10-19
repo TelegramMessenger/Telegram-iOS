@@ -127,8 +127,11 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             // strip.
             pageViews: [node.scrollNode.view] + header.expansionPageViews,
             // The cover clips at the header's bottom, the music strip's band: the edge rides the page with the band, its
-            // gradient and pattern held still, as the prototype's gradient (which has no edge) is.
+            // gradient and pattern held still while the page comes in, as the prototype's gradient (which has no edge) is,
+            // and landing with it past its place, so the background bounces with the avatar, the title and the page.
             pageEdgeViews: [banner],
+            // The gifts around the avatar land with the cover.
+            landingViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadii: layout.screenCornerRadii,

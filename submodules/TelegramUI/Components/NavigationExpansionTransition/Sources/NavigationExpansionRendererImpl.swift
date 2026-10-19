@@ -112,13 +112,15 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         let rest: CATransform3D
     }
     private var followers: [Follower] = []
-    /// A view of the page below the header (`NavigationExpansionDestinationLoan.pageViews`, `pageEdgeViews`), measured
-    /// before anything is lent: how many screen points one of its superlayer's points is, vertically, and its own
-    /// transform.
+    /// A view of the page below the header (`NavigationExpansionDestinationLoan.pageViews`, `pageEdgeViews`,
+    /// `landingViews`), measured before anything is lent: how many screen points one of its superlayer's points is,
+    /// vertically, and its own transform.
     private struct PageRider {
         let layer: CALayer
         let unit: CGFloat
         let rest: CATransform3D
+        /// A landing view's (`landingViews`): it takes only the page's overshoot past its resting place.
+        let landsOnly: Bool
         /// An edge's (`pageEdgeViews`): how many screen points one of its own points is, vertically, and its own sublayer
         /// transform, which takes its content back to where it stands.
         let content: (unit: CGFloat, rest: CATransform3D)?
@@ -205,14 +207,14 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             self.flyers.append(Flyer(layer: view.layer, restCenter: CGPoint(x: restFrame.midX, y: restFrame.midY), restSize: restFrame.size, unit: unit, rest: view.layer.transform))
             self.touchedLayers.append(view.layer)
         }
-        for (view, isEdge) in destinationLoan.pageViews.map({ ($0, false) }) + destinationLoan.pageEdgeViews.map({ ($0, true) }) {
+        for (view, isEdge, landsOnly) in destinationLoan.pageViews.map({ ($0, false, false) }) + destinationLoan.pageEdgeViews.map({ ($0, true, false) }) + destinationLoan.landingViews.map({ ($0, false, true) }) {
             guard let superlayer = view.layer.superlayer else {
                 continue
             }
             let point = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
             let unit = superlayer.convert(point, to: screen.layer).height
             let content = isEdge ? (unit: view.layer.convert(point, to: screen.layer).height, rest: view.layer.sublayerTransform) : nil
-            self.pageRiders.append(PageRider(layer: view.layer, unit: unit, rest: view.layer.transform, content: content))
+            self.pageRiders.append(PageRider(layer: view.layer, unit: unit, rest: view.layer.transform, landsOnly: landsOnly, content: content))
             self.touchedLayers.append(view.layer)
         }
 
@@ -418,15 +420,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
     }
 
     /// A page view's transform with the page `page` points below its resting place: after its own, in its superlayer's
-    /// points.
+    /// points. A landing view takes only the overshoot past its resting place.
     private func pageTransform(_ rider: PageRider, page: CGFloat) -> CATransform3D {
-        return CATransform3DConcat(rider.rest, CATransform3DMakeTranslation(0.0, page / max(rider.unit, 0.0001), 0.0))
+        let offset = rider.landsOnly ? max(page, 0.0) : page
+        return CATransform3DConcat(rider.rest, CATransform3DMakeTranslation(0.0, offset / max(rider.unit, 0.0001), 0.0))
     }
 
-    /// An edge's sublayer transform with the page `page` points below its resting place: its content as far back, in its
-    /// own points, so only the edge moves.
+    /// An edge's sublayer transform with the page `page` points below its resting place: while the page is above it, its
+    /// content as far back, in its own points, so only the edge moves; past it, none, so the content lands with the page.
     private func pageContentTransform(_ rider: PageRider, page: CGFloat) -> CATransform3D? {
-        return rider.content.map { CATransform3DConcat($0.rest, CATransform3DMakeTranslation(0.0, -page / max($0.unit, 0.0001), 0.0)) }
+        return rider.content.map { CATransform3DConcat($0.rest, CATransform3DMakeTranslation(0.0, -min(page, 0.0) / max($0.unit, 0.0001), 0.0)) }
     }
 
     private func originContentPlacement(_ frame: ExpansionFrame) -> (center: CGPoint, transform: CATransform3D)? {
