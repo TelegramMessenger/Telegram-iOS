@@ -124,8 +124,11 @@ public final class NavigationExpansionDestinationLoan {
     public let backgroundOpening: ClosedRange<CGFloat>?
     public let backgroundClosing: ClosedRange<CGFloat>?
     public let flyingViews: [UIView]
+    /// The avatar's corner radius over its side: 0.5 is round, a forum's rounded square is 0.25. The photo keeps it while
+    /// it flies.
+    public let avatarCornerFraction: CGFloat
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], landingViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?, backgroundOpening: ClosedRange<CGFloat>? = nil, backgroundClosing: ClosedRange<CGFloat>? = nil, flyingViews: [UIView] = []) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], landingViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?, backgroundOpening: ClosedRange<CGFloat>? = nil, backgroundClosing: ClosedRange<CGFloat>? = nil, flyingViews: [UIView] = [], avatarCornerFraction: CGFloat = 0.5) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -148,6 +151,7 @@ public final class NavigationExpansionDestinationLoan {
         self.backgroundOpening = backgroundOpening
         self.backgroundClosing = backgroundClosing
         self.flyingViews = flyingViews
+        self.avatarCornerFraction = avatarCornerFraction
     }
 }
 

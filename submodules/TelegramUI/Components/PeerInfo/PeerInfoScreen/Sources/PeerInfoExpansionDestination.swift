@@ -147,7 +147,8 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadii: layout.screenCornerRadii,
-            backButtonFrame: backButtonFrame
+            backButtonFrame: backButtonFrame,
+            avatarCornerFraction: header.avatarListNode.avatarContainerNode.cornerFraction
         )
     }
 

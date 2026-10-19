@@ -227,6 +227,7 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         if let backgroundOpening = destinationLoan.backgroundOpening {
             geometry.backgroundOpening = backgroundOpening
         }
+        geometry.avatarCornerFraction = destinationLoan.avatarCornerFraction
         if let backgroundClosing = destinationLoan.backgroundClosing {
             geometry.backgroundClosing = backgroundClosing
         }
