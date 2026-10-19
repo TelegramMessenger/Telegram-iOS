@@ -172,6 +172,10 @@ public extension TelegramEngine {
             return _internal_convertStarGift(account: self.account, reference: reference)
         }
         
+        public func deleteStarGift(reference: StarGiftReference) -> Signal<Never, NoError> {
+            return _internal_deleteStarGift(account: self.account, reference: reference)
+        }
+        
         public func updateStarGiftAddedToProfile(reference: StarGiftReference, added: Bool) -> Signal<Never, NoError> {
             return _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: added)
         }

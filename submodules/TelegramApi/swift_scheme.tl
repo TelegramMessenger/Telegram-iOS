@@ -3072,6 +3072,7 @@ payments.createOnrampSession#a2197cf6 flags:# provider:string crypto_currency:st
 payments.withdrawStarGift#ec2030ae flags:# keep_on_profile:flags.0?true stargift:InputSavedStarGift tmp_password:bytes = Bool;
 payments.depositStarGift#c0a2ea9f flags:# hide_sender:flags.0?true peer:InputPeer slug:string = payments.StarGiftDepositPayload;
 payments.displayStarGift#4aa5f0fe flags:# peer:flags.0?InputPeer slug:string = Bool;
+payments.deleteStarGift#3cdaf8aa stargift:InputSavedStarGift = Bool;
 
 stickers.createStickerSet#9021ab67 flags:# masks:flags.0?true emojis:flags.5?true text_color:flags.6?true user_id:InputUser title:string short_name:string thumb:flags.2?InputDocument stickers:Vector<InputStickerSetItem> software:flags.3?string = messages.StickerSet;
 stickers.removeStickerFromSet#f7760f51 sticker:InputDocument = messages.StickerSet;

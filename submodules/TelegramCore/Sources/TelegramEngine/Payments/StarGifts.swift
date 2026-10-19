@@ -1428,6 +1428,45 @@ func _internal_convertStarGift(account: Account, reference: StarGiftReference) -
     }
 }
 
+func _internal_deleteStarGift(account: Account, reference: StarGiftReference) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction in
+        return reference.apiStarGiftReference(transaction: transaction)
+    }
+    |> mapToSignal { starGift in
+        guard let starGift else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.deleteStarGift(stargift: starGift))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result in
+            if let result, case .boolTrue = result {
+                let ownerPeerId: EnginePeer.Id
+                if case let .peer(peerId, _) = reference {
+                    ownerPeerId = peerId
+                } else {
+                    ownerPeerId = account.peerId
+                }
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([ownerPeerId]), update: { _, cachedData -> CachedPeerData? in
+                        if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
+                            return cachedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                        } else if let cachedData = cachedData as? CachedChannelData, let starGiftsCount = cachedData.starGiftsCount {
+                            return cachedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                        } else {
+                            return cachedData
+                        }
+                    })
+                }
+            }
+            return .complete()
+        }
+        |> ignoreValues
+    }
+}
+
 func _internal_updateStarGiftAddedToProfile(account: Account, reference: StarGiftReference, added: Bool) -> Signal<Never, NoError> {
     var flags: Int32 = 0
     if !added {
@@ -2360,6 +2399,18 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
+    func deleteStarGift(reference: StarGiftReference) {
+        self.actionDisposable.set(
+            _internal_deleteStarGift(account: self.account, reference: reference).startStrict()
+        )
+        if let count = self.count {
+            self.count = max(0, count - 1)
+        }
+        self.gifts.removeAll(where: { $0.reference == reference })
+        self.filteredGifts.removeAll(where: { $0.reference == reference })
+        self.pushState()
+    }
+    
     func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
         if let count = self.count {
             self.count = max(0, count - 1)
@@ -3167,6 +3218,12 @@ public final class ProfileGiftsContext {
     public func convertStarGift(reference: StarGiftReference) {
         self.impl.with { impl in
             impl.convertStarGift(reference: reference)
+        }
+    }
+    
+    public func deleteStarGift(reference: StarGiftReference) {
+        self.impl.with { impl in
+            impl.deleteStarGift(reference: reference)
         }
     }
     

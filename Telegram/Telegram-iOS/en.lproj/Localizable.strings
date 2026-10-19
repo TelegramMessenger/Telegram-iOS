@@ -17238,3 +17238,8 @@ Error: %8$@";
 "Gift.MoveToGifts.Text" = "Transfer this collectible off-chain to your Telegram account?";
 "Gift.MoveToGifts.Success" = "Gift moved to your account.";
 "Wallet.Collectible.AlsoShowInMyGifts" = "also show in my gifts";
+
+"Gift.View.Context.Delete" = "Delete Gift";
+"Gift.Delete.Title" = "Delete Gift";
+"Gift.Delete.Text" = "Do you want to delete this gift?\n\nIt will disappear from your profile and can't be restored.";
+"Gift.Delete.Success" = "Gift Deleted";

@@ -76,6 +76,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let initialGiftCollectionId: Int64?
     
     private var resultsAreEmpty = false
+    public private(set) var isBottomPanelVisible = false
     
     private let chatControllerInteraction: ChatControllerInteraction
     
@@ -743,6 +744,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             if !self.canGift || self.resultsAreEmpty {
                 panelVisibility = 0.0
             }
+            self.isBottomPanelVisible = panelVisibility > 0.0
             
             if let current = self.panelContentContainer {
                 panelContentContainer = current

@@ -505,6 +505,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if let fromPeerId = arguments.fromPeerId, !peerIds.contains(fromPeerId) {
                     peerIds.append(fromPeerId)
                 }
+                if let reference = arguments.reference, case let .peer(peerId, _) = reference, !peerIds.contains(peerId) {
+                    peerIds.append(peerId)
+                }
                 if let messageGiftSenderPeerId = subject.messageGiftSenderPeerId, !peerIds.contains(messageGiftSenderPeerId) {
                     peerIds.append(messageGiftSenderPeerId)
                 }
@@ -987,7 +990,77 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             return nil
         }
-        
+
+        var canDeleteGift: Bool {
+            guard let arguments = self.subject.arguments, arguments.reference != nil, case let .generic(gift) = arguments.gift, gift.availability == nil else {
+                return false
+            }
+            if arguments.converted || arguments.upgraded || arguments.refunded {
+                return false
+            }
+            if let reference = arguments.reference, case let .peer(peerId, _) = reference, peerId.namespace == Namespaces.Peer.CloudChannel {
+                if case let .channel(channel) = self.peerMap[peerId], channel.flags.contains(.isCreator) {
+                    return true
+                }
+                return false
+            }
+            if let toPeerId = arguments.auctionToPeerId, toPeerId != self.context.account.peerId {
+                return false
+            }
+            return arguments.incoming || arguments.peerId == self.context.account.peerId
+        }
+
+        func deleteGift() {
+            guard let controller = self.getController() as? GiftViewScreen, let arguments = self.subject.arguments, let reference = arguments.reference else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let navigationController = controller.navigationController as? NavigationController
+            let alertController = textAlertController(
+                context: self.context,
+                title: presentationData.strings.Gift_Delete_Title,
+                text: presentationData.strings.Gift_Delete_Text,
+                actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak self, weak controller, weak navigationController] in
+                        guard let self else {
+                            return
+                        }
+                        if let profileGiftsContext = controller?.profileGiftsContext {
+                            profileGiftsContext.deleteStarGift(reference: reference)
+                        } else {
+                            let _ = self.context.engine.payments.deleteStarGift(reference: reference).startStandalone()
+                        }
+
+                        controller?.dismissAnimated()
+
+                        if let navigationController {
+                            Queue.mainQueue().after(0.5) { [navigationController] in
+                                if let lastController = navigationController.viewControllers.last as? ViewController {
+                                    let resultController = UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .universalImage(
+                                            image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: .white)!,
+                                            size: nil,
+                                            title: nil,
+                                            text: presentationData.strings.Gift_Delete_Success,
+                                            customUndoText: nil,
+                                            timeout: nil
+                                        ),
+                                        elevatedLayout: !(lastController is ChatController) && !(lastController is PeerInfoScreen),
+                                        appearance: (lastController as? PeerInfoScreen)?.isGiftsBottomPanelVisible == true ? UndoOverlayController.Appearance(bottomInset: 57.0) : nil,
+                                        action: { _ in return true }
+                                    )
+                                    lastController.present(resultController, in: .current)
+                                }
+                            }
+                        }
+                    })
+                ]
+            )
+            controller.present(alertController, in: .window(.root))
+        }
+
         func updateSavedToProfile(_ added: Bool) {
             guard let controller = self.getController() as? GiftViewScreen, let arguments = self.subject.arguments else {
                 return
@@ -1052,7 +1125,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 undoText: presentationData.strings.Gift_Displayed_View,
                                 customAction: nil
                             ),
-                            elevatedLayout: !(lastController is ChatController),
+                            elevatedLayout: !(lastController is ChatController) && !(lastController is PeerInfoScreen),
+                            appearance: (lastController as? PeerInfoScreen)?.isGiftsBottomPanelVisible == true ? UndoOverlayController.Appearance(bottomInset: 57.0) : nil,
                             action: { [weak navigationController] action in
                                 if case .undo = action, let navigationController, let giftsPeerId {
                                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: giftsPeerId))
@@ -2064,12 +2138,29 @@ private final class GiftViewSheetContent: CombinedComponent {
                 return
             }
             
-            
-            guard let arguments = self.subject.arguments, case let .unique(gift) = arguments.gift else {
+            guard let arguments = self.subject.arguments else {
                 return
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            
+            guard case let .unique(gift) = arguments.gift else {
+                if self.canDeleteGift {
+                    let items: [ContextMenuItem] = [
+                        .action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Delete, textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                        }, action: { [weak self] c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            self?.deleteGift()
+                        }))
+                    ]
+                    let contextController = makeContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                    controller.presentInGlobalOverlay(contextController)
+                }
+                return
+            }
+            
             let link = "https://t.me/nft/\(gift.slug)"
             
             let _ = (self.context.engine.data.get(
@@ -6115,6 +6206,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                     ))
                 }
 
+                rightControlItems.append(GlassControlGroupComponent.Item(
+                    id: AnyHashable("more"),
+                    content: .animation("anim_morewide"),
+                    action: { [weak state] in
+                        guard let state else {
+                            return
+                        }
+                        state.openMore()
+                    }
+                ))
+            }
+            if uniqueGift == nil && !showUpgradePreview && state.canDeleteGift {
                 rightControlItems.append(GlassControlGroupComponent.Item(
                     id: AnyHashable("more"),
                     content: .animation("anim_morewide"),
