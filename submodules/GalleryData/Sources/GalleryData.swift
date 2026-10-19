@@ -112,6 +112,11 @@ public func chatMessageGalleryControllerData(
     if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.namespace != Namespaces.Message.Cloud {
         standalone = true
     }
+    var candidateMedia = message.effectiveMedia
+    if case let .richTextMedia(mediaId) = mediaSubject {
+        standalone = true
+        candidateMedia = candidateMedia.filter { $0.id == mediaId }
+    }
     
     var galleryMedia: EngineRawMedia?
     var otherMedia: EngineRawMedia?
@@ -126,7 +131,7 @@ public func chatMessageGalleryControllerData(
             }
         }
     }
-    for media in message.effectiveMedia {
+    for media in candidateMedia {
         if let poll = media as? TelegramMediaPoll {
             standalone = true
             galleryMedia = poll
@@ -294,7 +299,7 @@ public func chatMessageGalleryControllerData(
                 
                 var source = source
                 if standalone {
-                    source = .standaloneMessage(message, nil)
+                    source = .standaloneMessage(message, mediaSubject)
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {

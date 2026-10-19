@@ -2703,6 +2703,16 @@ private func layoutParagraph(
     // silently resize existing inline images.
     let attributedString = attributedStringForRichText(text, styleStack: styleStack, inlineButtonMaxWidth: boundingWidth - horizontalInset * 2.0, formatDate: context.formatDate, quoteSource: context.quoteSource(.text))
 
+    if attributedString.length == 0 {
+        let lineString = attributedStringForRichText(.plain("\u{200b}"), styleStack: styleStack, formatDate: context.formatDate)
+        let (_, _, lineSize) = layoutTextItem(
+            lineString,
+            boundingWidth: boundingWidth - horizontalInset * 2.0,
+            offset: CGPoint(x: horizontalInset, y: 0.0)
+        )
+        return [.anchor(InstantPageV2AnchorItem(frame: CGRect(x: horizontalInset, y: 0.0, width: 0.0, height: lineSize.height), name: ""))]
+    }
+
     let (_, items, _) = layoutTextItem(
         attributedString,
         boundingWidth: boundingWidth - horizontalInset * 2.0,
