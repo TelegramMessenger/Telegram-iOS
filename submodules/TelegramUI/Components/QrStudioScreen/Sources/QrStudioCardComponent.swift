@@ -10,16 +10,18 @@ final class QrStudioCardComponent: Component {
     let username: String?
     let expires: Int32?
     let reservesTimer: Bool
+    let animatesLinkChange: Bool
     let ink: QrStudioColor
     let isLight: Bool
     let bounceToken: String
     let fillSource: QrStudioThemeBackgroundView?
 
-    init(link: String, username: String?, expires: Int32?, reservesTimer: Bool, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
+    init(link: String, username: String?, expires: Int32?, reservesTimer: Bool, animatesLinkChange: Bool, ink: QrStudioColor, isLight: Bool, bounceToken: String, fillSource: QrStudioThemeBackgroundView?) {
         self.link = link
         self.username = username
         self.expires = expires
         self.reservesTimer = reservesTimer
+        self.animatesLinkChange = animatesLinkChange
         self.ink = ink
         self.isLight = isLight
         self.bounceToken = bounceToken
@@ -37,6 +39,9 @@ final class QrStudioCardComponent: Component {
             return false
         }
         if lhs.reservesTimer != rhs.reservesTimer {
+            return false
+        }
+        if lhs.animatesLinkChange != rhs.animatesLinkChange {
             return false
         }
         if lhs.ink != rhs.ink {
@@ -282,7 +287,7 @@ final class QrStudioCardComponent: Component {
             let animated = previousComponent != nil && !transition.animation.isImmediate
             self.updateFill(component: component, previousInk: previousComponent?.ink, size: size, animated: animated)
             let linkChanged = previousComponent.flatMap { $0.link != component.link } ?? false
-            self.applyInk(component: component, animated: animated, animatesCode: linkChanged)
+            self.applyInk(component: component, animated: animated, animatesCode: linkChanged && component.animatesLinkChange)
 
             return size
         }

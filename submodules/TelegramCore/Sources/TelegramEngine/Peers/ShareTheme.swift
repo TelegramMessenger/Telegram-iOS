@@ -140,6 +140,63 @@ func _internal_getShareTheme(account: Account, peerId: PeerId) -> Signal<Telegra
     }
 }
 
+func _internal_preloadShareTheme(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    let files = _internal_getShareTheme(account: account, peerId: peerId)
+    |> distinctUntilChanged
+    |> mapToSignal { theme -> Signal<[TelegramMediaFile], NoError> in
+        guard let theme else {
+            return .single([])
+        }
+        switch theme {
+        case .default:
+            return .single([])
+        case let .emojiBackdrop(emojis, _):
+            let fileIds = (emojis ?? []).compactMap { reaction -> Int64? in
+                if case let .custom(fileId) = reaction {
+                    return fileId
+                }
+                return nil
+            }
+            if fileIds.isEmpty {
+                return .single([])
+            }
+            return _internal_resolveInlineStickers(postbox: account.postbox, network: account.network, fileIds: fileIds)
+            |> map { files -> [TelegramMediaFile] in
+                return fileIds.compactMap { files[$0] }
+            }
+        case let .gift(gift):
+            guard case let .unique(uniqueGift) = gift else {
+                return .single([])
+            }
+            var files: [TelegramMediaFile] = []
+            for attribute in uniqueGift.attributes {
+                switch attribute {
+                case let .model(_, file, _, _), let .pattern(_, file, _):
+                    files.append(file)
+                default:
+                    break
+                }
+            }
+            return .single(files)
+        }
+    }
+    |> mapToSignal { files -> Signal<Never, NoError> in
+        let fetches = files.map { file -> Signal<Never, NoError> in
+            return fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .peer(peerId), userContentType: .sticker, reference: .media(media: .standalone(media: file), resource: file.resource))
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            }
+        }
+        return combineLatest(fetches)
+        |> ignoreValues
+    }
+    let backdrops = _internal_shareThemeBackdrops(account: account)
+    |> ignoreValues
+    return combineLatest(files, backdrops)
+    |> ignoreValues
+}
+
 func _internal_setShareTheme(account: Account, peerId: PeerId, theme: TelegramShareThemeUpdate) -> Signal<Never, SetShareThemeError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer, Api.ShareTheme)? in
         guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {

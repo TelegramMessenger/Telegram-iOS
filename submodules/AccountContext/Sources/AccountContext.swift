@@ -1613,7 +1613,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
-    func makeWalletScreen(context: AccountContext) -> ViewController
+    func makeWalletScreen(context: AccountContext, opensCollectibles: Bool) -> ViewController
     func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController
     func makeWalletReceiveScreen(context: AccountContext, address: String, isOwnWallet: Bool) -> ViewController
     func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController
@@ -2225,5 +2225,11 @@ public protocol WalletCollectibleStickerHost: AnyObject {
 public extension SharedAccountContext {
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?) -> ViewController {
         return self.makePremiumGiftController(context: context, source: source, completion: completion, withdraw: nil)
+    }
+}
+
+public extension SharedAccountContext {
+    func makeWalletScreen(context: AccountContext) -> ViewController {
+        return self.makeWalletScreen(context: context, opensCollectibles: false)
     }
 }

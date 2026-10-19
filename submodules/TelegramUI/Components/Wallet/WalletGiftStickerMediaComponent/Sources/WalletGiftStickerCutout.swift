@@ -13,6 +13,9 @@ func walletGiftStickerCutout(bytes: UnsafeMutablePointer<UInt8>, side: Int) -> B
     var b = vImage_Buffer(data: grown, height: vImagePixelCount(side), width: vImagePixelCount(side), rowBytes: side)
     let flags = vImage_Flags(kvImageEdgeExtend)
     guard vImageExtractChannel_ARGB8888(&source, &a, 3, 0) == kvImageNoError else { return false }
+    let solid = (0 ... 255).map { UInt8($0 >= 128 ? 255 : 0) }
+    guard solid.withUnsafeBufferPointer({ vImageTableLookUp_Planar8(&a, &b, $0.baseAddress!, 0) }) == kvImageNoError,
+          vImageCopyBuffer(&b, &a, 1, 0) == kvImageNoError else { return false }
     // Reference v14: Gaussian sigma 5.35 / 384 of the canvas, followed by
     // alpha * 10 - 150. A separable integer kernel keeps this in Accelerate.
     let sigma = Double(side) * 5.35 / 384

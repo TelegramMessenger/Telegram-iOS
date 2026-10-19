@@ -484,7 +484,7 @@ extension HarnessSharedAccountContext {
     public func makeStarsIntroScreen(context: AccountContext) -> ViewController {
         fatalError("harness: SharedAccountContext.makeStarsIntroScreen is not provided")
     }
-    public func makeWalletScreen(context: AccountContext) -> ViewController {
+    public func makeWalletScreen(context: AccountContext, opensCollectibles: Bool) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletScreen is not provided")
     }
     public func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController {
