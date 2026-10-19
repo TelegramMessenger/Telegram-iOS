@@ -223,6 +223,19 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
             let destinationLabel = destinationLoan.labels[index]
             labels.append(ExpansionLabelGeometry(sourceCenter: sourceLabel.screenCenter, sourceSize: sourceLabel.textSize, destinationCenter: destinationLabel.screenCenter, destinationSize: destinationLabel.textSize, photoCenter: destinationLabel.screenCenter, photoSize: destinationLabel.textSize))
         }
+        // A label the lower screen does not show (a channel's title without a status line) comes from where it would
+        // stand there: under the label above it, at that label's scale. It fades in as the labels cross; without a place
+        // it was never shown until the upper screen had it back.
+        for index in labels.count ..< destinationLoan.labels.count {
+            guard let above = labels.last else {
+                break
+            }
+            let destinationLabel = destinationLoan.labels[index]
+            let scale = above.sourceSize.height / max(1.0, above.destinationSize.height)
+            let size = CGSize(width: destinationLabel.textSize.width * scale, height: destinationLabel.textSize.height * scale)
+            let center = CGPoint(x: above.sourceCenter.x, y: above.sourceCenter.y + (above.sourceSize.height + size.height) * 0.5)
+            labels.append(ExpansionLabelGeometry(sourceCenter: center, sourceSize: size, destinationCenter: destinationLabel.screenCenter, destinationSize: destinationLabel.textSize, photoCenter: destinationLabel.screenCenter, photoSize: destinationLabel.textSize))
+        }
         var geometry = ExpansionGeometry(screenSize: size, screenCornerRadii: destinationLoan.screenCornerRadii, origin: sourceLoan.origin, companion: sourceLoan.companion, companionPhotoDiameter: sourceLoan.companionPhotoDiameter, avatar: destinationLoan.avatar, photo: destinationLoan.photo, labels: labels, carriedEdge: destinationLoan.carriedEdge, appearing: destinationLoan.appearingViews.map { $0.convert($0.bounds, to: screen) })
         if let backgroundOpening = destinationLoan.backgroundOpening {
             geometry.backgroundOpening = backgroundOpening
@@ -325,6 +338,16 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
                 self.mount(destinationLabel, in: host.destinationHost, group: nil, colorLayer: nil)
                 self.cardContentView.addSubview(host.destinationHost)
             }
+            self.labelHosts.append(host)
+        }
+        // The upper screen's labels the lower screen does not show, on the places measured for them above.
+        for index in sourceLoan.labels.count ..< destinationLoan.labels.count {
+            let destinationLabel = destinationLoan.labels[index]
+            let destinationColor = index < destinationLoan.labelColors.count ? destinationLoan.labelColors[index] : .white
+            let host = LabelHost(source: nil, destination: destinationLabel, destinationColor: destinationColor)
+            self.view.addSubview(host.sourceHost)
+            self.mount(destinationLabel, in: host.destinationHost, group: nil, colorLayer: nil)
+            self.cardContentView.addSubview(host.destinationHost)
             self.labelHosts.append(host)
         }
         for view in destinationLoan.appearingViews + destinationLoan.appearingCompanions.flatMap({ $0 }) + destinationLoan.backgroundViews + destinationLoan.listViews + destinationLoan.patternViews {
