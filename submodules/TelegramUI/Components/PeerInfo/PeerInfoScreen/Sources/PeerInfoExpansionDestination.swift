@@ -18,6 +18,8 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
     private var homes: [(view: UIView, superview: UIView?, index: Int, frame: CGRect, isNodeBacked: Bool)] = []
     private var wrappers: [UIView] = []
     private var backgroundView: UIView?
+    /// The cover's view and its own bounds and centre, while its clip is opened upward.
+    private var coverClipHome: (view: UIView, bounds: CGRect, center: CGPoint)?
 
     init(screenNode: PeerInfoScreenNode, navigationBar: NavigationBarNode?, path: ExpansionPath) {
         self.screenNode = screenNode
@@ -88,6 +90,16 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
         node.expansionBackgroundView = background
         self.backgroundView = background
 
+        // The cover lands with the page past its place (`pageEdgeViews`, below), but its view clips at its own top, 3 pt
+        // above the screen, so moving it down showed a strip of what lies above it. Its gradient's colour reaches far
+        // above that top; while lent the clip is opened upward over it, the content staying where it is.
+        if let coverView = header.backgroundCover.view {
+            let opening: CGFloat = 100.0
+            self.coverClipHome = (coverView, coverView.bounds, coverView.center)
+            coverView.bounds = CGRect(x: coverView.bounds.minX, y: coverView.bounds.minY - opening, width: coverView.bounds.width, height: coverView.bounds.height + opening)
+            coverView.center = CGPoint(x: coverView.center.x, y: coverView.center.y - opening * 0.5)
+        }
+
         let avatarView = header.avatarListNode.view
         self.remember(avatarView)
 
@@ -127,12 +139,16 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             // strip.
             pageViews: [node.scrollNode.view] + header.expansionPageViews,
             // The cover clips at the header's bottom, the music strip's band: the edge rides the page with the band, its
-            // gradient and pattern held still, as the prototype's gradient (which has no edge) is.
+            // gradient and pattern held still while the page comes in, as the prototype's gradient (which has no edge) is,
+            // and landing with it past its place, so the background bounces with the avatar, the title and the page.
             pageEdgeViews: [banner],
+            // The gifts around the avatar land with the cover.
+            landingViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             patternViews: header.giftsCover.view.flatMap { [$0] } ?? [],
             glassTint: header.expansionGlassTint,
             screenCornerRadii: layout.screenCornerRadii,
-            backButtonFrame: backButtonFrame
+            backButtonFrame: backButtonFrame,
+            avatarCornerFraction: header.avatarListNode.avatarContainerNode.cornerFraction
         )
     }
 
@@ -156,6 +172,12 @@ final class PeerInfoExpansionDestination: NavigationExpansionDestinationProvidin
             wrapper.removeFromSuperview()
         }
         self.wrappers = []
+        // Before the held layout: setting a frame keeps the bounds' origin.
+        if let home = self.coverClipHome {
+            home.view.bounds = home.bounds
+            home.view.center = home.center
+            self.coverClipHome = nil
+        }
         if let node = self.screenNode {
             node.expansionBackgroundView = nil
             node.backgroundColor = self.backgroundView?.backgroundColor

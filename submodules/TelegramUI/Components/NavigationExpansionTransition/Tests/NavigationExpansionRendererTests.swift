@@ -20,6 +20,10 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     var origin: CGRect?
     /// A view whose frame is the title pill, measured in the space it is lent in (as the chat's pill is).
     var originView: UIView?
+    /// False as in a forum, whose bar has its menu button where a chat has its avatar.
+    var hasCompanion = true
+    /// False as in a channel whose title shows no status line (the profile's does).
+    var hasStatus = true
 
     init(screen: UIView) {
         self.titleView.layer.addSublayer(self.titleTintLayer)
@@ -40,10 +44,11 @@ private final class FakeSource: NavigationExpansionSourceProviding {
         self.lends += 1
         let g = makeExpansionGeometry()
         let measuredOrigin = self.originView.map { $0.convert($0.bounds, to: screenView) }
-        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: g.companion, companionPhotoDiameter: 38.0, companionView: self.avatarView, labels: [
-            NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
-            NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
-        ], press: .none)
+        var labels = [NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring)]
+        if self.hasStatus {
+            labels.append(NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray)))
+        }
+        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: self.hasCompanion ? g.companion : nil, companionPhotoDiameter: 38.0, companionView: self.hasCompanion ? self.avatarView : nil, labels: labels, press: .none)
     }
 
     func returnExpansionSource() {
@@ -72,8 +77,12 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
     var pageViews: [UIView] = []
     /// Views clipping at the page's top edge (the profile's cover).
     var pageEdgeViews: [UIView] = []
+    /// The rest of the background, landing with the page (the profile's gifts around its avatar).
+    var landingViews: [UIView] = []
     var path: ExpansionPath = .origin
     var screenCornerRadii = makeExpansionGeometry().screenCornerRadii
+    /// The avatar's corner radius over its side (a forum's is a rounded square).
+    var avatarCornerFraction: CGFloat = 0.5
     var lends = 0
     var returns = 0
     private(set) weak var top: UIView?
@@ -105,7 +114,7 @@ private final class FakeDestination: NavigationExpansionDestinationProviding {
         return NavigationExpansionDestinationLoan(avatar: g.avatar, photo: g.photo, avatarView: self.avatarView, avatarRestFrame: self.path == .photo ? g.photo! : g.avatar!, labels: [
             NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 79.0, y: 17.0), textSize: CGSize(width: 158.0, height: 34.0), screenCenter: g.labels[0].destinationCenter, coloring: .multiply([self.titleView.layer], .white)),
             NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 65.0, y: 10.0), textSize: CGSize(width: 130.0, height: 20.0), screenCenter: g.labels[1].destinationCenter, coloring: .multiply([self.statusView.layer], .white), followers: self.statusFollowers)
-        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, patternViews: [], glassTint: .purple, screenCornerRadii: self.screenCornerRadii, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0))
+        ], labelColors: [.white, .white], carriedEdge: g.carriedEdge, appearingViews: self.buttons, appearingCompanions: self.platters.map { [$0] }, overlayViews: self.overlays, backgroundViews: [self.background], listViews: [self.list], pageViews: self.pageViews, pageEdgeViews: self.pageEdgeViews, landingViews: self.landingViews, patternViews: [], glassTint: .purple, screenCornerRadii: self.screenCornerRadii, backButtonFrame: CGRect(x: 16.0, y: 64.0, width: 44.0, height: 44.0), avatarCornerFraction: self.avatarCornerFraction)
     }
 
     func returnExpansionDestination() {
@@ -599,6 +608,69 @@ final class NavigationExpansionRendererTests: XCTestCase {
         return NavigationExpansionTimeline(timing: timing, times: times, isOpening: opening, poses: times.map { _ in .none }, animationTime: { 0.0 }, reinstallTiming: { nil }, schedule: { _, _ in })
     }
 
+    // Without a companion (a forum's bar has its menu button where a chat has its avatar) the profile's avatar is drawn
+    // all the way: a point above the chat's title at the start, growing above the title mid-way under an unmasked
+    // circle, at its place at rest. It used to be lent and never placed, so it showed only once the profile had it back.
+    func test_noCompanion_avatarIsDrawnAllTheWay() {
+        let (renderer, container, _, _, destination) = self.make(configureSource: { $0.hasCompanion = false })
+        let g = makeExpansionGeometry()
+        for time: CGFloat in [0.0, 0.5, 1.0] {
+            renderer.update(time: time, isOpening: true, pose: .none)
+            XCTAssertNotNil(renderer.photoMaskForTesting.path, "t=\(time): the avatar is not masked out")
+            let frame = destination.avatarView.convert(destination.avatarView.bounds, to: container)
+            guard let title = renderer.labelHostCentersForTesting.first else {
+                return XCTFail("no title host")
+            }
+            switch time {
+            case 0.0:
+                XCTAssertLessThan(frame.width, 1.0, "a point")
+                XCTAssertLessThan(frame.midY, g.labels[0].sourceCenter.y, "above the title")
+            case 0.5:
+                XCTAssertGreaterThan(frame.width, 1.0)
+                XCTAssertLessThan(frame.width, g.avatar!.width)
+                XCTAssertLessThan(frame.maxY, title.y, "above the title")
+            default:
+                XCTAssertEqual(frame.minX, g.avatar!.minX, accuracy: 0.5)
+                XCTAssertEqual(frame.minY, g.avatar!.minY, accuracy: 0.5)
+                XCTAssertEqual(frame.width, g.avatar!.width, accuracy: 0.5)
+            }
+        }
+    }
+
+    // A forum's avatar is a rounded square, and so is the photo's mask while it flies: a point 10 pt in from the corner of
+    // the 100 pt avatar is inside a quarter-side rounding and outside a circle. It used to fly as a circle.
+    func test_roundedSquareAvatar_flyingMaskKeepsItsCorners() {
+        let (renderer, _, _, _, _) = self.make(configureSource: { $0.hasCompanion = false }, configure: { $0.avatarCornerFraction = 0.25 })
+        renderer.update(time: 1.0, isOpening: true, pose: .none)
+        guard let path = renderer.photoMaskForTesting.path else {
+            return XCTFail("no mask")
+        }
+        XCTAssertTrue(path.contains(CGPoint(x: 10.0, y: 10.0)), "a rounded square, not a circle")
+        XCTAssertFalse(path.contains(CGPoint(x: 3.0, y: 3.0)), "still rounded")
+    }
+
+    // A status the chat's title does not show (a channel's), but the profile's does, comes from where it would stand under
+    // the chat's title, at the title's scale, and fades in as the labels cross. It had no place, so it was taken from the
+    // profile and shown only once the profile had it back.
+    func test_missingStatus_comesFromUnderTheTitle() {
+        let (renderer, _, _, _, _) = self.make(configureSource: { $0.hasStatus = false })
+        let g = makeExpansionGeometry()
+        XCTAssertEqual(renderer.destinationLabelHostsForTesting.count, 2, "the profile's status has a host")
+        renderer.update(time: 0.0, isOpening: true, pose: .none)
+        var hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertEqual(hosts[1].alpha, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(hosts[1].layer.position.x, g.labels[0].sourceCenter.x, accuracy: 1e-6)
+        XCTAssertGreaterThan(hosts[1].layer.position.y, g.labels[0].sourceCenter.y, "under the chat's title")
+        renderer.update(time: 0.5, isOpening: true, pose: .none)
+        hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertGreaterThan(hosts[1].layer.position.y, hosts[0].layer.position.y, "under the title as it crosses")
+        renderer.update(time: 1.0, isOpening: true, pose: .none)
+        hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertEqual(hosts[1].alpha, 1.0, accuracy: 1e-6)
+        XCTAssertEqual(hosts[1].layer.position.x, g.labels[1].destinationCenter.x, accuracy: 0.1)
+        XCTAssertEqual(hosts[1].layer.position.y, g.labels[1].destinationCenter.y, accuracy: 0.1)
+    }
+
     // The chat's avatar (live, animated avatars included) rides the flying circle above the profile's: at the open's
     // start it is exactly where it was, so nothing jumps when the circle takes over.
     func test_companion_ridesTheCircle_fromItsOwnPlace() {
@@ -875,10 +947,12 @@ final class NavigationExpansionRendererTests: XCTestCase {
         return (edge, content)
     }
 
-    // The cover's bottom edge rides the page, its content still: wherever the status's host stands, the edge stands as
-    // far from its place as the page does, and the gradient where it rests. Riding in from above, the page's music strip
-    // (the cover's bottom band) otherwise left a strip of the cover below it, 40 pt at first.
-    func test_pageEdge_ridesThePageWithItsContentStill() {
+    // The cover's bottom edge rides the page; its content holds still while the page comes in from above and lands with it
+    // past its place: wherever the status's host stands, the edge stands as far from its place as the page does, and the
+    // gradient as far as the page's overshoot. Riding in from above, the page's music strip (the cover's bottom band)
+    // otherwise left a strip of the cover below it, 40 pt at first; held still through the overshoot, the gradient and
+    // its pattern stood still while the avatar, the name and the page bounced over them.
+    func test_pageEdge_ridesThePage_contentLandsWithIt() {
         var cover: (edge: UIView, content: UIView)?
         var rest: (edge: CGRect, content: CGRect)?
         let (renderer, container, _, _, _) = self.make(configure: { destination in
@@ -900,20 +974,23 @@ final class NavigationExpansionRendererTests: XCTestCase {
             XCTAssertEqual(edge.maxY - rest.edge.maxY, delta, accuracy: 0.01, "t=\(time)")
             XCTAssertEqual(edge.height, rest.edge.height, accuracy: 0.01, "t=\(time)")
             let content = cover.content.convert(cover.content.bounds, to: container)
-            XCTAssertEqual(content.minY, rest.content.minY, accuracy: 0.01, "t=\(time): the gradient holds still")
+            XCTAssertEqual(content.minY - rest.content.minY, max(delta, 0.0), accuracy: 0.01, "t=\(time): the gradient holds still until the page passes its place")
             XCTAssertEqual(content.height, rest.content.height, accuracy: 0.01, "t=\(time)")
             if time == 0.6 {
                 XCTAssertLessThan(delta, -20.0, "mid-flight the edge is still above its place")
             }
+            if time == 1.04 {
+                XCTAssertGreaterThan(delta, 2.0, "the page goes past its place")
+            }
         }
     }
 
-    // On keyframes too: the edge's transform and its content's sublayer transform cancel in every frame, from above its
-    // place to its rest.
+    // On keyframes too: the edge's transform and its content's sublayer transform cancel while the edge is above its
+    // place, and leave the content the page's overshoot past it.
     func test_pageEdge_keyframed() {
         var cover: (edge: UIView, content: UIView)?
         let (renderer, _, _, _, _) = self.make(configure: { cover = self.makePageEdge($0) })
-        let timeline = self.timeline(from: 0.0, to: 1.0, opening: true)
+        let timeline = self.timeline(from: 0.0, to: 1.04, opening: true)
         renderer.animate(timeline: timeline)
         guard let edge = cover?.edge, let transform = edge.layer.animation(forKey: "navigationExpansion.transform") as? CAKeyframeAnimation, let transforms = transform.values as? [NSValue], let sublayer = edge.layer.animation(forKey: "navigationExpansion.sublayerTransform") as? CAKeyframeAnimation, let sublayers = sublayer.values as? [NSValue] else {
             return XCTFail("no edge keyframes")
@@ -921,10 +998,52 @@ final class NavigationExpansionRendererTests: XCTestCase {
         XCTAssertEqual(transforms.count, timeline.timing.sampleTimes.count)
         XCTAssertEqual(sublayers.count, transforms.count)
         XCTAssertLessThan(transforms[0].caTransform3DValue.m42, -20.0, "it starts above its place")
+        var landed: CGFloat = 0.0
         for (edgeValue, contentValue) in zip(transforms, sublayers) {
-            XCTAssertEqual(edgeValue.caTransform3DValue.m42 + contentValue.caTransform3DValue.m42, 0.0, accuracy: 1e-6)
+            let edge = edgeValue.caTransform3DValue.m42
+            let content = edge + contentValue.caTransform3DValue.m42
+            XCTAssertEqual(content, max(edge, 0.0), accuracy: 1e-6)
+            landed = max(landed, content)
         }
-        XCTAssertEqual(transforms[transforms.count - 1].caTransform3DValue.m42, 0.0, accuracy: 1.0)
+        XCTAssertGreaterThan(landed, 2.0, "the content lands with the overshoot")
+    }
+
+    // The rest of the background (the profile's gifts around its avatar) holds still while the page comes in and lands
+    // with it past its place, as the cover's gradient does, keeping its own transform; it is restored on every ending.
+    func test_landing_takesOnlyThePagesOvershoot() {
+        for atTop in [true, false] {
+            var landing: UIView?
+            var rest: CGRect?
+            let (renderer, container, _, _, _) = self.make(configure: { destination in
+                let view = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 402.0, height: 360.0))
+                view.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+                destination.top!.addSubview(view)
+                destination.landingViews = [view]
+                landing = view
+                rest = view.convert(view.bounds, to: destination.top!.superview!)
+            })
+            guard let landing, let rest else {
+                return XCTFail()
+            }
+            let statusRest = makeExpansionGeometry().labels[1].destinationCenter.y
+            for time: CGFloat in [0.6, 1.0, 1.04] {
+                renderer.update(time: time, isOpening: true, pose: .none)
+                guard let host = renderer.destinationLabelHostsForTesting.last else {
+                    return XCTFail("no status host")
+                }
+                let delta = host.layer.position.y - statusRest
+                let now = landing.convert(landing.bounds, to: container)
+                XCTAssertEqual(now.minY - rest.minY, max(delta, 0.0), accuracy: 0.01, "t=\(time)")
+                XCTAssertEqual(now.height, rest.height, accuracy: 0.01, "t=\(time): its own transform is kept")
+                if time == 1.04 {
+                    XCTAssertGreaterThan(delta, 2.0, "the page goes past its place")
+                }
+            }
+            renderer.animate(timeline: self.timeline(from: 0.0, to: 1.0, opening: true))
+            renderer.end(atTop: atTop)
+            XCTAssertEqual(landing.transform, CGAffineTransform(scaleX: 0.9, y: 0.9))
+            XCTAssertNil(landing.layer.animation(forKey: "navigationExpansion.transform"))
+        }
     }
 
     func test_companion_goesHome() {

@@ -121,13 +121,75 @@ final class ExpansionChoreographyTests: XCTestCase {
         XCTAssertEqual(frame.card.midY, g.origin.midY - 140.0 * 0.04, accuracy: 1e-6)
     }
 
-    // Without a companion the pill still expands; there is no circle.
-    func test_noCompanion_noCircle() {
+    // Without a companion (a forum's bar has its menu button where a chat has its avatar) the pill still expands and
+    // there is no circle, but the avatar is not left out until the end: it rises from just above the title, growing from
+    // a point, stays above it all the way and lands on its place, overshooting with the spring. It used to have no frame
+    // at all, so the profile's avatar appeared only when the transition ended.
+    func test_noCompanion_avatarRisesFromAboveTheTitle() {
         var g = makeExpansionGeometry()
         g.companion = nil
-        let frame = ExpansionChoreography(geometry: g, path: .origin, duration: 0.55).frame(ExpansionClock(time: 0.5, isOpening: true), press: .none)
-        XCTAssertNil(frame.circle)
-        XCTAssertNil(frame.photo)
+        let c = ExpansionChoreography(geometry: g, path: .origin, duration: 0.44)
+        let title = g.labels[0]
+        let start = c.frame(ExpansionClock(time: 0.0, isOpening: true), press: .none)
+        XCTAssertNil(start.circle)
+        guard let startPhoto = start.photo else {
+            return XCTFail("no avatar at the start")
+        }
+        XCTAssertLessThan(startPhoto.width, 1.0, "a point")
+        XCTAssertEqual(startPhoto.midX, title.sourceCenter.x, accuracy: 1e-6)
+        XCTAssertLessThan(startPhoto.midY, title.sourceCenter.y - title.sourceSize.height * 0.5, "above the title")
+        for time: CGFloat in [0.2, 0.5, 0.8] {
+            let frame = c.frame(ExpansionClock(time: time, isOpening: true), press: .none)
+            guard let photo = frame.photo, let label = frame.labels.first else {
+                return XCTFail("no avatar at t=\(time)")
+            }
+            XCTAssertNil(frame.circle)
+            XCTAssertEqual(photo.midX, label.center.x, accuracy: 1e-6, "t=\(time)")
+            XCTAssertLessThan(photo.maxY, label.center.y, "t=\(time): above the title")
+        }
+        let end = c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none)
+        XCTAssertEqual(end.photo?.minX ?? -1.0, g.avatar!.minX, accuracy: 1e-6)
+        XCTAssertEqual(end.photo?.minY ?? -1.0, g.avatar!.minY, accuracy: 1e-6)
+        XCTAssertEqual(end.photo?.width ?? -1.0, g.avatar!.width, accuracy: 1e-6)
+        let overshoot = c.frame(ExpansionClock(time: 1.04, isOpening: true), press: .none)
+        XCTAssertGreaterThan(overshoot.photo?.width ?? 0.0, g.avatar!.width, "it overshoots with the spring")
+    }
+
+    // A rounded-square avatar (a forum's: corner radius a quarter of its side) keeps its corners while it flies and at
+    // rest; growing into the expanded photo its top corners still turn into the screen's and its bottom ones square.
+    func test_avatarCornerFraction_shapesThePhoto() {
+        var g = makeExpansionGeometry()
+        g.avatarCornerFraction = 0.25
+        for companion in [g.companion, nil] {
+            g.companion = companion
+            let c = ExpansionChoreography(geometry: g, path: .origin, duration: 0.44)
+            for time: CGFloat in [0.5, 1.0] {
+                let frame = c.frame(ExpansionClock(time: time, isOpening: true), press: .none)
+                guard let photo = frame.photo else {
+                    return XCTFail("no photo")
+                }
+                for radius in [frame.photoCornerRadii.topLeft, frame.photoCornerRadii.topRight, frame.photoCornerRadii.bottomLeft, frame.photoCornerRadii.bottomRight] {
+                    XCTAssertEqual(radius, photo.width * 0.25, accuracy: 1e-6, "t=\(time), companion \(companion != nil)")
+                }
+            }
+        }
+        let expanded = ExpansionChoreography(geometry: g, path: .photo, duration: 0.48).frame(ExpansionClock(time: 1.0, isOpening: true), press: .none)
+        XCTAssertEqual(expanded.photoCornerRadii.bottomLeft, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(expanded.photoCornerRadii.topLeft, g.screenCornerRadii.topLeft, accuracy: 1e-6)
+    }
+
+    // On the photo path without a companion the photo grows from that point into the expanded photo, and the labels go to
+    // their places under it (they waited for a flying circle that never came, so they never moved).
+    func test_noCompanion_photoPath_growsIntoThePhoto() {
+        var g = makeExpansionGeometry()
+        g.companion = nil
+        let c = ExpansionChoreography(geometry: g, path: .photo, duration: 0.48)
+        let start = c.frame(ExpansionClock(time: 0.0, isOpening: true), press: .none)
+        XCTAssertLessThan(start.photo?.width ?? 1.0, 1.0)
+        let end = c.frame(ExpansionClock(time: 1.0, isOpening: true), press: .none)
+        XCTAssertEqual(end.photo, g.photo)
+        XCTAssertEqual(end.labels.first?.center.x ?? -1.0, g.labels[0].photoCenter!.x, accuracy: 1e-6)
+        XCTAssertEqual(end.labels.first?.center.y ?? -1.0, g.labels[0].photoCenter!.y, accuracy: 1e-6)
     }
 
     // The drops merge from 30 pt apart, but never sooner than the lower screen's own shapes stand at rest: a pill

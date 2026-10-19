@@ -107,9 +107,15 @@ public final class NavigationExpansionDestinationLoan {
     /// itself, which have transforms of their own.
     public let pageViews: [UIView]
     /// Views clipping at a bottom edge that is the page's top (the profile's cover, whose bottom band is the music strip):
-    /// the edge rides the page while what they show holds still, so the page never leaves a strip of the cover below it.
-    /// They stay in their own superviews and keep their own transforms and sublayer transforms.
+    /// the edge rides the page while what they show holds still, so the page never leaves a strip of the cover below it,
+    /// until the page passes its resting place; past it what they show lands with the page, so its overshoot moves the
+    /// background with everything on it. They stay in their own superviews and keep their own transforms and sublayer
+    /// transforms.
     public let pageEdgeViews: [UIView]
+    /// The rest of the background (the gifts around the profile's avatar): held still while the page comes in, landing
+    /// with it past its resting place, as what the page edges show does. They stay in their own superviews and keep their
+    /// own transforms.
+    public let landingViews: [UIView]
     /// The colour the drops' glass tints toward (the profile's colour; nil: none, the plain profile).
     public let glassTint: UIColor?
     /// The screen's corner radii (`ContainerViewLayout.screenCornerRadii`), which differ on iPhone Duo's cover screen.
@@ -118,8 +124,11 @@ public final class NavigationExpansionDestinationLoan {
     public let backgroundOpening: ClosedRange<CGFloat>?
     public let backgroundClosing: ClosedRange<CGFloat>?
     public let flyingViews: [UIView]
+    /// The avatar's corner radius over its side: 0.5 is round, a forum's rounded square is 0.25. The photo keeps it while
+    /// it flies.
+    public let avatarCornerFraction: CGFloat
 
-    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?, backgroundOpening: ClosedRange<CGFloat>? = nil, backgroundClosing: ClosedRange<CGFloat>? = nil, flyingViews: [UIView] = []) {
+    public init(avatar: CGRect?, photo: CGRect?, avatarView: UIView?, avatarRestFrame: CGRect, labels: [NavigationExpansionLabel], labelColors: [UIColor], carriedEdge: CGFloat, appearingViews: [UIView], appearingCompanions: [[UIView]] = [], overlayViews: [UIView] = [], backgroundViews: [UIView], listViews: [UIView], pageViews: [UIView] = [], pageEdgeViews: [UIView] = [], landingViews: [UIView] = [], patternViews: [UIView], glassTint: UIColor?, screenCornerRadii: CornerRadii, backButtonFrame: CGRect?, backgroundOpening: ClosedRange<CGFloat>? = nil, backgroundClosing: ClosedRange<CGFloat>? = nil, flyingViews: [UIView] = [], avatarCornerFraction: CGFloat = 0.5) {
         self.avatar = avatar
         self.photo = photo
         self.avatarView = avatarView
@@ -134,6 +143,7 @@ public final class NavigationExpansionDestinationLoan {
         self.listViews = listViews
         self.pageViews = pageViews
         self.pageEdgeViews = pageEdgeViews
+        self.landingViews = landingViews
         self.patternViews = patternViews
         self.glassTint = glassTint
         self.screenCornerRadii = screenCornerRadii
@@ -141,6 +151,7 @@ public final class NavigationExpansionDestinationLoan {
         self.backgroundOpening = backgroundOpening
         self.backgroundClosing = backgroundClosing
         self.flyingViews = flyingViews
+        self.avatarCornerFraction = avatarCornerFraction
     }
 }
 

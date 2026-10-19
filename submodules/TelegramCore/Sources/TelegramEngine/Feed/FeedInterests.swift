@@ -5,7 +5,6 @@ import MtProtoKit
 internal import TelegramApi
 
 func _internal_refreshFeedInterestCategories(account: Account) -> Signal<Never, NoError> {
-#if TELEGRAM_NEWS_FEED_API
     return account.network.request(Api.functions.feed.getInterestCategories(hash: 0))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.feed.InterestCategories?, NoError> in
@@ -24,10 +23,6 @@ func _internal_refreshFeedInterestCategories(account: Account) -> Signal<Never, 
         }
         |> ignoreValues
     }
-#else
-    // The feed API is parked (layer 232): nothing to refresh.
-    return .complete()
-#endif
 }
 
 /// The cached categories (nil before the first fetch), refreshed from the server on subscription.
@@ -53,7 +48,6 @@ func _internal_feedInterestCategories(account: Account) -> Signal<EngineInterest
 
 /// Replaces the selection: optimistically in the cache, then on the server; reverts on failure.
 func _internal_setFeedInterestCategories(account: Account, ids: [Int32]) -> Signal<Never, NoError> {
-#if TELEGRAM_NEWS_FEED_API
     let entryId = feedInterestCategoriesEntryId()
     return account.postbox.transaction { transaction -> [Int32]? in
         guard var current = transaction.retrieveItemCacheEntry(id: entryId)?.get(EngineInterestCategories.self) else {
@@ -88,8 +82,4 @@ func _internal_setFeedInterestCategories(account: Account, ids: [Int32]) -> Sign
             |> ignoreValues
         }
     }
-#else
-    // The feed API is parked (layer 232): the selection is not changed.
-    return .complete()
-#endif
 }
