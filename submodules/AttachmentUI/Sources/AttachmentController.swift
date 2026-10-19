@@ -1142,7 +1142,11 @@ public class AttachmentController: ViewController, MinimizableController {
             })
         }
 
-        private var isAnimating = false
+        private var isAnimating = false {
+            didSet {
+                self.container.isAnimatingTransition = self.isAnimating
+            }
+        }
         private var pendingRegularLayoutAnimateIn = false
 
         override func didEnterHierarchy() {
