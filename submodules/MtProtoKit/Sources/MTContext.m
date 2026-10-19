@@ -397,6 +397,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     
     NSDictionary *transportSchemeDisposableByDatacenterId = _transportSchemeDisposableByDatacenterId;
     
+    id<MTDisposable> backupAddressListDisposable = _backupAddressListDisposable;
+    _backupAddressListDisposable = nil;
+    
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         for (NSNumber *nDatacenterId in discoverDatacenterAddressActions)
@@ -447,6 +450,8 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
             id<MTDisposable> disposable = transportSchemeDisposableByDatacenterId[nDatacenterId];
             [disposable dispose];
         }
+        
+        [backupAddressListDisposable dispose];
     }];
 }
 
