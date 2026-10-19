@@ -171,7 +171,6 @@ public struct Namespaces {
         public static let feed: Int8 = 60
         public static let shareThemeBackdrops: Int8 = 61
         public static let cachedUniqueStarGifts: Int8 = 62
-        public static let shareThemes: Int8 = 63
     }
     
     public struct UnorderedItemList {
