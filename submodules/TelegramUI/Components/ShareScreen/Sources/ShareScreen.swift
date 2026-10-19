@@ -442,8 +442,18 @@ public final class ShareScreen: ViewControllerComponentContainer {
         self.sender.present = { [weak self] controller in self?.present(controller, in: .window(.root)) }
         self.sender.premiumRequired = { [weak self] peer in self?.presentPremiumRequired(peer) }
         self.sender.navigationController = { [weak self] in self?.navigationController as? NavigationController }
+        self.sender.willEnqueue = { [weak self] ids in
+            guard let self else { return }
+            let environment: ShareControllerEnvironment = self.externalConfiguration?.environment ?? ShareControllerAppEnvironment(sharedContext: self.context.sharedContext)
+            environment.donateSendMessageIntent(account: ShareControllerAppAccountContext(context: self.context), peerIds: ids)
+        }
         self.sender.enqueued = { [weak self] ids, correlations in
             guard let self else { return }
+            let haptic = HapticFeedback()
+            let hapticDelay = ids.count == 1 && ids.first == self.context.account.peerId ? 0.88 : 0.44
+            Queue.mainQueue().after(hapticDelay) {
+                haptic.success()
+            }
             self.enqueued?(ids, correlations)
             self.close()
         }
@@ -523,6 +533,11 @@ public final class ShareScreen: ViewControllerComponentContainer {
         if case .done = status {
             self.uploadCompleted = true
             let completionDelay = (self.loadingNode as? ShareProlongedLoadingContainerNode)?.completionDuration ?? 0.9
+            let hapticDelay = self.loadingNode is ShareProlongedLoadingContainerNode ? max(0.0, completionDelay - 1.5) : completionDelay
+            let haptic = HapticFeedback()
+            Queue.mainQueue().after(hapticDelay) {
+                haptic.success()
+            }
             self.completionDisposable.set((Signal<Never, NoError>.complete() |> delay(completionDelay, queue: Queue.mainQueue())).start(completed: { [weak self] in
                 self?.actionCompleted?()
                 self?.close()

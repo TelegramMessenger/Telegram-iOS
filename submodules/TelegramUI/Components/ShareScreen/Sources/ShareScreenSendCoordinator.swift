@@ -24,6 +24,7 @@ final class ShareScreenSendCoordinator {
     var navigationController: (() -> NavigationController?)?
     var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
     var mediaStartTimestamp: Int32?
+    var willEnqueue: (([EnginePeer.Id]) -> Void)?
 
     init(context: AccountContext, subject: ShareScreen.Subject) {
         self.context = context
@@ -209,6 +210,7 @@ final class ShareScreenSendCoordinator {
     }
 
     private func enqueue(peers: [EnginePeer], topics: [EnginePeer.Id: Int64], caption: NSAttributedString, stars: [EnginePeer.Id: StarsAmount]) {
+        self.willEnqueue?(peers.map(\.id))
         if case let .fromExternal(_, send) = self.subject {
             self.externalStatusUpdated?(.preparing(false))
             var didComplete = false

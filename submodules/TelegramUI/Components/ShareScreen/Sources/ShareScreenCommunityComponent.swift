@@ -46,14 +46,11 @@ final class ShareScreenCommunityComponent: Component {
         }
 
         private let activity = UIActivityIndicatorView(style: .medium)
-        private let emptyLabel = UILabel()
+        private let emptyLabel = ComponentView<Empty>()
 
         override init(frame: CGRect) {
             super.init(frame: frame)
             self.addSubview(self.activity)
-            self.emptyLabel.font = Font.regular(17.0)
-            self.emptyLabel.textAlignment = .center
-            self.addSubview(self.emptyLabel)
         }
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -121,10 +118,7 @@ final class ShareScreenCommunityComponent: Component {
             self.activity.center = CGPoint(x: availableSize.width / 2.0, y: shareScreenActivityCenterY(contentBottom: 84.0, visibleBounds: self.visibleBounds, bottomInset: component.bottomInset))
             self.activity.color = environment.theme.list.itemSecondaryTextColor
             if model.communityLoading { self.activity.startAnimating() } else { self.activity.stopAnimating() }
-            self.emptyLabel.text = environment.strings.ChatList_Search_NoResults
-            self.emptyLabel.textColor = environment.theme.list.itemSecondaryTextColor
-            self.emptyLabel.frame = CGRect(x: 16.0, y: 104.0, width: availableSize.width - 32.0, height: 44.0)
-            self.emptyLabel.isHidden = model.communityLoading || !model.communityPeers.isEmpty
+            shareScreenUpdateText(self.emptyLabel, parent: self, string: environment.strings.ChatList_Search_NoResults, font: Font.regular(17.0), color: environment.theme.list.itemSecondaryTextColor, alignment: .center, frame: CGRect(x: 16.0, y: 104.0, width: availableSize.width - 32.0, height: 44.0), isHidden: model.communityLoading || !model.communityPeers.isEmpty)
             return CGSize(width: availableSize.width, height: max(availableSize.height, 84.0 + CGFloat((model.communityPeers.count + columns - 1) / columns) * rowHeight + component.bottomInset))
         }
     }

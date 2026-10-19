@@ -10,6 +10,10 @@ import CheckNode
 import AppBundle
 import EmojiStatusComponent
 import PeerListItemComponent
+import MultilineTextComponent
+
+private let shareScreenPeerTitleFont = Font.medium(11.0)
+private let shareScreenCommunityShadowImage = UIImage(bundleImageName: "Components/CommunityShadow")?.withRenderingMode(.alwaysTemplate)
 
 final class ShareScreenPeerComponent: Component {
     let context: AccountContext
@@ -50,7 +54,7 @@ final class ShareScreenPeerComponent: Component {
         private let bubbleRing = UIImageView()
         private var bubbleRingColor: UIColor?
         private let avatar = AvatarNode(font: avatarPlaceholderFont(size: 24.0))
-        private let title = UILabel()
+        private let title = ComponentView<Empty>()
         private let topicIcon = ComponentView<Empty>()
         private let chatAvatars = ComponentView<Empty>()
         private let communityShadow = UIImageView()
@@ -66,15 +70,11 @@ final class ShareScreenPeerComponent: Component {
             self.addSubview(self.ring)
             self.addSubview(self.communityShadow)
             self.addSubview(self.avatar.view)
-            self.addSubview(self.title)
             self.addSubview(self.online)
             self.addSubview(self.messagingBadge)
             self.avatar.view.isUserInteractionEnabled = false
             self.ring.isUserInteractionEnabled = false
             self.online.isUserInteractionEnabled = false
-            self.title.font = Font.medium(11.0)
-            self.title.numberOfLines = 2
-            self.title.textAlignment = .center
             self.isAccessibilityElement = true
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
@@ -94,8 +94,11 @@ final class ShareScreenPeerComponent: Component {
             let isMonoforum = component.peer?._asPeer().isMonoForum == true
             let isForum = !isMonoforum && (component.peer?._asPeer().isForumOrMonoForum == true || isCommunity)
             self.communityShadow.isHidden = !isCommunity
-            if isCommunity, let image = UIImage(bundleImageName: "Components/CommunityShadow") {
-                self.communityShadow.image = generateTintedImage(image: image, color: component.theme.chatList.titleColor.withAlphaComponent(0.9))
+            if isCommunity, let image = shareScreenCommunityShadowImage {
+                if self.communityShadow.image !== image {
+                    self.communityShadow.image = image
+                }
+                self.communityShadow.tintColor = component.theme.chatList.titleColor.withAlphaComponent(0.9)
                 let shadowSize = CGSize(width: floor(diameter * image.size.width / image.size.height * 0.84), height: floor(diameter * 0.97))
                 self.communityShadow.bounds = CGRect(origin: .zero, size: shadowSize)
                 self.communityShadow.center = CGPoint(x: frame.midX - 12.0 + UIScreenPixel, y: frame.midY)
@@ -161,7 +164,7 @@ final class ShareScreenPeerComponent: Component {
                 self.topicIcon.view?.removeFromSuperview()
             }
             if !component.communityChats.isEmpty {
-                let titleWidth = ceil((title as NSString).size(withAttributes: [.font: self.title.font!]).width)
+                let titleWidth = ceil((title as NSString).size(withAttributes: [.font: shareScreenPeerTitleFont]).width)
                 let avatarSpacing: CGFloat = component.communityChats.count > 1 ? min(10.0, max(4.0, (availableSize.width - titleWidth - 2.0 - 16.0) / CGFloat(component.communityChats.count - 1))) : 10.0
                 iconSize = self.chatAvatars.update(transition: transition, component: AnyComponent(MergedAvatarsComponent(
                     context: component.context, peers: component.communityChats,
@@ -175,17 +178,30 @@ final class ShareScreenPeerComponent: Component {
                 self.chatAvatars.view?.removeFromSuperview()
             }
             let hasIcon = topicData != nil || !component.communityChats.isEmpty
-            self.title.numberOfLines = hasIcon ? 1 : 2
-            self.title.lineBreakMode = .byTruncatingTail
-            self.title.text = title
-            self.title.textColor = component.selected ? component.theme.list.itemAccentColor : component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(component.requirement.requiresPremium ? 0.4 : 1.0)
+            let titleColor = component.selected ? component.theme.list.itemAccentColor : component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(component.requirement.requiresPremium ? 0.4 : 1.0)
             let iconWidth = hasIcon ? iconSize.width + 2.0 : 0.0
-            let titleSize = self.title.sizeThatFits(CGSize(width: max(0.0, availableSize.width - iconWidth), height: 30.0))
-            let titleWidth = min(availableSize.width - iconWidth, ceil(titleSize.width))
-            let left = floorToScreenPixels((availableSize.width - titleWidth - iconWidth) * 0.5)
-            self.title.frame = CGRect(x: left + iconWidth, y: frame.maxY + 4.0, width: titleWidth, height: min(30.0, ceil(titleSize.height)))
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: title, font: shareScreenPeerTitleFont, textColor: titleColor)),
+                    horizontalAlignment: .center,
+                    truncationType: .end,
+                    maximumNumberOfLines: hasIcon ? 1 : 2
+                )),
+                environment: {},
+                containerSize: CGSize(width: max(0.0, availableSize.width - iconWidth), height: 30.0)
+            )
+            let left = floorToScreenPixels((availableSize.width - titleSize.width - iconWidth) * 0.5)
+            let titleFrame = CGRect(x: left + iconWidth, y: frame.maxY + 4.0, width: titleSize.width, height: titleSize.height)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.insertSubview(titleView, aboveSubview: self.avatar.view)
+                }
+                titleView.frame = titleFrame
+            }
             if hasIcon, let view = component.communityChats.isEmpty ? self.topicIcon.view : self.chatAvatars.view {
-                view.frame = CGRect(x: left, y: self.title.frame.minY + floorToScreenPixels((self.title.font.lineHeight - iconSize.height) * 0.5), width: iconSize.width, height: iconSize.height)
+                view.frame = CGRect(x: left, y: titleFrame.minY + floorToScreenPixels((shareScreenPeerTitleFont.lineHeight - iconSize.height) * 0.5), width: iconSize.width, height: iconSize.height)
             }
             let check: CheckNode
             if let current = self.check { check = current } else {
