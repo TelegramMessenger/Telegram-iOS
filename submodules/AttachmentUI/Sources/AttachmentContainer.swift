@@ -80,6 +80,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
     
+    var isAnimatingTransition: Bool = false {
+        didSet {
+            self.updateCornerRadius()
+        }
+    }
+    
     private var panGestureRecognizer: UIPanGestureRecognizer?
     
     var isPanningUpdated: (Bool) -> Void = { _ in }
@@ -457,7 +463,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     bounds.origin.y = 0.0
                     self.bounds = bounds
                     if !minimizing {
-                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                            self?.updateCornerRadius()
+                        })
                     }
                 }
             case .cancelled:
@@ -470,7 +478,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let previousBounds = bounds
                 bounds.origin.y = 0.0
                 self.bounds = bounds
-                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                    self?.updateCornerRadius()
+                })
             default:
                 break
         }
@@ -503,13 +513,11 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         
-        let containerCornerRadius = max(24.0, layout.deviceMetrics.screenCornerRadius)
-        self.bottomClipNode.cornerRadius = containerCornerRadius - 2.0
-        
         self.isUpdatingState = true
         
         let isFirstTime = self.validLayout == nil
         self.validLayout = (layout, controllers, coveredByModalTransition)
+        self.updateCornerRadius()
                 
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
 
@@ -533,15 +541,16 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         } else {
             topInset = effectiveExpanded ? 0.0 : edgeTopInset
         }
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: { _ in
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: { [weak self] _ in
             completion()
+            self?.updateCornerRadius()
         })
         
         let modalProgress: CGFloat
         let scaleProgress: CGFloat
         if isLandscape {
             modalProgress = 0.0
-            scaleProgress = 1.0
+            scaleProgress = 0.0
         } else {
             if isFullSize, self.panGestureArguments != nil {
                 modalProgress = 1.0 - min(1.0, max(0.0, -1.0 * self.bounds.minY / defaultTopInset))
@@ -574,12 +583,6 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             self.clipNode.clipsToBounds = true
             if self.roundsTopCornersInRegularLayout, #available(iOS 11.0, *) {
                 self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            }
-            
-            if isLandscape {
-                self.clipNode.cornerRadius = 0.0
-            } else {
-                self.clipNode.cornerRadius = self.glass ? 38.0 : 10.0
             }
             
             if #available(iOS 11.0, *) {
@@ -667,6 +670,19 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         self.isUpdatingState = false
     }
         
+    func updateCornerRadius() {
+        guard let (layout, controllers, _) = self.validLayout else {
+            return
+        }
+        // A fullscreen sheet is a plain rect when not moving, so the compositor skips what it covers.
+        let isMoving = [self.layer, self.wrappingNode.layer].contains { $0.animation(forKey: "position") != nil || $0.animation(forKey: "bounds") != nil }
+        let isSquare = controllers.last?.isFullscreen == true && self.bounds.minY.isZero && self.wrappingNode.frame.minY.isZero && !self.isAnimatingTransition && !isMoving
+        self.bottomClipNode.cornerRadius = isSquare ? 0.0 : max(24.0, layout.deviceMetrics.screenCornerRadius) - 2.0
+        if case .compact = layout.metrics.widthClass {
+            self.clipNode.cornerRadius = isSquare || layout.orientation == .landscape ? 0.0 : (self.glass ? 38.0 : 10.0)
+        }
+    }
+    
     func dismiss(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) -> ContainedViewLayoutTransition {
         for controller in self.container.controllers {
             controller.viewWillDisappear(transition.isAnimated)
