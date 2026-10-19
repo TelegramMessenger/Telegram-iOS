@@ -946,7 +946,7 @@ private final class ShareScreenComponent: Component {
                 })),
                 rightItem: rightItem,
                 hasTopEdgeEffect: loadingNode == nil && nestedPeer != nil,
-                hasBottomEdgeEffect: loadingNode == nil && (!model.isSearching || !selected.isEmpty),
+                hasBottomEdgeEffect: loadingNode == nil && (!selected.isEmpty || (!model.isSearching && (copyTitle != nil || bottomAccessory != nil))),
                 bottomEdgeEffectColor: isEmbedded && selected.isEmpty && copyTitle == nil ? .clear : nil,
                 bottomItem: loadingNode == nil ? bottom : nil,
                 bottomEdgeEffectExtension: loadingNode == nil && !model.isSearching && hostScreen?.startAtTitle != nil ? 60.0 : 0.0,

@@ -273,6 +273,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     var resolvePeerByNameDisposable: MetaDisposable?
     let navigationActionDisposable = MetaDisposable()
     let enqueueMediaMessageDisposable = MetaDisposable()
+    private let openSavedMusicDisposable = MetaDisposable()
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     /// While an expansion has the profile's views they are held still: layouts wait, and the last one is applied when
@@ -2701,6 +2702,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.resolvePeerByNameDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
+        self.openSavedMusicDisposable.dispose()
         self.supportPeerDisposable.dispose()
         self.tipsPeerDisposable.dispose()
         self.shareStatusDisposable?.dispose()
@@ -2920,6 +2922,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if (previousBusinessLocation == nil) != (currentBusinessLocation != nil) {
                     infoUpdated = true
                 }
+                // The music strip arriving or leaving changes the header's height, and the page moves with it.
+                if self.hasProfileMusic(data: previousData) != self.hasProfileMusic(data: data) {
+                    infoUpdated = true
+                }
             }
             
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -3088,6 +3094,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func hasProfileMusic(data: PeerInfoScreenData?) -> Bool {
+        return self.headerNode.profileMusic(peer: data?.savedMessagesPeer ?? data?.peer, screenData: data) != nil
+    }
+
     var previousSavedMusicTimestamp: Double?
     private func displaySavedMusic() {
         guard let savedMusicContext = self.data?.savedMusicContext else {
@@ -3100,15 +3110,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         self.previousSavedMusicTimestamp = currentTimestamp
         
-        let _ = (self.context.sharedContext.mediaManager.globalMediaPlayerState
+        // Until the list answers, the strip shows the full user's track (`peerInfoProfileMusic`); the player plays the
+        // list, so it waits for it.
+        let answeredList = savedMusicContext.state
+        |> filter { state in
+            return !state.files.isEmpty || state.dataState != .loading
+        }
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] accountStateAndType in
+        self.openSavedMusicDisposable.set((combineLatest(answeredList, self.context.sharedContext.mediaManager.globalMediaPlayerState |> take(1))
+        |> deliverOnMainQueue).start(next: { [weak self] listState, accountStateAndType in
             guard let self else {
                 return
             }
             let peerId = self.peerId
             var initialId: Int32
-            if let initialFileId = self.data?.savedMusicState?.files.first?.fileId {
+            if let initialFileId = listState.files.first?.fileId {
                 initialId = Int32(clamping: initialFileId.id % Int64(Int32.max))
             } else {
                 initialId = 0
@@ -3139,7 +3155,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 musicController.navigationPresentation = .flatModal
                 self.controller?.push(musicController)
             }
-        })
+        }))
     }
     
     func openAutoremove(currentValue: Int32?) {
@@ -5568,7 +5584,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.contentOffsetWhenLent = nil
         if let held = self.layoutHeldDuringExpansion ?? self.validLayout.flatMap({ (layout: $0.0, navigationHeight: $0.1) }) {
             self.layoutHeldDuringExpansion = nil
-            self.containerLayoutUpdated(layout: held.layout, navigationHeight: held.navigationHeight, transition: .immediate)
+            // The music strip arrived or left while the views were lent (the header still has what it had when they were
+            // lent): it moves in as it does outside an expansion, instead of appearing in one frame.
+            let stripChanged = self.headerNode.hasBottomStrip != self.hasProfileMusic(data: self.data)
+            self.containerLayoutUpdated(layout: held.layout, navigationHeight: held.navigationHeight, transition: stripChanged ? .animated(duration: 0.3, curve: .spring) : .immediate)
         }
         let actions = self.actionsAfterExpansion
         self.actionsAfterExpansion = []
