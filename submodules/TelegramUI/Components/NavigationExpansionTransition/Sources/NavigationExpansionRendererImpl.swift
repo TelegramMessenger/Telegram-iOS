@@ -146,8 +146,8 @@ public final class NavigationExpansionRendererImpl: NavigationExpansionRenderer 
         self.underView = UIView()
         self.underView.isUserInteractionEnabled = false
         self.barExclusions = source.expansionBarExclusions
-        self.openSpring = destination.expansionOpenSpring ?? (destination.expansionPath == .photo ? NavigationTransitionSpring(duration: 0.6, bounce: 0.2) : NavigationTransitionSpring(duration: 0.55, bounce: 0.28))
-        self.closeSpring = destination.expansionCloseSpring ?? NavigationTransitionSpring(duration: 0.5, bounce: 0.22)
+        self.openSpring = destination.expansionOpenSpring ?? (destination.expansionPath == .photo ? NavigationTransitionSpring(duration: 0.48, bounce: 0.2) : NavigationTransitionSpring(duration: 0.44, bounce: 0.28))
+        self.closeSpring = destination.expansionCloseSpring ?? NavigationTransitionSpring(duration: 0.4, bounce: 0.22)
         self.cardMask.backgroundColor = UIColor.black.cgColor
         self.overlayMask.backgroundColor = UIColor.black.cgColor
         if #available(iOS 13.0, *) {
