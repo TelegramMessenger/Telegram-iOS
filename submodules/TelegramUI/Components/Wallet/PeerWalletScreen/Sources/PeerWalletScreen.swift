@@ -475,7 +475,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.applyProgress()
             self.alpha = 1.0
             self.isDismissing = false
-            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 1.05 : 0.65), completion: { [weak self] in
+            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 0.79 : 0.65), completion: { [weak self] in
                 self?.setNoticeVisible(true, duration: 0.2)
             })
         }
@@ -494,7 +494,7 @@ private final class PeerWalletOverlayComponent: Component {
                 self.usesFlight = true
                 self.isDismissing = self.progress >= 1.0
                 self.applyProgress()
-                self.animate(to: 0.0, duration: max(0.08, 0.4 * Double(self.progress)), completion: completion)
+                self.animate(to: 0.0, duration: max(0.06, 0.3 * Double(self.progress)), completion: completion)
             } else {
                 // Preserve the current pose if the source disappeared during the flight.
                 self.animator?.invalidate()
