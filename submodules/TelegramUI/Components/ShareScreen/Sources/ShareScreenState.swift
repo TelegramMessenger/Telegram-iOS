@@ -1,4 +1,5 @@
 import Foundation
+import QuartzCore
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -49,7 +50,11 @@ final class ShareScreenState {
     private(set) var createdGroup: EnginePeer?
     private(set) var foundPeers: [EnginePeer] = []
     var didPlayRepostAnimation = false
+    var firstLoadCompleted: (() -> Void)?
     var appearanceAnimationStart: Double?
+    var defersItemsUntilFirstLoad = false
+    private(set) var didCompleteFirstLoad = false
+    private let creationTimestamp = CACurrentMediaTime()
 
     var gridPeers: [EnginePeer] {
         guard !self.foundPeers.isEmpty else { return self.peers }
@@ -440,6 +445,9 @@ final class ShareScreenState {
         self.selection.toggle(peer, topicId: topic.id, topicData: topic.data, topicPeer: topic.data == nil ? topic.peer : nil)
         self.noteSelectedInSearch(peer)
         self.closeForum()
+        if self.isSearching && !self.query.isEmpty {
+            self.setSearching(false)
+        }
     }
 
     func selectCreatedGroup(_ peer: EnginePeer) {
@@ -571,7 +579,17 @@ final class ShareScreenState {
             }
             self.updateMessagingRequirements()
             self.isLoading = false
+            if !self.didCompleteFirstLoad {
+                self.didCompleteFirstLoad = true
+                if self.defersItemsUntilFirstLoad && CACurrentMediaTime() - self.creationTimestamp > 0.2 {
+                    self.appearanceAnimationStart = CACurrentMediaTime()
+                }
+            }
             self.changed()
+            if let firstLoadCompleted = self.firstLoadCompleted {
+                self.firstLoadCompleted = nil
+                firstLoadCompleted()
+            }
             let ids = self.peers.map(\.id)
             self.detailsDisposable.set((context.engine.data.subscribe(
                 EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),

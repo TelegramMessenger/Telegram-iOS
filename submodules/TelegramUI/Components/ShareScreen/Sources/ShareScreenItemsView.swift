@@ -152,9 +152,9 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
                 let _ = item.update(transition: itemTransition, component: AnyComponent(ShareScreenRestrictedRowComponent(content: AnyComponent(PeerListItemComponent(
                     context: model.context, theme: theme, strings: strings, style: .share, sideInset: 12.0,
                     title: peer.id == model.context.account.peerId ? strings.DialogList_SavedMessages : model.displayPeer(peer).displayTitle(strings: strings, displayOrder: model.context.sharedContext.currentPresentationData.with { $0.nameDisplayOrder }),
-                    peer: peer, avatarPeer: model.displayPeer(peer), subtitle: subtitle, subtitleAccessory: .none, presence: presence,
+                    peer: peer, avatarPeer: model.displayPeer(peer), avatarOverrideImage: peer.id == model.context.account.peerId ? .savedMessagesIcon : nil, subtitle: subtitle, subtitleAccessory: .none, presence: presence,
                     rightAccessory: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) ? .disclosure : .none,
-                    selectionState: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) ? .none : .editing(isSelected: model.selection.contains(peer.id), isTinted: false), selectionPosition: .right, isEnabled: !model.messagingRequirement(for: peer).requiresPremium, hasNext: index != peers.count - 1,
+                    selectionState: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) || !model.query.isEmpty ? .none : .editing(isSelected: model.selection.contains(peer.id), isTinted: false), selectionPosition: .right, isEnabled: !model.messagingRequirement(for: peer).requiresPremium, hasNext: index != peers.count - 1,
                     action: { [weak self] peer, _, _ in self?.component?.select(peer) }
                 )), theme: theme, requirement: model.messagingRequirement(for: peer))), environment: {}, containerSize: frame.size)
                 if let view = item.view {
@@ -171,8 +171,9 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
             self.recommendations.isHidden = true
             self.sectionTitle.view?.isHidden = true
             var leadingPeers: [(EnginePeer?, Bool)] = []
-            if component.story != nil { leadingPeers.append((nil, true)) }
-            if let peer = model.accountPeer { leadingPeers.append((peer, false)) }
+            let showsLeadingItems = !model.defersItemsUntilFirstLoad || model.didCompleteFirstLoad
+            if showsLeadingItems && component.story != nil { leadingPeers.append((nil, true)) }
+            if showsLeadingItems, let peer = model.accountPeer { leadingPeers.append((peer, false)) }
             let itemCount = leadingPeers.count + peers.count
             let visibleRange = shareScreenVisibleItems(min: visible.minY, max: visible.maxY, origin: y, stride: 100.0, count: itemCount, columns: columns)
             for index in visibleRange {
@@ -186,7 +187,7 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
         }
         self.activity.center = CGPoint(x: width * 0.5, y: shareScreenActivityCenterY(contentBottom: y, visibleBounds: visibleBounds, bottomInset: component.bottomInset))
         self.activity.color = theme.list.itemSecondaryTextColor
-        if isLoading && peers.isEmpty { self.activity.startAnimating() } else { self.activity.stopAnimating() }
+        if isLoading && peers.isEmpty && model.isSearching { self.activity.startAnimating() } else { self.activity.stopAnimating() }
         shareScreenUpdateText(self.emptyLabel, parent: self, string: strings.ChatList_Search_NoResults, font: Font.regular(17.0), color: theme.list.itemSecondaryTextColor, alignment: .center, maximumNumberOfLines: 0, frame: CGRect(x: 24.0, y: y + 24.0, width: width - 48.0, height: 60.0), isHidden: !peers.isEmpty || isLoading)
         self.contentHeight = y + 16.0 + component.bottomInset
         self.bounds.size = CGSize(width: width, height: max(y + 100.0, self.contentHeight))

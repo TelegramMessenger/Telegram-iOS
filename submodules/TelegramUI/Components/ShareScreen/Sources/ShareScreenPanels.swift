@@ -739,6 +739,10 @@ final class SearchInputPanelComponent: Component {
                 self.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
             }
 
+            if previousComponent?.isSearching == true && !component.isSearching && !(self.textField.text ?? "").isEmpty {
+                self.textField.text = ""
+            }
+
             let themeUpdated = component.theme !== previousComponent?.theme
 
             if themeUpdated {

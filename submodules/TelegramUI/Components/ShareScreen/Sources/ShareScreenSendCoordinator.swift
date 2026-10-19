@@ -25,6 +25,7 @@ final class ShareScreenSendCoordinator {
     var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
     var mediaStartTimestamp: Int32?
     var willEnqueue: (([EnginePeer.Id]) -> Void)?
+    var hidesSenderNames = false
 
     init(context: AccountContext, subject: ShareScreen.Subject) {
         self.context = context
@@ -240,6 +241,12 @@ final class ShareScreenSendCoordinator {
             var attributes: [EngineMessage.Attribute] = []
             if let amount = stars[peer.id] {
                 attributes.append(PaidStarsMessageAttribute(stars: amount, postponeSending: false))
+            }
+            if self.silently {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+            }
+            if self.hidesSenderNames {
+                attributes.append(ForwardOptionsMessageAttribute(hideNames: true, hideCaptions: false))
             }
             func textMessage(_ text: NSAttributedString, mediaReference: AnyMediaReference? = nil) -> EnqueueMessage {
                 let correlationId = Int64.random(in: Int64.min ... Int64.max)
