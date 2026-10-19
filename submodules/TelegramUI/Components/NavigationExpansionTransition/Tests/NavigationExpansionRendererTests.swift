@@ -22,6 +22,8 @@ private final class FakeSource: NavigationExpansionSourceProviding {
     var originView: UIView?
     /// False as in a forum, whose bar has its menu button where a chat has its avatar.
     var hasCompanion = true
+    /// False as in a channel whose title shows no status line (the profile's does).
+    var hasStatus = true
 
     init(screen: UIView) {
         self.titleView.layer.addSublayer(self.titleTintLayer)
@@ -42,10 +44,11 @@ private final class FakeSource: NavigationExpansionSourceProviding {
         self.lends += 1
         let g = makeExpansionGeometry()
         let measuredOrigin = self.originView.map { $0.convert($0.bounds, to: screenView) }
-        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: self.hasCompanion ? g.companion : nil, companionPhotoDiameter: 38.0, companionView: self.hasCompanion ? self.avatarView : nil, labels: [
-            NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring),
-            NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray))
-        ], press: .none)
+        var labels = [NavigationExpansionLabel(view: self.titleView, textCenter: CGPoint(x: 48.0, y: 10.0), textSize: CGSize(width: 96.0, height: 20.0), screenCenter: g.labels[0].sourceCenter, coloring: self.titleColoring)]
+        if self.hasStatus {
+            labels.append(NavigationExpansionLabel(view: self.statusView, textCenter: CGPoint(x: 40.0, y: 7.0), textSize: CGSize(width: 80.0, height: 14.0), screenCenter: g.labels[1].sourceCenter, coloring: .recolor(.gray)))
+        }
+        return NavigationExpansionSourceLoan(origin: measuredOrigin ?? self.origin ?? g.origin, originTint: .init(kind: .panel), isDark: false, companion: self.hasCompanion ? g.companion : nil, companionPhotoDiameter: 38.0, companionView: self.hasCompanion ? self.avatarView : nil, labels: labels, press: .none)
     }
 
     func returnExpansionSource() {
@@ -644,6 +647,28 @@ final class NavigationExpansionRendererTests: XCTestCase {
         }
         XCTAssertTrue(path.contains(CGPoint(x: 10.0, y: 10.0)), "a rounded square, not a circle")
         XCTAssertFalse(path.contains(CGPoint(x: 3.0, y: 3.0)), "still rounded")
+    }
+
+    // A status the chat's title does not show (a channel's), but the profile's does, comes from where it would stand under
+    // the chat's title, at the title's scale, and fades in as the labels cross. It had no place, so it was taken from the
+    // profile and shown only once the profile had it back.
+    func test_missingStatus_comesFromUnderTheTitle() {
+        let (renderer, _, _, _, _) = self.make(configureSource: { $0.hasStatus = false })
+        let g = makeExpansionGeometry()
+        XCTAssertEqual(renderer.destinationLabelHostsForTesting.count, 2, "the profile's status has a host")
+        renderer.update(time: 0.0, isOpening: true, pose: .none)
+        var hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertEqual(hosts[1].alpha, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(hosts[1].layer.position.x, g.labels[0].sourceCenter.x, accuracy: 1e-6)
+        XCTAssertGreaterThan(hosts[1].layer.position.y, g.labels[0].sourceCenter.y, "under the chat's title")
+        renderer.update(time: 0.5, isOpening: true, pose: .none)
+        hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertGreaterThan(hosts[1].layer.position.y, hosts[0].layer.position.y, "under the title as it crosses")
+        renderer.update(time: 1.0, isOpening: true, pose: .none)
+        hosts = renderer.destinationLabelHostsForTesting
+        XCTAssertEqual(hosts[1].alpha, 1.0, accuracy: 1e-6)
+        XCTAssertEqual(hosts[1].layer.position.x, g.labels[1].destinationCenter.x, accuracy: 0.1)
+        XCTAssertEqual(hosts[1].layer.position.y, g.labels[1].destinationCenter.y, accuracy: 0.1)
     }
 
     // The chat's avatar (live, animated avatars included) rides the flying circle above the profile's: at the open's
