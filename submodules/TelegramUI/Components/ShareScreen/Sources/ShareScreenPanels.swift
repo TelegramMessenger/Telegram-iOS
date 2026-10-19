@@ -138,7 +138,9 @@ final class BottomPanelComponent: Component {
         private let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
 
         private let actionButton = ComponentView<Empty>()
-        private let inlineBadge = UILabel()
+        private let inlineBadge = UIView()
+        private let inlineBadgeText = ComponentView<Empty>()
+        private var inlineBadgeValue = ""
         private var emojiInput: ShareScreenEmojiInputView?
         private var isEmoji = false
 
@@ -436,19 +438,32 @@ final class BottomPanelComponent: Component {
                     sendButtonView.addSubview(self.inlineBadge)
                 }
                 if let actionBadge = component.actionBadge {
-                    self.inlineBadge.text = "\(actionBadge)"
+                    self.inlineBadgeValue = "\(actionBadge)"
                 }
-                self.inlineBadge.font = Font.with(size: 11.0, weight: .semibold, traits: .monospacedNumbers)
-                self.inlineBadge.textAlignment = .center
-                self.inlineBadge.textColor = component.theme.list.itemCheckColors.foregroundColor
+                let badgeTextSize = self.inlineBadgeText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: self.inlineBadgeValue, font: Font.with(size: 11.0, weight: .semibold, traits: .monospacedNumbers), textColor: component.theme.list.itemCheckColors.foregroundColor)),
+                        horizontalAlignment: .center
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 18.0)
+                )
                 self.inlineBadge.backgroundColor = component.theme.list.itemCheckColors.fillColor
                 self.inlineBadge.layer.cornerRadius = 9.0
                 self.inlineBadge.clipsToBounds = true
                 self.inlineBadge.layer.borderWidth = 1.5
                 self.inlineBadge.layer.borderColor = component.theme.list.modalPlainBackgroundColor.cgColor
                 self.inlineBadge.isUserInteractionEnabled = false
-                let badgeWidth = max(18.0, ceil(self.inlineBadge.intrinsicContentSize.width) + 8.0)
+                let badgeWidth = max(18.0, badgeTextSize.width + 8.0)
                 self.inlineBadge.bounds = CGRect(origin: .zero, size: CGSize(width: badgeWidth, height: 18.0))
+                if let textView = self.inlineBadgeText.view {
+                    if textView.superview !== self.inlineBadge {
+                        textView.isUserInteractionEnabled = false
+                        self.inlineBadge.addSubview(textView)
+                    }
+                    textView.frame = CGRect(x: floorToScreenPixels((badgeWidth - badgeTextSize.width) * 0.5), y: floorToScreenPixels((18.0 - badgeTextSize.height) * 0.5), width: badgeTextSize.width, height: badgeTextSize.height)
+                }
                 self.inlineBadge.center = CGPoint(x: 1.0, y: 10.0)
                 let badgeTransition: ComponentTransition = previousInputIsVisible != nil && previousInputIsVisible != mainActionIsVisible ? .easeInOut(duration: 0.2) : transition
                 badgeTransition.setAlpha(view: self.inlineBadge, alpha: inlineBadgeIsVisible ? 1.0 : 0.0)
@@ -722,6 +737,10 @@ final class SearchInputPanelComponent: Component {
                 self.textField.returnKeyType = .search
                 self.textField.delegate = self
                 self.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
+            }
+
+            if previousComponent?.isSearching == true && !component.isSearching && !(self.textField.text ?? "").isEmpty {
+                self.textField.text = ""
             }
 
             let themeUpdated = component.theme !== previousComponent?.theme
@@ -1194,14 +1213,11 @@ final class ShareScreenCheckOptionComponent: Component {
 
     final class View: UIControl {
         private var checkNode: CheckNode?
-        private let titleLabel = UILabel()
+        private let titleLabel = ComponentView<Empty>()
         private var component: ShareScreenCheckOptionComponent?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.titleLabel.font = Font.regular(13.0)
-            self.titleLabel.isUserInteractionEnabled = false
-            self.addSubview(self.titleLabel)
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.isAccessibilityElement = true
             self.accessibilityTraits = .button
@@ -1233,13 +1249,25 @@ final class ShareScreenCheckOptionComponent: Component {
             }
             let checkSize: CGFloat = 18.0
             let spacing: CGFloat = 8.0
-            self.titleLabel.text = component.title
-            self.titleLabel.textColor = component.theme.list.itemSecondaryTextColor
-            let titleSize = self.titleLabel.sizeThatFits(CGSize(width: availableSize.width - checkSize - spacing, height: 100.0))
-            let size = CGSize(width: min(availableSize.width, checkSize + spacing + ceil(titleSize.width)), height: 36.0)
+            let titleSize = self.titleLabel.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.title, font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                    truncationType: .end
+                )),
+                environment: {},
+                containerSize: CGSize(width: max(0.0, availableSize.width - checkSize - spacing), height: 100.0)
+            )
+            let size = CGSize(width: min(availableSize.width, checkSize + spacing + titleSize.width), height: 36.0)
             checkNode.frame = CGRect(x: 0.0, y: floor((size.height - checkSize) * 0.5), width: checkSize, height: checkSize)
             checkNode.setSelected(component.isSelected, animated: previous != nil && !transition.animation.isImmediate)
-            self.titleLabel.frame = CGRect(x: checkSize + spacing, y: floor((size.height - titleSize.height) * 0.5), width: size.width - checkSize - spacing, height: ceil(titleSize.height))
+            if let titleView = self.titleLabel.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.addSubview(titleView)
+                }
+                titleView.frame = CGRect(x: checkSize + spacing, y: floor((size.height - titleSize.height) * 0.5), width: titleSize.width, height: titleSize.height)
+            }
             self.accessibilityLabel = component.title
             self.accessibilityValue = component.isSelected ? "1" : "0"
             return size

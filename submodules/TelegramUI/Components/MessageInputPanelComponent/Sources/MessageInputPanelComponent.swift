@@ -1241,6 +1241,7 @@ public final class MessageInputPanelComponent: Component {
             var mediaInsets = UIEdgeInsets(top: insets.top, left: textFieldSideInset, bottom: insets.bottom, right: 41.0)
             if case .gift = component.style {
                 mediaInsets.right = textFieldSideInset
+                insets.right = textFieldSideInset
             }
             if case .videoChat = component.style {
                 mediaInsets.right = 54.0
@@ -1336,7 +1337,7 @@ public final class MessageInputPanelComponent: Component {
                     fontSize: 17.0,
                     textColor: textColor,
                     accentColor: accentColor,
-                    insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: component.style == .gift && component.displayGiftSendButton ? 48.0 + giftSendButtonContainerSize.width + giftSendButtonRightInset + 4.0 : 48.0),
+                    insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: component.style == .gift ? (component.displayGiftSendButton ? 32.0 + giftSendButtonContainerSize.width + giftSendButtonRightInset + 4.0 : 32.0) : 48.0),
                     hideKeyboard: component.hideKeyboard,
                     customInputView: component.customInputView,
                     resetText: component.resetInputContents.flatMap { resetInputContents in
@@ -1889,6 +1890,8 @@ public final class MessageInputPanelComponent: Component {
                 if component.style == .gift && component.displayGiftSendButton {
                     let giftSendButtonCenterX = fieldBackgroundFrame.maxX - giftSendButtonRightInset - giftSendButtonContainerSize.width * 0.5
                     counterFrame.origin.x = floorToScreenPixels(giftSendButtonCenterX - counterSize.width * 0.5)
+                } else if component.style == .gift {
+                    counterFrame.origin.x = floorToScreenPixels(fieldBackgroundFrame.maxX - 20.0 - counterSize.width * 0.5)
                 } else if case .videoChat = component.style {
                     counterFrame.origin.x -= 7.0
                 }

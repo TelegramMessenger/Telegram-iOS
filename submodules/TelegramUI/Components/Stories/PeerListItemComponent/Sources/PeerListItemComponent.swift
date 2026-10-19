@@ -236,6 +236,7 @@ public final class PeerListItemComponent: Component {
     let avatar: Avatar?
     let avatarComponent: AnyComponent<Empty>?
     let avatarPeer: EnginePeer?
+    let avatarOverrideImage: AvatarNodeImageOverride?
     let peer: EnginePeer?
     let storyStats: EnginePeerStoryStats?
     let subtitle: Subtitle?
@@ -270,6 +271,7 @@ public final class PeerListItemComponent: Component {
         avatarComponent: AnyComponent<Empty>? = nil,
         peer: EnginePeer?,
         avatarPeer: EnginePeer? = nil,
+        avatarOverrideImage: AvatarNodeImageOverride? = nil,
         storyStats: EnginePeerStoryStats? = nil,
         subtitle: Subtitle?,
         subtitleComponent: AnyComponent<Empty>? = nil,
@@ -301,6 +303,7 @@ public final class PeerListItemComponent: Component {
         self.avatar = avatar
         self.avatarComponent = avatarComponent
         self.avatarPeer = avatarPeer
+        self.avatarOverrideImage = avatarOverrideImage
         self.peer = peer
         self.storyStats = storyStats
         self.subtitle = subtitle
@@ -353,6 +356,7 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.avatarPeer != rhs.avatarPeer { return false }
+        if lhs.avatarOverrideImage != rhs.avatarOverrideImage { return false }
         if lhs.peer != rhs.peer {
             return false
         }
@@ -949,7 +953,9 @@ public final class PeerListItemComponent: Component {
                     }
                     
                     let peer = component.avatarPeer ?? peer
-                    if peer.smallProfileImage != nil {
+                    if let overrideImage = component.avatarOverrideImage {
+                        avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, overrideImage: overrideImage, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                    } else if peer.smallProfileImage != nil {
                         avatarNode.setPeerV2(
                             context: component.context,
                             theme: component.theme,

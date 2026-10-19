@@ -398,12 +398,6 @@ final class ShareScreenContentComponent: Component {
             self.updatePinnedSearch(transition: .immediate)
             self.updateItems(transition: .immediate)
             self.isUpdating = false
-            if bounds.maxY > self.contentHeight - 300.0 {
-                Queue.mainQueue().justDispatch { [weak self] in
-                    guard let self, self.component?.model.forumPeer == nil, self.component?.model.communityPeer == nil else { return }
-                    self.component?.model.loadMore()
-                }
-            }
         }
 
         private func updatePinnedSearch(transition: ComponentTransition) {

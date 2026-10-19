@@ -24,6 +24,8 @@ final class ShareScreenSendCoordinator {
     var navigationController: (() -> NavigationController?)?
     var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
     var mediaStartTimestamp: Int32?
+    var willEnqueue: (([EnginePeer.Id]) -> Void)?
+    var hidesSenderNames = false
 
     init(context: AccountContext, subject: ShareScreen.Subject) {
         self.context = context
@@ -55,6 +57,17 @@ final class ShareScreenSendCoordinator {
             return 1 + (caption.length == 0 ? 0 : 1)
         case let .messages(messages):
             return messages.count + (caption.length == 0 ? 0 : 1)
+        }
+    }
+
+    var sendsForwards: Bool {
+        switch self.subject {
+        case .messages:
+            return true
+        case let .media(reference):
+            return Self.forwardSource(reference) != nil
+        default:
+            return false
         }
     }
 
@@ -209,6 +222,7 @@ final class ShareScreenSendCoordinator {
     }
 
     private func enqueue(peers: [EnginePeer], topics: [EnginePeer.Id: Int64], caption: NSAttributedString, stars: [EnginePeer.Id: StarsAmount]) {
+        self.willEnqueue?(peers.map(\.id))
         if case let .fromExternal(_, send) = self.subject {
             self.externalStatusUpdated?(.preparing(false))
             var didComplete = false
@@ -238,6 +252,12 @@ final class ShareScreenSendCoordinator {
             var attributes: [EngineMessage.Attribute] = []
             if let amount = stars[peer.id] {
                 attributes.append(PaidStarsMessageAttribute(stars: amount, postponeSending: false))
+            }
+            if self.silently {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+            }
+            if self.hidesSenderNames {
+                attributes.append(ForwardOptionsMessageAttribute(hideNames: true, hideCaptions: false))
             }
             func textMessage(_ text: NSAttributedString, mediaReference: AnyMediaReference? = nil) -> EnqueueMessage {
                 let correlationId = Int64.random(in: Int64.min ... Int64.max)

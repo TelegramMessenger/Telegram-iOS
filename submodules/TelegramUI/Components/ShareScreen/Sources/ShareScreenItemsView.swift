@@ -6,13 +6,14 @@ import AccountContext
 import TelegramPresentationData
 import ViewControllerComponent
 import PeerListItemComponent
+import MultilineTextComponent
 
 // Shared renderer for the main grid and independently retained folder pages.
 // Vertical scrolling and visible-item allocation remain owned by the sheet.
 final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
     let recommendations = UIScrollView()
-    private let sectionTitle = UILabel()
-    private let emptyLabel = UILabel()
+    private let sectionTitle = ComponentView<Empty>()
+    private let emptyLabel = ComponentView<Empty>()
     private let activity = UIActivityIndicatorView(style: .medium)
     var visibleItems: [String: ComponentView<Empty>] = [:]
     private(set) var contentHeight: CGFloat = 0.0
@@ -27,18 +28,12 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.addSubview(self.recommendations)
-        self.addSubview(self.sectionTitle)
-        self.addSubview(self.emptyLabel)
         self.addSubview(self.activity)
         self.recommendations.delegate = self
         self.recommendations.alwaysBounceHorizontal = true
         self.recommendations.disablesInteractiveTransitionGestureRecognizer = true
         self.recommendations.showsVerticalScrollIndicator = false
         self.recommendations.showsHorizontalScrollIndicator = false
-        self.sectionTitle.font = Font.semibold(17.0)
-        self.emptyLabel.font = Font.regular(17.0)
-        self.emptyLabel.textAlignment = .center
-        self.emptyLabel.numberOfLines = 0
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -119,7 +114,7 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
             y = 4.0
             let showsRecents = model.query.isEmpty && filterId == 0
             self.recommendations.isHidden = !showsRecents
-            self.sectionTitle.isHidden = !showsRecents
+            if !showsRecents { self.sectionTitle.view?.isHidden = true }
             if showsRecents {
                 self.recommendations.frame = CGRect(x: 0.0, y: y, width: width, height: 106.0)
                 let recommended = (model.recommendations.isEmpty ? Array(peers.prefix(8)) : model.recommendations).filter { $0.id != model.context.account.peerId }
@@ -134,9 +129,7 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
                     self.recommendations.contentSize = recommendationsContentSize
                 }
                 y += 104.0
-                self.sectionTitle.text = strings.ShareScreen_RecentChats
-                self.sectionTitle.textColor = theme.list.itemSecondaryTextColor
-                self.sectionTitle.frame = CGRect(x: 16.0, y: y, width: width - 32.0, height: 30.0)
+                shareScreenUpdateText(self.sectionTitle, parent: self, string: strings.ShareScreen_RecentChats, font: Font.semibold(17.0), color: theme.list.itemSecondaryTextColor, frame: CGRect(x: 16.0, y: y, width: width - 32.0, height: 30.0))
                 y += 30.0
             }
             let visibleRange = shareScreenVisibleItems(min: visible.minY, max: visible.maxY, origin: y, stride: 60.0, count: peers.count)
@@ -159,9 +152,9 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
                 let _ = item.update(transition: itemTransition, component: AnyComponent(ShareScreenRestrictedRowComponent(content: AnyComponent(PeerListItemComponent(
                     context: model.context, theme: theme, strings: strings, style: .share, sideInset: 12.0,
                     title: peer.id == model.context.account.peerId ? strings.DialogList_SavedMessages : model.displayPeer(peer).displayTitle(strings: strings, displayOrder: model.context.sharedContext.currentPresentationData.with { $0.nameDisplayOrder }),
-                    peer: peer, avatarPeer: model.displayPeer(peer), subtitle: subtitle, subtitleAccessory: .none, presence: presence,
+                    peer: peer, avatarPeer: model.displayPeer(peer), avatarOverrideImage: peer.id == model.context.account.peerId ? .savedMessagesIcon : nil, subtitle: subtitle, subtitleAccessory: .none, presence: presence,
                     rightAccessory: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) ? .disclosure : .none,
-                    selectionState: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) ? .none : .editing(isSelected: model.selection.contains(peer.id), isTinted: false), selectionPosition: .right, isEnabled: !model.messagingRequirement(for: peer).requiresPremium, hasNext: index != peers.count - 1,
+                    selectionState: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) || !model.query.isEmpty ? .none : .editing(isSelected: model.selection.contains(peer.id), isTinted: false), selectionPosition: .right, isEnabled: !model.messagingRequirement(for: peer).requiresPremium, hasNext: index != peers.count - 1,
                     action: { [weak self] peer, _, _ in self?.component?.select(peer) }
                 )), theme: theme, requirement: model.messagingRequirement(for: peer))), environment: {}, containerSize: frame.size)
                 if let view = item.view {
@@ -176,10 +169,11 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
             y += CGFloat(peers.count) * 60.0
         } else {
             self.recommendations.isHidden = true
-            self.sectionTitle.isHidden = true
+            self.sectionTitle.view?.isHidden = true
             var leadingPeers: [(EnginePeer?, Bool)] = []
-            if component.story != nil { leadingPeers.append((nil, true)) }
-            if let peer = model.accountPeer { leadingPeers.append((peer, false)) }
+            let showsLeadingItems = !model.defersItemsUntilFirstLoad || model.didCompleteFirstLoad
+            if showsLeadingItems && component.story != nil { leadingPeers.append((nil, true)) }
+            if showsLeadingItems, let peer = model.accountPeer { leadingPeers.append((peer, false)) }
             let itemCount = leadingPeers.count + peers.count
             let visibleRange = shareScreenVisibleItems(min: visible.minY, max: visible.maxY, origin: y, stride: 100.0, count: itemCount, columns: columns)
             for index in visibleRange {
@@ -193,11 +187,8 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
         }
         self.activity.center = CGPoint(x: width * 0.5, y: shareScreenActivityCenterY(contentBottom: y, visibleBounds: visibleBounds, bottomInset: component.bottomInset))
         self.activity.color = theme.list.itemSecondaryTextColor
-        if isLoading && peers.isEmpty { self.activity.startAnimating() } else { self.activity.stopAnimating() }
-        self.emptyLabel.isHidden = !peers.isEmpty || isLoading
-        self.emptyLabel.text = strings.ChatList_Search_NoResults
-        self.emptyLabel.textColor = theme.list.itemSecondaryTextColor
-        self.emptyLabel.frame = CGRect(x: 24.0, y: y + 24.0, width: width - 48.0, height: 60.0)
+        if isLoading && peers.isEmpty && model.isSearching { self.activity.startAnimating() } else { self.activity.stopAnimating() }
+        shareScreenUpdateText(self.emptyLabel, parent: self, string: strings.ChatList_Search_NoResults, font: Font.regular(17.0), color: theme.list.itemSecondaryTextColor, alignment: .center, maximumNumberOfLines: 0, frame: CGRect(x: 24.0, y: y + 24.0, width: width - 48.0, height: 60.0), isHidden: !peers.isEmpty || isLoading)
         self.contentHeight = y + 16.0 + component.bottomInset
         self.bounds.size = CGSize(width: width, height: max(y + 100.0, self.contentHeight))
 
@@ -205,4 +196,34 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
             self.visibleItems.removeValue(forKey: id)?.view?.removeFromSuperview()
         }
     }
+}
+
+func shareScreenUpdateText(_ text: ComponentView<Empty>, parent: UIView, string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment = .natural, maximumNumberOfLines: Int = 1, frame: CGRect, isHidden: Bool = false) {
+    let size = text.update(
+        transition: .immediate,
+        component: AnyComponent(MultilineTextComponent(
+            text: .plain(NSAttributedString(string: string, font: font, textColor: color)),
+            horizontalAlignment: alignment,
+            truncationType: .end,
+            maximumNumberOfLines: maximumNumberOfLines
+        )),
+        environment: {},
+        containerSize: frame.size
+    )
+    guard let view = text.view else { return }
+    if view.superview !== parent {
+        view.isUserInteractionEnabled = false
+        parent.addSubview(view)
+    }
+    view.isHidden = isHidden
+    let x: CGFloat
+    switch alignment {
+    case .center:
+        x = frame.minX + floorToScreenPixels((frame.width - size.width) * 0.5)
+    case .right:
+        x = frame.maxX - size.width
+    default:
+        x = frame.minX
+    }
+    view.frame = CGRect(x: x, y: frame.minY + floorToScreenPixels((frame.height - size.height) * 0.5), width: size.width, height: size.height)
 }

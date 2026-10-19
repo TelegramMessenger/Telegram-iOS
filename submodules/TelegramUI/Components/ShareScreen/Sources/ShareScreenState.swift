@@ -1,4 +1,5 @@
 import Foundation
+import QuartzCore
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -46,11 +47,14 @@ final class ShareScreenState {
     private(set) var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
     private(set) var participantCounts: [EnginePeer.Id: Int] = [:]
     private(set) var isLoading = true
-    private(set) var hasMore = false
     private(set) var createdGroup: EnginePeer?
     private(set) var foundPeers: [EnginePeer] = []
     var didPlayRepostAnimation = false
+    var firstLoadCompleted: (() -> Void)?
     var appearanceAnimationStart: Double?
+    var defersItemsUntilFirstLoad = false
+    private(set) var didCompleteFirstLoad = false
+    private let creationTimestamp = CACurrentMediaTime()
 
     var gridPeers: [EnginePeer] {
         guard !self.foundPeers.isEmpty else { return self.peers }
@@ -99,7 +103,7 @@ final class ShareScreenState {
             let displayPeers = peers.compactMapValues { $0 }
             if self.displayPeers != displayPeers {
                 self.displayPeers = displayPeers
-                self.changed()
+                self.scheduleChange()
             }
         }))
         let refreshIds = Set(peers.compactMap { peer -> EnginePeer.Id? in
@@ -123,7 +127,7 @@ final class ShareScreenState {
                     changed = true
                 }
             }
-            if changed { self.changed() }
+            if changed { self.scheduleChange() }
         }))
     }
 
@@ -149,72 +153,111 @@ final class ShareScreenState {
         self.folderCache.removeAll()
         guard self.isSearching else { return }
         if self.query.isEmpty {
-            for (id, peers) in self.emptyQueryPeers where id != self.filterId {
+            for (id, peers) in self.emptyQueryPeers {
                 self.folderCache[id] = FolderPage(peers: peers, isLoading: false)
             }
         }
+        self.loadFolderPages()
+    }
+
+    private func loadFolderPages() {
+        guard self.isSearching else { return }
         for id in [Int32(0)] + self.filters.map(\.id).filter({ $0 != 0 }) {
-            let disposable = MetaDisposable()
-            let detailsDisposable = MetaDisposable()
-            self.folderDisposables[id] = disposable
-            self.folderDetailsDisposables[id] = detailsDisposable
-            disposable.set((self.peersSignal(filterId: id, count: 100) |> deliverOnMainQueue).start(next: { [weak self] peers, _ in
-                guard let self else { return }
-                let peers = self.filteredPeers(peers, filterId: id)
-                self.folderCache[id] = FolderPage(peers: peers, isLoading: false)
-                if self.query.isEmpty {
-                    self.emptyQueryPeers[id] = peers
-                }
-                self.updateMessagingRequirements()
-                self.changed()
-                let ids = peers.map(\.id)
-                detailsDisposable.set((self.context.engine.data.subscribe(
-                    EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
-                    EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
-                ) |> deliverOnMainQueue).start(next: { [weak self] presences, counts in
-                    guard let self else { return }
-                    for id in ids {
-                        self.presences[id] = presences[id] ?? nil
-                        self.participantCounts[id] = counts[id] ?? nil
-                    }
-                    self.changed()
-                }))
-            }))
+            self.loadFolderPage(id)
         }
     }
 
-    private var count = 100
+    private func loadFolderPage(_ id: Int32) {
+        guard id != self.filterId, self.folderDisposables[id] == nil, self.folderCache[id] == nil else { return }
+        let disposable = MetaDisposable()
+        let detailsDisposable = MetaDisposable()
+        self.folderDisposables[id] = disposable
+        self.folderDetailsDisposables[id] = detailsDisposable
+        disposable.set((self.peersSignal(filterId: id) |> deliverOnMainQueue).start(next: { [weak self] peers, _ in
+            guard let self else { return }
+            let peers = self.filteredPeers(peers, filterId: id)
+            self.folderCache[id] = FolderPage(peers: peers, isLoading: false)
+            if self.query.isEmpty {
+                self.emptyQueryPeers[id] = peers
+            }
+            self.updateMessagingRequirements()
+            self.scheduleChange()
+            let ids = peers.map(\.id)
+            detailsDisposable.set((self.context.engine.data.subscribe(
+                EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
+                EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+            ) |> deliverOnMainQueue).start(next: { [weak self] presences, counts in
+                self?.applyDetails(ids: ids, presences: presences, counts: counts)
+            }))
+        }))
+    }
+
+    private func applyDetails(ids: [EnginePeer.Id], presences: [EnginePeer.Id: EnginePeer.Presence?], counts: [EnginePeer.Id: Int?]) {
+        var updated = false
+        for id in ids {
+            let presence = presences[id] ?? nil
+            if self.presences[id] != presence {
+                self.presences[id] = presence
+                updated = true
+            }
+            let count = counts[id] ?? nil
+            if self.participantCounts[id] != count {
+                self.participantCounts[id] = count
+                updated = true
+            }
+        }
+        if updated {
+            self.scheduleChange()
+        }
+    }
+
     private var generation = 0
     private let peersDisposable = MetaDisposable()
     private let detailsDisposable = MetaDisposable()
     private let filtersDisposable = MetaDisposable()
     private let recommendationsDisposable = MetaDisposable()
+    private let accountPeerDisposable = MetaDisposable()
+    private var searchDataStarted = false
 
     init(context: AccountContext) {
         self.context = context
+        self.accountPeerDisposable.set((context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { [weak self] accountPeer in
+            guard let self else { return }
+            if self.accountPeer != accountPeer {
+                self.accountPeer = accountPeer
+                self.scheduleChange()
+            }
+        }))
+        self.reload()
+    }
+
+    private func startSearchDataIfNeeded() {
+        guard !self.searchDataStarted else { return }
+        self.searchDataStarted = true
+        let context = self.context
         self.filtersDisposable.set((context.engine.peers.updatedChatListFilters()
         |> deliverOnMainQueue).start(next: { [weak self] filters in
             guard let self else { return }
             self.filters = filters
+            self.reloadFolderPages()
             if self.filterId != 0 && !filters.contains(where: { $0.id == self.filterId }) {
                 self.filterId = 0
+                self.reload()
+            } else {
+                self.scheduleChange()
             }
-            self.reloadFolderPages()
-            self.reload()
         }))
-        self.recommendationsDisposable.set((combineLatest(
-            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
-            context.engine.peers.recentPeers()
-        ) |> deliverOnMainQueue).start(next: { [weak self] accountPeer, recent in
+        self.recommendationsDisposable.set((context.engine.peers.recentPeers()
+        |> deliverOnMainQueue).start(next: { [weak self] recent in
             guard let self else { return }
-            self.accountPeer = accountPeer
             if case let .peers(peers) = recent {
                 self.recommendations = peers.map(EnginePeer.init).filter { canSendMessagesToPeer($0) && $0.id != context.account.peerId }
             } else {
                 self.recommendations = []
             }
             self.updateMessagingRequirements()
-            self.changed()
+            self.scheduleChange()
         }))
     }
 
@@ -225,10 +268,12 @@ final class ShareScreenState {
         self.displayPeersDisposable.dispose()
         self.communityDisposable.dispose()
         self.topicsDisposable.dispose()
+        self.pendingForumTimer.dispose()
         self.peersDisposable.dispose()
         self.detailsDisposable.dispose()
         self.filtersDisposable.dispose()
         self.recommendationsDisposable.dispose()
+        self.accountPeerDisposable.dispose()
     }
 
     private var communityChatIds: [EnginePeer.Id: Set<EnginePeer.Id>] = [:]
@@ -335,26 +380,60 @@ final class ShareScreenState {
     private let topicsDisposable = MetaDisposable()
     private var topicsCache: [EnginePeer.Id: [Topic]] = [:]
 
+    private var pendingForumPeer: EnginePeer?
+    private let pendingForumTimer = MetaDisposable()
+
     func openForum(_ peer: EnginePeer) {
+        guard self.forumPeer == nil, self.pendingForumPeer?.id != peer.id else { return }
+        if let cached = self.topicsCache[peer.id] {
+            self.presentForum(peer, topics: cached, isLoading: false)
+            self.subscribeTopics(peer)
+            return
+        }
+        self.pendingForumPeer = peer
+        self.subscribeTopics(peer)
+        self.pendingForumTimer.set((Signal<Never, NoError>.complete() |> delay(1.0, queue: Queue.mainQueue())).start(completed: { [weak self] in
+            guard let self, self.pendingForumPeer?.id == peer.id else { return }
+            self.pendingForumPeer = nil
+            self.presentForum(peer, topics: self.forumTopics, isLoading: self.topicsLoading)
+        }))
+    }
+
+    private func presentForum(_ peer: EnginePeer, topics: [Topic], isLoading: Bool) {
+        self.pendingForumTimer.set(nil)
         self.navigationWillChange?(peer.id, true)
         self.forumPeer = peer
+        self.forumTopics = topics
+        self.topicsLoading = isLoading
+        self.changed(animated: true)
+    }
+
+    private func subscribeTopics(_ peer: EnginePeer) {
         self.forumTopics = self.topicsCache[peer.id] ?? []
         self.topicsLoading = self.topicsCache[peer.id] == nil
-        self.changed(animated: true)
         self.topicsDisposable.set((self.context.engine.messages.peerThreads(peerId: peer.id, isMonoforum: peer.isMonoForum)
         |> deliverOnMainQueue).start(next: { [weak self] threads, isLoading in
-            guard let self, self.forumPeer?.id == peer.id else { return }
+            guard let self, self.forumPeer?.id == peer.id || self.pendingForumPeer?.id == peer.id else { return }
             self.forumTopics = threads.map { thread in
                 return Topic(id: thread.id, peer: thread.peer ?? peer, data: thread.data)
             }
             self.topicsLoading = isLoading
-            if !self.topicsLoading { self.topicsCache[peer.id] = self.forumTopics }
-            self.changed()
+            if !isLoading { self.topicsCache[peer.id] = self.forumTopics }
+            if self.pendingForumPeer?.id == peer.id {
+                if !isLoading {
+                    self.pendingForumPeer = nil
+                    self.presentForum(peer, topics: self.forumTopics, isLoading: false)
+                }
+            } else {
+                self.changed()
+            }
         }))
     }
 
     func closeForum() {
         if let peer = self.forumPeer { self.navigationWillChange?(peer.id, false) }
+        self.pendingForumPeer = nil
+        self.pendingForumTimer.set(nil)
         self.topicsDisposable.set(nil)
         self.forumPeer = nil
         self.forumTopics = []
@@ -366,6 +445,9 @@ final class ShareScreenState {
         self.selection.toggle(peer, topicId: topic.id, topicData: topic.data, topicPeer: topic.data == nil ? topic.peer : nil)
         self.noteSelectedInSearch(peer)
         self.closeForum()
+        if self.isSearching && !self.query.isEmpty {
+            self.setSearching(false)
+        }
     }
 
     func selectCreatedGroup(_ peer: EnginePeer) {
@@ -377,13 +459,24 @@ final class ShareScreenState {
         self.isSearching = false
         self.query = ""
         self.filterId = 0
-        self.count = 100
         self.peers.removeAll(where: { $0.id == peer.id })
         self.peers.insert(peer, at: 0)
         self.reload(keepPeers: true, animated: true)
     }
 
+    private var changeScheduled = false
+
+    func scheduleChange() {
+        guard !self.changeScheduled else { return }
+        self.changeScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.changeScheduled else { return }
+            self.changed()
+        }
+    }
+
     func changed(animated: Bool = false) {
+        self.changeScheduled = false
         self.revision += 1
         self.updated?(animated)
     }
@@ -392,7 +485,6 @@ final class ShareScreenState {
         guard self.query != query else { return }
         self.query = query
         self.reloadFolderPages()
-        self.count = 100
         if query.isEmpty, let peers = self.emptyQueryPeers[self.filterId] {
             self.peers = peers
             self.reload(keepPeers: true)
@@ -404,11 +496,13 @@ final class ShareScreenState {
     func setSearching(_ value: Bool) {
         guard self.isSearching != value else { return }
         self.isSearching = value
+        if value {
+            self.startSearchDataIfNeeded()
+        }
         self.reloadFolderPages()
         if !value && (!self.query.isEmpty || self.filterId != 0) {
             self.query = ""
             self.filterId = 0
-            self.count = 100
             self.reload(animated: true)
         } else {
             self.changed(animated: true)
@@ -418,18 +512,11 @@ final class ShareScreenState {
     func selectFilter(_ id: Int32) {
         guard self.filterId != id else { return }
         self.filterId = id
-        self.count = 100
         self.peers = self.folderCache[id]?.peers ?? []
         self.reload(keepPeers: true)
     }
 
-    func loadMore() {
-        guard self.hasMore && !self.isLoading && self.query.isEmpty else { return }
-        self.count += 100
-        self.reload(keepPeers: true)
-    }
-
-    private func peersSignal(filterId: Int32, count: Int) -> Signal<([EnginePeer], Bool), NoError> {
+    private func peersSignal(filterId: Int32) -> Signal<([EnginePeer], Bool), NoError> {
         let context = self.context
         let filterData: ChatListFilterData? = self.filters.compactMap { filter in
             if filter.id == filterId, case let .filter(_, _, _, data) = filter {
@@ -441,7 +528,7 @@ final class ShareScreenState {
         let query = self.query.trimmingCharacters(in: .whitespacesAndNewlines)
         let signal: Signal<([EnginePeer], Bool), NoError>
         if query.isEmpty {
-            signal = context.engine.messages.chatListPeers(group: .root, filterPredicate: predicate, count: count)
+            signal = context.engine.messages.chatListPeers(group: .root, filterPredicate: predicate, count: 150) |> take(1)
         } else {
             let remote: Signal<([FoundPeer], [FoundPeer]), NoError>
             if predicate == nil {
@@ -477,32 +564,39 @@ final class ShareScreenState {
         let generation = self.generation
         let context = self.context
         self.isLoading = true
-        self.hasMore = false
         if !keepPeers { self.peers = [] }
         self.changed(animated: animated)
-        let signal = self.peersSignal(filterId: self.filterId, count: self.count)
-        self.peersDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] peers, hasMore in
+        let signal = self.peersSignal(filterId: self.filterId)
+        self.peersDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] peers, _ in
             guard let self, self.generation == generation else { return }
             self.peers = self.filteredPeers(peers, filterId: self.filterId)
             self.folderCache[self.filterId] = FolderPage(peers: self.peers, isLoading: false)
+            DispatchQueue.main.async { [weak self] in
+                self?.startSearchDataIfNeeded()
+            }
             if self.query.isEmpty {
                 self.emptyQueryPeers[self.filterId] = self.peers
             }
             self.updateMessagingRequirements()
-            self.hasMore = hasMore
             self.isLoading = false
+            if !self.didCompleteFirstLoad {
+                self.didCompleteFirstLoad = true
+                if self.defersItemsUntilFirstLoad && CACurrentMediaTime() - self.creationTimestamp > 0.2 {
+                    self.appearanceAnimationStart = CACurrentMediaTime()
+                }
+            }
             self.changed()
+            if let firstLoadCompleted = self.firstLoadCompleted {
+                self.firstLoadCompleted = nil
+                firstLoadCompleted()
+            }
             let ids = self.peers.map(\.id)
             self.detailsDisposable.set((context.engine.data.subscribe(
                 EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
                 EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
             ) |> deliverOnMainQueue).start(next: { [weak self] presences, counts in
                 guard let self, self.generation == generation else { return }
-                for id in ids {
-                    self.presences[id] = presences[id] ?? nil
-                    self.participantCounts[id] = counts[id] ?? nil
-                }
-                self.changed()
+                self.applyDetails(ids: ids, presences: presences, counts: counts)
             }))
         }))
     }

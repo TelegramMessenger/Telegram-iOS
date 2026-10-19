@@ -7,6 +7,7 @@ import TelegramPresentationData
 import ViewControllerComponent
 import EmojiStatusComponent
 import PeerListItemComponent
+import MultilineTextComponent
 
 // The topic picker stays inside the share sheet, like ShareController's topics grid.
 final class ShareScreenTopicsComponent: Component {
@@ -27,14 +28,10 @@ final class ShareScreenTopicsComponent: Component {
 
     final class TopicButton: UIControl {
         let icon = ComponentView<Empty>()
-        let title = UILabel()
+        let title = ComponentView<Empty>()
         var action: (() -> Void)?
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.title.font = Font.regular(11.0)
-            self.title.textAlignment = .center
-            self.title.numberOfLines = 2
-            self.addSubview(self.title)
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.isAccessibilityElement = true
             self.accessibilityTraits = .button
@@ -61,15 +58,12 @@ final class ShareScreenTopicsComponent: Component {
         }
 
         private let activity = UIActivityIndicatorView(style: .medium)
-        private let emptyLabel = UILabel()
+        private let emptyLabel = ComponentView<Empty>()
         private var visibleItems: [Int64: TopicButton] = [:]
 
         override init(frame: CGRect) {
             super.init(frame: frame)
             self.addSubview(self.activity)
-            self.addSubview(self.emptyLabel)
-            self.emptyLabel.font = Font.regular(17.0)
-            self.emptyLabel.textAlignment = .center
         }
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -113,11 +107,27 @@ final class ShareScreenTopicsComponent: Component {
                         view.isUserInteractionEnabled = false
                         view.frame = CGRect(x: floorToScreenPixels((width - size.width) / 2.0), y: 7.0, width: size.width, height: size.height)
                     }
-                    button.title.text = topic.title
-                    button.title.textColor = environment.theme.list.itemPrimaryTextColor
-                    button.title.frame = CGRect(x: 2.0, y: 68.0, width: width - 4.0, height: 28.0)
+                    let titleSize = button.title.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: topic.title, font: Font.regular(11.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                            horizontalAlignment: .center,
+                            truncationType: .end,
+                            maximumNumberOfLines: 2
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: width - 4.0, height: 28.0)
+                    )
+                    if let titleView = button.title.view {
+                        if titleView.superview == nil {
+                            titleView.isUserInteractionEnabled = false
+                            button.addSubview(titleView)
+                        }
+                        titleView.isHidden = false
+                        titleView.frame = CGRect(x: floorToScreenPixels((width - titleSize.width) * 0.5), y: 68.0, width: titleSize.width, height: titleSize.height)
+                    }
                 } else {
-                    button.title.text = nil
+                    button.title.view?.isHidden = true
                     let _ = button.icon.update(transition: ComponentTransition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: synchronousLoad && isNew)), component: AnyComponent(ShareScreenPeerComponent(context: model.context, theme: environment.theme, peer: topic.peer, title: topic.title, isStory: false, selected: false, online: false, action: {})), environment: {}, containerSize: button.bounds.size)
                     if let view = button.icon.view {
                         if view.superview == nil { button.addSubview(view) }
@@ -132,10 +142,7 @@ final class ShareScreenTopicsComponent: Component {
             let height = 84.0 + CGFloat((model.forumTopics.count + columns - 1) / columns) * 100.0
             self.activity.center = CGPoint(x: availableSize.width / 2.0, y: shareScreenActivityCenterY(contentBottom: height, visibleBounds: self.visibleBounds, bottomInset: component.bottomInset))
             if model.topicsLoading { self.activity.startAnimating() } else { self.activity.stopAnimating() }
-            self.emptyLabel.text = environment.strings.ChatList_Search_NoResults
-            self.emptyLabel.textColor = environment.theme.list.itemSecondaryTextColor
-            self.emptyLabel.frame = CGRect(x: 16.0, y: 114.0, width: availableSize.width - 32.0, height: 44.0)
-            self.emptyLabel.isHidden = model.topicsLoading || !model.forumTopics.isEmpty
+            shareScreenUpdateText(self.emptyLabel, parent: self, string: environment.strings.ChatList_Search_NoResults, font: Font.regular(17.0), color: environment.theme.list.itemSecondaryTextColor, alignment: .center, frame: CGRect(x: 16.0, y: 114.0, width: availableSize.width - 32.0, height: 44.0), isHidden: model.topicsLoading || !model.forumTopics.isEmpty)
             return CGSize(width: availableSize.width, height: max(540.0, height + (model.forumTopics.isEmpty ? 100.0 : 0.0) + component.bottomInset))
         }
     }

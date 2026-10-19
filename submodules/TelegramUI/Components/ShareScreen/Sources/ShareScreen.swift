@@ -76,12 +76,18 @@ public final class ShareScreenHostController: ViewController {
         screen.navigationPresentation = .default
         self.navigation.setViewControllers([screen], animated: false)
         screen.host = self
+        self.hostReady.set(screen.contentReady.get()
+        |> filter { $0 }
+        |> take(1)
+        |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true)))
     }
 
     required public init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    private let hostReady = Promise<Bool>()
+
     override public var ready: Promise<Bool> {
-        return self.screen.ready
+        return self.hostReady
     }
 
     override public func loadDisplayNode() {
@@ -92,14 +98,26 @@ public final class ShareScreenHostController: ViewController {
         self.navigation.setIgnoreAppearanceMethodInvocations(false)
     }
 
+    private var currentLayout: ContainerViewLayout?
+    private var isAppearing = false
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        self.currentLayout = layout
+        guard self.isAppearing else { return }
         transition.updateFrame(view: self.navigation.view, frame: CGRect(origin: .zero, size: layout.size))
         self.navigation.containerLayoutUpdated(layout, transition: transition)
     }
 
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        if !self.isAppearing {
+            self.isAppearing = true
+            if let layout = self.currentLayout {
+                self.navigation.view.frame = CGRect(origin: .zero, size: layout.size)
+                self.navigation.containerLayoutUpdated(layout, transition: .immediate)
+            }
+        }
         self.navigation.viewWillAppear(animated)
     }
 
@@ -271,6 +289,8 @@ public final class ShareScreen: ViewControllerComponentContainer {
     private let forcedActionTitle: String?
     fileprivate private(set) var startAtTimestampEnabled = false
     private let peerDisposable = MetaDisposable()
+    private let showSenderNames = ValuePromise<Bool>(true)
+    fileprivate let contentReady = Promise<Bool>(false)
     public var shareStory: (() -> Void)? {
         didSet { self.refreshComponent() }
     }
@@ -323,7 +343,12 @@ public final class ShareScreen: ViewControllerComponentContainer {
         self.externalShareSubject = externalShareSubject
         self.shareAsLink = shareAsLink
         self.model = ShareScreenState(context: context)
+        self.model.defersItemsUntilFirstLoad = externalConfiguration != nil
         self.sender = ShareScreenSendCoordinator(context: context, subject: subject)
+        let contentReady = self.contentReady
+        self.model.firstLoadCompleted = {
+            contentReady.set(.single(true))
+        }
         self.caption = NSAttributedString(string: presetText ?? "")
         super.init(context: context, component: ShareScreenComponent(model: self.model, sender: self.sender, externalShare: externalShare, initialCaption: self.caption, hasStory: shareStory != nil, animateOut: self.animateOut), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceTheme.map { .custom($0) } ?? .default, updatedPresentationData: updatedPresentationData)
         self.navigationPresentation = .flatModal
@@ -442,8 +467,18 @@ public final class ShareScreen: ViewControllerComponentContainer {
         self.sender.present = { [weak self] controller in self?.present(controller, in: .window(.root)) }
         self.sender.premiumRequired = { [weak self] peer in self?.presentPremiumRequired(peer) }
         self.sender.navigationController = { [weak self] in self?.navigationController as? NavigationController }
+        self.sender.willEnqueue = { [weak self] ids in
+            guard let self else { return }
+            let environment: ShareControllerEnvironment = self.externalConfiguration?.environment ?? ShareControllerAppEnvironment(sharedContext: self.context.sharedContext)
+            environment.donateSendMessageIntent(account: ShareControllerAppAccountContext(context: self.context), peerIds: ids)
+        }
         self.sender.enqueued = { [weak self] ids, correlations in
             guard let self else { return }
+            let haptic = HapticFeedback()
+            let hapticDelay = ids.count == 1 && ids.first == self.context.account.peerId ? 0.88 : 0.44
+            Queue.mainQueue().after(hapticDelay) {
+                haptic.success()
+            }
             self.enqueued?(ids, correlations)
             self.close()
         }
@@ -468,6 +503,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
                 self.model.updated = nil
                 self.context = account.context
                 self.model = ShareScreenState(context: account.context)
+                self.model.defersItemsUntilFirstLoad = true
                 self.model.appearanceAnimationStart = CACurrentMediaTime()
                 self.sender = ShareScreenSendCoordinator(context: account.context, subject: self.subject)
                 self.configureSender()
@@ -480,24 +516,47 @@ public final class ShareScreen: ViewControllerComponentContainer {
     }
 
     fileprivate func presentSendOptions(source: UIView) {
-        guard self.externalConfiguration != nil, !self.sender.isSending, !self.model.selection.peers.isEmpty else { return }
+        guard !self.sender.isSending, !self.model.selection.peers.isEmpty else { return }
         let data = self.context.sharedContext.currentPresentationData.with { $0 }
-        func item(_ title: String, icon: String, silently: Bool) -> ContextMenuItem {
-            return .action(ContextMenuActionItem(text: title, icon: { theme in
-                generateTintedImage(image: UIImage(bundleImageName: icon), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, dismiss in
-                dismiss(.default)
-                guard let self else { return }
-                self.sender.send(peers: self.model.selection.peers, topics: self.model.selection.topics, caption: self.captureCaption?() ?? self.caption, silently: silently)
-            }))
+        let isExternal = self.externalConfiguration != nil
+        let showsSenderNameOptions = !isExternal && self.sender.sendsForwards
+        let canSendInHighQuality = self.canSendInHighQuality
+        let showNames = self.showSenderNames
+        let items: Signal<ContextController.Items, NoError> = showNames.get()
+        |> map { [weak self] showNamesValue -> ContextController.Items in
+            func sendItem(_ title: String, icon: String, silently: Bool) -> ContextMenuItem {
+                return .action(ContextMenuActionItem(text: title, icon: { theme in
+                    generateTintedImage(image: UIImage(bundleImageName: icon), color: theme.contextMenu.primaryColor)
+                }, action: { _, dismiss in
+                    dismiss(.default)
+                    guard let self else { return }
+                    self.sender.hidesSenderNames = showsSenderNameOptions && !showNamesValue
+                    self.sender.send(peers: self.model.selection.peers, topics: self.model.selection.topics, caption: self.captureCaption?() ?? self.caption, silently: silently)
+                }))
+            }
+            func checkItem(_ title: String, isChecked: Bool, value: Bool) -> ContextMenuItem {
+                return .action(ContextMenuActionItem(text: title, icon: { theme in
+                    isChecked ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
+                }, action: { _, _ in
+                    showNames.set(value)
+                }))
+            }
+            var items: [ContextMenuItem] = []
+            if showsSenderNameOptions {
+                items.append(checkItem(data.strings.Conversation_ForwardOptions_ShowSendersName, isChecked: showNamesValue, value: true))
+                items.append(checkItem(data.strings.Conversation_ForwardOptions_HideSendersName, isChecked: !showNamesValue, value: false))
+                items.append(.separator)
+            }
+            if isExternal && canSendInHighQuality {
+                items.append(sendItem(data.strings.Attachment_SendInHd, icon: "Chat/Context Menu/QualityHd", silently: true))
+            }
+            items.append(sendItem(data.strings.Conversation_SendMessage_SendSilently, icon: "Chat/Input/Menu/SilentIcon", silently: true))
+            items.append(sendItem(data.strings.Conversation_ForwardOptions_SendMessage, icon: "Chat/Context Menu/Resend", silently: false))
+            return ContextController.Items(content: .list(items))
         }
-        var items: [ContextMenuItem] = []
-        if self.canSendInHighQuality {
-            items.append(item(data.strings.Attachment_SendInHd, icon: "Chat/Context Menu/QualityHd", silently: true))
-        }
-        items.append(item(data.strings.Conversation_SendMessage_SendSilently, icon: "Chat/Input/Menu/SilentIcon", silently: true))
-        items.append(item(data.strings.Conversation_ForwardOptions_SendMessage, icon: "Chat/Context Menu/Resend", silently: false))
-        self.presentInGlobalOverlay(makeContextController(presentationData: data, source: .reference(ShareScreenAccountReferenceSource(sourceView: source, actionsPosition: .top)), items: .single(ContextController.Items(content: .list(items))), gesture: nil))
+        let controller = makeContextController(presentationData: data, source: .reference(ShareScreenAccountReferenceSource(sourceView: source, actionsPosition: .top)), items: items, gesture: nil)
+        controller.immediateItemsTransitionAnimation = true
+        self.presentInGlobalOverlay(controller)
     }
 
     private func updateExternalStatus(_ status: ShareControllerExternalStatus) {
@@ -523,6 +582,11 @@ public final class ShareScreen: ViewControllerComponentContainer {
         if case .done = status {
             self.uploadCompleted = true
             let completionDelay = (self.loadingNode as? ShareProlongedLoadingContainerNode)?.completionDuration ?? 0.9
+            let hapticDelay = self.loadingNode is ShareProlongedLoadingContainerNode ? max(0.0, completionDelay - 1.5) : completionDelay
+            let haptic = HapticFeedback()
+            Queue.mainQueue().after(hapticDelay) {
+                haptic.success()
+            }
             self.completionDisposable.set((Signal<Never, NoError>.complete() |> delay(completionDelay, queue: Queue.mainQueue())).start(completed: { [weak self] in
                 self?.actionCompleted?()
                 self?.close()
@@ -702,6 +766,13 @@ public final class ShareScreen: ViewControllerComponentContainer {
         } else if !self.model.selection.contains(peer.id), peer._asPeer().isForumOrMonoForum {
             self.view.endEditing(true)
             self.model.openForum(peer)
+        } else if self.model.isSearching && !self.model.query.isEmpty {
+            if !self.model.selection.contains(peer.id) {
+                self.model.selection.toggle(peer)
+            }
+            self.model.noteSelectedInSearch(peer)
+            self.view.endEditing(true)
+            self.model.setSearching(false)
         } else {
             self.model.selection.toggle(peer)
             self.model.noteSelectedInSearch(peer)
@@ -906,7 +977,7 @@ private final class ShareScreenComponent: Component {
             }, story: component.hasStory ? { (controller() as? ShareScreen)?.repost() } : nil, createGroup: { [weak self] in
                 (controller() as? ShareScreen)?.createGroup(caption: self?.panelState.caption() ?? NSAttributedString(string: ""))
             }, boundsUpdated: self.boundsUpdated, layoutApplied: self.layoutApplied)
-            let bottom: AnyComponent<Empty> = AnyComponent(BottomPanelComponent(context: model.context, theme: theme, strings: strings, actionTitle: copyTitle, actionBadge: selected.isEmpty ? nil : selected.count, panelState: self.panelState, showsActionButton: !model.isSearching, hiddenActionOffset: environment.inputHeight + environment.safeInsets.bottom + 100.0, inlineSendButton: model.isSearching, sheetSideInset: ResizableSheetComponent<EnvironmentType>.bottomItemSideInset(inputHeight: environment.inputHeight), metrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isSending: component.sender.isSending || (controller() as? ShareScreen)?.isSaving == true, showsProgress: (controller() as? ShareScreen)?.isSaving == true, present: { c in controller()?.present(c, in: .window(.root)) }, accessory: bottomAccessory, actionOptions: (controller() as? ShareScreen)?.externalConfiguration == nil ? nil : { source in (controller() as? ShareScreen)?.presentSendOptions(source: source) }, action: { [weak self] in
+            let bottom: AnyComponent<Empty> = AnyComponent(BottomPanelComponent(context: model.context, theme: theme, strings: strings, actionTitle: copyTitle, actionBadge: selected.isEmpty ? nil : selected.count, panelState: self.panelState, showsActionButton: !model.isSearching, hiddenActionOffset: environment.inputHeight + environment.safeInsets.bottom + 100.0, inlineSendButton: model.isSearching, sheetSideInset: ResizableSheetComponent<EnvironmentType>.bottomItemSideInset(inputHeight: environment.inputHeight), metrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isSending: component.sender.isSending || (controller() as? ShareScreen)?.isSaving == true, showsProgress: (controller() as? ShareScreen)?.isSaving == true, present: { c in controller()?.present(c, in: .window(.root)) }, accessory: bottomAccessory, actionOptions: { source in (controller() as? ShareScreen)?.presentSendOptions(source: source) }, action: { [weak self] in
                 (controller() as? ShareScreen)?.action(caption: self?.panelState.caption() ?? NSAttributedString(string: ""))
             }))
             let communityChanged = self.previousCommunityId != model.communityPeer?.id
