@@ -519,6 +519,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
         guard !self.sender.isSending, !self.model.selection.peers.isEmpty else { return }
         let data = self.context.sharedContext.currentPresentationData.with { $0 }
         let isExternal = self.externalConfiguration != nil
+        let showsSenderNameOptions = !isExternal && self.sender.sendsForwards
         let canSendInHighQuality = self.canSendInHighQuality
         let showNames = self.showSenderNames
         let items: Signal<ContextController.Items, NoError> = showNames.get()
@@ -529,7 +530,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
                 }, action: { _, dismiss in
                     dismiss(.default)
                     guard let self else { return }
-                    self.sender.hidesSenderNames = !isExternal && !showNamesValue
+                    self.sender.hidesSenderNames = showsSenderNameOptions && !showNamesValue
                     self.sender.send(peers: self.model.selection.peers, topics: self.model.selection.topics, caption: self.captureCaption?() ?? self.caption, silently: silently)
                 }))
             }
@@ -541,7 +542,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
                 }))
             }
             var items: [ContextMenuItem] = []
-            if !isExternal {
+            if showsSenderNameOptions {
                 items.append(checkItem(data.strings.Conversation_ForwardOptions_ShowSendersName, isChecked: showNamesValue, value: true))
                 items.append(checkItem(data.strings.Conversation_ForwardOptions_HideSendersName, isChecked: !showNamesValue, value: false))
                 items.append(.separator)

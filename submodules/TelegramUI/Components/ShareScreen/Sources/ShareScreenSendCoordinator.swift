@@ -60,6 +60,17 @@ final class ShareScreenSendCoordinator {
         }
     }
 
+    var sendsForwards: Bool {
+        switch self.subject {
+        case .messages:
+            return true
+        case let .media(reference):
+            return Self.forwardSource(reference) != nil
+        default:
+            return false
+        }
+    }
+
     private static func forwardSource(_ reference: AnyMediaReference) -> EngineMessage.Id? {
         if case let .message(message, _) = reference, let id = message.id,
            [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(id.peerId.namespace) {
