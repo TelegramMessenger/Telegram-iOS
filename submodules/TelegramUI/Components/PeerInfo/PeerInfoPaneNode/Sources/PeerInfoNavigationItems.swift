@@ -107,6 +107,8 @@ public final class PeerInfoNavigationItems {
         case .done, .selectionDone:
             item = UIBarButtonItem(title: "___done", style: .done, target: nil, action: nil)
             item.accessibilityLabel = resources.done
+            // iPhone Duo: in the row, where the Edit it replaces is (a text button, `peerInfoNavigationButtonIsIcon`).
+            item.staysInRow = true
         case .qrCode:
             item = self.imageItem(resources.qrCodeImage, label: resources.qrCodeLabel)
         case .postStory:

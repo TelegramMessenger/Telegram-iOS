@@ -134,22 +134,26 @@ extension NavigationBarComponent {
         /// A pill of its own even where UIKit's rule would put it with its neighbours (an icon beside icons): UIKit's
         /// `sharesBackground = false` (`navigationBarRightSections`).
         public let requiresOwnSection: Bool
+        /// iPhone Duo: stays in the row rather than moving into the side column (`navigationBarIsColumnItem`), for a
+        /// button that takes turns with a text button in the same place (Done after Edit).
+        public let staysInRow: Bool
         public let action: (UIView) -> Void
         public let contextAction: ((UIView, ContextGesture?) -> Void)?
 
-        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil) {
+        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, staysInRow: Bool = false, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil) {
             self.id = id
             self.content = content
             self.isEnabled = isEnabled
             self.tint = tint
             self.overflow = overflow
             self.requiresOwnSection = requiresOwnSection
+            self.staysInRow = staysInRow
             self.action = action
             self.contextAction = contextAction
         }
 
         public func withOverflow(_ overflow: OverflowInfo?) -> Button {
-            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, action: self.action, contextAction: self.contextAction)
+            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, staysInRow: self.staysInRow, action: self.action, contextAction: self.contextAction)
         }
 
         /// Actions are not compared: they are recreated on every update.
@@ -170,6 +174,9 @@ extension NavigationBarComponent {
                 return false
             }
             if lhs.requiresOwnSection != rhs.requiresOwnSection {
+                return false
+            }
+            if lhs.staysInRow != rhs.staysInRow {
                 return false
             }
             return true

@@ -374,9 +374,12 @@ public class InfoItemNode: ListViewItemNode {
                                 hasTopCorners = true
                                 strongSelf.topStripeNode.isHidden = hasCorners || !item.hasDecorations
                         }
-                    } else if case .blocks = item.style, case .glass = item.systemStyle {
+                    } else {
+                        // A standalone info item (the contact list's access notice) draws no separator above itself.
                         strongSelf.topStripeNode.isHidden = true
-                        hasTopCorners = true
+                        if case .blocks = item.style, case .glass = item.systemStyle {
+                            hasTopCorners = true
+                        }
                     }
                     let bottomStripeInset: CGFloat
                     if let neighbors = neighbors {

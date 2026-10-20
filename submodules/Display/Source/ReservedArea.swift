@@ -87,6 +87,17 @@ func iPhoneDuoReservedCorners(windowSize: CGSize, orientation: UIInterfaceOrient
     return .none
 }
 
+public extension DeviceMetrics {
+    /// iPhone Duo: whether a layout of `size` fills the unfolded inner screen (669x951, either orientation), a phone
+    /// screen as large as a small tablet's, rather than the cover screen. False on every other device.
+    func isIPhoneDuoInnerScreen(size: CGSize) -> Bool {
+        guard case .iPhoneDuo = self else {
+            return false
+        }
+        return matchesSize(portraitSize(size), CGSize(width: 669.0, height: 951.0))
+    }
+}
+
 /// The reserved corners for a full-screen layout built outside the window's own layout pass (a legacy host that hands
 /// a size and insets to a Display screen), from the same per-posture table the window uses: iPhone Duo's status
 /// corners for a window of `size` in `orientation`, `.none` on every other device.
@@ -354,6 +365,23 @@ public extension ContainerViewLayout {
     /// that stands in for the status bar, such as the window's scroll-to-top views, belongs across the top.
     var statusBarIsInCorner: Bool {
         return self.reservedCorners != .none
+    }
+
+    /// Whether a surface at `frame` (in this layout's coordinates) still covers part of a corner block, so that the
+    /// status bar in it (iPhone Duo) shows over that surface rather than over what lies beneath. A modal card dragged
+    /// down, or aside, stops covering the block only once it has left it entirely. False without corner blocks.
+    func coversStatusCorner(frame: CGRect) -> Bool {
+        let size = self.size
+        let blocks: [CGRect] = [
+            self.reservedCorners.topLeft.map { CGRect(origin: CGPoint(), size: $0) },
+            self.reservedCorners.topRight.map { CGRect(origin: CGPoint(x: size.width - $0.width, y: 0.0), size: $0) },
+            self.reservedCorners.bottomLeft.map { CGRect(origin: CGPoint(x: 0.0, y: size.height - $0.height), size: $0) },
+            self.reservedCorners.bottomRight.map { CGRect(origin: CGPoint(x: size.width - $0.width, y: size.height - $0.height), size: $0) }
+        ].compactMap { $0 }
+        return blocks.contains(where: { block in
+            let intersection = block.intersection(frame)
+            return !intersection.isNull && intersection.width > 0.0 && intersection.height > 0.0
+        })
     }
 }
 

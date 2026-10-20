@@ -70,6 +70,18 @@ final class NavigationBarRowLayoutTests: XCTestCase {
         XCTAssertEqual(placement.trailingCircleItem?.id, AnyHashable("compose"))
     }
 
+    // The Done of an Edit/Done toggle stays in the row, where the text Edit it replaces is, rather than taking the
+    // column's trailing circle; on the left (Calls) it stays the row's left button.
+    func test_column_staysInRowDone_staysInTheRow() {
+        let done = NavigationBarComponent.Button(id: "done", content: .icon(imageName: "Navigation/Done"), tint: .accent, staysInRow: true, action: { _ in })
+        let right = navigationBarButtonPlacement(leftButton: nil, rightButtons: [done], hasBack: true, columnLength: 400.0)
+        XCTAssertNil(right.trailingCircleItem)
+        XCTAssertEqual(self.sectionIds(right.rowRightSections), [["done"]])
+        let left = navigationBarButtonPlacement(leftButton: done, rightButtons: [], hasBack: false, columnLength: 400.0)
+        XCTAssertFalse(left.leftButtonInColumn)
+        XCTAssertEqual(left.rowLeftButton?.id, AnyHashable("done"))
+    }
+
     func test_noColumn_everyButtonStaysInTheRow() {
         let placement = navigationBarButtonPlacement(leftButton: self.button("left", .icon(imageName: "L")), rightButtons: [self.button("a", .icon(imageName: "A")), self.button("b", .text(title: "Edit", isBold: false))], hasBack: true, columnLength: nil)
         XCTAssertNil(placement.columnLayout)

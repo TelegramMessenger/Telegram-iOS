@@ -849,6 +849,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         let isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
+        // iPhone Duo: the topmost card whose frame covers the status bar's corner block.
+        var statusCornerModalContainer: NavigationModalContainer?
         
         for i in (0 ..< navigationLayout.modal.count).reversed() {
             let modalContainer = self.modalContainers[i]
@@ -966,6 +968,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 previousModalContainer = modalContainer
+                if statusCornerModalContainer == nil, !modalContainer.isFlat, let cardFrame = modalContainer.presentedCardFrame, layout.coversStatusCorner(frame: cardFrame) {
+                    statusCornerModalContainer = modalContainer
+                }
                 if isStandaloneModal {
                     switch modalContainer.container.statusBarStyle {
                     case .Hide:
@@ -1134,10 +1139,12 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        var rootStatusBarStyle: StatusBarStyle = .Ignore
         if let rootContainer = self.rootContainer {
             switch rootContainer {
             case let .flat(container):
                 statusBarStyle = container.statusBarStyle
+                rootStatusBarStyle = container.statusBarStyle
                 self.globalScrollToTopNode?.isHidden = false
             case .split:
                 self.globalScrollToTopNode?.isHidden = true
@@ -1281,6 +1288,22 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 ContainedViewLayoutTransition.immediate.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: 1.0, offset: CGPoint())
             }
+        }
+        
+        // iPhone Duo: the status bar is a block in a corner beside the side strip, so it shows over whatever covers that
+        // block. That is a modal's card while the card covers the block (not the dark frame the card path above assumes
+        // over a card), then the screens behind once an interactive dismiss has moved the card off the block.
+        if layout.statusBarIsInCorner && layout.topBarStatusIsland == nil && (visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero || statusCornerModalContainer != nil) {
+            if let statusCornerModalContainer {
+                let modalStatusBarStyle = statusCornerModalContainer.container.statusBarStyle
+                if case .Hide = modalStatusBarStyle {
+                    statusBarHidden = true
+                }
+                statusBarStyle = modalStatusBarStyle
+            } else {
+                statusBarStyle = rootStatusBarStyle
+            }
+            animateStatusBarStyleTransition = true
         }
         
         if let minimizedContainer = self.minimizedContainer {

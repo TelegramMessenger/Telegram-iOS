@@ -44,6 +44,7 @@ public class NotificationExceptionsController: ViewController {
         
         self.removeAllItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.removeAllPressed))
         self.editItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.editPressed))
+        self.editItem.staysInRow = true
         self.doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -99,6 +100,7 @@ public class NotificationExceptionsController: ViewController {
         
         let removeAllItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.removeAllPressed))
         let editItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.editPressed))
+        editItem.staysInRow = true
         let doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         if self.navigationItem.rightBarButtonItem === self.editItem {
             self.navigationItem.rightBarButtonItem = editItem
