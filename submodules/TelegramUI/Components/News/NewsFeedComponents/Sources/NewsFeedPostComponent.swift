@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreText
 import Display
 import ComponentFlow
 import SwiftSignalKit
@@ -103,7 +104,7 @@ public final class NewsFeedPostComponent: Component {
     public let fading: Bool
     /// When Undo brought the post back: a row created right after fades in and rises.
     public let appearTime: Double?
-    /// The row's swipe actions; nil for rows that do not swipe (search results).
+    /// The row's swipe actions; nil for rows that do not swipe (Added, search results).
     public let swipe: NewsPostSwipe?
     public let action: () -> Void
 
@@ -280,7 +281,17 @@ public final class NewsFeedPostComponent: Component {
             guard let textView = self.text.view as? MultilineTextWithEntitiesComponent.View, let layout = textView.textNode.cachedLayout else {
                 return []
             }
-            return layout.linesRects().map { textView.textNode.view.convert($0, to: self) }
+            // Each line's ascent and descent around the baseline it is drawn at. `linesRects()` starts each line at
+            // its baseline, most of a line lower.
+            let textNodeView = textView.textNode.view
+            var frames: [CGRect] = []
+            layout.enumerateRenderedLines(in: textNodeView.bounds) { line, baseline in
+                var ascent: CGFloat = 0.0
+                var descent: CGFloat = 0.0
+                let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, nil))
+                frames.append(textNodeView.convert(CGRect(x: baseline.x, y: baseline.y - ascent, width: width, height: ascent + descent), to: self))
+            }
+            return frames
         }
 
         @objc private func tapped() {

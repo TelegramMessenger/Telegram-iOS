@@ -6,8 +6,9 @@ import TelegramCore
 import NewsFeedSupport
 import NewsFeedComponents
 
-/// One tab's "Post hidden" flow (spec §2): local and in memory, nothing sent or stored. It runs the mockup's steps on
-/// main-queue timers; each step re-checks the state, so a step that no longer applies does nothing.
+/// One tab's "Post hidden" flow (spec §2): in memory, nothing stored. Not Interested dislikes the post on the server
+/// and its Undo likes it; the panel's choices only hide locally. It runs the mockup's steps on main-queue timers;
+/// each step re-checks the state, so a step that no longer applies does nothing.
 final class NewsPostFeedbackController {
     let tab: NewsPostFeedbackPanelComponent.Tab
     private(set) var state = NewsPostFeedbackState()
@@ -20,17 +21,23 @@ final class NewsPostFeedbackController {
     var currentPosts: (() -> [(post: AnyHashable, channel: EnginePeer.Id)])?
     /// The tab's rows on screen now: only those of a hidden channel's posts fade one by one.
     var visiblePosts: (() -> Set<AnyHashable>)?
+    /// Sends a like or dislike of a post's message.
+    var vote: ((NewsPostVote, EngineMessage.Id) -> Void)?
+    /// The message each panel's post was disliked by, for its Undo's like.
+    private var dislikedMessageIds: [AnyHashable: EngineMessage.Id] = [:]
     private let haptic = HapticFeedback()
 
     init(tab: NewsPostFeedbackPanelComponent.Tab) {
         self.tab = tab
     }
 
-    /// The post fades, then the panel takes its place.
-    func notInterested(post: AnyHashable) {
+    /// The post is disliked and fades, then the panel takes its place.
+    func notInterested(post: AnyHashable, messageId: EngineMessage.Id) {
         guard self.state.beginNotInterested(post) else {
             return
         }
+        self.dislikedMessageIds[post] = messageId
+        self.vote?(.dislike, messageId)
         self.haptic.impact(.light)
         self.updated?(false)
         Queue.mainQueue().after(NewsFeedbackTiming.fadeOut, { [weak self] in
@@ -44,10 +51,14 @@ final class NewsPostFeedbackController {
         })
     }
 
-    /// The panel fades, then the post comes back, even if another panel's choice hid its channel meanwhile.
+    /// The panel fades, then the post comes back, even if another panel's choice hid its channel meanwhile. The
+    /// dislike is taken back with a like.
     func undo(post: AnyHashable, channel: EnginePeer.Id) {
         guard self.state.beginUndo(post) else {
             return
+        }
+        if let messageId = self.dislikedMessageIds.removeValue(forKey: post) {
+            self.vote?(.like, messageId)
         }
         self.haptic.tap()
         self.updated?(false)
@@ -68,6 +79,8 @@ final class NewsPostFeedbackController {
         guard self.state.choose(post, channel: channel, choice: choice, others: others) else {
             return
         }
+        // The dislike stands: the panel can no longer be undone.
+        self.dislikedMessageIds.removeValue(forKey: post)
         self.haptic.success()
         self.updated?(false)
         for (index, other) in others.enumerated() {

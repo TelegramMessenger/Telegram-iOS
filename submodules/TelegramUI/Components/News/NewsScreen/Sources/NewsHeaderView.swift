@@ -23,9 +23,10 @@ private final class NewsHeaderRowContentView: UIView {
 
 /// The News header, one instance over both pages (Feed2 FeedScreen.swift:203-272). Back to front:
 /// - the search block, which scrolls with the active list (above everything while search is open);
-/// - the tab-switch shutter;
 /// - the soft scroll edge (blur and whitening, shown once content scrolls under the header);
 /// - the mockup's static header gradient;
+/// - page overlays, a page's content drawn above the edges (Added's New posts pill);
+/// - the tab-switch shutter, over the edges too: they only blend towards its colour, so it looks the same there;
 /// - the top row (the tabs island and "…"), which never moves.
 ///
 /// The view covers the screen and takes only its children's touches. In a navigation transition the top row is the
@@ -100,14 +101,14 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        self.shutterView.isUserInteractionEnabled = false
-        self.shutterView.alpha = 0.0
-        self.addSubview(self.shutterView)
         self.softEdgeView.isUserInteractionEnabled = false
         self.softEdgeView.alpha = 0.0
         self.addSubview(self.softEdgeView)
         self.gradientView.isUserInteractionEnabled = false
         self.addSubview(self.gradientView)
+        self.shutterView.isUserInteractionEnabled = false
+        self.shutterView.alpha = 0.0
+        self.addSubview(self.shutterView)
         self.addSubview(self.rowContentView)
         self.buttonsContainer.layer.anchorPoint = CGPoint()
         self.rowContentView.addSubview(self.buttonsContainer)
@@ -119,6 +120,12 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
 
     required init?(coder: NSCoder) {
         preconditionFailure()
+    }
+
+    /// Adds a page's content above the edges and under the tab-switch shutter, which whitens it with the lists. The
+    /// caller lays it out; it should take no touches of its own.
+    func addPageOverlay(_ view: UIView) {
+        self.insertSubview(view, belowSubview: self.shutterView)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -178,8 +185,9 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
                 self?.activateSearch?()
             })
             searchContentNode.view.layer.anchorPoint = CGPoint()
-            // Under the shutter, so a tab switch whitens it with the lists (the mockup's search is a list row).
-            self.insertSubview(searchContentNode.view, belowSubview: self.shutterView)
+            // Under the edges and the shutter, so a tab switch whitens it with the lists (the mockup's search is a
+            // list row).
+            self.insertSubview(searchContentNode.view, belowSubview: self.softEdgeView)
             self.searchContentNode = searchContentNode
         }
         self.searchTheme = theme
@@ -265,8 +273,8 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             if searchContentNode.view.superview === self, self.subviews.last !== searchContentNode.view {
                 self.bringSubviewToFront(searchContentNode.view)
             }
-        } else if let index = self.subviews.firstIndex(of: searchContentNode.view), let shutterIndex = self.subviews.firstIndex(of: self.shutterView), index > shutterIndex {
-            self.insertSubview(searchContentNode.view, belowSubview: self.shutterView)
+        } else if let index = self.subviews.firstIndex(of: searchContentNode.view), let softEdgeIndex = self.subviews.firstIndex(of: self.softEdgeView), index > softEdgeIndex {
+            self.insertSubview(searchContentNode.view, belowSubview: self.softEdgeView)
         }
 
         // Search takes the top row, as in the chat list: the row's content leaves upwards.
@@ -353,7 +361,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         self.isContentLifted = false
         self.transitionContentFrameUpdated = nil
         self.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
-        self.insertSubview(self.rowContentView, aboveSubview: self.gradientView)
+        self.insertSubview(self.rowContentView, aboveSubview: self.shutterView)
         self.rowContentView.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         // An open search field stays above the row, as `update` puts it.
         if let params = self.params, params.isSearchActive, let searchContentNode = self.searchContentNode, searchContentNode.view.superview === self {

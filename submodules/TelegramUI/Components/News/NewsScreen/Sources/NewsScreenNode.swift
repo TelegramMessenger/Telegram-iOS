@@ -19,6 +19,15 @@ import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
 
+/// A page's layer above the header's edges: it takes no touch of its own, so the touches it does not give a child
+/// reach the header and the list beneath.
+private final class NewsPageOverlayView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result === self ? nil : result
+    }
+}
+
 final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private weak var controller: NewsScreen?
@@ -27,7 +36,11 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     let headerView = NewsHeaderView()
     private let listsContainerNode = ASDisplayNode()
     private let forYouList = NewsFeedListView()
-    private let addedList = NewsFeedListView()
+    /// Replaced by a jump to the newest posts, which slides a new list in over the old one's way out.
+    private var addedList = NewsFeedListView()
+    /// The Added page's layer above the header's edges, laid out as the page is: the pill is pinned under the header
+    /// and never overlaps it, so it is drawn over the edge effect rather than through it.
+    private let addedOverlayView = NewsPageOverlayView()
     private let pill = ComponentView<Empty>()
     private let edgeEffectView = EdgeEffectView()
 
@@ -39,6 +52,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var forYouHasPosts = false
     private var addedHasPosts = false
     private var pendingAddedReposition = false
+    /// The jump to the newest posts the Added list last showed.
+    private var appliedAddedJump: NewsAddedFeedBinding.Jump?
     /// The user dragged the Added list since it was last positioned: a late window replacement must not
     /// pull the list away from what they are reading.
     private var addedUserScrolledSinceReposition = false
@@ -54,9 +69,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
-    /// Each tab's "Post hidden" flow, for the screen's lifetime (spec §2).
+    /// For you's "Post hidden" flow, for the screen's lifetime (spec §2). Added has none: its rows do not swipe.
     private let forYouFeedback = NewsPostFeedbackController(tab: .forYou)
-    private let addedFeedback = NewsPostFeedbackController(tab: .added)
+    /// Likes and dislikes, sent one at a time in the order they were cast.
+    private var voteQueue = NewsPostVoteQueue()
     private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsSkeletonModelRow)?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
@@ -84,8 +100,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.listsContainerNode.view.addSubview(self.forYouList)
         self.listsContainerNode.view.addSubview(self.addedList)
         self.addedList.isHidden = true
+        self.addedOverlayView.isHidden = true
         self.view.addSubview(self.edgeEffectView)
         self.view.addSubview(self.headerView)
+        self.headerView.addPageOverlay(self.addedOverlayView)
         self.headerView.activateSearch = { [weak self] in
             self?.requestActivateSearch?()
         }
@@ -97,63 +115,14 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
 
         self.forYouList.reduceMotion = self.presentationData.reduceMotion
-        self.addedList.reduceMotion = self.presentationData.reduceMotion
 
         self.forYouList.onEdgeReached = { [weak self] edge in
             if edge == .bottom {
                 self?.forYou.feed.loadMore()
             }
         }
-        self.addedList.onEdgeReached = { [weak self] edge in
-            switch edge {
-            case .top:
-                self?.added.feed.loadNewer()
-            case .bottom:
-                self?.added.feed.loadOlder()
-            }
-        }
-        for list in [self.forYouList, self.addedList] {
-            list.onScrollOffsetChanged = { [weak self, weak list] offset, transition in
-                guard let self, let list else {
-                    return
-                }
-                self.refreshController.listMoved()
-                if self.pagerFraction != 0.0 {
-                    // Mid-swipe the header blends both lists, so either one moving changes it.
-                    self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: false), transition: .immediate)
-                    return
-                }
-                guard self.activeList === list else {
-                    return
-                }
-                // Scroll to top and the snap below scroll programmatically: the header unfolds with them.
-                self.updateNavigationScrolling(offset: offset, transition: ComponentTransition(transition))
-            }
-            list.onScrollingEnded = { [weak self, weak list] in
-                guard let self, let list, self.activeList === list, self.pagerFraction == 0.0 else {
-                    return
-                }
-                self.snapNavigationBar()
-            }
-        }
-        self.addedList.onVisibleRowsChanged = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.trackAddedReading()
-            self.updatePill(transition: .immediate)
-        }
-
-        self.addedList.onProgrammaticScroll = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.trackAddedReading(settled: true)
-            self.updatePill(transition: .immediate, settled: true)
-        }
-        self.addedList.onWillBeginDragging = { [weak self] in
-            self?.addedUserScrolledSinceReposition = true
-        }
+        self.bindScrolling(of: self.forYouList)
+        self.bindAddedList(self.addedList)
 
         self.refreshController.selectedPage = { [weak self] in
             return self?.selectedSegment ?? 0
@@ -189,7 +158,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
         self.forYou.updated = { [weak self] in
             self?.updateForYouList(transition: .immediate)
-            self?.searchContentNode?.corpusUpdated()
         }
         self.added.updated = { [weak self] windowReplaced in
             guard let self else {
@@ -199,7 +167,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.pendingAddedReposition = true
             }
             self.updateAddedList(transition: .immediate)
-            self.searchContentNode?.corpusUpdated()
         }
         // Rows going in or out ride `NewsSpring.rows` and play their own appears, so the list adds no fade of its own.
         self.forYouFeedback.updated = { [weak self] rowsChanged in
@@ -211,14 +178,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.forYouFeedback.visiblePosts = { [weak self] in
             return self?.forYouList.visibleItemIdentities ?? []
         }
-        self.addedFeedback.updated = { [weak self] rowsChanged in
-            self?.updateAddedList(transition: rowsChanged ? NewsFeedListView.feedbackRowsTransition : .immediate, animatesInsertions: !rowsChanged)
-        }
-        self.addedFeedback.currentPosts = { [weak self] in
-            return self?.added.feedbackPosts ?? []
-        }
-        self.addedFeedback.visiblePosts = { [weak self] in
-            return self?.addedList.visibleItemIdentities ?? []
+        self.forYouFeedback.vote = { [weak self] vote, messageId in
+            self?.castVote(vote, messageId: messageId)
         }
 
         self.foregroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
@@ -285,6 +246,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self.isPagerDragging = true
             self.forYouList.isHidden = false
             self.addedList.isHidden = false
+            self.addedOverlayView.isHidden = false
         case .changed:
             var fraction = recognizer.translation(in: self.view).x / width
             if self.selectedSegment == 0 {
@@ -340,8 +302,22 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.refreshController.isScreenVisible = false
     }
 
+    /// The tab bar's scroll to top, and a tap on the selected tab.
     func scrollToTop() {
-        self.activeList.scrollToTop()
+        if self.selectedSegment == 1 {
+            self.goToTopOfAdded()
+        } else {
+            self.activeList.scrollToTop()
+        }
+    }
+
+    /// Added's way to its top is the New posts pill's: a scroll when the newest post is loaded, otherwise a jump to
+    /// the newest page.
+    private func goToTopOfAdded() {
+        if self.added.jump != nil || self.added.beginJump() {
+            return
+        }
+        self.addedList.scrollToTop()
     }
 
     func markAllAsRead() {
@@ -366,7 +342,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard index != displayed else {
             if self.tappedSegment == nil {
                 // As tapping the current Peer Info tab does.
-                self.activeList.scrollToTop()
+                self.scrollToTop()
             }
             return
         }
@@ -424,23 +400,26 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         let isPaging = self.isPagerDragging || self.pagerFraction != 0.0
-        for (index, list) in [self.forYouList, self.addedList].enumerated() {
+        let pages: [[UIView]] = [[self.forYouList], [self.addedList, self.addedOverlayView]]
+        for (index, views) in pages.enumerated() {
             let frame = CGRect(origin: CGPoint(x: (CGFloat(index - self.selectedSegment) + self.pagerFraction) * layout.size.width, y: 0.0), size: layout.size)
-            if list.bounds.size != frame.size {
-                // Only the position animates.
-                list.frame = CGRect(origin: list.frame.origin, size: frame.size)
-            }
-            if index == self.selectedSegment || isPaging {
-                list.isHidden = false
-            }
-            transition.updateFrame(view: list, frame: frame, completion: { [weak self, weak list] _ in
-                guard let self, let list else {
-                    return
+            for view in views {
+                if view.bounds.size != frame.size {
+                    // Only the position animates.
+                    view.frame = CGRect(origin: view.frame.origin, size: frame.size)
                 }
-                if index != self.selectedSegment && !self.isPagerDragging && self.pagerFraction == 0.0 {
-                    list.isHidden = true
+                if index == self.selectedSegment || isPaging {
+                    view.isHidden = false
                 }
-            })
+                transition.updateFrame(view: view, frame: frame, completion: { [weak self, weak view] _ in
+                    guard let self, let view else {
+                        return
+                    }
+                    if index != self.selectedSegment && !self.isPagerDragging && self.pagerFraction == 0.0 {
+                        view.isHidden = true
+                    }
+                })
+            }
         }
     }
 
@@ -472,15 +451,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func itemEnvironment(list: NewsFeedListView) -> NewsFeedItemEnvironment {
-        // The feeds' rows swipe and have the "Post hidden" flow; search results do neither (spec §1, §3).
-        let feedbackController: NewsPostFeedbackController?
-        if list === self.forYouList {
-            feedbackController = self.forYouFeedback
-        } else if list === self.addedList {
-            feedbackController = self.addedFeedback
-        } else {
-            feedbackController = nil
-        }
+        // For you's rows swipe and have the "Post hidden" flow; Added's rows and search results do neither.
+        let feedbackController: NewsPostFeedbackController? = list === self.forYouList ? self.forYouFeedback : nil
         var postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
         var feedback: NewsFeedItemFeedback?
         if let feedbackController {
@@ -504,22 +476,101 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }, postSwipe: postSwipe, feedback: feedback)
     }
 
-    /// A post row's swipe action (spec §3). Not Interested starts the tab's local "Post hidden" flow; Interesting has
-    /// nothing to do yet. Neither reaches the server: there is no API. Its requests, for `peer` and `messageId`, go
-    /// here once it exists.
+    /// A post row's swipe action (spec §3). Interesting likes the post; Not Interested starts the tab's "Post hidden"
+    /// flow, which dislikes it.
     private func postSwipeAction(_ action: NewsPostSwipeAction, peer: EnginePeer, messageId: EngineMessage.Id, post: AnyHashable, feedback: NewsPostFeedbackController?) {
         switch action {
         case .notInterested:
-            feedback?.notInterested(post: post)
+            feedback?.notInterested(post: post, messageId: messageId)
         case .interesting:
-            break
+            self.castVote(.like, messageId: messageId)
         }
     }
 
-    /// Closes an open swipe in either feed (spec §5).
+    private func castVote(_ vote: NewsPostVote, messageId: EngineMessage.Id) {
+        if let request = self.voteQueue.cast(vote, messageId: messageId) {
+            self.sendVote(request)
+        }
+    }
+
+    private func sendVote(_ request: NewsPostVoteRequest) {
+        let feed = self.context.engine.feed
+        let signal: Signal<Never, NoError>
+        switch request.vote {
+        case .like:
+            signal = feed.likePost(id: request.messageId)
+        case .dislike:
+            signal = feed.dislikePost(id: request.messageId)
+        }
+        // Not tied to the screen: a vote that was cast goes out.
+        let _ = (signal
+        |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let self, let next = self.voteQueue.finished() else {
+                return
+            }
+            self.sendVote(next)
+        })
+    }
+
+    /// The header follows the selected list's scrolling.
+    private func bindScrolling(of list: NewsFeedListView) {
+        list.onScrollOffsetChanged = { [weak self, weak list] offset, transition in
+            guard let self, let list else {
+                return
+            }
+            self.refreshController.listMoved()
+            if self.pagerFraction != 0.0 {
+                // Mid-swipe the header blends both lists, so either one moving changes it.
+                self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: false), transition: .immediate)
+                return
+            }
+            guard self.activeList === list else {
+                return
+            }
+            // Scroll to top and the snap below scroll programmatically: the header unfolds with them.
+            self.updateNavigationScrolling(offset: offset, transition: ComponentTransition(transition))
+        }
+        list.onScrollingEnded = { [weak self, weak list] in
+            guard let self, let list, self.activeList === list, self.pagerFraction == 0.0 else {
+                return
+            }
+            self.snapNavigationBar()
+        }
+    }
+
+    private func bindAddedList(_ list: NewsFeedListView) {
+        list.reduceMotion = self.presentationData.reduceMotion
+        list.onEdgeReached = { [weak self] edge in
+            switch edge {
+            case .top:
+                self?.added.feed.loadNewer()
+            case .bottom:
+                self?.added.feed.loadOlder()
+            }
+        }
+        self.bindScrolling(of: list)
+        list.onVisibleRowsChanged = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.trackAddedReading()
+            self.updatePill(transition: .immediate)
+        }
+        list.onProgrammaticScroll = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.trackAddedReading(settled: true)
+            self.updatePill(transition: .immediate, settled: true)
+        }
+        list.onWillBeginDragging = { [weak self] in
+            self?.addedUserScrolledSinceReposition = true
+        }
+    }
+
+    /// Closes an open swipe in For you, the only feed whose rows swipe (spec §5).
     private func closeSwipedRows(animated: Bool) {
         self.forYouList.closeSwipedRows(animated: animated)
-        self.addedList.closeSwipedRows(animated: animated)
     }
 
     private func updateLists(transition: CoreListTransition) {
@@ -543,11 +594,21 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         guard let (layout, _) = self.validLayout else {
             return
         }
+        if self.added.jump == .loading && self.appliedAddedJump == nil {
+            self.replaceAddedListForJump()
+        }
         let environment = self.itemEnvironment(list: self.addedList)
         self.addedRows = self.added.rows(environment: environment)
         self.addedHasPosts = !self.addedRows.isLoading && self.addedRows.hasPostRows
-        self.addedList.setShowsSkeleton(self.addedRows.isLoading, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
+        var listTransition = transition
         var scrollTo: CoreListScrollTarget?
+        // The newest posts fade and rise in as after a reload; the posts the feed had come back without.
+        let jump = self.added.jump
+        self.addedList.setShowsSkeleton(self.addedRows.isLoading, revealCascades: jump != .localTop, theme: environment.presentationData.theme, rowLayout: environment.skeletonRowLayout)
+        if jump == .localTop {
+            // At their top, under the skeleton fading out.
+            scrollTo = CoreListScrollTarget(index: 0, pointOffset: 0.0)
+        }
         let hasPosts = !self.addedRows.positions.isEmpty
         if self.pendingAddedReposition, hasPosts {
             self.pendingAddedReposition = false
@@ -567,11 +628,68 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             }
         }
-        self.addedList.update(size: layout.size, insets: self.listInsets, items: self.addedRows.items, scrollTo: scrollTo, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: scrollTo != nil ? .immediate : transition)
+        if scrollTo != nil {
+            listTransition = .immediate
+        }
+        if jump == .loading && self.appliedAddedJump == nil {
+            // The header unfolds with the slide.
+            listTransition = NewsScreenNode.addedJumpCoreListTransition
+        }
+        self.addedList.update(size: layout.size, insets: self.listInsets, items: self.addedRows.items, scrollTo: scrollTo, anchorMode: anchorMode, animatesInsertions: animatesInsertions, transition: listTransition)
+        if jump == .loading {
+            self.appliedAddedJump = jump
+        } else {
+            if jump != nil {
+                self.added.endJump()
+            }
+            self.appliedAddedJump = nil
+        }
 
         self.recheckAddedEdgesIfGrown(count: self.addedRows.items.count)
         self.updatePill(transition: .immediate)
         self.trackAddedReading()
+    }
+
+    /// The jump's slide, on the spring a scroll to top runs (CoreList and ComponentFlow emit the same one at 0.5 s), so
+    /// the header unfolds with it.
+    private static let addedJumpTransition: ComponentTransition = .spring(duration: 0.5)
+    private static let addedJumpCoreListTransition: CoreListTransition = .spring(duration: 0.5)
+
+    /// A jump to the newest posts: the list being read stops updating and slides down out of the screen, cut at its
+    /// topmost post's top edge so only the posts on screen leave, while a new list slides in on top of it, with its
+    /// skeleton, to the top. The new list is the Added list from now on.
+    private func replaceAddedListForJump() {
+        let oldList = self.addedList
+        let newList = NewsFeedListView()
+        newList.frame = oldList.frame
+        newList.isHidden = oldList.isHidden
+        self.listsContainerNode.view.insertSubview(newList, aboveSubview: oldList)
+        oldList.detach()
+        self.addedList = newList
+        self.bindAddedList(newList)
+
+        let height = oldList.bounds.height
+        // The topmost post showing below the header; rows wholly under the header stay behind.
+        let headerBottom = self.headerView.currentBottom
+        let clipY = oldList.visibleRowFrames().filter({ $0.frame.maxY > headerBottom }).map(\.frame.minY).min() ?? self.listInsets.top
+        let mask = CALayer()
+        mask.backgroundColor = UIColor.black.cgColor
+        mask.frame = CGRect(x: 0.0, y: clipY, width: oldList.bounds.width, height: max(0.0, height - clipY))
+        oldList.layer.mask = mask
+
+        // Both travel the same distance, so the new list's bottom stays on the old one's cut: the old one leaves at the
+        // bottom of the screen as the new one lands. The skeleton reaches below the new list's bounds by the top inset,
+        // so the list is clipped while it slides.
+        let distance = height - clipY
+        let transition = NewsScreenNode.addedJumpTransition
+        oldList.center = CGPoint(x: oldList.center.x, y: oldList.center.y + distance)
+        transition.animatePosition(view: oldList, from: CGPoint(x: 0.0, y: -distance), to: CGPoint(), additive: true, completion: { [weak oldList] _ in
+            oldList?.removeFromSuperview()
+        })
+        newList.clipsToBounds = true
+        transition.animatePosition(view: newList, from: CGPoint(x: 0.0, y: -distance), to: CGPoint(), additive: true, completion: { [weak newList] _ in
+            newList?.clipsToBounds = false
+        })
     }
 
     /// CoreList reports an edge only on entering it; after a page grows a list while it is still at the edge,
@@ -612,7 +730,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func trackAddedReading(settled: Bool = false) {
-        guard self.isScreenVisible, self.selectedSegment == 1, !self.isSearchActive else {
+        // Debug Settings' Skip Read History, as chats and stories follow it.
+        guard self.isScreenVisible, self.selectedSegment == 1, !self.isSearchActive, !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory else {
             return
         }
         let positions = self.addedRows.positions
@@ -632,8 +751,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         var title: String?
-        // The pill lives on the Added page, so it shows only where that page does, and slides with it.
-        if !self.isSearchActive, let state = self.added.state {
+        // The pill lives on the Added page, so it shows only where that page does, and slides with it. A jump in
+        // progress is its action already under way.
+        if !self.isSearchActive, self.added.jump == nil, let state = self.added.state {
             if state.hasNewer {
                 title = "↑ " + self.presentationData.strings.News_NewPostsPill
             } else if let readMax = state.readMaxPosition {
@@ -669,7 +789,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 // Moved like the header's tabs, with an additive position.
                 view.layer.anchorPoint = CGPoint()
                 // The page's origin is the screen's top, so the header-relative position holds.
-                self.addedList.addSubview(view)
+                self.addedOverlayView.addSubview(view)
             }
             view.isUserInteractionEnabled = true
             transition.setAlpha(view: view, alpha: 1.0)
@@ -695,14 +815,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func pillTapped() {
-        guard let state = self.added.state else {
-            return
-        }
-        if state.hasNewer {
-            self.added.feed.jumpToNewest()
-        } else {
-            self.addedList.scrollToTop()
-        }
+        self.goToTopOfAdded()
     }
 
     // MARK: Header
@@ -834,7 +947,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
 
-    // MARK: Search (as ContactsControllerNode, with the posts the feeds hold as its results)
+    // MARK: Search (as ContactsControllerNode, with the server's For you search as its results)
 
     func activateSearch(placeholderNode: SearchBarPlaceholderNode?) {
         guard let (layout, navigationBarHeight) = self.validLayout, self.searchDisplayController == nil else {
@@ -844,14 +957,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.closeSwipedRows(animated: false)
         self.isSearchActive = true
 
-        let contentNode = NewsSearchContentNode(presentationData: self.presentationData, corpus: { [weak self] in
-            guard let self else {
-                return NewsSearchCorpus()
-            }
-            var corpus = self.forYou.searchCorpus
-            corpus.append(self.added.searchCorpus)
-            return corpus
-        }, itemEnvironment: { [weak self] list in
+        let contentNode = NewsSearchContentNode(context: self.context, presentationData: self.presentationData, itemEnvironment: { [weak self] list in
             return self?.itemEnvironment(list: list)
         })
         self.searchContentNode = contentNode

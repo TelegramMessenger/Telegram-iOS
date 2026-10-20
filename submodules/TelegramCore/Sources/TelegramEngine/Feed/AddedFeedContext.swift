@@ -244,7 +244,7 @@ private final class AddedFeedContextImpl {
         }))
     }
 
-    func jumpToNewest() {
+    func jumpToNewest(completion: @escaping (Bool) -> Void) {
         self.newerDisposable.set(nil)
         self.olderDisposable.set(nil)
         self.state.isLoadingOlder = false
@@ -258,6 +258,7 @@ private final class AddedFeedContextImpl {
             self.state.isLoadingNewer = false
             guard let page else {
                 self.pushState()
+                completion(false)
                 return
             }
             self.state.entries = page.entries
@@ -269,6 +270,7 @@ private final class AddedFeedContextImpl {
             self.state.windowReadMarkPosition = nil
             self.pushState()
             self.persist()
+            completion(true)
         }))
     }
 
@@ -413,9 +415,11 @@ public final class AddedFeedContext {
         }
     }
 
-    public func jumpToNewest() {
+    /// Replaces the window with the newest page. `completion` (on the main queue) is false when the server refused
+    /// the page; a request waiting for the network does not complete.
+    public func jumpToNewest(completion: @escaping (Bool) -> Void) {
         self.impl.with { impl in
-            impl.jumpToNewest()
+            impl.jumpToNewest(completion: completion)
         }
     }
 

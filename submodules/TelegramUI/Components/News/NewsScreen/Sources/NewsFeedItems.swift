@@ -4,7 +4,6 @@ import ComponentFlow
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
-import LocalizedPeerData
 import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
@@ -43,10 +42,10 @@ struct NewsFeedItemEnvironment {
     /// The list the rows are for: whether they load synchronously as they are built.
     let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
-    /// A post row's swipe actions: the feeds' rows swipe, search results do not (nil). The last argument is the post's
+    /// A post row's swipe actions: For you's rows swipe, Added's and search results do not (nil). The last argument is the post's
     /// identity (`newsPostIdentity`).
     let postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
-    /// The tab's "Post hidden" flow; nil for search results.
+    /// The tab's "Post hidden" flow; nil for Added and search results.
     let feedback: NewsFeedItemFeedback?
 }
 
@@ -144,32 +143,6 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
             }
         }
     )))
-}
-
-/// The posts a feed holds, as the search finds them, and their messages, which their rows are built from.
-struct NewsSearchCorpus {
-    var documents: [NewsSearchDocument] = []
-    var messages: [EngineMessage.Id: EngineMessage] = [:]
-
-    init() {
-    }
-
-    /// The feed's entries whose messages are loaded (`newsPostItem` builds no row for the others).
-    init(entries: [EngineFeedEntry], messages: [EngineMessage.Id: EngineMessage]) {
-        self.messages = messages
-        for entry in newsResolvedEntries(entries, availableMessageIds: Set(messages.keys)) {
-            let resolved = entry.messageIds.compactMap { messages[$0] }
-            guard let first = resolved.first, let peer = newsPostPeer(first) else {
-                continue
-            }
-            self.documents.append(NewsSearchDocument(entry: entry, texts: resolved.map(\.text), channelTitle: peer.compactDisplayTitle))
-        }
-    }
-
-    mutating func append(_ other: NewsSearchCorpus) {
-        self.documents.append(contentsOf: other.documents)
-        self.messages.merge(other.messages, uniquingKeysWith: { _, other in other })
-    }
 }
 
 func newsPlaceholderItems(count: Int, theme: PresentationTheme, rowLayout: NewsSkeletonModelRow, identityPrefix: String) -> [CoreListComponentItem] {

@@ -21,7 +21,6 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/SearchUI",
         "//submodules/SearchBarNode",
-        "//submodules/LocalizedPeerData",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/TelegramUI/Components/NavigationBarComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",

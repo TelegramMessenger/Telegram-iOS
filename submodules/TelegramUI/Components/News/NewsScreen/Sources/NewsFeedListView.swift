@@ -183,8 +183,9 @@ final class NewsFeedListView: UIView {
     }
 
     /// Until the list's first content arrives a skeleton stands in for it, moving with the list's offset (an
-    /// overscroll while there are no rows); when it arrives, the list fades in and the skeleton out.
-    func setShowsSkeleton(_ value: Bool, theme: PresentationTheme, rowLayout: NewsSkeletonModelRow) {
+    /// overscroll while there are no rows); when it arrives, the skeleton fades out and, if `revealCascades`, the
+    /// rows fade and rise in.
+    func setShowsSkeleton(_ value: Bool, revealCascades: Bool = true, theme: PresentationTheme, rowLayout: NewsSkeletonModelRow) {
         self.skeletonParameters = (theme, rowLayout)
         if value {
             if !self.showsSkeleton {
@@ -196,7 +197,9 @@ final class NewsFeedListView: UIView {
             self.layoutSkeleton()
         } else if self.showsSkeleton {
             self.showsSkeleton = false
-            self.pendingCascade = true
+            if revealCascades {
+                self.pendingCascade = true
+            }
             // Measured on the mockup's Reload: the skeleton is gone in about 0.1 s as the rows start.
             self.skeletonView.alpha = 0.0
             self.skeletonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
@@ -206,6 +209,17 @@ final class NewsFeedListView: UIView {
                 self.skeletonView.isHidden = true
             })
         }
+    }
+
+    /// The list is being replaced and only animates away: it reports nothing more and takes no touches.
+    func detach() {
+        self.onEdgeReached = nil
+        self.onScrollOffsetChanged = nil
+        self.onVisibleRowsChanged = nil
+        self.onScrollingEnded = nil
+        self.onWillBeginDragging = nil
+        self.onProgrammaticScroll = nil
+        self.isUserInteractionEnabled = false
     }
 
     /// Rows present within 0.6 s of the content arriving fade and rise in, top to bottom, 45 ms apart (Feed2

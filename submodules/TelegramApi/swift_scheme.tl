@@ -3291,3 +3291,5 @@ feed.readFeed#b436c1ff filter_id:int max_position:FeedPosition = Updates;
 feed.getForYou#33b8e5eb flags:# query:flags.0?string limit:int = feed.ForYouFeed;
 feed.getInterestCategories#ba7a1dba hash:long = feed.InterestCategories;
 feed.setInterestCategories#9f2958dc category_ids:Vector<int> = Bool;
+feed.likePost#1b4b627e peer:InputPeer msg_id:int = Bool;
+feed.dislikePost#4d70175c peer:InputPeer msg_id:int = Bool;

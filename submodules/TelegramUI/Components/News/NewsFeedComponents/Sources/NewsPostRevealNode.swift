@@ -6,7 +6,7 @@ import ItemListUI
 import TelegramPresentationData
 import NewsFeedSupport
 
-/// A post row's swipe actions (spec §3). Rows built without it do not swipe (search results).
+/// A post row's swipe actions (spec §3). Rows built without it do not swipe (Added, search results).
 public struct NewsPostSwipe {
     /// The action picked for this row's post. The row has already started closing.
     public let action: (NewsPostSwipeAction) -> Void
