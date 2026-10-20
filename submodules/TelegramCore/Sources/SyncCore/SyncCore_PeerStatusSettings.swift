@@ -145,3 +145,35 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         return self.flags.contains(member)
     }
 }
+
+public extension PeerStatusSettings.Flags {
+    /// The flags that keep a user's chat suspicious (`CachedUserData.isSuspiciousPeer`).
+    static let suspiciousPeer: PeerStatusSettings.Flags = [.canReport, .canBlock]
+}
+
+public extension CachedUserData {
+    /// The user's chat still shows the report/block panel: they wrote first, and the account has
+    /// neither dismissed the panel nor sent them a message (`enqueueMessages` clears these flags
+    /// locally). Until then the chat shows their links as plain text, hides their buttons and
+    /// emoji status, and marks nothing read.
+    var isSuspiciousPeer: Bool {
+        guard let flags = self.peerStatusSettings?.flags else {
+            return false
+        }
+        return !flags.isDisjoint(with: .suspiciousPeer)
+    }
+}
+
+public extension MessageTextEntity {
+    /// Whether a suspicious peer's text keeps this entity (`CachedUserData.isSuspiciousPeer`). Links,
+    /// mentions, hashtags (cashtags arrive as hashtags), emails, bank cards and TON addresses show as
+    /// plain text.
+    var isShownFromSuspiciousPeer: Bool {
+        switch self.type {
+        case .Url, .TextUrl, .Mention, .TextMention, .Hashtag, .Email, .BankCard, .TonAddress:
+            return false
+        default:
+            return true
+        }
+    }
+}

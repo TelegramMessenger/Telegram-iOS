@@ -2214,6 +2214,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if firstMessage.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
             replyMarkup = nil
         }
+        // A suspicious sender's buttons are not shown, as their links are not.
+        if item.associatedData.isSuspiciousPeer && firstMessage.effectivelyIncoming(item.context.account.peerId) {
+            replyMarkup = nil
+        }
         
         if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
             inlineBotNameString = nil

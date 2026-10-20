@@ -442,14 +442,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 
                 if incoming && item.associatedData.isSuspiciousPeer, let entities = messageEntities {
-                    messageEntities = entities.filter { entity in
-                        switch entity.type {
-                        case .Url, .TextUrl, .Mention, .TextMention, .Hashtag, .Email, .BankCard, .TonAddress:
-                            return false
-                        default:
-                            return true
-                        }
-                    }
+                    messageEntities = entities.filter(\.isShownFromSuspiciousPeer)
                 }
                 
                 var formattedDateUpdatePeriod: Int32?

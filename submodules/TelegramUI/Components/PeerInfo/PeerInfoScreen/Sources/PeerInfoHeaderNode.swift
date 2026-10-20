@@ -575,6 +575,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             threadData = nil
         }
         
+        // A suspicious peer's emoji status is not shown, as in their chat's title: neither the icon nor
+        // the cover and colours a collectible status brings.
+        var peer = peer
+        if case let .user(user) = peer, user.emojiStatus != nil, (cachedData as? CachedUserData)?.isSuspiciousPeer == true {
+            peer = .user(user.withUpdatedEmojiStatus(nil))
+        }
+        
         self.state = state
         self.peer = peer
         self.threadData = threadData
