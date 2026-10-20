@@ -64,7 +64,7 @@ import MediaAssetsContext
 /// preview is narrowed and placed with the frame in that space. The sticker is the canvas-centred square either way, so
 /// only the preview's scale changes. Returns the preview's frame on iPhone Duo (reserved corners), nil elsewhere, where
 /// the usual placement is kept.
-func mediaEditorStickerPreviewFrame(screenSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners, statusBarHeight: CGFloat, hasStatusIsland: Bool) -> CGRect? {
+func mediaEditorStickerPreviewFrame(screenSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners, statusBarHeight: CGFloat, hasStatusIsland: Bool, homeIndicatorInset: CGFloat) -> CGRect? {
     if reservedCorners == .none {
         return nil
     }
@@ -72,8 +72,9 @@ func mediaEditorStickerPreviewFrame(screenSize: CGSize, safeInsets: UIEdgeInsets
     let spaceAboveFrame: CGFloat = 35.0 + 40.0
     let spaceBelowFrame: CGFloat = 35.0 + 40.0 + 16.0 + 40.0
     // The bottom bar's buttons start 8pt above where the editor's controls inset puts them (see the component's
-    // `controlsBottomInset`: mirrored on the status island's clock line beside the island, 62pt up otherwise).
-    let controlsBottomInset: CGFloat = hasStatusIsland ? -(statusBarHeight + 31.0 + 30.0) : -62.0
+    // `controlsBottomInset`: mirrored on the status island's clock line beside the island, 62pt above the home
+    // indicator otherwise).
+    let controlsBottomInset: CGFloat = hasStatusIsland ? -(statusBarHeight + 31.0 + 30.0) : -62.0 - homeIndicatorInset
     let bottomLimit = screenSize.height + 8.0 + controlsBottomInset - 8.0
     let topLimit = statusBarHeight + 8.0
     let available = bottomLimit - topLimit
@@ -867,6 +868,11 @@ final class MediaEditorScreenComponent: Component {
                         // Beside a status island the bottom bar mirrors the top row (see topRowY): its 44pt buttons
                         // centred compact status height + 31 above the bottom edge, as the drawing screen's are.
                         controlsBottomInset = min(controlsBottomInset, -(environment.statusBarHeight + 31.0 + 30.0))
+                    } else {
+                        // Elsewhere 62pt above the home indicator. The 62pt was set for home-button phones, the only phones
+                        // with a preview taller than the screen until iPhone Duo, whose folded screen it left with the
+                        // buttons on the indicator.
+                        controlsBottomInset -= component.bottomSafeInset
                     }
                     // Beside a status island the bottom buttons keep the top rows' 16pt side inset; so do they on the folded
                     // screen, whose outer corners (59pt) would clip a button 9pt from the edge (iPhone Duo).
@@ -886,7 +892,7 @@ final class MediaEditorScreenComponent: Component {
             // The sticker frame's buttons centre on the frame, which beside a side strip is the band's centre, not the screen's
             // (iPhone Duo folded: an erase and restore pair centred on the screen reached 16pt into the strip).
             var stickerButtonsCenterX: CGFloat = availableSize.width / 2.0
-            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners, statusBarHeight: environment.statusBarHeight, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0) {
+            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners, statusBarHeight: environment.statusBarHeight, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0, homeIndicatorInset: component.bottomSafeInset) {
                 // iPhone Duo: see `mediaEditorStickerPreviewFrame` (the node places the preview the same way).
                 previewSize = stickerPreviewFrame.size
                 previewFrame = stickerPreviewFrame
@@ -6122,7 +6128,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             // `mediaEditorStickerPreviewFrame`; the component places them the same way). The insets above stay those of
             // the full-width preview, so the bottom bar keeps its place.
             var stickerPreviewOrigin: CGPoint?
-            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: layout.size, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, hasStatusIsland: layout.navigationBarTrailingButtonsInset > 0.0) {
+            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: layout.size, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, hasStatusIsland: layout.navigationBarTrailingButtonsInset > 0.0, homeIndicatorInset: layout.intrinsicInsets.bottom) {
                 previewSize = stickerPreviewFrame.size
                 stickerPreviewOrigin = stickerPreviewFrame.origin
             }
