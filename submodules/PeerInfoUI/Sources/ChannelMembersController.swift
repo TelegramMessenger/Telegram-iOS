@@ -752,7 +752,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         }
         if !isEmpty {
             if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState { state in
                         return state.withUpdatedEditing(false)
                     }

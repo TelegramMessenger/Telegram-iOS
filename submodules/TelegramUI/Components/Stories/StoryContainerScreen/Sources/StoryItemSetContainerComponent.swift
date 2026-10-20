@@ -111,6 +111,12 @@ public final class StoryItemSetContainerComponent: Component {
     public let inputHeight: CGFloat
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
+    /// The story is a card with space around it, as on an iPad, rather than filling the screen. The host sets it on a
+    /// regular width (the default) and on iPhone Duo's unfolded screen, whose width class is regular only in landscape.
+    public let isCardLayout: Bool
+    /// The input row's least width, centred on the card when the card is narrower (iPhone Duo's unfolded landscape
+    /// card is narrower than any phone); 0 keeps it the card's width.
+    public let minimumInputPanelWidth: CGFloat
     public let isEmbeddedInCamera: Bool
     public let isProgressPaused: Bool
     public let isAudioMuted: Bool
@@ -153,6 +159,8 @@ public final class StoryItemSetContainerComponent: Component {
         inputHeight: CGFloat,
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
+        isCardLayout: Bool? = nil,
+        minimumInputPanelWidth: CGFloat = 0.0,
         isEmbeddedInCamera: Bool,
         isProgressPaused: Bool,
         isAudioMuted: Bool,
@@ -194,6 +202,8 @@ public final class StoryItemSetContainerComponent: Component {
         self.inputHeight = inputHeight
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
+        self.isCardLayout = isCardLayout ?? (metrics.widthClass == .regular)
+        self.minimumInputPanelWidth = minimumInputPanelWidth
         self.isEmbeddedInCamera = isEmbeddedInCamera
         self.isProgressPaused = isProgressPaused
         self.isAudioMuted = isAudioMuted
@@ -257,6 +267,12 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.deviceMetrics != rhs.deviceMetrics {
+            return false
+        }
+        if lhs.isCardLayout != rhs.isCardLayout {
+            return false
+        }
+        if lhs.minimumInputPanelWidth != rhs.minimumInputPanelWidth {
             return false
         }
         if lhs.isEmbeddedInCamera != rhs.isEmbeddedInCamera {
@@ -2853,9 +2869,9 @@ public final class StoryItemSetContainerComponent: Component {
                 bottomContentInset = 0.0
             }
                         
-            var inputPanelAvailableWidth = availableSize.width
+            var inputPanelAvailableWidth = max(availableSize.width, component.minimumInputPanelWidth)
             var inputPanelTransition = transition
-            if case .regular = component.metrics.widthClass {
+            if component.isCardLayout {
                 if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
                     if wasPanning != component.isPanning {
                         inputPanelTransition = .easeInOut(duration: 0.25)
@@ -3114,7 +3130,7 @@ public final class StoryItemSetContainerComponent: Component {
                         maxLength: maxInputLength,
                         maxEmojiCount: maxEmojiCount,
                         queryTypes: [.mention, .hashtag, .emoji],
-                        alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                        alwaysDarkWhenHasText: component.isCardLayout,
                         resetInputContents: resetInputContents,
                         nextInputMode: { [weak self] hasText in
                             if case .media = self?.sendMessageContext.currentInputMode {
@@ -3426,7 +3442,7 @@ public final class StoryItemSetContainerComponent: Component {
             let inputPanelIsOverlay: Bool
             if inputHeight == 0.0 {
                 inputPanelBottomInset = bottomContentInset
-                if case .regular = component.metrics.widthClass {
+                if component.isCardLayout {
                     bottomContentInset += 60.0
                 } else if let inputPanelSize {
                     bottomContentInset += inputPanelSize.height
@@ -3987,7 +4003,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             transition.setFrame(view: self.viewListsContainer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: 0.0), size: CGSize(width: contentSize.width, height: availableSize.height)))
             let viewListsRadius: CGFloat
-            if component.metrics.widthClass == .regular {
+            if component.isCardLayout {
                 viewListsRadius = 10.0
             } else {
                 viewListsRadius = 0.0
@@ -4502,7 +4518,7 @@ public final class StoryItemSetContainerComponent: Component {
                     inputPanelAlpha = 0.0
                 }
                 
-                if case .regular = component.metrics.widthClass {
+                if component.isCardLayout {
                     inputPanelAlpha *= component.visibilityFraction
                 }
                 inputPanelAlpha *= (1.0 - min(1.0, viewListHeightMidFraction * 1.3))
@@ -4734,7 +4750,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)
                 if let captionItemView = captionItem.view.view {
                     if captionItemView.superview == nil {
-                        if case .regular = component.metrics.widthClass {
+                        if component.isCardLayout {
                             self.topContentGradientView.layer.cornerRadius = 12.0
                             self.topContentGradientView.clipsToBounds = true
                             captionItemView.layer.cornerRadius = 12.0
@@ -7809,7 +7825,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
-            guard let component = self.component, case .compact = component.metrics.widthClass else {
+            guard let component = self.component, !component.isCardLayout else {
                 return
             }
             

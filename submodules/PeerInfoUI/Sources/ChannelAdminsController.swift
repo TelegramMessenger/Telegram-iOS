@@ -1070,7 +1070,7 @@ public func channelAdminsController(
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let admins = admins, admins.count > 1 {
             if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState { state in
                         return state.withUpdatedEditing(false)
                     }

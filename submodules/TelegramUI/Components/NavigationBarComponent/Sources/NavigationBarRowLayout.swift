@@ -52,7 +52,11 @@ func navigationBarInterpolatedRightPills(primary: [NavigationBarRightPillMetrics
 /// in the row (Apple: text-only items stay horizontal). A screen's node rides in its button's view, which the bar alone
 /// hosts, so it can move with it; it does when it fits a column cell (the chat's avatar and "…", a spinner), and a
 /// node that draws text (Calls' "Delete All", a mini app's "Close") stays in the row, where the column would cut it.
+/// A button marked `staysInRow` (the Done of an Edit/Done toggle) stays in the row with the text button it replaces.
 func navigationBarIsColumnItem(_ button: NavigationBarComponent.Button) -> Bool {
+    if button.staysInRow {
+        return false
+    }
     switch button.content {
     case .text:
         return false

@@ -608,7 +608,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         var rightNavigationButton: ItemListNavigationButton?
         if !peers.isEmpty {
             if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState { state in
                         var state = state
                         state.editing = false

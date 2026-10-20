@@ -982,7 +982,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 if case .modal = mode {
                     rightNavigationButton = nil
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }

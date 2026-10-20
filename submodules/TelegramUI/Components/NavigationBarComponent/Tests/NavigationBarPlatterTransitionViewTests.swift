@@ -1072,7 +1072,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_columnBack_morphsBetweenBars() {
         let view = self.makeView(bottom: self.duoSide(right: []), top: self.duoSide(right: [self.iconButton("search")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNotNil(view.platterStateForTesting(.columnBack))
+        XCTAssertNotNil(view.platterStateForTesting(.column(0)))
         XCTAssertNil(view.platterStateForTesting(.leading), "the back is in the column")
     }
 
@@ -1080,29 +1080,58 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
     func test_columnButtons_materializeInPlace() {
         let view = self.makeView(bottom: self.duoSide(right: []), top: self.duoSide(right: [self.iconButton("search"), self.iconButton("more")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        guard let start = view.platterStateForTesting(.columnButtons) else {
+        guard let start = view.platterStateForTesting(.column(1)) else {
             XCTFail("no column capsule")
             return
         }
         XCTAssertEqual(start.opacity, 0.0, accuracy: 0.001)
         XCTAssertGreaterThan(start.frame.height, start.frame.width)
         self.time.advance(by: 1.0)
-        XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(view.platterStateForTesting(.column(1))?.opacity ?? 0.0, 1.0, accuracy: 0.001)
     }
 
-    // A bar that hides its column buttons (an active search) has no column buttons or trailing capsule.
+    // A bar that hides its column buttons (an active search) has no column buttons or trailing capsule: only the back
+    // circle takes a slot.
     func test_hiddenColumnButtons_haveNoCapsule() {
         let view = self.makeView(bottom: self.duoSide(right: [self.iconButton("search")], hidesColumnButtons: true), top: self.duoSide(right: [self.iconButton("search")], hidesColumnButtons: true))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertNil(view.platterStateForTesting(.columnButtons))
-        XCTAssertNil(view.platterStateForTesting(.columnTrailing))
+        XCTAssertNotNil(view.platterStateForTesting(.column(0)))
+        XCTAssertNil(view.platterStateForTesting(.column(1)))
+        XCTAssertNil(view.platterStateForTesting(.column(2)))
     }
 
     // The same column items on both bars are no change of items: no pulse.
     func test_columnSignature_comesFromThePlacement() {
         let view = self.makeView(bottom: self.duoSide(right: [self.iconButton("search")]), top: self.duoSide(right: [self.iconButton("search")]))
         view.beginTransition(isInteractive: false, toTop: true)
-        XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.pulse.height ?? 0.0, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(view.platterStateForTesting(.column(1))?.pulse.height ?? 0.0, 1.0, accuracy: 0.0001)
+    }
+
+    // Chats -> a chat on iPhone Duo: Chats' column is its story capsule over the compose circle, the chat's its back
+    // circle over the avatar capsule, at the same two places. The shapes pair by index from the column's top, as the
+    // row's right platters pair from the edge: each stays where it is and swaps its items (the compose circle's accent
+    // cross-fading to the avatar's glass); none moves to the other's place, and none comes or goes in place.
+    func test_column_pairsByIndexFromTheTop_chatsToChat() {
+        let chats = self.duoSide(back: nil, right: [self.iconButton("compose", tint: .accent), self.iconButton("story")])
+        let chat = self.duoSide(right: [self.iconButton("avatar")])
+        let view = self.makeView(bottom: chats, top: chat)
+        view.beginTransition(isInteractive: false, toTop: true)
+        guard let storyStart = view.platterStateForTesting(.column(0)), let composeStart = view.platterStateForTesting(.column(1)) else {
+            XCTFail("Chats' column has two shapes")
+            return
+        }
+        XCTAssertNil(view.platterStateForTesting(.column(2)))
+        for time in [0.05, 0.15, 0.3, 1.0] {
+            self.time.advance(by: time)
+            guard let first = view.platterStateForTesting(.column(0)), let second = view.platterStateForTesting(.column(1)) else {
+                XCTFail("both shapes stay")
+                return
+            }
+            XCTAssertEqual(first.opacity, 1.0, accuracy: 0.001, "the story capsule becomes the back circle, it does not dematerialize")
+            XCTAssertEqual(second.opacity, 1.0, accuracy: 0.001, "the compose circle becomes the avatar capsule, it does not dematerialize")
+            XCTAssertEqual(first.frame.midY, storyStart.frame.midY, accuracy: 0.5)
+            XCTAssertEqual(second.frame.midY, composeStart.frame.midY, accuracy: 0.5)
+        }
     }
 
     // The column back's unread badge rides with the circle's items.
@@ -1111,7 +1140,7 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         side.content = NavigationBarComponent.Content(title: .text(""), back: .back, leftButton: nil, rightButtons: [], backPressed: {}, badge: "3")
         let view = self.makeView(bottom: side, top: self.duoSide(right: []))
         view.beginTransition(isInteractive: false, toTop: true)
-        guard let badge = view.badgeNodeForTesting(.columnBack) else {
+        guard let badge = view.badgeNodeForTesting(.column(0)) else {
             XCTFail("no badge")
             return
         }
@@ -1130,9 +1159,9 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         view.beginTransition(isInteractive: false, toTop: true)
         XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.press ?? 0.0, 60.0 / 44.0, accuracy: 1e-6)
         XCTAssertEqual(view.platterStateForTesting(.trailing(0))?.glow ?? 0.0, 1.0, accuracy: 1e-6)
-        XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.press ?? 0.0, 1.0)
-        XCTAssertEqual(view.platterStateForTesting(.columnButtons)?.glow ?? 1.0, 0.0)
-        XCTAssertEqual(view.platterStateForTesting(.columnBack)?.press ?? 0.0, 1.0)
-        XCTAssertEqual(view.platterStateForTesting(.columnBack)?.glow ?? 1.0, 0.0)
+        XCTAssertEqual(view.platterStateForTesting(.column(1))?.press ?? 0.0, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.column(1))?.glow ?? 1.0, 0.0)
+        XCTAssertEqual(view.platterStateForTesting(.column(0))?.press ?? 0.0, 1.0)
+        XCTAssertEqual(view.platterStateForTesting(.column(0))?.glow ?? 1.0, 0.0)
     }
 }

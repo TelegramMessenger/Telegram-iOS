@@ -365,6 +365,9 @@ private final class StoryContainerScreenComponent: Component {
         private let isComponentReadyPromise = ValuePromise(false, ignoreRepeated: true)
         private weak var state: EmptyComponentState?
         private var environment: ViewControllerComponentContainer.Environment?
+        /// The story is a card with space around it, as on an iPad, rather than filling the screen: on a regular width,
+        /// and on iPhone Duo's unfolded screen, which is as large as a small tablet's but regular only in landscape.
+        private var isCardLayout = false
         
         private let backgroundLayer: SimpleLayer
         private let backgroundEffectView: BlurredBackgroundView
@@ -466,7 +469,7 @@ private final class StoryContainerScreenComponent: Component {
                 if self.isDisplayingInteractionGuide {
                     return []
                 }
-                if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                if self.isCardLayout {
                 } else {
                     if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
                         return []
@@ -768,7 +771,7 @@ private final class StoryContainerScreenComponent: Component {
                 return false
             }
             
-            if let environment = self.environment, case .regular = environment.metrics.widthClass {
+            if self.isCardLayout {
                 
             } else {
                 if !itemSetComponentView.isPointInsideContentArea(point: touch.location(in: itemSetComponentView)) {
@@ -984,7 +987,7 @@ private final class StoryContainerScreenComponent: Component {
                     }
                 } else {
                     if let result = subview.hitTest(self.convert(self.convert(point, to: subview), to: subview), with: event) {
-                        if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                        if self.isCardLayout {
                             if result.isDescendant(of: self.backgroundEffectView) {
                                 if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                                     if point.x < itemSetView.frame.minX || point.x > itemSetView.frame.maxX {
@@ -1283,6 +1286,11 @@ private final class StoryContainerScreenComponent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
+            if case .regular = environment.metrics.widthClass {
+                self.isCardLayout = true
+            } else {
+                self.isCardLayout = environment.deviceMetrics.isIPhoneDuoInnerScreen(size: availableSize)
+            }
             
             if self.component == nil {
                 self.areHeadphonesConnected = component.context.sharedContext.mediaManager.audioSession.getIsHeadsetPluggedIn()
@@ -1491,7 +1499,7 @@ private final class StoryContainerScreenComponent: Component {
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
             transition.setFrame(view: self.backgroundEffectView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
-            if case .regular = environment.metrics.widthClass {
+            if self.isCardLayout {
                 self.backgroundLayer.isHidden = true
                 self.backgroundEffectView.update(size: availableSize, transition: transition.containedViewLayoutTransition)
                 self.insertSubview(self.backgroundEffectView, at: 0)
@@ -1553,7 +1561,7 @@ private final class StoryContainerScreenComponent: Component {
             // hidden while it closes.
             var itemSetsContainerFrame = CGRect(origin: CGPoint(), size: availableSize)
             var isItemSetsContainerBand = false
-            if case .regular = environment.metrics.widthClass {
+            if self.isCardLayout {
             } else if environment.safeInsets.left != environment.safeInsets.right {
                 itemSetsContainerFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left, y: 0.0), size: CGSize(width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: availableSize.height))
                 isItemSetsContainerBand = true
@@ -1631,8 +1639,29 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         var itemSetContainerSafeInsets = environment.safeInsets
                         var itemSetContainerOriginX: CGFloat?
-                        if case .regular = environment.metrics.widthClass {
-                            let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
+                        var itemSetHeaderTrailingInset = environment.navigationBarTrailingButtonsInset
+                        var itemSetMinimumInputPanelWidth: CGFloat = 0.0
+                        if self.isCardLayout {
+                            var verticalInset = max(45.0, environment.safeInsets.bottom)
+                            let isDuoInnerScreen = environment.deviceMetrics.isIPhoneDuoInnerScreen(size: availableSize)
+                            if isDuoInnerScreen {
+                                if availableSize.width > availableSize.height {
+                                    // iPhone Duo, unfolded landscape: the height is what limits the card, and nothing
+                                    // reserves the top or the bottom of the band (the status corner is in the side
+                                    // strip), so the card takes all of it but a margin.
+                                    verticalInset = max(16.0, environment.safeInsets.bottom)
+                                } else {
+                                    // Portrait: the card stays clear of the status island as an iPad's stays clear of
+                                    // its status bar.
+                                    verticalInset = max(verticalInset, environment.fullStatusBarHeight + 8.0)
+                                }
+                                // Its header needs no room beside the island, and its input row is never narrower than
+                                // on a phone: the landscape card is narrower than any phone, and a long placeholder
+                                // (Stealth Mode's countdown) ran under the share button.
+                                itemSetHeaderTrailingInset = 0.0
+                                itemSetMinimumInputPanelWidth = 375.0
+                            }
+                            let availableHeight = min(1080.0, availableSize.height - verticalInset * 2.0)
                             let mediaHeight = availableHeight - 60.0
                             let mediaWidth = floor(mediaHeight * 0.5625)
                             itemSetContainerSize = CGSize(width: mediaWidth, height: availableHeight)
@@ -1643,6 +1672,14 @@ private final class StoryContainerScreenComponent: Component {
                             presentationContextInsets.left =  floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0)
                             presentationContextInsets.right = presentationContextInsets.left
                             presentationContextInsets.bottom = itemSetContainerInsets.bottom
+                            if isDuoInnerScreen && environment.safeInsets.left != environment.safeInsets.right {
+                                // Centred in the band beside the side strip (landscape), as the screen's content is.
+                                let bandWidth = availableSize.width - environment.safeInsets.left - environment.safeInsets.right
+                                let originX = environment.safeInsets.left + floorToScreenPixels((bandWidth - itemSetContainerSize.width) / 2.0)
+                                itemSetContainerOriginX = originX
+                                presentationContextInsets.left = originX
+                                presentationContextInsets.right = availableSize.width - originX - itemSetContainerSize.width
+                            }
                         } else if environment.safeInsets.left != environment.safeInsets.right {
                             // iPhone Duo: one side's safe inset is the side strip, whose top corner holds the status
                             // corner. The story (and its close, more and sound buttons) is laid out in the band beside
@@ -1672,10 +1709,12 @@ private final class StoryContainerScreenComponent: Component {
                                 containerInsets: itemSetContainerInsets,
                                 safeInsets: itemSetContainerSafeInsets,
                                 statusBarHeight: environment.statusBarHeight,
-                                headerTrailingInset: environment.navigationBarTrailingButtonsInset,
+                                headerTrailingInset: itemSetHeaderTrailingInset,
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
                                 deviceMetrics: environment.deviceMetrics,
+                                isCardLayout: self.isCardLayout,
+                                minimumInputPanelWidth: itemSetMinimumInputPanelWidth,
                                 isEmbeddedInCamera: false,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 isAudioMuted: self.audioMode == .off || (self.audioMode == .ambient && !(self.isMuteSwitchOn || self.areHeadphonesConnected)),
@@ -1874,7 +1913,7 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
                             let itemTintSize: CGSize
-                            if case .regular = environment.metrics.widthClass {
+                            if self.isCardLayout {
                                 itemTintSize = itemSetView.externalState.derivedMediaSize
                             } else {
                                 itemTintSize = itemFrame.size
@@ -1887,7 +1926,7 @@ private final class StoryContainerScreenComponent: Component {
                             let width = itemFrame.width
                             
                             let sideDistance: CGFloat
-                            if case .regular = environment.metrics.widthClass {
+                            if self.isCardLayout {
                                 sideDistance = 0.0
                             } else {
                                 sideDistance = 40.0

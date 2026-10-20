@@ -339,7 +339,9 @@ class ContactListActionItemNode: ListViewItemNode {
                     // and the highlight stop at it instead of running under it. Equal insets give today's frames.
                     let stripExcessLeft = max(0.0, params.leftInset - params.rightInset)
                     let stripExcessRight = max(0.0, params.rightInset - params.leftInset)
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - stripExcessRight, height: separatorHeight))
+                    // Glass rows end their separator 16pt short of the edge, as the contact rows below do.
+                    let separatorRightInset: CGFloat = (item.systemStyle == .glass ? 16.0 : 0.0) + stripExcessRight
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - separatorRightInset, height: separatorHeight))
                     
                     let titleFrame: CGRect
                     if subtitleAttributedString != nil {

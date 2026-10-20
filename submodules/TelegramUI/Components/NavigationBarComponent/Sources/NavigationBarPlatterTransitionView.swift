@@ -10,7 +10,8 @@ import GlassBackgroundComponent
 ///
 /// Capsules are matched between the two bars by role (leading: back and left button; trailing: the outermost right
 /// platter, the accent circle when there is one; trailing inner: the capsule beside it), as UIKit pairs `SectionID`s by
-/// index from the edge.
+/// index from the edge. iPhone Duo's column shapes pair the same way, by index from the column's top: Chats' story
+/// capsule and compose circle become the chat's back circle and avatar capsule in place.
 /// - **Present on both bars:** one glass shape that morphs to the new frame on `Spring(0.416, bounce 0.25)`. If the
 ///   items changed, the old ones shrink away and the new ones grow in (matched items: scale 0.2, transparent, blur 10,
 ///   on the same spring), the shape gives SwiftUI's scale pulse, and a tint change cross-fades on the one shape.
@@ -77,22 +78,27 @@ public final class NavigationBarPlatterTransitionView: UIView {
     }
 
     /// A capsule's place: the row's leading capsule, a right platter by index from the edge (UIKit's
-    /// `SectionID(index, owner)`: 0 the outermost), and iPhone Duo's column back circle, buttons capsule and trailing
-    /// circle.
+    /// `SectionID(index, owner)`: 0 the outermost), and an iPhone Duo column shape by index from the column's top (the
+    /// back circle, buttons capsule and trailing circle a bar has, in that order).
     enum Role: Hashable {
         case leading
         case trailing(Int)
-        case columnBack
-        case columnButtons
-        case columnTrailing
+        case column(Int)
 
-        /// Every role, with right platters up to `rightCount`.
-        static func all(rightCount: Int) -> [Role] {
-            return [.leading] + (0 ..< rightCount).map { .trailing($0) } + [.columnBack, .columnButtons, .columnTrailing]
+        /// Every role, with right platters up to `rightCount` and column shapes up to `columnCount`.
+        static func all(rightCount: Int, columnCount: Int) -> [Role] {
+            return [.leading] + (0 ..< rightCount).map { .trailing($0) } + (0 ..< columnCount).map { .column($0) }
         }
 
         var rightIndex: Int? {
             if case let .trailing(index) = self {
+                return index
+            }
+            return nil
+        }
+
+        var columnIndex: Int? {
+            if case let .column(index) = self {
                 return index
             }
             return nil
@@ -458,20 +464,24 @@ public final class NavigationBarPlatterTransitionView: UIView {
             layout.titlePillRole = .trailing(1)
         }
         if let columnFrame = side.columnFrame, let columnLayout = contentView.columnLayout {
-            let roles: [(Role, CGRect?, UIView, GlassBackgroundView.TintColor)] = [
-                (.columnBack, columnLayout.backFrame, contentView.columnBackContainer, navigationBarGlassTintColor(.generic, theme: side.theme)),
-                (.columnButtons, side.hidesColumnButtons ? nil : columnLayout.capsuleFrame, contentView.columnButtonsContainer, navigationBarGlassTintColor(.generic, theme: side.theme)),
-                (.columnTrailing, side.hidesColumnButtons || contentView.columnTrailingContainer.subviews.isEmpty ? nil : columnLayout.trailingFrame, contentView.columnTrailingContainer, navigationBarGlassTintColor(contentView.trailingCircleTint, theme: side.theme))
+            // Top to bottom (`sideColumnItemsLayout`), each shape the bar has taking the next slot.
+            let shapes: [(NavigationBarColumnShape, CGRect?, UIView, GlassBackgroundView.TintColor)] = [
+                (.back, columnLayout.backFrame, contentView.columnBackContainer, navigationBarGlassTintColor(.generic, theme: side.theme)),
+                (.buttons, side.hidesColumnButtons ? nil : columnLayout.capsuleFrame, contentView.columnButtonsContainer, navigationBarGlassTintColor(.generic, theme: side.theme)),
+                (.trailing, side.hidesColumnButtons || contentView.columnTrailingContainer.subviews.isEmpty ? nil : columnLayout.trailingFrame, contentView.columnTrailingContainer, navigationBarGlassTintColor(contentView.trailingCircleTint, theme: side.theme))
             ]
-            for (role, frame, container, tint) in roles {
+            var slot = 0
+            for (shape, frame, container, tint) in shapes {
                 guard let frame else {
                     continue
                 }
+                let role: Role = .column(slot)
+                slot += 1
                 layout.frames[role] = frame.offsetBy(dx: columnFrame.minX, dy: columnFrame.minY)
                 container.frame = CGRect(origin: CGPoint(), size: frame.size)
-                layout.itemViews[role] = role == .columnBack ? self.columnBackItems(kind: kind, container: container, size: frame.size, badge: side.content.badge, theme: side.theme) : container
+                layout.itemViews[role] = shape == .back ? self.columnBackItems(kind: kind, container: container, size: frame.size, badge: side.content.badge, theme: side.theme) : container
                 layout.tints[role] = tint
-                layout.signatures[role] = navigationBarCapsuleSignature(side.content, role: role, columnLength: columnFrame.height, hidesColumnButtons: side.hidesColumnButtons)
+                layout.signatures[role] = navigationBarColumnShapeSignature(side.content, shape: shape, columnLength: columnFrame.height, hidesColumnButtons: side.hidesColumnButtons)
             }
         }
         return layout
@@ -531,6 +541,12 @@ public final class NavigationBarPlatterTransitionView: UIView {
         return (indices.max() ?? -1) + 1
     }
 
+    /// The column slots the two layouts and the current platters hold.
+    private var columnRoleCount: Int {
+        let indices = [self.bottomLayout, self.topLayout].flatMap { $0.frames.keys.compactMap(\.columnIndex) } + self.platters.keys.compactMap(\.columnIndex)
+        return (indices.max() ?? -1) + 1
+    }
+
     private func layout(_ side: SideKind) -> SideLayout {
         return side == .bottom ? self.bottomLayout : self.topLayout
     }
@@ -550,7 +566,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         // The outgoing bar's capsules, as they are, a press UIKit was drawing on one included: it goes on releasing.
         let from = self.layout(self.fromSide)
         let fromSide = self.fromSide == .bottom ? self.bottomSide : self.topSide
-        for role in Role.all(rightCount: self.rightRoleCount) {
+        for role in Role.all(rightCount: self.rightRoleCount, columnCount: self.columnRoleCount) {
             guard let frame = from.frames[role], let itemView = from.itemViews[role], let tint = from.tints[role] else {
                 continue
             }
@@ -567,7 +583,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 let glows = fromSide?.trailingPressGlows ?? []
                 pressScale = index < scales.count ? scales[index] : 1.0
                 pressGlow = index < glows.count ? glows[index] : 0.0
-            case .columnBack, .columnButtons, .columnTrailing:
+            case .column:
                 pressScale = 1.0
                 pressGlow = 0.0
             }
@@ -628,7 +644,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         let targetRight: [(role: Role, frame: CGRect)] = target.frames.compactMap { role, frame in
             return role.rightIndex != nil ? (role, frame) : nil
         }
-        for role in Role.all(rightCount: self.rightRoleCount) {
+        for role in Role.all(rightCount: self.rightRoleCount, columnCount: self.columnRoleCount) {
             let existing = self.platters[role]
             if let frame = target.frames[role], let itemView = target.itemViews[role], let tint = target.tints[role] {
                 if let platter = existing {
@@ -1163,9 +1179,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
 }
 
 /// What a capsule shows, to tell a change of its items, from where the bar places its buttons: the back button (with
-/// its badge) and the row's left button for the leading capsule, the row's right buttons for the trailing one, and on
-/// iPhone Duo the column's back circle, its visible items (with the ellipsis when some overflow) and its trailing
-/// circle; nil when the bar has no such capsule.
+/// its badge) and the row's left button for the leading capsule, the row's right buttons for the trailing one; nil when
+/// the bar has no such capsule. A column slot is signed by the shape that takes it (`navigationBarColumnShapeSignature`).
 private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Content, role: NavigationBarPlatterTransitionView.Role, columnLength: CGFloat?, hidesColumnButtons: Bool) -> [AnyHashable]? {
     let placement = navigationBarButtonPlacement(leftButton: content.leftButton, rightButtons: content.rightButtons, hasBack: content.back != nil, columnLength: columnLength)
     let backInColumn = content.back != nil && placement.columnLayout?.backFrame != nil
@@ -1182,12 +1197,29 @@ private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Con
         return signature.isEmpty ? nil : signature
     case let .trailing(index):
         return index < placement.rowRightSections.count ? placement.rowRightSections[index].map { $0.id } : nil
-    case .columnBack:
-        guard backInColumn, let backSignature else {
+    case .column:
+        return nil
+    }
+}
+
+/// iPhone Duo's column shapes, top to bottom (`sideColumnItemsLayout`).
+private enum NavigationBarColumnShape {
+    case back
+    case buttons
+    case trailing
+}
+
+/// What a column shape shows: the back circle's back button (with its badge), the capsule's visible items (with the
+/// ellipsis when some overflow), the trailing circle's button; nil when the bar has no such shape.
+private func navigationBarColumnShapeSignature(_ content: NavigationBarComponent.Content, shape: NavigationBarColumnShape, columnLength: CGFloat?, hidesColumnButtons: Bool) -> [AnyHashable]? {
+    let placement = navigationBarButtonPlacement(leftButton: content.leftButton, rightButtons: content.rightButtons, hasBack: content.back != nil, columnLength: columnLength)
+    switch shape {
+    case .back:
+        guard let back = content.back, placement.columnLayout?.backFrame != nil else {
             return nil
         }
-        return [backSignature]
-    case .columnButtons:
+        return [AnyHashable("\(back)-\(content.badge ?? "")")]
+    case .buttons:
         guard !hidesColumnButtons, let columnLayout = placement.columnLayout, columnLayout.capsuleFrame != nil else {
             return nil
         }
@@ -1196,7 +1228,7 @@ private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Con
             signature.append("ellipsis")
         }
         return signature
-    case .columnTrailing:
+    case .trailing:
         guard !hidesColumnButtons, let item = placement.trailingCircleItem, placement.columnLayout?.trailingFrame != nil else {
             return nil
         }
