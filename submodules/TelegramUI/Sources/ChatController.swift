@@ -11345,6 +11345,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion?()
                 return
             }
+            Logger.shared.log("ReplyThreadOpen", "inline switch start peer=\(peerId.id._internalGetInt64Value()) thread=\(String(describing: threadId))")
             guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
                 completion?()
                 return

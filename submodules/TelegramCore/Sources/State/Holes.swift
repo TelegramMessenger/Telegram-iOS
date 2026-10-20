@@ -349,7 +349,9 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                                 return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, additionalPeers: additionalPeers, ids: Array(threadIds))
                                 |> mapToSignal { _ -> Signal<T, NoError> in
                                     return postbox.transaction { transaction -> T in
-                                        return f(transaction, parsedPeers, [])
+                                        // The reply targets fetched above are stored with the rest: dropping them
+                                        // here left a forum message's reply header waiting for good.
+                                        return f(transaction, additionalPeers, additionalMessages)
                                     }
                                 }
                             } else {
@@ -420,7 +422,9 @@ struct FetchMessageHistoryHoleResult: Equatable {
     var ids: [MessageId]
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleOperationSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
+/// `pendingReferences`: where a fill that stores before resolving registers the reply targets and stories it is
+/// fetching, so the views it feeds draw them as skeletons. Fills nobody is looking at pass nil.
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleOperationSpace, count rawCount: Int, pendingReferences: PendingMessageReferences? = nil) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
     
     return postbox.stateView()
@@ -995,10 +999,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     var serverCount: Int32?
                     var serverOffsetIdOffset: Int32?
                     var serverInexact = false
+                    var responseTopics: [Api.ForumTopic] = []
                     switch result {
                         case let .messages(messagesData):
-                            let (apiMessages, _, apiChats, apiUsers) = (messagesData.messages, messagesData.topics, messagesData.chats, messagesData.users)
+                            let (apiMessages, apiTopics, apiChats, apiUsers) = (messagesData.messages, messagesData.topics, messagesData.chats, messagesData.users)
                             messages = apiMessages
+                            responseTopics = apiTopics
                             chats = apiChats
                             users = apiUsers
                             serverCount = Int32(clamping: apiMessages.count)
@@ -1013,7 +1019,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         case let .channelMessages(channelMessagesData):
                             let (pts, apiMessages, apiTopics, apiChats, apiUsers) = (channelMessagesData.pts, channelMessagesData.messages, channelMessagesData.topics, channelMessagesData.chats, channelMessagesData.users)
                             messages = apiMessages
-                            let _ = apiTopics
+                            responseTopics = apiTopics
                             chats = apiChats
                             users = apiUsers
                             channelPts = pts
@@ -1027,9 +1033,14 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     }
                     
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                    
+
                     var storeMessages: [StoreMessage] = []
-                    
+
+                    if peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) != nil {
+                        let messageIds = messages.compactMap { $0.id()?.id }
+                        Logger.shared.log("ReplyThreadOpen", "thread fill answered input=\(peerInput) ids=\(messageIds.count) min=\(String(describing: messageIds.min())) max=\(String(describing: messageIds.max())) pts=\(String(describing: channelPts)) count=\(String(describing: serverCount)) offsetIdOffset=\(String(describing: serverOffsetIdOffset))")
+                    }
+
                     for message in messages {
                         if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum, namespace: namespace) {
                             if let channelPts = channelPts {
@@ -1042,35 +1053,9 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
-                    /// The version each fetched message had once the first transaction stored it; the
-                    /// follow-up re-adds a message only while it is still that version.
-                    final class StoredVersions {
-                        var byId: [MessageId: UInt32] = [:]
-                    }
-                    let storedVersions = StoredVersions()
-                    
                     /// Stores the fetched messages, closes the hole and reports what was filled.
                     let storeAndCloseHole: (Transaction) -> FetchMessageHistoryHoleResult? = { transaction in
                         let _ = transaction.addMessages(storeMessages, location: .Random)
-                        var storedIds = Set<MessageId>()
-                        for message in storeMessages {
-                            if case let .Id(id) = message.id {
-                                storedIds.insert(id)
-                            }
-                        }
-                        // Only a message that references something outside this fetch can be re-added
-                        // later; `getMessage` is a full render, so it runs for those alone.
-                        for message in storeMessages {
-                            guard case let .Id(id) = message.id else {
-                                continue
-                            }
-                            let referencesOutside = message.attributes.contains(where: { attribute in
-                                attribute.associatedMessageIds.contains(where: { !storedIds.contains($0) })
-                            })
-                            if referencesOutside, let stored = transaction.getMessage(id) {
-                                storedVersions.byId[id] = stored.stableVersion
-                            }
-                        }
                         var filledRange: ClosedRange<MessageId.Id>
                         var strictFilledIndices: IndexSet
                         let ids = storeMessages.compactMap { message -> MessageId.Id? in
@@ -1209,62 +1194,155 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         )
                     }
                     
-                    /// Stores what the fetched messages reference (reply targets, custom emoji files,
-                    /// stories) and re-adds the messages whose reply targets just arrived, so a view
-                    /// re-renders them with the target attached (a view watches its own chat only).
+                    /// What the stored messages reference that is not stored: reply targets (other than a forum
+                    /// message's own topic root, which never draws as a header) and stories, in their media or in a
+                    /// reply header (`replyStoryIds`, which the associated-message resolution does not fetch), and
+                    /// the messages referencing any of them (`sourceIds`), which draw them as loading and are redrawn
+                    /// when the follow-up ends.
+                    struct MissingReferences {
+                        var sourceIds = Set<MessageId>()
+                        var replyStoryIds = Set<StoryId>()
+                    }
+                    let missingReferences: (Transaction) -> MissingReferences = { transaction in
+                        var storedIds = Set<MessageId>()
+                        for message in storeMessages {
+                            if case let .Id(id) = message.id {
+                                storedIds.insert(id)
+                            }
+                        }
+                        var targetsBySource: [MessageId: [MessageId]] = [:]
+                        var storiesBySource: [MessageId: [StoryId]] = [:]
+                        var candidateTargets = Set<MessageId>()
+                        var mediaStoryIds = Set<StoryId>()
+                        var attributeStoryIds = Set<StoryId>()
+                        for message in storeMessages {
+                            guard case let .Id(id) = message.id else {
+                                continue
+                            }
+                            for attribute in message.attributes {
+                                let targets = pendingReplyTargets(replyTargets: attribute.associatedMessageIds, messageThreadId: message.threadId, peerIsForum: peer.isForumOrMonoForum).filter { !storedIds.contains($0) }
+                                if !targets.isEmpty {
+                                    targetsBySource[id, default: []].append(contentsOf: targets)
+                                    candidateTargets.formUnion(targets)
+                                }
+                                if !attribute.associatedStoryIds.isEmpty {
+                                    storiesBySource[id, default: []].append(contentsOf: attribute.associatedStoryIds)
+                                    attributeStoryIds.formUnion(attribute.associatedStoryIds)
+                                }
+                            }
+                            for media in message.media where !media.storyIds.isEmpty {
+                                storiesBySource[id, default: []].append(contentsOf: media.storyIds)
+                                mediaStoryIds.formUnion(media.storyIds)
+                            }
+                        }
+                        let missingTargets = candidateTargets.subtracting(transaction.filterStoredMessageIds(candidateTargets))
+                        var missingStories = Set<StoryId>()
+                        for id in mediaStoryIds.union(attributeStoryIds) where transaction.getStory(id: id) == nil {
+                            missingStories.insert(id)
+                        }
+                        
+                        var result = MissingReferences()
+                        result.replyStoryIds = missingStories.subtracting(mediaStoryIds)
+                        for (id, targets) in targetsBySource where targets.contains(where: { missingTargets.contains($0) }) {
+                            result.sourceIds.insert(id)
+                        }
+                        for (id, stories) in storiesBySource where stories.contains(where: { missingStories.contains($0) }) {
+                            result.sourceIds.insert(id)
+                        }
+                        return result
+                    }
+                    
+                    /// Stores what the follow-up fetched (reply targets and their peers).
                     let storeReferencedData: (Transaction, AccumulatedPeers, [StoreMessage]) -> Void = { transaction, additionalParsedPeers, additionalMessages in
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: additionalParsedPeers)
-                        
-                        var additionalIds = Set<MessageId>()
-                        for message in additionalMessages {
-                            if case let .Id(id) = message.id {
-                                additionalIds.insert(id)
-                            }
-                        }
-                        if additionalIds.isEmpty {
-                            return
-                        }
-                        let referencingMessages = storeMessages.filter { message in
-                            guard case let .Id(id) = message.id, let version = storedVersions.byId[id] else {
-                                return false
-                            }
-                            let referencesAdditional = message.attributes.contains(where: { attribute in
-                                attribute.associatedMessageIds.contains(where: { additionalIds.contains($0) })
+                    }
+                    
+                    /// Redraws the messages that referenced something missing, found or not: each is rewritten from
+                    /// its current row, which loses nothing written since and always counts as an update (a view
+                    /// watches its own chat only, and a skeleton drawn meanwhile must end).
+                    let redrawMessages: (Transaction, Set<MessageId>) -> Void = { transaction, ids in
+                        for id in ids {
+                            transaction.updateMessage(id, update: { current in
+                                return .update(storeMessageRewritingCurrent(current))
                             })
-                            if !referencesAdditional {
-                                return false
-                            }
-                            guard let current = transaction.getMessage(id), current.stableVersion == version else {
-                                return false
-                            }
-                            return true
-                        }
-                        if !referencingMessages.isEmpty {
-                            let _ = transaction.addMessages(referencingMessages, location: .Random)
                         }
                     }
                     
+                    // Topic headers read a message's thread info while drawing: a forum fill holding a message of a
+                    // topic whose info is not stored resolves before it stores. The answer's own topics count; they
+                    // are stored with the messages, since a topic's info does not survive a commit without one of
+                    // its messages (MessageThreadIndexTable.replay).
+                    var storesFirst = true
+                    var answerTopics: [Int64: Api.ForumTopic] = [:]
                     if peer.isForumOrMonoForum {
-                        // Topic headers read thread infos at render time: a forum resolves before it stores.
+                        for topic in responseTopics {
+                            if case let .forumTopic(forumTopicData) = topic {
+                                answerTopics[Int64(forumTopicData.id)] = topic
+                            }
+                        }
+                        var fetchedThreadIds = Set<Int64>()
+                        var storedThreadIds = Set<Int64>()
+                        for message in storeMessages {
+                            guard case let .Id(id) = message.id, let threadId = message.threadId else {
+                                continue
+                            }
+                            fetchedThreadIds.insert(threadId)
+                            if transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId) != nil {
+                                storedThreadIds.insert(threadId)
+                            }
+                        }
+                        storesFirst = forumFillStoresFirst(fetchedThreadIds: fetchedThreadIds, storedThreadIds: storedThreadIds, answerThreadIds: Set(answerTopics.keys))
+                        Logger.shared.log("ReplyThreadOpen", "forum fill responseTopics=\(answerTopics.count) threads=\(fetchedThreadIds.count) unknownThreads=\(fetchedThreadIds.subtracting(storedThreadIds).count) storesFirst=\(storesFirst)")
+                    }
+                    
+                    if !storesFirst {
                         return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: true, { transaction, additionalParsedPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
                             let result = storeAndCloseHole(transaction)
                             storeReferencedData(transaction, additionalParsedPeers, additionalMessages)
                             return result
                         })
                     } else {
-                        // The view loads after one round trip; what the messages reference follows.
+                        // The view loads after one round trip; what the messages reference follows, registered
+                        // meanwhile so the view draws it as loading.
                         return postbox.transaction { transaction -> FetchMessageHistoryHoleResult? in
-                            return storeAndCloseHole(transaction)
-                        }
-                        |> mapToSignal { result -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-                            // Detached on purpose: ReplyThreadHistory disposes a fill as soon as the
-                            // thread's hole changes, which the first transaction just did, and what
-                            // the messages reference must still arrive.
-                            let _ = withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: false, { transaction, additionalParsedPeers, additionalMessages -> Void in
+                            let result = storeAndCloseHole(transaction)
+                            var storedAnswerTopics = 0
+                            for (threadId, topic) in answerTopics where transaction.getMessageHistoryThreadInfo(peerId: peer.id, threadId: threadId) == nil {
+                                storeFetchedForumTopic(transaction: transaction, peerId: peer.id, topic: topic)
+                                storedAnswerTopics += 1
+                            }
+                            let missing = missingReferences(transaction)
+                            let registration = pendingReferences?.register(sourceIds: missing.sourceIds)
+                            if !missing.sourceIds.isEmpty || storedAnswerTopics != 0 {
+                                Logger.shared.log("ReplyThreadOpen", "fill stored answerTopics=\(storedAnswerTopics) waiting messages=\(missing.sourceIds.count) replyStories=\(missing.replyStoryIds.count) registered=\(registration != nil)")
+                            }
+                            
+                            // Started here, not after this transaction's result is delivered: a fill disposed in
+                            // between (ReplyThreadHistory disposes one as soon as the thread's hole changes, which
+                            // this transaction just did) must still fetch what its messages reference and release
+                            // what it registered.
+                            let replyStories: Signal<Void, NoError>
+                            if missing.replyStoryIds.isEmpty {
+                                replyStories = .single(Void())
+                            } else {
+                                replyStories = resolveStories(postbox: postbox, source: source, accountPeerId: accountPeerId, storyIds: missing.replyStoryIds, additionalPeers: parsedPeers, result: Void())
+                            }
+                            let associated = withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: peer.isForumOrMonoForum, { transaction, additionalParsedPeers, additionalMessages -> Void in
                                 storeReferencedData(transaction, additionalParsedPeers, additionalMessages)
+                            })
+                            let _ = (combineLatest(replyStories, associated)
+                            |> take(1)
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return postbox.transaction { transaction -> Void in
+                                    if let registration {
+                                        pendingReferences?.release(registration)
+                                    }
+                                    redrawMessages(transaction, missing.sourceIds)
+                                }
                             }).startStandalone()
-                            return .single(result)
+                            
+                            return result
                         }
                     }
                 }
@@ -1462,4 +1540,9 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
         }
         return searchResult
     }
+}
+
+/// A message as it now stands, to write back unchanged: a rewrite always counts as an update, so views redraw it.
+private func storeMessageRewritingCurrent(_ message: Message) -> StoreMessage {
+    return StoreMessage(id: message.id, customStableId: nil, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: StoreMessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media)
 }

@@ -2467,41 +2467,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                 for item in result.items {
                                     switch item {
                                     case let .forum(topic):
-                                        switch topic {
-                                        case let .forumTopic(forumTopicData):
-                                            let (flags, id, date, peer, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, unreadPollVoteCount, fromId, notifySettings, draft) = (forumTopicData.flags, forumTopicData.id, forumTopicData.date, forumTopicData.peer, forumTopicData.title, forumTopicData.iconColor, forumTopicData.iconEmojiId, forumTopicData.topMessage, forumTopicData.readInboxMaxId, forumTopicData.readOutboxMaxId, forumTopicData.unreadCount, forumTopicData.unreadMentionsCount, forumTopicData.unreadReactionsCount, forumTopicData.unreadPollVotesCount, forumTopicData.fromId, forumTopicData.notifySettings, forumTopicData.draft)
-                                            let _ = peer
-                                            let _ = draft
-
-                                            let data = MessageHistoryThreadData(
-                                                creationDate: date,
-                                                isOwnedByMe: (flags & (1 << 1)) != 0,
-                                                author: fromId.peerId,
-                                                info: EngineMessageHistoryThread.Info(
-                                                    title: title,
-                                                    icon: iconEmojiId == 0 ? nil : iconEmojiId,
-                                                    iconColor: iconColor
-                                                ),
-                                                incomingUnreadCount: unreadCount,
-                                                isMarkedUnread: false,
-                                                maxIncomingReadId: readInboxMaxId,
-                                                maxKnownMessageId: topMessage,
-                                                maxOutgoingReadId: readOutboxMaxId,
-                                                isClosed: (flags & (1 << 2)) != 0,
-                                                isHidden: (flags & (1 << 6)) != 0,
-                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
-                                                isMessageFeeRemoved: false
-                                            )
-                                            if let entry = StoredMessageHistoryThreadInfo(data) {
-                                                transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
-                                            }
-                                            
-                                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadMentionsCount, maxId: topMessage)
-                                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadReactionsCount, maxId: topMessage)
-                                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadPollVoteCount, maxId: topMessage)
-                                        case .forumTopicDeleted:
-                                            break
-                                        }
+                                        storeFetchedForumTopic(transaction: transaction, peerId: peerId, topic: topic)
                                     case let .savedDialog(savedDialog):
                                         switch savedDialog {
                                         case let .monoForumDialog(monoForumDialogData):
@@ -6453,4 +6419,44 @@ func replayFinalState(
         updatedStarGiftAuctionMyState: updatedStarGiftAuctionMyState,
         updatedEmojiGameInfo: updatedEmojiGameInfo
     )
+}
+
+/// Stores a forum topic fetched from the server: its thread info and its unread mention, reaction and poll-vote
+/// summaries. A deleted topic stores nothing.
+func storeFetchedForumTopic(transaction: Transaction, peerId: PeerId, topic: Api.ForumTopic) {
+    switch topic {
+    case let .forumTopic(forumTopicData):
+        let (flags, id, date, peer, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, unreadPollVoteCount, fromId, notifySettings, draft) = (forumTopicData.flags, forumTopicData.id, forumTopicData.date, forumTopicData.peer, forumTopicData.title, forumTopicData.iconColor, forumTopicData.iconEmojiId, forumTopicData.topMessage, forumTopicData.readInboxMaxId, forumTopicData.readOutboxMaxId, forumTopicData.unreadCount, forumTopicData.unreadMentionsCount, forumTopicData.unreadReactionsCount, forumTopicData.unreadPollVotesCount, forumTopicData.fromId, forumTopicData.notifySettings, forumTopicData.draft)
+        let _ = peer
+        let _ = draft
+
+        let data = MessageHistoryThreadData(
+            creationDate: date,
+            isOwnedByMe: (flags & (1 << 1)) != 0,
+            author: fromId.peerId,
+            info: EngineMessageHistoryThread.Info(
+                title: title,
+                icon: iconEmojiId == 0 ? nil : iconEmojiId,
+                iconColor: iconColor
+            ),
+            incomingUnreadCount: unreadCount,
+            isMarkedUnread: false,
+            maxIncomingReadId: readInboxMaxId,
+            maxKnownMessageId: topMessage,
+            maxOutgoingReadId: readOutboxMaxId,
+            isClosed: (flags & (1 << 2)) != 0,
+            isHidden: (flags & (1 << 6)) != 0,
+            notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+            isMessageFeeRemoved: false
+        )
+        if let entry = StoredMessageHistoryThreadInfo(data) {
+            transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
+        }
+
+        transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadMentionsCount, maxId: topMessage)
+        transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadReactionsCount, maxId: topMessage)
+        transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadPollVoteCount, maxId: topMessage)
+    case .forumTopicDeleted:
+        break
+    }
 }

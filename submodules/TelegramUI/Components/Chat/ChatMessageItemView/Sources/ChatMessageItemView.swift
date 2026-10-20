@@ -553,6 +553,9 @@ public final class ChatMessageAccessibilityData {
                 replyValue = replyMessageValue
                 
                 label = "\(replyLabel) . \(label)"
+            } else if let attribute = attribute as? ReplyMessageAttribute, item.message.associatedMessages[attribute.messageId] == nil, item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id) {
+                // The reply's target is being fetched; the header draws as a skeleton.
+                label = "\(item.presentationData.strings.VoiceOver_Chat_Reply), \(item.presentationData.strings.Channel_NotificationLoading) . \(label)"
             }
         }
         

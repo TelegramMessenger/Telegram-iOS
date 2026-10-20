@@ -47,6 +47,7 @@ private final class ManagedMessageHistoryHolesContext {
     private let accountPeerId: PeerId
     private let postbox: Postbox
     private let network: Network
+    private let pendingReferences: PendingMessageReferences
     
     private var nextEntryId: Int = 0
     private var pendingEntries: [PendingEntry] = []
@@ -64,12 +65,14 @@ private final class ManagedMessageHistoryHolesContext {
         accountPeerId: PeerId,
         postbox: Postbox,
         network: Network,
+        pendingReferences: PendingMessageReferences,
         entries: Signal<Set<MessageHistoryHolesViewEntry>, NoError>
     ) {
         self.queue = queue
         self.accountPeerId = accountPeerId
         self.postbox = postbox
         self.network = network
+        self.pendingReferences = pendingReferences
         
         self.currentEntriesDisposable = (entries |> deliverOn(self.queue)).start(next: { [weak self] entries in
             guard let self = self else {
@@ -196,7 +199,7 @@ private final class ManagedMessageHistoryHolesContext {
                     accountPeerId: self.accountPeerId,
                     source: .network(self.network),
                     postbox: self.postbox,
-                    peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: pendingEntry.entry.direction, space: pendingEntry.entry.space, count: pendingEntry.entry.count)
+                    peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: pendingEntry.entry.direction, space: pendingEntry.entry.space, count: pendingEntry.entry.count, pendingReferences: self.pendingReferences)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     guard let self = self else {
                         return
@@ -210,7 +213,7 @@ private final class ManagedMessageHistoryHolesContext {
     }
 }
 
-func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox) -> ((PeerId) -> Void, Disposable) {
+func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox, pendingReferences: PendingMessageReferences) -> ((PeerId) -> Void, Disposable) {
     let sharedQueue = Queue()
     
     var context: QueueLocalObject<ManagedMessageHistoryHolesContext>? = QueueLocalObject<ManagedMessageHistoryHolesContext>(queue: sharedQueue, generate: {
@@ -219,6 +222,7 @@ func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox
             accountPeerId: accountPeerId,
             postbox: postbox,
             network: network,
+            pendingReferences: pendingReferences,
             entries: postbox.messageHistoryHolesView() |> map { view in
                 return view.entries
             }

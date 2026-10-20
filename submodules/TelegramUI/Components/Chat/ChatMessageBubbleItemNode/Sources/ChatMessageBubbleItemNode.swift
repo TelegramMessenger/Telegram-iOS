@@ -2151,6 +2151,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
         var replyInnerSubject: EngineMessageReplyInnerSubject?
         var replyStory: StoryId?
+        // The reply target or replied story is missing and being fetched: the header draws as a skeleton.
+        var replyIsLoading = false
         var replyMarkup: ReplyMarkupMessageAttribute?
         var authorNameColor: UIColor?
         
@@ -2169,6 +2171,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 if let threadId = firstMessage.threadId, Int32(clamping: threadId) == attribute.messageId.id, let peer = firstMessage.peers[firstMessage.id.peerId], peer.isForumOrMonoForum {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
+                    if replyMessage == nil {
+                        replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: firstMessage.id)
+                    }
                 }
                 replyQuote = attribute.quote.flatMap { ($0, attribute.isQuote) }
                 replyInnerSubject = attribute.innerSubject
@@ -2176,6 +2181,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 replyForward = attribute
             } else if let attribute = attribute as? ReplyStoryAttribute {
                 replyStory = attribute.storyId
+                if firstMessage.associatedStories[attribute.storyId] == nil {
+                    replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: firstMessage.id)
+                }
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 var isExtendedMedia = false
                 for media in firstMessage.media {
@@ -2437,7 +2445,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasForwardLikeContent = true
             }
             
-            if inlineBotNameString == nil && (ignoreForward || !hasForwardLikeContent) && replyMessage == nil && replyForward == nil && replyStory == nil {
+            if inlineBotNameString == nil && (ignoreForward || !hasForwardLikeContent) && replyMessage == nil && replyForward == nil && replyStory == nil && !replyIsLoading {
                 if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader && !ignoreNameHiding {
                     if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
                     } else {
@@ -2578,7 +2586,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if firstMessage.media.contains(where: { $0 is TelegramMediaStory }) {
                 displayHeader = true
             }
-            if replyMessage != nil || replyForward != nil || replyStory != nil {
+            if replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading {
                 displayHeader = true
             }
             if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
@@ -3009,7 +3017,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             let hasThreadInfo = !"".isEmpty
                         
-            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
+            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading
             if !isInstantVideo && hasThreadInfo {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -3023,7 +3031,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasReply = true
             }
                         
-            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || isSummarized) {
+            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || isSummarized || replyIsLoading) {
                 if headerSize.height.isZero {
                     headerSize.height += 11.0
                 } else {
@@ -3040,6 +3048,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     innerSubject: replyInnerSubject,
                     story: replyStory,
                     isSummarized: isSummarized,
+                    isLoading: replyIsLoading,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,

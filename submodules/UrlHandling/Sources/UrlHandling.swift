@@ -1156,7 +1156,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         }
                                     }
                                 } else {
-                                    return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
+                                    return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: replyId)
                                     |> map(Optional.init)
                                     |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                         return .single(nil)
@@ -1310,7 +1310,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             }
                         } else if let threadId = threadId {
                             let replyThreadMessageId = EngineMessage.Id(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
+                            return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: messageId.id)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)

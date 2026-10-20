@@ -4148,6 +4148,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             // A view still loading reports loading, as in `dequeueHistoryViewTransitions`.
             let historyState: ChatHistoryNodeHistoryState = transition.historyView.originalView.isLoading ? .loading : .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
             if self.currentHistoryState != historyState {
+                if case .loaded = historyState, self.chatLocation.threadId != nil {
+                    Logger.shared.log("ReplyThreadOpen", "history loaded thread=\(String(describing: self.chatLocation.threadId)) entries=\(transition.historyView.originalView.entries.count)")
+                }
                 self.currentHistoryState = historyState
                 self.historyState.set(historyState)
             }
@@ -4652,6 +4655,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 // other open.
                 let historyState: ChatHistoryNodeHistoryState = transition.historyView.originalView.isLoading ? .loading : .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
                 if strongSelf.currentHistoryState != historyState {
+                    if case .loaded = historyState, strongSelf.chatLocation.threadId != nil {
+                        Logger.shared.log("ReplyThreadOpen", "history loaded thread=\(String(describing: strongSelf.chatLocation.threadId)) entries=\(transition.historyView.originalView.entries.count)")
+                    }
                     strongSelf.currentHistoryState = historyState
                     strongSelf.historyState.set(historyState)
                 }

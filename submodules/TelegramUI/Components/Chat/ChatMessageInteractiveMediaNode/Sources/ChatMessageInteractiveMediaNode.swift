@@ -35,6 +35,7 @@ import RangeSet
 import GiftItemComponent
 import MediaResources
 import UIKitRuntimeUtils
+import ShimmerEffect
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -433,6 +434,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
+    /// Over a forwarded story's media area while the story is being fetched (the area already has its final size).
+    private var storySkeletonNode: ShimmerEffectNode?
     private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
     private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize, Int32)?
     private var highQualityImageNode: TransformImageNode?
@@ -1929,6 +1932,35 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             }
                             strongSelf.currentImageArguments = arguments
                             imageApply(transition)
+                            
+                            var storyIsLoading = false
+                            if let story = media as? TelegramMediaStory, message.associatedStories[story.storyId] == nil {
+                                storyIsLoading = context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: message.id)
+                            }
+                            if storyIsLoading {
+                                let skeletonNode: ShimmerEffectNode
+                                if let current = strongSelf.storySkeletonNode {
+                                    skeletonNode = current
+                                } else {
+                                    skeletonNode = ShimmerEffectNode()
+                                    skeletonNode.isUserInteractionEnabled = false
+                                    strongSelf.storySkeletonNode = skeletonNode
+                                    strongSelf.pinchContainerNode.contentNode.addSubnode(skeletonNode)
+                                }
+                                let skeletonFrame = CGRect(origin: CGPoint(), size: imageFrame.size)
+                                let baseColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
+                                // Reduce Motion: the sweep is the block's own colour, so nothing moves.
+                                let sweepColor = UIAccessibility.isReduceMotionEnabled ? baseColor : baseColor.mixedWith(.white, alpha: 0.25)
+                                skeletonNode.frame = skeletonFrame
+                                skeletonNode.update(backgroundColor: .clear, foregroundColor: baseColor, shimmeringColor: sweepColor, shapes: [.roundedRect(rect: skeletonFrame, cornerRadius: arguments.corners.topLeft.radius)], horizontal: true, size: skeletonFrame.size, mask: true)
+                                skeletonNode.updateAbsoluteRect(skeletonFrame, within: skeletonFrame.size)
+                            } else if let skeletonNode = strongSelf.storySkeletonNode {
+                                // The story landed (or will not): the skeleton fades off what is now drawn.
+                                strongSelf.storySkeletonNode = nil
+                                skeletonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak skeletonNode] _ in
+                                    skeletonNode?.removeFromSupernode()
+                                })
+                            }
 
                             if let statusApply = statusApply {
                                 let dateAndStatusFrame = CGRect(origin: CGPoint(x: cleanImageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: cleanImageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)

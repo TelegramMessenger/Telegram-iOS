@@ -1260,8 +1260,9 @@ come from TelegramCore around it. Four facts keep the critical path at one `mess
 
 - **A history fill stores before it resolves.** `fetchMessageHistoryHole` stores the messages and
   closes the hole in its first transaction; reply targets, custom emoji files and stories follow, and
-  the follow-up re-adds the messages whose reply targets arrived so a view (which watches its own
-  chat only) re-renders them. Forums and monoforums keep thread resolution before storage.
+  the follow-up rewrites the messages that waited for them from their current rows, so a view (which
+  watches its own chat only) re-renders them. Forums and monoforums store first too when their topics
+  are known (see "Forum topics, and references that arrive late").
 - **The around fill learns the top from the server.** `offset_id_offset` is the 1-based position of
   the anchor from the newest message and the server does not fill downward, so the hole closes to the
   top exactly when the newer ids returned number one less than it (`aroundHoleFillRange`, tested in
@@ -1275,6 +1276,83 @@ come from TelegramCore around it. Four facts keep the critical path at one `mess
   The full hole is added once per unpolled period (a flag on the channel's polling context), and a
   fill that closes the hole to the top advances the channel state's `synchronizedUntilMessageId`, so
   the chat's re-subscription after a fill does not wipe it and the poll does not seed a gap hole over it.
+
+## Opening a post's comments (one round trip)
+
+Measured 2026-10-20: a channel post's comments, a `?comment=` link and a group reply thread each open after one
+round trip. Before, they took two, and a link took four.
+
+- **`getReplies` goes out beside `getDiscussionMessage`, not after it.** `messages.getReplies(peer: channel, msg_id:
+  post)` answers with the discussion group's comments (`.threadFromChannel`); a group thread is requested by its own
+  id.
+  - `replyThreadOpenPlan` decides what to send from the head's stored `ReplyThreadMessageAttribute`. The anchor is the
+    link's comment, else `read_max_id`, else the oldest 40.
+  - `replyThreadReconcile` keeps the fill only when `getDiscussionMessage` names the same thread and anchor. Otherwise
+    the sequential fill runs, cache first.
+  - "Same thread" differs by target (`replyThreadFillMatchesServerThread`). A post's fill matches unless its comments
+    name another thread. A group thread's fill matches only when the thread the client chose is the server's: an
+    empty answer names no thread, and a `.direct` fill has already closed holes on the thread it asked for. Treating an
+    empty answer as a match closed every hole of the real thread on disk.
+  - Both are pure and tested (`ReplyThreadOpenPlanTests`).
+- **A `.threadFromChannel` fill cannot close its own holes**, because it does not know the thread id. The opener
+  removes its full `removedIndices` on the server's thread, exactly what a `.direct` fill of the same answer closes.
+- **A cached reopen sends `getDiscussionMessage` alone.** The cache probe needs the post's thread id. It takes it from
+  a cached comment (the anchor or the newest), else from the group's copy of the post: found by the post's date and its
+  `SourceReferenceMessageAttribute` (`cachedDiscussionThreadId`). A long thread opened at its oldest end has neither
+  comment cached; without the second lookup, every later reopen sent an extra `getReplies`.
+- **`getDiscussionMessage` is sent before the probe runs.** The probe runs beside it and only decides whether
+  `getReplies` goes out too.
+- **The fill's `pts` is the group's** (measured), so `ChannelMessageStateVersionAttribute` is stamped as for `.direct`.
+- **The thread context's own `getDiscussionMessage` is skipped** within 30 s of the opener's
+  (`RecentDiscussionMessageFetches`). Both forms returned the same read state in every measured case.
+- **A comment link fetches its thread once.** The resolver fills around the linked comment and hands the thread to
+  `openMessageReplies(resolvedThread:)`, which only preloads. A post that is not cached is fetched in the same turn.
+- **Debug builds have three measurement aids:**
+  - `-resetCommentsCache <username/post,…>` clears those posts' discussion groups at launch.
+    `-resetCommentsCacheDropPosts` also drops the posts and leaves a hole in their place; without the hole the channel
+    reads the post as never having existed.
+  - `-debugOpenUrl <url>` opens a link through the universal-link path.
+  - The `ReplyThreadOpen` log tag times each step. The `[MT] … add request` lines show what reached the wire.
+
+## Forum topics, and references that arrive late (skeletons)
+
+Measured 2026-10-20 on twochannel, in round trips: a cold topic shows its
+messages after one round trip (`getReplies`), where it took two.
+
+- **A forum fill stores first when every fetched message's topic info is known** (`forumFillStoresFirst`).
+  - Known means stored, or carried by the answer itself (`topics`; both `getHistory` and `getReplies` carry them).
+  - The answer's missing topics are stored **in the same transaction as the messages** (`storeFetchedForumTopic`). A
+    topic's info stored alone is dropped at commit: `MessageThreadIndexTable.replay` keeps an info only while the
+    topic has a stored message.
+  - A message of a still-unknown topic resolves before storing, because topic headers read thread infos while
+    drawing.
+  - Monoforums follow the same rule.
+- **Forum fills store the reply targets they fetch.** From `09c49d47d9` ("[WIP] Monoforums") until this change, the
+  topics branch of `withResolvedAssociatedMessages` passed them on as empty.
+- **Messages waiting for references that arrive after the store are registered** in
+  `AccountViewTracker.pendingMessageReferences`.
+  - The registry is keyed by the **referencing message**, so the set that draws skeletons is exactly the set the
+    fills redraw. A message drawing a skeleton is always a source of a pending registration.
+  - A fill registers the messages it stored that reference a missing reply target or story, in the transaction that
+    stores them. A forum message's own topic root is excluded (`pendingReplyTargets`): it is usually not stored and
+    never draws as a header.
+  - The follow-up is **started inside that transaction**, so a fill disposed right after (ReplyThreadHistory disposes
+    on the hole change the store causes) still releases.
+  - The follow-up also fetches reply-header stories (`ReplyStoryAttribute`, which `resolveAssociatedStories` skips).
+  - When it ends, whatever came back, it releases the registration and **rewrites its source messages from their
+    current rows**, so each one redraws. Do not bring back the version-guarded re-add: the view counter rewrites
+    channel posts on screen, so the guard skipped exactly those, and a skeleton would stay.
+  - Fills with nobody looking (preload, sparse lists) pass nil and register nothing.
+- **Skeletons draw only for a missing reference of a registered message**
+  (`hasLoadingReferences(messageId:)`); anything else missing draws as before.
+  - A reply header (`ChatMessageReplyInfoNode.Arguments.isLoading`) shimmers its author and text bars at the real
+    header's height; a quote shows its own text.
+  - A forwarded story or story link preview shimmers its media area, which already has the story's final size
+    (`ChatMessageInteractiveMediaNode`).
+  - A story mention shimmers its circle.
+- **The forum debug reset** is `-resetForumCache <username,...>`. It clears the history and also marks the topic list
+  unloaded, because a topic's list entry, and the topic info stored in it, live only while the topic has a stored
+  message (`MessageThreadIndexTable.replay`).
 
 ## Opening a post from the News feed: the cached post first
 

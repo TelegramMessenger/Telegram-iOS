@@ -262,9 +262,21 @@ public extension TelegramEngine {
             return _internal_requestUnpinAllMessages(account: self.account, peerId: peerId, threadId: threadId)
         }
 
-        public func fetchChannelReplyThreadMessage(messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
+        /// `atMessageId` is a comment's id in the discussion group's id space (a link's `?comment=`): the group
+        /// may not be known before the thread is fetched.
+        public func fetchChannelReplyThreadMessage(messageId: MessageId, atMessageId: MessageId.Id?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
             return _internal_fetchChannelReplyThreadMessage(account: self.account, messageId: messageId, atMessageId: atMessageId)
         }
+
+        #if DEBUG
+        public func debugResetDiscussionCaches(posts: [(username: String, postId: Int32)], dropPosts: Bool) -> Signal<Never, NoError> {
+            return _internal_debugResetDiscussionCaches(account: self.account, posts: posts, dropPosts: dropPosts)
+        }
+        
+        public func debugResetForumHistory(usernames: [String]) -> Signal<Never, NoError> {
+            return _internal_debugResetForumHistory(account: self.account, usernames: usernames)
+        }
+        #endif
 
         public func requestStartBot(botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
             return _internal_requestStartBot(account: self.account, botPeerId: botPeerId, payload: payload)

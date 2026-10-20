@@ -462,111 +462,117 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
     case .channelPost(let messageId), .groupMessage(let messageId):
-        message = context.engine.messages.fetchChannelReplyThreadMessage(messageId: messageId, atMessageId: atMessageId)
+        message = context.engine.messages.fetchChannelReplyThreadMessage(messageId: messageId, atMessageId: atMessageId?.id)
     }
     
     return message
     |> mapToSignal { replyThreadMessage -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> in
-        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        
-        let input: ChatHistoryLocationInput
-        var scrollToLowerBoundMessage: MessageIndex?
-        switch replyThreadMessage.initialAnchor {
-        case .automatic:
-            if let atMessageId = atMessageId {
-                input = ChatHistoryLocationInput(
-                    content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(atMessageId)), count: 40, highlight: true, setupReply: false),
-                    id: 0
-                )
-            } else {
-                input = ChatHistoryLocationInput(
-                    content: .Initial(count: 40),
-                    id: 0
-                )
-            }
-        case let .lowerBoundMessage(index):
+        return preloadReplyThreadInfo(context: context, replyThreadMessage: replyThreadMessage, subject: subject, atMessageId: atMessageId, preload: preload)
+    }
+}
+
+/// The preload half of `fetchAndPreloadReplyThreadInfo`, for a thread that is already fetched (a comment link
+/// resolves its thread before opening it).
+func preloadReplyThreadInfo(context: AccountContext, replyThreadMessage: ChatReplyThreadMessage, subject: ReplyThreadSubject, atMessageId: MessageId?, preload: Bool) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
+    let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+    
+    let input: ChatHistoryLocationInput
+    var scrollToLowerBoundMessage: MessageIndex?
+    switch replyThreadMessage.initialAnchor {
+    case .automatic:
+        if let atMessageId = atMessageId {
             input = ChatHistoryLocationInput(
-                content: .Navigation(index: .message(index), anchorIndex: .message(index), count: 40, highlight: false),
+                content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(atMessageId)), count: 40, highlight: true, setupReply: false),
                 id: 0
             )
-            scrollToLowerBoundMessage = index
+        } else {
+            input = ChatHistoryLocationInput(
+                content: .Initial(count: 40),
+                id: 0
+            )
         }
-        
-        if replyThreadMessage.isNotAvailable {
-            return .single(ReplyThreadInfo(
-                message: replyThreadMessage,
-                isChannelPost: replyThreadMessage.isChannelPost,
-                isEmpty: false,
-                scrollToLowerBoundMessage: nil,
-                contextHolder: chatLocationContextHolder
-            ))
-        }
-        
-        if preload {
-            var channelMessage: Signal<Void, NoError> = .single(Void())
-            if case .channelPost = subject, let channelMessageId = replyThreadMessage.channelMessageId {
-                channelMessage = context.engine.messages.getMessagesLoadIfNecessary([channelMessageId], strategy: .cloud(skipLocal: false))
-                |> mapToSignal { result -> Signal<Void, GetMessagesError> in
-                    switch result {
-                    case .progress:
-                        return .never()
-                    case .result:
-                        return .single(Void())
-                    }
-                }
-                |> `catch` { _ -> Signal<Void, NoError> in
+    case let .lowerBoundMessage(index):
+        input = ChatHistoryLocationInput(
+            content: .Navigation(index: .message(index), anchorIndex: .message(index), count: 40, highlight: false),
+            id: 0
+        )
+        scrollToLowerBoundMessage = index
+    }
+    
+    if replyThreadMessage.isNotAvailable {
+        return .single(ReplyThreadInfo(
+            message: replyThreadMessage,
+            isChannelPost: replyThreadMessage.isChannelPost,
+            isEmpty: false,
+            scrollToLowerBoundMessage: nil,
+            contextHolder: chatLocationContextHolder
+        ))
+    }
+    
+    if preload {
+        var channelMessage: Signal<Void, NoError> = .single(Void())
+        if case .channelPost = subject, let channelMessageId = replyThreadMessage.channelMessageId {
+            channelMessage = context.engine.messages.getMessagesLoadIfNecessary([channelMessageId], strategy: .cloud(skipLocal: false))
+            |> mapToSignal { result -> Signal<Void, GetMessagesError> in
+                switch result {
+                case .progress:
+                    return .never()
+                case .result:
                     return .single(Void())
                 }
             }
-            
-            let preloadSignal = preloadedChatHistoryViewForLocation(
-                input,
-                context: context,
-                chatLocation: .replyThread(message: replyThreadMessage),
-                subject: nil,
-                chatLocationContextHolder: chatLocationContextHolder,
-                fixedCombinedReadStates: nil,
-                tag: nil,
-                additionalData: []
-            )
-            return combineLatest(preloadSignal, channelMessage)
-            |> map { historyView, _ -> Bool? in
-                switch historyView {
-                case .Loading:
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .single(Void())
+            }
+        }
+        
+        let preloadSignal = preloadedChatHistoryViewForLocation(
+            input,
+            context: context,
+            chatLocation: .replyThread(message: replyThreadMessage),
+            subject: nil,
+            chatLocationContextHolder: chatLocationContextHolder,
+            fixedCombinedReadStates: nil,
+            tag: nil,
+            additionalData: []
+        )
+        return combineLatest(preloadSignal, channelMessage)
+        |> map { historyView, _ -> Bool? in
+            switch historyView {
+            case .Loading:
+                return nil
+            case let .HistoryView(view, _, _, _, _, _, _):
+                if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
                     return nil
-                case let .HistoryView(view, _, _, _, _, _, _):
-                    if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
-                        return nil
-                    }
-                    return view.entries.isEmpty
                 }
+                return view.entries.isEmpty
             }
-            |> mapToSignal { value -> Signal<Bool, NoError> in
-                if let value = value {
-                    return .single(value)
-                } else {
-                    return .complete()
-                }
+        }
+        |> mapToSignal { value -> Signal<Bool, NoError> in
+            if let value = value {
+                return .single(value)
+            } else {
+                return .complete()
             }
-            |> take(1)
-            |> map { isEmpty -> ReplyThreadInfo in
-                return ReplyThreadInfo(
-                    message: replyThreadMessage,
-                    isChannelPost: replyThreadMessage.isChannelPost,
-                    isEmpty: isEmpty,
-                    scrollToLowerBoundMessage: scrollToLowerBoundMessage,
-                    contextHolder: chatLocationContextHolder
-                )
-            }
-            |> castError(FetchChannelReplyThreadMessageError.self)
-        } else {
-            return .single(ReplyThreadInfo(
+        }
+        |> take(1)
+        |> map { isEmpty -> ReplyThreadInfo in
+            return ReplyThreadInfo(
                 message: replyThreadMessage,
                 isChannelPost: replyThreadMessage.isChannelPost,
-                isEmpty: false,
+                isEmpty: isEmpty,
                 scrollToLowerBoundMessage: scrollToLowerBoundMessage,
                 contextHolder: chatLocationContextHolder
-            ))
+            )
         }
+        |> castError(FetchChannelReplyThreadMessageError.self)
+    } else {
+        return .single(ReplyThreadInfo(
+            message: replyThreadMessage,
+            isChannelPost: replyThreadMessage.isChannelPost,
+            isEmpty: false,
+            scrollToLowerBoundMessage: scrollToLowerBoundMessage,
+            contextHolder: chatLocationContextHolder
+        ))
     }
 }

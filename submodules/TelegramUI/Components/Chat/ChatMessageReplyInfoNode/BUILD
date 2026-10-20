@@ -28,6 +28,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/MessageInlineBlockBackgroundView",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
+        "//submodules/ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",
