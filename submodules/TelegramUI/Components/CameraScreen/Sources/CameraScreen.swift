@@ -2139,8 +2139,10 @@ private final class CameraScreenComponent: CombinedComponent {
                     availableSize: CGSize(width: availableSize.width - 32.0, height: availableSize.height),
                     transition: context.transition
                 )
+                // Below the viewfinder, not above the bottom inset, which can be the home indicator's (iPhone Duo): a viewfinder
+                // taller than the screen leaves no room for the hint, and it stays off screen as on home-button phones.
                 context.add(collageReorderHint
-                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + 16.0 + collageReorderHint.size.height / 2.0))
+                    .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight + 16.0 + collageReorderHint.size.height / 2.0))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -3747,7 +3749,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             // Clamped like the story editor's: a 9:16 viewfinder much taller than the screen (iPhone Duo's unfolded
             // screen in portrait, 238pt over) would otherwise put the bottom controls below the screen.
-            let bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
+            var bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
+            if !isTablet {
+                // The bottom controls stay above the home indicator. Below a 9:16 viewfinder that fits there is always more
+                // room than the indicator takes; one taller than the screen leaves none, which until iPhone Duo only
+                // happened on home-button phones (its folded screen, 150pt over, put the mode selector on the indicator).
+                bottomInset = max(bottomInset, layout.intrinsicInsets.bottom)
+            }
             
             let panelWidth: CGFloat
             let previewFrame: CGRect

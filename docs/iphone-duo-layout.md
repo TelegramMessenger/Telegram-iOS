@@ -112,6 +112,11 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - `UIScreen.main` used for layout while unfolded.
 - `widthClass == .regular` treated as iPad.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
+- A bottom row lifted by a constant tuned for home-button phones, until the Duo the only phones whose 9:16 preview is
+  taller than the screen: measured from the screen edge, it lands on the home indicator. The indicator is
+  `layout.intrinsicInsets.bottom` (20pt); the Duo's `safeInsets.bottom` is 0. The story camera keeps its controls above
+  it; the editor's bar, the drawing screen's and the sticker frame sit 62pt above it on the folded screen. Beside the
+  unfolded island the bar mirrors the top row, which already clears it.
 - Something parked just past the content's edge, off-screen on a phone, shows in the strip beside a band: the story
   viewer's resting cube neighbours sat 40pt into FP's strip. Clip to the band (the stories turn the clip off while
   opening and closing, which can start or end at an avatar in the strip).
