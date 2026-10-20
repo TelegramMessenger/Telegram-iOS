@@ -66,7 +66,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                                 }
                             }
                             
-                            if shouldOpenUrl {
+                            if shouldOpenUrl && !strongSelf.isFromSuspiciousSender(item) {
                                 var isConcealed = true
                                 if item.message.text.contains(content.url) {
                                     isConcealed = false
@@ -95,7 +95,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     openChatMessageMode = .automaticPlayback
                 }
                 if !item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode)) {
-                    if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    if !strongSelf.isFromSuspiciousSender(item), let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                         var isConcealed = true
                         if item.message.text.contains(content.url) {
                             isConcealed = false
@@ -117,6 +117,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
+                if strongSelf.isFromSuspiciousSender(item) {
+                    return
+                }
                 if let _ = item.message.adAttribute {
                     item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress(), false, false)
                 } else {
@@ -160,8 +163,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
             
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            if incoming && item.associatedData.isSuspiciousPeer {
+            if self.isFromSuspiciousSender(item) {
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
             
@@ -191,6 +193,12 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    /// A suspicious sender's link preview opens nothing, as their links do not
+    /// (`ChatMessageItemAssociatedData.isSuspiciousPeer`).
+    private func isFromSuspiciousSender(_ item: ChatMessageBubbleContentItem) -> Bool {
+        return item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId)
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -595,6 +603,14 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     actionIcon = .link
                 }
                 displayLine = true
+            }
+            
+            // A suspicious sender's link preview opens nothing, so it offers no button either, and its
+            // text shows links as plain text, as their message does.
+            if item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId) {
+                actionTitle = nil
+                actionIcon = nil
+                entities = entities?.filter(\.isShownFromSuspiciousPeer)
             }
             
             let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, titleBadge, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)

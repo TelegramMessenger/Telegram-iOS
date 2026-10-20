@@ -581,6 +581,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
     let canReadHistory = Promise<Bool>()
+    /// The chat reads nothing while its peer is suspicious (`CachedUserData.isSuspiciousPeer`), or
+    /// may still turn out to be: a non-contact user whose settings have not been fetched yet, as on
+    /// the first open of a chat they started. A read cannot be taken back. From the latest history view.
+    private let holdsReadsForSender = ValuePromise<Bool>(ignoreRepeated: true)
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
     
@@ -2321,10 +2325,18 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     translateToLanguage = (normalizeTranslationLanguage(translationState.fromLang), normalizeTranslationLanguage(languageCode))
                 }
                 
-                var isSuspiciousPeer = false
-                if let cachedUserData = data.cachedData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.flags.contains(.canBlock) || peerStatusSettings.flags.contains(.canReport) {
-                    isSuspiciousPeer = true
+                let isSuspiciousPeer = (data.cachedData as? CachedUserData)?.isSuspiciousPeer ?? false
+                var holdsReadsForSender = isSuspiciousPeer
+                if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser, peerId != context.account.peerId, (data.cachedData as? CachedUserData)?.peerStatusSettings == nil {
+                    let isContact = view.additionalData.contains(where: { entry in
+                        if case let .peerIsContact(entryPeerId, value) = entry, entryPeerId == peerId {
+                            return value
+                        }
+                        return false
+                    })
+                    holdsReadsForSender = !isContact
                 }
+                self?.holdsReadsForSender.set(holdsReadsForSender)
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, preferredStoryHighQuality: preferredStoryHighQuality, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, premiumGiftStickers: premiumGiftStickers, tonGiftStickers: tonGiftStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, availableMessageEffects: availableMessageEffects, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction.0, areStarReactionsEnabled: defaultReaction.1, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage?.toLang, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: !rotated, showSensitiveContent: contentSettings.ignoreContentRestrictionReasons.contains("sensitive"), isSuspiciousPeer: isSuspiciousPeer, accountCountry: accountCountry)
                 
@@ -2681,13 +2693,13 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private func beginReadHistoryManagement() {
         let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
-        let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
+        let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get(), self.holdsReadsForSender.get())
         
-        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).startStrict(next: { [weak self] messageIndex, canRead in
+        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).startStrict(next: { [weak self] messageIndex, canRead, holdsReadsForSender in
             guard let strongSelf = self else {
                 return
             }
-            if !canRead {
+            if !canRead || holdsReadsForSender {
                 return
             }
             

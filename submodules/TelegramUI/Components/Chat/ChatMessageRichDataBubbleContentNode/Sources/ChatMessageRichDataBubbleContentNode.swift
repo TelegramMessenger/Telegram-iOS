@@ -52,16 +52,69 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 return .original
             }
         }
+
+        func withPage(_ page: ObjectIdentifier) -> ResolvedRichDataPageKey {
+            switch self {
+            case let .pendingEdit(attribute, _):
+                return .pendingEdit(attribute: attribute, page: page)
+            case let .translated(language, attribute, _):
+                return .translated(language: language, attribute: attribute, page: page)
+            case let .original(attribute, _):
+                return .original(attribute: attribute, page: page)
+            }
+        }
     }
 
     private struct ResolvedRichDataContent {
-        let instantPage: InstantPage
+        var instantPage: InstantPage
         let originalAttribute: RichTextMessageAttribute?
-        let key: ResolvedRichDataPageKey
+        var key: ResolvedRichDataPageKey
         let isTranslated: Bool
         let isTranslating: Bool
+        /// Set when `instantPage` is a suspicious sender's page as shown (`showing(_:)`).
+        var suspiciousSenderPage: SuspiciousSenderPage? = nil
+
+        /// The page a selection quotes from: the page the server stored, which a suspicious sender's
+        /// shown page maps back to only when stripping it left every quotable node's text alone.
+        var quotablePage: InstantPage? {
+            guard let suspiciousSenderPage = self.suspiciousSenderPage else {
+                return self.instantPage
+            }
+            return suspiciousSenderPage.keepsQuotes ? suspiciousSenderPage.original : nil
+        }
+
+        func showing(_ suspiciousSenderPage: SuspiciousSenderPage) -> ResolvedRichDataContent {
+            var result = self
+            result.instantPage = suspiciousSenderPage.shown
+            result.key = self.key.withPage(ObjectIdentifier(suspiciousSenderPage.shown))
+            result.suspiciousSenderPage = suspiciousSenderPage
+            return result
+        }
     }
-    
+
+    /// A suspicious sender's page as shown (`instantPageForSuspiciousSender`), kept across layouts so
+    /// the shown page's identity, and with it the page key the layout cache and the page view reuse
+    /// on, changes only when the original page does.
+    private struct SuspiciousSenderPage {
+        let original: InstantPage
+        let shown: InstantPage
+        /// Stripping left every quotable node's text as it was. Removing an inline pill drops its
+        /// label from its node, so a selection there would quote the wrong range.
+        let keepsQuotes: Bool
+
+        init(original: InstantPage, previous: SuspiciousSenderPage?) {
+            self.original = original
+            if let previous, previous.original === original {
+                self.shown = previous.shown
+                self.keepsQuotes = previous.keepsQuotes
+            } else {
+                let shown = instantPageForSuspiciousSender(original)
+                self.shown = shown
+                self.keepsQuotes = shown.quotableNodes.map(\.flatText) == original.quotableNodes.map(\.flatText)
+            }
+        }
+    }
+
     private let containerNode: ContainerNode
     /// Clips `containerNode` to the bubble's four (possibly unequal, when merged) corner radii —
     /// see `applyContainerCorners`. Created on first layout, since an unloaded node has no layer.
@@ -101,6 +154,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
     // materialization), so this is a straight structural compare. It runs only on the
     // about-to-crossfade path, never on the hot same-content path.
     private var appliedInstantPage: InstantPage?
+    private var suspiciousSenderPage: SuspiciousSenderPage?
     // messageStableVersion is in the cache key because the synthesized instantPage content
     // mutates between streamed AI message chunks (each chunk bumps stableVersion); without
     // this, the cached layout would shadow newly-arrived content during streaming.
@@ -535,7 +589,9 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
         // (`fullInstantPage`) rendering carries the same key but a different page object, so an
         // identity check excludes it. `originalAttribute` is Optional (it is the pending edit's
         // attribute in the `.pendingEdit` case).
-        guard let attribute = resolved.originalAttribute, resolved.instantPage === attribute.instantPage else {
+        // A suspicious sender's shown page is a copy of the stored one, with the same paths.
+        let page = resolved.suspiciousSenderPage?.original ?? resolved.instantPage
+        guard let attribute = resolved.originalAttribute, page === attribute.instantPage else {
             return false
         }
         return item.controllerInteraction.canEditMessageRichText(item.message)
@@ -582,6 +638,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
         let currentPageLayout = self.currentPageLayout
         let currentExpandedDetails = self.currentExpandedDetails
         let currentExpandedQuotePaths = self.currentExpandedQuotePaths
+        let currentSuspiciousSenderPage = self.suspiciousSenderPage
         let showMoreExpandedState = self.showMoreExpanded
         let statusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
         let showMoreTextLayout = TextNode.asyncLayout(self.showMoreTextNode)
@@ -805,7 +862,15 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
 
                 // Resolve the node-local expand state for THIS message (collapsed for any other).
                 let showMoreExpanded = (showMoreExpandedState?.messageId == item.message.id) ? (showMoreExpandedState?.value ?? false) : false
-                let resolvedContent = ChatMessageRichDataBubbleContentNode.resolvedRichDataContent(item: item, showMoreExpanded: showMoreExpanded)
+                var resolvedContent = ChatMessageRichDataBubbleContentNode.resolvedRichDataContent(item: item, showMoreExpanded: showMoreExpanded)
+                // A suspicious sender's links show as text and their buttons not at all, as in a plain
+                // message from them (`ChatMessageTextBubbleContentNode`).
+                var suspiciousSenderPage: SuspiciousSenderPage?
+                if let content = resolvedContent, item.associatedData.isSuspiciousPeer, item.message.effectivelyIncoming(item.context.account.peerId) {
+                    let page = SuspiciousSenderPage(original: content.instantPage, previous: currentSuspiciousSenderPage)
+                    suspiciousSenderPage = page
+                    resolvedContent = content.showing(page)
+                }
 
                 if let resolvedContent {
                     #if DEBUG && false
@@ -1341,6 +1406,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                             codeHighlightState.disposable.dispose()
                         }
 
+                        self.suspiciousSenderPage = suspiciousSenderPage
                         if let pageLayout, let pageWebpage, let resolvedContent {
                             self.currentPageLayout = (
                                 suggestedBoundingWidth,
@@ -1355,10 +1421,10 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                                 cachedMessageSyntaxHighlight,
                                 pageLayout
                             )
-                            if case .original = resolvedContent.key, !resolvedContent.isTranslated, !resolvedContent.isTranslating {
-                                if self.quotablePage !== resolvedContent.instantPage {
-                                    self.quotablePage = resolvedContent.instantPage
-                                    self.quotableNodes = resolvedContent.instantPage.quotableNodes
+                            if case .original = resolvedContent.key, !resolvedContent.isTranslated, !resolvedContent.isTranslating, let quotablePage = resolvedContent.quotablePage {
+                                if self.quotablePage !== quotablePage {
+                                    self.quotablePage = quotablePage
+                                    self.quotableNodes = quotablePage.quotableNodes
                                 }
                             } else {
                                 self.quotablePage = nil
