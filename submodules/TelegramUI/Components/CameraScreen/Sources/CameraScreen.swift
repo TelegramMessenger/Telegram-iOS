@@ -2418,7 +2418,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         fileprivate let previewFrameRightDimView: UIView
         fileprivate let transitionDimView: UIView
         fileprivate let transitionCornersView: UIImageView
-        
+        private var transitionCornersRadii: CornerRadii?
+
         private var cameraStateDisposable: Disposable?
         private var changingPositionDisposable: Disposable?
         private var appliedDualCamera = false
@@ -4098,22 +4099,50 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.previewFrameRightDimView.isHidden = !isTablet
             transition.setFrame(view: self.previewFrameRightDimView, frame: CGRect(origin: CGPoint(x: viewfinderFrame.maxX, y: 0.0), size: CGSize(width: viewfinderFrame.minX + 1.0, height: viewfinderFrame.height)))
             
-            let screenCornerRadius = layout.deviceMetrics.screenCornerRadius
-            if screenCornerRadius > 0.0, self.transitionCornersView.image == nil {
-                self.transitionCornersView.image = generateImage(CGSize(width: screenCornerRadius, height: screenCornerRadius * 3.0), rotatedContext: { size, context in
-                    context.setFillColor(UIColor.black.cgColor)
-                    context.fill(CGRect(origin: .zero, size: size))
-                    context.setBlendMode(.clear)
-                    
-                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: size.width)
-                    context.addPath(path.cgPath)
-                    context.fillPath()
-                })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(screenCornerRadius))
+            // The strip rounds the left corners of the screen the camera pushes aside (the chat list) as the screen's own
+            // left corners are rounded: on iPhone Duo's folded screen they differ from the right ones (8pt on the hinge
+            // side, 59pt outside).
+            let screenCornerRadii = layout.screenCornerRadii
+            let transitionCornersWidth = max(screenCornerRadii.topLeft, screenCornerRadii.bottomLeft)
+            if transitionCornersWidth > 0.0, self.transitionCornersRadii != screenCornerRadii {
+                self.transitionCornersRadii = screenCornerRadii
+                if screenCornerRadii.isUniform {
+                    let screenCornerRadius = transitionCornersWidth
+                    self.transitionCornersView.image = generateImage(CGSize(width: screenCornerRadius, height: screenCornerRadius * 3.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor.black.cgColor)
+                        context.fill(CGRect(origin: .zero, size: size))
+                        context.setBlendMode(.clear)
+
+                        let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: size.width)
+                        context.addPath(path.cgPath)
+                        context.fillPath()
+                    })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(screenCornerRadius))
+                } else {
+                    let topRadius = screenCornerRadii.topLeft
+                    let bottomRadius = screenCornerRadii.bottomLeft
+                    self.transitionCornersView.image = generateImage(CGSize(width: transitionCornersWidth, height: topRadius + bottomRadius + 1.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor.black.cgColor)
+                        context.fill(CGRect(origin: .zero, size: size))
+                        context.setBlendMode(.clear)
+
+                        let path = CGMutablePath()
+                        path.move(to: CGPoint(x: topRadius, y: 0.0))
+                        path.addLine(to: CGPoint(x: size.width, y: 0.0))
+                        path.addLine(to: CGPoint(x: size.width, y: size.height))
+                        path.addLine(to: CGPoint(x: bottomRadius, y: size.height))
+                        path.addArc(tangent1End: CGPoint(x: 0.0, y: size.height), tangent2End: CGPoint(x: 0.0, y: size.height - bottomRadius), radius: bottomRadius)
+                        path.addLine(to: CGPoint(x: 0.0, y: topRadius))
+                        path.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topRadius, y: 0.0), radius: topRadius)
+                        path.closeSubpath()
+                        context.addPath(path)
+                        context.fillPath()
+                    })?.resizableImage(withCapInsets: UIEdgeInsets(top: topRadius, left: 0.0, bottom: bottomRadius, right: 0.0), resizingMode: .stretch)
+                }
             }
             self.transitionCornersView.isHidden = isTablet
-        
-            transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + screenCornerRadius / 2.0, y: layout.size.height / 2.0))
-            transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: screenCornerRadius, height: layout.size.height)))
+
+            transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + transitionCornersWidth / 2.0, y: layout.size.height / 2.0))
+            transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: transitionCornersWidth, height: layout.size.height)))
             
             if ([.sticker, .avatar].contains(controller.mode) || isTablet) && isFirstTime {
                 self.animateIn()

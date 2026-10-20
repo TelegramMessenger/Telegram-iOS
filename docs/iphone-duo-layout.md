@@ -85,7 +85,8 @@ These are the user's decisions; a screen that follows them is correct, one that 
    scrolling slide their top-right control clear by the row's current position.
 5. **Full-screen viewers** (browser documents, full-screen mini apps) fill the screen beside the island.
 6. **Per-corner radii** follow the screen: sheets' bottom corners, inner clips inside them, and in-progress
-   navigation transitions use `screenCornerRadii`, not one uniform radius.
+   navigation transitions (and the story camera sliding the chat list aside) use `screenCornerRadii`, not one uniform
+   radius.
 7. **Unfolded landscape is a regular-width phone**: check `deviceMetrics.type == .tablet`, not
    `widthClass == .regular`, for anything meant for iPads; it also refuses programmatic rotation requests. Modals see
    compact metrics there (`forOptionalFloatingPresentation`). The story viewer is the exception the other way: on the
