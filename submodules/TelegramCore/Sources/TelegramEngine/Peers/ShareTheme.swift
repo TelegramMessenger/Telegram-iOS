@@ -111,7 +111,7 @@ extension TelegramShareTheme {
     }
 }
 
-private func _internal_localShareTheme(postbox: Postbox, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
+func _internal_localShareTheme(postbox: Postbox, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
     let key = PostboxViewKey.cachedPeerData(peerId: peerId)
     return postbox.combinedView(keys: [key])
     |> map { views -> TelegramShareTheme? in
