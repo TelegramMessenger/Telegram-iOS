@@ -60,6 +60,7 @@ swift_library(
     ]),
     deps = [
         ":InstantPageUI",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorUIKit",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
