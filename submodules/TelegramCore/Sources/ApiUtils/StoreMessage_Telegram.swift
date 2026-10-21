@@ -686,8 +686,10 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     isSafe: (flags & (1 << 4)) != 0
                 ), nil)
             }
-        case .messageMediaUnsupported, .messageMediaWidget:
-            // Widgets (layer 233) are not supported yet: shown as the server sent them to layer 232.
+        case let .messageMediaWidget(messageMediaWidgetData):
+            // The payload is the gzipped HTML; `makeData()` copies it out of the per-access `Buffer`.
+            return (TelegramMediaWidget(width: messageMediaWidgetData.width, height: messageMediaWidgetData.height, payload: messageMediaWidgetData.payload.makeData()), nil, nil, nil, nil, nil)
+        case .messageMediaUnsupported:
             return (TelegramMediaUnsupported(), nil, nil, nil, nil, nil)
         case .messageMediaEmpty:
             break

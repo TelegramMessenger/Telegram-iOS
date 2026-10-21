@@ -326,7 +326,7 @@ class BazelCommandLine:
         print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
-    def invoke_test(self, test_target='Tests/AllTests'):
+    def invoke_test(self, test_target='Tests/AllTests', test_filter=None):
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -337,6 +337,8 @@ class BazelCommandLine:
         combined_arguments += ['--test_output=errors']
 
         combined_arguments += [test_target]
+        if test_filter:
+            combined_arguments += ['--test_filter={}'.format(test_filter)]
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
@@ -715,7 +717,7 @@ def test(bazel, arguments):
     bazel_command_line.set_configuration('debug_sim_arm64')
     bazel_command_line.set_build_number('10000')
 
-    bazel_command_line.invoke_test(test_target=arguments.target)
+    bazel_command_line.invoke_test(test_target=arguments.target, test_filter=arguments.testFilter)
 
 
 def query(bazel, arguments):
@@ -952,6 +954,12 @@ if __name__ == '__main__':
         type=str,
         default='Tests/AllTests',
         help='Bazel test target to run (default: Tests/AllTests, the full suite).'
+    )
+    testParser.add_argument(
+        '--testFilter',
+        type=str,
+        default=None,
+        help='Run only the matching tests (bazel --test_filter; for an ios_unit_test, Class or Class/testMethod).'
     )
 
     generateProjectParser = subparsers.add_parser('generateProject', help='Generate Xcode project')

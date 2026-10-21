@@ -43,6 +43,7 @@ swift_library(
         "//submodules/PasscodeCore",
         "//submodules/OpenSSLEncryptionProvider",
         "//submodules/AccountContext",
+        "//submodules/FetchManagerImpl",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/Display",

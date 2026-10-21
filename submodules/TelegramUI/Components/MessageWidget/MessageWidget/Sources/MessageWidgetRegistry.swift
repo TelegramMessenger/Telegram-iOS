@@ -1,0 +1,165 @@
+import UIKit
+
+/// The widget runtimes of one bubble. A runtime lives as long as its bubble: the bubble node
+/// calls `beginPass` with its message's stable id, and a different id destroys everything.
+/// Within a message, a widget is keyed by its block's structural path plus its source, so an
+/// edited source gets a fresh runtime and two widget blocks get two. Main thread only.
+public final class MessageWidgetRegistry {
+    public struct Key: Hashable {
+        public let path: [Int]
+        public let source: String
+    }
+
+    public typealias Factory = (_ source: String, _ theme: MessageWidgetInstance.Theme, _ stoppedLabel: String, _ maxMessageLength: Int, _ locale: String) -> MessageWidgetInstance?
+
+    /// Widgets one bubble runs at most, in layout order; a block past them draws as code. Each widget is one runtime
+    /// (a 64 MiB memory limit; the server bounds the source at 32 KB) plus its decoded images (at most 24 MiB alive) and
+    /// its tiles. The examples use one per message.
+    public static let maximumWidgets = 4
+
+    public var stoppedLabel: String = "Widget stopped"
+    public var maxMessageLength: Int = 4096
+    /// The client's UI language, for widgets made from now on (SDK v1 §2.9).
+    public var locale: String = "en-US"
+    /// The most a widget asked for in this pass may be tall (`MessageWidgetInstance.maximumHeight`): its bubble's fixed
+    /// height, else the 600 pt bound. Handed over on every `size`, so an edit of the anchors reaches a running widget.
+    public var maximumHeight: CGFloat = MessageWidgetBubbleSize.maximumHeight
+    public var onLayoutChange: (() -> Void)?
+    public var onBridge: ((MessageWidgetInstance.BridgeCall) -> Void)?
+
+    private let factory: Factory
+    private var ownerId: AnyHashable?
+    private var theme: MessageWidgetInstance.Theme = .light
+    private var visible = true
+    private var instances: [Key: MessageWidgetInstance] = [:]
+    private var usedInPass = Set<Key>()
+    /// Keys whose widget could not start. Remembered so that a failing boot is not repeated, on main, by every layout pass.
+    private var failedKeys = Set<Key>()
+
+    public init(factory: Factory? = nil) {
+        self.factory = factory ?? { source, theme, label, max, locale in
+            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale)
+        }
+    }
+
+    deinit {
+        for (_, instance) in self.instances {
+            instance.destroy()
+        }
+    }
+
+    public func beginPass(ownerId: AnyHashable, theme: MessageWidgetInstance.Theme) {
+        if self.ownerId != ownerId {
+            self.destroyAll()
+            self.ownerId = ownerId
+        }
+        if self.theme != theme {
+            self.theme = theme
+            for (_, instance) in self.instances {
+                instance.setTheme(theme)
+            }
+        }
+        self.usedInPass.removeAll()
+    }
+
+    /// The size of the widget for this block, or nil when the block is drawn as code: an empty
+    /// source, a widget that could not start, a block past `maximumWidgets` in this pass, or a call off
+    /// the main thread (a list that lays out off main passes no widget host, and a runtime is main-thread only).
+    public func size(path: [Int], source: String, width: CGFloat) -> CGSize? {
+        guard Thread.isMainThread, !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        let key = Key(path: path, source: source)
+        if self.failedKeys.contains(key) {
+            self.usedInPass.insert(key)
+            return nil
+        }
+        // A key already answered in this pass is answered again, so a layout that asks twice gets one answer.
+        if !self.usedInPass.contains(key) && self.usedInPass.filter({ self.instances[$0] != nil }).count >= MessageWidgetRegistry.maximumWidgets {
+            // Not marked used: an instance this key may still have from an earlier pass is destroyed at endPass.
+            return nil
+        }
+        let instance: MessageWidgetInstance
+        if let existing = self.instances[key] {
+            instance = existing
+        } else {
+            guard let created = self.factory(source, self.theme, self.stoppedLabel, self.maxMessageLength, self.locale) else {
+                self.failedKeys.insert(key)
+                self.usedInPass.insert(key)
+                return nil
+            }
+            created.onLayoutChange = { [weak self] in
+                self?.onLayoutChange?()
+            }
+            created.onBridge = { [weak self] call in
+                self?.onBridge?(call)
+            }
+            created.setVisible(self.visible)
+            self.instances[key] = created
+            instance = created
+        }
+        instance.maximumHeight = self.maximumHeight
+        let size = instance.layout(width: width)
+        if instance.failedToStart {
+            instance.destroy()
+            self.instances[key] = nil
+            self.failedKeys.insert(key)
+            self.usedInPass.insert(key)
+            return nil
+        }
+        self.usedInPass.insert(key)
+        return size
+    }
+
+    /// The size of this block's widget laid out exactly `width` wide (`MessageWidgetInstance.fill`), for a bubble wider
+    /// than the widget's own width; nil when the block has no running widget.
+    public func fill(path: [Int], source: String, width: CGFloat) -> CGSize? {
+        guard Thread.isMainThread, let instance = self.instances[Key(path: path, source: source)] else {
+            return nil
+        }
+        return instance.fill(width: width)
+    }
+
+    public func endPass() {
+        for (key, instance) in self.instances where !self.usedInPass.contains(key) {
+            instance.destroy()
+            self.instances[key] = nil
+        }
+        // A failure is kept only while its block keeps asking: an edited source is a new key anyway.
+        self.failedKeys.formIntersection(self.usedInPass)
+    }
+
+    public func view(path: [Int], source: String) -> UIView? {
+        return self.instances[Key(path: path, source: source)]?.view
+    }
+
+    /// The height the widget at `path` last reported, nil until its first render (main thread). A bubble in auto height
+    /// uses it, and its placeholder or cached height until then.
+    public func reportedHeight(path: [Int], source: String) -> CGFloat? {
+        return self.instances[Key(path: path, source: source)]?.reportedHeight
+    }
+
+    public func isLive(path: [Int]) -> Bool {
+        return self.instances.contains { $0.key.path == path && $0.value.deadReason == nil }
+    }
+
+    public var layoutVersions: [Key: Int] {
+        return self.instances.mapValues { $0.layoutVersion }
+    }
+
+    public func setVisible(_ visible: Bool) {
+        self.visible = visible
+        for (_, instance) in self.instances {
+            instance.setVisible(visible)
+        }
+    }
+
+    public func destroyAll() {
+        for (_, instance) in self.instances {
+            instance.destroy()
+        }
+        self.instances.removeAll()
+        self.usedInPass.removeAll()
+        self.failedKeys.removeAll()
+    }
+}

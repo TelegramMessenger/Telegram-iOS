@@ -749,7 +749,10 @@ public func asyncUpdateMessageSyntaxHighlight(engine: TelegramEngine, messageId:
         }
         
         if let entry = EngineCodableEntry(CachedMessageSyntaxHighlight(values: updated)) {
-            return engine.messages.storeLocallyDerivedData(messageId: messageId, data: ["code": entry]).start(completed: {
+            // Merge: replacing the whole dictionary would erase the message's other derived keys ("mps", "widget").
+            return engine.messages.updateLocallyDerivedData(messageId: messageId, update: { current in
+                return derivedDataSetting(current, key: "code", to: entry)
+            }).start(completed: {
                 subscriber.putCompletion()
             })
         } else {

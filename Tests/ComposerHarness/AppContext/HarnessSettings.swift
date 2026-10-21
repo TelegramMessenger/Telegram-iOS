@@ -14,5 +14,7 @@ public final class HarnessSettings {
     public var useDarkTheme: Bool = false
     /// Settings ▸ Appearance ▸ Text Size. The composer scales its text from this.
     public var fontSize: PresentationFontSize = .regular
+    /// Debug Settings ▸ "Widget messages" (`ExperimentalUISettings.widgetMessages`): the widget harness turns it on.
+    public var widgetMessages: Bool = false
     public init() {}
 }

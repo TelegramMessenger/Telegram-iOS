@@ -17243,3 +17243,6 @@ Error: %8$@";
 "Gift.Delete.Title" = "Delete Gift";
 "Gift.Delete.Text" = "Do you want to delete this gift?\n\nIt will disappear from your profile and can't be restored.";
 "Gift.Delete.Success" = "Gift Deleted";
+
+"Message.WidgetStopped" = "Widget stopped";
+"Message.Widget" = "Widget";

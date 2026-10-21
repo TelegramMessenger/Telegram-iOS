@@ -1,0 +1,65 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--range:light-dark(rgba(51,144,236,.15),rgba(51,144,236,.32));--acc:#3390ec}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+.head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+h3{margin:0;font-size:16px}
+.price{font-size:13px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:4px;text-align:center}
+.dow{font-size:11px;color:var(--mut);text-transform:uppercase;padding-bottom:4px}
+.day{height:36px;line-height:36px;font-size:15px;font-variant-numeric:tabular-nums}
+.day.in{background:var(--range)}
+.day.start,.day.end{background:var(--acc);color:#fff;font-weight:600}
+.day.start{border-radius:18px 0 0 18px}
+.day.end{border-radius:0 18px 18px 0}
+.day.start.end{border-radius:18px}
+#sum{margin-top:10px;font-size:14px}
+</style>
+<div class="head"><h3 id="month"></h3><span class="price">€96 / night</span></div>
+<div class="grid" id="grid"></div>
+<div id="sum"></div>
+<script>
+const today = new Date();
+const first = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+const year = first.getFullYear(), month = first.getMonth();
+const days = new Date(year, month + 1, 0).getDate();
+const offset = (first.getDay() + 6) % 7;
+const name = first.toLocaleString('en', { month: 'long' });
+document.getElementById('month').textContent = name + ' ' + year;
+const grid = document.getElementById('grid');
+for (const d of ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']) {
+  const e = document.createElement('div');
+  e.className = 'dow';
+  e.textContent = d;
+  grid.appendChild(e);
+}
+for (let i = 0; i < offset; i++) grid.appendChild(document.createElement('div'));
+const cells = [];
+for (let d = 1; d <= days; d++) {
+  const e = document.createElement('div');
+  e.className = 'day';
+  e.textContent = d;
+  e.onclick = () => pick(d);
+  grid.appendChild(e);
+  cells.push(e);
+}
+let start = 12, end = 16;
+function pick(d) {
+  if (start && !end && d > start) end = d;
+  else { start = d; end = 0; }
+  render();
+}
+function render() {
+  cells.forEach((e, i) => {
+    const d = i + 1;
+    e.classList.toggle('start', d === start);
+    e.classList.toggle('end', d === end || (d === start && !end));
+    e.classList.toggle('in', !!end && d > start && d < end);
+  });
+  const sum = document.getElementById('sum');
+  if (!end) { sum.textContent = 'Check-in ' + name.slice(0, 3) + ' ' + start + ' · now tap the check-out day'; return; }
+  const nights = end - start;
+  sum.textContent = name.slice(0, 3) + ' ' + start + ' – ' + end + ' · ' + nights + (nights === 1 ? ' night' : ' nights') + ' · €' + nights * 96;
+}
+render();
+</script>

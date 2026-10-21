@@ -63,6 +63,15 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
+    # DEBUG builds only: widget-sandbox's corpus and conformance set, for Debug Settings' widget insertion
+    # (DebugSettingsUI/Sources/WidgetDebugPosts.swift reads them from this framework's bundle).
+    data = select({
+        "//third-party/widget-sandbox:debug_build": [
+            "//third-party/widget-sandbox:WidgetCorpusBundle",
+            "//third-party/widget-sandbox:WidgetConformanceBundle",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         "//submodules/CrashReporting:CrashReporting",
         "//third-party/recaptcha:RecaptchaEnterprise",
@@ -558,6 +567,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TranslateHeaderPanelComponent",
         "//submodules/TelegramUI/Components/AdPanelHeaderPanelComponent",
         "//submodules/TelegramUI/Components/MessageFeeHeaderPanelComponent",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/TelegramUI/Components/LegacyChatHeaderPanelComponent",
         "//submodules/TelegramUI/Components/GroupCallHeaderPanelComponent",
         "//submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode",

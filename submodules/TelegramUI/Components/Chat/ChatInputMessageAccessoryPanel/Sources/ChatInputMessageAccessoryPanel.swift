@@ -88,6 +88,8 @@ private func textStringForForwardedMessage(_ message: EngineMessage, strings: Pr
             return (NSAttributedString(string: strings.ForwardedPolls(1)), [], true)
         case let todo as TelegramMediaTodo:
             return (NSAttributedString(string: todo.text), [], true)
+        case _ as TelegramMediaWidget where message.text.isEmpty:
+            return (NSAttributedString(string: strings.Message_Widget), [], true)
         case let dice as TelegramMediaDice:
             return (NSAttributedString(string: dice.emoji), [], true)
         case let invoice as TelegramMediaInvoice:

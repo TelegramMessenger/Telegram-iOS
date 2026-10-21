@@ -28,6 +28,7 @@ public enum EngineMedia: Equatable {
     case paidContent(TelegramMediaPaidContent)
     case todo(TelegramMediaTodo)
     case liveStream(TelegramMediaLiveStream)
+    case widget(TelegramMediaWidget)
     case custom(EngineCustomMedia)
 
     public static func ==(lhs: EngineMedia, rhs: EngineMedia) -> Bool {
@@ -146,6 +147,12 @@ public enum EngineMedia: Equatable {
             } else {
                 return false
             }
+        case let .widget(lhsValue):
+            if case let .widget(rhsValue) = rhs {
+                return lhsValue == rhsValue
+            } else {
+                return false
+            }
         case let .custom(lhsValue):
             if case let .custom(rhsValue) = rhs {
                 return lhsValue.isEqual(to: rhsValue)
@@ -197,6 +204,8 @@ public extension EngineMedia {
             return nil
         case .liveStream:
             return nil
+        case .widget:
+            return nil
         case let .custom(custom):
             return custom.id
         }
@@ -244,6 +253,8 @@ public extension EngineMedia {
             self = .todo(todo)
         case let liveStream as TelegramMediaLiveStream:
             self = .liveStream(liveStream)
+        case let widget as TelegramMediaWidget:
+            self = .widget(widget)
         case let custom as EngineCustomMedia:
             self = .custom(custom)
         default:
@@ -291,6 +302,8 @@ public extension EngineMedia {
             return todo
         case let .liveStream(liveStream):
             return liveStream
+        case let .widget(widget):
+            return widget
         case let .custom(custom):
             return custom
         }

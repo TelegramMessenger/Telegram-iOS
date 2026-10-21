@@ -1037,6 +1037,12 @@ public extension TelegramEngine {
             return _internal_getMessagesFactCheck(account: self.account, messageIds: messageIds)
         }
         
+        /// Debug: inserts `posts` into `peerId` as local widget messages (each post, then its photos), returning how many
+        /// messages were added.
+        public func debugInsertLocalWidgetMessages(peerId: EnginePeer.Id, posts: [EngineLocalWidgetPost]) -> Signal<Int, NoError> {
+            return _internal_debugInsertLocalWidgetMessages(account: self.account, peerId: peerId, posts: posts)
+        }
+
         public func debugAddHoles() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)

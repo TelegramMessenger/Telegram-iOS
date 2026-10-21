@@ -3388,9 +3388,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let performOpenURL = strongSelf.performOpenURL {
-                performOpenURL(message, url, progress)
+                if !urlData.forceConcealed { performOpenURL(message, url, progress) } // a link that must be confirmed (a widget's) gets no preview fetched here
             } else {
-                strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
+                strongSelf.openUrl(url, concealed: concealed, forceConcealed: urlData.forceConcealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
             }
         }, openExternalInstantPage: { [weak self] instantPage in
             guard let self else {
@@ -10083,6 +10083,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func openUrl(
         _ url: String,
         concealed: Bool,
+        forceConcealed: Bool = false,
         forceExternal: Bool = false,
         forceUpdate: Bool = false,
         skipUrlAuth: Bool = false,
@@ -10122,7 +10123,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let disposable = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: false, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
+            let disposable = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id, progress: progress, forceExternal: forceExternal, concealed: concealed, commit: commit)

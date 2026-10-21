@@ -1,0 +1,55 @@
+<!doctype html>
+<html data-test="visual/sdk/12-drag-gestures">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- conformance {"title":"Drag inside the widget versus the bubble's gestures","hint":"Drag the knob left and right: no swipe-to-reply, the list does not scroll. Swipe left on the grey area: swipe-to-reply. Double tap: the reaction appears. Long press: the bubble menu. The counters stay 0.","expect":"The widget claims horizontal drags of the knob (touch-action: none, preventDefault); elsewhere the chat keeps swipe-to-reply and scrolling; double tap and long press stay with the bubble and never reach the widget.","contract":"docs/sdk-v1.md §3.5, §5.5","covers":["behaviour.gesture-claim","input.drag","input.dblclick","input.long-press"]} -->
+<!-- conformance:mini --><style>html,body{margin:0;padding:0}body{font:14px/1.4 system-ui,sans-serif;color:var(--tg-theme-text-color,#111)}@media (prefers-color-scheme:dark){body{color:var(--tg-theme-text-color,#eee)}}.h{font-weight:600;font-size:15px;margin:10px 12px 2px}.i{margin:0 12px 8px;font-size:13px;color:var(--tg-theme-hint-color,#888)}.r{display:flex;flex-wrap:wrap;gap:6px;margin:6px 12px}.big{font-size:22px;font-weight:600;margin:4px 12px}#log{margin:8px 12px 10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style><script>var S = (function () {
+  var r = document.documentElement, c = [], tg = {}, st = 'running';
+  function rc(e) { var b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height].map(function (v) { return Math.round(v * 10) / 10; }); }
+  function pub() {
+    var t = {};
+    for (var k in tg) { var e = document.getElementById(tg[k]); if (e) t[k] = rc(e); }
+    r.setAttribute('data-conformance', JSON.stringify({ v: 1, id: r.getAttribute('data-test'), status: st, checks: c, targets: t }));
+  }
+  function log(m, ok) {
+    var l = document.getElementById('log');
+    if (!l) return;
+    var d = document.createElement('div');
+    d.textContent = (ok === true ? '✓ ' : ok === false ? '✗ ' : '· ') + m;
+    l.appendChild(d);
+  }
+  return {
+    TW: typeof TelegramWidget !== 'undefined' ? TelegramWidget : null,
+    check: function (id, name, ok, d) { c.push([id, name, ok ? 'pass' : 'fail', d || '']); log(name + (d ? ' (' + d + ')' : ''), !!ok); pub(); },
+    log: log,
+    target: function (n, id) { tg[n] = id; },
+    start: function () { st = 'awaiting'; pub(); },
+    done: function () { st = 'done'; pub(); },
+  };
+})();</script><!-- /conformance:mini -->
+<style>
+#t{position:relative;height:44px;margin:8px 12px;border-radius:22px;background:var(--tg-theme-secondary-bg-color,#e8e8ee);touch-action:none}
+#k{position:absolute;left:0;top:0;width:44px;height:44px;border-radius:22px;background:var(--tg-theme-button-color,#3390ec)}
+#f{height:70px;margin:8px 12px;border-radius:10px;background:repeating-linear-gradient(45deg,#8882 0 6px,transparent 6px 12px)}
+</style>
+</head>
+<body>
+<div class="h">SDK 12 · Drag and the bubble's gestures</div>
+<div class="i">Drag the knob: no swipe-to-reply. Grey area: swipe-to-reply works. Double tap, long press: the bubble's, counters stay 0.</div>
+<div id="t"><div id="k"></div></div>
+<div id="f"></div>
+<div class="h" id="v"></div>
+<div id="log"></div>
+<script>
+var k = document.getElementById('k'), t = document.getElementById('t'), x0 = null, l0 = 0, c = { drag: 0, dblclick: 0, contextmenu: 0 };
+function show() { document.getElementById('v').textContent = 'drags ' + c.drag + ' · double taps ' + c.dblclick + ' · long presses ' + c.contextmenu; }
+k.addEventListener('pointerdown', function (e) { x0 = e.clientX; l0 = parseFloat(k.style.left) || 0; try { k.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+k.addEventListener('pointermove', function (e) { if (x0 === null) return; k.style.left = Math.max(0, Math.min(t.clientWidth - 44, l0 + e.clientX - x0)) + 'px'; });
+k.addEventListener('pointerup', function () { if (x0 !== null) { c.drag++; x0 = null; show(); } });
+document.addEventListener('dblclick', function () { c.dblclick++; show(); });
+document.addEventListener('contextmenu', function () { c.contextmenu++; show(); });
+S.target('knob', 'k'); show(); S.start();
+</script>
+</body>
+</html>

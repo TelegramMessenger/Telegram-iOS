@@ -150,14 +150,17 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public struct OpenUrl {
         public var url: String
         public var concealed: Bool
+        /// Ask "Open link?" whatever the URL: `parseUrl` clears `concealed` for Telegram's own hosts and `tel:`.
+        public var forceConcealed: Bool
         public var external: Bool?
         public var message: EngineRawMessage?
         public var allowInlineWebpageResolution: Bool
         public var progress: Promise<Bool>?
-        
-        public init(url: String, concealed: Bool, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
+
+        public init(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
             self.url = url
             self.concealed = concealed
+            self.forceConcealed = forceConcealed
             self.external = external
             self.message = message
             self.allowInlineWebpageResolution = allowInlineWebpageResolution

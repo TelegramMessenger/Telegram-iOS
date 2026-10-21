@@ -4,7 +4,7 @@
 //   python3 Tests/ComposerHarness/Tools/generate_harness_stubs.py \
 //     --source submodules/AccountContext/Sources/AccountContext.swift \
 //     --protocol SharedAccountContext --conformer HarnessSharedAccountContext \
-//     --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager \
+//     --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager,applicationBindings \
 //     > Tests/ComposerHarness/AppContext/HarnessSharedAccountContext+Generated.swift
 //
 // Every member here TRAPS and names itself. A stub returning a plausible constant is
@@ -66,9 +66,6 @@ extension HarnessSharedAccountContext {
     }
     public var currentMediaDisplaySettings : Atomic<MediaDisplaySettings> {
         fatalError("harness: SharedAccountContext.currentMediaDisplaySettings is not provided")
-    }
-    public var applicationBindings : TelegramApplicationBindings {
-        fatalError("harness: SharedAccountContext.applicationBindings is not provided")
     }
     public var authorizationPushConfiguration : Signal<AuthorizationCodePushNotificationConfiguration?, NoError> {
         fatalError("harness: SharedAccountContext.authorizationPushConfiguration is not provided")
@@ -597,6 +594,9 @@ extension HarnessSharedAccountContext {
     }
     public func makeShareController(context: AccountContext, params: ShareControllerParams) -> ViewController {
         fatalError("harness: SharedAccountContext.makeShareController is not provided")
+    }
+    public func makeShareScreen(context: AccountContext, params: ShareControllerParams) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeShareScreen is not provided")
     }
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {
         fatalError("harness: SharedAccountContext.makeMiniAppListScreenInitialData is not provided")

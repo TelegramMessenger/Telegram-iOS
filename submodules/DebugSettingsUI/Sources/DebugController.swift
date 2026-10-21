@@ -735,6 +735,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case coreListChatBackend(Bool)
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
+    case widgetMessages(Bool)
+    case insertWidgetConformanceSet
+    case insertWidgetCorpus
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -788,7 +791,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .widgetMessages, .insertWidgetConformanceSet, .insertWidgetCorpus:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -947,6 +950,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .fakeWalletTransfers:
             // Appended right after `springSendAnimation`; see the ordering note above.
             return 74
+        case .widgetMessages:
+            // Appended right after `fakeWalletTransfers`; see the ordering note above.
+            return 75
+        case .insertWidgetConformanceSet:
+            return 76
+        case .insertWidgetCorpus:
+            return 77
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1456,6 +1466,40 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
+            })
+        case let .widgetMessages(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Widget messages", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.widgetMessages = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case .insertWidgetConformanceSet, .insertWidgetCorpus:
+            let isConformance: Bool
+            if case .insertWidgetConformanceSet = self {
+                isConformance = true
+            } else {
+                isConformance = false
+            }
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: isConformance ? "Insert widget conformance set" : "Insert widget corpus", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                // Local messages in Saved Messages (My Notes), in the order the test channel posts them; nothing is sent.
+                let posts = isConformance ? widgetConformanceDebugPosts() : widgetCorpusDebugPosts()
+                if posts.isEmpty {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                arguments.presentController(controller, nil)
+                let _ = (context.engine.messages.debugInsertLocalWidgetMessages(peerId: context.account.peerId, posts: posts)
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
             })
         case let .forceRLottieBackend(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Lottie: force rlottie", value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -1988,6 +2032,9 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         if let data = context?.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 {
             entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
         }
+        entries.append(.widgetMessages(experimentalSettings.widgetMessages))
+        entries.append(.insertWidgetConformanceSet)
+        entries.append(.insertWidgetCorpus)
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

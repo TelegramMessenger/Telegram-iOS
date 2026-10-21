@@ -1,0 +1,964 @@
+# Message widgets: the native runtime (`WidgetRuntime`)
+
+A native runtime for message widgets on iOS. It is a C++ DOM built into our QuickJS fork, parsed by our gumbo fork,
+and rendered by feeding litehtml the DOM directly, with no JavaScript sandbox, no JavaScript validator and no HTML
+in between. Its design was approved 2026-10-16 and amended 2026-10-17 (there is no validator, and the runtime owns
+litehtml's container and outputs a layer tree) and 2026-10-18 (no comparison harness against the old runtime, and the
+switch in M1d with no flag); this document is its record. It was built in milestones M1a–M1d, then the widgets v0.1.0
+client's V milestones.
+
+**Status (2026-10-19): M1a to M1d are done, and the app runs every message widget on `WidgetRuntime`.** Since V1 of
+the widgets v0.1.0 client (spec `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`) a widget
+arrives as `messageMediaWidget` in a
+bubble of its own, behind Debug Settings ▸ "Widget messages"; the root `CLAUDE.md`'s "Message widgets" has the client
+side. V1 changed three runtime facts recorded below: the host sheet is the spec renderer's root CSS, a widget's height
+is clamped to 50…600, and there is no source cap. V1 also re-vendored widget-sandbox at tag v0.1.0 (237 listed
+files, 99 attacks, 19 compat, 9 out-of-profile, and the conformance set); the corpus suites pass on it, but the
+measurements below (230 documents, 93 attacks) were taken on the earlier corpus and are not re-measured.
+The old runtime (widget-sandbox's JavaScript shim and trusted validator, `MessageWidgetEngine`, `WidgetDOM` and the
+ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14). Until M2 to M4, a widget that needs what is not
+built yet renders or behaves less well than it did: "What regresses until M2 to M4", below. M1a built:
+- the QuickJS fork changes for engine built-in interfaces (changes 3–5);
+- the WebIDL binding generator;
+- the core DOM (nodes, tree algorithms, attributes, collections);
+- gumbo parsing straight into the DOM;
+- serialization (`innerHTML`, `outerHTML`, `insertAdjacent*`);
+- selectors (`querySelector*`, `matches`, `closest`).
+
+M1b built:
+- the `Window` global, a host-class global object (QuickJS change 6);
+- deterministic time and randomness hooks (change 7);
+- the final stop: an uncatchable error through a `Promise` executor (change 8), a hook at the memory limit (change
+  9), nothing catchable once stopped (change 10); charged walks of the loaded modules (change 11); and the same work
+  units and memory in every build configuration, with no dumps unless asked for (change 12);
+- callbacks, `[Global]`, `[LegacyUnforgeable]` and `[Replaceable]` in the generator;
+- `EventTarget`, `Event` and dispatch, and inline `on*` handlers;
+- the event loop: tasks, the microtask checkpoint, timers, animation frames;
+- error and rejection reporting;
+- script elements and the boot sequence;
+- a headless WPT runner (`:WidgetRuntimeWPTTests`, ratcheting `wpt-expectations.txt`).
+
+M1c built the rendering, in `Sources/Render/`:
+- `RenderTree`: the main document built into one litehtml document element by element (no HTML string, no
+  validator), the node↔element maps, the mutation journal and the flush, with in-place paths for text, attributes and
+  inline style, and inserted, removed and moved subtrees, each equal to a rebuild;
+- `WidgetContainer`, the runtime's own litehtml container, and `RenderHost`, the interface the app implements for fonts,
+  text, images and path containment (a deterministic `FakeRenderHost` in the tests);
+- `LayerTree`, plain data that the app paints, kept current by operations (`LayerMirror`: `Reset`, `Insert`, `Remove`,
+  `Move`, `Frame`, `Content`, `Clip`, `Group`) and published with the rects that changed;
+- hit-testing and boxes (`nodeAt`, `borderBox`, `clientRects`), read from the published layout;
+- the render limits, the corpus and attack gates, and a scan that nothing in the runtime does I/O;
+- twidget edits 12–21 in the litehtml fork.
+
+M1d switched the app to it:
+- in `WidgetRuntime`: the host's side of rendering (`RenderTree::contentSize`, `Runtime::setWorkObserver`, recording
+  pixel-snapped at `RenderOptions::pixelSnapScale`); UI events and taps (`Sources/Events/Taps.*`, `UIEvents.*`);
+  activation, the default actions, the focus model and the user-action pseudo-classes (`UserActions.*`); the
+  `TelegramWidget` bridge (`Sources/Host/TelegramWidget.*`); and `element.style` (`Sources/DOM/StyleDeclaration.*`),
+  pulled forward from M2 (the user, 2026-10-19);
+- `WidgetRuntimeIOS`, the platform half: `CoreTextRenderHost` (the `RenderHost`, from `LHContainer`'s text and image
+  code), `LayerTreePainter` (a published tree into a `CGContext`, through `LHContainer`'s drawing code) and `WRSession`,
+  the one facade Swift calls;
+- in the app: `MessageWidgetCore` drives `WRSession`, `WidgetTreeRenderer` keeps the published tree and draws the frozen
+  badge, and the tiles are drawn by a task of their own that main never waits for: only the size is on the critical
+  path (the user, 2026-10-19);
+- the old runtime deleted: the shim and validator bundles, `MessageWidgetEngine`, `TrustedValidator`,
+  `QuickJSContext`, `WidgetDOM`, `MessageWidgetRenderer`, `MessageWidgetDocument` (spec §4 lists every file).
+
+Each milestone's plan and carry-over (its rulings, deferred items and measurements) stayed with the development
+branch, `feature/message-widgets`; what still binds the code is recorded here.
+
+## Where things are
+
+| Path | What |
+|---|---|
+| `submodules/TelegramUI/Components/MessageWidget/WidgetRuntime` | The runtime. `Sources/Support` (values, errors, work charging, `JSAllocator`), `Sources/Runtime`, `Sources/DOM`, `IDL/` (the WebIDL it binds), `Tests/` |
+| `build-system/WidgetIDL` | The WebIDL → C++ binding generator (Swift), run by a Bazel genrule |
+| `third-party/quickjs-ng` | QuickJS fork, changes 1–12 in `VENDOR.md`. M1a added change 3 (host auto-init), change 4 (class prototype on first use) and change 5 (string access). M1b added change 6 (a host-class global), 7 (host time and randomness), 8–10 (the final stop: a `Promise` executor, the memory-limit hook, nothing catchable once stopped), 11 (charged loaded-module walks) and 12 (no dumps unless asked for, so every build configuration counts the same) |
+| `third-party/gumbo` | gumbo fork (moved out of twidget's litehtml in M1a; litehtml links it). Changes 1–13 in `VENDOR.md` |
+| `third-party/wpt/interfaces` | WPT IDL, vendored at d2727a54348e (2026-10-15). `IDL/README.md` lists every rewrite of it |
+| `…/WidgetRuntime/Sources/Events`, `Sources/Host` | M1b: `EventTarget`, events and dispatch, handlers; `HostState`, `Window`, the event loop, timers, frames, scripts, boot |
+| `…/WidgetRuntime/Sources/Render` | M1c: `RenderTree` (`RenderTree.*`, `Builder.*`, `Journal.*`, `HitTest.*`), `WidgetContainer`, `RenderHost.h`, `DataUrl.*`, `RenderDump.*`, `LayerTree.*`, `LayerMirror.*`, `LayerDiff.*`. `Tests/FakeRenderHost.*` and `RenderHarness.*` are the fake host and `RenderEnv` |
+| `third-party/twidget` | The litehtml fork (`LiteHTML/litehtml`), edits 1–21 in `VENDOR.md`. M1c added edits 12–21 and their host tests (`tests/*_test.cpp`, the `Twidget…Tests` targets) |
+| `third-party/wpt/{resources,common,dom,html,css}` | The WPT tests the runner runs, vendored at the same commit (`FILES.txt` lists every blob id); `css/cssom/` is the inline style block's tests (M1d) |
+| `…/WidgetRuntime/wpt-expectations.txt`, `wpt-skip.txt` | The WPT results, per subtest, that only ratchet up; the tests not run, with reasons |
+| `…/WidgetRuntime/Sources/Events/{Taps,UIEvents,UserActions}.*` | M1d: taps and the UI events; activation, the default actions, focus and the user-action state |
+| `…/WidgetRuntime/Sources/Host/TelegramWidget.*`, `IDL/telegram.webidl` | The SDK (V2a, widget-sandbox v0.1.0 sdk-v1.md): `TelegramWidget` v1, `HapticFeedback`, `navigator` (`language`, the clipboard and sharing refused) |
+| `…/WidgetRuntime/Sources/Host/{Links,ThemeParams,Storage,Inert}.*` | V2a: the link rules and routes, the theme palette, Web Storage, and the network and dialog APIs that do nothing |
+| `…/WidgetRuntime/Sources/Host/{Crypto,Base64,Encoding,StructuredClone,URL,URLParser,Abort,Blob,Sequences}.*`, `IDL/builtins.webidl` | V5a: the built-ins, each against its own standard |
+| `…/WidgetRuntime/Sources/Host/{ICU.h,Intl.h,IntlCore.cpp,IntlNumberFormat.cpp,IntlDateTimeFormat.cpp,IntlText.cpp}` | V5b: Intl over the system ICU, and ICU's declarations |
+| `…/WidgetRuntime/Sources/Canvas/`, `…/WidgetRuntimeIOS/Sources/CanvasBitmap.{h,mm}` | V5d: Canvas 2D (the interpreter, the context and its objects, the canvas and img elements) and the iOS bitmap |
+| `…/WidgetRuntime/Sources/Animation/`, `IDL/web-animations.webidl`, `Sources/Support/Promises.*`, `third-party/wpt/web-animations` | V5e: Web Animations (the objects, easing, interpolation and timing, the per-runtime `AnimationState` with the update step and the sampler) and its WPT; `Sources/Animation/PROVENANCE.md` lists what is ported from where |
+| `…/WidgetRuntime/Sources/Animation/CSS*.{h,cpp}`, `IDL/css-animations.webidl`, `third-party/wpt/css/css-{animations,transitions}` | V5f: CSS animations and transitions (the `@keyframes` and declaration parsers, `CSSAnimation`/`CSSTransition`, the style-change step and the events) and the event interfaces' WPT |
+| `…/WidgetRuntime/Sources/Host/{CSSNamespace,CSSSupports,Profile}.*`, `ProfileTables.inc`, `IDL/generate-profile-tables.py`, `Sources/DOM/CSSComponents.*`, `third-party/widget-sandbox/profile/profile.json` | V5c: the `CSS` namespace, profile 1's tables and their generator, and the component-value pipeline shared with the selector parser |
+| `…/WidgetRuntime/Tests/{URLDataTests.cpp,url-data-expected-failures.txt}`, `third-party/wpt/url/resources/` | V5b: WPT's URL data through `URL` (`:WidgetRuntimeURLDataTests`), and the cases it still fails |
+| `…/WidgetRuntime/Sources/Runtime/PairIterators.cpp` | V5a: WebIDL pair iterators (`iterable<K, V>`), with the generator's adapters |
+| `…/WidgetRuntime/Sources/DOM/StyleDeclaration.*`, `IDL/cssom.webidl`, `IDL/css-properties.txt` | M1d: `element.style`. `IDL/cssom-properties.webidl` and `Sources/DOM/CSSProperties.inc` are generated from the property list by `IDL/generate-css-properties.py` and checked in |
+| `submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS` | M1d: the iOS half. `Sources/CoreTextRenderHost.*` (the `RenderHost`), `Sources/LayerTreePainter.*` (the painter), `Sources/WRSession.mm` and `PublicHeaders/WidgetRuntimeIOS/WRSession.h` (the facade), `Tests/` (`:WidgetRuntimeIOSTests`) |
+| `third-party/twidget/LiteHTML/LHHostSupport.h` | M1d: `LHHostContainer`, one `LHContainer` behind a textual C++ header for the host and the painter; its implementation is appended to `LHContainer.mm` |
+| `…/MessageWidget/MessageWidget/Sources` | The app's widget: `MessageWidgetCore` (on `WRSession` since M1d), `MessageWidgetInstance`, the pool, handshake, registry and view; `WidgetFrame.swift` holds the tile drawer (`WidgetTileDrawer`) |
+| `…/MessageWidget/MessageWidgetRendering/Sources/WidgetTreeRenderer.swift` | M1d: a session's published tree, its height and changed rects, and the frozen badge |
+
+## How it works
+
+- **Nodes are QuickJS objects** whose payload is a C++ object. Interfaces are engine built-ins: static generated
+  tables, an auto-init global entry per interface name, and each class's prototype made the first time it is used.
+  A widget pays only for the interfaces it touches.
+- **Bindings come from WebIDL.** `IDL/*.webidl` are hand-kept subsets of the vendored WPT IDL. The generator emits
+  the glue and the C++ classes implement the members. Indexed interfaces get `@@iterator` =
+  `Array.prototype.values`.
+- **Parsing.** gumbo's output tree is built into DOM nodes directly. Adjacent text runs merge into one node. Template
+  contents live in an inert owner document. Fragment parsing follows HTML's context rules. Scripts from fragment
+  parsing are inert.
+- **Selectors.** Our own parser for the profile's Selectors 4 subset runs over litehtml's CSS Syntax tokenizer.
+  Matching is right to left with WebKit's match results, so a failed ancestor search stops instead of backtracking.
+- **Rendering (M1c).** `RenderTree` listens to the main document and only records changes in a journal. The flush
+  (end of every task and animation frame, after the microtask checkpoint; in `boot` after the parse; and
+  `HostState::flushRender`) applies the journal by patching the published litehtml document in place or rebuilding
+  it, lays it out, and publishes the layer tree with its operations and changed rects. Anything a patch could get
+  wrong rebuilds, and a rebuild is the oracle: `testRandomEditsMatchARebuild` holds the patched document, its render
+  input and its layer tree equal to a fresh rebuild's after seeded random edit sequences. Not rendered: `script
+  noscript template iframe frame frameset noframes object embed noembed applet param portal fencedframe video audio
+  source track math link meta base title area` (any namespace), comments, doctypes and template contents; everything
+  else renders as the DOM holds it (spec §4 item 3).
+- **The layer tree.** `WidgetContainer::record` draws litehtml's paint calls into plain data (text shaped by the host,
+  images decoded). `LayerMirror` publishes the same painting as `Context`, `Box` and `Inline` nodes with stable ids,
+  context-relative origins and clip chains, built by one walk of litehtml's own `draw()` loop
+  (`walk_paint_order`, twidget edit 20) and then kept current by operations the fork reports at its mutation points.
+  Nothing is compared on a patched flush. `record()` stays as the oracle: a mirror flattens to what it records, after
+  `wr_test::normalized` drops empty clip pairs and lone `del_clip`s.
+- **Taps and events (M1d).** The host's pointer phases (`HostState::pointer`) are hit-tested on the runtime's own
+  layout and dispatched as touch browsers dispatch a tap, each phase one trusted task (spec §5 has the order and the
+  click rule). A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
+  listeners and reverts when the click is canceled, a label clicks its control, a summary toggles its details, a
+  submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
+  `:active` live in `UserActions`; a change to them rebuilds the render tree, and only when the build's `<style>` text
+  names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild.
+- **The SDK (V2a, widget-sandbox v0.1.0 `docs/sdk-v1.md`).** `window.TelegramWidget` (unforgeable) is SDK v1, and the
+  runtime applies its policy itself; the app's core only passes the calls on. Calls reach `wr::Host::bridgeCall` as a
+  method and a JSON array of strings: `ready`, `openLink`, `openTelegramLink` and `haptic`.
+  - *Members* (`TelegramWidget.cpp`): `profile` 1, `isProfileAtLeast`, `colorScheme` (and its alias `theme`),
+    `isActive` (`!document.hidden`), `onEvent`/`offEvent` for `themeChanged`, `activated` and `deactivated` (16
+    handlers per type, a handler added once, unknown types and non-functions ignored; `this` is the widget), and the
+    deprecated `onTheme`, whose 16 callbacks are a list of their own, called at once and after `themeChanged`'s with
+    the scheme. `activated`/`deactivated` fire after `visibilitychange`. `sendMessage` and `on` are gone.
+  - *Theme* (`ThemeParams.cpp`, sdk-v1 §2.3): `themeParams` has every Mini Apps key as lowercase `#rrggbb`, the host's
+    palette (`HostState::setThemeParams`, checked as the reference's `checkThemeParams`) over `DEFAULT_THEME_PARAMS`
+    for the scheme; one frozen object until the next change. The root gets `--tg-theme-<key>` and `--tg-color-scheme`
+    as `!important` declarations after its own style attribute (twidget edit 26: parsed on their own, so no sheet, no
+    root style and no unclosed construct in one replaces them). A change of scheme or of any completed colour updates
+    all of it at once and then fires `themeChanged`; anything else fires nothing. The iOS host passes no palette yet
+    (V2b), so a widget sees the defaults for the chat's scheme.
+  - *Links* (`Links.cpp`, §2.5): `openLink`/`openTelegramLink` check the URL as the reference's `checkLink` does and
+    throw `TypeError` for anything else; the host gets it normalised (scheme and host lowercase, non-ASCII after the
+    host as UTF-8 escapes). A checked call is posted only while a trusted press dispatches, one call per press, on a
+    visible widget (below); otherwise it is dropped with `activation-blocked`. An `<a href>` and `window.open` go to
+    `openTelegramLink` for t.me, telegram.me and telegram.dog, to `openLink` for another valid URL, and are ignored with
+    `navigation-blocked` otherwise; `window.open` returns null. The bubble confirms both kinds before opening
+    (`forceConcealed`: a t.me link is resolved over the network too).
+  - *Haptics* (§2.6): `HapticFeedback`'s three methods return it, throw `TypeError` for an unknown style or type, and
+    post `haptic` only while the widget is visible and the reference's bucket (5, refilled at 10 per second, on the
+    step's clock) has a token; a drop is reported as `haptic-limit` at most once a second. The bubble plays them as
+    Mini Apps do.
+  - *Storage* (`Storage.cpp`, §2.8): `localStorage` and `sessionStorage` over `Host::storageArea`, 16,384 bytes of
+    UTF-8 keys and values per area, committed through `Host::storageCommit` at the end of the step that changed them,
+    after its rendering update (a media query's change listener or a ResizeObserver callback may write). The iOS host
+    keeps nothing yet (V2b).
+  - *Locale* (§2.9): `navigator.language` is the host's (`HostState::setLocale`, `WRSession setLocale:`, the bubble's
+    `strings.baseLanguageCode`), `navigator.languages` a fresh frozen `[language]`; a tag that is not BCP 47-shaped or
+    is longer than 35 characters is `en-US`. `Intl` does not exist yet (V5).
+  - *Inert* (`Inert.cpp`, §2.10): `fetch` rejects and the network constructors and `sendBeacon` throw
+    `NetworkDisabledError`; `alert`, `confirm` (false) and `prompt` (null) do nothing; the clipboard and `share` reject
+    with `NotAllowedError`.
+- **`element.style` (M1d).** CSSOM's inline declaration block over the element's `style` attribute: parsed on every
+  access and written back serialized on every change, so the render tree restyles from the attribute as for any other
+  attribute change and the two never disagree. Values are kept as text (spec §10.3).
+- **The app's half (M1d).** A widget is `MessageWidgetCore`, which runs only inside the widget's tasks on the pool,
+  and `MessageWidgetInstance` on main, which applies each task's `WidgetSnapshot` in order. The core owns a
+  `WRSession`, which owns the runtime, the `CoreTextRenderHost`, the render tree and the production `wr::Host`
+  (`CACurrentMediaTime()` in milliseconds as the clock the steps are given; the wall clock for `Date`; diagnostics and
+  bridge calls to the core; `console` lines are dropped). Each core task sets the step's budget, runs its steps, hands
+  the session's tree and changed rects to its `WidgetTreeRenderer`, and returns a snapshot with the size, the state,
+  the bridge calls the policy allowed, the diagnostics and the units spent. The snapshot carries no tiles. When main
+  applies one whose tree changed, it queues a `.draw` task, never waited for and keyed so that a draw still waiting is
+  replaced, which paints the 128 pt tiles under the changed rects in parallel through `LayerTreePainter`.
+
+## Invariants (none of these shows up as a build error)
+
+- **Lifetime.** Every raw pointer between nodes is paired with a counted, traced reference (`Held`):
+  - parent, document, `Attr`'s owner;
+  - each live collection's root, and the document it holds;
+  - the template ↔ contents pair, both ways (the contents' host).
+
+  Each `trace` marks exactly its counted references. No finalizer touches another payload: QuickJS may finalize a
+  cycle in any order. Freeing a deep tree goes through QuickJS's zero-refcount list, so it does not recurse.
+- **No script runs inside a native algorithm.** Conversions run before an implementation body starts. Native code
+  never calls through JS-visible properties, except where WebIDL itself requires it (new-target `prototype`,
+  `[PutForwards]`, dictionary members). Script is entered only from:
+  - the event loop's steps;
+  - `dispatchEvent`'s listener calls, with the event path held as `Ref`s;
+  - script execution at a task or at mutation depth 0;
+  - WebIDL-mandated reads during conversion (dictionary members, a callback interface's `handleEvent`);
+  - compiling an event handler's text (HTML "getting the current value of the event handler"), from the handler's
+    IDL getter or its listener during dispatch, at native depth 0 and counted as a call into JS;
+  - the string conversions a standard makes of a script's value: `console`'s ToString of each argument, inside its
+    binding call, and "report the exception"'s ToString of the exception and read of its `stack` (PF21). The
+    report's conversions do not recurse: one that throws gives a fixed text (or no location) instead of being
+    reported in turn, and each counts as a call into JS (`Runtime::ConversionScope`). `console`'s conversion is part
+    of the script's own call: what it throws propagates to the caller as an ordinary exception.
+
+  The document reaches native code through `DOMState`, never through `globalThis.document`.
+- **Work charging.** Every native path whose work grows with its input charges work units through `wr::charge` /
+  `chargeScan` (`Sources/Support/Work.h`), **before** the work. No clock backs the budget, so an uncharged path is an
+  unbounded freeze. M1a's reviews found and fixed several:
+  - megabyte-long tag names in fragment parsing;
+  - class-name copies on every collection recompute;
+  - per-simple-selector matching;
+  - componentizer copying.
+
+  Precise calibration of the rates is not a goal for now (user, 2026-10-16). The manual
+  `WidgetRuntimeWorkCostTests` holds each rate to at most 2× the reference JS loop's time per unit, the project's
+  convention.
+- **Stack.** No recursion grows with input size. Cloning, `isEqualNode`, serialization and gumbo's destroy are
+  iterative. The parse builder, the selector matcher and litehtml's componentizer recurse only to fixed caps (see
+  Limits). Tests run deep inputs on 512 KiB stacks.
+- **Memory.** DOM allocations go through QuickJS's allocator (`js_malloc*`, `wr::JSAllocator`), so they count
+  against the widget's memory limit. The documented exceptions are two transient parse structures on the system
+  heap:
+  - gumbo's tree;
+  - litehtml's selector tokens.
+
+  Each is bounded by the caps below, with its bound written at the code (`Parser.cpp`, `Selectors.cpp`) and pinned
+  by a test.
+- **Determinism.** No decision reads the clock.
+- **Two depth counters.**
+  - **Mutation depth.** `Runtime::nativeDepth()` counts nested native frames (`wr::NativeFrame`): every binding call
+    (`wr::glue`) and every `wr::MutationScope`. A call into JS through `callFunction`, `callInterface`, `runScript`
+    or a handler's compilation starts it at 0 again (`Runtime::ScriptBoundary`). JS that argument conversion runs (a
+    dictionary member's getter) does not, so a script inserted there waits for the binding call being converted for
+    (spec §10.1). Inserted scripts are prepared only when the outermost frame is left normally
+    (`afterOutermostNative`) and after every task, never inside `insertNode`, whose callers hold raw pointers.
+  - **Callback depth.** `Runtime::scriptDepth()` counts nested calls into JS. The microtask checkpoint runs when the
+    outermost one returns, and after every task and every animation frame. A report's reads of the value it reports
+    (ToString of the exception, its `stack`, an unhandled rejection's reason described for the host) count as one
+    (`Runtime::ConversionScope`) without a cleanup of their own, so a callback that author code makes is not
+    outermost and no checkpoint runs inside the conversion: the task's or caller's checkpoint after it drains what
+    it queued. The ErrorEvent's listeners are ordinary outermost calls.
+- **Stops are final.**
+  - A budget trip, out-of-memory or an internal failure latches `Runtime::stopReason()`. An allocation refused at the
+    memory limit latches Memory inside QuickJS's allocator (fork change 9).
+  - After that, every step returns `Stopped` without calling into JS, and the interrupt handler always says stop.
+    Nothing is catchable by script any more, bare `null` included, and every poll site throws (fork change 10).
+  - QuickJS cannot drop queued jobs, so the latch, not the queue, is what keeps a stopped widget stopped.
+  - `wr::Aborted` carries an uncatchable error out through every native frame to the step boundary.
+- **Time is the host's.**
+  - The loop never reads a clock. The host passes `now` into `runNextTask` and `runAnimationFrame` (or
+    `advanceTime`), and timers are scheduled against the loop's current time: the `now` of the step running, or of
+    the last one.
+  - Script-visible time (`performance.now()`, `Event.timeStamp`, `Date.now()`) comes from `wr::Host`, and
+    `Math.random` from the runtime's seed.
+  - A virtual host clock therefore makes a run deterministic. The WPT runner and the corpus boot both use one.
+    Local-time `Date` output (`toString`, `getHours`, `getTimezoneOffset`) still reads the process time zone, so a
+    deterministic run also pins `TZ`; M1e's corpus goldens must.
+
+### M1c's invariants (rendering)
+
+- **There is no validator.** Nothing in `WidgetRuntime` rewrites, allowlists or sanitizes content. The only content
+  rules are what is not rendered (above) and the render limits (below). `WidgetContainer` keeps litehtml's
+  allow-everything sanitize hooks, and the build never calls `sanitize_element`. A change that adds a rewrite step
+  contradicts D12.
+- **The container is the only way out.** litehtml has no I/O of its own: every load is a container callback
+  (`load_image`, `get_image_size`, `draw_image`, `import_css`, `link`). `WidgetContainer` accepts `data:` images whose
+  type is `image/*` and refuses and counts everything else, and `RenderHost` is never handed a URL, only the decoded
+  bytes of an accepted image. Nothing in the runtime or the libraries compiled into it opens a URL, a file or a socket:
+  `testNoIOInTheRuntime` scans 313 source files for it (a text scan, not a proof: its known gaps are in M1b's carry-over, in `feature/message-widgets`' history),
+  `testAttackCorpusLoadsNothing` runs the 93 attack documents and `testLoadsAreRefused` pins each path. The fork's SVG
+  painter never loads an `<image>` (`testAttackCorpusLoadsNothing` prints that a nested `data:` image is not decoded).
+- **The tree is plain data and outlives its document.** A `LayerTree` holds no `Node*`, no litehtml pointer and no
+  `uint_ptr` handle; fonts and images are held by `std::shared_ptr` and every paint argument is copied. Published, it
+  is immutable: a `LayerTree` the host already holds may be read on any thread while the runtime builds the next. Getting
+  one is not thread-safe: call `layerTree()`, `layerOps()` and `changedRects()` on the widget's queue or after a step returns,
+  because a flush swaps the members they read. A `HostFont` or `HostImage` must be
+  self-contained, because the tree outlives the host object that made it, and a host call never throws and never calls
+  back into the runtime. Pinned by `testTreeOutlivesItsDocument` and `testTreeOutlivesTheRuntime`.
+- **The flush runs no JS and is atomic.** It calls nothing JS-visible, dispatches no event, and is never run from
+  `afterOutermostNative`. It builds on a new document with new maps and swaps them in only when the build, the layout,
+  the mirror and the publish have succeeded; a stop or a failure leaves the document, maps, render input and published
+  tree as they were (`testRebuildIsAtomic`, `testAStoppedWidgetKeepsItsLastFlush`). A failure goes through
+  `abortForCaughtException`, which latches the stop and throws `Aborted` to the step boundary. Nothing charges inside a
+  litehtml callback: layout, painting and shaping are pre-charged before `render()`, so no exception unwinds through
+  litehtml. A flush entered from inside a flush returns at once (`testFlushIsNotReentrant`).
+- **The journal only records.** The listener runs no script and reads no attribute value; it records the node and the
+  kind of change, holding a `Ref<Node>`. It drops `attributeChanged` on an element with no parent (all of the parse's
+  and of cloning's), records nothing detached, in a template or outside the rendered tree
+  (`testDetachedBuildsAreNotJournaled`), and collapses to "rebuild" past 4,096 distinct nodes (`testJournalCollapses`).
+  A failure in it latches the stop and throws `Aborted`.
+- **`RenderTree` is destroyed first.** It is not a payload: it holds an untraced, counted `Ref<Node>` for every node
+  it maps or journals, released when its entry goes and in its destructor, so it must go while the context and the
+  main document are alive. `HostState` declares it last and `Runtime::~Runtime` resets the host's extension before the
+  DOM's (`testRenderTreeReleasesNodes`). Inside it, the litehtml documents are destroyed before the container they call
+  (the container is declared before the build), and the mirror before the document it observes.
+- **The first flush is in `boot`**, right after the parse and before any script, so a first script that never ends
+  still leaves the parsed markup laid out and published (`testBootBuildsTheParsedMarkup`,
+  `testHangingFirstScriptLeavesTheParsedMarkup`).
+- **Matching is one budget per build or patch session.** litehtml counts a step per selector test and gives up at
+  4,000,000; that count is per session (twidget edit 18), not per outermost pass. A build runs with the smaller of
+  that and the widget's remaining work, is charged the steps it used, and is dropped if the widget's budget cut it. A
+  patch bounds its steps first and rebuilds when it might not fit; one cut midway is abandoned and the same flush
+  rebuilds. No patch ends in an abort.
+- **The fork keeps its discipline** (`third-party/twidget/VENDOR.md`): each edit is numbered, cites the code it
+  touches, is pinned by a test that failed before it, and records what it changes on macOS.
+
+### M1d's invariants (the app's half)
+
+- **One facade.** Swift reaches the runtime only through `WRSession`. Its calls run on the widget's queue, one at a
+  time, and may move between the pool's two threads; `teardown` may come from any thread and waits for a running call
+  (a recursive mutex). The delegate is called inside a session call, on its thread. A call it makes back into the
+  session does nothing and answers its empty default (a depth guard): it would change the runtime under the running
+  call's stack.
+- **A caught failure is final.** Every entry catches what C++ throws, latches `failed` and drops the runtime. From
+  then on every call is a no-op answering its empty default, and the getters keep their last values, which the freeze
+  reads. A memory stop is fatal the same way: the runtime goes in the call that latched it, so nothing reads the
+  litehtml document an abandoned fallback rebuild may have left mutated (spec §10.3), and the last published tree stays
+  (`testMemoryStopIsFatal`).
+- **The tree outlives the session.** A `WRTree` holds one `shared_ptr<const LayerTree>`; the renderer keeps it after the
+  session is gone, and it paints on any thread, which is what lets the draw task paint tiles concurrently.
+  `LayerTreePainter` reads nothing but the tree (`testTreeOutlivesItsRuntime`,
+  `testTeardownDuringATaskKeepsTheLastTree`).
+- **A boot that published nothing did not start.** `bootWithSource:` is NO for a caught failure, a stop before the
+  parse's flush published (a parse past its ceiling), or a second boot; the core then reports `.failedToStart` and the
+  bubble shows the unsupported pill (V1; there is no source cap since then). A boot whose scripts stopped it did start, and freezes with its
+  parsed markup (`testHangingBootShowsTheParsedMarkupFrozen`).
+- **Changed rects are the union of a step's publishes.** `WRSession` takes `RenderTree::takeChangedRects()` after every
+  call that may publish: every publish since the last take, together (V3: a layout query's `flushForQuery` publishes
+  mid-step, before the step's own flush; `testChangedRectsOfAStepAreTheUnionOfItsPublishes`). It pads each rect 2 px
+  for glyph overhang and clips it to the tree's extent: the layout width (which a block reaches whatever its content's
+  own width) and the height. A size change, or a publish that changed everything, answers nil, everything.
+- **Layout queries** (V3, `Sources/DOM/Geometry.cpp`, `IDL/cssom-view.webidl`): `getBoundingClientRect`,
+  `getClientRects` (`DOMRect`, `DOMRectList`), the client and scroll sizes (nothing scrolls: `scrollTop`/`scrollLeft`
+  read 0 and ignore writes), `HTMLElement`'s offsets, `document.elementFromPoint` and `innerWidth`/`innerHeight` (the
+  layout width and the document's height: a widget has no viewport). Each charges `work::kLayoutQuery` (100), flushes
+  what is pending and reads the published layout (`borderBox`, `clientRects`, `nodeAt`, `boxMetrics`); the read is
+  charged too, `work::kLayoutBox` per rect or box it walks (`elementFromPoint` per box of the whole tree,
+  `getClientRects` per line fragment; a computed style value by its length). Known under-charge, parked with its
+  measurement (a parked patch in `feature/message-widgets`'s history, conformance first):
+  litehtml's hit test and paint make one pass over a stacking context's children per distinct z-index, so 3,000
+  positioned divs with distinct values cost 42 ms per `elementFromPoint` and 79 ms per rebuild for the charge of one
+  pass. A step's queries, their flushes and reads included, may spend `work::kLayoutQueryBudget` (10,000,000 units, about 100 ms) on top of
+  counting toward the step's budget; past it the widget stops with "Layout query limit exceeded" (sdk-v1 §2;
+  `StopReason::LayoutQuery`; `attacks/layout-query-loop.html` stops that way). A new work limit, which each step sets,
+  starts the count again.
+- **matchMedia** (V3b, `DOM/MediaQueries.cpp`): a query is evaluated by litehtml's own media query parser against the
+  container's media features (`RenderTree::matchesMedia`), exactly what `@media` sees, so the two agree:
+  `prefers-color-scheme` follows the theme, `hover`, `pointer` and `prefers-reduced-motion` are unknown features and
+  never match, `print` never applies. After every task's and frame's microtasks the loop reports changes
+  (`Window::reportMediaChanges`): a list with a change listener whose answer flipped gets a `MediaQueryListEvent`. Such
+  a list is held by the window (`EventTarget::listenersChanged`); one without listeners is not tracked and, when it
+  gains one, takes its previous answer from the media features the last report kept. A media keyword is looked up
+  with `_find_id` (twidget edit 24), so `matchMedia` cannot grow the process-wide id table.
+- **ResizeObserver and IntersectionObserver** (V3b, `DOM/ResizeObserver.cpp`, `DOM/IntersectionObserver.cpp`): after
+  the flush that ends a task or a frame, `EventLoop::deliverResizeObservations` gathers the observations whose content
+  or border box changed since they last reported (0×0 at first), calls the callbacks, runs the microtasks and lays out
+  again, at most `work::kResizeObserverRounds` (4) rounds, then fires "ResizeObserver loop completed with undelivered
+  notifications." at the window and leaves the rest for the next update. Then `Window::updateIntersectionObservations`
+  clips each target by its clipping ancestors (`RenderTree::overflowClip`) and the root rectangle grown by
+  `rootMargin`, and queues an entry when the threshold index or `isIntersecting` changed; a task delivers them. The
+  implicit root is the widget's whole area (no viewport); the bubble's maximum-height clip is not applied. An observer
+  that observes something is held by the window, and holds its targets.
+- **SVG geometry** (V3b, `DOM/SVGGeometry.cpp`, `RenderTree::svg*`): SVG's elements get SVG 2's interfaces
+  (`SVGGeometryElement` for the shapes, `SVGTextContentElement` for text, `SVGGraphicsElement` for containers);
+  `getBBox` is the box of `litehtml::svg_geometry`'s path in user units from its points and curve extrema (exact, not
+  sampled), a container's the union of its shapes; `getTotalLength`/`getPointAtLength` come from `svg_path_length`;
+  `getComputedTextLength` is the container's measure of the text in the font litehtml computed from its attributes. A
+  shape has no CSS box, so its client and bounding rects are its user-unit box mapped through the `<svg>`'s viewBox
+  (`xMidYMid meet`; transforms are not applied).
+- **The built-ins** (V5a; widgets v0.1.0 design §5 V5), each our own C++ against its standard, bound through
+  `IDL/builtins.webidl`; widget-sandbox's shims were read for behaviour only (§3: none of its code is adopted).
+  - `crypto.getRandomValues`/`randomUUID` (Web Crypto §10.1, no `subtle`): integer typed arrays of at most 65,536 bytes,
+    filled from `Host::randomBytes` (by default `arc4random_buf`).
+  - `atob`/`btoa` (HTML §8.3, Infra's forgiving-base64).
+  - `TextEncoder`/`TextDecoder` (the Encoding Standard, UTF-8 only): `encodeInto`, `fatal`, `ignoreBOM`, `stream`; the
+    decoder (`UTF8Decoder`) is shared with `URLSearchParams` and `Blob`.
+  - `structuredClone` (HTML §2.7): plain objects, arrays, errors, ArrayBuffers, typed arrays, `Map` and `Set` are walked
+    here (getters run, references and cycles keep their identity); `Date`, `RegExp` and the wrappers go through
+    quickjs-ng's own serializer, which reads their internal slots and runs no script for them; everything else is a
+    `DataCloneError`, as is a detached buffer, nesting past 1,000 levels and a non-empty `transfer`. A `Map` or `Set`
+    is walked with the entries copied first, through the constructors, methods and iterator `next` the runtime took
+    when it was made (`Runtime::intrinsic`): the engine's serializer walked one without a reference to the record it
+    was on, so a getter that cleared the map freed the record under it. The host reads a `DataView` the same way,
+    through the `%DataView.prototype%` accessors taken then, never through the redefinable ones.
+  - `URLSearchParams` and `URL` (the URL Standard, `URLParser.cpp`): the basic URL parser and serializer, a domain
+    through "domain to ASCII" (V5b: an ASCII domain lowercased, as WPT's data has it for every ASCII case, `xn--`
+    labels included; any other through UTS 46 from the system ICU, non-transitional, CheckBidi and CheckJoiners);
+    a `URL` keeps only its serialization (a JS string) and parses it again on each read, its setters splice and
+    re-parse, and `searchParams` and the query follow each other. Pair iteration (`entries`/`keys`/`values`/`forEach`,
+    "URLSearchParams Iterator") is the generator's `iterable<K, V>` support, added for it.
+  - `AbortController`/`AbortSignal` (DOM §3.1–3.2): no abort algorithms, `timeout` through a timer task.
+  - `Blob` (File API §3), its bytes and its type in the JS heap; `URL.createObjectURL` answers `""` and makes nothing.
+- **The `CSS` namespace** (V5c, `Sources/Host/CSSNamespace.cpp`, `CSSSupports.cpp`): a lazy global, hand-built as
+  `Intl` is (the generator skips WebIDL namespaces), with `escape` and `supports` as enumerable data properties and the
+  class string `"CSS"`. `CSS.escape` is CSSOM's "serialize an identifier". `CSS.supports` answers from profile 1's
+  tables, as decision D23 says: `true` only when the validator keeps the declaration as written. The two-argument form
+  checks the property (in the profile, or custom), every function, unit and `url()` of the value (a `url()` only as a
+  `#fragment` or a `data:` URL of a profile image type), then the profile's value rules: `display` and `position`
+  from their tables; the values the validator rewrites (`sticky`, `overflow: auto|scroll|overlay`), `background-clip:
+  text`, 3D transform functions, a 3D `rotate`, a three-axis `translate` or `scale`, filters outside `blur`,
+  `brightness` and `drop-shadow` (a `var()` or `attr()` item kept), and non-generic font families (a family holding
+  `var()` or `attr()` kept) refused; a global keyword or a custom property kept; with `var()` or `attr()` only the
+  `display` and `position` tables skipped, every other rule still applying (`env()` is not in the profile's
+  functions, so it is refused). The one-argument form is CSS Conditional 4's
+  `<supports-condition>` (`not`, `and`, `or`, nested parentheses, declarations, `selector()` against the profile's
+  pseudo-classes and pseudo-elements, general-enclosed false), then the text in parentheses, as CSSOM says, so a bare
+  declaration is true. Values are litehtml's component values, through the guarded pipeline the selector parser uses
+  (`Sources/DOM/CSSComponents.h`, `css::componentValues`). The tables are profile 1's `profile.json`, vendored as data
+  (`third-party/widget-sandbox/profile/`) and generated into `Sources/Host/ProfileTables.inc` by
+  `IDL/generate-profile-tables.py` (sorted `constexpr` arrays, `Sources/Host/Profile.h`); V4's validator adds its HTML,
+  SVG, event and canvas tables beside them.
+- **Canvas 2D** (V5d, `Sources/Canvas/`, `IDL/canvas.webidl`), profile 1's `canvas.*`:
+  - The state machine is twidget's portable interpreter, ported as owned code (`CanvasInterpreter.{h,cpp}`,
+    `PROVENANCE.md` lists every change): each call becomes resolved `CanvasOp`s in canvas pixels. A
+    `CanvasRenderingContext2D` runs them at once into its canvas's bitmap, a `HostCanvas` the render host makes
+    (`RenderHost::createCanvas`; on iOS twidget's CoreGraphics backend, `WidgetRuntimeIOS/Sources/CanvasBitmap.mm`, with
+    text clipped to its glyph outlines). The bitmap is made on the first op and never kept after a resize; a widget's
+    canvases hold at most 4,194,304 pixels together and 16,384 per side (`CanvasState`), past which a canvas draws
+    nothing and a `render-limit` `canvas-pixels` diagnostic is posted once. Each op is charged by the area it may touch
+    (`work::kCanvasSixtyFourPixels`), its clip chain and, for an image, its source pixels (a canvas drawn onto itself,
+    its whole bitmap, which the draw copies); a dashed stroke per dash and gap, counted in the space the backend dashes
+    in (the device path through the inverse of the op's float matrix) and per subpath, as the pattern restarts at each,
+    and drawn solid past 100,000 or when a length is not finite (`canvas-dashes`); a path per point before a call
+    copies or hit-tests it, text per byte.
+  - What a canvas keeps between calls is in the JS heap (`Allocator.h`'s convention), so the 64 MB limit bounds it:
+    paths (`PathData`, a `Path2D`, the current path), clip paths, gradient stops and both state stacks. Clips are a chain
+    (`ClipNode`) a `save()` shares, at most 64 deep (`canvas-clips` past it). A state's font, filter and lang
+    (`SharedText`) and its dash (a `shared_ptr<const Vector<float>>`) are not chains: they are immutable JS-heap values a
+    save copies by pointer. A rect, which only its op uses, never enters the JS heap. `lang` is capped at 256 bytes, a
+    font's family list at 1 KB, `Path2D(d)` data at 64 K units and `measureText` at 64 KB. Canvas text is measured by its
+    shaped advances, never through the layout's measure, which on iOS keeps every text it sees in a process-wide cache.
+  - Drawing: litehtml lays a `<canvas>` out as an image, with a `twcanvas:<serial>:<w>:<h>` source the builder gives it
+    (its width and height are its intrinsic size, not dimension properties); the container draws the bitmap's current
+    snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes it, today as a full rebuild.
+  - The context keeps two states: the interpreter's (what draws) and what the IDL reads back, saved and restored
+    together. Profile 1's out features are API-visible and inert: `createConicGradient`/`createPattern` paint nothing,
+    `globalCompositeOperation`, shadows, `filter` and the text-rendering attributes read back and never apply,
+    `getImageData` is transparent, `putImageData` draws nothing, `toDataURL` is `"data:,"`, `toBlob` calls back with null,
+    no WebGL and no `OffscreenCanvas`. `measureText` measures with the font DOM text gets for the same `font`
+    (generic families only, D3b). `drawImage`/`createPattern` take a canvas or an `<img>` (`ImageElement.cpp`: its
+    state is the container's decision for its `data:` src; the element keeps only that decision, never a copy of the
+    src, until its src changes, and images with one src share one decode per runtime, keyed by the src's hash and length
+    (`CanvasState::sharedImage`), except that an element which decides before layout (a preloaded `new Image()` its
+    `onload` appends) is decoded again by the build (a deferred minor); a broken one is an `InvalidStateError`;
+    `new Image()` is a hand-built lazy global). A solid `fillText` is drawn by CoreText in the fill colour, y-up from
+    the baseline with an identity text matrix, so emoji draw, at the fill's alpha; gradient fills and `strokeText` clip
+    to glyph outlines, where emoji draw nothing.
+- **Web Animations** (V5e, `Sources/Animation/`, `IDL/web-animations.webidl`; Web Animations Level 1), profile 1's
+  `anim.waapi`:
+  - *The objects:* `Element.animate`/`getAnimations` (with `subtree`), `document.timeline`/`getAnimations`, `Animation`
+    (every Level 1 member, `persist` and `commitStyles` included), `AnimationEffect` and `KeyframeEffect` (both keyframe
+    forms, `getKeyframes`/`setKeyframes`, `composite`, `iterationComposite`), `DocumentTimeline` (with `originTime`) and
+    `AnimationPlaybackEvent`. A `pseudoElement` is checked, kept and read back, and renders nothing (one `unsupported`
+    diagnostic per runtime). The algorithms are the standard's (`Animation.cpp`): pending play and pause tasks that
+    commit at the next frame, the effective playback rate, auto-rewind, the finished state and its notification steps.
+    `ready` and `finished` resolve synchronously where the standard does, so the animation's `then` is read inside the
+    call (WPT checks it), and a rejection with an `AbortError` is a queued job, because making the exception can run the
+    widget's `Error.prepareStackTrace` (`Sources/Support/Promises.*`). Easing (the reference's grammar and canonical
+    text, twidget's evaluation), interpolation and the computed timing are ported code; keyframes keep their values as
+    text in the JS heap. Where the reference and Level 1 differ, Level 1 wins, except for easing's grammar and
+    canonical text, which are the reference's.
+  - *The update step:* the document timeline's time is the last frame's timestamp (origin 0). HTML's "update
+    animations and send events" runs in `EventLoop::runAnimationFrame` before the frame callbacks: every pending task
+    whose timeline has a time runs and every finished state is updated; replaced animations are removed (§5.5: an
+    active, finished, filling animation whose target is in the document and whose every property a later replaceable
+    one (active or persisted, itself finished and filling) on the same effect target, an element or one of its
+    pseudo-elements, also animates, by the names as given; `play()` leaves a removed animation removed, rendering
+    nothing while its timing still runs to its finish, and `persist()` brings it back); then a microtask checkpoint, the
+    queued events (by scheduled event time, an unresolved or NaN one first, then composite order, then the order
+    queued; at most 4,096 a frame), and `release`. `AnimationState` (per runtime, in
+    `HostState`) holds every animation that can still do something with a counted reference, so a playing animation
+    nobody holds keeps running. One with no pending task and no event queued that is idle; removed and paused, or
+    removed and finished with `finished` settled; or finished, not filling and with `finished` settled is let go,
+    and script that changes it tracks it again. `wantsAnimationFrame` asks a cached flag:
+    any change sets it, and the update step recomputes it.
+  - *Rendering* (twidget edit 27): an element's sampled declarations reach litehtml in a render-only attribute
+    (`"animated style"`, a name no DOM attribute can have) that litehtml combines right after `style`, as the
+    animations origin: above every normal declaration, below every `!important` one. At the start of every flush, a
+    layout query's included, the elements whose animations changed or moved are sampled again
+    (`collectRenderChanges`), and one is journaled only when its declarations' text changed: a seek is visible in the
+    same task, and a paused or filling animation costs no relayout per frame. A change of only paint-only properties
+    (`transform`, `opacity`, colours, `filter`, `visibility`, …) keeps litehtml's render tree and republishes as mirror
+    operations, as a class change does; a layout property (`width`, `left`, …) rebuilds it. The mirror still publishes
+    its own `Reset` when a positioned element becomes or stops being a paint group (an animation's first and last
+    frames): it places a new group only for an in-flow block. A property's underlying value is what the animations
+    below give, else the element's inline declaration, else the reference renderer's initial table (`opacity` 1,
+    `transform` none, …); cascaded and computed values are V5f's. A change of the style attribute, and any change of an
+    effect (its target, keyframes, timing, composite, pseudo-element, or the animation's effect itself), samples the
+    element again. Sampling is linear in an effect's values (hash lookups; only a word that is a named colour reaches
+    litehtml's colour parser). A value that would not stay inside its declaration (`;`, `{`, `}`, `!`, unbalanced
+    brackets or quotes) is not rendered. `commitStyles` writes, for the properties the animation animates, the values
+    the animations up to and including it give (a removed animation's own values included, Level 1 §4.4.20; the
+    animations below it are the rendered ones, so past the 1,024 rendered animations those beyond the cap are left
+    out) into the `style` attribute (a disconnected target is an `InvalidStateError`; a `display: none` one is not refused).
+  - *Not yet:* computed underlying values (V5f made them the cascaded declaration, below) and `commitStyles`' style
+    change events. Not in profile 1: Level 2 (scroll timelines, ranges, `overallProgress`), Typed OM values. Hit
+    testing and the geometry queries (`getBoundingClientRect`, `nodeAt`) read the layout and ignore CSS transforms, as
+    they did before V5e: an animated `transform` moves what is drawn, not the element's client rect or where a tap
+    finds it.
+- **CSS animations and transitions** (V5f, `Sources/Animation/CSS*.{h,cpp}`, `IDL/css-animations.webidl`; CSS
+  Animations 1 and 2, CSS Transitions 1 and 2), profile 1's `at.keyframes`, `anim.keyframes`, `anim.transition`,
+  `anim.play-state`, `anim.easing`, `anim.events` and `anim.waapi-css-control`. They are `Animation` subclasses
+  (`CSSAnimation`, `CSSTransition`) whose `KeyframeEffect` carries the CSS timing, so V5e samples, renders, seeks and
+  reports them like a script animation:
+  - *What the step reads:* litehtml's cascaded declarations (the fork keeps the raw text of the properties named in
+    `style.cpp`'s `-lh-raw-<name>` list; `RenderTree::declaredValue`). An underlying value is now that declaration
+    (V5e's inline value is its special case). Cascaded, not computed: an inherited value, a `var()` or a percentage
+    stays as written. `@keyframes` and `@-webkit-keyframes` are read from the build's sheets at every build
+    (`parseKeyframesRules`, with V5e's keyframe caps; a later rule of a name replaces an earlier one). An `animation`
+    or `transition` list is the shorthand's entries with each longhand cycled over them, at most 64.
+  - *The style-change step* (`CSSAnimationState`, run by `AnimationState::stylesResolved`) runs inside
+    `RenderTree::flush`, after its first publish: for every element after a build; else for the elements whose DOM
+    attributes changed (their before-change values read from the published tree before the patch,
+    `pendingStyleChange`) and every element of an inserted subtree; a removal cancels the animations of the elements
+    that left. A change other elements' selectors depend on is refused by the patch and rebuilt, so an ancestor's class
+    change reaches its descendants. A second pass publishes what the step started; a flush makes at most two passes.
+    Frames, seeks and paused animations never run the step, nor does a build an animated frame falls back to (litehtml
+    refuses patches on pages with generated content or sibling selectors), and `getAnimations` flushes style first.
+    `@keyframes` are read again only when the sheets' text changed, so a rebuild keeps what script did to a CSS
+    animation's effect. The step can run script (creating or cancelling an animation resolves its `ready` promise, which
+    reads `then`): a flush inside it does nothing, the rules' entries leave their map before they are cancelled, and a
+    build's walk holds every element before it updates one. A play state from style resumes without auto-rewind and
+    never throws.
+  - *`CSSAnimation`:* one per `animation-name` entry that names a rule. An animation keeps its object while its name
+    stays in the list (matched in list order); a dropped name is cancelled. The effect's timing is the entry's (delay,
+    duration, iterations, direction, fill) with a linear easing; `animation-timing-function` applies per keyframe
+    interval unless the keyframe declares its own. Style sets the play state until script calls `play()` or `pause()`.
+  - *`CSSTransition`:* only the 28 watched properties transition (`kWatchedProperties`, the fork's list less the
+    animation, transition and discrete ones). A `background` that is one plain colour counts as `background-color`
+    (`watchedValue`, as a browser expands the shorthand), and a `transition: background` entry covers it; no other
+    shorthand is expanded. The before-change value is the one kept at the element's last change
+    (kept while it declares a transition or one runs), else the one the flush read before patching; an undeclared value
+    is the reference renderer's initial (`opacity` 1, …), and a property without one does not transition, either way.
+    The last entry covering the property (or `all`) with a positive combined duration wins. An interrupted transition
+    hands over from its sampled value; a change to the value a running transition is already heading for starts
+    nothing; a property no longer covered cancels its transition. Two keyframes, the entry's easing on the effect,
+    `fill: backwards`.
+  - *Order and events:* composite order is transitions, then CSS animations, then script animations, each by creation.
+    Each update step compares a CSS animation's phase with the last one (CSS Animations 2 §4.2, CSS Transitions 2 §5;
+    `afterUpdate`) and queues `animationstart`/`iteration`/`end`/`cancel` and `transitionrun`/`start`/`end`/`cancel`
+    at its element, with V5e's events (by scheduled time, then composite order); a cancel has no scheduled time and so
+    sorts first. The `onanimation*`/`ontransition*` handlers fire, and the legacy `webkitAnimation*`/`webkitTransition*`
+    names reach listeners when nothing listens to the standard name.
+  - *Not in V5f:* the reversing shortening factor (a transition reversed mid-way takes its full duration back),
+    `transition-behavior: allow-discrete`, `@starting-style`, animations of `::before`/`::after`, computed values, and a
+    transition on an element a rebuild restyled before anything tracked it (it has no before-change style).
+- **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over the system ICU, `libicucore`: `NumberFormat`,
+  `DateTimeFormat`, `PluralRules`, `RelativeTimeFormat`, `ListFormat`, `Collator` and `getCanonicalLocales`, with
+  `formatToParts` for the first two and `resolvedOptions` and `supportedLocalesOf` for all six; `Number`/`BigInt`/
+  `Date.prototype.toLocale*String` and `String.prototype.localeCompare` go through the same code. The classes are
+  hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object: `NumberFormat`,
+  `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are accessors returning a
+  cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime. `Intl` is a lazy global (a
+  third host auto-init tag, `Runtime::defineLazyGlobal`); the prototype overrides are installed at startup and reach
+  the runtime's own `Intl` object, never `globalThis.Intl`, and read `this` through the engine's `valueOf`/`getTime`
+  taken at startup (`Runtime::intrinsic`). A constructor reads every option in ECMA-402's order into a fixed-size
+  record (its js_malloc'd payload); ICU objects live only in the runtime's `IntlCache` (32 handles, least recently used
+  evicted), taken when a value is formatted, after every argument is converted, so no ICU handle or buffer is held
+  while script runs. A number is formatted through an ICU number skeleton made from the record, a date through a
+  pattern ICU's pattern generator made at construction (an explicit hour cycle rewrites its hour letters), and the
+  resolved date fields are read back from that pattern. The default locale is the host's (`HostState::locale`, the
+  app's language), resolved like a request; the default time zone is `Host::defaultTimeZone()` (the device's on iOS,
+  UTC in the test hosts). The declarations are our own (`ICU.h`): the SDK ships only a few of ICU's headers, so the
+  functions and enums are copied by hand from ICU 78.1's, every one `@stable` at ICU 69 or older, iOS 15.0's
+  library, which is the floor. ICU loading its own locale data is the system library's I/O, like Core Text's fonts;
+  nothing in the runtime opens a file.
+- **getComputedStyle** (V3, `Render/ComputedStyle.cpp`): `CSSStyleDeclaration` in a read-only computed mode (every
+  write throws `NoModificationAllowedError`, `cssText` is ""), each read a layout query that serializes what litehtml
+  computed: keywords from litehtml's own tables, colors `rgb()`/`rgba()`, lengths in px (width, height, padding and
+  the horizontal margins from the render box; top and bottom margins from the computed value, since collapsing moves
+  the used ones), `transform` as one 2D `matrix()`, `::before`/`::after` from the pseudo-element litehtml made (a
+  missing one reads its host's values with `content: none`). Custom properties are looked up with `_find_id`, which
+  never adds the name to litehtml's process-wide id table (twidget edit 23;
+  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). Not modeled, so constant: `direction` (ltr), `user-select`,
+  `touch-action`, `quotes` (auto). Known differences from browsers: `text-decoration-line` is merged with the
+  parent's (litehtml's), `background-image` other than `none`, `background-size`/`-position` and `filter` read "".
+- **Only the size is critical** (the user, 2026-10-19). Main waits for a task's snapshot within the turn's allowance
+  (1,000,000 units, 20 ms), and that snapshot carries the size and no tiles; drawing is never waited for. A size change
+  can show the old tiles for a frame before the new ones land. A tile that fails to draw keeps the last frame, with no
+  diagnostic.
+- **User activation is the runtime's (V2a).** A press is numbered when its `pointerdown` task runs
+  (`HostState::beginPress`) and is active (`HostState::PressScope`) only while its `pointerdown`, `pointerup`,
+  `mousedown`, `mouseup` and `click` dispatch and the click's activation behaviour runs, the microtask checkpoint after
+  each of their listeners included (the reference drains a task's promise jobs inside it, with the gesture, so an
+  `async` click handler keeps the press after an `await`); never in a touch event's listener, a timer, a frame, or a
+  job of a later task. One link call consumes the press. The app's core passes `openLink`, `openTelegramLink` and `haptic` on, refuses a URL
+  over 4,096 bytes (`bridge-refused`) and ignores any other method (`bridge-ignored`); `ready` does nothing in the app.
+- **A core task is bounded.** Each step gets the task's budget, 28,000,000 units; one drain runs at most 256 steps and
+  stops once it has spent a task's budget, so a core task spends at most about two. A width or theme change is a step
+  on a budget of its own.
+- **A frozen widget is a picture.** A stop, a caught failure or a memory stop freezes it: the session is torn down, the
+  renderer keeps its last tree and draws the badge over it, at the bottom left (V1: the widget bubble's date pill sits
+  at the bottom right), the height is latched, touches are ignored, and a new width clips the tree instead of
+  reflowing it. Its theme stays the one it froze in.
+- **The size is the layout width.** A snapshot's width is the width the session lays out at
+  (`WidgetTreeRenderer.documentSize`), as the old renderer's was, not `contentSize.width`, which is the content's
+  natural width and would shrink every widget. The height is `ceil(contentSize.height)` clamped to 50…600
+  (`WidgetTreeRenderer.minimumHeight`/`maximumHeight`, widget-sandbox v0.1.0's bounds, V1) or to a bubble's fixed height
+  under 600 (`WidgetTreeRenderer(width:maximumHeight:)`, passed at the boot), and it includes the host
+  sheet, the spec renderer's root CSS (`RenderOptions::hostCSS`: `html { display: flow-root; position: relative;
+  min-height: 0 } head { display: none } body { display: block; margin: 8px }`), which goes with litehtml's master sheet
+  so an author's rules win over it whatever their specificity, as the spec's `:where()` makes them.
+
+## Limits (decided in M1a to M1d)
+
+| Limit | Value | Where | Past it | Why |
+|---|---|---|---|---|
+| Builder depth | 256 levels | `ParseLimits.maxDepth` | deeper content dropped | today's `MAX_PARSE_DEPTH`; bounds the builder's recursion |
+| gumbo tree depth | 512 | gumbo `max_tree_depth` | content kept at the limit | bounds gumbo's own scans |
+| Attributes per element | 256 | `ParseLimits.maxAttributes` | later attributes dropped | today's `MAX_ATTRIBUTES` |
+| Nodes per parse | 100,000 | `ParseLimits.maxNodes` | the parse stops | bounds the tree |
+| Attributes per parse | 100,000 | `ParseLimits.maxTotalAttributes` (gumbo fork change 12) | the parse stops | attributes are not nodes |
+| Attribute bytes per parse | 8 MiB | `ParseLimits.maxTotalAttributeBytes` (fork change 13) | the parse stops | reconstruction **re-clones** attribute values, so counting attributes alone let a 256 KB document peak at 486 MB |
+| Formatting elements | 512 | gumbo `max_formatting_elements` (change 10) | earliest dropped | a quadratic class |
+| Markup set by script | 1,048,576 UTF-16 units | `MarkupMembers.cpp` | `NotSupportedError` | bounds the transient parse heap |
+| Selector length | 16,384 UTF-16 units | `Selectors.cpp` | `SyntaxError` | litehtml's tokens cost about 545 B of system heap per byte |
+| Selector nesting / compounds / brackets | 32 / 1,024 / 64 | `Selectors.cpp` | `SyntaxError` | bound the matcher's and the componentizer's recursion |
+| Timers and animation frame callbacks | 256 live, together | `Sources/Host` | `RangeError("too many timers")` / `RangeError("too many animation frame callbacks")` | bound the tables; today keeps the timer limit |
+| Promise rejection lists | 1,024 about to be notified / being notified; 256 outstanding | `Sources/Host/PromiseRejections` | dropped (one diagnostic) / oldest evicted | the tracker cannot charge work |
+| Rendered elements | 10,000 per document | `Builder.cpp` `kMaxElements` | not rendered, with their subtrees; `render-limit: elements` | litehtml and the tree cost ~10.4 KB per styled element; half of litehtml's own cap |
+| Form controls | 256 per document | `Builder.cpp` `kMaxFormControls` | not rendered; `form-controls` | litehtml makes a control's parts outside its caps (20,000 inputs: 436 MB) |
+| litehtml's caps | depth 256, 20,000 elements, 10,000 text pieces, 200,000 table cells | `document.h` | not built; `depth`, `elements`, `text-pieces`, `table-cells` | litehtml's own |
+| `<style>` text | 64 KiB per document, in tree order | `Builder.cpp` `kMaxStyleText` | that sheet is not applied; `css` | ~545 B of litehtml heap per CSS byte |
+| `style` attribute | 16 KiB | `Builder.cpp` `kMaxStyleAttribute` | that attribute is left out, the element renders; `style-attribute` | the same |
+| Text and attribute values | 1 MiB (UTF-8) per document, in tree order | `Builder.h` `kMaxRenderBytes` | the node that would pass it and every node after it are not rendered; `bytes` | replaces today's 256 KiB serialized-document cap |
+| List-valued CSS | 8 layers, shadows or transform/filter functions; 32 colour stops or points | `css_parser.h` (twidget edit 15) | later entries dropped | each element copies its lists, each entry paints (100 shadows: 105 MB per 1,000 divs) |
+| CSS nesting | 64 blocks | `css_parser.h` (twidget edit 14) | the deeper block is parsed as empty | litehtml's componentizer recursed once per block |
+| Pseudo-elements | none nest; `content` keeps 32 items; they count against the element cap | twidget edit 19 | not created | unbounded recursion, and 1,002,004 elements from 1,000 divs |
+| Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB | `document.h` `max_style_bytes` (twidget edit 21) | declarations holding heap payload are dropped in document order; `style-bytes` | 16 KiB on `*` over 9,000 elements held 353.6 MB |
+| Journal | 4,096 distinct nodes | `Journal.h` | the flush rebuilds | bounds the journal |
+| `TelegramWidget` handlers | 16 per `onEvent` type, and 16 `onTheme` callbacks | `TelegramWidget.h` `kMaxHandlersPerEvent` | ignored, no exception | sdk-policy.ts `MAX_HANDLERS_PER_EVENT` |
+| Link URLs | 256 UTF-8 bytes as given and 256 characters normalised; one link call per press | `Links.h` `kMaxLinkLength` | `TypeError`; a second call is `activation-blocked` | sdk-policy.ts `MAX_LINK_LENGTH` |
+| Link diagnostics | 20 `activation-blocked` and 20 `navigation-blocked` per widget | `Links.h` `kMaxLinkDiagnostics` | not reported | the reference's 20 (and ours for navigation) |
+| Haptics | a bucket of 5 refilled at 10 per second; `haptic-limit` once per second | `TelegramWidget.h` `kHapticBurst`, `kHapticPerSecond`, `kHapticReportMs` | dropped | sdk-policy.ts `HapticGate` |
+| Storage | 16,384 bytes of UTF-8 keys and values per area | `Storage.h` `kStorageQuotaBytes` | `QuotaExceededError` | sdk-policy.ts `STORAGE_QUOTA_BYTES` |
+| Locale | 35 characters, BCP 47-shaped | `HostState.cpp` `kMaxLocaleLength` | `en-US` | sdk-policy.ts `MAX_LOCALE_LENGTH` |
+| Random bytes | 65,536 per `getRandomValues` | `Crypto.h` `kMaxRandomBytes` | `QuotaExceededError` | Web Crypto's |
+| Clone depth | 1,000 nested values | `StructuredClone.h` `kMaxCloneDepth` | `DataCloneError` | no native recursion without bound |
+| A `CSS.supports` value or condition | 16,384 UTF-16 units, 64 nested blocks (the selector parser's caps) | `CSSComponents.h` `kMaxSelectorUnits`, `kMaxBracketDepth` | `false` | a browser answers `false` for what it cannot parse; bounds the tokenizer's and componentizer's native work |
+| ICU handles | 32 per runtime | `Intl.h` `kIntlCacheSize` | the least recently used is closed | Intl's native state stays bounded whatever a widget constructs |
+| A string handed to ICU | 1,048,576 UTF-16 code units (a list's items together) | `Intl.h` `kMaxIntlString` | `RangeError` | bounds the copies made for ICU and its work |
+| A locale tag | 157 bytes (ICU's `ULOC_FULLNAME_CAPACITY`) | `Intl.h` `kMaxLocaleTag` | `RangeError` | ICU's buffers are fixed-size |
+| Distinct tags in a locale list | 128 | `Intl.h` `kMaxLocaleList` | `RangeError` | the list is deduplicated through a hash set; no request needs more |
+| Items a `ListFormat` reads | 10,000 | `Intl.h` `kMaxListItems` | `RangeError`, the iterator closed | units alone let a million empty strings through, each a native allocation in ICU |
+| A free-form Intl option (`timeZone`, `currency`, `unit`, …) | 64 UTF-16 units | `getStringOption`'s `maxLength` | `RangeError` | every one has a shorter grammar |
+| Keyframes | 10,000 per effect, 10,000 values in a property's list, 512 properties per keyframe (the first by name), values of 4,096 UTF-16 units, property keys of 128, easing text of 4,096 | `KeyframeEffect.h`, `Easing.h` `kMaxEasingText` | `RangeError` (counts), `TypeError` (lengths); properties past 512 dropped | the reference's `processKeyframes` |
+| Rendered animations | the first 1,024 live animations with a target, in tracking order; 64 keyframes and 64 properties of each; 16 KiB of declarations per element, which count toward the render's 1 MiB | `AnimationState.h` | not rendered (`animation-limit` once) / left out | the reference renderer's caps; litehtml keeps the text on the system heap |
+| Animation events | 4,096 per frame | `AnimationState.h` `kMaxQueuedEvents` | dropped | the reference's `MAX_EVENTS_PER_FRAME` |
+| URL input and href | 1,048,576 UTF-16 code units | `URLParser.h` `kMaxURLLength` | the URL fails to parse (`TypeError`); a setter that would pass it leaves the URL as it was | bounds the parser's native strings (browsers cap near 2 MiB); a stored href always parses back |
+| Widget source | none since V1: the client adds no size check of its own (widget-sandbox v0.1.0, tgw-format.md); the parse's work ceiling is the bound | `MessageWidgetCore.parseWorkUnits` | past the ceiling the widget fails to start (the unsupported pill) | M1d's 256 KiB `kMaxSourceBytes` removed |
+| Work budgets | parse 400,000,000 (ours, not charged to the widget); boot 48,000,000; each later step 28,000,000 | `MessageWidgetCore` | a failed start (the parse) or a freeze | the old runtime's values, unchanged |
+| Steps per core task | 256, and at most one task's budget of spent units | `MessageWidgetCore.maximumStepsPerTask`, `drain` | the rest runs at the next wake | a widget that keeps a task runnable cannot hold its queue |
+| Memory, stack | 64 MiB, 1 MiB | `WRSession` | a memory stop is fatal: the runtime goes, the last tree stays | as before |
+| Tap slop | 8 CSS px on either axis | `Taps.h` `kTapSlop` | the move is not delivered; once past it, no click | the old renderer's |
+| Bridge calls | a method name of at most 64 characters; a link at most 4,096 UTF-8 bytes (the runtime's 256 is the real bound) | `MessageWidgetCore.bridge`, `MessageWidgetInstance.maximumLinkLength` | `bridge-ignored`, `bridge-refused` | the old core's policies |
+| Diagnostics | 500 per core | `MessageWidgetCore` | dropped | the old core's |
+| `data:` images | a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; SVG through `LHCreateSVGImage` (2 MiB of markup, every non-`data:` URL inside refused) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
+| Tiles | 128 pt; one image each, at most 4,096 px a side; a size change redraws every tile | `WidgetFrame.swift`, `LayerTreePainter.mm` | — | as before |
+
+The resulting transient-heap bounds:
+- **Script markup at its cap:** 119,144,832 B (about 114 MiB).
+- **A 256 KiB boot document:** 88,473,984 B (about 84 MiB). A larger source is not refused since V1 (below).
+- **Measured worst case:** an adversarial shape at the script cap peaks at 71 MB.
+- **Selector parse at its cap:** stated bound 26.8 MB; the true bound is about 8.9 MB.
+
+The render limits bound litehtml's heap and the layer tree, which are on the system heap and outside the widget's
+memory limit. The estimates are written at `RenderTree.h`, and `testHostileSizesAreBoundedAndCharged` holds each
+hostile single build under 160 MB and prints its growth:
+- 10,000 styled elements: about 10.4 KB each, so about 104 MB published and about 210 MB at a rebuild's peak, when the
+  old and new document and tree are alive together (atomicity). The test's styled-elements shape measured 95.5 MB;
+- 10,000 text pieces: about 36 MB (measured 36.4 MB); 256 form controls: about 5 MB (measured 5.0 MB);
+- all limits together: about 156 MB published, 200 MB at a first build's peak and 360 MB at a rebuild's (estimates).
+
+Not bounded by the limits: litehtml's process-global caches (master and author sheets, declarations) and its interned
+names (below).
+
+The boot bound was computed for a 256 KiB source, the cap `WRSession` enforced from M1d until V1 removed it (the
+client adds no size check of its own). A larger source is now bounded only by the parse's work ceiling
+(400,000,000 units, more than twice the 256 KiB worst case of 733 units a byte, `LimitsTests`) and by what the
+server delivers; its transient heap is not measured (M5 measures the boot on a device). A known way to cut the markup bound to about half: once an attribute
+limit is exceeded, `clone_node` copies no attributes. It waits for a memory measurement on a device (M5 measures the
+boot there).
+
+## The gumbo fork
+
+Upstream gumbo is unmaintained, so gaps are fixed in our copy. Every change is numbered in
+`third-party/gumbo/VENDOR.md` and has its own case in `tests/fork_test.cpp`.
+
+Pristine gumbo was quadratic on eight input classes (256 KiB of nested `<li>` took 3 s). Its formatting-element
+reconstruction made 5 M nodes from 64 KiB, and its error recording took 277 MB. Changes 1–8 make it linear and
+bounded. The rest:
+- **Change 9:** a dropped attribute name resets the tag buffer. Before it, `<p h h ref=x>` invented an `href`.
+- **Change 10:** the formatting list is bounded.
+- **Change 11:** a tag name read from source text ends at CR and at whitespace, for start and end tags, so CRLF
+  markup gets correct SVG and custom-element names.
+- **Changes 12–13:** total attribute count and attribute byte limits.
+
+html5lib tree construction stays at 1747 pass, 31 pre-existing fails, 14 skipped (`:GumboHtml5libTests`; M1a's harness
+counted 1746 and 32 because it misread the one case with an empty `#data`, fixed in M1b Task 15).
+litehtml uses gumbo's defaults, which leave every new limit off.
+
+## Measured (spec §6.2, 2026-10-16, loaded host)
+
+- **A context with the DOM and an empty document:** 49,693 units, 136 KB. The old runtime spent about 20M units on
+  setup before a widget's own scripts ran.
+- **One interface materialized** in a bare runtime: 513–14,700 units, 0.3–28.9 KB.
+- **The corpus parsed natively:** 323 documents, 0.1 ms mean, 0.66 ms max. None reaches a parse limit.
+
+After M1b (spec §6.2, 2026-10-17, loaded host):
+- **The Window, host state and loop** on top of the DOM context: 9,370 units, 18.5 KB (83,457 units and 204.6 KB
+  in all). The DOM context alone is now 74,087 units and 186.2 KB (49,693 units and 136 KB after M1a).
+- **The corpus booted headless** (`:WidgetRuntimeCorpusBootTests`, 230 documents): median 61,456 units, max 653,076;
+  all 230 within the 1,000,000-unit allowance. 103 documents report failures; by hand against the corpus (not
+  program output), 79 of them fail on `element.style` (M2).
+
+After M1c (spec §6.2, 2026-10-18; the corpus booted with the render tree at a width of 360):
+- **The first flush** (the build after the parse, inside `boot`): median 12,334 units, p90 34,103, max 188,729. A boot
+  with the tree: median 78,596, p90 315,363, max 840,605; all 230 within the 1,000,000-unit allowance, none stopped.
+- **The corpus gates** (`:WidgetRuntimeRenderCorpusTests`): the render input of 230 of 230 documents survives a
+  re-parse (0 are skipped) and lays out as litehtml's own parse of it does, and the mirror equals the recorded tree on
+  230 of 230; no document stops only because of the tree; the largest style charge is 585,504 bytes of 16 MiB; the 93
+  attacks load nothing.
+- **The random edit run** (`LayerMirrorTests`): 2,644 flushes, 91 published as operations, 976 as `Reset` because litehtml
+  rebuilt its render tree, 17 as `Reset` for a change the mirror could not place.
+
+After M1d (spec §6.2, 2026-10-19; `MessageWidgetCorpusTests` in the iPhone 17 / 26.5 test simulator, a debug build,
+wall time, printed and not asserted):
+- **Boot latency**, the layout call that boots each of the 230 corpus widgets at a width of 360, tiles at 3×: what main
+  waits for (the size and the state), median 2.6 ms, p95 8.9 ms, max 17.0 ms (`compat/sortable-table.html`); until the
+  tiles land, 4.3, 13.7 and 20.4 ms. With the tiles drawn inside the task, before the draw task, main waited 5.8, 20.2
+  and 49.5 ms.
+- **Tap latency**, a 3 × 3 grid of taps (down and up) over each widget, 2,070 taps: what main waits for, median 1.5 ms,
+  p95 8.4 ms, max 17.9 ms (`showcase/commerce/04-flash-sale.html`); until the tiles land, 2.2, 9.8 and 21.8 ms. A 5 s
+  tap seen before was the process's first `CADisplayLink` (5,014 ms in a headless test simulator; the tap itself
+  1.6 ms); `testThePollsTapsAreFast` warms it up and holds each of the poll's taps under 500 ms.
+- **The corpus**: all 230 files boot, none stops, and 23 end with an uncaught error ("What regresses until M2 to M4",
+  below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
+  and largest later task stay under a quarter of their budgets.
+
+Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
+configuration (before it, a build without `NDEBUG` charged more for every string). Another platform's allocator can
+move them: QuickJS counts a block over 512 B at the allocator's usable size (`js_arena_usable_size`), which the memory
+figures, the collector's thresholds and the in-place string concatenation read. The host wall times were to be
+re-measured on a quiet machine before an M1d gate, which the spec's amended D5 removed; M5 measures the boot on a
+device.
+
+## Divergences
+
+Spec §10 lists every intended difference from the old runtime and from the specs, including the ones M1a to M1d added
+(§10.1 and §10.3). There is no comparison harness (the amended D5): the list is the record, and WPT and the corpus are
+the gates. M1c's are the ones the validator's removal makes: unknown elements, attributes, `a[href]` and refused
+images render as the DOM holds them, the validator's diagnostics are gone, a theme change re-themes `style` attributes
+and SVG presentation colours, and a `<style>`'s sheet is its Text children only.
+
+M1d's, from the old runtime (spec §10.1):
+- **A frozen widget does not reflow.** It keeps its last tree, drawn at its own layout and clipped to a new width, and
+  the theme it froze in; the old renderer reflowed and re-themed its kept document.
+- **The badge is drawn, not injected.** `WidgetTreeRenderer` draws it in CoreGraphics over the bottom left of the
+  last tiles (V1: the bottom right is where the widget bubble's date pill sits), with the old badge's look; the old renderer put it into the document as HTML, with a rule that set the
+  body's opacity to 0.85, which is not drawn now.
+- **No `innerWidth` or `innerHeight` until M2.** The old core sent the offered width and 300 by a `viewport` task;
+  the core has no such task now.
+- **No keyboard events.** There is no `KeyboardEvent` interface (iOS has no keyboard path into widgets), and
+  `createEvent('KeyboardEvent')` throws `NotSupportedError`; the `onkey*` handler attributes stay and never fire.
+- **A parse past its ceiling is `.failedToStart`**, the unsupported pill, not frozen: nothing was published.
+- **`attacks/cpu-raf-burn` is stopped at its first frame**, not throttled: host calls are charged, so its 30 ms
+  `performance.now()` spin is about 70M units.
+- **A tap's events come in touch browsers' order**, `pointerdown`, `touchstart`; `pointerup`, `touchend`; then
+  `mousedown`, `mouseup`, `click`, and a drag sends no `mousemove`.
+- **Bridge arguments are strings**, always a JSON array of them: a link's URL as checked and normalised, a haptic's
+  kind and style or type.
+- **One press is one gesture.** The reference numbers gestures from the renderer's events, and on a touch's order
+  (`pointerup` before `mousedown`) its counter starts a second gesture at `mousedown`; ours is one per press, as sdk-v1
+  §2.5 says ("one press unlocks one call"). The reference's 5-second gesture lifetime is not ported: a press is only
+  ever usable while its own events dispatch.
+- **The haptic bucket refills on the step's clock** (`EventLoop::currentTime`), not the live one the reference's host
+  reads, so a burst inside one task never sees a refill however long the task runs.
+- **`openTelegramLink` asks first**, as `openLink` does: Mini Apps open t.me links without a prompt, but resolving one
+  is a network request the widget would cause.
+- **There is no source cap** (V1): M1d's 256 KiB cap is gone with the inline `tgwidget` blocks and `.tgw` files it
+  covered. The old runtime booted an inline source of any size, and stopped it when its serialized document passed
+  256 KiB.
+- **The built-ins diverge in places** (V5a): `URL`'s setters re-parse instead of using the state override (WPT's URL
+  data fails 7 cases, none of them IDNA: `Tests/url-data-expected-failures.txt`); `TextDecoder` knows UTF-8 only; `EvalError` and
+  `URIError` clone as `Error`; a `DataView` is a `DataCloneError`; `[Clamp]` and `[EnforceRange]` are not applied
+  (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
+- **`@supports` in a stylesheet is not yet the profile's** (V5c): `CSS.supports` answers from the profile's tables, but
+  a stylesheet's `@supports` blocks are still litehtml's until V4's validator decides them from the same tables, so
+  the two can disagree (`at.supports` stays failing).
+- **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
+  `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
+  `supportedValuesOf` are absent; a resolved locale drops its `-u-` extension (the `numberingSystem` and `calendar`
+  options are honored); a string handed to `NumberFormat.format` goes through `ToNumber`; a time zone resolves to
+  ICU's canonical (CLDR) id (`Asia/Calcutta`, not `Asia/Kolkata`: the IANA lookup is ICU 74, above the floor), and an
+  offset time zone (`+01:00`) is a `RangeError`. A `numberingSystem` ICU does not have as digits falls back to the
+  locale's own. A `Collator` sets only the attributes its options give, so a locale's tailoring stands (Danish sorts
+  upper case first, Thai ignores punctuation) and `resolvedOptions` reports it. Known gap: ICU 69 (iOS 15) has not
+  been run, and the number skeletons for `roundingMode: 'halfCeil'` / `'halfFloor'` may be refused there (a
+  `RangeError` at format, on iOS 15 only).
+
+Two things the M1d plan wrote otherwise keep the old runtime's behaviour, so they are not divergences: the host CSS
+goes with litehtml's master sheet (an author's rules win over it, as with `LHDocument`'s `MasterWithCSS`), and a
+snapshot's width is the layout width, not the content's natural width.
+
+## What regresses until M2 to M4
+
+The cost of the spec's D14 (the switch now, with no flag): a widget that needs what is not built yet renders or
+behaves less well than on the old runtime until it is. At the end of M1d, after `element.style` came forward from M2
+(it alone was 79 of the 103 corpus documents with failures in M1b's count, and the corpus went from 92 files with an
+uncaught error to 23), `CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots all 230 corpus files with no
+crash and no stop, and 23 end with an uncaught error. `CorpusTests.knownGaps` lists them, so they print rather than
+fail:
+- `TypeError: not a function` (7): `canvas.getContext` in 5 (`compat/webgl.html` asks for WebGL first; Canvas 2D is
+  M3), `window.matchMedia` in `compat/dark-mode.html` and SVG `getBBox` in `compat/svg-chart.html` (M2);
+- `Intl is not defined` (5, M2);
+- `Chart is not defined` (5) and `d3 is not defined` (2) (M3). The app installs no script loader, so all 9 files that
+  load Chart.js or D3 by URL get `script-skipped`, and 2 of them throw nothing; `compat/three-js.html` loads three.js,
+  which was never bundled;
+- `localStorage is not defined` (3; Web Storage came in V2a, kept in memory by the runtime until V2b's host);
+- `fetch is not defined` (1): never, since a widget cannot fetch.
+
+CSS transitions and animations do not run (V5f; `element.animate()` runs since V5e), and the observers are absent (M2; the geometry queries and
+`getComputedStyle` came in V3); none of these is among the corpus's uncaught errors. On the simulator (K3) the corpus messages already in
+Saved Messages render on the new runtime, every widget fully drawn from its first frame while the chat opens and is
+flung, and taps on the stock card, the live poll and the hotel booking update them. The re-post of the corpus at
+`widget-runtime-m1d-1` was queued but failed to send, because the account stayed offline the whole session; it is still
+owed.
+
+The tests that pinned the old runtime are deleted or rewritten (M1d's carry-over, in `feature/message-widgets`' history, lists every case): `EngineTests`,
+`ValidatorTests` and `RendererTests` whole, twidget's `PatchLogTests` and `WidgetDOMFuzzTests`, and the engine- and
+validator-specific cases of `CoreTests`, `DeterminismTests`, `LimitsTests` and `ViewTests`. Kept tests whose
+observation changed read the new core: tap helpers use `WRSession.borderBoxForTesting:` until M2's
+`getBoundingClientRect`, frozen checks read the renderer's badge, the failed-start tests use a source past the 256 KiB
+cap, and the attack and corpus scans assert that no URL-loading request is made (a URL now reaches `WidgetContainer`
+and is refused there). The three tests skipped for the CSSOM in Task 9 run again since `element.style`; nothing is
+skipped now.
+
+## Tests
+
+Host tests, from the repo root:
+
+```sh
+./build-input/bazel-9.2.0-darwin-arm64 test \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeTests \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBindingTests \
+  //build-system/WidgetIDL:WidgetIDLTests //third-party/quickjs-ng:QuickJSHostTests \
+  //third-party/gumbo:GumboHtml5libTests --test_output=errors
+./build-input/bazel-9.2.0-darwin-arm64 test //third-party/gumbo:GumboForkTests   # alone: its timing case is flaky under load
+```
+
+The WPT runner (vendored tests on a virtual clock; fails on any regression or unexpected change), and how to
+record new results:
+
+```sh
+./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeWPTTests
+./build-input/bazel-9.2.0-darwin-arm64 run //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeWPTTests -- --update
+```
+
+At the end of M1b it recorded 331 pages (304 with the harness OK) and 3,078 of 4,541 subtests passing, and skipped
+139 pages (`wpt-skip.txt` gives each its reason). At the end of M1d it records 350 pages (318 with the harness OK, 16
+ERROR, 9 TIMEOUT, 7 STOPPED) and 3,276 of 4,594 subtests passing, the `css/cssom/` subset included, and still skips 139.
+Six `NodeList-static-length-getter-tampered*` pages are STOPPED at the 500,000,000-unit page cap, and
+`Event-timestamp-safe-resolution.html` loops waiting on a fixed clock. M1d recorded with `--allow-regressions` three
+times. In Task 2, three pages that now run further and wait for what is absent by design: `Event-dispatch-click.html`
+(TIMEOUT, on activation and `hashchange`), `Event-stopPropagation-cancel-bubbling.html` (ERROR: no `window.event`) and
+`Event-timestamp-safe-resolution.html` (STOPPED). In Task 3, `Event-dispatch-single-activation-behavior.html`, whose
+harness went from ERROR to OK and whose old FAIL rows are no longer reported under those names (122 rows newly pass).
+With `element.style`, the animation cases of `EventListener-invoke-legacy.html`, which now sets `style.animation` and
+waits for animation events (TIMEOUT: CSS animations run since V5f, but only over a render tree, which this runner
+does not install).
+V5e added `web-animations/` (71 pages run, 2 skipped on the virtual clock; 964 of 1,216 subtests pass). Its runner keeps
+no render tree, so computed-style subtests there stay unverified; `AnimationRenderTests` covers the render path. V5f
+added the CSS event interfaces' pages (`css/css-animations/animationevent-interface.html`,
+`css/css-transitions/transitionevent-interface.html`, 42 of 42 each); the other pages of those directories need a CSS
+animation to run, which needs the render tree, so `CSSAnimation{Rules,Object,Render,Event}Tests` and `CSSStyleStepTests`
+replicate the conformance pages' numbers on the host render tree instead.
+
+M1c's targets, from the repo root. The first two are the render layer's own gates; the twidget ones test the litehtml
+fork on the host: `:TwidgetExternalTests` pins edits 12, 16–18, 20 and 21, and edits 13, 14, 15 and 19 have `:TwidgetSchemeTests`,
+`:TwidgetCssNestingTests`, `:TwidgetCssListsTests` and `:TwidgetPseudoNestingTests`:
+
+```sh
+./build-input/bazel-9.2.0-darwin-arm64 test \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeRenderCorpusTests \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeNoIOScanTests \
+  //third-party/twidget:TwidgetLitehtmlSmokeTests //third-party/twidget:TwidgetForkTests \
+  //third-party/twidget:TwidgetExternalTests //third-party/twidget:TwidgetSchemeTests \
+  //third-party/twidget:TwidgetCssNestingTests //third-party/twidget:TwidgetCssListsTests \
+  //third-party/twidget:TwidgetPseudoNestingTests --test_output=errors
+```
+
+`:WidgetRuntimeTests` (454 cases at the end of M1c, 491 at the end of M1d) holds the render suites: `RenderBuildTests`,
+`RenderJournalTests`, `RenderTextPatchTests`, `RenderAttributePatchTests`, `RenderStructurePatchTests` (with
+`testRandomEditsMatchARebuild`), `RenderHitTestTests`, `WidgetContainerTests`, `LayerTreeTests` and `LayerMirrorTests`;
+and M1d's `HostApiTests`, `TapTests`, `ActivationTests`, `FocusTests`, `BridgeTests` and `StyleDeclarationTests`.
+It takes about a minute. `testSelectorParsingIsLinear` times itself and can flake under load: rerun it alone.
+
+M1d's iOS targets are `ios_unit_test`s on a runner pinned to iPhone 17 / 26.5, run through `Make.py test` (root
+`CLAUDE.md`, "Running tests"; `--testFilter Class` or `Class/testMethod` runs part of one, since M1d):
+- `//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS:WidgetRuntimeIOSTests` (30 cases): the CoreText
+  host against `LHContainer` and hostile images, the painter against `LHDocument` (16 fixtures; a CSS filter paints
+  nothing in a test process, which has no Metal device), and the `WRSession` facade;
+- `//submodules/TelegramUI/Components/MessageWidget/MessageWidget:MessageWidgetTests` (141 cases): the instance, pool,
+  handshake, registry, view and the other kept suites on the native core, `NativeCoreTests`, and the 93 attack pages;
+- `//submodules/TelegramUI/Components/MessageWidget/MessageWidget:MessageWidgetCorpusTests` (5 cases, size large,
+  about 6 minutes): the 230 corpus files through the whole pipeline, their budgets, and the latency measurement.
+
+Three manual programs run with `-c opt`:
+- `:WidgetRuntimeWorkCostTests`: the rate calibration, 70+ attacks, each against an interleaved reference.
+- `:WidgetRuntimeMeasurementTests`: the §6.2 numbers, and a check that no corpus document reaches a parse limit.
+- `:WidgetRuntimeCorpusBootTests`: every corpus document booted headless, with the render tree since M1c; the §6.2
+  boot numbers, the first flush's, and the failures by missing global (M2's list).
+
+The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox:CorpusFiles`).
+
+## Next
+
+- M1a to M1d are done (the status above).
+- **M1e: the gates, and what M1c left** (spec §13):
+  - WPT rendering: reftests and `check-layout-th.js` tests through litehtml, with their own ratcheting expectations;
+  - the corpus gates and goldens (spec §9), the goldens in deterministic mode with `TZ` pinned, because local-time
+    `Date` output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone;
+  - Task 10c, an incremental render subtree in the fork, so that structural and non-neutral attribute patches stop
+    publishing `Reset`;
+  - the sub-pixel gap of moved nodes, the SVG `<image>` the fork never loads, and a `list-style-image` over 1 KiB on a
+    `<ul>` (spec §10.3);
+  - the corpus re-post at `widget-runtime-m1d-1`, which failed to send in M1d's simulator run.
+- **M2:** the rest of the profile (spec §13), with `innerWidth` and `innerHeight`; `Intl`, which is new
+  (`IntlBridge.swift` went with the old engine; V5 in the widgets v0.1.0 plan); and the layout queries over
+  `flushForQuery` (the geometry ones, with the accumulated changed rects, came in V3; `getComputedStyle` in V3,
+  `matchMedia` in V3b, storage in V2a). Also the
+  captioned-table cell boxes, which mis-hit in `nodeAt` and `RenderTree::borderBox`.
+- **M3:** Canvas 2D, Chart.js and D3, and a script loader for the bundled libraries: the app installs none
+  (`WRProductionHost` does not override `scriptLoader()`).
+- **M4:** CSS transitions and animations came in V5f (Web Animations in V5e); computed values and the omissions listed
+  under them remain.
+- **M5:** the corpus goldens recorded again once M2 to M4 are in, and the boot measured against the allowance on a
+  device.
+
+What M1a and M1b owed M1d, and how the app keeps M1b's and M1c's host contract (all done in M1d):
+- the loop is stepped with `now`, `CACurrentMediaTime()` in milliseconds, which is also the clock `WRProductionHost`
+  reports to the runtime;
+- `MessageWidgetCore` reads `stopReason` and `failed` after every task (`publish`), so a stopped widget freezes
+  instead of reading as idle;
+- moves reach the runtime's tasks only when the widget listens for them, which `Taps.cpp` decides from
+  `ListenedTypes` itself: the host does not call `takeIfChanged`;
+- a width or theme change is `setWidth:` or `setDark:`, each followed by a flush; a stopped widget meets a new width
+  by being clipped, not reflowed;
+- `CoreTextRenderHost` never throws and never calls back into the runtime, and its fonts and images (`IOSHostFont`,
+  `IOSHostImage`) outlive it;
+- out-of-memory is fatal at the facade, and the 256 KiB source cap is `WRSession`'s;
+- taps, the UI events and the activation behaviour are built, and `TapTests` and `ActivationTests` pin their order.
+
+Open from M1d (its carry-over's deferred items): a widget frozen by a width task can show a blank strip at a later,
+wider width; a tile that fails to draw leaves the last frame with no diagnostic; nothing at the core level refuses a
+bridge call after a stop; demotion judges a whole drain; the DEBUG slow-task log line went with the old engine; and
+`borderBoxForTesting:` sits in the production header.
+
+The milestones' carry-over files, in `feature/message-widgets`' history, list them all.

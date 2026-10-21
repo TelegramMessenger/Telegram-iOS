@@ -1136,7 +1136,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.openUrl(url: url.url, concealed: url.concealed, external: url.external ?? false)
+            strongSelf.openUrl(url: url.url, concealed: url.concealed, forceConcealed: url.forceConcealed, external: url.external ?? false)
         }, openExternalInstantPage: { _ in
         }, shareCurrentLocation: { _ in
         }, shareAccountContact: { _ in

@@ -72,6 +72,7 @@ import ChatMessageBirthdateSuggestionContentNode
 import ChatMessageRestrictedBubbleContentNode
 import ChatMessageStoryMentionContentNode
 import ChatMessageUnsupportedBubbleContentNode
+import ChatMessageWidgetBubbleContentNode
 import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiftOfferBubbleContentNode
@@ -327,6 +328,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let _ = media as? TelegramMediaGiveawayResults {
                 result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
+            } else if let _ = media as? TelegramMediaWidget {
+                // The widget node draws the unsupported pill itself when the widget cannot run, inside a normal bubble,
+                // so the caption keeps its bubble either way (not `isUnsupportedMedia`, which drops the caption).
+                result.append((message, ChatMessageWidgetBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
                 needReactions = false
@@ -6105,13 +6110,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             })
                         }
                     case .ignore:
+                        // `contextMenuOnLongPress` is false for every `.ignore` that keeps the default
+                        // `hasLongTapAction: true`, which stops the context gesture (:909). A live message
+                        // widget passes `hasLongTapAction: false`: holding it opens the message's menu.
                         if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
-                            return .action(InternalBubbleTapAction.Action {
+                            return .action(InternalBubbleTapAction.Action({
                                 tapMessage(item.message)
-                            })
+                            }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                         } else {
-                            return .action(InternalBubbleTapAction.Action {
-                            })
+                            return .action(InternalBubbleTapAction.Action({
+                            }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                         }
                     case let .custom(action):
                         return .action(InternalBubbleTapAction.Action({
@@ -7855,7 +7863,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         for contentNode in self.contentNodes {
             if contentNode is ChatMessageTransferBubbleContentNode {
                 contentNode.visibility = mapVisibility(self.forceStopAnimations ? .none : effectiveMediaVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
-            } else if contentNode is ChatMessageMediaBubbleContentNode || contentNode is ChatMessageGiftBubbleContentNode || contentNode is ChatMessageWebpageBubbleContentNode || contentNode is ChatMessageInvoiceBubbleContentNode || contentNode is ChatMessageGameBubbleContentNode || contentNode is ChatMessageInstantVideoBubbleContentNode || contentNode is ChatMessageRichDataBubbleContentNode {
+            } else if contentNode is ChatMessageMediaBubbleContentNode || contentNode is ChatMessageGiftBubbleContentNode || contentNode is ChatMessageWebpageBubbleContentNode || contentNode is ChatMessageInvoiceBubbleContentNode || contentNode is ChatMessageGameBubbleContentNode || contentNode is ChatMessageInstantVideoBubbleContentNode || contentNode is ChatMessageRichDataBubbleContentNode || contentNode is ChatMessageWidgetBubbleContentNode {
                 contentNode.visibility = mapVisibility(effectiveMediaVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
             } else {
                 contentNode.visibility = mapVisibility(effectiveVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)

@@ -1,0 +1,124 @@
+#include "Sources/Render/HitTest.h"
+
+#include <algorithm>
+#include <cctype>
+#include <functional>
+#include <string>
+
+#include <litehtml.h>
+#include <litehtml/el_svg.h>
+#include <litehtml/render_item.h>
+
+namespace wr {
+
+namespace {
+
+RenderBox boxOf(const litehtml::position& p) {
+    return RenderBox{double(p.x.value()), double(p.y.value()), double(p.width.value()), double(p.height.value())};
+}
+
+RenderBox unite(const RenderBox& a, const RenderBox& b) {
+    const double left = std::min(a.x, b.x);
+    const double top = std::min(a.y, b.y);
+    const double right = std::max(a.x + a.width, b.x + b.width);
+    const double bottom = std::max(a.y + a.height, b.y + b.height);
+    return RenderBox{left, top, right - left, bottom - top};
+}
+
+} // namespace
+
+litehtml::element::ptr hitElement(const litehtml::document& document, double x, double y) {
+    // root_render() is not const, though it only returns the root.
+    std::shared_ptr<litehtml::render_item> root = const_cast<litehtml::document&>(document).root_render();
+    if (!root) {
+        return nullptr;
+    }
+    static const litehtml::string_id pointerEvents = litehtml::raw_declaration_id(litehtml::_id("pointer-events"));
+    const auto hittable = [](const std::shared_ptr<litehtml::render_item>& item) -> bool {
+        for (litehtml::element::ptr el = item->src_el(); el; el = el->parent()) {
+            auto tag = std::dynamic_pointer_cast<litehtml::html_tag>(el);
+            if (!tag) {
+                continue;
+            }
+            const litehtml::css_token_vector* tokens = tag->get_token_property(pointerEvents);
+            if (!tokens) {
+                continue;
+            }
+            std::string value = litehtml::get_repr(*tokens, 0, -1, true);
+            if (value.empty()) {
+                continue;
+            }
+            for (auto& c : value) {
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            return value != "none";
+        }
+        return true;
+    };
+    const litehtml::pixel_t px(static_cast<float>(x)), py(static_cast<float>(y));
+    litehtml::element::ptr hit = root->get_element_by_point(px, py, px, py, hittable);
+    if (auto svg = std::dynamic_pointer_cast<litehtml::el_svg>(hit)) {
+        if (litehtml::element::ptr inner = svg->element_at(svg->get_placement(), px, py)) {
+            hit = inner;
+        }
+    }
+    return hit;
+}
+
+std::vector<RenderBox> elementClientRects(const litehtml::element& element) {
+    std::vector<RenderBox> rects;
+    element.for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
+        const litehtml::position p = ri->get_placement();
+        const litehtml::position pos = ri->pos();
+        std::vector<RenderBox> fragments;
+        const bool isInline = ri->for_inline_boxes([&](const litehtml::position& b, bool, bool) {
+            fragments.push_back(boxOf(b));
+            return true;
+        });
+        if (isInline) {
+            const double dx = double(p.x.value()) - double(pos.x.value());
+            const double dy = double(p.y.value()) - double(pos.y.value());
+            std::vector<RenderBox> mine;
+            for (const RenderBox& f : fragments) {
+                mine.push_back(RenderBox{f.x + dx, f.y + dy, f.width, f.height});
+            }
+            if (mine.empty()) {
+                mine.push_back(RenderBox{double(p.x.value()), double(p.y.value()), 0, 0});
+            }
+            if (ri->css().get_display() == litehtml::display_table_row) {
+                // Edit 6: a row's box is the union of its cells, one rect.
+                RenderBox all = mine.front();
+                for (const RenderBox& b : mine) {
+                    all = unite(all, b);
+                }
+                mine.assign(1, all);
+            }
+            rects.insert(rects.end(), mine.begin(), mine.end());
+            return;
+        }
+        const double left = double(ri->padding_left().value()) + double(ri->border_left().value());
+        const double top = double(ri->padding_top().value()) + double(ri->border_top().value());
+        const double right = double(ri->padding_right().value()) + double(ri->border_right().value());
+        const double bottom = double(ri->padding_bottom().value()) + double(ri->border_bottom().value());
+        rects.push_back(RenderBox{double(p.x.value()) - left, double(p.y.value()) - top,
+                                  double(p.width.value()) + left + right, double(p.height.value()) + top + bottom});
+    });
+    return rects;
+}
+
+bool unionOfRects(const std::vector<RenderBox>& rects, RenderBox& out) {
+    if (rects.empty()) {
+        return false;
+    }
+    out = rects.front();
+    for (const RenderBox& r : rects) {
+        out = unite(out, r);
+    }
+    return true;
+}
+
+bool elementBorderBox(const litehtml::element& element, RenderBox& out) {
+    return unionOfRects(elementClientRects(element), out);
+}
+
+} // namespace wr

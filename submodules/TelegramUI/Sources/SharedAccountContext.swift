@@ -127,6 +127,7 @@ import TextProcessingScreen
 import CreateBotScreen
 import EmojiStatusSelectionComponent
 import EntityKeyboard
+import MessageWidget
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -541,7 +542,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) {
-                let _ = immediateExperimentalUISettingsValue.swap(settings)
+                let previousSettings = immediateExperimentalUISettingsValue.swap(settings)
+                if previousSettings.widgetMessages != settings.widgetMessages {
+                    // Widget bubbles in open chats lay out again: a running widget stops, a pill becomes a widget.
+                    MessageWidgetAvailability.noteChange()
+                }
                 
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass

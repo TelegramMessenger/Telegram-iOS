@@ -25,6 +25,7 @@ swift_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/AppBundle:AppBundle",
         "//submodules/GZip:GZip",
         "//third-party/ZipArchive:ZipArchive",

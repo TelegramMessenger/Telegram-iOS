@@ -32,6 +32,18 @@ source ~/.zshrc 2>/dev/null; python3 build-system/Make/Make.py --overrideXcodeVe
 
 The first app-side `ios_unit_test` is `//submodules/TextFormat:TextFormatTests` (the mention/date link codecs). An `ios_unit_test` here needs an `ios_test_runner` pinned to a real device/OS (e.g. `iPhone 17` / `26.5`) — the default runner picks an invalid device and the test process exits 15. **Run new targets via `--target`, not the default suite:** `Tests/AllTests` currently references a dangling `//submodules/TgVoipWebrtc:TgCallsTests`, so the default would fail to build until that suite is repaired.
 
+**A failing iOS test run used to sit in `simctl diagnose` for up to 10 minutes after its last test** (fixed
+2026-10-20). rules_apple's `ios_test_runner` drives xcodebuild through xctestrunner, which passed
+`-collect-test-diagnostics=never`. xcodebuild takes that `=` spelling for a build setting and ignores it
+(`-collect-test-diagnostics=bogus` is accepted silently; `-collect-test-diagnostics bogus` is rejected), so diagnostics
+stayed `on-failure` and every failing run ended in `simctl diagnose -l -b --timeout=600 …`: measured from 25 s to over
+7 min awake, and both that timeout and Bazel's test timeout stop while the Mac sleeps (a lid close stretched one to
+45 min). `MODULE.bazel` now patches xctestrunner (`build-system/bazel-patches/`) to pass the two arguments; a bump that
+no longer matches the patch fails the build rather than quietly bringing the stall back. **If a failing run still
+stalls after its `Test Suite … failed` line:** `pgrep -fl "simctl diagnose"`. A hit means the patch is not in effect;
+killing that process is safe (it only collects logs) and the run returns at once with its real result. Scripts that call
+xcodebuild themselves pass `-collect-test-diagnostics never`, as two arguments.
+
 Pure C++ units have host `cc_test`s that bypass Make.py entirely (macOS build, no codesigning):
 `./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TgVoipWebrtc:streaming_audio_renderer_test --test_output=all`
 (likewise `:mtproto_ice_transport_test`). `//third-party/libprisma:SyntaxHighlighterTests` (added
@@ -678,7 +690,9 @@ Also, `Make.py build --target` on a bare `swift_library` builds it for the host 
 
 Almost every submodule builds `-Onone` under `--configuration=debug_*`. Exactly **two** override it with
 `copts = ["-O"]`: `submodules/GradientBackground` and `submodules/AnimatedStickerNode`. Nothing about a
-call site reveals which side of that line it is on.
+call site reveals which side of that line it is on. (Third-party C/C++ that runs inside a chat layout pass is
+`-O2` in every configuration too: `third-party/quickjs-ng` and twidget's LiteHTML (`OPTIMIZE` in
+`third-party/twidget/BUILD`), where `-O0` made a message widget's boot about twice as slow, 6.3 → 3.1 ms median.)
 
 This matters whenever per-pixel work is written in Swift. Measured over 1.41 Mpx, the wallpaper
 soft-light blend runs **3.4 ms at `-O` and 1083 ms at `-Onone`** — the same source, a factor of ~300,
@@ -1004,6 +1018,216 @@ builder, the server's validation rule) is `TelegramCore/Sources/Utils/RichReplyQ
 renderer stamps each laid-out run with its node and flat range so a selection maps to nodes. The
 node-id scheme is shared by the enumerator and the V2 layout and nothing checks the pair. Details
 in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Rich reply quotes".
+
+## Message widgets (`messageMediaWidget`)
+
+A widget message carries `messageMediaWidget width:int height:int payload:bytes` (layer 233): a bot's size anchors and
+the widget's HTML, gzipped by the server. TelegramCore stores it as `TelegramMediaWidget` (Postbox keys `w`, `h`, `p`;
+`html()` gunzips with no size check of its own), and `ChatMessageWidgetBubbleContentNode` draws it as a live widget in
+a bubble of its own, the message's text as its caption below. The authority is widget-sandbox v0.1.0, vendored at
+`third-party/widget-sandbox` (tag v0.1.0, `d895dcb5`: `corpus/`, and `conformance/` with its channel, reference pictures
+and self-checks); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`
+(milestones V1–V6). Every widget runs on the native runtime,
+`WidgetRuntime`, whose record, invariants, limits and measurements are
+[`docs/message-widgets-native-runtime.md`](docs/message-widgets-native-runtime.md). Off by default:
+`chatMessageWidgetRenderingEnabled` needs Debug Settings ▸ "Widget messages" (`ExperimentalUISettings.widgetMessages`)
+and no `ios_killswitch_disable_message_widgets` in the app config (`MessageWidgetKillSwitch.isEngaged`, set once per
+app configuration by `AccountContextImpl`, because `getAppConfigValue` is expensive). Off, or when the payload does not
+decode or the widget fails to start, the bubble shows the shared "please update" pill (`UnsupportedContentPill`)
+inside a normal bubble, so the caption keeps its bubble, and no date. Switching either while a chat is open re-lays its
+widget bubbles out: the kill switch's setter and `SharedAccountContextImpl` (when `widgetMessages` changes) post
+`MessageWidgetAvailability`'s change, and a bubble whose last pass answered the gate differently asks for its own
+relayout, because nothing else lays out a widget whose size never changes (`WidgetHarnessAvailabilityTests`). The chat list and the forward panels read the
+caption, or "Widget" for a widget with none (`MessageContentKind.widget`). The `.tgw` widget files and ```` ```tgwidget ````
+code blocks of the earlier milestones are removed (V1): `messageMediaWidget` is the only delivery. Code:
+`submodules/TelegramUI/Components/MessageWidget/{MessageWidget,MessageWidgetRendering,WidgetRuntimeIOS,WidgetRuntime}`
+and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a build error:
+
+- **Size** (`MessageWidgetBubbleSize`, widget-sandbox v0.1.0's anchors). Width 0 is the bubble's width; a width is
+  clamped to 200…the bubble's. Height 0 is the widget's own: 160 pt until it reports, then its reported height clamped
+  to 50…600 and cached per message (`MessageWidgetHeightCache`, 4,096 messages), so scrolling back does not jump; a
+  height is clamped to 50…600 and clips the widget. The runtime clamps what it reports to the same 50…600
+  (`WidgetTreeRenderer`), and to a fixed height under it: the node hands it over on every main-thread pass
+  (`MessageWidgetRegistry.maximumHeight` → `MessageWidgetInstance.maximumHeight`, applied by its next `layout` →
+  the renderer; an edit of the anchors keeps the runtime and changes it), so the document ends at the clip and a stopped widget's badge, drawn at the document's bottom, stays visible.
+- **Widgets exist only where the bubble lays out on main.** A widget's instance and the height cache are main-thread
+  only, so the node boots and asks a widget only in a main-thread pass; its runtime runs on the pool below. The chat
+  history's CoreList backend lays out on main; `ListViewImpl` (other lists, and the chat with
+  `ios_killswitch_disable_corelist_chat_backend`) lays out off main except in a `.Synchronous` transaction, so there the
+  bubble keeps its placeholder or cached height and shows no widget until a main-thread pass. The widget harness's list
+  sets `useMainQueueTransactions` for this reason.
+- **Off main, on a pool of two threads.** A widget is two halves: `MessageWidgetCore`
+  (its `WRSession`, `WidgetTreeRenderer` and `WidgetTileDrawer`) runs only inside the widget's tasks on
+  `MessageWidgetPool` (two 8 MB threads, a serial queue per widget, no pinning: QuickJS re-reads its stack top on every
+  entry); and `MessageWidgetInstance` (main) applies the `WidgetSnapshot` each task ends with, in task order. Main never
+  calls into a core. It queues a task and waits for it within one allowance per run-loop turn, 1,000,000 units of the
+  waited tasks' own work (the uncharged parse counted), and a 20 ms cap that is never a verdict
+  (`MessageWidgetWaitPolicy`, `MessageWidgetTurn`, reset at `beforeWaiting`); a task not done goes on, and its snapshot
+  is applied later from the handshake's mailbox, before anything newer. The handshake's `drain()` is not re-entered: a
+  task run while it applies (a snapshot asking for its draw) mailboxes its result behind the ones still to apply.
+  **Only the size is on the critical path** (the user, 2026-10-19): a snapshot carries the size and the state, never
+  tiles; applying one with `needsDraw` queues a `.draw` task that main never waits for, which draws the changed 128 pt
+  tiles in parallel (`WidgetTileDrawer`), so a size change can show the old tiles for a frame. A boot not done is the
+  offered width × 160 pt (`MessageWidgetInstance.placeholderHeight`), and its late snapshot moves `layoutVersion`, so
+  the bubble lays out again (a late start failure too: the bubble then shows the pill). Taps always wait and carry their
+  permission; timer ticks and frames wait unless the widget is hidden or demoted (a timer, wake or frame task past
+  1,000,000 units demotes it for good; boots and taps never do); keyed tasks (`timer-<id>`, `wake`, `frame`,
+  `visibility`, `width`, `draw`) replace one still queued, and one frame task is in flight at a time.
+  Tests run every widget on a pool of their own with `.unbounded` (each wait ends with its task); the background
+  path's tests pass a capped policy and hold a task with `gateNextTaskForTesting()` (never with `.unbounded`: main
+  would wait for a task that waits for main).
+- **A hostile message must not crash, freeze or exhaust the app — and every limit on its JS is a budget of work,
+  never of time** (user decisions 2026-10-15: fully deterministic, per-task limits only, **no rate limits**; kept for v0.1.0, the user, 2026-10-19).
+  Whether a widget is stopped depends on what it does, not on the device's speed, the thread it runs on or the
+  machine's load (`DeterminismTests`). The unit is QuickJS's work counter (`third-party/quickjs-ng` VENDOR.md change 2):
+  1 per interrupt poll (calls, branches, loop back-edges), 1 per 4 bytes allocated, and charges inside every native
+  builtin that works in proportion to its input (the list is in VENDOR.md). `WidgetRuntime` charges its own native work
+  in the same units, before the work (`wr::charge`/`chargeScan`; the rates, per binding call, node visited, selector
+  tested, byte parsed or serialized and box laid out, are in `WidgetRuntime/Sources/Support/Work.h`). **Budgets**
+  (`MessageWidgetCore`; tests replace them through `budgetsForTesting`; a million units is ~10 ms at the cost suite's
+  reference rate), each set so the corpus's largest honest task of its kind stays under a quarter of it:
+  - the **parse** of a widget's markup, `parseWorkUnits` 400,000,000: ours, not charged to the widget (the user,
+    2026-10-15), a ceiling no honest widget nears; past it nothing was published, so the widget did not start
+    (`.failedToStart`, the pill). With no source cap (V1: the client adds no size check of its own), it is also what
+    bounds a source's size;
+  - the **boot** (its scripts, then `load`, on one budget: what the layout pass waits for), `bootWorkUnits` 48,000,000;
+  - every later runtime **step** (an event, a timer, a frame, a width or theme change's rebuild), `taskWorkUnits`
+    28,000,000. One core task's drain runs at most 256 steps (`maximumStepsPerTask`) and stops once it has spent one
+    task budget, so a widget that keeps a task runnable cannot hold its queue.
+
+  A session's memory limit is 64 MiB (`WRSession`), and a memory stop is fatal. The budget is read at QuickJS's
+  interrupt poll (every 100 polls: `JS_INTERRUPT_COUNTER_INIT=100`, change 1) and at every native charge; once it
+  stops the widget, nothing is catchable by script (change 10), so no `try`/`catch` keeps a loop going. **With no
+  clock behind it, an uncharged native path is an unbounded freeze**: the final review found five such classes in
+  one-line scripts (`trim` on 4 MB, a 4 MB Map key, short regex execs, BigInt division, `join` on `{length: 2**40}`)
+  that ran for hours. A new native path, in `WidgetRuntime` or in QuickJS, needs its charge and a row in a cost suite;
+  a QuickJS change or upgrade also needs a run of the native-path sweep (`//third-party/quickjs-ng:QuickJSNativeSweep`,
+  manual, `-c opt`, quiet machine), which calls every builtin with large inputs and reports any call slow per unit or
+  never ending. **Calibration:** each rate holds its attack to at most 2× the reference loop's wall time per unit —
+  `QuickJSWorkCostTests` (host, `-c opt`, an alarm per attack so a hang fails) for QuickJS's own,
+  `:WidgetRuntimeWorkCostTests` (manual, `-c opt`) for `WidgetRuntime`'s, and `LimitsTests`'
+  `testAHostCallLoopCostsNoMorePerUnitThanJS` and `testAWordDenseRebuildLoopCostsNoMorePerUnitThanJS`
+  (`MessageWidgetTests`) through the app. Those are wall-time ratios (best of three): read a failure under machine load
+  as noise before reading it as a regression.
+  **The corpus check** is its own target, `//submodules/TelegramUI/Components/MessageWidget/MessageWidget:MessageWidgetCorpusTests`
+  (size large, ~6 min): `CorpusTests` boots every file of widget-sandbox's corpus but `attacks` (`out-of-profile`
+  included: the runtime must boot what the profile leaves out without stopping), taps a 4×6 grid over it and runs 1.2 s
+  of timers and frames on lifted budgets, and prints each one's parse, boot and largest later task; it fails when an
+  honest widget passes a quarter of a budget. `MessageWidgetTests` runs the 99 `attacks`. Two files are not honest
+  widgets, by widget-sandbox's own README: the Hang button (`11-live-scripts/15-pixel-bare`, a runaway, stopped) and
+  the Buggy button (`17-pixel-bare`, throws on purpose). `knownGaps` names, by message, the uncaught errors that are
+  APIs not built yet, and `testWhatTheParseCostsPerByte` prints the uncharged parse per folder, `attacks` included.
+  **Determinism:** the runtime reads no clock of its own; the host hands each step its `now`. Counts can still shift
+  with the system allocator across OS versions (QuickJS reads usable sizes for its GC threshold and in-place string
+  appends).
+  **Bounds:** the render limits (elements, form controls, `<style>` and text bytes, …) are `WidgetRuntime`'s, tabled in
+  the runtime record's "Limits". A message has one widget (registry path `[]`).
+- **The host sheet is the spec renderer's root CSS** (widget-sandbox v0.1.0, `shadow-renderer.ts`):
+  `RenderOptions::hostCSS` (`WidgetRuntime/Sources/Render/RenderHost.h`) is `html { display: flow-root; position:
+  relative; min-height: 0 } head { display: none } body { display: block; margin: 8px }`, appended to litehtml's master
+  stylesheet (`masterWithHostCSS`, `Builder.cpp`), so an author's rules win over it whatever their specificity, as the
+  spec's `:where()` makes them. It replaced M1's text-bubble padding (`body { padding: 4px 9px }`) in V1.
+- **Visible = bubble visible ∧ view in a window ∧ app active.** The list's visibility is geometric (a chat
+  under a pushed screen keeps it) and the app stays alive in the background during calls and audio, so the
+  instance also follows its view's `didMoveToWindow` and `MessageWidgetApplicationState`, which one subscription
+  to `applicationBindings.applicationIsActive` feeds (`feedMessageWidgetApplicationState`). Hidden, a widget gets no
+  frames and 1 Hz timers.
+- **The renderer is twidget's litehtml fork** (Telegram for macOS's renderer, vendored in `third-party/twidget/` at
+  `b5878f9`). `:litehtml_fork` (not `:litehtml`: APFS case collision with `:LiteHTML`) lays out the document
+  `WidgetRuntime`'s `RenderTree` builds from its DOM. The ObjC++ `LiteHTML` layer is reused only through
+  `LHHostSupport.h` (`LHHostContainer`, one `LHContainer` driven without an `LHDocument`): its fonts, text and ImageIO
+  decoding are `WidgetRuntimeIOS`'s `CoreTextRenderHost`, and its CoreGraphics drawing is `LayerTreePainter`'s. Every
+  local edit is numbered in `third-party/twidget/VENDOR.md` (AppKit guarded by `#if TARGET_OS_OSX`, Telegram's image
+  policy, the fork fixes, edits 12–21 for the native runtime, edit 22 the host support). Re-syncing: re-copy from
+  twidget, re-apply VENDOR.md's edits, run both suites.
+- **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
+  C++ throws, latches `failed` and drops the runtime; from then on every call answers its empty default. A stop or a
+  failure after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer`
+  keeps its last tree and draws the badge over it in CoreGraphics, at the bottom LEFT (a captionless widget's bubble
+  draws its date pill at the bottom right, over the widget; sdk-v1 §5.7), the height is latched, touches are ignored, and a
+  new width clips it rather than reflowing it. A snapshot's width is the layout width
+  (`WidgetTreeRenderer.documentSize`), not the content's natural width, and its height is the content's rounded up and
+  clamped to 50…600.
+- **Tile rule.** `MessageWidgetView` shows 128 pt tiles whose `contents` are the `CGImage`s a `.draw` task made, each
+  `WidgetTreeRenderer.image(rect:scale:)`: `LayerTreePainter` into a bitmap context of its own. Never paint the tree
+  inside `CALayer.draw(in:)`: `LHContainer`'s box-shadow code converts offsets through the CTM and assumes an identity
+  base CTM, which a layer backing context at 2x/3x lacks (shadows vanish). Tile memory follows the widget's area
+  (≤ ~8 MB for 360×600 pt at 3x), whatever the CSS. The view's own layer has transparent 1x1 contents so touches
+  arrive on iOS 26/27 (see "iOS 26/27 windows and touch delivery").
+- **No network, ever.** A widget can never cause a network request from the device, and `openLink` always prompts.
+  - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
+    The only way out is the bridge: `openLink` behind its prompt, one per tap (`MessageWidgetCore.bridge`). SDK v1 has
+    no `sendMessage` (sdk-v1 §2.10); the runtime's still exists and the bubble ignores it until V2 removes it.
+  - **Loads.** With no validator in front of it (below), the runtime's litehtml container, `WidgetContainer`, is the
+    boundary: it refuses and counts every load but a `data:` image (`WRSession.refusedLoads`).
+    `CoreTextRenderHost` decodes those under today's image policy (`LHHostContainer::createImage`: PNG, JPEG, GIF or
+    WebP as ImageIO sniffs it, ≤ 4096 px a side and 16 Mpx; SVG through `LHCreateSVGImage`, which refuses every
+    non-`data:` URL inside), and keeps at most 24 MiB of decoded pixels alive per session (`kMaxDecodedImageBytes`):
+    an image whose raster would pass what is left is refused before it is drawn (`createImage`'s `maxPixelBytes`).
+    The app installs no script loader, so every external `src` is `script-skipped`.
+  - **The runtime itself.** Nothing in `WidgetRuntime` may open a URL, a file or a socket (`:WidgetRuntimeNoIOScanTests`,
+    a text scan), and `InstanceTests.testAttackCorpusRequestsNothing` drives the attack pages under a recording
+    `URLProtocol` and requires no request.
+  - **The prompt.** A widget's `openLink` (≤ 4 KB) asks "Open link?" in the chat whatever the URL: the bubble passes no
+    `message:` (a verified author skips the prompt) and sets `OpenUrl.forceConcealed` (`parseUrl` clears `concealed`
+    for t.me and Telegram's other hosts and `tel:`). `ChatController`, `PeerInfoScreen` and the admin log
+    (`ChatRecentActionsControllerNode`, which otherwise never asks) honour the flag, and `ChatController`'s
+    link-options preview (`performOpenURL`, which fetches a preview of the URL) ignores such a link; the other
+    `ChatControllerInteraction`s open nothing or show list items, not bubbles. A new opener of `OpenUrl` must honour it
+    too.
+- **The runtime is `WidgetRuntime`** (decided 2026-10-16; the JS sandbox, the JS validator and the ops renderer are
+  deleted): a C++ DOM built into our QuickJS fork (nodes are QuickJS objects, bindings generated from WebIDL by
+  `build-system/WidgetIDL`), parsed by our gumbo fork (`third-party/gumbo`, changes 1–13), rendered by feeding litehtml
+  the DOM and published as a `LayerTree`, plain data that outlives its document and the runtime. `MessageWidgetCore`
+  drives it inside the widget's tasks. What SDK v1 needs and is not built yet (storage, theme, Web Animations, the C++
+  validation the user asked for, canvas and the profile-1 libraries, …) is milestones V2–V6 of the client spec; until
+  then such a widget ends with an uncaught error or does less. Its sharpest facts:
+  - **gumbo's reconstruction re-clones attribute values**, so parse memory is bounded by attribute *bytes*
+    (8 MiB). Counting attributes alone let a 256 KB document peak at 486 MB.
+  - **A stop is final.** A budget trip, out-of-memory or an internal failure latches the runtime; an allocation
+    refused at the memory limit latches it inside QuickJS's allocator (fork change 9). From then on nothing is
+    catchable by script and every poll site throws (fork change 10), and no step calls into JS, because QuickJS
+    cannot drop queued jobs.
+  - **There is no validator yet** (the user, 2026-10-17; v0.1.0's validation comes to C++ in a later milestone, the
+    user, 2026-10-19). Nothing in `WidgetRuntime` rewrites or allowlists content: it does not render a short list of
+    elements and stays inside the render limits.
+  - **The flush is atomic and runs no JS**, and the first one is in `boot`, after the parse and before any script, so
+    a first script that never ends still leaves the parsed markup laid out.
+- **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +
+  source; a new message stable id destroys it; a widget that failed to start is remembered, not re-booted). Height
+  changes ride the layout (`reportedHeight`, then the height cache) and `requestMessageUpdate`.
+- **Touches.** A touch inside a live widget is the widget's: `tapActionAtPoint` answers `.ignore` with
+  `hasLongTapAction: false`, so a fast double tap never becomes a quick reaction while a long press still opens the
+  message's context menu (`ChatMessageBubbleItemNode`'s `.ignore` arm: `contextMenuOnLongPress`). The context gesture
+  recognizes alongside the widget's recognizer, so when the menu takes the bubble
+  (`willUpdateIsExtractedToContextPreview(true)`) the node cancels the widget's touch (`MessageWidgetView.cancelTouches`),
+  or lifting the finger would also click (`testALongPressOpensTheMenuAndDoesNotClick`). **The widget view takes
+  touches through `MessageWidgetTouchRecognizer`, never `touchesEnded`:** a recognizer above the bubble recognizes every
+  tap and cancels the touched view's touches, so a view-level widget saw began → cancelled and never clicked. The
+  recognizer cannot be prevented by a tap, can be by a pan (a drag on a widget scrolls the chat), and recognizes on the
+  touch's end. A tap makes no `click` on a disabled form control or inside one, as browsers do.
+- **Local widget messages, for development** (DEBUG builds). Debug Settings ▸ "Insert widget conformance set" posts
+  widget-sandbox's conformance channel (`conformance/channel.json`, parsed by `MessageWidgetChannel`, with its
+  reference pictures after each widget) to Saved Messages, and "Insert widget corpus" the corpus, as Local-namespace
+  messages through `engine.messages.debugInsertLocalWidgetMessages(peerId:posts:)` (`LocalWidgetMessages.swift`:
+  nothing is sent, pictures are tagged like sent ones). Replying to or forwarding such a message is not supported
+  (its local id and local media mean nothing to the server).
+- **The widget harness** (`Tests/WidgetHarness`, its own [`CLAUDE.md`](Tests/WidgetHarness/CLAUDE.md)) hosts the real
+  chat bubbles (`ChatMessageItemImpl` → `ChatMessageWidgetBubbleContentNode`) over the composer harness's loginless app
+  context, with the conformance set, the corpus or its fixtures, and a readout (`harness.readout`) that Tier 1 reads
+  in process and Tier 2 (XCUITest) out of process. Develop and regression-test widget behaviour there, on K1, never K3.
+- **Tests.** `Make.py test --target //submodules/TelegramUI/Components/MessageWidget/MessageWidget:MessageWidgetTests`
+  (incl. `BubbleSizeTests`, `ChannelTests`, fixtures 01–05 within 4 pt of WebKit; `Fixtures/` holds examples 01–10),
+  `…/MessageWidget:MessageWidgetCorpusTests` (the corpus check above), `…/WidgetRuntimeIOS:WidgetRuntimeIOSTests`,
+  `//third-party/twidget:TwidgetRenderingTests`, `//submodules/TelegramCore:TelegramCoreTests`
+  (`TelegramMediaWidgetTests`, `LocalWidgetMessagesTests`), `//submodules/ChatListUI:ChatListUITests` (the preview
+  text); the harness: `./build-input/bazel-9.2.0-darwin-arm64 test //Tests/WidgetHarness:WidgetHarnessTests
+  //Tests/WidgetHarness:WidgetHarnessUITests`; host:
+  `./build-input/bazel-9.2.0-darwin-arm64 test //third-party/twidget:TwidgetForkTests //third-party/twidget:TwidgetLitehtmlSmokeTests
+  //third-party/quickjs-ng:QuickJSWorkTests //third-party/quickjs-ng:QuickJSSmokeTests`, and the cost suite optimized,
+  `… test -c opt //third-party/quickjs-ng:QuickJSWorkCostTests --test_output=all`
+  (not `//third-party/twidget:all`: it includes the iOS test). `WidgetRuntime`'s own host suites (`:WidgetRuntimeTests`,
+  the WPT runner, the render gates, the gumbo and twidget fork tests) are in the runtime record's "Tests".
 
 ## Rust MTProto engine on iOS
 
