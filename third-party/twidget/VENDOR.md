@@ -1129,6 +1129,40 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     spinner (`border-radius: 50%`, one side coloured) drew a square hole in its round ring. Each side now closes
     through the inner rect's centre, so the four partition the box; inside the border band the joins are the miters
     as before. Pinned by WidgetRuntimeIOS's `LayerTreePainterTests.testARoundedBorderWithOneSideColouredFillsItsRing`.
+29. **The profile hooks** (2026-10-21, V4 plan, Task 3a; both platforms, as insertions only). New virtuals on
+    `document_container` (`document_container.h`) that WidgetRuntime's `WidgetContainer` answers with its profile
+    policy; every default keeps litehtml's behaviour, so `LHContainer`, which overrides none of them, is unchanged.
+    Pinned by `:TwidgetProfileHooksTests` (`tests/profile_hooks_test.cpp`).
+    - **29.1** `profile_declaration(std::string& name, css_token_vector& value, bool& important)`, called in
+      `style::add` (`style.cpp`) where `sanitize_declaration` was (that line under `#if 0`); the default calls
+      `sanitize_declaration`. It may rewrite the declaration before it is added (sticky → relative, a pruned filter
+      list, a reduced font list); false drops it.
+    - **29.2** `sanitize_selector_list(std::vector<css_token_vector>& groups)`, in `css::parse_style_rule`
+      (`stylesheet.cpp`): the prelude's comma groups (`parse_comma_separated_list`) go to the container, which may erase
+      or rewrite them; the kept groups, rejoined with comma tokens, are parsed strictly as before (the old
+      `parse_selector_list(rule->prelude, …)` line under `#if 0`). `parse_selector_list` splits the joined tokens back
+      into the same groups, so a container that changes nothing parses exactly what it did, and a malformed group still
+      drops the whole rule. No group left drops the rule.
+    - **29.3** `sanitize_media_query(const css_token_vector& prelude)`, before an `@media` rule's query list is parsed
+      (`stylesheet.cpp`, false: the rule is dropped with its rules) and before a stylesheet's `media` is
+      (`document.cpp`, false: that sheet is not applied; `document.cpp` now includes `css_parser.h` for `normalize`).
+      The second site serves `<link media>` only: the fork's `<style>` (`el_style`) is an `element` and keeps no
+      attributes, so a `<style media>` sheet has always applied whatever its media.
+    - **29.4** `evaluate_supports(const css_token_vector& condition)`, for an `@supports` condition (`stylesheet.cpp`,
+      the `eval_supports_condition` line under `#if 0`): 1 true, 0 false, -1 (the default) litehtml's own evaluation.
+    - **29.5** `prefers-reduced-motion`, as edit 13 added `prefers-color-scheme`: `media_features::reduced_motion` (0
+      no-preference, 1 reduce; filled by the container, default 0, `types.h`), the string ids
+      `_prefers_reduced_motion_`, `_no_preference_` and `_reduce_` (`string_id.h`), a `supported_media_features` row and
+      a `media_feature::check` case (`media_query.cpp`). In a boolean context, `(prefers-reduced-motion)`, only reduce
+      matches. On macOS `(prefers-reduced-motion: no-preference)` now matches where it was unknown.
+    - **29.6** `profile_substituted(const std::string& name, css_token_vector& value)`, in `style::subst_vars`
+      (`style.cpp`) for a non-custom property once `var()` is substituted, before it is added: it may rewrite the value;
+      false drops it as edit 21's splice budget does (value cleared, `m_has_var` off). Custom properties were judged by
+      29.1 where they were declared.
+    - **29.7** `sanitizer_key() const`, four bytes mixed into the declaration cache key (`style.cpp`), the author-sheet
+      `styles_key` and the master sheet's `master_key` (`document.cpp`, the old key under `#if 0`). The three caches are
+      process-wide and keyed on text, so a hook must be a pure function of its text, and containers whose hooks differ
+      must never share an entry: the test container and `WidgetContainer` build in one test process.
 
 ## The iOS font resolver
 

@@ -1048,6 +1048,14 @@ private:
             if (const auto parent = item->parent(); parent && parent->src_el()->tag() == litehtml::_fieldset_) {
                 m_boxes.add(parent.get());
             }
+            // A table row paints its cells' backgrounds (draw_background): a cell that moved or resized (a column another
+            // row widened) changes the row's own paint, though the row itself did not change.
+            if (what & (litehtml::render_observer::moved | litehtml::render_observer::resized)) {
+                if (const auto parent = item->parent();
+                    parent && dynamic_cast<const litehtml::render_item_table_row*>(parent.get()) != nullptr) {
+                    m_boxes.add(parent.get());
+                }
+            }
         }
         m_moved = m_movedSet.list;
         m_clippers = m_clipperSet.list;

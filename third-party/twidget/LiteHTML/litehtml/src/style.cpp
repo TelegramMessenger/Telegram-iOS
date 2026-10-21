@@ -211,6 +211,13 @@ namespace litehtml
                 layer = true;
             std::string key(txt, d.first, d.second);
             key.push_back(container ? '\x01' : '\x00');
+            // Telegram (VENDOR.md edit 29.7): the container's sanitizer key, so containers whose hooks differ never
+            // share a cached declaration.
+            if(container)
+            {
+                const uint32_t sanitizer = container->sanitizer_key();
+                key.append(reinterpret_cast<const char*>(&sanitizer), sizeof sanitizer);
+            }
             // Telegram (VENDOR.md edit 13): light-dark() and color-scheme resolve against the container's scheme.
             if(container)
             {
@@ -287,7 +294,12 @@ namespace litehtml
             // Note: decl.value is already componentized, see consume_qualified_rule and consume_style_block_contents.
             // Note: decl.value may be empty.
             std::string name = decl.name.substr(0, 2) == "--" ? decl.name : lowcase(decl.name);
+#if 0
             if(container && !container->sanitize_declaration(name, decl.value))
+#else
+            // Telegram (VENDOR.md edit 29.1): the mutable profile hook; its default calls sanitize_declaration.
+            if(container && !container->profile_declaration(name, decl.value, decl.important))
+#endif
             {
                 continue;
             }
@@ -2685,6 +2697,19 @@ namespace litehtml
                     value.shrink_to_fit();
                     prop.second.m_has_var = false;
                     continue;
+                }
+                // Telegram (VENDOR.md edit 29.6): the container judges a declaration's value once var() is substituted
+                // (custom properties were judged where they were declared); a refusal drops it as edit 21's budget does.
+                if(document_container* hooks = el->get_document()->container())
+                {
+                    const std::string& substituted_name = _s(prop.first);
+                    if(substituted_name.compare(0, 2, "--") != 0 && !hooks->profile_substituted(substituted_name, value))
+                    {
+                        value.clear();
+                        value.shrink_to_fit();
+                        prop.second.m_has_var = false;
+                        continue;
+                    }
                 }
                 std::vector<std::pair<string_id, property_value>> later;
                 for(auto longhand : at(shorthands, prop.first))

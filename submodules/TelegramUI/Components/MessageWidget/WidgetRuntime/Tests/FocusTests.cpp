@@ -90,14 +90,15 @@ WR_TEST(testHoverActiveFocusRender) {
     CHECK_EQ(env.render().layerTree()->dump(), rebuilt2);
 }
 
-WR_TEST(testFocusWithinRendersOnAncestors) {
+// V4 plan, Task 3b: :focus-within is out of profile 1 (sel.focus), so its rule leaves the sheet and focus renders nothing.
+WR_TEST(testFocusWithinRendersNothing) {
     RenderEnv env("<!doctype html><html><head><style>body{margin:0;padding:0} #w{width:100px;height:50px}"
                   "#w:focus-within{background:#f00}</style></head><body><div id=w><input id=i></div><script>"
                   "window.i = document.getElementById('i');</script></body></html>");
     const std::string before = env.render().layerTree()->dump();
     CHECK_EQ(env.env().eval("i.focus(); document.activeElement.id"), std::string("i"));
     env.flush();
-    CHECK(env.render().layerTree()->dump() != before);
+    CHECK_EQ(env.render().layerTree()->dump(), before);
     auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
     CHECK_EQ(env.render().layerTree()->dump(), rebuilt);
 }

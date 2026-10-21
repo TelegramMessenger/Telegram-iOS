@@ -40,6 +40,10 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 - (void)session:(WRSession *)session bridge:(NSString *)method args:(NSString *)argsJson;
 /// The work counter, at least every 10,000 units while a step runs: what feeds main's wait meter.
 - (void)session:(WRSession *)session didWork:(uint64_t)totalUnits;
+@optional
+/// SDK v1 §3.2: the whole content of a storage area (`local` or `session`) a task changed, as [key, value] pairs in
+/// insertion order, at the end of that task. Not after the widget has stopped.
+- (void)session:(WRSession *)session storageCommit:(NSString *)area entries:(NSArray<NSArray<NSString *> *> *)entries;
 @end
 
 /// A published layer tree: immutable, and readable on any thread. It outlives its session.
@@ -58,6 +62,15 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 /// light or dark theme and recorded for drawing at `scale`. nil when it cannot be made.
 - (nullable instancetype)initWithWidth:(CGFloat)width
                                   dark:(BOOL)dark
+                                 scale:(CGFloat)scale
+                              delegate:(id<WRSessionDelegate>)delegate;
+/// The same, with the chat's palette (SDK v1 §2.3: theme key → #rrggbb; unknown keys and other values are dropped) and
+/// the client's button tokens (§2.4: `bg`, `text`, `radius`, `font`, `padding`, `height` as strings, `pressedOpacity`,
+/// `disabledOpacity` as numbers; each checked against its grammar), in the first build already.
+- (nullable instancetype)initWithWidth:(CGFloat)width
+                                  dark:(BOOL)dark
+                           themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
+                          buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens
                                  scale:(CGFloat)scale
                               delegate:(id<WRSessionDelegate>)delegate;
 - (instancetype)init NS_UNAVAILABLE;
@@ -84,6 +97,13 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 /// A width or theme change rebuilds and flushes now; a theme change also queues the TelegramWidget.onTheme callbacks.
 - (void)setWidth:(CGFloat)width;
 - (void)setDark:(BOOL)dark;
+/// The scheme, the palette and the button tokens at once: one theme change (one themeChanged) when anything differs.
+- (void)setDark:(BOOL)dark
+     themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
+    buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens;
+/// SDK v1 §3.1: the stored areas, as [key, value] pairs in order, read once at the widget's first touch of each area.
+/// Set it before the boot.
+- (void)setStoragePreloadLocal:(NSArray<NSArray<NSString *> *> *)local session:(NSArray<NSArray<NSString *> *> *)session;
 /// SDK v1 §2.9: the client's UI language as a BCP 47 tag, navigator.language; a malformed one is en-US. Set it before
 /// the boot.
 - (void)setLocale:(NSString *)locale;

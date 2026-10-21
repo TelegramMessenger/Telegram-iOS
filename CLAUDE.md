@@ -1158,11 +1158,13 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
     The only way out is the bridge: `openLink` behind its prompt, one per tap (`MessageWidgetCore.bridge`). SDK v1 has
     no `sendMessage` (sdk-v1 §2.10); the runtime's still exists and the bubble ignores it until V2 removes it.
-  - **Loads.** With no validator in front of it (below), the runtime's litehtml container, `WidgetContainer`, is the
-    boundary: it refuses and counts every load but a `data:` image (`WRSession.refusedLoads`).
-    `CoreTextRenderHost` decodes those under today's image policy (`LHHostContainer::createImage`: PNG, JPEG, GIF or
-    WebP as ImageIO sniffs it, ≤ 4096 px a side and 16 Mpx; SVG through `LHCreateSVGImage`, which refuses every
-    non-`data:` URL inside), and keeps at most 24 MiB of decoded pixels alive per session (`kMaxDecodedImageBytes`):
+  - **Loads.** Profile 1 decides the renderer's copy first (below): a remote `url()` declaration is dropped and a
+    refused `<img src>` renders the 48 px placeholder. Behind it the runtime's litehtml container, `WidgetContainer`,
+    is the boundary: it accepts only `data:` images of the profile's types (PNG, JPEG, GIF, WebP) and the placeholder,
+    and refuses and counts every other load (`WRSession.refusedLoads`). `CoreTextRenderHost` decodes those under
+    today's image policy (`LHHostContainer::createImage`: ImageIO's sniffing, ≤ 4096 px a side and 16 Mpx; the
+    placeholder, the one SVG it is handed, through `LHCreateSVGImage`), and keeps at most 24 MiB of decoded pixels
+    alive per session (`kMaxDecodedImageBytes`):
     an image whose raster would pass what is left is refused before it is drawn (`createImage`'s `maxPixelBytes`).
     The app installs no script loader, so every external `src` is `script-skipped`.
   - **The runtime itself.** Nothing in `WidgetRuntime` may open a URL, a file or a socket (`:WidgetRuntimeNoIOScanTests`,
@@ -1175,22 +1177,37 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
     link-options preview (`performOpenURL`, which fetches a preview of the URL) ignores such a link; the other
     `ChatControllerInteraction`s open nothing or show list items, not bubbles. A new opener of `OpenUrl` must honour it
     too.
+- **A widget's storage is in its message's derived data** (`DerivedDataMessageAttribute["widgetStorage"]`, the user's
+  decision of 2026-10-20; `MessageWidgetStorage`), so it goes with the message, the chat and the account by itself.
+  Three traps: an area with no entries is written as one, never removed, because Postbox's attribute merge re-appends a
+  `DerivedDataMessageAttribute` an update leaves out; the area is one flat `[String]` (keys and values alternating),
+  because Postbox's Codable adapter has no nested containers and an array of arrays traps when decoded; and the key is
+  not `"widget"`, which development builds used for widget sources in another shape. Writes never come from the admin
+  log (synthetic ids that can name a real message) or a preview (`messageWidgetStoragePersists`), whose areas are kept
+  in memory under keys of their own (`Key.persists`) so they never become a real message's starting state. A widget
+  keeps the commit sink it was made with, so a recycled node cannot store its areas under the next message; the sink is
+  per stable id and follows the message's id, because a sent or forwarded message renders under its local id first and
+  its widget keeps running when the cloud id replaces it.
 - **The runtime is `WidgetRuntime`** (decided 2026-10-16; the JS sandbox, the JS validator and the ops renderer are
   deleted): a C++ DOM built into our QuickJS fork (nodes are QuickJS objects, bindings generated from WebIDL by
   `build-system/WidgetIDL`), parsed by our gumbo fork (`third-party/gumbo`, changes 1–13), rendered by feeding litehtml
   the DOM and published as a `LayerTree`, plain data that outlives its document and the runtime. `MessageWidgetCore`
-  drives it inside the widget's tasks. What SDK v1 needs and is not built yet (storage, theme, Web Animations, the C++
-  validation the user asked for, canvas and the profile-1 libraries, …) is milestones V2–V6 of the client spec; until
-  then such a widget ends with an uncaught error or does less. Its sharpest facts:
+  drives it inside the widget's tasks. What SDK v1 needs and is not built yet (the rest of V4: the strict text and
+  node limits and the DOM-side behaviours; the release checks, V6) is in the client spec's milestones. Its sharpest
+  facts:
   - **gumbo's reconstruction re-clones attribute values**, so parse memory is bounded by attribute *bytes*
     (8 MiB). Counting attributes alone let a 256 KB document peak at 486 MB.
   - **A stop is final.** A budget trip, out-of-memory or an internal failure latches the runtime; an allocation
     refused at the memory limit latches it inside QuickJS's allocator (fork change 9). From then on nothing is
     catchable by script and every poll site throws (fork change 10), and no step calls into JS, because QuickJS
     cannot drop queued jobs.
-  - **There is no validator yet** (the user, 2026-10-17; v0.1.0's validation comes to C++ in a later milestone, the
-    user, 2026-10-19). Nothing in `WidgetRuntime` rewrites or allowlists content: it does not render a short list of
-    elements and stays inside the render limits.
+  - **Profile 1 is enforced on the renderer's copy, never on the DOM** (V4, 2026-10-21): the widget's DOM keeps
+    what it wrote, while litehtml gets elements as `markup::renderTagFor` decides them (kept, an inert span or div with
+    `data-tg-tag`, or dropped with their subtree), attributes as `markup::renderAttribute` does in `scanAttributes`
+    (an external `a[href]` becomes `#` plus `data-tg-link`; a tap still reads the DOM's href), CSS through twidget
+    edit 29's hooks answered by `css::policy` (keep, augment, rewrite or drop; `CSS.supports` agrees), and images by
+    `imageSourceKept`. Each rule is one decision that a rebuild, the patches and the render input read alike; the
+    master, UA and host sheets are trusted. The record is the runtime doc's "Profile 1 is the renderer's".
   - **The flush is atomic and runs no JS**, and the first one is in `boot`, after the parse and before any script, so
     a first script that never ends still leaves the parsed markup laid out.
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +

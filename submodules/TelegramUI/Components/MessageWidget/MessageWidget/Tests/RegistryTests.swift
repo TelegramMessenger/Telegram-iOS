@@ -4,8 +4,8 @@ import XCTest
 class RegistryTests: MessageWidgetTestCase {
     private func makeRegistry() -> MessageWidgetRegistry {
         let pool = self.pool!, turn = self.turn!
-        return MessageWidgetRegistry(factory: { source, theme, label, max, locale in
-            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
+        return MessageWidgetRegistry(factory: { source, theme, label, max, locale, storage, _ in
+            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
         })
     }
 
@@ -18,6 +18,62 @@ class RegistryTests: MessageWidgetTestCase {
         XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
         XCTAssertEqual(self.instance(in: registry, path: [], source: source)?.evaluateForTesting("navigator.language"), "pt-BR")
         registry.endPass()
+        registry.destroyAll()
+    }
+
+    /// Review Focus 4 (V2b plan, Task 4): a new palette in the same scheme reaches the running widget, with no rebuild.
+    func testAPaletteChangeInTheSameSchemeReachesTheWidget() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let first = self.instance(in: registry, path: [], source: source)
+        var palette = MessageWidgetInstance.Theme.light
+        palette.params = ["bg_color": "#102030"]
+        palette.button.bg = "#112233"
+        registry.beginPass(ownerId: 1, theme: palette)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let instance = self.instance(in: registry, path: [], source: source)
+        XCTAssertTrue(first === instance)
+        XCTAssertEqual(instance?.evaluateForTesting("TelegramWidget.colorScheme + ':' + TelegramWidget.themeParams.bg_color + ':' + getComputedStyle(document.documentElement).getPropertyValue('--tg-button-bg').trim()"), "light:#102030:#112233")
+        registry.destroyAll()
+    }
+
+    /// The registry's storage preload is given to the widgets it makes from then on, not to a running one.
+    func testTheStoragePreloadIsGivenToNewWidgetsOnly() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        registry.storage = MessageWidgetStorage(local: [.init(key: "k", value: "1")], session: [])
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        registry.storage = MessageWidgetStorage(local: [.init(key: "k", value: "2")], session: [])
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        XCTAssertNotNil(registry.size(path: [1], source: source, width: 300.0))
+        registry.endPass()
+        XCTAssertEqual(self.instance(in: registry, path: [], source: source)?.evaluateForTesting("localStorage.getItem('k')"), "1")
+        XCTAssertEqual(self.instance(in: registry, path: [1], source: source)?.evaluateForTesting("localStorage.getItem('k')"), "2")
+        registry.destroyAll()
+    }
+
+    /// A widget's commits go to the registry's commit sink as it was when the widget was made (it carries that message's
+    /// key), not to a later one: a node recycled for another message must not store this widget's areas under that one.
+    func testAWidgetsCommitsGoToTheSinkOfItsCreation() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        var first: [MessageWidgetInstance.StorageCommit] = []
+        var later: [MessageWidgetInstance.StorageCommit] = []
+        registry.onStorageCommit = { first.append($0) }
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        registry.onStorageCommit = { later.append($0) }
+        _ = self.instance(in: registry, path: [], source: source)?.evaluateForTesting("setTimeout(() => localStorage.setItem('k', 'v'), 0); 'ok'")
+        XCTAssertTrue(self.pump(until: { !first.isEmpty }, timeout: 5.0))
+        XCTAssertTrue(later.isEmpty)
         registry.destroyAll()
     }
 
@@ -70,7 +126,7 @@ class RegistryTests: MessageWidgetTestCase {
         self.lowerTheParseCeiling()
         let pool = self.pool!, turn = self.turn!
         var calls = 0
-        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _ in
+        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _ in
             calls += 1
             return MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
         })
@@ -97,7 +153,7 @@ class RegistryTests: MessageWidgetTestCase {
 
     func testNilFromTheFactoryIsNotRetriedEveryPass() {
         var calls = 0
-        let registry = MessageWidgetRegistry(factory: { _, _, _, _, _ in
+        let registry = MessageWidgetRegistry(factory: { _, _, _, _, _, _, _ in
             calls += 1
             return nil
         })

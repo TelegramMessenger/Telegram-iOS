@@ -10,13 +10,13 @@
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-21T09:52:01Z",
+  "date": "2026-10-21T18:54:02Z",
   "commit": "d895dcb5"
  },
  "summary": {
   "in": {
-   "pass": 124,
-   "partial": 30,
+   "pass": 127,
+   "partial": 27,
    "fail": 8,
    "xfail": 0,
    "xpass": 0,
@@ -33,9 +33,9 @@
    "untested": 0
   },
   "out": {
-   "pass": 50,
-   "partial": 7,
-   "fail": 19,
+   "pass": 74,
+   "partial": 1,
+   "fail": 1,
    "xfail": 0,
    "xpass": 0,
    "skip": 6,
@@ -434,18 +434,17 @@
   },
   "html.el.legacy": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 5,
-    "pass": 1
+    "pass": 6
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "center becomes a div: no centring",
-     "status": "fail",
-     "detail": "center",
+     "status": "pass",
+     "detail": "start",
      "theme": "light",
      "width": 390
     },
@@ -453,8 +452,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "font becomes a span: color=red is dropped",
-     "status": "fail",
-     "detail": "255,0,0,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     },
@@ -462,8 +461,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "big becomes a span: normal size",
-     "status": "fail",
-     "detail": "15.6px",
+     "status": "pass",
+     "detail": "13px",
      "theme": "light",
      "width": 390
     },
@@ -471,8 +470,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "tt becomes a span: not monospace",
-     "status": "fail",
-     "detail": "monospace",
+     "status": "pass",
+     "detail": "sans-serif",
      "theme": "light",
      "width": 390
     },
@@ -480,8 +479,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "strike becomes a span: not struck",
-     "status": "fail",
-     "detail": "line-through",
+     "status": "pass",
+     "detail": "none",
      "theme": "light",
      "width": 390
     },
@@ -552,17 +551,17 @@
   },
   "html.el.img-svg": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 2
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-b",
      "kind": "check",
      "name": "an SVG image is refused: the 48px placeholder (profile 1: out)",
-     "status": "fail",
-     "detail": " (timed out)",
+     "status": "pass",
+     "detail": "load, naturalWidth 48",
      "theme": "light",
      "width": 390
     },
@@ -570,8 +569,8 @@
      "test": "auto/02-attributes-images-b",
      "kind": "stage",
      "name": "svgimg",
-     "status": "fail",
-     "detail": "diff 96.1 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 4.3 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -579,17 +578,17 @@
   },
   "html.el.img-other-formats": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 2
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-b",
      "kind": "check",
      "name": "BMP is refused (placeholder, not the 2px image)",
-     "status": "fail",
-     "detail": " (timed out)",
+     "status": "pass",
+     "detail": "load, naturalWidth 48",
      "theme": "light",
      "width": 390
     },
@@ -597,8 +596,8 @@
      "test": "auto/02-attributes-images-b",
      "kind": "check",
      "name": "ICO is refused (placeholder, not the 2px image)",
-     "status": "fail",
-     "detail": " (timed out)",
+     "status": "pass",
+     "detail": "load, naturalWidth 48",
      "theme": "light",
      "width": 390
     }
@@ -606,17 +605,17 @@
   },
   "html.el.img-remote": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-b",
      "kind": "check",
      "name": "a remote image becomes the 48px placeholder",
-     "status": "fail",
-     "detail": " (timed out)",
+     "status": "pass",
+     "detail": "load, naturalWidth 48",
      "theme": "light",
      "width": 390
     }
@@ -652,7 +651,7 @@
      "kind": "check",
      "name": "button has a box with padding",
      "status": "pass",
-     "detail": "50.86376953125x18",
+     "detail": "72.18878173828125x32.80000114440918",
      "theme": "light",
      "width": 390
     },
@@ -661,7 +660,7 @@
      "kind": "check",
      "name": "button has a visible background or border",
      "status": "pass",
-     "detail": "0,0,0,0",
+     "detail": "51,144,236,0.12",
      "theme": "light",
      "width": 390
     }
@@ -745,16 +744,16 @@
    "status": "in",
    "verdict": "partial",
    "counts": {
-    "fail": 2,
-    "pass": 2
+    "pass": 3,
+    "fail": 1
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "an external href never reaches the renderer (a[href^=https] does not match)",
-     "status": "fail",
-     "detail": "1,2,3,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     },
@@ -789,10 +788,9 @@
   },
   "html.el.forms": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 7
+    "pass": 8
    },
    "evidence": [
     {
@@ -808,8 +806,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "input type=text is not drawn",
-     "status": "fail",
-     "detail": "155.9219970703125x21",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -817,8 +815,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "checkbox is not drawn",
-     "status": "fail",
-     "detail": "12x12",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -826,8 +824,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "radio is not drawn",
-     "status": "fail",
-     "detail": "12x12",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -835,8 +833,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "range is not drawn",
-     "status": "fail",
-     "detail": "129x16",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -844,8 +842,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "select is not drawn",
-     "status": "fail",
-     "detail": "52.59502029418945x20",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -853,8 +851,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "textarea is not drawn",
-     "status": "fail",
-     "detail": "152.02999877929688x19",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -862,8 +860,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "fieldset is not drawn",
-     "status": "fail",
-     "detail": "30.38818359375x30.674999713897705",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     }
@@ -871,17 +869,17 @@
   },
   "html.el.progress-meter": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 2
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "progress is dropped (no box)",
-     "status": "fail",
-     "detail": "140x14",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     },
@@ -889,8 +887,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "meter is dropped (no box)",
-     "status": "fail",
-     "detail": "70x14",
+     "status": "pass",
+     "detail": "0x0",
      "theme": "light",
      "width": 390
     }
@@ -898,10 +896,9 @@
   },
   "html.el.dialog-popover": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -917,8 +914,8 @@
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": "a shown dialog stays where the widget put it",
-     "status": "fail",
-     "detail": "dialog at 8,100 (45x25), its place 8,105",
+     "status": "pass",
+     "detail": "dialog at 8,99 (374x16), its place 8,99",
      "theme": "light",
      "width": 390
     },
@@ -936,7 +933,7 @@
      "kind": "check",
      "name": "a popover stays inside the widget",
      "status": "pass",
-     "detail": "popover at 8,121 (374x16)",
+     "detail": "popover at 8,115 (374x16)",
      "theme": "light",
      "width": 390
     }
@@ -944,10 +941,9 @@
   },
   "html.el.unknown": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -963,8 +959,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "it renders as an inert span: its type selector does not match",
-     "status": "fail",
-     "detail": "200,0,0,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -1144,18 +1140,17 @@
   },
   "html.attr.legacy-presentational": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 3,
-    "pass": 1
+    "pass": 4
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "align is dropped: no centring",
-     "status": "fail",
-     "detail": "center",
+     "status": "pass",
+     "detail": "start",
      "theme": "light",
      "width": 390
     },
@@ -1163,8 +1158,8 @@
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "bgcolor is dropped",
-     "status": "fail",
-     "detail": "255,0,0,1",
+     "status": "pass",
+     "detail": "0,0,0,0",
      "theme": "light",
      "width": 390
     },
@@ -1181,8 +1176,8 @@
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "border=1 is dropped",
-     "status": "fail",
-     "detail": "1px",
+     "status": "pass",
+     "detail": "0px",
      "theme": "light",
      "width": 390
     }
@@ -1208,17 +1203,17 @@
   },
   "html.attr.contenteditable": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "contenteditable does not reach the renderer",
-     "status": "fail",
-     "detail": "1,1,1,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -1226,17 +1221,17 @@
   },
   "html.attr.draggable": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "draggable does not reach the renderer",
-     "status": "fail",
-     "detail": "2,2,2,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -1244,17 +1239,17 @@
   },
   "html.attr.tabindex": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "tabindex does not reach the renderer",
-     "status": "fail",
-     "detail": "3,3,3,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -2160,17 +2155,17 @@
   },
   "css.position.sticky": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/03-layout-c",
      "kind": "check",
      "name": "sticky is neutralised to relative",
-     "status": "fail",
-     "detail": "sticky",
+     "status": "pass",
+     "detail": "relative",
      "theme": "light",
      "width": 390
     }
@@ -2241,17 +2236,17 @@
   },
   "css.overflow.scroll": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/03-layout-c",
      "kind": "check",
      "name": "overflow: auto is neutralised to hidden",
-     "status": "fail",
-     "detail": "auto",
+     "status": "pass",
+     "detail": "hidden",
      "theme": "light",
      "width": 390
     }
@@ -2440,17 +2435,17 @@
   },
   "css.color.mix": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 3
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-a",
      "kind": "check",
      "name": "color-mix() is dropped: no background (profile 1: out)",
-     "status": "fail",
-     "detail": "got \"100,0,100,1\", want \"0,0,0,0\"",
+     "status": "pass",
+     "detail": "got \"0,0,0,0\", want \"0,0,0,0\"",
      "theme": "light",
      "width": 390
     },
@@ -2458,8 +2453,8 @@
      "test": "auto/05-colour-backgrounds-a",
      "kind": "stage",
      "name": "mix",
-     "status": "fail",
-     "detail": "diff 100.0 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     },
@@ -2467,8 +2462,8 @@
      "test": "auto/05-colour-backgrounds-a",
      "kind": "check",
      "name": "color-mix() is dropped: no background (profile 1: out)",
-     "status": "fail",
-     "detail": "got \"100,0,100,1\", want \"0,0,0,0\"",
+     "status": "pass",
+     "detail": "got \"0,0,0,0\", want \"0,0,0,0\"",
      "theme": "dark",
      "width": 390
     }
@@ -2647,17 +2642,17 @@
   },
   "css.url.remote": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-b",
      "kind": "check",
      "name": "a remote url() never reaches the renderer",
-     "status": "fail",
-     "detail": "got \"\", want \"none\"",
+     "status": "pass",
+     "detail": "got \"none\", want \"none\"",
      "theme": "light",
      "width": 390
     }
@@ -2710,10 +2705,9 @@
   },
   "css.font.ui-families": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
@@ -2729,8 +2723,8 @@
      "test": "auto/06-text-fonts-a",
      "kind": "check",
      "name": "the validator adds a generic fallback (ui-monospace → …, monospace)",
-     "status": "fail",
-     "detail": "ui-monospace",
+     "status": "pass",
+     "detail": "ui-monospace, monospace",
      "theme": "light",
      "width": 390
     },
@@ -2747,17 +2741,17 @@
   },
   "css.font.named": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 2
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/06-text-fonts-a",
      "kind": "check",
      "name": "a named family is dropped: \"Courier New\" alone is not monospace",
-     "status": "fail",
-     "detail": "46.8076171875 vs 46.8076171875",
+     "status": "pass",
+     "detail": "18.814453125 vs 67.716796875",
      "theme": "light",
      "width": 390
     },
@@ -2765,8 +2759,8 @@
      "test": "auto/06-text-fonts-a",
      "kind": "check",
      "name": "a named family is dropped from the list (\"Times New Roman\", sans-serif → sans-serif)",
-     "status": "fail",
-     "detail": "\"Times New Roman\", sans-serif",
+     "status": "pass",
+     "detail": "sans-serif",
      "theme": "light",
      "width": 390
     }
@@ -3093,17 +3087,17 @@
   },
   "css.text.shadow": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/06-text-fonts-c",
      "kind": "stage",
      "name": "text-shadow",
-     "status": "fail",
-     "detail": "diff 35.6 % of ink (max 50 %); #e83 1626/0px, #36c 2296/2317px",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 50 %); #e83 0/0px, #36c 2290/2317px",
      "theme": "light",
      "width": 390
     }
@@ -3319,10 +3313,9 @@
   },
   "css.transform.3d": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -3338,8 +3331,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "stage",
      "name": "transform-3d",
-     "status": "fail",
-     "detail": "diff 42.5 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -3384,17 +3377,17 @@
   },
   "css.filter.other": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/09-transforms-effects-a",
      "kind": "stage",
      "name": "filter-other",
-     "status": "fail",
-     "detail": "diff 100.0 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -3456,17 +3449,17 @@
   },
   "css.clip-path": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/09-transforms-effects-b",
      "kind": "stage",
      "name": "clip-path",
-     "status": "fail",
-     "detail": "diff 51.3 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -3910,7 +3903,7 @@
      "kind": "check",
      "name": "env() resolves to its fallback or is dropped",
      "status": "pass",
-     "detail": "w 31",
+     "detail": "w 200",
      "theme": "light",
      "width": 390
     }
@@ -4316,17 +4309,17 @@
   },
   "sel.focus": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/07-selectors-b",
      "kind": "check",
      "name": ":focus never matches (no keyboard focus in v1)",
-     "status": "fail",
-     "detail": "61,0,0,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -4334,17 +4327,17 @@
   },
   "sel.form-state": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/18-out-of-profile",
      "kind": "check",
      "name": ":checked does not match (the control is gone)",
-     "status": "fail",
-     "detail": "7,7,7,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     }
@@ -4613,10 +4606,9 @@
   },
   "at.supports": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 4,
-    "fail": 4
+    "pass": 8
    },
    "evidence": [
     {
@@ -4632,8 +4624,8 @@
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@supports (3D transform) is false: 3D is out of the profile",
-     "status": "fail",
-     "detail": "21,0,0,1",
+     "status": "pass",
+     "detail": "0,0,0,1",
      "theme": "light",
      "width": 390
     },
@@ -4641,8 +4633,8 @@
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@supports with and/not follows the profile",
-     "status": "fail",
-     "detail": "got \"0,0,0,1\", want \"22,0,0,1\"",
+     "status": "pass",
+     "detail": "got \"22,0,0,1\", want \"22,0,0,1\"",
      "theme": "light",
      "width": 390
     },
@@ -4668,8 +4660,8 @@
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@supports (3D transform) is false: 3D is out of the profile",
-     "status": "fail",
-     "detail": "21,0,0,1",
+     "status": "pass",
+     "detail": "0,0,0,1",
      "theme": "dark",
      "width": 390
     },
@@ -4677,8 +4669,8 @@
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@supports with and/not follows the profile",
-     "status": "fail",
-     "detail": "got \"0,0,0,1\", want \"22,0,0,1\"",
+     "status": "pass",
+     "detail": "got \"22,0,0,1\", want \"22,0,0,1\"",
      "theme": "dark",
      "width": 390
     },
@@ -4785,17 +4777,17 @@
   },
   "at.layer": {
    "status": "out",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 2
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@layer is dropped with its rules (profile 1: out)",
-     "status": "fail",
-     "detail": "41,0,0,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     },
@@ -4803,8 +4795,8 @@
      "test": "auto/08-at-rules",
      "kind": "check",
      "name": "@layer is dropped with its rules (profile 1: out)",
-     "status": "fail",
-     "detail": "41,0,0,1",
+     "status": "pass",
+     "detail": "232,232,232,1",
      "theme": "dark",
      "width": 390
     }
@@ -5236,7 +5228,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "87.40791666507721",
+     "detail": "71.36862504482269",
      "theme": "light",
      "width": 390
     },
@@ -6216,18 +6208,17 @@
   },
   "js.focus": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 1
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/21-no-keyboard",
      "kind": "check",
      "name": "focus() does not make :focus match in the renderer",
-     "status": "fail",
-     "detail": "9,9,9,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     },
@@ -6281,7 +6272,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "16,33,49",
+     "detail": "8,25,42",
      "theme": "light",
      "width": 390
     }
@@ -7803,8 +7794,8 @@
    "status": "in",
    "verdict": "partial",
    "counts": {
-    "fail": 2,
-    "pass": 1
+    "fail": 1,
+    "pass": 2
    },
    "evidence": [
     {
@@ -7829,8 +7820,8 @@
      "test": "auto/19-limits",
      "kind": "check",
      "name": "attr() of a non-text attribute (class) is dropped",
-     "status": "fail",
-     "detail": "15.88818359375",
+     "status": "pass",
+     "detail": "0",
      "theme": "light",
      "width": 390
     }
@@ -7885,8 +7876,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 8,
-    "fail": 12
+    "pass": 17,
+    "fail": 3
    },
    "stages": [],
    "host": []
@@ -7903,8 +7894,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 8,
-    "fail": 10
+    "pass": 14,
+    "fail": 4
    },
    "stages": [],
    "host": []
@@ -7921,8 +7912,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 2,
-    "fail": 4
+    "pass": 6
    },
    "stages": [
     {
@@ -7932,8 +7922,8 @@
     },
     {
      "name": "svgimg",
-     "diff": 0.961,
-     "status": "fail"
+     "diff": 0.0433,
+     "status": "pass"
     }
    ],
    "host": []
@@ -8002,8 +7992,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 3,
-    "pass": 14
+    "fail": 1,
+    "pass": 16
    },
    "stages": [
     {
@@ -8044,8 +8034,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 2,
-    "pass": 5
+    "fail": 1,
+    "pass": 6
    },
    "stages": [
     {
@@ -8060,8 +8050,8 @@
     },
     {
      "name": "mix",
-     "diff": 1,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "light-dark",
@@ -8083,8 +8073,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 2,
-    "pass": 5
+    "fail": 1,
+    "pass": 6
    },
    "stages": [
     {
@@ -8107,7 +8097,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 5
+    "fail": 4,
+    "pass": 1
    },
    "stages": [
     {
@@ -8165,8 +8156,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 13,
-    "fail": 4
+    "pass": 16,
+    "fail": 1
    },
    "stages": [],
    "host": []
@@ -8212,8 +8203,8 @@
     },
     {
      "name": "text-shadow",
-     "diff": 0.3557,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "emoji",
@@ -8257,8 +8248,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 18,
-    "fail": 2
+    "pass": 19,
+    "fail": 1
    },
    "stages": [],
    "host": []
@@ -8275,8 +8266,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 21,
-    "fail": 3
+    "pass": 24
    },
    "stages": [],
    "host": []
@@ -8293,8 +8283,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 21,
-    "fail": 3
+    "pass": 24
    },
    "stages": [],
    "host": []
@@ -8322,8 +8311,8 @@
     },
     {
      "name": "transform-3d",
-     "diff": 0.425,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "blur",
@@ -8337,8 +8326,8 @@
     },
     {
      "name": "filter-other",
-     "diff": 1,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "filter-url",
@@ -8376,8 +8365,8 @@
     },
     {
      "name": "clip-path",
-     "diff": 0.5128,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "mask",
@@ -8892,8 +8881,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 10,
-    "fail": 9
+    "pass": 19
    },
    "stages": [],
    "host": []
@@ -8910,8 +8898,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 4,
-    "fail": 4
+    "pass": 5,
+    "fail": 3
    },
    "stages": [],
    "host": []
@@ -8958,7 +8946,7 @@
    ],
    "counts": {
     "skip": 2,
-    "fail": 1
+    "pass": 1
    },
    "stages": [],
    "host": [

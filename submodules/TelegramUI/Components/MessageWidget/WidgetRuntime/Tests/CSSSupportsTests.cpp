@@ -120,3 +120,16 @@ WR_TEST(testTheConditions) {
                       " CSS.supports('('.repeat(30) + 'color: red' + ')'.repeat(30))].join()"),
              std::string("false,false,false,true"));
 }
+
+/// V4 plan, Task 2: CSS.supports is the policy's verdict, true exactly for Keep and Augment (a family the validator
+/// completes, a light-dark() it resolves, a :disabled it rewrites) and false for a rewrite or a drop (plan OP4:
+/// strict attr()).
+WR_TEST(testSupportsIsTheVerdict) {
+    HostEnv env;
+    CHECK_EQ(mismatches(env, R"JS([
+        ['font-family', 'ui-monospace', true], ['color', 'light-dark(#fff,#000)', true], ['position', 'sticky', false],
+        ['content', 'attr(class)', false], ['content', 'attr(data-x)', true]
+    ])JS"),
+             std::string(""));
+    CHECK_EQ(env.eval("CSS.supports('selector(button:disabled)')"), std::string("true"));
+}

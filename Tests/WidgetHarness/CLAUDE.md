@@ -86,9 +86,10 @@ contextMenuEnded fixture/open-link.html
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
 runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (40 runs), through
-`MessageWidgetInstance` with the app's pool and wait policy at width 390, six at a time (`ConformanceRunner.runAll`),
-each view in the window so it gets its frames, a stand-in chat input focused before loading. A run reads the widget's
-`<html data-conformance>` from the live DOM (`MessageWidgetInstance.documentElementAttribute`), waits at most 20 s for
+`MessageWidgetInstance` with the app's pool and wait policy at width 390, one at a time (`ConformanceRunner.runAll`:
+widgets run together share the pool's two threads, and 10-css-animations' iteration check failed whenever the
+filter-heavy 09 pages ran beside it), each view in the window so it gets its frames, a stand-in chat input focused
+before loading. A run reads the widget's `<html data-conformance>` from the live DOM (`MessageWidgetInstance.documentElementAttribute`), waits at most 20 s for
 `done` (or `awaiting` when it has actions), records what the host saw and crops the manifest's stages at 2×
 (`documentImage`). It writes into the test's undeclared outputs (`conformance/`): the run file
 (`ios-telegram-native.json`, `run.schema.json`), `crops/` and `baseline.new.json`.

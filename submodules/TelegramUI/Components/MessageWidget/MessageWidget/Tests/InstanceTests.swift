@@ -108,6 +108,64 @@ class InstanceTests: MessageWidgetTestCase {
         XCTAssertTrue(instance.diagnostics.contains { $0.kind == "haptic-limit" })
     }
 
+    /// SDK v1 §3.1 (V2b plan, Task 4): the client's stored areas are in the widget at its first read.
+    func testThePreloadReachesTheWidget() throws {
+        let storage = MessageWidgetStorage(local: [.init(key: "k", value: "v")], session: [.init(key: "s", value: "1")])
+        let instance = self.make("<!doctype html><p>s</p>", storage: storage)
+        _ = instance.layout(width: 360.0)
+        XCTAssertEqual(instance.evaluateForTesting("localStorage.getItem('k') + ':' + sessionStorage.getItem('s')"), "v:1")
+    }
+
+    /// §3.2: each area a task changed reaches the host once, at the task's end, `local` first, entries in insertion order.
+    func testCommitsReachTheHostInOrder() throws {
+        let instance = self.make("<!doctype html><p>c</p>")
+        _ = instance.layout(width: 360.0)
+        var commits: [MessageWidgetInstance.StorageCommit] = []
+        instance.onStorageCommit = { commits.append($0) }
+        _ = instance.evaluateForTesting("setTimeout(() => { sessionStorage.setItem('s', 'x'); localStorage.setItem('b', '2'); localStorage.setItem('a', '1'); }, 0); 'ok'")
+        XCTAssertTrue(self.pump(until: { commits.count >= 2 }, timeout: 5.0))
+        XCTAssertEqual(commits, [
+            MessageWidgetInstance.StorageCommit(area: .local, entries: [.init(key: "b", value: "2"), .init(key: "a", value: "1")]),
+            MessageWidgetInstance.StorageCommit(area: .session, entries: [.init(key: "s", value: "x")])
+        ])
+    }
+
+    /// Review Focus 5: the writes of the task that stopped the widget are never committed.
+    func testAStoppedWidgetCommitsNothingMore() throws {
+        let instance = self.make("<!doctype html><p>x</p>")
+        _ = instance.layout(width: 360.0)
+        var commits: [MessageWidgetInstance.StorageCommit] = []
+        instance.onStorageCommit = { commits.append($0) }
+        _ = instance.evaluateForTesting("setTimeout(() => { localStorage.setItem('k', 'v'); for (;;) {} }, 0); 'ok'")
+        XCTAssertTrue(self.pump(until: { instance.deadReason != nil }, timeout: 10.0))
+        self.pump(0.2)
+        XCTAssertEqual(commits, [])
+    }
+
+    /// Final review I1: the task running when the bubble destroys and releases its widget still delivers its commit —
+    /// an area the widget reached is kept, even though the task's presentation is dropped (spec D5).
+    func testTheCommitOfTheTaskRunningAtDestroyStillReachesTheHost() throws {
+        // A capped wait: the gated timer task is waited for while the widget is visible.
+        var instance: MessageWidgetInstance? = self.make("<!doctype html><p>d</p>", policy: MessageWidgetWaitPolicy(cap: 0.05, allowance: nil))
+        _ = instance?.layout(width: 360.0)
+        var commits: [MessageWidgetInstance.StorageCommit] = []
+        instance?.onStorageCommit = { commits.append($0) }
+        _ = instance?.evaluateForTesting("setTimeout(() => { localStorage.setItem('k', 'v'); }, 300); 'ok'")
+        // The next task is the timer's, not a draw of the boot or the evaluation.
+        XCTAssertTrue(self.pump(until: { instance?.isDrawPendingForTesting == false }, timeout: 5.0))
+        guard let gate = instance?.gateNextTaskForTesting() else {
+            return XCTFail()
+        }
+        XCTAssertTrue(self.pump(until: { gate.started.wait(timeout: .now()) == .success }, timeout: 5.0))
+        instance?.destroy()
+        weak var released = instance
+        instance = nil
+        XCTAssertNil(released)
+        gate.release.signal()
+        XCTAssertTrue(self.pump(until: { !commits.isEmpty }, timeout: 2.0))
+        XCTAssertEqual(commits, [MessageWidgetInstance.StorageCommit(area: .local, entries: [.init(key: "k", value: "v")])])
+    }
+
     /// A disabled button takes no click, as in browsers: a tap on it reaches no handler.
     func testDisabledButtonTakesNoClick() throws {
         let instance = self.make("<!doctype html><body style='margin:0'><button id=go disabled style='display:block;width:200px;height:40px' onclick=\"TelegramWidget.openLink('https://example.org/a'); this.disabled = true\">go</button></body>")
@@ -196,15 +254,17 @@ class InstanceTests: MessageWidgetTestCase {
         instance.destroy()
     }
 
-    /// Pages with a URL where the old validator removed it: in markup, in CSS, and set from script through the DOM.
-    static let urlPages = ["attacks/markup-img-src.html", "attacks/css-background-url.html", "attacks/api-setattribute-src.html"]
+    /// Pages with an image URL in markup and set from script through the DOM. Profile 1 gives the renderer the 48 px
+    /// placeholder in its place (V4 plan, Task 6), as it drops a remote CSS url() declaration
+    /// (`attacks/css-background-url.html`, Task 3b), so neither reaches the container.
+    static let urlPages = ["attacks/markup-img-src.html", "attacks/api-setattribute-src.html"]
 
     /// The boundary (spec §3): over every page of widget-sandbox's attack corpus (its URLs point at
     /// `http://127.0.0.1:9999/hit/…`), nothing is requested. A recording URLProtocol sees every request the process's
     /// URL loading system makes; WidgetRuntime has no loader of its own (`WidgetRuntimeNoIOScanTests`), and its container
     /// refuses every URL but `data:` that reaches it, counting each. Each page gets three animation frames, so the
-    /// rAF-driven attacks run past boot, and is drawn, so the draw-time sites are reached too. With no validator in
-    /// front of it, the URL pages' URLs now reach the container and are refused there.
+    /// rAF-driven attacks run past boot, and is drawn, so the draw-time sites are reached too. The URL pages' URLs never
+    /// reach the container: profile 1 renders the placeholder in their place.
     func testAttackCorpusRequestsNothing() throws {
         URLProtocol.registerClass(RecordingURLProtocol.self)
         defer {
@@ -233,7 +293,7 @@ class InstanceTests: MessageWidgetTestCase {
             let refused = self.networkRefusals(instance)
             XCTAssertGreaterThanOrEqual(refused, 0, "\(page.path) has no runtime")
             if InstanceTests.urlPages.contains(page.path) {
-                XCTAssertGreaterThan(refused, 0, "\(page.path): its URLs did not reach the container")
+                XCTAssertEqual(refused, 0, "\(page.path): a planted URL reached the container")
             }
             instance.destroy()
         }

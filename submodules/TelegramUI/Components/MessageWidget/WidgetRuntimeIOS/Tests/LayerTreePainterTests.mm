@@ -134,8 +134,8 @@ size_t paintedPixels(CGImageRef image) {
 - (void)testPaintsLikeLHDocument {
     const std::string png = pngDataURL();
     const std::pair<const char*, std::string> fixtures[] = {
-        {"text", "<p style=\"font:17px -apple-system;text-decoration:underline;text-shadow:1px 1px 2px #f00\">Hello "
-                 "world, quickly</p>"},
+        // In-profile CSS only (V4 plan, Task 3b): LHDocument applies no profile, and profile 1 drops text-shadow.
+        {"text", "<p style=\"font:17px -apple-system;text-decoration:underline\">Hello world, quickly</p>"},
         {"image", "<img src=\"" + png + "\" width=40 height=40>"},
         {"list marker", "<ul><li>one</li><li>two</li></ul><ol><li>a</li></ol>"},
         {"solid fill", "<div style=\"width:100px;height:40px;background:#3a7\"></div>"},

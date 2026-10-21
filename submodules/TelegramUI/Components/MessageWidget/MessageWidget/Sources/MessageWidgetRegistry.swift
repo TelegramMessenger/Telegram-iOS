@@ -10,7 +10,7 @@ public final class MessageWidgetRegistry {
         public let source: String
     }
 
-    public typealias Factory = (_ source: String, _ theme: MessageWidgetInstance.Theme, _ stoppedLabel: String, _ maxMessageLength: Int, _ locale: String) -> MessageWidgetInstance?
+    public typealias Factory = (_ source: String, _ theme: MessageWidgetInstance.Theme, _ stoppedLabel: String, _ maxMessageLength: Int, _ locale: String, _ storage: MessageWidgetStorage, _ startsStopped: Bool) -> MessageWidgetInstance?
 
     /// Widgets one bubble runs at most, in layout order; a block past them draws as code. Each widget is one runtime
     /// (a 64 MiB memory limit; the server bounds the source at 32 KB) plus its decoded images (at most 24 MiB alive) and
@@ -21,11 +21,16 @@ public final class MessageWidgetRegistry {
     public var maxMessageLength: Int = 4096
     /// The client's UI language, for widgets made from now on (SDK v1 §2.9).
     public var locale: String = "en-US"
+    /// The stored areas for widgets made from now on (SDK v1 §3.1): the bubble's message's, set on every pass.
+    public var storage: MessageWidgetStorage = .empty
     /// The most a widget asked for in this pass may be tall (`MessageWidgetInstance.maximumHeight`): its bubble's fixed
     /// height, else the 600 pt bound. Handed over on every `size`, so an edit of the anchors reaches a running widget.
     public var maximumHeight: CGFloat = MessageWidgetBubbleSize.maximumHeight
     public var onLayoutChange: (() -> Void)?
     public var onBridge: ((MessageWidgetInstance.BridgeCall) -> Void)?
+    /// Where the widgets made from now on send their storage commits (SDK v1 §5.4); each keeps the sink it was made
+    /// with.
+    public var onStorageCommit: ((MessageWidgetInstance.StorageCommit) -> Void)?
 
     private let factory: Factory
     private var ownerId: AnyHashable?
@@ -35,16 +40,29 @@ public final class MessageWidgetRegistry {
     private var usedInPass = Set<Key>()
     /// Keys whose widget could not start. Remembered so that a failing boot is not repeated, on main, by every layout pass.
     private var failedKeys = Set<Key>()
+    /// SDK v1 §5.7: whether a widget may boot, counted per message and source across the bubbles that show it.
+    private let restartPolicy: MessageWidgetRestartPolicy
+    /// Each running widget's key in the restart policy (its message and its source).
+    private var restartKeys: [Key: MessageWidgetRestartPolicy.Key] = [:]
 
-    public init(factory: Factory? = nil) {
-        self.factory = factory ?? { source, theme, label, max, locale in
-            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale)
+    public init(factory: Factory? = nil, restartPolicy: MessageWidgetRestartPolicy = .shared) {
+        self.factory = factory ?? { source, theme, label, max, locale, storage, startsStopped in
+            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, startsStopped: startsStopped)
         }
+        self.restartPolicy = restartPolicy
     }
 
     deinit {
-        for (_, instance) in self.instances {
+        for (key, instance) in self.instances {
+            self.ended(key, instance)
             instance.destroy()
+        }
+    }
+
+    /// A widget that goes without having stopped starts its restart count over (§5.7).
+    private func ended(_ key: Key, _ instance: MessageWidgetInstance) {
+        if let restartKey = self.restartKeys.removeValue(forKey: key), instance.deadReason == nil, !instance.failedToStart {
+            self.restartPolicy.noteEndedWithoutStop(restartKey)
         }
     }
 
@@ -83,7 +101,9 @@ public final class MessageWidgetRegistry {
         if let existing = self.instances[key] {
             instance = existing
         } else {
-            guard let created = self.factory(source, self.theme, self.stoppedLabel, self.maxMessageLength, self.locale) else {
+            let restartKey = MessageWidgetRestartPolicy.Key(owner: self.ownerId ?? AnyHashable(0), source: source)
+            let startsStopped = !self.restartPolicy.allowsBoot(restartKey)
+            guard let created = self.factory(source, self.theme, self.stoppedLabel, self.maxMessageLength, self.locale, self.storage, startsStopped) else {
                 self.failedKeys.insert(key)
                 self.usedInPass.insert(key)
                 return nil
@@ -94,6 +114,16 @@ public final class MessageWidgetRegistry {
             created.onBridge = { [weak self] call in
                 self?.onBridge?(call)
             }
+            // The sink as it is now: it carries this message's key, and a commit the widget makes just before its bubble
+            // goes is still delivered.
+            created.onStorageCommit = self.onStorageCommit
+            if !startsStopped {
+                self.restartKeys[key] = restartKey
+                let restartPolicy = self.restartPolicy
+                created.onStopped = {
+                    restartPolicy.noteStopped(restartKey)
+                }
+            }
             created.setVisible(self.visible)
             self.instances[key] = created
             instance = created
@@ -103,6 +133,7 @@ public final class MessageWidgetRegistry {
         if instance.failedToStart {
             instance.destroy()
             self.instances[key] = nil
+            self.restartKeys[key] = nil
             self.failedKeys.insert(key)
             self.usedInPass.insert(key)
             return nil
@@ -122,6 +153,7 @@ public final class MessageWidgetRegistry {
 
     public func endPass() {
         for (key, instance) in self.instances where !self.usedInPass.contains(key) {
+            self.ended(key, instance)
             instance.destroy()
             self.instances[key] = nil
         }
@@ -155,7 +187,8 @@ public final class MessageWidgetRegistry {
     }
 
     public func destroyAll() {
-        for (_, instance) in self.instances {
+        for (key, instance) in self.instances {
+            self.ended(key, instance)
             instance.destroy()
         }
         self.instances.removeAll()

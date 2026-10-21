@@ -24,6 +24,13 @@ std::string page(const std::string& body, const std::string& script = "") {
            "</script></body></html>";
 }
 
+// Profile 1 drops every form control from the render (V4 plan, Task 4), so a control has no box to tap: its activation,
+// the DOM's own, runs from click().
+void clickT(RenderEnv& env) {
+    env.env().eval("t.click(); 1");
+    env.env().drain();
+}
+
 void tapAt(RenderEnv& env, double x = 50, double y = 25) {
     wr::HostState& host = wr::HostState::of(env.ctx());
     host.pointer(env.ctx(), PointerPhase::Down, x, y, 1, true);
@@ -37,23 +44,23 @@ WR_TEST(testCheckboxTogglesAndRevertsWhenCancelled) {
     RenderEnv env(page("<input id=t type=checkbox>",
                        "const t = document.getElementById('t');"
                        "for (const k of ['input','change']) t.addEventListener(k, () => log.push(k));"));
-    tapAt(env);
+    clickT(env);
     CHECK_EQ(env.env().eval("t.checked + ':' + log.join()"), std::string("true:input,change"));
-    tapAt(env);
+    clickT(env);
     CHECK_EQ(env.env().eval("t.checked"), std::string("false"));
     CHECK_EQ(env.env().eval("log.length = 0; t.onclick = () => false; 1"), std::string("1"));
-    tapAt(env);
+    clickT(env);
     CHECK_EQ(env.env().eval("t.checked + ':' + log.join()"), std::string("false:"));
     // A listener sees the new state during the click (the toggle comes before the listeners).
     CHECK_EQ(env.env().eval("t.onclick = () => log.push('saw ' + t.checked); 1"), std::string("1"));
-    tapAt(env);
+    clickT(env);
     CHECK_EQ(env.env().eval("log.join()"), std::string("saw true,input,change"));
 }
 
 WR_TEST(testRadioChecksOneOfItsGroup) {
     RenderEnv env(page("<input id=t type=radio name=g><input id=u type=radio name=g checked>"
                        "<input id=v type=radio name=other checked>"));
-    tapAt(env);
+    clickT(env);
     CHECK_EQ(env.env().eval("[t.checked, u.checked, v.checked].join()"), std::string("true,false,true"));
 }
 
@@ -123,10 +130,11 @@ WR_TEST(testLabelWrappingATextControlDoesNotRecurse) {
                        "window.clicks = {x: 0, s: 0, ta: 0};"
                        "for (const id of ['x', 's', 'ta']) document.getElementById(id).addEventListener('click', "
                        "() => clicks[id]++);"));
+    // The labels are tapped (each renders as a span with a box); the controls have none under profile 1.
     tapAt(env);
     tapAt(env, 220, 20);
     tapAt(env, 50, 75);
     tapAt(env, 50, 125);
-    CHECK_EQ(env.env().eval("[clicks.x, clicks.s, clicks.ta].join()"), std::string("2,1,1"));
-    CHECK_EQ(env.env().eval("x.click(); s.click(); clicks.x + ':' + clicks.s"), std::string("3:2"));
+    CHECK_EQ(env.env().eval("[clicks.x, clicks.s, clicks.ta].join()"), std::string("1,1,1"));
+    CHECK_EQ(env.env().eval("x.click(); s.click(); clicks.x + ':' + clicks.s"), std::string("2:2"));
 }

@@ -104,3 +104,43 @@ WR_TEST(testTheStoredAreaIsThereAtTheFirstRead) {
     CHECK_EQ(env.eval("[localStorage.getItem('k'), localStorage.n, localStorage.length, sessionStorage.length].join()"),
              std::string("v,2,2,0"));
 }
+
+namespace {
+
+size_t diagnosticsOfKind(HostEnv& env, const std::string& kind) {
+    size_t count = 0;
+    for (const auto& [k, detail] : env.host().diagnostics) {
+        count += k == kind ? 1 : 0;
+    }
+    return count;
+}
+
+} // namespace
+
+/// SDK v1 §3.1 (V2b plan, Task 1): a preload past the quota is dropped whole, with `storage-rejected`, and the widget
+/// starts empty; one exactly at the quota loads.
+WR_TEST(testAPreloadOverTheQuotaIsDroppedWhole) {
+    {
+        HostEnv env;
+        env.host().storedAreas["local"] = {{"a", std::string(8191, 'x')}, {"b", std::string(8191, 'y')}};
+        CHECK_EQ(env.eval("localStorage.length"), std::string("2"));
+        CHECK_EQ(diagnosticsOfKind(env, "storage-rejected"), size_t(0));
+    }
+    {
+        HostEnv env;
+        env.host().storedAreas["local"] = {{"a", std::string(8191, 'x')}, {"b", std::string(8192, 'y')}};
+        CHECK_EQ(env.eval("[localStorage.length, localStorage.getItem('a')].join()"), std::string("0,"));
+        CHECK_EQ(diagnosticsOfKind(env, "storage-rejected"), size_t(1));
+    }
+}
+
+/// V2b plan, Task 1: once the runtime has stopped nothing more is committed, so the writes of the task that stopped
+/// never reach the host.
+WR_TEST(testNothingIsCommittedAfterAStop) {
+    HostEnv env;
+    env.eval("setTimeout(() => { localStorage.setItem('k', 'v'); for (;;) {} }, 0); 1");
+    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 300000);
+    env.advance(1);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK_EQ(env.host().storageCommits.size(), size_t(0));
+}

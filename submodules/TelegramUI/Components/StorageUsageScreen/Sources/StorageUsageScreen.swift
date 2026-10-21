@@ -28,6 +28,7 @@ import AnimatedTextComponent
 import BottomButtonPanelComponent
 import GlassBackgroundComponent
 import EdgeEffect
+import MessageWidgetStorage
 
 #if DEBUG
 import os.signpost
@@ -2922,6 +2923,11 @@ final class StorageUsageScreenComponent: Component {
         private func commitClear(fromCategories: Bool) {
             guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
+            }
+            
+            // SDK v1 §5.4: "Clear cache" also deletes every message widget's storage, which Storage Usage does not list.
+            if MessageWidgetStorageStore.clearsWidgetStorage(chatScoped: aggregatedData.peerId != nil, clearingCategories: fromCategories) {
+                let _ = MessageWidgetStorageStore.shared.clearAll(accountPeerId: component.context.account.peerId, writer: MessageWidgetEngineStorageWriter(engine: component.context.engine)).startStandalone()
             }
             
             if let _ = aggregatedData.peerId {

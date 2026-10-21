@@ -8,14 +8,13 @@
 #include <string_view>
 
 #include "Generated/Bindings.h"
+#include "Sources/Host/Profile.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Bindings.h"
 #include "Sources/Support/Callbacks.h"
 
 namespace wr {
 
-/// SDK v1 §2.2: the profile the framework enforces (profile v1).
-inline constexpr int32_t kWidgetProfile = 1;
 /// SDK v1 §2.11 (sdk-policy.ts MAX_HANDLERS_PER_EVENT): onEvent keeps this many handlers per type; further ones are
 /// ignored.
 inline constexpr size_t kMaxHandlersPerEvent = 16;
@@ -41,7 +40,7 @@ class TelegramWidget : public PlatformObject {
 public:
     explicit TelegramWidget(JSContext* ctx);
 
-    int32_t profile(JSContext*) const { return kWidgetProfile; }
+    int32_t profile(JSContext*) const { return profile::kVersion; }
     /// False for anything but a number.
     bool isProfileAtLeast(JSContext* ctx, std::optional<Value> n);
     String colorScheme(JSContext* ctx);

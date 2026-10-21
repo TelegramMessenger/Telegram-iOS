@@ -1,5 +1,11 @@
 #include "Sources/Host/ThemeParams.h"
 
+#include <cmath>
+#include <cstdio>
+#include <vector>
+
+#include "Sources/Host/Profile.h"
+
 namespace wr {
 
 const std::array<std::string_view, kThemeKeyCount> kThemeKeys = {
@@ -49,7 +55,148 @@ bool isHexColor(const std::string& value) {
     return true;
 }
 
+std::string lowercased(std::string value) {
+    for (char& c : value) {
+        if (c >= 'A' && c <= 'Z') {
+            c = char(c - 'A' + 'a');
+        }
+    }
+    return value;
+}
+
+std::vector<std::string_view> splitOn(std::string_view text, char separator) {
+    std::vector<std::string_view> parts;
+    size_t start = 0;
+    while (start <= text.size()) {
+        const size_t end = text.find(separator, start);
+        parts.push_back(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
+        if (end == std::string_view::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    return parts;
+}
+
+/// A non-negative number: digits, with at most one dot between digits.
+bool isNumber(std::string_view text) {
+    if (text.empty()) {
+        return false;
+    }
+    bool dot = false;
+    bool digit = false;
+    for (size_t i = 0; i < text.size(); i++) {
+        const char c = text[i];
+        if (c >= '0' && c <= '9') {
+            digit = true;
+        } else if (c == '.' && !dot && i > 0 && i + 1 < text.size()) {
+            dot = true;
+        } else {
+            return false;
+        }
+    }
+    return digit;
+}
+
+/// A length in px, em or rem.
+bool isLength(std::string_view text) {
+    for (std::string_view unit : {"rem", "px", "em"}) {
+        if (text.size() > unit.size() && text.substr(text.size() - unit.size()) == unit) {
+            return isNumber(text.substr(0, text.size() - unit.size()));
+        }
+    }
+    return false;
+}
+
+/// A font shorthand: style and weight keywords or numeric weights, a size (a length, optionally /line-height as a
+/// number or a length), then a comma-separated list of generic families.
+bool isGenericFont(std::string_view text) {
+    const std::vector<std::string_view> words = splitOn(text, ' ');
+    size_t i = 0;
+    for (; i < words.size(); i++) {
+        const std::string_view word = words[i];
+        if (word == "normal" || word == "italic" || word == "oblique" || word == "bold" || word == "bolder" || word == "lighter" ||
+            word == "small-caps" || (word.size() == 3 && isNumber(word))) {
+            continue;
+        }
+        break;
+    }
+    if (i >= words.size()) {
+        return false;
+    }
+    const std::string_view size = words[i];
+    const size_t slash = size.find('/');
+    if (!isLength(size.substr(0, slash))) {
+        return false;
+    }
+    if (slash != std::string_view::npos) {
+        const std::string_view lineHeight = size.substr(slash + 1);
+        if (!isNumber(lineHeight) && !isLength(lineHeight)) {
+            return false;
+        }
+    }
+    std::string families;
+    for (size_t j = i + 1; j < words.size(); j++) {
+        families += words[j];
+    }
+    if (families.empty()) {
+        return false;
+    }
+    for (std::string_view family : splitOn(families, ',')) {
+        if (family.empty() || !profile::contains(profile::CSSTable::GenericFonts, lowercased(std::string(family)))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isOpacity(double value) {
+    return std::isfinite(value) && value >= 0 && value <= 1;
+}
+
+std::string formatOpacity(double value) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.3g", value);
+    return buffer;
+}
+
 } // namespace
+
+ThemeButtonTokens checkButtonTokens(const ThemeButtonTokens& tokens) {
+    ThemeButtonTokens checked;
+    if (tokens.bg && isHexColor(*tokens.bg)) {
+        checked.bg = lowercased(*tokens.bg);
+    }
+    if (tokens.text && isHexColor(*tokens.text)) {
+        checked.text = lowercased(*tokens.text);
+    }
+    if (tokens.radius && isLength(*tokens.radius)) {
+        checked.radius = tokens.radius;
+    }
+    if (tokens.padding) {
+        const std::vector<std::string_view> parts = splitOn(*tokens.padding, ' ');
+        bool valid = parts.size() >= 1 && parts.size() <= 4;
+        for (std::string_view part : parts) {
+            valid = valid && isLength(part);
+        }
+        if (valid) {
+            checked.padding = tokens.padding;
+        }
+    }
+    if (tokens.height && (*tokens.height == "auto" || isLength(*tokens.height))) {
+        checked.height = tokens.height;
+    }
+    if (tokens.font && isGenericFont(*tokens.font)) {
+        checked.font = tokens.font;
+    }
+    if (tokens.pressedOpacity && isOpacity(*tokens.pressedOpacity)) {
+        checked.pressedOpacity = tokens.pressedOpacity;
+    }
+    if (tokens.disabledOpacity && isOpacity(*tokens.disabledOpacity)) {
+        checked.disabledOpacity = tokens.disabledOpacity;
+    }
+    return checked;
+}
 
 ThemeParams completeThemeParams(const ThemePalette& palette, Theme theme) {
     const auto& defaults = theme == Theme::Dark ? kDarkDefaults : kLightDefaults;
@@ -77,7 +224,7 @@ ThemeParams completeThemeParams(const ThemePalette& palette, Theme theme) {
     return params;
 }
 
-std::string themeRootDeclarations(const ThemeParams& params, Theme theme) {
+std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens) {
     std::string out;
     for (size_t i = 0; i < kThemeKeyCount; i++) {
         out += "--tg-theme-";
@@ -91,6 +238,23 @@ std::string themeRootDeclarations(const ThemeParams& params, Theme theme) {
     out += "--tg-color-scheme:";
     out += theme == Theme::Dark ? "dark" : "light";
     out += " !important";
+    const auto add = [&](std::string_view name, const std::optional<std::string>& value) {
+        if (value) {
+            out += ";--tg-button-";
+            out += name;
+            out += ':';
+            out += *value;
+            out += " !important";
+        }
+    };
+    add("bg", tokens.bg);
+    add("text", tokens.text);
+    add("radius", tokens.radius);
+    add("font", tokens.font);
+    add("padding", tokens.padding);
+    add("height", tokens.height);
+    add("pressed-opacity", tokens.pressedOpacity ? std::optional<std::string>(formatOpacity(*tokens.pressedOpacity)) : std::nullopt);
+    add("disabled-opacity", tokens.disabledOpacity ? std::optional<std::string>(formatOpacity(*tokens.disabledOpacity)) : std::nullopt);
     return out;
 }
 

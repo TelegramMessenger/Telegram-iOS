@@ -9,6 +9,7 @@
 
 #include <litehtml.h>
 
+#include "Sources/Host/CSSPolicy.h"
 #include "Sources/Render/DataUrl.h"
 #include "Sources/Render/LayerTree.h"
 
@@ -395,10 +396,17 @@ const WidgetContainer::CachedImage& WidgetContainer::decide(std::string_view src
     auto found = m_images.find(src);
     if (found == m_images.end()) {
         CachedImage entry;
-        // Only an image/* data: URL reaches the host, and only as its decoded bytes. Every scheme, a relative URL,
-        // icon: and sf:, and a data: URL that does not parse or is not an image is refused.
-        std::optional<DataUrl> data = parseDataUrl(src);
-        if (data && data->mimeType.starts_with("image/")) {
+        // Only a data: URL of profile 1's image types reaches the host, and only as its decoded bytes, and the
+        // placeholder (V4 plan, Task 6). Every scheme, a relative URL, a fragment, icon: and sf:, another image type
+        // (SVG, BMP, ICO, AVIF, ...) and a data: URL that does not parse are refused.
+        std::optional<DataUrl> data;
+        if (src == kPlaceholderURL) {
+            const std::string_view svg = placeholderSVG();
+            data = DataUrl{"image/svg+xml", std::vector<uint8_t>(svg.begin(), svg.end())};
+        } else if (css::policy::imageSourceKept(src)) {
+            data = parseDataUrl(src);
+        }
+        if (data) {
             std::optional<DecodedImage> decoded = m_host.decodeImage(data->mimeType, data->bytes);
             if (decoded) {
                 entry.load = Load::Decoded;
@@ -415,8 +423,12 @@ const WidgetContainer::CachedImage& WidgetContainer::decide(std::string_view src
 
 // Layout.
 
-litehtml::uint_ptr WidgetContainer::create_font(const litehtml::font_description& descr, const litehtml::document*,
+litehtml::uint_ptr WidgetContainer::create_font(const litehtml::font_description& requested, const litehtml::document*,
                                                 litehtml::font_metrics* fm) {
+    // The backstop of the profile's font rule (V4 plan, Task 3b): a family no declaration hook saw (an SVG font
+    // attribute, a family a var() carried) is reduced to the profile's generic families before the host resolves it.
+    litehtml::font_description descr = requested;
+    descr.family = css::policy::reduceFontFamilyText(requested.family);
     std::string key = fontKey(descr);
     auto found = m_fonts.find(key);
     if (found == m_fonts.end()) {
@@ -483,6 +495,66 @@ void WidgetContainer::get_media_features(litehtml::media_features& media) const 
     media.color_index = 256;
     media.resolution = 96;
     media.color_scheme = m_options.theme == Theme::Dark ? 1 : 0;
+    media.reduced_motion = m_options.reducedMotion ? 1 : 0;
+}
+
+// Profile 1 (V4 plan, Task 3b): litehtml asks while it parses, never charging; the policy is pure and its walks are
+// bounded by the text the builder charged before litehtml was handed it.
+
+bool WidgetContainer::sanitize_at_rule(const std::string& name) {
+    return m_trusted || css::policy::atRuleKept(name);
+}
+
+bool WidgetContainer::profile_declaration(std::string& name, litehtml::css_token_vector& value, bool&) {
+    // -lh-anim marks the animations origin's block (twidget edit 27): the runtime's own.
+    if (m_trusted || name == "-lh-anim") {
+        return true;
+    }
+    css::policy::Judged judged = css::policy::declaration(name, value);
+    if (judged.verdict == css::policy::Verdict::Drop) {
+        return false;
+    }
+    if (judged.verdict != css::policy::Verdict::Keep) {
+        value = std::move(judged.value);
+    }
+    return true;
+}
+
+bool WidgetContainer::profile_substituted(const std::string& name, litehtml::css_token_vector& value) {
+    // Closes the reference's var() bypass (plan decision 4): the value is judged once substituted, as if written so. A
+    // master-sheet value (the UA button's font var()) is kept as the policy keeps it: generic families only.
+    css::policy::Judged judged = css::policy::declaration(name, value);
+    if (judged.verdict == css::policy::Verdict::Drop) {
+        return false;
+    }
+    if (judged.verdict != css::policy::Verdict::Keep) {
+        value = std::move(judged.value);
+    }
+    return true;
+}
+
+void WidgetContainer::sanitize_selector_list(std::vector<litehtml::css_token_vector>& groups) {
+    if (m_trusted) {
+        return;
+    }
+    std::vector<litehtml::css_token_vector> kept;
+    kept.reserve(groups.size());
+    for (litehtml::css_token_vector& group : groups) {
+        css::policy::Judged judged = css::policy::selector(group);
+        if (judged.verdict == css::policy::Verdict::Drop) {
+            continue;
+        }
+        kept.push_back(judged.verdict == css::policy::Verdict::Keep ? std::move(group) : std::move(judged.value));
+    }
+    groups = std::move(kept);
+}
+
+bool WidgetContainer::sanitize_media_query(const litehtml::css_token_vector& prelude) {
+    return m_trusted || css::policy::mediaQueryInProfile(prelude);
+}
+
+int WidgetContainer::evaluate_supports(const litehtml::css_token_vector& condition) {
+    return m_trusted ? -1 : int(css::policy::supportsCondition(condition));
 }
 
 void WidgetContainer::get_language(std::string& language, std::string& culture) const {
@@ -510,14 +582,24 @@ void WidgetContainer::sanitizer_limit(const char* what) {
 }
 
 std::optional<DecodedImage> WidgetContainer::decodeImageUncached(std::string_view src) {
-    if (src.empty() || parseCanvasURL(src)) {
+    if (src == kPlaceholderURL) {
+        const std::string_view svg = placeholderSVG();
+        return m_host.decodeImage("image/svg+xml", std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(svg.data()), svg.size()));
+    }
+    if (!css::policy::imageSourceKept(src)) {
         return std::nullopt;
     }
     std::optional<DataUrl> data = parseDataUrl(src);
-    if (!data || !data->mimeType.starts_with("image/")) {
+    if (!data) {
         return std::nullopt;
     }
     return m_host.decodeImage(data->mimeType, data->bytes);
+}
+
+std::string_view WidgetContainer::placeholderSVG() {
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"0 0 48 48\"><rect width=\"48\" "
+           "height=\"48\" fill=\"#8882\"/><path d=\"M8 36l10-12 8 9 6-7 8 10z\" fill=\"#8886\"/><circle cx=\"33\" "
+           "cy=\"15\" r=\"4\" fill=\"#8886\"/></svg>";
 }
 
 std::optional<DecodedImage> WidgetContainer::decodedByLayout(std::string_view src) const {

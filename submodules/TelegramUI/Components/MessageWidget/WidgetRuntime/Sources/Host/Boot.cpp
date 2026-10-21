@@ -191,7 +191,10 @@ ParseOutcome boot(JSContext* ctx, const BootOptions& options) {
         chargeScan(ctx, options.url.size());
         document.setURL(ctx, options.url);
         document.setReadiness(DocumentReadiness::Loading);
-        outcome = parseDocumentInto(ctx, document, options.html, options.limits);
+        {
+            DOMState::DocumentParseScope parsing(DOMState::of(ctx));
+            outcome = parseDocumentInto(ctx, document, options.html, options.limits);
+        }
         // Ruling 13: the parsed markup is built, laid out and recorded before any script runs, so a first script that
         // never ends still leaves it (spec §5, step 3). The parse told the journal nothing: this flush is a full
         // build. A stop in it ends the boot below, as the parse's would.

@@ -93,3 +93,35 @@ WR_TEST(testOnlyAChangeFiresThemeChanged) {
     env.env().drain();
     CHECK_EQ(env.env().eval("(p => [n, p.hint_color, p.bg_color].join())(TelegramWidget.themeParams)"), std::string("2,#000001,#212121"));
 }
+
+/// SDK v1 §2.4 (V2b plan, Task 2): each button token is checked against its grammar — colours #rrggbb, lengths in
+/// px/em/rem, a font shorthand naming generic families only, opacities 0–1 — and a token that fails is dropped.
+WR_TEST(testButtonTokensAreChecked) {
+    wr::ThemeButtonTokens bad;
+    bad.bg = "red";
+    bad.text = "#12345";
+    bad.radius = "8";
+    bad.font = "500 14px Helvetica";
+    bad.padding = "8px; color: red";
+    bad.height = "10vh";
+    bad.pressedOpacity = 1.5;
+    bad.disabledOpacity = -0.1;
+    CHECK(wr::checkButtonTokens(bad) == wr::ThemeButtonTokens{});
+    wr::ThemeButtonTokens good;
+    good.bg = "#3390EC";
+    good.text = "#ffffff";
+    good.radius = "8px";
+    good.font = "500 14px/1.2 system-ui,sans-serif";
+    good.padding = "8px 14px";
+    good.height = "2.5em";
+    good.pressedOpacity = 0.7;
+    good.disabledOpacity = 0.5;
+    const wr::ThemeButtonTokens checked = wr::checkButtonTokens(good);
+    CHECK(checked.bg == std::optional<std::string>("#3390ec"));
+    CHECK(checked.text == good.text && checked.radius == good.radius && checked.font == good.font && checked.padding == good.padding &&
+          checked.height == good.height && checked.pressedOpacity == good.pressedOpacity && checked.disabledOpacity == good.disabledOpacity);
+    const std::string declarations = wr::themeRootDeclarations(wr::completeThemeParams({}, wr::Theme::Light), wr::Theme::Light, checked);
+    CHECK(declarations.find("--tg-button-bg:#3390ec !important") != std::string::npos);
+    CHECK(declarations.find("--tg-button-font:500 14px/1.2 system-ui,sans-serif !important") != std::string::npos);
+    CHECK(declarations.find("--tg-button-pressed-opacity:0.7 !important") != std::string::npos);
+}

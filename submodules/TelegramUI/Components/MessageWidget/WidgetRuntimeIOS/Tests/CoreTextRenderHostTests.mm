@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "../Sources/CoreTextRenderHost.h"
+#include "Sources/Render/WidgetContainer.h"
 #include "third-party/twidget/LiteHTML/LHHostSupport.h"
 
 namespace {
@@ -143,6 +144,17 @@ uint64_t residentBytes() {
     XCTAssertTrue(image.has_value());
     XCTAssertEqual(image->width, 10);
     XCTAssertEqual(image->height, 8);
+}
+
+// V4 plan, Task 6: the 48 px placeholder a refused <img src> renders (RB §3.5) is the one SVG the host is handed.
+- (void)testThePlaceholderDecodesAt48 {
+    wr::ios::CoreTextRenderHost host;
+    const std::string_view svg = wr::WidgetContainer::placeholderSVG();
+    std::optional<wr::DecodedImage> image =
+        host.decodeImage("image/svg+xml", std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(svg.data()), svg.size()));
+    XCTAssertTrue(image.has_value());
+    XCTAssertEqual(image->width, 48);
+    XCTAssertEqual(image->height, 48);
 }
 
 - (void)testHostileImagesAreRefused {

@@ -44,6 +44,8 @@ class FakeRenderHost final : public wr::RenderHost {
 public:
     /// The MIME type of every decodeImage call, in order.
     std::vector<std::string> decodedMimeTypes;
+    /// The image/svg+xml decodes whose bytes were not the 48 px placeholder's (V4 plan, Task 6: none should be).
+    size_t foreignSVGs = 0;
     /// The createFont calls so far.
     size_t fontsCreated = 0;
     /// Every font createFont made, with the description it was made for, in order (weak: this log keeps nothing alive).

@@ -97,6 +97,16 @@ void rebuilds(RenderEnv& env, const std::string& script, const std::string& why)
     expectMatchesRebuild(env, script);
 }
 
+// `edit`, and no rebuild: what changed is nothing a build reads (inside an element profile 1 drops), and the published
+// state is a rebuild's.
+void rendersNothing(RenderEnv& env, const std::string& script) {
+    const uint64_t builds = env.render().buildCount();
+    edit(env, script);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().journalNodes(), size_t(0));
+    expectMatchesRebuild(env, script);
+}
+
 // Ruling E22: what `tree` holds back for rebuilding its document, without the steps (RenderTree::buildCharge).
 uint64_t estimateWithoutSteps(const wr::RenderTree& tree) {
     return tree.buildCharge() - tree.buildChargeParts().steps;
@@ -199,9 +209,10 @@ WR_TEST(testRandomEditsMatchARebuild) {
                // A compound left of a combinator walks an ancestor's siblings (fix round 2): the many <p>s below.
                " .zz ~ p span{color:#909} p:nth-child(3n of .y) b{color:#090}";
     // The fixture's three controls and 253 more: 256, so the next one crosses the limit (Ruling E6).
+    // Profile 1 drops every control but <button> (V4 plan, Task 4), the one Ruling E6 counts.
     std::string controls = "<div id=inputs>";
     for (int n = 0; n < 253; n++) {
-        controls += "<input value=i>";
+        controls += "<button value=i>i</button>";
     }
     controls += "</div>";
     // Ruling E19: 2,000 rules each div is tested against and fails (one counted step each, no declarations).
@@ -218,7 +229,7 @@ WR_TEST(testRandomEditsMatchARebuild) {
                "<table id=t>\n<caption>cap</caption>\n<thead><tr><td>h1</td></tr></thead>\n"
                "<tbody><tr><td>c1</td><td class=y>c2</td></tr>\n<tr><td>c3</td><td>c4</td></tr></tbody>\n</table>"
                "<pre id=pre>pre  text\n line</pre>"
-               "<div id=f><input value=ab><input type=checkbox checked><button>go</button></div>"
+               "<div id=f><button value=ab>ab</button><button disabled>d</button><button>go</button></div>"
                "<svg width=30 height=30 viewBox='0 0 30 30'><circle cx=15 cy=15 r=10 fill=red></circle></svg>"
                "<template id=tpl><i class=x>tpl one</i><b>tpl two</b></template>"
                "<div id=c class=y>tail</div>" + filler + "</body>";
@@ -322,7 +333,7 @@ globalThis.__edit = (() => {
       case 2: return el('span', {class: 'y'}, ['sp']);
       case 3: return el('li', {}, ['item']);
       case 4: return el('div', {class: 'box'}, [el('p', {}, ['inner']), el('span', {}, ['s'])]);
-      case 5: return el('input', {value: 'zz'}, []);
+      case 5: return el('button', {value: 'zz'}, ['zz']);
       case 6: return el('b', {}, ['b']);
       case 7: return el('tr', {}, [el('td', {}, ['r1']), el('td', {class: 'y'}, ['r2'])]);
       case 8: return el('q', {}, ['quote']);
@@ -607,11 +618,12 @@ WR_TEST(testStructureFallsBack) {
     rebuilds(env, "document.querySelector('style').firstChild.data = 'p{color:green}'", "an unmapped or empty Text");
     rebuilds(env, "document.querySelector('style').firstChild.data = 'p{color:#111}'; " + byId("d") + ".append('z')",
              "a <style>'s text");
-    rebuilds(env, byId("s") + ".append(document.createElement('option'))", "refused by can_insert_subtree");
-    rebuilds(env, byId("s") + ".firstElementChild.append(' more')", "refused by can_insert_subtree");
-    rebuilds(env, byId("s") + ".remove()", "refused by can_remove_subtree");
-    rebuilds(env, "const d = document.createElement('div'); d.append(document.createElement('select')); document.body.append(d)",
-             "refused by can_insert_subtree");
+    // A <select> is dropped by profile 1 (V4 plan, Task 4): what happens inside it renders nothing, and removing it or
+    // inserting one removes or inserts nothing the build has.
+    rendersNothing(env, byId("s") + ".append(document.createElement('option'))");
+    rendersNothing(env, byId("s") + ".firstElementChild.append(' more')");
+    rendersNothing(env, byId("s") + ".remove()");
+    rendersNothing(env, "const d = document.createElement('div'); d.append(document.createElement('select')); document.body.append(d)");
     rebuilds(env, byId("t") + ".append(document.createElement('tr'))", "refused by can_insert_subtree");
     rebuilds(env, byId("g") + ".append(document.createElementNS('http://www.w3.org/2000/svg', 'rect'))", "refused by can_insert_subtree");
     rebuilds(env, byId("b") + ".append(document.createElement('b'))", "refused by can_insert_subtree");
@@ -660,15 +672,16 @@ WR_TEST(testStructurePatchRespectsLimits) {
         patches(env, byId("p") + ".append('back under')");
     }
     {
-        // 256 form controls (Ruling E6).
+        // 256 form controls (Ruling E6): buttons, the one control profile 1 keeps; a dropped <input> counts nothing.
         std::string page = "<!doctype html><body><div id=d>";
         for (int n = 0; n < 254; n++) {
-            page += "<input>";
+            page += "<button>b</button>";
         }
         page += "</div></body>";
         RenderEnv env(page);
         patches(env, byId("d") + ".append(document.createElement('input'), document.createElement('button'))");
-        rebuilds(env, byId("d") + ".append(document.createElement('textarea'))", "a render limit in a built subtree");
+        rebuilds(env, byId("d") + ".append(document.createElement('button'), document.createElement('button'))",
+                 "a render limit in a built subtree");
         rebuilds(env, byId("d") + ".lastElementChild.remove()", "a rebuild pending, no build, or a limit hit");
         patches(env, byId("d") + ".firstElementChild.remove()");
     }
@@ -1516,10 +1529,11 @@ WR_TEST(testAnUnmappedNodesOwnChangeRebuilds) {
 }
 
 // Ruling E22.5, the reviewer's pabandon: a text-and-attribute patch whose re-match is cut (the test's cap at 0) is
-// abandoned, and the same flush rebuilds: the journal is clean and the published state a rebuild's; so is an input's value.
+// abandoned, and the same flush rebuilds: the journal is clean and the published state a rebuild's; so is an attribute
+// alone (profile 1 drops the <input> this once used, V4 plan, Task 4).
 WR_TEST(testCutAttributePatchIsReplacedByARebuild) {
     RenderEnv env("<!doctype html><style>.b{color:#f00} div{margin:1px}</style><body><div id=a class=x>one</div>"
-                  "<p id=t>text</p><input id=i value=abc></body>");
+                  "<p id=t>text</p><p id=i title=abc>abc</p></body>");
     env.render().setPatchStepCapForTesting(0);
     auto abandoned = [&](const std::string& script) {
         const uint64_t builds = env.render().buildCount();
@@ -1532,7 +1546,7 @@ WR_TEST(testCutAttributePatchIsReplacedByARebuild) {
         expectMatchesRebuild(env, script);
     };
     abandoned(byId("a") + ".className = 'b'; " + byId("t") + ".firstChild.data = 'changed text here'");
-    abandoned(byId("i") + ".setAttribute('value', 'abcdef')");
+    abandoned(byId("i") + ".setAttribute('title', 'abcdef')");
     // A text alone matches nothing: never cut.
     patches(env, byId("t") + ".firstChild.data = 'again'");
 }

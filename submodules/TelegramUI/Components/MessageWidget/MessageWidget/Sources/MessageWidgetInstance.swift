@@ -9,12 +9,108 @@ import UIKit
 /// the main queue after their snapshot is applied, so a host reacting to them never re-enters a widget mid-apply.
 /// Every task runs on the widget's queue in `MessageWidgetPool`; main waits for it within the turn's allowance and cap
 /// (spec D3), and a snapshot that arrives later is applied, in order, from the handshake's mailbox.
-public final class MessageWidgetInstance {
-    public enum Theme: Equatable {
-        case light
-        case dark
+/// SDK v1 §2.8 (V2b plan, Task 4): a widget's stored areas as the client keeps them, [key, value] in insertion order.
+public struct MessageWidgetStorage: Equatable {
+    public struct Entry: Equatable {
+        public var key: String
+        public var value: String
 
-        var css: String { return self == .dark ? "dark" : "light" }
+        public init(key: String, value: String) {
+            self.key = key
+            self.value = value
+        }
+    }
+
+    public var local: [Entry]
+    public var session: [Entry]
+
+    public init(local: [Entry], session: [Entry]) {
+        self.local = local
+        self.session = session
+    }
+
+    public static let empty = MessageWidgetStorage(local: [], session: [])
+}
+
+public enum MessageWidgetStorageArea: String {
+    case local
+    case session
+}
+
+public final class MessageWidgetInstance {
+    /// SDK v1 §2.3 and §2.4 (WidgetTheme): the chat's colour scheme, its palette (theme key → #rrggbb) and the client's
+    /// button tokens. Two themes are equal when all three are, so a palette change in the same scheme is a change.
+    public struct Theme: Equatable {
+        public enum ColorScheme: Equatable {
+            case light
+            case dark
+        }
+
+        /// §2.4's tokens; a token left nil keeps the UA stylesheet's default.
+        public struct ButtonTokens: Equatable {
+            public var bg: String?
+            public var text: String?
+            public var radius: String?
+            public var font: String?
+            public var padding: String?
+            public var height: String?
+            public var pressedOpacity: Double?
+            public var disabledOpacity: Double?
+
+            public init(bg: String? = nil, text: String? = nil, radius: String? = nil, font: String? = nil, padding: String? = nil, height: String? = nil, pressedOpacity: Double? = nil, disabledOpacity: Double? = nil) {
+                self.bg = bg
+                self.text = text
+                self.radius = radius
+                self.font = font
+                self.padding = padding
+                self.height = height
+                self.pressedOpacity = pressedOpacity
+                self.disabledOpacity = disabledOpacity
+            }
+
+            /// As WRSession takes them.
+            var dictionary: [String: Any] {
+                var out: [String: Any] = [:]
+                out["bg"] = self.bg
+                out["text"] = self.text
+                out["radius"] = self.radius
+                out["font"] = self.font
+                out["padding"] = self.padding
+                out["height"] = self.height
+                out["pressedOpacity"] = self.pressedOpacity
+                out["disabledOpacity"] = self.disabledOpacity
+                return out
+            }
+        }
+
+        public var colorScheme: ColorScheme
+        public var params: [String: String]
+        public var button: ButtonTokens
+
+        public init(colorScheme: ColorScheme, params: [String: String] = [:], button: ButtonTokens = ButtonTokens()) {
+            self.colorScheme = colorScheme
+            self.params = params
+            self.button = button
+        }
+
+        /// The scheme alone: the framework's defaults for every colour and token.
+        public static let light = Theme(colorScheme: .light)
+        public static let dark = Theme(colorScheme: .dark)
+
+        var isDark: Bool {
+            return self.colorScheme == .dark
+        }
+    }
+
+    /// §3.2: the whole content of a storage area a task changed, as the widget left it at the task's end.
+    public struct StorageCommit: Equatable {
+        public let area: MessageWidgetStorageArea
+        public let entries: [MessageWidgetStorage.Entry]
+
+        public init(area: MessageWidgetStorageArea, entries: [MessageWidgetStorage.Entry]) {
+            self.area = area
+            self.entries = entries
+        }
     }
 
     /// SDK v1 §2.5: a link the runtime checked and the press allowed. The host must confirm either before it opens.
@@ -42,6 +138,29 @@ public final class MessageWidgetInstance {
     public private(set) var failedToStart = false
     public var onLayoutChange: (() -> Void)?
     public var onBridge: ((BridgeCall) -> Void)?
+    /// SDK v1 §5.4: each storage commit, on main at its task's end, in commit order and before that task's bridge
+    /// calls; also for the task running when the widget was destroyed, even once the instance is released. None after
+    /// the widget has stopped.
+    public var onStorageCommit: ((StorageCommit) -> Void)? {
+        get {
+            return self.storageCommitSink.callback
+        }
+        set {
+            self.storageCommitSink.callback = newValue
+        }
+    }
+
+    /// Holds `onStorageCommit` for the core, which outlives the instance until its last task ends. Main thread only.
+    final class StorageCommitSink {
+        var callback: ((StorageCommit) -> Void)?
+    }
+
+    private let storageCommitSink: StorageCommitSink
+    /// The first stop of a widget that booted (SDK v1 §5.7's count), on main as its snapshot is applied; never for one
+    /// that started stopped.
+    public var onStopped: (() -> Void)?
+    /// Made stopped by the restart policy: it never ran, and shows the stopped badge only.
+    public let startedStopped: Bool
 
     private let core: MessageWidgetCore
     /// Queues the core's tasks on the widget's queue in the pool, waits within the turn's allowance and cap, and hands
@@ -96,9 +215,14 @@ public final class MessageWidgetInstance {
     private(set) var appliedForTesting: [WidgetSnapshot.Kind: Int] = [:]
 
     /// `locale`: the client's UI language (SDK v1 §2.9, navigator.language).
-    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale) {
+    /// `storage`: the stored areas the widget reads at its first touch of each (SDK v1 §3.1). `startsStopped`: the
+    /// restart policy's (§5.7): the widget's code never runs, and it shows the stopped badge.
+    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, startsStopped: Bool = false, pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale) {
         let timers = MessageWidgetTimers()
-        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, timers: timers, scale: scale)
+        self.startedStopped = startsStopped
+        let storageCommitSink = StorageCommitSink()
+        self.storageCommitSink = storageCommitSink
+        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, storage: storage, startsStopped: startsStopped, commitSink: storageCommitSink, timers: timers, scale: scale)
         self.handshake = WidgetHandshake(queue: pool.makeQueue(), policy: waitPolicy, turn: turn)
         self.theme = theme
         self.tileScale = scale
@@ -469,6 +593,9 @@ public final class MessageWidgetInstance {
                 self.deadReason = reason
                 self.frameRequested = false
                 self.viewStorage?.setDead()
+                if !self.startedStopped {
+                    self.onStopped?()
+                }
             }
         case .failedToStart:
             if !self.failedToStart {

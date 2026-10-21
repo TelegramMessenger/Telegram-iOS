@@ -101,9 +101,13 @@ public:
     /// rebuilds at the next flush, RenderTree::setTheme) and a task fires themeChanged and the onTheme callbacks;
     /// otherwise nothing happens. Never throws.
     void themeChanged(JSContext* ctx, Theme theme);
-    /// The host's: the chat's palette (ThemePalette, checked as checkThemeParams does), with the scheme last set; the
-    /// change rule as themeChanged's. Never throws.
-    void setThemeParams(JSContext* ctx, const ThemePalette& palette);
+    /// The host's: the chat's palette (ThemePalette, checked as checkThemeParams does) and its button tokens
+    /// (checkButtonTokens; §2.4), with the scheme last set; the change rule as themeChanged's, a token counting as a
+    /// colour. Never throws.
+    void setThemeParams(JSContext* ctx, const ThemePalette& palette, const ThemeButtonTokens& tokens = {});
+    /// The scheme, the palette and the button tokens at once (the iOS host's theme change): one change, one
+    /// themeChanged, by the same rule. Never throws.
+    void setTheme(JSContext* ctx, Theme theme, const ThemePalette& palette, const ThemeButtonTokens& tokens);
     /// The layout width (RenderTree::setWidth), and a task whose end runs the rendering update's steps (media changes,
     /// resize and intersection observations): a width change is told to an idle widget (the V3b review's I4). The
     /// host's, as themeChanged is: it never throws.
@@ -112,6 +116,8 @@ public:
     Theme theme() const { return m_theme; }
     /// TelegramWidget.themeParams' values: the palette completed for the scheme.
     const ThemeParams& themeParams() const { return m_themeParams; }
+    /// The button tokens as checked, for the root's --tg-button-* variables.
+    const ThemeButtonTokens& buttonTokens() const { return m_buttonTokens; }
     /// Counts the changes of themeParams, so TelegramWidget keeps one object between them.
     uint64_t themeGeneration() const { return m_themeGeneration; }
     /// The main document's focus, hover and active state (Sources/Events/UserActions.h), installed as its ElementState.
@@ -119,6 +125,12 @@ public:
     void setInitialTheme(Theme theme) {
         m_theme = theme;
         m_themeParams = completeThemeParams(m_palette, theme);
+    }
+    /// The same, with the host's first palette and button tokens (before installRender, so the first build has them).
+    void setInitialTheme(Theme theme, ThemePalette palette, const ThemeButtonTokens& tokens) {
+        m_palette = std::move(palette);
+        m_buttonTokens = checkButtonTokens(tokens);
+        this->setInitialTheme(theme);
     }
     /// The canvases' state (V5d plan, Task 3), made by CanvasState::of on first use.
     std::unique_ptr<canvas::CanvasState>& canvasSlot() { return m_canvas; }
@@ -143,7 +155,7 @@ public:
 
 private:
     /// themeChanged and setThemeParams.
-    void applyTheme(JSContext* ctx, Theme theme, ThemePalette palette);
+    void applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, ThemeButtonTokens tokens);
 
     JSContext* m_ctx;
     /// Not counted: the window is the global object, alive for the context's life.
@@ -154,6 +166,7 @@ private:
     TapState m_taps;
     Theme m_theme = Theme::Light;
     ThemePalette m_palette;
+    ThemeButtonTokens m_buttonTokens;
     ThemeParams m_themeParams = completeThemeParams({}, Theme::Light);
     uint64_t m_themeGeneration = 0;
     uint64_t m_lastPress = 0;

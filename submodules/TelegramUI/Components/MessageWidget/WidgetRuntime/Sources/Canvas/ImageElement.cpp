@@ -8,9 +8,11 @@
 #include "Sources/Canvas/CanvasState.h"
 #include "Sources/DOM/DOMState.h"
 #include "Sources/Events/Dispatch.h"
+#include "Sources/Host/CSSPolicy.h"
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Host/HostState.h"
 #include "Sources/Render/RenderTree.h"
+#include "Sources/Render/WidgetContainer.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Work.h"
@@ -63,7 +65,7 @@ void fireImageEvent(JSContext* ctx, HTMLImageElement& image) {
 
 HTMLImageElement::State HTMLImageElement::state(JSContext* ctx, std::optional<DecodedImage>* decoded) const {
     std::optional<String> src = this->attributeValue(ctx, DOMState::of(ctx).name(Name::src));
-    if (!src || src->empty()) {
+    if (!src) {
         return State::Unavailable;
     }
     if (!m_decided) {
@@ -71,8 +73,14 @@ HTMLImageElement::State HTMLImageElement::state(JSContext* ctx, std::optional<De
             return State::Broken;
         }
         chargeScan(ctx, src->length());
+        // A present src profile 1 refuses, the empty one included, is the 48 px placeholder the renderer draws in its
+        // place (V4 plan, Task 6; RB §3.5, §8.5): it loads.
+        std::string utf8 = src->utf8();
+        if (!css::policy::imageSourceKept(utf8)) {
+            utf8 = std::string(WidgetContainer::kPlaceholderURL);
+        }
         bool decoded = false;
-        m_decoded = canvas::CanvasState::of(ctx).sharedImage(src->utf8(), decoded);
+        m_decoded = canvas::CanvasState::of(ctx).sharedImage(utf8, decoded);
         m_decided = true;
         if (decoded) {
             // A decode, the first time any image with this src asks (V5d final review, I3).
@@ -177,8 +185,12 @@ void imageCreated(JSContext* ctx) {
 
 void imageSourceChanged(JSContext* ctx, HTMLImageElement& element) {
     element.forgetDecision();
+    // A parsed image's event waits for the window's load (fireParsedImageEvents), when the page's listeners exist.
+    if (DOMState::of(ctx).parsingDocument()) {
+        return;
+    }
     std::optional<String> src = element.attributeValue(ctx, DOMState::of(ctx).name(Name::src));
-    if (!src || src->empty() || !HostState::find(ctx)) {
+    if (!src || !HostState::find(ctx)) {
         return;
     }
     element.setEventQueued();

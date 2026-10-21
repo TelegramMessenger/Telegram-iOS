@@ -303,11 +303,12 @@ WR_TEST(testUnrenderedContent) {
     }
     script += "]) { const e = document.createElement(name); const b = document.createElement('b'); b.textContent = 'X';"
               " e.appendChild(b); document.body.appendChild(e); }"
-              // In any namespace: MathML's math, an SVG title, and an HTML element named in upper case.
+              // In other namespaces: MathML's math, an SVG element outside svg.elements (an SVG title is kept, V4 plan,
+              // Task 4), and an HTML element named in upper case.
               "const m = document.createElementNS('http://www.w3.org/1998/Math/MathML', 'math');"
               "m.appendChild(document.createElement('b')).textContent = 'X'; document.body.appendChild(m);"
               "const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');"
-              "const t = svg.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'title'));"
+              "const t = svg.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject'));"
               "t.textContent = 'X'; document.body.appendChild(svg);"
               "const u = document.createElementNS('http://www.w3.org/1999/xhtml', 'SCRIPT');"
               "u.appendChild(document.createElement('b')).textContent = 'X'; document.body.appendChild(u);"
@@ -336,21 +337,23 @@ WR_TEST(testUnrenderedContent) {
     }
 }
 
-WR_TEST(testEverythingElseRendersAsItIs) {
+// V4 plan, Task 4 (html.el.unknown): an unknown element is an inert span carrying its name in data-tg-tag, so a type
+// selector naming it no longer matches; the DOM keeps it as it is.
+WR_TEST(testAnUnknownElementIsASpan) {
     RenderEnv env("<!doctype html><style>my-card{display:block;height:10px}</style>"
-                  "<my-card class=x onclick=\"f()\" data-tg-link=\"\" data-lh-id=7>c</my-card>");
+                  "<my-card class=x data-lh-id=7>c</my-card>");
     env.rebuild();
     const std::string dump = env.render().layoutDump();
-    const std::string line = lineFor(dump, "my-card");
-    CHECK(!line.empty());
-    CHECK_EQ(heightOf(line), 10.0);
+    CHECK(lineFor(dump, "my-card").empty());
+    // The my-card rule (display:block; height:10px) matches nothing: the span is laid out as an inline span.
+    CHECK(heightOf(lineFor(dump, "span")) != 10.0);
     const std::string input = env.render().renderInput();
-    CHECK(input.find("<my-card class=\"x\" onclick=\"f()\" data-tg-link=\"\" data-lh-id=\"7\">c</my-card>") !=
-          std::string::npos);
-    litehtml::element::ptr card = findElement(*env.render().document(), "my-card");
+    CHECK(input.find("<span data-tg-tag=\"my-card\" class=\"x\" data-lh-id=\"7\">c</span>") != std::string::npos);
+    litehtml::element::ptr card = findElement(*env.render().document(), "span");
+    CHECK(card && card->get_attr("data-tg-tag") && std::string(card->get_attr("data-tg-tag")) == "my-card");
     CHECK(card && card->get_attr("data-lh-id") && std::string(card->get_attr("data-lh-id")) == "7");
-    CHECK(card && card->get_attr("onclick") && std::string(card->get_attr("onclick")) == "f()");
-    if (line.empty() || heightOf(line) != 10.0) {
+    CHECK_EQ(env.env().eval("document.querySelector('my-card').tagName"), std::string("MY-CARD"));
+    if (input.find("data-tg-tag=\"my-card\"") == std::string::npos) {
         std::printf("  layoutDump:\n%s  renderInput: %s\n", dump.c_str(), input.c_str());
     }
 }
@@ -497,11 +500,12 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
              CHECK(env.render().renderInput().find("aaaa") == std::string::npos);
              CHECK_EQ(diagnosticCount(env, "render-limit", "bytes"), size_t(1));
          }},
-        {"inputs",
-         "for (let i = 0; i < 20000; i++) document.body.appendChild(document.createElement('input'));",
+        {"buttons",
+         "for (let i = 0; i < 20000; i++) document.body.appendChild(document.createElement('button'));",
          [&](RenderEnv& env) {
-             // Ruling E6: 256 form controls render (20,000 measured 436 MB before the limit).
-             CHECK_EQ(count(env.render().layoutDump(), "\n    input "), size_t(256));
+             // Ruling E6: 256 form controls render (20,000 inputs measured 436 MB before the limit); under profile 1 the
+             // <button> is the one control left.
+             CHECK_EQ(count(env.render().layoutDump(), "\n    button "), size_t(256));
              CHECK_EQ(diagnosticCount(env, "render-limit", "form-controls"), size_t(1));
              CHECK_EQ(diagnosticCount(env, "render-limit", "elements"), size_t(0));
          }},
@@ -550,25 +554,26 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
 }
 
 WR_TEST(testFormControlLimit) {
-    // 255 inputs, then a textarea (the 256th), then a select (the 257th: not rendered, nor its option) and a button;
-    // the rest of the document still renders. In any namespace, by the lowercased name, as litehtml makes controls.
+    // 255 buttons, then the 256th, then a 257th (not rendered); inputs, a textarea and a select, which profile 1 drops
+    // (V4 plan, Task 4), count nothing; the rest of the document still renders.
     RenderEnv env(kEmpty);
-    CHECK_EQ(env.env().eval("for (let i = 0; i < 255; i++) document.body.appendChild(document.createElement('input'));"
+    CHECK_EQ(env.env().eval("for (let i = 0; i < 255; i++) document.body.appendChild(document.createElement('button'));"
+                            "for (let i = 0; i < 300; i++) document.body.appendChild(document.createElement('input'));"
                             "document.body.appendChild(document.createElement('textarea')).textContent = 't';"
                             "const s = document.body.appendChild(document.createElement('select'));"
                             "s.appendChild(document.createElement('option')).textContent = 'o';"
-                            "document.body.appendChild(document.createElement('button')).textContent = 'b';"
-                            "document.body.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'INPUT'));"
+                            "document.body.appendChild(document.createElement('button')).textContent = 'last';"
+                            "document.body.appendChild(document.createElement('button')).textContent = 'over';"
                             "document.body.appendChild(document.createElement('p')).textContent = 'after'; 'ok'"),
              std::string("ok"));
     env.rebuild();
     const std::string input = env.render().renderInput();
-    CHECK_EQ(count(input, "<input>"), size_t(255));
-    CHECK(input.find("<textarea>t</textarea>") != std::string::npos);
+    CHECK_EQ(count(input, "<button>"), size_t(256));
+    CHECK(input.find("<button>last</button>") != std::string::npos);
+    CHECK(input.find("over") == std::string::npos);
+    CHECK(input.find("<textarea") == std::string::npos);
     CHECK(input.find("<select") == std::string::npos);
-    CHECK(input.find("<option") == std::string::npos);
-    CHECK(input.find("<button") == std::string::npos);
-    CHECK(input.find("<INPUT") == std::string::npos);
+    CHECK(input.find("<input") == std::string::npos);
     CHECK(input.find("<p>after</p>") != std::string::npos);
     CHECK_EQ(diagnosticCount(env, "render-limit", "form-controls"), size_t(1));
     CHECK(!lineFor(env.render().layoutDump(), "p").empty());
@@ -651,14 +656,16 @@ WR_TEST(testNonHtmlDocumentElement) {
 }
 
 WR_TEST(testLoadsGoThroughTheContainer) {
+    // Neither URL reaches litehtml (V4 plan): the profile drops the remote background's declaration (Task 3b), and the
+    // <img> asks for the 48 px placeholder in its place (Task 6).
     RenderEnv env("<!doctype html><img src=http://x><div style=\"background:url(http://y)\">d</div>");
-    CHECK(env.render().refusedLoads() >= 2);
+    CHECK_EQ(env.render().refusedLoads(), uint64_t(0));
+    CHECK(env.host().decodedMimeTypes == std::vector<std::string>{"image/svg+xml"});
     // A tree asks for nothing until it builds.
     wr::RenderTree fresh(env.ctx(), env.host(), env.options());
-    CHECK_EQ(fresh.refusedLoads(), uint64_t(0));
     fresh.rebuild(env.ctx());
-    CHECK(fresh.refusedLoads() >= 2);
-    CHECK(env.host().decodedMimeTypes.empty());
+    CHECK_EQ(fresh.refusedLoads(), uint64_t(0));
+    CHECK_EQ(env.host().decodedMimeTypes.size(), size_t(2));
 }
 
 namespace {
@@ -745,10 +752,13 @@ WR_TEST(testCacheWindowFollowsTheBuildOrder) {
     // list-style-image, ::before content url() and font, form controls (input, placeholder, textarea, select, button,
     // checkbox, range, meter), list markers, SVG text, use and image (SVG image loads nothing), mask-image,
     // border-image and image-set().
+    // list-style-image is out of profile 1, so the marker's image comes through the trusted host sheet.
+    wr::RenderOptions options;
+    options.hostCSS += std::string(" ul.marked { list-style-image: url('") + kPng3x2 + "#marker') }";
     RenderEnv env("<!doctype html><img src='" + kPng3x2 + "#img'><div style=\"background-image:url('" + kPng3x2 +
-                  "#bg')\">bg</div><ul style=\"list-style-image:url('" + kPng3x2 +
-                  "#marker')\"><li>item</li></ul><p style='font-family:serif'>serif <b>bold</b></p><input value=v>"
-                  "<select><option>o</option></select><button>b</button>");
+                  "#bg')\">bg</div><ul class=marked><li>item</li></ul><p style='font-family:serif'>serif <b>bold</b></p>"
+                  "<input value=v><select><option>o</option></select><button>b</button>",
+                  options);
     env.rebuild();
     const size_t fonts = env.host().fontsCreated;
     const size_t images = env.host().decodedMimeTypes.size();

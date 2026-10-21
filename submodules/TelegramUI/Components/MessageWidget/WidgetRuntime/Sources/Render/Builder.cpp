@@ -11,6 +11,9 @@
 #include "Sources/Animation/AnimationState.h"
 #include "Sources/Canvas/CanvasElement.h"
 #include "Sources/DOM/DOM.h"
+#include "Sources/Host/CSSPolicy.h"
+#include "Sources/Host/MarkupPolicy.h"
+#include "Sources/Host/Profile.h"
 #include "Sources/Render/WidgetContainer.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
@@ -68,12 +71,6 @@ void syncUserActionState(JSContext* ctx, Element& element, litehtml::element& cr
 }
 
 
-// Ruling 4: not rendered, nor their subtrees, in any namespace.
-constexpr std::string_view kUnrendered[] = {
-    "script", "noscript", "template", "iframe", "frame", "frameset", "noframes", "object", "embed", "noembed", "applet",
-    "param", "portal", "fencedframe", "video", "audio", "source", "track", "math", "link", "meta", "base", "title",
-    "area"};
-
 // Ruling 7.
 constexpr size_t kMaxStyleText = 64 * 1024;
 constexpr size_t kMaxStyleAttribute = 16 * 1024;
@@ -81,9 +78,9 @@ constexpr size_t kMaxStyleAttribute = 16 * 1024;
 // litehtml and 55 MB of tree), so W renders half of litehtml's own 20,000.
 constexpr size_t kMaxElements = 10000;
 // Ruling E6: litehtml generates each control's parts outside its element and text caps (20,000 inputs measured 436 MB;
-// the corpus maximum is 19 controls).
+// the corpus maximum is 19 controls). Profile 1 drops every control but <button> (V4 plan, Task 4), which is the one
+// counted, by the rendered tag.
 constexpr size_t kMaxFormControls = 256;
-constexpr std::string_view kFormControls[] = {"input", "textarea", "select", "button"};
 
 char asciiLower(char c) {
     return c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;
@@ -95,15 +92,13 @@ bool equalsIgnoringASCIICase(std::string_view a, std::string_view b) {
            });
 }
 
-bool isUnrendered(std::string_view localName) {
-    return std::any_of(std::begin(kUnrendered), std::end(kUnrendered),
-                       [&](std::string_view name) { return equalsIgnoringASCIICase(name, localName); });
+// The control litehtml makes of a rendered tag (el_button) that Ruling E6 counts.
+bool isFormControl(std::string_view renderedTag) {
+    return equalsIgnoringASCIICase(renderedTag, "button");
 }
 
-// As litehtml makes them (el_input, el_textarea, el_select, el_button): by the lowercased tag, in any namespace.
-bool isFormControl(std::string_view localName) {
-    return std::any_of(std::begin(kFormControls), std::end(kFormControls),
-                       [&](std::string_view name) { return equalsIgnoringASCIICase(name, localName); });
+bool isRootName(std::string_view lowered) {
+    return lowered == "html" || lowered == "head" || lowered == "body";
 }
 
 litehtml::document_mode modeOf(DocumentMode mode) {
@@ -224,41 +219,61 @@ std::string qualifiedAttributeName(AtomNames& names, const Attribute& attribute)
     return names.name(attribute.prefix.atom) + ":" + names.name(attribute.localName.atom);
 }
 
-/// Serializer.cpp's attributeName.
-std::string serializedAttributeName(AtomNames& names, DOMState& state, const Attribute& attribute) {
-    const std::string& local = names.name(attribute.localName.atom);
-    switch (attribute.ns) {
-    case Namespace::None:
-        return local;
-    case Namespace::XML:
-        return "xml:" + local;
-    case Namespace::XMLNS:
-        return attribute.localName.atom == state.name(Name::xmlns) ? std::string("xmlns") : "xmlns:" + local;
-    case Namespace::XLink:
-        return "xlink:" + local;
-    default:
-        return attribute.prefix.atom != JS_ATOM_NULL ? names.name(attribute.prefix.atom) + ":" + local : local;
+/// What the renderer's copy of `element` is (V4 plan, Task 4): profile 1's one decision (MarkupPolicy.h), read by the
+/// build, the patches and the render input alike. An html, head or body is the document's own only when it is the
+/// document element, its head or its body.
+markup::RenderTag tagOf(JSContext* ctx, AtomNames& names, DOMState& state, const Element& element) {
+    const std::string& localName = names.name(element.localNameAtom());
+    markup::ElementNamespace ns = markup::ElementNamespace::Other;
+    if (element.ns() == Namespace::HTML) {
+        ns = markup::ElementNamespace::HTML;
+    } else if (element.ns() == Namespace::SVG) {
+        ns = markup::ElementNamespace::SVG;
     }
-}
-
-/// Serializer.cpp's tagName: an HTML, SVG or MathML element's local name; any other element's qualified name.
-std::string serializedTagNameOf(AtomNames& names, const Element& element) {
-    const Namespace ns = element.ns();
-    if (ns != Namespace::HTML && ns != Namespace::SVG && ns != Namespace::MathML && element.prefixAtom() != JS_ATOM_NULL) {
-        return names.name(element.prefixAtom()) + ":" + names.name(element.localNameAtom());
+    bool adopted = false;
+    if (ns == markup::ElementNamespace::HTML) {
+        std::string lowered = localName;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), asciiLower);
+        if (isRootName(lowered)) {
+            Document& document = state.document();
+            adopted = &element == document.documentElementNode() || &element == document.head(ctx) ||
+                      &element == document.body(ctx);
+        }
     }
-    return names.name(element.localNameAtom());
+    return markup::renderTagFor(ns, localName, adopted);
 }
 
 /// The one reading of an element's attributes for litehtml, the build's and the in-place patch's (Ruling 8: a patch
-/// must agree with a rebuild). Each attribute is charged work::kRenderAttribute plus chargeScan of its value; one whose
-/// lowercased name repeats an earlier one is left out; a `style` over 16 KiB is left out (styleTooLong); the budget is
-/// kMaxRenderBytes counting names and values from `usedBefore` on, and the attribute that would pass it ends the
-/// scan (overBudget).
-RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& state, Element& element, size_t usedBefore,
-                                bool keepInput) {
+/// must agree with a rebuild). Each attribute is charged work::kRenderAttribute plus chargeScan of its value; profile 1
+/// decides what the renderer gets of it (markup::renderAttribute, V4 plan, Task 5): one it drops by name is skipped
+/// before its value is read, and one whose output name repeats an earlier one is left out; a `style` over 16 KiB is
+/// left out (styleTooLong); the budget is kMaxRenderBytes counting the names and values read from `usedBefore` on, and
+/// the attribute that would pass it ends the scan (overBudget).
+RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& state, Element& element,
+                                const markup::RenderTag& rendered, size_t usedBefore, bool keepInput) {
     RenderAttributes out;
     std::unordered_set<std::string> keys;
+    // A host marker (data-tg-tag, data-tg-link) goes to litehtml and the render input; the widget cannot write one
+    // (data-tg-* is dropped). Charged as an attribute is, it costs the widget's byte budget nothing.
+    const auto addHostMarker = [&](const char* name, const std::string& value) {
+        charge(ctx, work::kRenderAttribute);
+        keys.insert(name);
+        if (keepInput) {
+            out.text += ' ';
+            out.text += name;
+            out.text += "=\"";
+            appendEscaped(out.text, value, true);
+            out.text += '"';
+        }
+        out.map.emplace(name, value);
+    };
+    // A renamed element's original name (V4 plan, Task 4), first.
+    if (!rendered.dataTgTag.empty()) {
+        addHostMarker("data-tg-tag", rendered.dataTgTag);
+    }
+    const markup::ElementNamespace ns = element.ns() == Namespace::HTML  ? markup::ElementNamespace::HTML
+                                        : element.ns() == Namespace::SVG ? markup::ElementNamespace::SVG
+                                                                         : markup::ElementNamespace::Other;
     // A canvas's width, height and src are the builder's (below): the render input records those, not the widget's.
     const auto* canvas = element.isHTMLElement() && element.localNameAtom() == state.name(Name::canvas)
                              ? dynamic_cast<const HTMLCanvasElement*>(&element)
@@ -266,16 +281,16 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
     for (size_t i = 0; i < element.attributeCount(); i++) {
         const Attribute& attribute = element.attributeAt(i);
         charge(ctx, work::kRenderAttribute);
-        std::string qualified = qualifiedAttributeName(names, attribute);
+        const std::string qualified = qualifiedAttributeName(names, attribute);
         String value = String::adopt(ctx, JS_DupValue(ctx, attribute.value.value));
         chargeScan(ctx, value.length());
-        std::string key = qualified;
-        std::transform(key.begin(), key.end(), key.begin(), asciiLower);
-        if (!keys.insert(key).second) {
+        if (!markup::attributeMayRender(ns, rendered.tag, qualified)) {
             continue;
         }
         // The budget used with this attribute's name.
         const size_t used = usedBefore + out.bytes + qualified.size();
+        std::string key = qualified;
+        std::transform(key.begin(), key.end(), key.begin(), asciiLower);
         std::string utf8;
         if (key == "style") {
             if (!utf8AtMost(value, kMaxStyleAttribute, utf8)) {
@@ -292,14 +307,33 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
             return out;
         }
         out.bytes += qualified.size() + utf8.size();
-        if (keepInput && !(canvas && (key == "width" || key == "height" || key == "src"))) {
+        markup::RenderAttributeDecision decided = markup::renderAttribute(ns, rendered.tag, qualified, utf8);
+        if (!decided.kept || !keys.insert(decided.name).second) {
+            continue;
+        }
+        // An <img src> profile 1 refuses, the empty one included, renders the 48 px placeholder (V4 plan, Task 6; RB
+        // §2.4, §3.5); the DOM's HTMLImageElement::state decides alike.
+        const bool placeholder = ns == markup::ElementNamespace::HTML && rendered.tag == "img" && decided.name == "src" &&
+                                 !css::policy::imageSourceKept(decided.value);
+        if (placeholder) {
+            decided.value = std::string(WidgetContainer::kPlaceholderURL);
+        }
+        if (keepInput && !(canvas && (decided.name == "width" || decided.name == "height" || decided.name == "src"))) {
             out.text += ' ';
-            out.text += serializedAttributeName(names, state, attribute);
+            out.text += decided.name;
             out.text += "=\"";
-            appendEscaped(out.text, utf8, true);
+            appendEscaped(out.text, decided.value, true);
             out.text += '"';
         }
-        out.map.emplace(std::move(qualified), std::move(utf8));
+        out.map.emplace(decided.name, std::move(decided.value));
+        // An external link (RB §2.4): href="#" and the host's marker. A tap reads the DOM's own href, as the
+        // reference's does; the marker only labels the link.
+        if (decided.addsLink) {
+            addHostMarker("data-tg-link", std::string());
+        }
+        if (placeholder) {
+            addHostMarker("data-tg-placeholder", std::string());
+        }
     }
     // A canvas draws as litehtml's image of its bitmap (V5d plan, Task 4): a source of its own, whatever src the widget
     // set, naming the canvas and its size. Its width and height are that size, its intrinsic one, and not the dimension
@@ -532,14 +566,17 @@ private:
 
     const std::string& name(JSAtom atom) { return m_names.name(atom); }
 
-    std::string serializedTagName(const Element& element) { return serializedTagNameOf(m_names, element); }
-
     size_t remainingBytes() const { return kMaxRenderBytes - m_bytes; }
 
     Step element(Element& element) {
-        const std::string localName = this->name(element.localNameAtom());
-        if (isUnrendered(localName)) {
+        const markup::RenderTag rendered = tagOf(m_ctx, m_names, m_state, element);
+        if (!rendered.rendered) {
             return Step::SkipChildren;
+        }
+        // Which html, head and body are the document's own can move with the structure: rebuild.
+        if (m_roots && element.ns() == Namespace::HTML &&
+            (isRootName(rendered.tag) || isRootName(rendered.dataTgTag))) {
+            return this->refuse();
         }
         // W's limits are asked before litehtml's caps, so an element past one takes no slot of litehtml's.
         if (m_elements >= kMaxElements) {
@@ -549,7 +586,7 @@ private:
             noteLimit(m_build.limits, "elements");
             return Step::SkipChildren;
         }
-        const bool formControl = isFormControl(localName);
+        const bool formControl = isFormControl(rendered.tag);
         if (formControl && m_formControls >= kMaxFormControls) {
             if (m_roots) {
                 return this->refuse();
@@ -568,8 +605,8 @@ private:
             return Step::SkipChildren;
         }
         // The render input's names and start tag only when it is kept (Ruling E11).
-        const std::string tagName = m_keepInput ? this->serializedTagName(element) : std::string();
-        RenderAttributes scanned = scanAttributes(m_ctx, m_names, m_state, element, m_bytes, m_keepInput);
+        const std::string tagName = m_keepInput ? rendered.tag : std::string();
+        RenderAttributes scanned = scanAttributes(m_ctx, m_names, m_state, element, rendered, m_bytes, m_keepInput);
         if (m_roots && (scanned.styleTooLong || scanned.overBudget)) {
             return this->refuse();
         }
@@ -586,10 +623,10 @@ private:
 
         // A `<style>` in an inserted subtree is a document-level change (its sheet), which the fork refuses: rebuild
         // before anything of it is made.
-        if (m_roots && equalsIgnoringASCIICase(localName, "style")) {
+        if (m_roots && rendered.stylesheet) {
             return this->refuse();
         }
-        litehtml::element::ptr created = m_doc->create_element(localName.c_str(), attributes);
+        litehtml::element::ptr created = m_doc->create_element(rendered.tag.c_str(), attributes);
         syncUserActionState(m_ctx, element, *created);
         if (m_roots && m_stack.size() == 1) {
             // The subtree's root, left detached.
@@ -622,8 +659,10 @@ private:
         }
         this->append(startTag);
 
-        const bool rawText = element.isHTMLElement() && m_state.hasRawTextChildren(element.localNameAtom());
-        if (equalsIgnoringASCIICase(localName, "style")) {
+        // A renamed element is never void or raw text: its DOM name's answers are not its rendered tag's.
+        const bool kept = rendered.dataTgTag.empty();
+        const bool rawText = kept && element.isHTMLElement() && m_state.hasRawTextChildren(element.localNameAtom());
+        if (rendered.stylesheet) {
             // litehtml makes every element named style an el_style, whatever its namespace.
             this->styleSheet(element, created, rawText);
             const std::string endTag = "</" + tagName + ">";
@@ -634,7 +673,7 @@ private:
             }
             return Step::SkipChildren;
         }
-        const bool isVoid = element.isHTMLElement() && m_state.isVoidHTMLElement(element.localNameAtom());
+        const bool isVoid = kept && element.isHTMLElement() && m_state.isVoidHTMLElement(element.localNameAtom());
         if (isVoid && entry.inputOffset != kNoRenderInput) {
             // No end tag, and its content is out of the input.
             entry.inputEnd = entry.inputOffset + entry.inputLength;
@@ -849,17 +888,21 @@ RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_
                                          std::string* startTag) {
     AtomNames names(ctx);
     DOMState& state = DOMState::of(ctx);
-    const std::string tagName = keepInput && startTag ? serializedTagNameOf(names, element) : std::string();
-    RenderAttributes out = scanAttributes(ctx, names, state, element, usedBefore, keepInput && startTag);
+    const markup::RenderTag rendered = tagOf(ctx, names, state, element);
+    RenderAttributes out = scanAttributes(ctx, names, state, element, rendered, usedBefore, keepInput && startTag);
     if (startTag && keepInput && !out.overBudget) {
-        *startTag = "<" + tagName + out.text + ">";
+        *startTag = "<" + rendered.tag + out.text + ">";
     }
     return out;
 }
 
-bool renderElementIsUnrendered(JSContext* ctx, const Element& element) {
+markup::RenderTag renderTagOf(JSContext* ctx, const Element& element) {
     AtomNames names(ctx);
-    return isUnrendered(names.name(element.localNameAtom()));
+    return tagOf(ctx, names, DOMState::of(ctx), element);
+}
+
+bool renderElementIsUnrendered(JSContext* ctx, const Element& element) {
+    return !renderTagOf(ctx, element).rendered;
 }
 
 bool renderUtf8AtMost(const String& s, size_t maxBytes, std::string& out) {
@@ -899,6 +942,9 @@ void collectContainerLimits(const WidgetContainer& container, std::vector<std::s
 
 std::string masterWithHostCSS(const std::string& hostCSS) {
     std::string master = litehtml::telegram_master_css();
+    // The profile's UA stylesheet (SDK v1 §2.4: a <button> the widget did not style), then the host's root CSS.
+    master += "\n";
+    master += profile::uaStylesheet();
     master += "\n";
     master += hostCSS;
     return master;

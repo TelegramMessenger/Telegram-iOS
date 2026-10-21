@@ -648,6 +648,9 @@ namespace litehtml
         pixel_t resolution; // The resolution of the output device (in DPI)
         // Telegram (VENDOR.md edit 13): the colour scheme, 0 light and 1 dark; filled by the container, default 0.
         int color_scheme = 0;
+        // Telegram (VENDOR.md edit 29.5): prefers-reduced-motion, 0 no-preference and 1 reduce; filled by the
+        // container, default 0.
+        int reduced_motion = 0;
 
         media_features()
         {

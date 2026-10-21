@@ -60,6 +60,15 @@ public final class WidgetHarnessListHost {
 
     /// Replaces the list's messages with `posts`, oldest first, as the test channel posts them: each widget message
     /// (text = caption), then its reference pictures.
+    /// A post's message id: a 30-bit FNV-1a hash of its path, never 0.
+    static func messageId(forPath path: String) -> Int32 {
+        var hash: UInt32 = 2166136261
+        for byte in path.utf8 {
+            hash = (hash ^ UInt32(byte)) &* 16777619
+        }
+        return Int32(hash & 0x3fffffff) | 1
+    }
+
     public func load(posts: [WidgetHarnessPost]) {
         let accountPeer = TelegramUser(
             id: self.context.account.peerId, accessHash: nil, firstName: "Harness", lastName: "Account", username: nil, phone: nil,
@@ -73,10 +82,18 @@ public final class WidgetHarnessListHost {
         var messages: [EngineRawMessage] = []
         var paths: [EngineMessage.Id: String] = [:]
         var timestamp = Int32(Date().timeIntervalSince1970) - 10_000
+        var takenIds = Set<Int32>()
         func append(text: String, media: EngineRawMedia, path: String) {
             let stableId = WidgetHarnessListHost.nextStableId
             WidgetHarnessListHost.nextStableId += 1
-            let id = EngineMessage.Id(peerId: WidgetHarnessListHost.chatPeer.id, namespace: Namespaces.Message.Cloud, id: Int32(stableId))
+            // The message id is the post's, the same in every load as a real message's is (a widget's storage is kept
+            // per message id); the stable id is new per load, so every load lays out new bubbles.
+            var messageId = WidgetHarnessListHost.messageId(forPath: path)
+            if takenIds.contains(messageId) {
+                messageId = Int32(truncatingIfNeeded: stableId)
+            }
+            takenIds.insert(messageId)
+            let id = EngineMessage.Id(peerId: WidgetHarnessListHost.chatPeer.id, namespace: Namespaces.Message.Cloud, id: messageId)
             timestamp += 1
             messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
             paths[id] = path

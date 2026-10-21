@@ -3,6 +3,7 @@
 #include <string_view>
 #include <unordered_set>
 #include "document_container.h"
+#include "css_parser.h" // Telegram (VENDOR.md edit 29.3): normalize, for a <style media> prelude
 #include "el_anchor.h"
 #include "el_base.h"
 #include "el_body.h"
@@ -2423,8 +2424,16 @@ namespace litehtml
             // Telegram (VENDOR.md edit 13): light-dark() resolves at parse, so the cache is keyed by the scheme too.
             media_features scheme_media;
             container()->get_media_features(scheme_media);
+#if 0
             const std::string master_key =
                 std::string(scheme_media.color_scheme ? "\x03" : "\x02") + master_styles;
+#else
+            // Telegram (VENDOR.md edit 29.7): and by the container's sanitizer key.
+            const uint32_t    master_sanitizer = container()->sanitizer_key();
+            const std::string master_key       = std::string(scheme_media.color_scheme ? "\x03" : "\x02") +
+                                           std::string(reinterpret_cast<const char*>(&master_sanitizer), sizeof master_sanitizer) +
+                                           master_styles;
+#endif
             if(cacheable)
             {
                 std::lock_guard<std::mutex> lock(master_cache_mutex);
@@ -2510,6 +2519,11 @@ namespace litehtml
                 styles_key.push_back(static_cast<char>('0' + static_cast<int>(m_mode)));
                 // Telegram (VENDOR.md edit 13): keyed by the container's scheme too.
                 styles_key.push_back(m_media.color_scheme ? '\x03' : '\x02');
+                // Telegram (VENDOR.md edit 29.7): and by the container's sanitizer key.
+                {
+                    const uint32_t sanitizer = container()->sanitizer_key();
+                    styles_key.append(reinterpret_cast<const char*>(&sanitizer), sizeof sanitizer);
+                }
                 for(const auto& css : m_css)
                 {
                     styles_key.append(css.baseurl);
@@ -2533,6 +2547,11 @@ namespace litehtml
                     media_query_list_list::ptr media;
                     if(css.media != "")
                     {
+                        // Telegram (VENDOR.md edit 29.3): a <style media> the container refuses is not applied.
+                        if(!container()->sanitize_media_query(normalize(css.media, f_componentize)))
+                        {
+                            continue;
+                        }
                         auto mq_list = parse_media_query_list(css.media, shared_from_this());
                         media        = std::make_shared<media_query_list_list>();
                         media->add(mq_list);

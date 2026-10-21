@@ -34,8 +34,12 @@ wr::RenderOptions options(double width = 300) {
     return result;
 }
 
-litehtml::document::ptr layOut(litehtml::document_container& container, const std::string& html, float width = 300) {
-    litehtml::document::ptr document = litehtml::document::createFromString(litehtml::estring(html), &container);
+/// `trustedCSS` is litehtml's user sheet, which a container takes as trusted (twidget edit 29): the profile leaves it
+/// whole, so a paint call no widget can reach any more (clip-path, text-shadow) is still recorded and checked.
+litehtml::document::ptr layOut(litehtml::document_container& container, const std::string& html, float width = 300,
+                               const std::string& trustedCSS = {}) {
+    litehtml::document::ptr document =
+        litehtml::document::createFromString(litehtml::estring(html), &container, litehtml::master_css, trustedCSS);
     document->render(litehtml::pixel_t(width));
     return document;
 }
@@ -217,17 +221,20 @@ const char* const kEveryKind =
     "<div style='overflow:hidden;border-radius:4px;height:20px'>clipped</div>"
     "<div style='filter:blur(2px)'>blurred</div>"
     "<div style='backdrop-filter:blur(3px);height:10px'></div>"
-    "<div style='clip-path:circle(5px);height:10px'>c</div>"
+    "<div class=tw-clip style='height:10px'>c</div>"
     "<div style='position:fixed;left:0;top:0'>fixed</div>"
     "<svg width=20 height=20><rect width=10 height=10 fill=red /></svg>"
     "<ul><li>item</li></ul>"
-    "<p style='text-shadow:3px 4px 2px red'>shadowed</p>"
+    "<p class=tw-shadow>shadowed</p>"
     "<svg width=20 height=20><line x1=0 y1=5 x2=10 y2=5 stroke=blue stroke-width=2 /></svg>"
     "<svg width=20 height=20><path d='M0 10 C0 0 10 0 10 10' fill='#00ff00' /></svg>";
 
 std::string everyKindHtml() {
     return std::string(kEveryKind) + "<img src='" + kPng3x2 + "'>";
 }
+
+// kEveryKind's two out-of-profile shapes, as trusted CSS (layOut's `trustedCSS`).
+const char* const kEveryKindTrusted = ".tw-clip{clip-path:circle(5px)} .tw-shadow{text-shadow:3px 4px 2px red}";
 
 void* runBody(void* body) {
     (*static_cast<void (**)()>(body))();
@@ -273,7 +280,7 @@ std::shared_ptr<const LayerTree> chain(size_t depth, const litehtml::position& c
 WR_TEST(testItemsRecordTheirCalls) {
     FakeRenderHost host;
     wr::WidgetContainer container(host, options());
-    litehtml::document::ptr document = layOut(container, everyKindHtml());
+    litehtml::document::ptr document = layOut(container, everyKindHtml(), 300, kEveryKindTrusted);
     std::shared_ptr<const LayerTree> tree = container.record(*document);
     CHECK(tree != nullptr);
     if (!tree) {
@@ -995,8 +1002,9 @@ WR_TEST(testMarkersKeepNoUrl) {
     FakeRenderHost host;
     wr::WidgetContainer container(host, options());
     const std::string url = "data:image/png;base64," + std::string(60000, 'A');
-    litehtml::document::ptr document = layOut(container, "<style>li { list-style-image: url(" + url +
-                                                             ") }</style><ul><li>a</li><li>b</li><li>c</li></ul>");
+    // list-style-image is out of profile 1, so the marker's image comes through the trusted sheet.
+    litehtml::document::ptr document =
+        layOut(container, "<ul><li>a</li><li>b</li><li>c</li></ul>", 300, "li { list-style-image: url(" + url + ") }");
     std::shared_ptr<const LayerTree> tree = container.record(*document);
     size_t markers = 0;
     for (const Located& located : items(*tree)) {

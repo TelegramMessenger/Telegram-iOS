@@ -10,6 +10,8 @@
 
 using wr_test::HostEnv;
 using wr::profile::CSSTable;
+using wr::profile::ElementAction;
+using wr::profile::MarkupTable;
 
 namespace {
 
@@ -21,11 +23,43 @@ std::string profileJSON() {
     return s.str();
 }
 
-std::string joined(CSSTable table) {
+std::string joined(std::span<const std::string_view> entries) {
     std::string out;
-    for (std::string_view entry : wr::profile::table(table)) {
+    for (std::string_view entry : entries) {
         out += out.empty() ? "" : "\n";
         out += entry;
+    }
+    return out;
+}
+
+std::string joined(CSSTable table) {
+    return joined(wr::profile::table(table));
+}
+
+std::string joined(MarkupTable table) {
+    return joined(wr::profile::table(table));
+}
+
+const char* actionName(ElementAction action) {
+    switch (action) {
+    case ElementAction::Keep:
+        return "keep";
+    case ElementAction::Span:
+        return "span";
+    case ElementAction::Div:
+        return "div";
+    case ElementAction::Drop:
+        return "drop";
+    }
+    return "?";
+}
+
+/// html.elements as "name:action" lines, sorted by name.
+std::string joinedActions() {
+    std::string out;
+    for (const wr::profile::NamedElementAction& entry : wr::profile::htmlElementActions()) {
+        out += out.empty() ? "" : "\n";
+        out += std::string(entry.name) + ":" + actionName(entry.action);
     }
     return out;
 }
@@ -59,10 +93,27 @@ WR_TEST(testTheTablesAreTheProfiles) {
         {CSSTable::PseudoClasses, "j([...c.pseudoClasses, ...Object.keys(c.pseudoRewrite)])"},
         {CSSTable::PseudoElements, "j(c.pseudoElements)"},
         {CSSTable::ImageTypes, "j(p.tables.images)"},
+        {CSSTable::AtRules, "j(c.atRules)"},
+        {CSSTable::MediaTypes, "j(c.mediaTypes)"},
+        {CSSTable::MediaFeatures, "j(c.mediaFeatures)"},
     };
     for (const auto& row : rows) {
         CHECK_EQ(joined(row.table), env.eval(row.source));
     }
+    const struct {
+        MarkupTable table;
+        const char* source;
+    } markupRows[] = {
+        {MarkupTable::HTMLAttributes, "j(p.tables.html.attributes)"},
+        {MarkupTable::HTMLAttributePrefixes, "j(p.tables.html.attributePrefixes)"},
+        {MarkupTable::SVGElements, "j(p.tables.svg.elements.map(s => s.toLowerCase()))"},
+        {MarkupTable::SVGAttributes, "j(p.tables.svg.attributes.map(s => s.toLowerCase()))"},
+    };
+    for (const auto& row : markupRows) {
+        CHECK_EQ(joined(row.table), env.eval(row.source));
+    }
+    CHECK_EQ(joinedActions(), env.eval("j(Object.entries(p.tables.html.elements).map(([k, v]) => k + ':' + v))"));
+    CHECK_EQ(std::string(wr::profile::defaultFont()), env.eval("c.fonts.default"));
     CHECK_EQ(std::to_string(wr::profile::kVersion), env.eval("String(p.profile)"));
 }
 
@@ -77,4 +128,47 @@ WR_TEST(testTheLookups) {
     CHECK(contains(CSSTable::PseudoClasses, "disabled"));
     CHECK(contains(CSSTable::ImageTypes, "image/png"));
     CHECK(wr::profile::kVersion == 1);
+}
+
+WR_TEST(testTheMarkupLookups) {
+    using namespace wr::profile;
+    CHECK(htmlElementAction("font") == ElementAction::Span);
+    CHECK(htmlElementAction("center") == ElementAction::Div);
+    CHECK(htmlElementAction("input") == ElementAction::Drop);
+    CHECK(htmlElementAction("div") == ElementAction::Keep);
+    CHECK(!htmlElementAction("style"));
+    CHECK(!htmlElementAction("my-widget"));
+    CHECK(unknownHTMLAction() == ElementAction::Span);
+    CHECK(svgElementName("lineargradient") == std::optional<std::string_view>("linearGradient"));
+    CHECK(!svgElementName("clippath"));
+    CHECK(svgAttributeName("viewbox") == std::optional<std::string_view>("viewBox"));
+    CHECK(fontAlias("blinkmacsystemfont") == std::optional<std::string_view>("system-ui"));
+    CHECK(fontFallback("ui-rounded") == std::optional<std::string_view>("sans-serif"));
+    CHECK(defaultFont() == "system-ui");
+    CHECK(pseudoRewrite("enabled") == std::optional<std::string_view>(":not([disabled])"));
+    CHECK(pseudoRewrite("disabled") == std::optional<std::string_view>("[disabled]"));
+    CHECK(positionRewrite("-webkit-sticky") == std::optional<std::string_view>("relative"));
+    CHECK(overflowRewrite("overlay") == std::optional<std::string_view>("hidden"));
+    CHECK(contains(CSSTable::AtRules, "-webkit-keyframes"));
+    CHECK(!contains(CSSTable::AtRules, "layer"));
+    CHECK_EQ(joined(CSSTable::MediaTypes), std::string("all\nscreen"));
+    CHECK(table(CSSTable::MediaFeatures).size() == 9);
+    CHECK(contains(MarkupTable::HTMLAttributes, "colspan"));
+    CHECK(!contains(MarkupTable::HTMLAttributes, "align"));
+    CHECK(contains(MarkupTable::SVGAttributes, "viewbox"));
+}
+
+// Plan OP1: two lists the reference keeps outside profile.json (css-sanitizer.ts:62-72, allowlist.ts:63-66).
+WR_TEST(testTheTwoReferenceLists) {
+    CHECK_EQ(joined(MarkupTable::TextAttributes), std::string("alt\nlabel\nplaceholder\ntitle\nvalue"));
+    CHECK_EQ(joined(MarkupTable::CSSValuedSVGAttributes),
+             std::string("clip-path\ncolor\ncursor\nfill\nfilter\nflood-color\nlighting-color\nmarker\nmarker-end\n"
+                         "marker-mid\nmarker-start\nmask\nstop-color\nstroke"));
+}
+
+WR_TEST(testTheProfileIsTheTables) {
+    HostEnv env;
+    CHECK_EQ(env.eval("String(TelegramWidget.profile)"), std::to_string(wr::profile::kVersion));
+    CHECK_EQ(env.eval("String(TelegramWidget.isProfileAtLeast(" + std::to_string(wr::profile::kVersion) + "))"),
+             std::string("true"));
 }

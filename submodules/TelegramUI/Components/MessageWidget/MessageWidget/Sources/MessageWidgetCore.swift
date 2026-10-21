@@ -47,6 +47,14 @@ final class MessageWidgetCore {
     /// The running core task's kind: what a work-limit stop names.
     private var kind: WidgetSnapshot.Kind = .boot
     private var bridgeCalls: [MessageWidgetInstance.BridgeCall] = []
+    private var storageCommits: [MessageWidgetInstance.StorageCommit] = []
+    /// Where the commits go: posted to main by the task itself, so the commits of a task running when its widget was
+    /// destroyed and released still arrive (an area the widget reached is kept; spec D5 drops its presentation only).
+    private let commitSink: MessageWidgetInstance.StorageCommitSink
+    /// The stored areas the session reads at the widget's first touch of each (SDK v1 §3.1).
+    private let storage: MessageWidgetStorage
+    /// The restart policy stopped the widget for good (SDK v1 §5.7): its boot makes no session.
+    private let startsStopped: Bool
     private var diagnostics: [(kind: String, detail: String)] = []
     private var diagnosticCount = 0
     private var lastError: String?
@@ -72,8 +80,11 @@ final class MessageWidgetCore {
     /// Tests only: the loads the renderer refused (it fetches nothing), as of the last task; -1 without a session.
     private(set) var refusedLoads = -1
 
-    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", timers: MessageWidgetTimers, scale: CGFloat) {
+    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
         self.source = source
+        self.commitSink = commitSink
+        self.storage = storage
+        self.startsStopped = startsStopped
         self.stoppedLabel = stoppedLabel
         self.maxMessageLength = maxMessageLength
         self.locale = locale
@@ -120,6 +131,17 @@ final class MessageWidgetCore {
         let wantsFrame = self.state == .live && self.session?.wantsAnimationFrame() == true
         let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent)
         self.bridgeCalls.removeAll()
+        if !self.storageCommits.isEmpty {
+            // Posted before the snapshot is handed over, so they reach main ahead of the snapshot's bridge calls.
+            let commits = self.storageCommits
+            let sink = self.commitSink
+            DispatchQueue.main.async {
+                for commit in commits {
+                    sink.callback?(commit)
+                }
+            }
+            self.storageCommits.removeAll()
+        }
         self.diagnostics.removeAll()
         return snapshot
     }
@@ -134,14 +156,23 @@ final class MessageWidgetCore {
             self.bootBudget = budgets.boot
             self.taskBudget = budgets.task
         }
+        if self.startsStopped {
+            // §5.7: stopped twice in a row; the badge alone, and none of the widget's code runs.
+            let renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
+            renderer.freeze(label: self.stoppedLabel)
+            self.renderer = renderer
+            self.state = .frozen("Stopped twice in a row")
+            return
+        }
         let delegate = SessionDelegate(core: self)
-        guard let session = WRSession(width: width, dark: theme == .dark, scale: self.scale, delegate: delegate) else {
+        guard let session = WRSession(width: width, dark: theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, scale: self.scale, delegate: delegate) else {
             self.appendDiag("core-error", "the widget runtime could not be created")
             self.state = .failedToStart
             return
         }
         self.sessionDelegate = delegate
         session.setLocale(self.locale)
+        session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
         // A document starts visible; a hidden one is hidden by a task that runs before the boot's scripts.
@@ -191,7 +222,7 @@ final class MessageWidgetCore {
             return
         }
         session.setWorkLimitAfter(self.taskBudget)
-        session.setDark(theme == .dark)
+        session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 
@@ -427,6 +458,16 @@ final class MessageWidgetCore {
         }
     }
 
+    /// SDK v1 §3.2: an area the task changed, posted to main at the task's end.
+    fileprivate func storageCommit(_ area: String, entries: [[String]]) {
+        guard let area = MessageWidgetStorageArea(rawValue: area) else {
+            return
+        }
+        self.storageCommits.append(MessageWidgetInstance.StorageCommit(area: area, entries: entries.compactMap { pair in
+            pair.count == 2 ? MessageWidgetStorage.Entry(key: pair[0], value: pair[1]) : nil
+        }))
+    }
+
     /// The runtime posts a link call only once it has checked the URL (SDK v1 §2.5) and the press allowed it; the host
     /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). Any other
     /// method is ignored.
@@ -481,5 +522,9 @@ private final class SessionDelegate: NSObject, WRSessionDelegate {
 
     func session(_ session: WRSession, didWork totalUnits: UInt64) {
         self.core?.addWork(totalUnits)
+    }
+
+    func session(_ session: WRSession, storageCommit area: String, entries: [[String]]) {
+        self.core?.storageCommit(area, entries: entries)
     }
 }

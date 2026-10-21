@@ -355,7 +355,11 @@ std::string value(const Source& s, std::string_view name) {
         return color(css.get_bg().m_color, css);
     }
     if (name == "background-image") {
-        return css.get_bg().m_image.empty() ? "none" : std::string();
+        // litehtml's initial value is one empty layer, never an empty list (V4 plan, Task 3b: css.url.remote reads none
+        // for a declaration the profile dropped).
+        const auto& images = css.get_bg().m_image;
+        const bool none = std::all_of(images.begin(), images.end(), [](const auto& image) { return image.is_empty(); });
+        return none ? "none" : std::string();
     }
     if (name == "opacity") {
         return number(css.get_opacity());

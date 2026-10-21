@@ -197,7 +197,7 @@ WR_TEST(testDetachedBuildsAreNotJournaled) {
     // clone, a fragment and innerHTML. None of it is in the rendered tree, so none of it is journaled.
     CHECK_EQ(env.env().eval("const d = document.createElement('div');"
                             "for (let i = 0; i < 1000; i++) { const s = document.createElement('span');"
-                            " s.setAttribute('a', i); d.appendChild(s); s.setAttribute('b', i); s.className = 'c';"
+                            " s.setAttribute('data-a', i); d.appendChild(s); s.setAttribute('data-b', i); s.className = 'c';"
                             " s.textContent = 't'; s.firstChild.data = 'u'; }"
                             "d.setAttribute('x', '1'); d.cloneNode(true).setAttribute('y', '2');"
                             "const f = document.createDocumentFragment(); f.append(d.cloneNode(true));"
@@ -215,7 +215,7 @@ WR_TEST(testDetachedBuildsAreNotJournaled) {
     CHECK_EQ(env.render().buildCount(), builds);
     CHECK_EQ(env.render().patchCount(), uint64_t(1));
     CHECK_EQ(env.render().journalNodes(), size_t(0));
-    CHECK_EQ(countOf(env.render().renderInput(), "<span a=\"999\" b=\"999\" class=\"c\">u</span>"), size_t(1));
+    CHECK_EQ(countOf(env.render().renderInput(), "<span data-a=\"999\" data-b=\"999\" class=\"c\">u</span>"), size_t(1));
 }
 
 WR_TEST(testJournalCollapses) {

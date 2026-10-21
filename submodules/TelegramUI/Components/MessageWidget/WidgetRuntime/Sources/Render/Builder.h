@@ -54,6 +54,7 @@
 #include <litehtml/document.h>
 #include <litehtml/element.h>
 
+#include "Sources/Host/MarkupPolicy.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/PlatformObject.h"
 #include "Sources/Support/Values.h"
@@ -262,8 +263,11 @@ std::string renderEscapedText(std::string_view utf8);
 /// Throws Thrown (a charge) or std::bad_alloc.
 RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, bool keepInput,
                                          std::string* startTag);
-/// Whether Ruling 4 leaves `element` out of the rendered tree (by its local name): such an element, and its subtree,
-/// are never in the build, so a change to them is never rendered. Charges the name.
+/// What the renderer's copy of `element` is (V4 plan, Task 4): profile 1's one decision (MarkupPolicy.h), read by the
+/// build, both patches and the render input. Charges the name.
+markup::RenderTag renderTagOf(JSContext* ctx, const Element& element);
+/// Whether the profile leaves `element` out of the rendered tree: such an element, and its subtree, are never in the
+/// build, so a change to them is never rendered. Charges the name.
 bool renderElementIsUnrendered(JSContext* ctx, const Element& element);
 
 /// Adds the kinds `container` reported since its beginBuild that `limits` does not have yet, by Ruling 7's names

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "Sources/Render/DataUrl.h"
 #include "Sources/Render/RenderDump.h"
 #include "Sources/Render/RenderHost.h"
 #include "Sources/Render/WidgetContainer.h"
@@ -155,11 +156,14 @@ WR_TEST(testLoadsAreRefused) {
     container.link(document, document->root());
     CHECK_EQ(container.refusedLoads(), ++refused);
 
-    // Through a document: an <img>, a background, a stylesheet <link> (import_css, then link) and @import.
+    // Through a document: an <img>, a background, a stylesheet <link> (import_css, then link) and @import. The profile
+    // drops the @import rule and the remote background before any load is asked for (V4 plan, Task 3b).
     litehtml::document::ptr loads = layOut(container,
         "<style>@import url(http://x/i.css);</style><link rel=stylesheet href=//x/l.css><img src=http://x/i.png>"
-        "<div style='width:10px;height:10px;background-image:url(http://x/b.png)'></div>");
-    CHECK(container.refusedLoads() >= refused + 6);
+        "<div id=bg style='width:10px;height:10px;background-image:url(http://x/b.png)'></div>");
+    CHECK(container.refusedLoads() >= refused + 4);
+    litehtml::element::ptr bg = loads->root()->select_one("#bg");
+    CHECK(bg && bg->css().get_bg().m_image.size() == 1 && bg->css().get_bg().m_image[0].is_empty());
     // An empty source asks for nothing: it is not counted (LHContainer's refuse_request does not count it either).
     uint64_t beforeEmpty = container.refusedLoads();
     container.load_image("", nullptr, true);
@@ -212,17 +216,50 @@ WR_TEST(testDataImagesDecodeOnce) {
         CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/png"}));
         CHECK_EQ(container.refusedLoads(), uint64_t(0));
 
-        // A GIF, and an SVG the fake cannot decode: the host is handed each type's essence.
+        // A GIF: the host is handed the type's essence.
         container.beginBuild();
         container.get_image_size("data:image/gif;base64,R0lGODlhBQAHAAAAACw=", nullptr, size);
         CHECK(float(size.width) == 5 && float(size.height) == 7);
-        container.get_image_size("data:image/svg+xml;charset=utf-8,<svg/>", nullptr, size);
-        CHECK(isZero(size));
         container.endBuild();
-        CHECK(host.decodedMimeTypes ==
-              (std::vector<std::string>{"image/png", "image/png", "image/gif", "image/svg+xml"}));
+        CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/png", "image/gif"}));
     }
     CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore);
+}
+
+/// V4 plan, Task 6: only profile 1's image types decode (RB §3.2); the 48 px placeholder is the one SVG the host is
+/// ever handed, and a widget's own internal URL is refused like any other.
+WR_TEST(testOnlyProfileImagesDecode) {
+    FakeRenderHost host;
+    wr::WidgetContainer container(host, options(300, 0));
+    container.beginBuild();
+    uint64_t refused = 0;
+    for (const char* url : {"data:image/svg+xml,<svg/>", "data:image/bmp;base64,Qk0=", "data:image/x-icon;base64,AAAB",
+                            "#frag"}) {
+        litehtml::size size(7, 7);
+        container.get_image_size(url, nullptr, size);
+        CHECK_EQ(container.refusedLoads(), ++refused);
+        CHECK(isZero(size));
+    }
+    CHECK(host.decodedMimeTypes.empty());
+    litehtml::size size;
+    container.get_image_size(kPng3x2, nullptr, size);
+    CHECK(float(size.width) == 3 && float(size.height) == 2);
+    container.get_image_size(std::string(wr::WidgetContainer::kPlaceholderURL).c_str(), nullptr, size);
+    CHECK(float(size.width) == 48 && float(size.height) == 48);
+    CHECK(!host.decodedMimeTypes.empty() && host.decodedMimeTypes.back() == "image/svg+xml");
+    CHECK_EQ(container.refusedLoads(), refused);
+    // The DOM's decode follows the same predicate.
+    CHECK(!container.decodeImageUncached("data:image/svg+xml,<svg/>").has_value());
+    std::optional<wr::DecodedImage> placeholder = container.decodeImageUncached(wr::WidgetContainer::kPlaceholderURL);
+    CHECK(placeholder && placeholder->width == 48 && placeholder->height == 48);
+    container.endBuild();
+    // Byte for byte the reference's (widget-sandbox v0.1.0 url-policy.ts; RB §3.5).
+    std::optional<wr::DataUrl> reference = wr::parseDataUrl(
+        "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2248%22%20height%3D%2248%22"
+        "%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20width%3D%2248%22%20height%3D%2248%22%20fill%3D%22%238882%22%2F%3E%3Cpath"
+        "%20d%3D%22M8%2036l10-12%208%209%206-7%208%2010z%22%20fill%3D%22%238886%22%2F%3E%3Ccircle%20cx%3D%2233%22%20cy%3D%2215%22"
+        "%20r%3D%224%22%20fill%3D%22%238886%22%2F%3E%3C%2Fsvg%3E");
+    CHECK(reference && std::string(reference->bytes.begin(), reference->bytes.end()) == wr::WidgetContainer::placeholderSVG());
 }
 
 WR_TEST(testFontsAreCachedAcrossBuilds) {

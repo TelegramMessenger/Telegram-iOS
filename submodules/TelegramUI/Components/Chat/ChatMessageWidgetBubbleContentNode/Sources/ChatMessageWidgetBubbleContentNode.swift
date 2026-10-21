@@ -15,6 +15,7 @@ import ChatControllerInteraction
 import MessageWidget
 import UnsupportedContentPill
 import WallpaperBackgroundNode
+import MessageWidgetStorage
 
 /// Whether widget messages render as widgets: the client's own flag (Debug Settings ▸ "Widget messages"; widget-sandbox
 /// v0.1.0, integration.md "Enabling") on and the app-config kill switch off. Off, a widget message shows as unsupported
@@ -62,11 +63,17 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
-                // Off screen, a widget's timers and frames pause.
+                // Off screen, a widget's timers and frames pause, and its storage is written now (§5.4).
                 self.registry.setVisible(self.visibility != .none)
+                if self.visibility == .none, let storageSink = self.storageSink {
+                    MessageWidgetStorageStore.shared.flush(storageSink.key)
+                }
             }
         }
     }
+    /// Where the widget of the message the last pass laid out commits its storage (SDK v1 §5.4); its key is also the
+    /// one the writes on hide and teardown flush.
+    private var storageSink: MessageWidgetStorageSink?
 
     required public init(lottieSettings: LottieRenderingSettings) {
         self.registry = MessageWidgetRegistry()
@@ -113,8 +120,14 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 // A widget's URL is never shown to the user, and opening it reveals the user's IP address to that
                 // host (a t.me link is resolved over the network as well), so the "Open link?" confirmation must
                 // always appear: no `message:` (with one, ChatController skips it when the message's author or its
-                // forward source is verified) and `forceConcealed`. A confirmed t.me link opens in the app.
-                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: true, forceConcealed: true))
+                // forward source is verified) and `forceConcealed`. A confirmed t.me link opens in the app. SDK v1
+                // §5.2: the confirmation shows the whole URL, and only one is shown at a time; a link that comes
+                // while one is up is dropped.
+                MessageWidgetLinkDialog.shared.request { displayUpdated in
+                    item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: true, forceConcealed: true, fullUrl: true, alertDisplayUpdated: { controller in
+                        displayUpdated(controller)
+                    }))
+                }
             case let .haptic(kind, value):
                 // SDK v1 §2.6, as Mini Apps play them (WebAppController's web_app_trigger_haptic_feedback).
                 switch (kind, value) {
@@ -154,12 +167,19 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         // A widget's runtime is main-thread only. A node is normally released on main, but one built by an off-main
         // layout can be released there, so hand the teardown to main rather than run it here.
         let registry = self.registry
-        if Thread.isMainThread {
+        let storageKey = self.storageSink?.key
+        // The widget's storage is written now (§5.4); a commit its last task made reaches the store after this and
+        // is written after the store's short delay.
+        let teardown = {
             registry.destroyAll()
-        } else {
-            Queue.mainQueue().async {
-                registry.destroyAll()
+            if let storageKey {
+                MessageWidgetStorageStore.shared.flush(storageKey)
             }
+        }
+        if Thread.isMainThread {
+            teardown()
+        } else {
+            Queue.mainQueue().async(teardown)
         }
     }
 
@@ -220,8 +240,28 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     registry.maxMessageLength = Int(item.context.userLimits.maxMessageLength)
                     // SDK v1 §2.9: the app's UI language (a code the runtime cannot read as BCP 47 becomes en-US).
                     registry.locale = item.presentationData.strings.baseLanguageCode
-                    // Another message's stable id (the node was recycled) destroys the runtime.
-                    registry.beginPass(ownerId: heightKey, theme: item.presentationData.theme.theme.overallDarkAppearance ? .dark : .light)
+                    // SDK v1 §2.8 and §5.4: the widget's storage is this message's, kept by the store and written into the
+                    // message's derived data; where the id is not the message's own (the admin log, a preview) it stays
+                    // in memory, apart from the message's. One sink per message (stable id), following its id from
+                    // pending to sent; set on every pass, for widgets made in it.
+                    let persists = messageWidgetStoragePersists(associatedData: item.associatedData, isPreview: item.presentationData.isPreview)
+                    let storageKey = MessageWidgetStorageStore.Key(accountPeerId: item.context.account.peerId, message: item.message.id, persists: persists)
+                    let storageWriter: MessageWidgetStorageWriter? = persists ? MessageWidgetEngineStorageWriter(engine: item.context.engine) : nil
+                    let storageSink: MessageWidgetStorageSink
+                    if let current = self?.storageSink, current.owner == heightKey {
+                        current.update(key: storageKey, writer: storageWriter)
+                        storageSink = current
+                    } else {
+                        storageSink = MessageWidgetStorageSink(owner: heightKey, key: storageKey, writer: storageWriter)
+                        self?.storageSink = storageSink
+                    }
+                    registry.storage = MessageWidgetStorageStore.shared.preload(storageKey, storedAttributes: item.message.attributes)
+                    registry.onStorageCommit = { commit in
+                        storageSink.commit(commit)
+                    }
+                    // Another message's stable id (the node was recycled) destroys the runtime. SDK v1 §2.3, §5.1: the
+                    // chat's palette.
+                    registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                     // Not asked when it may not run: the pass then ends with no widget, which destroys a running one
                     // (the flag was just turned off).
                     if renderable {
@@ -453,4 +493,17 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         }
         return nil
     }
+}
+
+/// SDK v1 §5.4 (V2b plan, Task 9): whether a widget's storage is written for its message. Not in the admin log, whose
+/// message ids are synthetic and could name an unrelated real message, nor in a preview (a chat preview, a forward or
+/// reply preview), which shows a message under a borrowed context; there it is kept in memory only.
+public func messageWidgetStoragePersists(associatedData: ChatMessageItemAssociatedData, isPreview: Bool) -> Bool {
+    if associatedData.isRecentActions || isPreview {
+        return false
+    }
+    if let subject = associatedData.subject, case .messageOptions = subject {
+        return false
+    }
+    return true
 }

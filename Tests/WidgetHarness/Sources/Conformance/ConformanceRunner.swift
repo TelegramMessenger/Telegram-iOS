@@ -62,8 +62,9 @@ public struct ConformanceRun {
 
 /// Runs widget-sandbox v0.1.0's conformance widgets through the app's widget path (CLIENTS.md, "The runner, step by
 /// step"): a `MessageWidgetInstance` with the app's pool and wait policy, its view in the harness's window so it is
-/// visible and gets its frames, and a stand-in chat input that has the focus before the widget loads. Several runs go
-/// at once (`runAll`), each its own widget: most of today's widgets never publish and would each hold the 20 s wait.
+/// visible and gets its frames, and a stand-in chat input that has the focus before the widget loads. `runAll` runs one
+/// widget at a time by default: widgets running together share the pool's two threads, so a timing check (two
+/// animationiteration events of a 0.1 s animation) depended on which pages ran beside it rather than on the runtime.
 /// Main thread.
 public final class ConformanceRunner {
     public static let defaultWidth: CGFloat = 390.0
@@ -119,7 +120,7 @@ public final class ConformanceRunner {
     }
 
     /// Every (test, theme) of `tests`, `concurrency` at a time; the runs in the order given.
-    public func runAll(_ tests: [ConformanceTest], width: CGFloat = ConformanceRunner.defaultWidth, timeout: TimeInterval = ConformanceRunner.defaultTimeout, concurrency: Int = 6) -> [ConformanceRun] {
+    public func runAll(_ tests: [ConformanceTest], width: CGFloat = ConformanceRunner.defaultWidth, timeout: TimeInterval = ConformanceRunner.defaultTimeout, concurrency: Int = 1) -> [ConformanceRun] {
         return self.runAll(tests.flatMap { test in test.themes.map { (test, $0) } }, width: width, timeout: timeout, concurrency: concurrency)
     }
 

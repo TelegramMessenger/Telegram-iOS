@@ -186,6 +186,11 @@ namespace litehtml
                     {
                         break;
                     }
+                    // Telegram (VENDOR.md edit 29.3): an @media rule the container refuses is dropped with its rules.
+                    if(!doc->container()->sanitize_media_query(rule->prelude))
+                    {
+                        break;
+                    }
                     auto new_media = media;
                     auto mq_list   = parse_media_query_list(rule->prelude, doc);
                     // An empty media query list evaluates to true.
@@ -209,7 +214,13 @@ namespace litehtml
                         break;
                     }
                     auto condition = normalize(rule->prelude, f_componentize);
+#if 0
                     if(eval_supports_condition(condition, doc->container()))
+#else
+                    // Telegram (VENDOR.md edit 29.4): the container may answer @supports itself (-1: litehtml decides).
+                    const int answer = doc->container()->evaluate_supports(condition);
+                    if(answer < 0 ? eval_supports_condition(condition, doc->container()) : answer != 0)
+#endif
                     {
                         parse_css_stylesheet(rule->block.value, baseurl, doc, media, false);
                     }
@@ -287,7 +298,31 @@ namespace litehtml
     {
         // The prelude of the qualified rule is parsed as a <selector-list>. If this returns failure, the entire style
         // rule is invalid.
+#if 0
         auto list = parse_selector_list(rule->prelude, strict_mode, doc->mode());
+#else
+        // Telegram (VENDOR.md edit 29.2): the container may erase or rewrite the list's comma groups; the kept groups,
+        // rejoined, are parsed strictly as before (parse_selector_list splits them again unchanged), so a malformed one
+        // still drops the whole rule.
+        css_selector::vector list;
+        {
+            std::vector<css_token_vector> groups = parse_comma_separated_list(rule->prelude);
+            doc->container()->sanitize_selector_list(groups);
+            if(!groups.empty())
+            {
+                css_token_vector joined;
+                for(size_t i = 0; i < groups.size(); i++)
+                {
+                    if(i)
+                    {
+                        joined.push_back(css_token(COMMA));
+                    }
+                    joined.insert(joined.end(), groups[i].begin(), groups[i].end());
+                }
+                list = parse_selector_list(joined, strict_mode, doc->mode());
+            }
+        }
+#endif
         if(list.empty())
         {
             css_parse_error("invalid selector");

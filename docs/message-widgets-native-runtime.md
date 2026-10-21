@@ -15,6 +15,8 @@ side. V1 changed three runtime facts recorded below: the host sheet is the spec 
 is clamped to 50…600, and there is no source cap. V1 also re-vendored widget-sandbox at tag v0.1.0 (237 listed
 files, 99 attacks, 19 compat, 9 out-of-profile, and the conformance set); the corpus suites pass on it, but the
 measurements below (230 documents, 93 attacks) were taken on the earlier corpus and are not re-measured.
+Since V4 (2026-10-21) profile 1 is enforced on the renderer's copy of the document, never on the DOM: "Profile 1 is
+the renderer's" under M1c's invariants, which replaces M1c's "there is no validator".
 The old runtime (widget-sandbox's JavaScript shim and trusted validator, `MessageWidgetEngine`, `WidgetDOM` and the
 ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14). Until M2 to M4, a widget that needs what is not
 built yet renders or behaves less well than it did: "What regresses until M2 to M4", below. M1a built:
@@ -91,6 +93,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 | `…/WidgetRuntime/Sources/Animation/`, `IDL/web-animations.webidl`, `Sources/Support/Promises.*`, `third-party/wpt/web-animations` | V5e: Web Animations (the objects, easing, interpolation and timing, the per-runtime `AnimationState` with the update step and the sampler) and its WPT; `Sources/Animation/PROVENANCE.md` lists what is ported from where |
 | `…/WidgetRuntime/Sources/Animation/CSS*.{h,cpp}`, `IDL/css-animations.webidl`, `third-party/wpt/css/css-{animations,transitions}` | V5f: CSS animations and transitions (the `@keyframes` and declaration parsers, `CSSAnimation`/`CSSTransition`, the style-change step and the events) and the event interfaces' WPT |
 | `…/WidgetRuntime/Sources/Host/{CSSNamespace,CSSSupports,Profile}.*`, `ProfileTables.inc`, `IDL/generate-profile-tables.py`, `Sources/DOM/CSSComponents.*`, `third-party/widget-sandbox/profile/profile.json` | V5c: the `CSS` namespace, profile 1's tables and their generator, and the component-value pipeline shared with the selector parser |
+| `…/WidgetRuntime/Sources/Host/{CSSPolicy,MarkupPolicy}.*`, `third-party/twidget` edit 29 | V4: profile 1 on the renderer's copy: the CSS verdicts the fork's hooks ask for, and the element and attribute rules |
 | `…/WidgetRuntime/Tests/{URLDataTests.cpp,url-data-expected-failures.txt}`, `third-party/wpt/url/resources/` | V5b: WPT's URL data through `URL` (`:WidgetRuntimeURLDataTests`), and the cases it still fails |
 | `…/WidgetRuntime/Sources/Runtime/PairIterators.cpp` | V5a: WebIDL pair iterators (`iterable<K, V>`), with the generator's adapters |
 | `…/WidgetRuntime/Sources/DOM/StyleDeclaration.*`, `IDL/cssom.webidl`, `IDL/css-properties.txt` | M1d: `element.style`. `IDL/cssom-properties.webidl` and `Sources/DOM/CSSProperties.inc` are generated from the property list by `IDL/generate-css-properties.py` and checked in |
@@ -147,23 +150,45 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     for the scheme; one frozen object until the next change. The root gets `--tg-theme-<key>` and `--tg-color-scheme`
     as `!important` declarations after its own style attribute (twidget edit 26: parsed on their own, so no sheet, no
     root style and no unclosed construct in one replaces them). A change of scheme or of any completed colour updates
-    all of it at once and then fires `themeChanged`; anything else fires nothing. The iOS host passes no palette yet
-    (V2b), so a widget sees the defaults for the chat's scheme.
+    all of it at once and then fires `themeChanged`; anything else fires nothing. The iOS host (V2b) passes the chat's
+    palette with the scheme, at creation (so the first build has it) and on every change, one theme change
+    (`HostState::setTheme`): the bubble's `messageWidgetTheme` maps the incoming bubble's colours to every key (a colour
+    with alpha composited over the bubble). With it come §2.4's button tokens (`ThemeButtonTokens`, each checked against
+    its grammar, set on the root as `--tg-button-*`), which the profile's UA stylesheet reads; the master sheet carries
+    that sheet unlayered and without `:where()` (it loses to every author rule anyway), so a `<button>` the widget did
+    not style is the client's solid button.
   - *Links* (`Links.cpp`, §2.5): `openLink`/`openTelegramLink` check the URL as the reference's `checkLink` does and
     throw `TypeError` for anything else; the host gets it normalised (scheme and host lowercase, non-ASCII after the
     host as UTF-8 escapes). A checked call is posted only while a trusted press dispatches, one call per press, on a
     visible widget (below); otherwise it is dropped with `activation-blocked`. An `<a href>` and `window.open` go to
     `openTelegramLink` for t.me, telegram.me and telegram.dog, to `openLink` for another valid URL, and are ignored with
     `navigation-blocked` otherwise; `window.open` returns null. The bubble confirms both kinds before opening
-    (`forceConcealed`: a t.me link is resolved over the network too).
+    (`forceConcealed`: a t.me link is resolved over the network too), shows the whole URL (§5.2), and shows one
+    confirmation at a time: `MessageWidgetLinkDialog`, told by `openUserGeneratedUrl`'s `alertDisplayUpdated` which
+    confirmation appeared and when it goes, drops a widget link that comes while one is up. It holds the confirmation
+    weakly, so one that was never presented (its chat had left the window) or went by a path that does not report it
+    stops blocking once released.
   - *Haptics* (§2.6): `HapticFeedback`'s three methods return it, throw `TypeError` for an unknown style or type, and
     post `haptic` only while the widget is visible and the reference's bucket (5, refilled at 10 per second, on the
     step's clock) has a token; a drop is reported as `haptic-limit` at most once a second. The bubble plays them as
     Mini Apps do.
   - *Storage* (`Storage.cpp`, §2.8): `localStorage` and `sessionStorage` over `Host::storageArea`, 16,384 bytes of
     UTF-8 keys and values per area, committed through `Host::storageCommit` at the end of the step that changed them,
-    after its rendering update (a media query's change listener or a ResizeObserver callback may write). The iOS host
-    keeps nothing yet (V2b).
+    after its rendering update (a media query's change listener or a ResizeObserver callback may write). A stored area
+    over the quota is dropped whole (`storage-rejected`, §3.1), and nothing is committed once the widget has stopped.
+    The client's half (V2b, `MessageWidgetStorage`): `MessageWidgetStorageStore` keeps every shown widget's latest areas
+    per (account, message) and writes `local` into the message's `DerivedDataMessageAttribute["widgetStorage"]` 1 s
+    after the widget's last commit and at once on hide, teardown, background and terminate; `session` stays in memory
+    until the app restarts. A widget built again before its write lands reads its last commit, and the commits of the
+    task running when its widget is destroyed still arrive (the core posts them itself). Deletion with the message, the
+    chat or the account is the row's own; "Clear cache" (Storage Usage's whole-cache clear, whatever categories) empties
+    every message an account index (`ApplicationSpecificPreferencesKeys.messageWidgetStorageIndex`) lists. In the admin
+    log and in previews the storage is kept in memory only, under keys of its own (`persists: false`). Each message's
+    widget commits through one `MessageWidgetStorageSink` per stable id, which follows the message from its local id to
+    its cloud id when it is sent (a forwarded copy renders while pending first).
+  - *Restarts* (§5.7, `MessageWidgetRestartPolicy`): a stopped widget is built again the next time its bubble is shown;
+    after 2 stops in a row (per message and source, in memory) it is made `startsStopped`, the badge alone with none of
+    its code run, until the app restarts or the message gets new HTML.
   - *Locale* (§2.9): `navigator.language` is the host's (`HostState::setLocale`, `WRSession setLocale:`, the bubble's
     `strings.baseLanguageCode`), `navigator.languages` a fresh frozen `[language]`; a tag that is not BCP 47-shaped or
     is longer than 35 characters is `en-US`. `Intl` does not exist yet (V5).
@@ -263,14 +288,29 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 
 ### M1c's invariants (rendering)
 
-- **There is no validator.** Nothing in `WidgetRuntime` rewrites, allowlists or sanitizes content. The only content
-  rules are what is not rendered (above) and the render limits (below). `WidgetContainer` keeps litehtml's
-  allow-everything sanitize hooks, and the build never calls `sanitize_element`. A change that adds a rewrite step
-  contradicts D12.
+- **Profile 1 is the renderer's, never the DOM's** (V4, 2026-10-21; it replaces M1c's "there is no validator"). The
+  widget's DOM keeps everything it wrote, and script reads it back unchanged; what litehtml gets follows widget-sandbox
+  v0.1.0's validator, ported as rules from its tables, not as code. One decision per rule, read alike by a rebuild, the
+  in-place patches and the render input:
+  - **elements:** `markup::renderTagFor` (`Sources/Host/MarkupPolicy.*`): kept, rendered as an inert `span` or `div`
+    carrying `data-tg-tag` (legacy, unknown, `dialog`, a second `body`), or dropped with its subtree (form controls but
+    `button`, media, embedding, `progress`, `meter`, an HTML `title`);
+  - **attributes:** `markup::renderAttribute`, applied in `scanAttributes`: `on*` and malformed names dropped, data-* and
+    aria-* kept, the rest by the namespace's table; an `a[href]` is its fragment, or `#` with `data-tg-link` for an
+    external or empty one (a tap still reads the DOM's href); an SVG `use` or gradient `href` must be a fragment; every
+    other URL attribute is dropped; `data-tg-*` is the host's;
+  - **CSS:** twidget edit 29's hooks, answered by `css::policy` (`Sources/Host/CSSPolicy.*`) with four verdicts (keep,
+    augment, rewrite, drop) for a declaration, a selector group, an `@media` query, an `@supports` condition and a
+    value after `var()` substitution; `CSS.supports` gives the same verdict. litehtml's, the UA and the host sheets
+    are trusted and pass whole (`trusted_styles`), and the caches are keyed on the sanitizer key;
+  - **images:** `css::policy::imageSourceKept` (PNG, JPEG, GIF or WebP `data:` URLs) in layout and in
+    `HTMLImageElement::state` alike; a refused `<img src>`, the empty one included, renders the 48 px placeholder
+    (`WidgetContainer::kPlaceholderURL`, `placeholderSVG`) with `data-tg-placeholder`, and the element loads at 48 × 48.
+  A hook is a pure function of its text and posts no diagnostic.
 - **The container is the only way out.** litehtml has no I/O of its own: every load is a container callback
-  (`load_image`, `get_image_size`, `draw_image`, `import_css`, `link`). `WidgetContainer` accepts `data:` images whose
-  type is `image/*` and refuses and counts everything else, and `RenderHost` is never handed a URL, only the decoded
-  bytes of an accepted image. Nothing in the runtime or the libraries compiled into it opens a URL, a file or a socket:
+  (`load_image`, `get_image_size`, `draw_image`, `import_css`, `link`). `WidgetContainer` accepts `data:` images of
+  profile 1's types and the placeholder (V4), and refuses and counts everything else, and `RenderHost` is never handed
+  a URL, only the decoded bytes of an accepted image; the placeholder is the one SVG it is ever handed. Nothing in the runtime or the libraries compiled into it opens a URL, a file or a socket:
   `testNoIOInTheRuntime` scans 313 source files for it (a text scan, not a proof: its known gaps are in M1b's carry-over, in `feature/message-widgets`' history),
   `testAttackCorpusLoadsNothing` runs the 93 attack documents and `testLoadsAreRefused` pins each path. The fork's SVG
   painter never loads an `<image>` (`testAttackCorpusLoadsNothing` prints that a nested `data:` image is not decoded).
@@ -398,7 +438,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 - **The `CSS` namespace** (V5c, `Sources/Host/CSSNamespace.cpp`, `CSSSupports.cpp`): a lazy global, hand-built as
   `Intl` is (the generator skips WebIDL namespaces), with `escape` and `supports` as enumerable data properties and the
   class string `"CSS"`. `CSS.escape` is CSSOM's "serialize an identifier". `CSS.supports` answers from profile 1's
-  tables, as decision D23 says: `true` only when the validator keeps the declaration as written. The two-argument form
+  tables, as decision D23 says: `true` when the profile keeps the declaration, as written or augmented (V4: the verdict
+  `css::policy` gives the renderer's hooks). The two-argument form
   checks the property (in the profile, or custom), every function, unit and `url()` of the value (a `url()` only as a
   `#fragment` or a `data:` URL of a profile image type), then the profile's value rules: `display` and `position`
   from their tables; the values the validator rewrites (`sticky`, `overflow: auto|scroll|overlay`), `background-clip:
@@ -659,7 +700,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 | Tap slop | 8 CSS px on either axis | `Taps.h` `kTapSlop` | the move is not delivered; once past it, no click | the old renderer's |
 | Bridge calls | a method name of at most 64 characters; a link at most 4,096 UTF-8 bytes (the runtime's 256 is the real bound) | `MessageWidgetCore.bridge`, `MessageWidgetInstance.maximumLinkLength` | `bridge-ignored`, `bridge-refused` | the old core's policies |
 | Diagnostics | 500 per core | `MessageWidgetCore` | dropped | the old core's |
-| `data:` images | a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; SVG through `LHCreateSVGImage` (2 MiB of markup, every non-`data:` URL inside refused) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
+| `data:` images | profile 1's types only (V4); a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; the placeholder's SVG through `LHCreateSVGImage` (the only SVG the host is handed) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
 | Tiles | 128 pt; one image each, at most 4,096 px a side; a size change redraws every tile | `WidgetFrame.swift`, `LayerTreePainter.mm` | — | as before |
 
 The resulting transient-heap bounds:
@@ -753,9 +794,9 @@ device.
 
 Spec §10 lists every intended difference from the old runtime and from the specs, including the ones M1a to M1d added
 (§10.1 and §10.3). There is no comparison harness (the amended D5): the list is the record, and WPT and the corpus are
-the gates. M1c's are the ones the validator's removal makes: unknown elements, attributes, `a[href]` and refused
-images render as the DOM holds them, the validator's diagnostics are gone, a theme change re-themes `style` attributes
-and SVG presentation colours, and a `<style>`'s sheet is its Text children only.
+the gates. M1c's were the ones the validator's removal made; since V4 profile 1 decides the renderer's copy again
+(M1c's invariants), so what remains of them is that the validator's diagnostics are gone, a theme change re-themes
+`style` attributes and SVG presentation colours, and a `<style>`'s sheet is its Text children only.
 
 M1d's, from the old runtime (spec §10.1):
 - **A frozen widget does not reflow.** It keeps its last tree, drawn at its own layout and clipped to a new width, and
@@ -789,9 +830,6 @@ M1d's, from the old runtime (spec §10.1):
   data fails 7 cases, none of them IDNA: `Tests/url-data-expected-failures.txt`); `TextDecoder` knows UTF-8 only; `EvalError` and
   `URIError` clone as `Error`; a `DataView` is a `DataCloneError`; `[Clamp]` and `[EnforceRange]` are not applied
   (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
-- **`@supports` in a stylesheet is not yet the profile's** (V5c): `CSS.supports` answers from the profile's tables, but
-  a stylesheet's `@supports` blocks are still litehtml's until V4's validator decides them from the same tables, so
-  the two can disagree (`at.supports` stays failing).
 - **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
   `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
   `supportedValuesOf` are absent; a resolved locale drops its `-u-` extension (the `numberingSystem` and `calendar`
@@ -821,7 +859,7 @@ fail:
 - `Chart is not defined` (5) and `d3 is not defined` (2) (M3). The app installs no script loader, so all 9 files that
   load Chart.js or D3 by URL get `script-skipped`, and 2 of them throw nothing; `compat/three-js.html` loads three.js,
   which was never bundled;
-- `localStorage is not defined` (3; Web Storage came in V2a, kept in memory by the runtime until V2b's host);
+- `localStorage is not defined` (3; Web Storage came in V2a, persisted by the client since V2b);
 - `fetch is not defined` (1): never, since a widget cannot fetch.
 
 CSS transitions and animations do not run (V5f; `element.animate()` runs since V5e), and the observers are absent (M2; the geometry queries and

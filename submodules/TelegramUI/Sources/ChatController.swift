@@ -148,6 +148,7 @@ import GlobalControlPanelsContext
 import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
 import TextProcessingScreen
+import OpenUserGeneratedUrl
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -3390,7 +3391,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let performOpenURL = strongSelf.performOpenURL {
                 if !urlData.forceConcealed { performOpenURL(message, url, progress) } // a link that must be confirmed (a widget's) gets no preview fetched here
             } else {
-                strongSelf.openUrl(url, concealed: concealed, forceConcealed: urlData.forceConcealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
+                strongSelf.openUrl(url, concealed: concealed, forceConcealed: urlData.forceConcealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress, fullUrl: urlData.fullUrl, alertDisplayUpdated: urlData.alertDisplayUpdated)
             }
         }, openExternalInstantPage: { [weak self] instantPage in
             guard let self else {
@@ -10091,6 +10092,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         message: Message? = nil,
         allowInlineWebpageResolution: Bool = false,
         progress: Promise<Bool>? = nil,
+        fullUrl: Bool = false,
+        alertDisplayUpdated: ((ViewController?) -> Void)? = nil,
         commit: @escaping () -> Void = {}
     ) {
         self.commitPurposefulAction()
@@ -10123,11 +10126,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let disposable = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
+            let disposable = OpenUserGeneratedUrl.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id, progress: progress, forceExternal: forceExternal, concealed: concealed, commit: commit)
-            }, progress: progress, alertDisplayUpdated: nil, concealedAlertOption: nil)
+            }, progress: progress, alertDisplayUpdated: alertDisplayUpdated, concealedAlertOption: nil, fullUrl: fullUrl)
             self.navigationActionDisposable.set(disposable)
         }, performAction: true)
     }

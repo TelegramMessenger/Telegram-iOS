@@ -125,6 +125,25 @@ namespace litehtml
         virtual bool sanitize_at_rule(const std::string& /*name*/) { return true; }
         virtual void sanitizer_limit(const char* /*what*/) {}
         virtual void trusted_styles(bool /*trusted*/) {}
+        // Telegram (VENDOR.md edit 29): the profile hooks (WidgetRuntime's V4 policy). Every default keeps litehtml's
+        // behaviour, so a container overriding none of them (LHContainer) is unchanged.
+        // 29.1: a declaration as it is added; may rewrite its name, value or importance; false drops it.
+        virtual bool profile_declaration(std::string& name, css_token_vector& value, bool& /*important*/)
+        {
+            return sanitize_declaration(name, value);
+        }
+        // 29.2: a style rule's selector list, one comma group each; may erase or rewrite groups (none left: the rule is
+        // dropped). The kept groups are parsed strictly as before.
+        virtual void sanitize_selector_list(std::vector<css_token_vector>& /*groups*/) {}
+        // 29.3: an @media prelude, or a <style media> attribute; false drops the rule or the sheet.
+        virtual bool sanitize_media_query(const css_token_vector& /*prelude*/) { return true; }
+        // 29.4: an @supports condition: 1 true, 0 false, -1 litehtml's own evaluation.
+        virtual int evaluate_supports(const css_token_vector& /*condition*/) { return -1; }
+        // 29.6: a non-custom declaration's value after var() substitution; may rewrite it; false drops it.
+        virtual bool profile_substituted(const std::string& /*name*/, css_token_vector& /*value*/) { return true; }
+        // 29.7: mixed into the declaration, author-sheet and master-sheet cache keys, so containers whose hooks differ
+        // never share a cached parse.
+        virtual uint32_t sanitizer_key() const { return 0; }
         virtual bool controls_active() const { return false; }
         virtual web_color control_accent() const { return web_color(0, 122, 255); }
 

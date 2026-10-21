@@ -5,8 +5,11 @@
 #include <cmath>
 #include <limits>
 
+#include <litehtml/css_parser.h>
+
 #include "Sources/Animation/CSSText.h"
 #include "Sources/Animation/KeyframeEffect.h"
+#include "Sources/Host/CSSPolicy.h"
 #include "Sources/Support/Work.h"
 
 namespace wr::animation {
@@ -175,50 +178,11 @@ std::optional<double> parseTimeMs(std::string_view raw) {
     return std::nullopt;
 }
 
-void parseKeyframesRules(JSContext* ctx, std::string_view sheet, CSSKeyframesRules& into) {
-    charge(ctx, uint64_t(sheet.size()) * work::kCssByte);
-    JSRuntime* rt = JS_GetRuntime(ctx);
-    constexpr std::string_view kKeyword = "keyframes";
-    size_t pos = 0;
-    for (;;) {
-        size_t at = std::string_view::npos;
-        for (size_t i = pos; i + kKeyword.size() <= sheet.size(); i++) {
-            if (equalsIgnoringCase(sheet.substr(i, kKeyword.size()), kKeyword)) {
-                at = i;
-                break;
-            }
-        }
-        if (at == std::string_view::npos) {
-            return;
-        }
-        const std::string_view before = sheet.substr(0, at);
-        const size_t open = sheet.find('{', at + kKeyword.size());
-        const bool rule = (before.size() >= 1 && before.back() == '@') || endsWithIgnoringCase(before, "@-webkit-");
-        if (!rule || open == std::string_view::npos) {
-            pos = at + kKeyword.size();
-            continue;
-        }
-        std::string name = trimmed(sheet.substr(at + kKeyword.size(), open - at - kKeyword.size()));
-        while (!name.empty() && (name.front() == '"' || name.front() == '\'')) {
-            name.erase(name.begin());
-        }
-        while (!name.empty() && (name.back() == '"' || name.back() == '\'')) {
-            name.pop_back();
-        }
-        int depth = 0;
-        size_t close = std::string_view::npos;
-        for (size_t i = open; i < sheet.size(); i++) {
-            if (sheet[i] == '{') {
-                depth++;
-            } else if (sheet[i] == '}' && --depth == 0) {
-                close = i;
-                break;
-            }
-        }
-        if (close == std::string_view::npos) {
-            return;
-        }
-        const std::string_view body = sheet.substr(open + 1, close - open - 1);
+namespace {
+
+/// One @keyframes rule: `body` is its block's text, the keyframe rules.
+void addKeyframesRule(JSContext* ctx, JSRuntime* rt, std::string name, std::string_view body, CSSKeyframesRules& into) {
+    {
         auto frames = std::allocate_shared<CSSKeyframesRule>(JSAllocator<CSSKeyframesRule>(rt), JSAllocator<CSSKeyframe>(rt));
         size_t p = 0;
         for (;;) {
@@ -263,8 +227,45 @@ void parseKeyframesRules(JSContext* ctx, std::string_view sheet, CSSKeyframesRul
         }
         std::stable_sort(frames->begin(), frames->end(), [](const CSSKeyframe& a, const CSSKeyframe& b) { return a.offset < b.offset; });
         into[name] = std::move(frames);
-        pos = close + 1;
     }
+}
+
+/// The @keyframes rules of `rules`, entering an @media or @supports the profile keeps (V4 plan, Task 3b): the verdicts
+/// are the ones litehtml's container hooks give the same rules, so an animation can name only a rule the renderer kept.
+/// Keyframes inside a kept @media apply whether it matches now or not (plan OP5). Recursion is bounded by litehtml's
+/// component nesting (twidget edit 14).
+void collectKeyframes(JSContext* ctx, JSRuntime* rt, const litehtml::raw_rule::vector& rules, CSSKeyframesRules& into) {
+    for (const litehtml::raw_rule::ptr& rule : rules) {
+        if (rule->type != litehtml::raw_rule::at || rule->block.type != litehtml::CURLY_BLOCK) {
+            continue;
+        }
+        const std::string at = lowered(rule->name);
+        if (at == "keyframes" || at == "-webkit-keyframes") {
+            std::string name = trimmed(litehtml::get_repr(rule->prelude));
+            while (!name.empty() && (name.front() == '"' || name.front() == '\'')) {
+                name.erase(name.begin());
+            }
+            while (!name.empty() && (name.back() == '"' || name.back() == '\'')) {
+                name.pop_back();
+            }
+            addKeyframesRule(ctx, rt, std::move(name), litehtml::get_repr(rule->block.value), into);
+        } else if (at == "media") {
+            if (css::policy::mediaQueryInProfile(rule->prelude)) {
+                collectKeyframes(ctx, rt, litehtml::css_parser::parse_stylesheet(rule->block.value, false), into);
+            }
+        } else if (at == "supports") {
+            if (css::policy::supportsCondition(litehtml::normalize(rule->prelude, litehtml::f_componentize))) {
+                collectKeyframes(ctx, rt, litehtml::css_parser::parse_stylesheet(rule->block.value, false), into);
+            }
+        }
+    }
+}
+
+} // namespace
+
+void parseKeyframesRules(JSContext* ctx, std::string_view sheet, CSSKeyframesRules& into) {
+    charge(ctx, uint64_t(sheet.size()) * work::kCssByte);
+    collectKeyframes(ctx, JS_GetRuntime(ctx), litehtml::css_parser::parse_stylesheet(std::string(sheet), true), into);
 }
 
 Vector<Keyframe> keyframesFor(JSContext* ctx, const CSSKeyframesRule& rule, const std::shared_ptr<const Easing>& animationEasing) {

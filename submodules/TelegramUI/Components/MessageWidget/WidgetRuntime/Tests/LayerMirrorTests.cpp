@@ -3,6 +3,8 @@
 // reported at its own mutation points, with nothing compared. Task 4's recorder is the oracle: a mirror flattens to what
 // WidgetContainer::record paints, less what no painting node owns (Ruling E37).
 #include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <functional>
@@ -336,7 +338,40 @@ bool flattensAsRecorded(RenderEnv& env, const std::string& what) {
     return true;
 }
 
-// The published mirror equals a freshly built one: kinds, keys, order, origins, passes, clip chains and content.
+// Two dumps alike but for float noise: the same text, and every number within 1/1000 px. Positions are floats (pixel_t),
+// about 6e-5 px apart near 1,000 px, and a Box a Frame operation moved keeps its content's offsets as they were captured
+// against its old origin, where a fresh mirror subtracts the new one: 5.33334 against 5.33333.
+bool sameButForFloatNoise(const std::string& a, const std::string& b) {
+    auto isNumberStart = [](const std::string& s, size_t i) {
+        return std::isdigit(static_cast<unsigned char>(s[i])) ||
+               ((s[i] == '-' || s[i] == '.') && i + 1 < s.size() && std::isdigit(static_cast<unsigned char>(s[i + 1])));
+    };
+    size_t i = 0;
+    size_t j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (isNumberStart(a, i) && isNumberStart(b, j)) {
+            size_t ai = 0;
+            size_t bj = 0;
+            const double x = std::stod(a.substr(i, 32), &ai);
+            const double y = std::stod(b.substr(j, 32), &bj);
+            if (std::fabs(x - y) > 1e-3) {
+                return false;
+            }
+            i += ai;
+            j += bj;
+            continue;
+        }
+        if (a[i] != b[j]) {
+            return false;
+        }
+        i++;
+        j++;
+    }
+    return i == a.size() && j == b.size();
+}
+
+// The published mirror equals a freshly built one: kinds, keys, order, origins, passes, clip chains and content (numbers
+// up to float noise).
 bool equalsAFreshMirror(RenderEnv& env, const std::string& what, std::shared_ptr<const LayerTree>* fresh = nullptr) {
     std::shared_ptr<const LayerTree> tree = env.render().layerTree();
     std::shared_ptr<const LayerTree> rebuilt = env.render().freshMirrorForTesting();
@@ -348,7 +383,7 @@ bool equalsAFreshMirror(RenderEnv& env, const std::string& what, std::shared_ptr
     }
     const std::string ours = wr::dumpMirror(*tree->mirror());
     const std::string theirs = wr::dumpMirror(*rebuilt->mirror());
-    if (ours != theirs) {
+    if (!sameButForFloatNoise(ours, theirs)) {
         size_t at = 0;
         while (at < ours.size() && at < theirs.size() && ours[at] == theirs[at]) {
             at++;
@@ -964,6 +999,19 @@ WR_TEST(testAMovedClipperClipsWhatItHolds) {
           now.at(runId)->clips[0].box.y.value() > run->clips[0].box.y.value());
     CHECK(flattensAsRecorded(env, "the clipper moved"));
     CHECK(equalsAFreshMirror(env, "the clipper moved"));
+}
+
+// A table row paints its cells' backgrounds itself (draw_background): a text change in another row that widens a column
+// moves and resizes the row's cells without changing the row, and the row's own paint is captured again (found by
+// testOpsMatchAFreshMirror's seed 4 once profile 1 dropped the fixture's inputs, V4 plan, Task 4).
+WR_TEST(testARowRepaintsWhenItsCellsMove) {
+    RenderEnv env("<!doctype html><style>td{padding:2px}</style><body style='margin:0'><table>"
+                  "<tr style='background:#ccc'><td>a</td><td>b</td></tr><tr><td id=w>c</td><td>d</td></tr></table></body>");
+    const uint64_t patches = env.render().patchCount();
+    edit(env, "document.getElementById('w').firstChild.data = 'a much wider first column'");
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    CHECK(flattensAsRecorded(env, "a column widened"));
+    CHECK(equalsAFreshMirror(env, "a column widened"));
 }
 
 // A table paints every caption before any row (render_item_table::draw_children), so in its context a caption that

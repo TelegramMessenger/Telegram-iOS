@@ -19,15 +19,23 @@ void Storage::load(JSContext* ctx) {
     }
     m_loaded = true;
     JSRuntime* rt = JS_GetRuntime(ctx);
-    for (const auto& [key, value] : Runtime::from(ctx).host().storageArea(m_area)) {
-        // The client stores what it got; the quota is the framework's (§5.4), so an area past it is cut where it passes.
-        if (m_bytes + key.size() + value.size() > kStorageQuotaBytes) {
-            break;
-        }
+    Host& host = Runtime::from(ctx).host();
+    const std::vector<std::pair<std::string, std::string>> stored = host.storageArea(m_area);
+    // The client stores what it got and the quota is the framework's (§5.4): a preload past it is dropped whole, with
+    // storage-rejected, and the widget starts empty (§3.1).
+    size_t bytes = 0;
+    for (const auto& [key, value] : stored) {
         charge(ctx, work::kNodeVisit + work::kCssByte * uint64_t(key.size() + value.size()));
-        m_entries.push_back(Entry{Text(key.begin(), key.end(), JSAllocator<char>(rt)), Text(value.begin(), value.end(), JSAllocator<char>(rt))});
-        m_bytes += key.size() + value.size();
+        bytes += key.size() + value.size();
     }
+    if (bytes > kStorageQuotaBytes) {
+        host.diagnostic("storage-rejected", m_area + ": the stored area is over the quota");
+        return;
+    }
+    for (const auto& [key, value] : stored) {
+        m_entries.push_back(Entry{Text(key.begin(), key.end(), JSAllocator<char>(rt)), Text(value.begin(), value.end(), JSAllocator<char>(rt))});
+    }
+    m_bytes = bytes;
 }
 
 int Storage::find(JSContext* ctx, const std::string& key) {
@@ -160,7 +168,9 @@ bool Storage::deleteNamed(JSContext* ctx, const String& name) {
 }
 
 void Storage::commitIfChanged(JSContext* ctx) {
-    if (!m_changed) {
+    // Nothing is committed once the widget has stopped: the task that stopped it was cut short, so its writes are not a
+    // state the widget reached (V2b plan, Task 1).
+    if (!m_changed || Runtime::from(ctx).stopReason() != StopReason::None) {
         return;
     }
     m_changed = false;

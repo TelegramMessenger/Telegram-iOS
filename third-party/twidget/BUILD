@@ -156,6 +156,14 @@ cc_test(
     deps = [":litehtml_fork"],
 )
 
+# Host test of twidget edit 29 (VENDOR.md): the profile hooks a container answers (WidgetRuntime's V4 policy).
+cc_test(
+    name = "TwidgetProfileHooksTests",
+    srcs = ["tests/profile_hooks_test.cpp", "tests/test_container.h"],
+    copts = ["-std=gnu++17", "-w", "-Ithird-party/twidget/tests"],
+    deps = [":litehtml_fork"],
+)
+
 # Host test of twidget edit 14 (VENDOR.md): CSS component nesting is bounded, on a 512 KiB stack.
 cc_test(
     name = "TwidgetCssNestingTests",

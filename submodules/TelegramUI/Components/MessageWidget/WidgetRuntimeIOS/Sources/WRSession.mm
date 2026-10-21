@@ -38,6 +38,56 @@ NSString* text(std::string_view s) {
     return [[NSString alloc] initWithBytes:s.data() length:s.size() encoding:NSUTF8StringEncoding] ?: @"";
 }
 
+std::string utf8(NSString* s) {
+    return std::string(s.UTF8String ?: "");
+}
+
+/// SDK v1 §2.3: the palette as given, in key order (the runtime keeps a THEME_KEYS key with a #rrggbb value).
+wr::ThemePalette palette(NSDictionary<NSString*, NSString*>* params) {
+    wr::ThemePalette out;
+    for (NSString* key in [params.allKeys sortedArrayUsingSelector:@selector(compare:)]) {
+        id value = params[key];
+        if ([key isKindOfClass:[NSString class]] && [value isKindOfClass:[NSString class]]) {
+            out.emplace_back(utf8(key), utf8(value));
+        }
+    }
+    return out;
+}
+
+/// SDK v1 §2.4: the tokens as given (the runtime checks each against its grammar).
+wr::ThemeButtonTokens buttonTokens(NSDictionary<NSString*, id>* tokens) {
+    wr::ThemeButtonTokens out;
+    const auto string = [&](NSString* key) -> std::optional<std::string> {
+        id value = tokens[key];
+        return [value isKindOfClass:[NSString class]] ? std::optional<std::string>(utf8(value)) : std::nullopt;
+    };
+    const auto number = [&](NSString* key) -> std::optional<double> {
+        id value = tokens[key];
+        return [value isKindOfClass:[NSNumber class]] ? std::optional<double>([value doubleValue]) : std::nullopt;
+    };
+    out.bg = string(@"bg");
+    out.text = string(@"text");
+    out.radius = string(@"radius");
+    out.font = string(@"font");
+    out.padding = string(@"padding");
+    out.height = string(@"height");
+    out.pressedOpacity = number(@"pressedOpacity");
+    out.disabledOpacity = number(@"disabledOpacity");
+    return out;
+}
+
+/// [key, value] pairs, in order; a malformed entry is skipped.
+std::vector<std::pair<std::string, std::string>> pairs(NSArray<NSArray<NSString*>*>* entries) {
+    std::vector<std::pair<std::string, std::string>> out;
+    for (id entry in entries) {
+        if ([entry isKindOfClass:[NSArray class]] && [entry count] == 2 && [entry[0] isKindOfClass:[NSString class]] &&
+            [entry[1] isKindOfClass:[NSString class]]) {
+            out.emplace_back(utf8(entry[0]), utf8(entry[1]));
+        }
+    }
+    return out;
+}
+
 } // namespace
 
 /// The production wr::Host: CACurrentMediaTime's milliseconds as the monotonic clock (the `now` steps are given on),
@@ -51,6 +101,13 @@ public:
     void log(wr::LogLevel level, std::string_view line) override;
     void diagnostic(std::string_view kind, std::string_view detail) override;
     void bridgeCall(std::string_view method, std::string_view argsJson) override;
+    std::vector<std::pair<std::string, std::string>> storageArea(std::string_view area) override {
+        return area == "session" ? m_sessionPreload : area == "local" ? m_localPreload : std::vector<std::pair<std::string, std::string>>{};
+    }
+    void storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) override;
+    /// The client's stored areas (setStoragePreloadLocal:session:), read once at the widget's first touch of each.
+    std::vector<std::pair<std::string, std::string>> m_localPreload;
+    std::vector<std::pair<std::string, std::string>> m_sessionPreload;
     __weak WRSession* m_session;
     __weak id<WRSessionDelegate> delegate;
 };
@@ -140,6 +197,15 @@ struct Depth {
     } while (0)
 
 - (instancetype)initWithWidth:(CGFloat)width dark:(BOOL)dark scale:(CGFloat)scale delegate:(id<WRSessionDelegate>)delegate {
+    return [self initWithWidth:width dark:dark themeParams:@{} buttonTokens:@{} scale:scale delegate:delegate];
+}
+
+- (instancetype)initWithWidth:(CGFloat)width
+                         dark:(BOOL)dark
+                  themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
+                 buttonTokens:(NSDictionary<NSString*, id>*)tokens
+                        scale:(CGFloat)scale
+                     delegate:(id<WRSessionDelegate>)delegate {
     if (!(self = [super init])) {
         return nil;
     }
@@ -161,7 +227,7 @@ struct Depth {
         JSContext* ctx = _runtime->context();
         wr::installDOM(ctx, wr::Document::createHTML(ctx));
         // TelegramWidget.theme reads the host's theme, the scheme the render tree folds into the CSS its own.
-        wr::installHost(ctx).setInitialTheme(dark ? wr::Theme::Dark : wr::Theme::Light);
+        wr::installHost(ctx).setInitialTheme(dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens));
         wr::RenderOptions renderOptions;
         renderOptions.width = width;
         renderOptions.theme = dark ? wr::Theme::Dark : wr::Theme::Light;
@@ -386,6 +452,24 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
+- (void)setDark:(BOOL)dark themeParams:(NSDictionary<NSString*, NSString*>*)themeParams buttonTokens:(NSDictionary<NSString*, id>*)tokens {
+    WR_GUARD(, {
+        if (_runtime) {
+            JSContext* ctx = _runtime->context();
+            wr::HostState::of(ctx).setTheme(ctx, dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens));
+            wr::HostState::of(ctx).flushRender(ctx);
+            [self noteTree];
+        }
+    });
+}
+
+- (void)setStoragePreloadLocal:(NSArray<NSArray<NSString*>*>*)local session:(NSArray<NSArray<NSString*>*>*)session {
+    if (_host) {
+        _host->m_localPreload = pairs(local);
+        _host->m_sessionPreload = pairs(session);
+    }
+}
+
 - (void)setLocale:(NSString*)locale {
     WR_GUARD(, {
         if (_runtime) {
@@ -591,4 +675,17 @@ void WRProductionHost::diagnostic(std::string_view kind, std::string_view detail
 void WRProductionHost::bridgeCall(std::string_view method, std::string_view argsJson) {
     WRSession* session = m_session;
     [delegate session:session bridge:text(method) args:text(argsJson)];
+}
+
+void WRProductionHost::storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) {
+    WRSession* session = m_session;
+    id<WRSessionDelegate> d = delegate;
+    if (![d respondsToSelector:@selector(session:storageCommit:entries:)]) {
+        return;
+    }
+    NSMutableArray<NSArray<NSString*>*>* list = [NSMutableArray arrayWithCapacity:entries.size()];
+    for (const auto& [key, value] : entries) {
+        [list addObject:@[ text(key), text(value) ]];
+    }
+    [d session:session storageCommit:text(area) entries:list];
 }

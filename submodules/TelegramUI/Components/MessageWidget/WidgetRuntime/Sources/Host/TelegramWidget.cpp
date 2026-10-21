@@ -69,7 +69,7 @@ bool TelegramWidget::isProfileAtLeast(JSContext*, std::optional<Value> n) {
     }
     double value = 0;
     JS_ToFloat64(nullptr, &value, n->get());
-    return double(kWidgetProfile) >= value;
+    return double(profile::kVersion) >= value;
 }
 
 String TelegramWidget::colorScheme(JSContext* ctx) {

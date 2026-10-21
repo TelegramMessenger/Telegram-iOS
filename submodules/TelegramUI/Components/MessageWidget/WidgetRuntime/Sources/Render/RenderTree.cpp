@@ -9,10 +9,12 @@
 #include <utility>
 
 #include <litehtml.h>
+#include <litehtml/css_parser.h>
 #include <litehtml/el_svg.h>
 
 #include "Sources/Canvas/CanvasState.h"
 #include "Sources/DOM/DOM.h"
+#include "Sources/Host/CSSPolicy.h"
 #include "Sources/Host/HostState.h"
 #include "Sources/Render/LayerDiff.h"
 #include "Sources/Render/RenderDump.h"
@@ -521,6 +523,11 @@ bool RenderTree::matchesMedia(JSContext* ctx, const std::string& query, bool atL
     if (!m_current.document) {
         return false;
     }
+    // V4 plan, Task 3b: a query outside the profile's media types and features is false, as its @media rule is dropped:
+    // one walker for both (CSSPolicy.h).
+    if (!css::policy::mediaQueryInProfile(litehtml::normalize(query, litehtml::f_componentize))) {
+        return false;
+    }
     litehtml::media_features features;
     if (atLastReport) {
         features = m_reportedMedia;
@@ -932,6 +939,10 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                 if (!tag) {
                     return this->refused("not an html_tag");
                 }
+                // The tag the build made it with must still be the profile's answer (V4 plan, Task 4).
+                if (litehtml::lowcase(renderTagOf(ctx, element).tag) != litehtml::lowcase(tag->get_tagName())) {
+                    return this->refused("the rendered tag changed");
+                }
                 // The budget the other nodes leave this element (Ruling 7): a fresh build cuts at it.
                 const uint64_t others = bytes - entry.bytes;
                 AttributePlan plan;
@@ -973,6 +984,11 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                 return this->refused("not a Text");
             }
             auto found = m_current.nodes.find(&node);
+            // Text no build reads (inside an element the profile drops, or a <script>): its change renders nothing, as
+            // an unrendered element's attribute change does (V4 plan, Task 4: profile 1 drops every form control).
+            if (found == m_current.nodes.end() && !this->readByABuild(ctx, node)) {
+                continue;
+            }
             if (found == m_current.nodes.end() || found->second.pieces.empty()) {
                 return this->refused("an unmapped or empty Text");
             }
@@ -1380,6 +1396,10 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
                 return this->refused("the document's children");
             }
             auto found = m_current.nodes.find(&node);
+            // A parent no build reads (an element the profile drops, or one inside it): its children render nothing.
+            if (found == m_current.nodes.end() && !this->readByABuild(ctx, node)) {
+                continue;
+            }
             if (found == m_current.nodes.end() || !found->second.element || isStyleElement(*found->second.element)) {
                 return this->refused("a <style>'s children");
             }
@@ -2258,7 +2278,7 @@ void RenderTree::characterDataChanged(Node& node) {
 RenderTree& installRender(JSContext* ctx, RenderHost& host, RenderOptions options) {
     HostState& state = HostState::of(ctx);
     state.setInitialTheme(options.theme);
-    options.rootDeclarations = themeRootDeclarations(state.themeParams(), options.theme);
+    options.rootDeclarations = themeRootDeclarations(state.themeParams(), options.theme, state.buttonTokens());
     state.setRender(std::make_unique<RenderTree>(ctx, host, std::move(options)));
     return *state.render();
 }

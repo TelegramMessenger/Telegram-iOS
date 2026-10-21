@@ -156,8 +156,12 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         public var message: EngineRawMessage?
         public var allowInlineWebpageResolution: Bool
         public var progress: Promise<Bool>?
+        /// The confirmation shows the whole URL (SDK v1 §5.2, a message widget's link).
+        public var fullUrl: Bool
+        /// Told the confirmation when it appears and nil when it goes (a message widget's one-dialog guard).
+        public var alertDisplayUpdated: ((ViewController?) -> Void)?
 
-        public init(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
+        public init(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, fullUrl: Bool = false, alertDisplayUpdated: ((ViewController?) -> Void)? = nil) {
             self.url = url
             self.concealed = concealed
             self.forceConcealed = forceConcealed
@@ -165,6 +169,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
             self.message = message
             self.allowInlineWebpageResolution = allowInlineWebpageResolution
             self.progress = progress
+            self.fullUrl = fullUrl
+            self.alertDisplayUpdated = alertDisplayUpdated
         }
     }
     

@@ -88,6 +88,14 @@ namespace litehtml
         // Telegram (VENDOR.md edit 13): the colour scheme the container reports.
         case _prefers_color_scheme_:
             return compare(feat.color_scheme ? _dark_ : _light_);
+        // Telegram (VENDOR.md edit 29.5): the reduced-motion preference the container reports; in a boolean context,
+        // `(prefers-reduced-motion)`, only reduce matches.
+        case _prefers_reduced_motion_:
+            if(!op2 && op == u'≠' && value == static_cast<float>(_none_))
+            {
+                return feat.reduced_motion != 0;
+            }
+            return compare(feat.reduced_motion ? _reduce_ : _no_preference_);
         default:
             assert(0); // must never happen, unknown media features are handled in parse_media_feature
             return false;
@@ -473,6 +481,9 @@ namespace litehtml
 
         // Telegram (VENDOR.md edit 13): https://drafts.csswg.org/mediaqueries-5/#prefers-color-scheme
         {"prefers-color-scheme", {_discrete_, _keyword_, {_light_, _dark_}}       },
+
+        // Telegram (VENDOR.md edit 29.5): https://drafts.csswg.org/mediaqueries-5/#prefers-reduced-motion
+        {"prefers-reduced-motion", {_discrete_, _keyword_, {_no_preference_, _reduce_}}},
 
         ////////////////////////////////////////////////
         // 5. Display Quality Media Features

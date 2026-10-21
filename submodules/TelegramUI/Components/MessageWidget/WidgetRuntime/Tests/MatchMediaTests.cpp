@@ -154,3 +154,15 @@ WR_TEST(testAnOverlongQueryIsRefused) {
     unitsOf(env, "matchMedia(q).matches");
     CHECK(unitsOf(env, "matchMedia(q).matches") < 2000);
 }
+
+/// V4 plan, Task 3b: matchMedia and @media share the profile's walker; an out-of-profile query is false whatever the
+/// features say.
+WR_TEST(testMatchMediaFollowsTheProfile) {
+    RenderEnv env(kEmpty);
+    for (const char* query : {"(hover: hover)", "(pointer: fine)", "print", "(max-height: 9999px)", "(color)"}) {
+        CHECK_EQ(env.env().eval(std::string("String(matchMedia('") + query + "').matches)"), std::string("false"));
+    }
+    for (const char* query : {"(max-width: 9999px)", "(prefers-reduced-motion: no-preference)"}) {
+        CHECK_EQ(env.env().eval(std::string("String(matchMedia('") + query + "').matches)"), std::string("true"));
+    }
+}

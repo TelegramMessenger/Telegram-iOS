@@ -125,9 +125,10 @@ WR_TEST(testTextPatchFallsBack) {
     edit(env, "document.getElementById('p').firstChild.data = ''");
     CHECK_EQ(env.render().buildCount(), ++builds);
     expectMatchesRebuild(env, "empty");
-    // Text read by a form control.
+    // Text in an element profile 1 drops (an <option>, V4 plan, Task 4) renders nothing; text a form control reads
+    // rebuilds.
     edit(env, "document.getElementById('o').firstChild.data = 'two'");
-    CHECK_EQ(env.render().buildCount(), ++builds);
+    CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "option");
     edit(env, "document.getElementById('b').firstChild.data = 'stop'");
     CHECK_EQ(env.render().buildCount(), ++builds);

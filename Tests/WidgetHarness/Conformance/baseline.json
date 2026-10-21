@@ -36,7 +36,7 @@
       "html.el.table · th is bold and centred" : "pass"
     },
     "auto\/01-html-elements-c\/light" : {
-      "html.el.a-external · an external href never reaches the renderer (a[href^=https] does not match)" : "fail",
+      "html.el.a-external · an external href never reaches the renderer (a[href^=https] does not match)" : "pass",
       "html.el.a-external · it is still drawn as a link" : "fail",
       "html.el.a-fragment · a[href=#…] is a link (UA link colour, underline)" : "fail",
       "html.el.button · button has a box with padding" : "pass",
@@ -44,46 +44,46 @@
       "html.el.details · closed details is only as tall as its summary" : "pass",
       "html.el.details · open details shows its content" : "pass",
       "html.el.details · summary is a list item (disclosure marker)" : "fail",
-      "html.el.legacy · big becomes a span: normal size" : "fail",
-      "html.el.legacy · center becomes a div: no centring" : "fail",
-      "html.el.legacy · font becomes a span: color=red is dropped" : "fail",
+      "html.el.legacy · big becomes a span: normal size" : "pass",
+      "html.el.legacy · center becomes a div: no centring" : "pass",
+      "html.el.legacy · font becomes a span: color=red is dropped" : "pass",
       "html.el.legacy · nobr becomes a span: the text wraps" : "pass",
-      "html.el.legacy · strike becomes a span: not struck" : "fail",
-      "html.el.legacy · tt becomes a span: not monospace" : "fail",
-      "html.el.progress-meter · meter is dropped (no box)" : "fail",
-      "html.el.progress-meter · progress is dropped (no box)" : "fail",
+      "html.el.legacy · strike becomes a span: not struck" : "pass",
+      "html.el.legacy · tt becomes a span: not monospace" : "pass",
+      "html.el.progress-meter · meter is dropped (no box)" : "pass",
+      "html.el.progress-meter · progress is dropped (no box)" : "pass",
       "html.el.sub-sup · sub and sup are smaller" : "pass",
       "html.el.sub-sup · sub sits lower, sup higher" : "pass",
       "html.el.unknown · an unknown element renders inline" : "pass",
-      "html.el.unknown · it renders as an inert span: its type selector does not match" : "fail"
+      "html.el.unknown · it renders as an inert span: its type selector does not match" : "pass"
     },
     "auto\/02-attributes-images-a\/light" : {
-      "html.attr.contenteditable · contenteditable does not reach the renderer" : "fail",
+      "html.attr.contenteditable · contenteditable does not reach the renderer" : "pass",
       "html.attr.data-aria · aria-* reaches attribute selectors" : "pass",
       "html.attr.data-aria · data-* reaches attribute selectors" : "pass",
       "html.attr.dir · dir=auto with Hebrew text resolves to rtl" : "fail",
       "html.attr.dir · dir=rtl lays out inline boxes right to left" : "fail",
       "html.attr.dir · dir=rtl sets direction" : "fail",
-      "html.attr.draggable · draggable does not reach the renderer" : "fail",
+      "html.attr.draggable · draggable does not reach the renderer" : "pass",
       "html.attr.event-handlers · an inline onclick handler runs" : "pass",
       "html.attr.global · hidden hides" : "pass",
       "html.attr.global · lang reaches the renderer (:lang(ru))" : "fail",
       "html.attr.global · style attribute applies" : "pass",
-      "html.attr.legacy-presentational · align is dropped: no centring" : "fail",
-      "html.attr.legacy-presentational · bgcolor is dropped" : "fail",
-      "html.attr.legacy-presentational · border=1 is dropped" : "fail",
+      "html.attr.legacy-presentational · align is dropped: no centring" : "pass",
+      "html.attr.legacy-presentational · bgcolor is dropped" : "pass",
+      "html.attr.legacy-presentational · border=1 is dropped" : "pass",
       "html.attr.legacy-presentational · cellpadding is dropped" : "pass",
-      "html.attr.tabindex · tabindex does not reach the renderer" : "fail",
+      "html.attr.tabindex · tabindex does not reach the renderer" : "pass",
       "html.el.img · img inside picture is drawn" : "pass",
       "html.el.img · width\/height attributes size the image" : "pass"
     },
     "auto\/02-attributes-images-b\/light" : {
       "html.el.img · GIF decodes (naturalWidth 1)" : "pass",
       "html.el.img · PNG decodes (naturalWidth 2)" : "pass",
-      "html.el.img-other-formats · BMP is refused (placeholder, not the 2px image)" : "fail",
-      "html.el.img-other-formats · ICO is refused (placeholder, not the 2px image)" : "fail",
-      "html.el.img-remote · a remote image becomes the 48px placeholder" : "fail",
-      "html.el.img-svg · an SVG image is refused: the 48px placeholder (profile 1: out)" : "fail"
+      "html.el.img-other-formats · BMP is refused (placeholder, not the 2px image)" : "pass",
+      "html.el.img-other-formats · ICO is refused (placeholder, not the 2px image)" : "pass",
+      "html.el.img-remote · a remote image becomes the 48px placeholder" : "pass",
+      "html.el.img-svg · an SVG image is refused: the 48px placeholder (profile 1: out)" : "pass"
     },
     "auto\/03-layout-a\/light" : {
       "css.display.basic · a block fills the container width" : "pass",
@@ -135,13 +135,13 @@
       "css.overflow.clip · overflow: clip is computed" : "pass",
       "css.overflow.clip · overflow: hidden clips hit testing" : "pass",
       "css.overflow.clip · overflow: hidden is computed" : "pass",
-      "css.overflow.scroll · overflow: auto is neutralised to hidden" : "fail",
+      "css.overflow.scroll · overflow: auto is neutralised to hidden" : "pass",
       "css.position.fixed · fixed is placed against the bubble" : "pass",
       "css.position.relative-absolute · absolute: left\/top inside a relative parent" : "pass",
       "css.position.relative-absolute · inset: 0 fills the parent" : "pass",
       "css.position.relative-absolute · relative: left\/top shift the box" : "pass",
       "css.position.relative-absolute · right\/bottom anchor to the far edges" : "pass",
-      "css.position.sticky · sticky is neutralised to relative" : "fail",
+      "css.position.sticky · sticky is neutralised to relative" : "pass",
       "css.position.z-index · the higher z-index is on top" : "pass",
       "css.visibility · a hidden box keeps its size" : "pass",
       "css.visibility · visibility: hidden is skipped by hit testing" : "pass"
@@ -187,7 +187,7 @@
       "css.color.basic · named colour" : "fail",
       "css.color.basic · transparent" : "pass",
       "css.color.light-dark · light-dark() picks the chat theme" : "pass",
-      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "fail"
+      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
     },
     "auto\/05-colour-backgrounds-a\/light" : {
       "css.color.basic · #rgba hex" : "pass",
@@ -196,14 +196,14 @@
       "css.color.basic · named colour" : "fail",
       "css.color.basic · transparent" : "pass",
       "css.color.light-dark · light-dark() picks the chat theme" : "pass",
-      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "fail"
+      "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
     },
     "auto\/05-colour-backgrounds-b\/light" : {
       "css.background.basic · background-image keeps the data: image" : "fail",
       "css.background.basic · background-position" : "fail",
       "css.background.basic · background-repeat" : "fail",
       "css.background.basic · background-size" : "fail",
-      "css.url.remote · a remote url() never reaches the renderer" : "fail"
+      "css.url.remote · a remote url() never reaches the renderer" : "pass"
     },
     "auto\/06-text-fonts-a\/light" : {
       "css.font.basic · font shorthand" : "pass",
@@ -216,9 +216,9 @@
       "css.font.generic · monospace: i and M have the same advance" : "pass",
       "css.font.generic · serif and sans-serif are different faces" : "pass",
       "css.font.generic · system-ui renders" : "pass",
-      "css.font.named · a named family is dropped from the list (\"Times New Roman\", sans-serif → sans-serif)" : "fail",
-      "css.font.named · a named family is dropped: \"Courier New\" alone is not monospace" : "fail",
-      "css.font.ui-families · the validator adds a generic fallback (ui-monospace → …, monospace)" : "fail",
+      "css.font.named · a named family is dropped from the list (\"Times New Roman\", sans-serif → sans-serif)" : "pass",
+      "css.font.named · a named family is dropped: \"Courier New\" alone is not monospace" : "pass",
+      "css.font.ui-families · the validator adds a generic fallback (ui-monospace → …, monospace)" : "pass",
       "css.font.ui-families · ui-monospace: i and M have the same advance" : "pass",
       "css.font.ui-families · ui-rounded with a fallback renders" : "pass",
       "css.font.variant-numeric · font-feature-settings \"tnum\"" : "fail",
@@ -278,7 +278,7 @@
       "sel.first-letter-line · ::first-letter never matches" : "pass",
       "sel.first-letter-line · ::first-line never matches" : "pass",
       "sel.first-letter-line · ::marker never matches" : "pass",
-      "sel.focus · :focus never matches (no keyboard focus in v1)" : "fail",
+      "sel.focus · :focus never matches (no keyboard focus in v1)" : "pass",
       "sel.has · :has() never matches (profile 1: out)" : "pass",
       "sel.host-scoped · :scope at the top level matches nothing" : "pass",
       "sel.hover · :hover rules are kept and do not match without a pointer" : "pass",
@@ -298,7 +298,7 @@
       "at.container · @container is dropped (profile 1: out)" : "pass",
       "at.exotic · @scope is dropped" : "pass",
       "at.import-namespace · @import is dropped" : "pass",
-      "at.layer · @layer is dropped with its rules (profile 1: out)" : "fail",
+      "at.layer · @layer is dropped with its rules (profile 1: out)" : "pass",
       "at.media.color-scheme · matchMedia(prefers-color-scheme) agrees" : "pass",
       "at.media.color-scheme · prefers-color-scheme follows the chat theme" : "pass",
       "at.media.hover-pointer · @media (hover) is dropped and matchMedia answers false (profile 1: out)" : "pass",
@@ -314,17 +314,17 @@
       "at.nesting · a nested rule .a { .b {} } is dropped (profile 1: out)" : "pass",
       "at.nesting · rules after nested ones survive" : "pass",
       "at.property · @property is dropped: var(--pp) has no initial value (profile 1: out)" : "pass",
-      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "fail",
+      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "pass",
       "at.supports · @supports (display: flex) holds" : "pass",
       "at.supports · @supports (gap) holds" : "pass",
-      "at.supports · @supports with and\/not follows the profile" : "fail"
+      "at.supports · @supports with and\/not follows the profile" : "pass"
     },
     "auto\/08-at-rules\/light" : {
       "at.container · @container (min-width: 500px) does not apply either way" : "pass",
       "at.container · @container is dropped (profile 1: out)" : "pass",
       "at.exotic · @scope is dropped" : "pass",
       "at.import-namespace · @import is dropped" : "pass",
-      "at.layer · @layer is dropped with its rules (profile 1: out)" : "fail",
+      "at.layer · @layer is dropped with its rules (profile 1: out)" : "pass",
       "at.media.color-scheme · matchMedia(prefers-color-scheme) agrees" : "pass",
       "at.media.color-scheme · prefers-color-scheme follows the chat theme" : "pass",
       "at.media.hover-pointer · @media (hover) is dropped and matchMedia answers false (profile 1: out)" : "pass",
@@ -340,10 +340,10 @@
       "at.nesting · a nested rule .a { .b {} } is dropped (profile 1: out)" : "pass",
       "at.nesting · rules after nested ones survive" : "pass",
       "at.property · @property is dropped: var(--pp) has no initial value (profile 1: out)" : "pass",
-      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "fail",
+      "at.supports · @supports (3D transform) is false: 3D is out of the profile" : "pass",
       "at.supports · @supports (display: flex) holds" : "pass",
       "at.supports · @supports (gap) holds" : "pass",
-      "at.supports · @supports with and\/not follows the profile" : "fail"
+      "at.supports · @supports with and\/not follows the profile" : "pass"
     },
     "auto\/09-transforms-effects-a\/light" : {
       "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "fail",
@@ -566,28 +566,28 @@
     },
     "auto\/18-out-of-profile\/light" : {
       "html.el.dialog-popover · a popover stays inside the widget" : "pass",
-      "html.el.dialog-popover · a shown dialog stays where the widget put it" : "fail",
+      "html.el.dialog-popover · a shown dialog stays where the widget put it" : "pass",
       "html.el.dialog-popover · showModal does not put the dialog in the top layer (:modal never matches)" : "pass",
       "html.el.dialog-popover · showPopover does not open a top-layer popover" : "pass",
       "html.el.embedding · MathML is dropped" : "pass",
       "html.el.embedding · embed is dropped" : "pass",
       "html.el.embedding · iframe is dropped" : "pass",
       "html.el.embedding · object is dropped" : "pass",
-      "html.el.forms · checkbox is not drawn" : "fail",
-      "html.el.forms · fieldset is not drawn" : "fail",
+      "html.el.forms · checkbox is not drawn" : "pass",
+      "html.el.forms · fieldset is not drawn" : "pass",
       "html.el.forms · form submission never navigates (submit reaches the widget)" : "pass",
-      "html.el.forms · input type=text is not drawn" : "fail",
-      "html.el.forms · radio is not drawn" : "fail",
-      "html.el.forms · range is not drawn" : "fail",
-      "html.el.forms · select is not drawn" : "fail",
-      "html.el.forms · textarea is not drawn" : "fail",
+      "html.el.forms · input type=text is not drawn" : "pass",
+      "html.el.forms · radio is not drawn" : "pass",
+      "html.el.forms · range is not drawn" : "pass",
+      "html.el.forms · select is not drawn" : "pass",
+      "html.el.forms · textarea is not drawn" : "pass",
       "html.el.media · audio is dropped" : "pass",
       "html.el.media · video is dropped" : "pass",
-      "sel.form-state · :checked does not match (the control is gone)" : "fail"
+      "sel.form-state · :checked does not match (the control is gone)" : "pass"
     },
     "auto\/19-limits\/light" : {
       "behaviour.policy-strict · a 300 KB data-* attribute does not reach the renderer" : "fail",
-      "behaviour.policy-strict · attr() of a non-text attribute (class) is dropped" : "fail",
+      "behaviour.policy-strict · attr() of a non-text attribute (class) is dropped" : "pass",
       "behaviour.policy-strict · attr() of a text attribute (data-*) works" : "pass",
       "limit.text-budget · 3000 CJK characters render" : "pass",
       "limit.text-budget · past 8192 complex-script units in the document the text is refused" : "fail",
@@ -611,7 +611,7 @@
       "host · js.focus · focus() from the widget leaves the chat input focused" : "pass",
       "input.key-activation · Enter and Space add no clicks to a tapped button or link (one click each)" : "skip",
       "input.keyboard · no keydown, keyup, keypress, beforeinput or input event reaches the widget" : "skip",
-      "js.focus · focus() does not make :focus match in the renderer" : "fail"
+      "js.focus · focus() does not make :focus match in the renderer" : "pass"
     }
   }
 }

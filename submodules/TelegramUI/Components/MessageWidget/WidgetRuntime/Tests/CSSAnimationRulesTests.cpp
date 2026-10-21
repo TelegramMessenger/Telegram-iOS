@@ -1,5 +1,7 @@
 // CSS animations' rules and declarations (V5f plan, Task 1): @keyframes from a sheet, and the animation and transition
 // lists of an element's declarations, against the conformance set's own declarations (auto/10, visual/06).
+#include <vector>
+#include <algorithm>
 #include <cstdio>
 #include <map>
 #include <string>
@@ -95,6 +97,34 @@ WR_TEST(testKeyframesFromTheSheet) {
     checkText(describe(rules, "quoted"), "1:-{color=blue}");
     checkText(describe(rules, "legacy"), "1:-{left=4px}");
     checkText(describe(rules, "inner"), "1:-{top=1px}");
+}
+
+/// V4 plan, Task 3b (Review Focus 3): the sheet is read as litehtml parses it, through the profile's verdicts, so a
+/// @keyframes inside an at-rule the profile drops (or a false @supports) is no rule, and a commented one never was.
+/// Keyframes inside a kept @media apply whether it matches now or not (plan OP5).
+WR_TEST(testKeyframesFollowTheKeptAtRules) {
+    HostEnv env;
+    CSSKeyframesRules rules;
+    parseKeyframesRules(env.ctx(),
+                        "@layer x{@keyframes a{from{opacity:0}}}\n"
+                        "@media print{@keyframes b{from{opacity:0}}}\n"
+                        "@supports (display:flow-root){@keyframes c{from{opacity:0}}}\n"
+                        "@media (max-width:1px){@keyframes d{from{opacity:0}}}\n"
+                        "@supports (display:flex){@keyframes e{from{opacity:0}}}\n"
+                        "@keyframes f{from{opacity:0}}\n"
+                        "/* @keyframes g{from{opacity:0}} */\n"
+                        "@foo{@keyframes h{from{opacity:0}}}",
+                        rules);
+    std::vector<std::string> sorted;
+    for (const auto& [name, frames] : rules) {
+        sorted.emplace_back(name);
+    }
+    std::sort(sorted.begin(), sorted.end());
+    std::string names;
+    for (const std::string& name : sorted) {
+        names += (names.empty() ? "" : ",") + name;
+    }
+    checkText(names, "d,e,f");
 }
 
 WR_TEST(testAnimationShorthands) {

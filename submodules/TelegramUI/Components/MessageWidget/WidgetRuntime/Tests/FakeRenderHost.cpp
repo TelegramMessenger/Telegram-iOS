@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "Sources/Canvas/CanvasOps.h"
+#include "Sources/Render/WidgetContainer.h"
 
 namespace wr_test {
 
@@ -149,6 +150,27 @@ std::optional<wr::DecodedImage> FakeRenderHost::decodeImage(std::string_view mim
         // GIF: the logical screen descriptor's width and height (little-endian) after the 6-byte header.
         width = littleEndian16(bytes, 6);
         height = littleEndian16(bytes, 8);
+    } else if (mimeType == "image/svg+xml") {
+        // SVG: the root's width and height attributes, as whole numbers.
+        const std::string_view text(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        if (text != wr::WidgetContainer::placeholderSVG()) {
+            foreignSVGs++;
+        }
+        const size_t root = text.find("<svg");
+        const std::string_view tag = root == std::string_view::npos ? std::string_view() : text.substr(root, text.find('>', root) - root);
+        const auto attribute = [&](std::string_view name) {
+            const size_t at = tag.find(std::string(" ") + std::string(name) + "=\"");
+            double value = 0;
+            for (size_t i = at == std::string_view::npos ? tag.size() : at + name.size() + 3; i < tag.size() && tag[i] >= '0' && tag[i] <= '9'; i++) {
+                value = value * 10 + (tag[i] - '0');
+            }
+            return value;
+        };
+        width = attribute("width");
+        height = attribute("height");
+        if (width <= 0 || height <= 0) {
+            return std::nullopt;
+        }
     } else {
         return std::nullopt;
     }

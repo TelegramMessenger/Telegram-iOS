@@ -49,7 +49,8 @@ WR_TEST(testLoadAndErrorEvents) {
     CHECK_EQ(env.env().eval("log.join()"), std::string(""));
     env.env().drain();
     CHECK_EQ(env.env().eval("[log.join(), img.complete, img.naturalWidth].join('|')"), std::string("load|true|40"));
-    env.env().eval("img.src = 'https://example.com/a.png'; 1");
+    // A source the profile allows that does not decode: error.
+    env.env().eval("img.src = 'data:image/png;base64,AAAA'; 1");
     env.env().drain();
     CHECK_EQ(env.env().eval("[log.join(), img.complete, img.naturalWidth].join('|')"), std::string("load,error|true|0"));
     // Removing the source fires nothing.
@@ -69,9 +70,10 @@ WR_TEST(testDrawImageFromAnImage) {
         }
     }
     CHECK_EQ(log, std::string("image 40x20 -> 6,6 32x16 | image 40x20 -> 6,30 16x16 from 0,0 20x20 | image 40x20 -> 1,2 40x20"));
-    // No source: nothing to draw. A broken image: InvalidStateError (HTML's "check the usability of the image").
+    // No source: nothing to draw. A broken image (a profile type that does not decode): InvalidStateError (HTML's "check
+    // the usability of the image").
     CHECK_EQ(env.env().eval("var none = document.createElement('img'); var bad = document.createElement('img');"
-                            " bad.src = 'https://example.com/a.png';"
+                            " bad.src = 'data:image/png;base64,AAAA';"
                             " [err(() => x.drawImage(none, 0, 0)), err(() => x.drawImage(bad, 0, 0)),"
                             " err(() => x.createPattern(bad, 'repeat')), x.createPattern(i, 'repeat') instanceof CanvasPattern].join()"),
              std::string("ok,InvalidStateError,InvalidStateError,true"));
@@ -170,4 +172,63 @@ WR_TEST(testTheImageSweepIsAmortized) {
     if (last >= first * 3 / 2) {
         std::printf("  first 1000: %llu units, last 1000: %llu\n", (unsigned long long)first, (unsigned long long)last);
     }
+}
+
+namespace {
+
+// widget-sandbox v0.1.0 conformance/auto/02-attributes-images-b.html's i-svg, i-bmp and i-ico.
+const char* const kSVG10x8 =
+    "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%2F%3E";
+const char* const kBMP2x2 =
+    "data:image/bmp;base64,Qk1GAAAAAAAAADYAAAAoAAAAAgAAAAIAAAABABgAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAIjMAIjMAAAAiMwAiMwAAA==";
+const char* const kICO2x2 =
+    "data:image/x-icon;base64,AAABAAEAAgIAAAEAGABAAAAAFgAAACgAAAACAAAABAAAAAEAGAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAADMAIjMAIgAAMwAiMwAiAAAAAAAAAAAAAA=";
+
+} // namespace
+
+/// V4 plan, Task 6 (RB §8.5, §9 html.el.img-svg, img-other-formats, img-remote): a present src the profile refuses, the
+/// empty one included, is the 48 px placeholder: load, 48 × 48, complete. An allowed one decodes, or errors.
+WR_TEST(testARefusedSourceIsThePlaceholder) {
+    RenderEnv env(page(""));
+    const std::pair<std::string, std::string> rows[] = {
+        {"https://example.org/p.png", "load,48,48,true"},
+        {kSVG10x8, "load,48,48,true"},
+        {kBMP2x2, "load,48,48,true"},
+        {kICO2x2, "load,48,48,true"},
+        {"#x", "load,48,48,true"},
+        {"", "load,48,48,true"},
+        {kPNG, "load,40,20,true"},
+        {"data:image/png;base64,AAAA", "error,0,0,true"},
+    };
+    std::string wrong;
+    for (const auto& [src, want] : rows) {
+        env.env().eval("var r = document.createElement('img'); var got = [];"
+                       " r.onload = () => got.push('load'); r.onerror = () => got.push('error');"
+                       " r.src = '" + src + "'; 1");
+        env.env().drain();
+        const std::string got = env.env().eval("[got.join('+'), r.naturalWidth, r.naturalHeight, r.complete].join()");
+        if (got != want) {
+            wrong += " [" + src.substr(0, 40) + " → " + got + ", want " + want + "]";
+        }
+    }
+    CHECK_EQ(wrong, std::string(""));
+    // No src: no event, no size.
+    env.env().eval("var n = document.createElement('img'); var none = []; n.onload = () => none.push('load');"
+                   " n.onerror = () => none.push('error'); n.alt = 'x'; 1");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[none.length, n.naturalWidth, n.complete].join()"), std::string("0,0,true"));
+}
+
+/// V4 plan, Task 6 (FH §8.2): a parsed image's load or error fires at the window's load, after the page's scripts added
+/// their listeners, once; an image a script makes fires from its own task.
+WR_TEST(testAParsedImageFiresLoadToAScriptsListener) {
+    RenderEnv env("<!doctype html><html><head></head><body><img id=i src=\"https://x/p.png\"><img id=j src=\"" +
+                  std::string(kPNG) +
+                  "\"><script>window.log = []; for (const e of document.querySelectorAll('img')) { e.onload = () => log.push(e.id + ':' +"
+                  " e.naturalWidth); e.onerror = () => log.push(e.id + ':error'); }</script></body></html>");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("i:48,j:40"));
+    env.env().eval("const m = new Image(); m.onload = () => log.push('m'); m.src = '" + std::string(kPNG) + "'; 1");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("i:48,j:40,m"));
 }

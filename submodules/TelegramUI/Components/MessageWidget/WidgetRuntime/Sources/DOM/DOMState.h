@@ -95,9 +95,26 @@ public:
         }
     }
 
+    /// True while boot parses the document into the main one (Boot.cpp, a DocumentParseScope): a parsed <img> then
+    /// queues no load or error of its own, and fireParsedImageEvents fires it at the window's load, after the page's
+    /// scripts added their listeners (V4 plan, Task 6). A fragment parse (innerHTML) is not a document parse.
+    bool parsingDocument() const { return m_parsingDocument; }
+
+    class DocumentParseScope {
+    public:
+        explicit DocumentParseScope(DOMState& state) : m_state(state) { m_state.m_parsingDocument = true; }
+        ~DocumentParseScope() { m_state.m_parsingDocument = false; }
+        DocumentParseScope(const DocumentParseScope&) = delete;
+        DocumentParseScope& operator=(const DocumentParseScope&) = delete;
+
+    private:
+        DOMState& m_state;
+    };
+
 private:
     JSContext* m_ctx;
     Document* m_document = nullptr;
+    bool m_parsingDocument = false;
     /// The reference behind m_document: an untraced root, released with the state (the document lives as long as the
     /// widget anyway).
     JSValue m_documentValue = JS_UNDEFINED;

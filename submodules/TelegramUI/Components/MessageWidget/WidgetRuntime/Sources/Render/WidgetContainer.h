@@ -8,7 +8,12 @@
 //   data: fonts and images by shared_ptr, every argument copied, nothing pointing into the document or this container.
 // Fonts and decoded images are cached for the container's lifetime, by font description and by the data: URL's text
 // (Ruling 19), so rebuilds reuse the same objects. beginBuild/endBuild bracket a build, and endBuild drops what that
-// build did not ask for. The sanitize hooks keep litehtml's allow-everything defaults (no validator, Ruling 2).
+// build did not ask for.
+// - Profile 1 (V4 plan, Task 3b): litehtml's profile hooks (twidget edit 29) are answered with CSSPolicy.h's verdicts,
+//   so a declaration, a selector, an at-rule, an @media query and an @supports condition reach the document as the
+//   profile keeps them. The master sheet (litehtml's, the profile's UA sheet and the host's) passes whole: litehtml
+//   parses it between trusted_styles(true) and (false), once per process, and caches it. Every hook is a pure function
+//   of its text (litehtml's caches key on text, with sanitizer_key), and none reports a diagnostic.
 //
 // A litehtml document calls its container until it is destroyed (its destructor deletes its fonts here), so every
 // document laid out through a WidgetContainer must be destroyed before it.
@@ -64,7 +69,13 @@ public:
         uint32_t width = 0, height = 0;
     };
     static std::string canvasURL(const CanvasURL& canvas);
-    /// An image source decoded as layout decides it (only an image/* data: URL reaches the host), but kept nowhere
+    /// The source a refused <img src> renders (V4 plan, Task 6): the builder writes it with data-tg-placeholder, and
+    /// the container answers it with placeholderSVG, decoded by the host like any image (RB §3.5).
+    static constexpr std::string_view kPlaceholderURL = "twplaceholder:";
+    /// widget-sandbox v0.1.0's placeholder, url-policy.ts decoded: 48 × 48, a #8882 ground, mountains and a sun in
+    /// #8886. The one SVG the host is ever handed.
+    static std::string_view placeholderSVG();
+    /// An image source decoded as layout decides it (profile 1's image types, and the placeholder), but kept nowhere
     /// here: an <img>'s state (V5d plan, Task 5; CanvasState shares it). nullopt when refused or not decodable.
     std::optional<DecodedImage> decodeImageUncached(std::string_view src);
     /// The image layout already decoded for `src`, if it did: a lookup that adds nothing.
@@ -113,6 +124,18 @@ public:
                                           const std::shared_ptr<litehtml::document>& doc) override;
     bool point_in_clip_path(const litehtml::vector_path& path, litehtml::pixel_t x, litehtml::pixel_t y) override;
     void sanitizer_limit(const char* what) override;
+
+    // Profile 1 (twidget edit 29): everything passes while the master sheet is parsed (trusted_styles).
+    void trusted_styles(bool trusted) override { m_trusted = trusted; }
+    bool sanitize_at_rule(const std::string& name) override;
+    bool profile_declaration(std::string& name, litehtml::css_token_vector& value, bool& important) override;
+    bool profile_substituted(const std::string& name, litehtml::css_token_vector& value) override;
+    void sanitize_selector_list(std::vector<litehtml::css_token_vector>& groups) override;
+    bool sanitize_media_query(const litehtml::css_token_vector& prelude) override;
+    int evaluate_supports(const litehtml::css_token_vector& condition) override;
+    uint32_t sanitizer_key() const override { return kSanitizerKey; }
+    /// litehtml's caches keep this container's parses apart from a container whose hooks differ ("WR" + version 4).
+    static constexpr uint32_t kSanitizerKey = 0x57520004;
 
     // Loads: data: images, or refused and counted. `baseurl` is never used: a relative URL is never resolved.
     void load_image(const char* src, const char* baseurl, bool redraw_on_ready) override;
@@ -219,6 +242,8 @@ private:
     WalkListener* m_walk = nullptr;
     /// Whether a traversal call goes to the walk: a walk runs and no capture is open.
     bool walking() const { return m_walk && m_open.empty(); }
+    /// litehtml is parsing the master sheet (trusted_styles).
+    bool m_trusted = false;
 };
 
 } // namespace wr

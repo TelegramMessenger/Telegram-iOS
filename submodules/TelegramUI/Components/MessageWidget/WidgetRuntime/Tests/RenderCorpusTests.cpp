@@ -23,6 +23,7 @@
 #include <litehtml/telegram_master_css.h>
 
 #include "Sources/DOM/DOM.h"
+#include "Sources/Host/Profile.h"
 #include "Sources/Render/Builder.h"
 #include "Sources/Render/LayerTree.h"
 #include "Sources/Render/RenderDump.h"
@@ -162,13 +163,14 @@ std::string lineDifference(const std::string& a, const std::string& b) {
     return out;
 }
 
-bool onlyImageTypes(const std::vector<std::string>& types) {
-    for (const std::string& type : types) {
-        if (type.compare(0, 6, "image/") != 0) {
+/// Profile 1's image types, and the 48 px placeholder's image/svg+xml (V4 plan, Task 6): the host is handed nothing else.
+bool onlyImageTypes(const wr_test::FakeRenderHost& host) {
+    for (const std::string& type : host.decodedMimeTypes) {
+        if (!wr::profile::contains(wr::profile::CSSTable::ImageTypes, type) && type != "image/svg+xml") {
             return false;
         }
     }
-    return true;
+    return host.foreignSVGs == 0;
 }
 
 size_t heapInUse() {
@@ -263,7 +265,7 @@ WR_TEST(testCorpusRenders) {
         if (!nonEmpty) {
             emptyTree.push_back(name);
         }
-        if (!onlyImageTypes(env.host().decodedMimeTypes)) {
+        if (!onlyImageTypes(env.host())) {
             nonImage.push_back(name);
         }
 
@@ -486,7 +488,7 @@ WR_TEST(testAttackCorpusLoadsNothing) {
             env.render().flushForQuery(env.ctx());
         } catch (const wr::Aborted&) {
         }
-        const bool images = onlyImageTypes(env.host().decodedMimeTypes);
+        const bool images = onlyImageTypes(env.host());
         CHECK(images);
         const uint64_t refused = env.render().refusedLoads();
         std::printf("%4llu refused  %2zu decoded  %-8s %s%s\n", (unsigned long long)refused,
@@ -494,11 +496,19 @@ WR_TEST(testAttackCorpusLoadsNothing) {
                     images ? "" : "  NON-IMAGE DECODE");
         seen.insert(name);
         const std::string leaf = name.substr(name.rfind('/') + 1);
-        if (leaf == "markup-img-src.html" || leaf == "css-background-url.html" || leaf == "api-setattribute-src.html") {
-            if (refused < 1) {
-                std::printf("  %s: the planted URL never reached the container\n", name.c_str());
+        // V4 plan, Task 3b: profile 1 drops a remote url() declaration before litehtml asks for anything.
+        if (leaf == "css-background-url.html") {
+            CHECK_EQ(refused, uint64_t(0));
+            CHECK(env.host().decodedMimeTypes.empty());
+        }
+        // V4 plan, Task 6: a planted image URL never reaches litehtml; the <img> renders the 48 px placeholder.
+        if (leaf == "markup-img-src.html" || leaf == "api-setattribute-src.html") {
+            const bool planted = env.render().renderInput().find("127.0.0.1") != std::string::npos;
+            if (planted || refused != 0) {
+                std::printf("  %s: a planted URL reached the renderer (%llu refused)\n", name.c_str(), (unsigned long long)refused);
             }
-            CHECK(refused >= 1);
+            CHECK(!planted);
+            CHECK_EQ(refused, uint64_t(0));
         }
         if (leaf == "markup-svg-image.html") {
             // The brief expects the nested data: SVG to reach decodeImage as image/svg+xml. The fork's svg painter never

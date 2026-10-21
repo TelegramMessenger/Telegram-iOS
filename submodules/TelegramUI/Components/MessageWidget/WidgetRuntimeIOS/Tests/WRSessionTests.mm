@@ -13,6 +13,8 @@
 @interface WRRecordingDelegate : NSObject <WRSessionDelegate>
 @property (nonatomic) NSMutableArray<NSString *> *diagnostics;
 @property (nonatomic) NSMutableArray<NSString *> *bridgeCalls;
+/// Each storage commit as "area key=value key=value", in order.
+@property (nonatomic) NSMutableArray<NSString *> *storageCommits;
 @property (nonatomic) uint64_t lastWork;
 @property (nonatomic) NSUInteger workReports;
 /// Called from each work report, inside the step that reports it.
@@ -24,6 +26,7 @@
     if ((self = [super init])) {
         _diagnostics = [NSMutableArray array];
         _bridgeCalls = [NSMutableArray array];
+        _storageCommits = [NSMutableArray array];
     }
     return self;
 }
@@ -34,6 +37,13 @@
 }
 - (void)session:(WRSession *)session bridge:(NSString *)method args:(NSString *)argsJson {
     [self.bridgeCalls addObject:[NSString stringWithFormat:@"%@ %@", method, argsJson]];
+}
+- (void)session:(WRSession *)session storageCommit:(NSString *)area entries:(NSArray<NSArray<NSString *> *> *)entries {
+    NSMutableString* line = [area mutableCopy];
+    for (NSArray<NSString *>* entry in entries) {
+        [line appendFormat:@" %@=%@", entry[0], entry[1]];
+    }
+    [self.storageCommits addObject:line];
 }
 - (void)session:(WRSession *)session didWork:(uint64_t)totalUnits {
     self.lastWork = totalUnits;
@@ -250,6 +260,50 @@ void drain(WRSession* session) {
                                             "</script></body></html>"]);
     drain(session);
     XCTAssertEqualObjects(delegate.bridgeCalls, (@[ @"ready []", @"ready []" ]));
+}
+
+/// SDK v1 §3.1 (V2b plan, Task 3): the client's preload is there at the widget's first read.
+- (void)testThePreloadIsReadAtFirstTouch {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    [session setStoragePreloadLocal:@[ @[ @"k", @"v" ] ] session:@[ @[ @"s", @"1" ] ]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><p>x</p>"]);
+    XCTAssertEqualObjects([session evaluateForTesting:@"localStorage.getItem('k') + ':' + sessionStorage.getItem('s')"], @"v:1");
+}
+
+/// §3.2: an area a task changed reaches the delegate once, at the task's end, with its entries in insertion order.
+- (void)testACommitReachesTheDelegateInOrder {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* session = [self sessionWith:delegate];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><script>"
+                                            "setTimeout(() => { localStorage.setItem('b', '2'); localStorage.setItem('a', '1'); }, 0);"
+                                            "</script></body></html>"]);
+    drain(session);
+    XCTAssertEqualObjects(delegate.storageCommits, (@[ @"local b=2 a=1" ]));
+}
+
+/// §2.3 and §2.4: the palette and the button tokens given at creation are in the first build.
+- (void)testThePaletteReachesTheWidget {
+    WRSession* session = [[WRSession alloc] initWithWidth:300
+                                                     dark:NO
+                                              themeParams:@{ @"bg_color" : @"#102030" }
+                                             buttonTokens:@{ @"bg" : @"#112233" }
+                                                    scale:2
+                                                 delegate:[WRRecordingDelegate new]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><p>x</p>"]);
+    XCTAssertEqualObjects([session evaluateForTesting:@"(s => [TelegramWidget.themeParams.bg_color, s.getPropertyValue('--tg-theme-bg-color').trim(),"
+                                                       " s.getPropertyValue('--tg-button-bg').trim()].join())(getComputedStyle(document.documentElement))"],
+                          @"#102030,#102030,#112233");
+}
+
+/// A new palette in the same scheme is a theme change: one themeChanged, the new colour in themeParams.
+- (void)testAPaletteChangeFiresThemeChanged {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><script>"
+                                            "window.n = 0; TelegramWidget.onEvent('themeChanged', () => n++);</script></body></html>"]);
+    drain(session);
+    [session setDark:NO themeParams:@{ @"bg_color" : @"#102030" } buttonTokens:@{}];
+    drain(session);
+    XCTAssertEqualObjects([session evaluateForTesting:@"n + ':' + TelegramWidget.themeParams.bg_color"], @"1:#102030");
 }
 
 - (void)testTeardownDuringATaskKeepsTheLastTree {
