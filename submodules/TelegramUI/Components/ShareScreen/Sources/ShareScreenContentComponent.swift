@@ -89,6 +89,7 @@ final class ShareScreenContentComponent: Component {
         private var previousCommunityUsesGrid = false
         private var gridTransition: ShareScreenGridTransition?
         private var gridTransitionPrepared = false
+        private var dismissedInputForScroll = false
 
         private func gridViews() -> [UIView] {
             if self.previousForumId != nil {
@@ -214,6 +215,7 @@ final class ShareScreenContentComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+            self.gridItems.recommendationsWillBeginDragging = { [weak self] in self?.dismissInput() }
             self.addSubview(self.mainContent)
             self.mainContent.addSubview(self.itemsContainer)
             self.topEdge.isUserInteractionEnabled = false
@@ -255,6 +257,7 @@ final class ShareScreenContentComponent: Component {
             guard width > 0.0, !self.pagerIds.isEmpty else { return }
             switch recognizer.state {
             case .began:
+                self.dismissInput()
                 self.stopPagerAnimation()
                 self.folderPanStartOffset = self.folderPager.contentOffset.x
             case .changed:
@@ -299,8 +302,14 @@ final class ShareScreenContentComponent: Component {
             for index in indices {
                 let id = ids[index]
                 valid.insert(id)
-                let page = self.folderPages[id] ?? ShareScreenItemsView(frame: .zero)
-                self.folderPages[id] = page
+                let page: ShareScreenItemsView
+                if let current = self.folderPages[id] {
+                    page = current
+                } else {
+                    page = ShareScreenItemsView(frame: .zero)
+                    page.recommendationsWillBeginDragging = { [weak self] in self?.dismissInput() }
+                    self.folderPages[id] = page
+                }
                 if page.superview == nil { self.folderPager.addSubview(page) }
                 let data = model.folderPage(id)
                 // A neighboring folder starts beneath the pinned header even
@@ -377,6 +386,10 @@ final class ShareScreenContentComponent: Component {
             self.pagerSelectedId = self.pagerIds[index]
             model.selectFilter(self.pagerIds[index])
             (self.search.view as? SearchInputPanelComponent.View)?.updateTabSwitchFraction(0.0, selectedTab: nil, isDragging: false)
+        }
+
+        private func dismissInput() {
+            self.environment?.controller()?.view.endEditing(true)
         }
 
         private func updateVisibleBounds(_ bounds: CGRect) {
@@ -460,7 +473,16 @@ final class ShareScreenContentComponent: Component {
                     self.gridItems.visibleItems.removeAll()
                 }
             }
-            component.boundsUpdated.connect { [weak self] update in self?.updateVisibleBounds(update.contentBounds) }
+            component.boundsUpdated.connect { [weak self] update in
+                guard let self else { return }
+                if !update.isInteractive {
+                    self.dismissedInputForScroll = false
+                } else if !self.dismissedInputForScroll && update.contentBounds.minY != self.visibleBounds.minY {
+                    self.dismissedInputForScroll = true
+                    self.dismissInput()
+                }
+                self.updateVisibleBounds(update.contentBounds)
+            }
             component.layoutApplied.connect { [weak self] _ in self?.runGridTransition() }
             let environment = environment[EnvironmentType.self].value
             self.environment = environment
