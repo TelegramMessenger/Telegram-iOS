@@ -548,7 +548,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.updateBlocked(block: block)
             },
             openReport: { [weak self] type in
-                self?.openReport(type: type, contextController: nil, backAction: nil)
+                self?.openReport(type: type, contextController: nil)
             },
             openDeleteReaction: { [weak self] messageId in
                 self?.openDeleteReaction(messageId: messageId)
@@ -3677,7 +3677,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    func openReport(type: PeerInfoReportType, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)?) {
+    /// `peerId` is the peer the report sheet (`.default`) reports when it is not the one the profile is opened for: a secret chat's profile reports its user.
+    func openReport(type: PeerInfoReportType, peerId: EnginePeer.Id? = nil, contextController: ContextControllerProtocol?) {
         self.view.endEditing(true)
         
         switch type {
@@ -3718,7 +3719,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         default:
             contextController?.dismiss()
             
-            let reportSubject = ReportContentSubject.peer(self.peerId, sourceMessageId: self.sourceMessageId)
+            let reportSubject = ReportContentSubject.peer(peerId ?? self.peerId, sourceMessageId: self.sourceMessageId)
             self.context.sharedContext.makeContentReportScreen(context: self.context, subject: reportSubject, forceDark: false, present: { [weak self] controller in
                 self?.controller?.push(controller)
             }, completion: {

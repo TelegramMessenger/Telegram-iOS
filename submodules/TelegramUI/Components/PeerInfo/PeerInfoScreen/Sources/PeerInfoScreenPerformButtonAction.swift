@@ -871,16 +871,9 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.id != strongSelf.context.account.peerId && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, f in
-                            self?.openReport(type: .default, contextController: c, backAction: { c in
-                                if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
-                                }
-                            })
-                        })))
+                    if (strongSelf.peerId.namespace == Namespaces.Peer.CloudUser || strongSelf.peerId.namespace == Namespaces.Peer.SecretChat) && user.id != strongSelf.context.account.peerId && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !EnginePeer.user(user).isService {
+                        // On a secret chat's profile this reports the user: the secret chat itself cannot be reported.
+                        items.append(strongSelf.reportContextMenuItem(peerId: user.id))
                     }
                     
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(user), chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
@@ -1000,15 +993,7 @@ extension PeerInfoScreenNode {
                         canReport = false
                     }
                     if canReport {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, f in
-                            self?.openReport(type: .default, contextController: c, backAction: { c in
-                                if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
-                                }
-                            })
-                        })))
+                        items.append(strongSelf.reportContextMenuItem(peerId: channel.id))
                     }
                     
                     if canSetupAutoremoveTimeout {
@@ -1255,15 +1240,7 @@ extension PeerInfoScreenNode {
                         canReport = false
                     }
                     if canReport {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, f in
-                            self?.openReport(type: .default, contextController: c, backAction: { c in
-                                if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
-                                }
-                            })
-                        })))
+                        items.append(strongSelf.reportContextMenuItem(peerId: group.id))
                     }
                     
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(group), chatPeer: EnginePeer(group), cachedData: strongSelf.data?.cachedData)
@@ -1334,5 +1311,13 @@ extension PeerInfoScreenNode {
         case .addContact:
             self.openAddContact()
         }
+    }
+    
+    private func reportContextMenuItem(peerId: EnginePeer.Id) -> ContextMenuItem {
+        return .action(ContextMenuActionItem(text: self.presentationData.strings.ReportPeer_Report, icon: { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, _ in
+            self?.openReport(type: .default, peerId: peerId, contextController: c)
+        }))
     }
 }
