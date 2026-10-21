@@ -656,11 +656,17 @@ final class QrStudioScreenComponent: Component {
                 guard let gift = self.look.gifts.first(where: { $0.id == giftId }) else {
                     return
                 }
-                update = .gift(gift.reference ?? .slug(slug: gift.gift.slug))
+                update = .gift(gift: gift.gift, reference: gift.reference ?? .slug(slug: gift.gift.slug))
             }
             self.syncedServerLook = local
             self.pendingServerLook = nil
-            let _ = context.engine.peers.setShareTheme(peerId: component.peer.id, theme: update).startStandalone()
+            let _ = (context.engine.peers.setShareTheme(peerId: component.peer.id, theme: update)
+            |> deliverOnMainQueue).startStandalone(error: { [weak self] _ in
+                guard let self, self.syncedServerLook == local else {
+                    return
+                }
+                self.syncedServerLook = nil
+            })
             self.saveWorkItem?.perform()
             self.saveWorkItem?.cancel()
             self.saveWorkItem = nil
