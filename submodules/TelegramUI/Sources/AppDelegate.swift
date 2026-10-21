@@ -59,11 +59,6 @@ import MTProtoRustEngine
 import AlertComponent
 #endif
 
-#if canImport(AppCenter)
-import AppCenter
-import AppCenterCrashes
-#endif
-
 private let handleVoipNotifications = false
 
 private func isTonTransferUrl(_ url: URL) -> Bool {
@@ -1634,14 +1629,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         self.maybeCheckForUpdates()
-
-        #if canImport(AppCenter)
-        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
-            AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
-                Crashes.self
-            ])
-        }
-        #endif
         
         if #available(iOS 13.0, *) {
             let cleanupTaskId = "\(baseAppBundleId).cleanup"
