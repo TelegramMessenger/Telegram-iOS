@@ -18,6 +18,7 @@ import GlassBarButtonComponent
 import ButtonComponent
 import QrCode
 import PremiumDiamondComponent
+import WalletContext
 
 private final class WalletReceiveQrComponent: Component {
     let address: String
@@ -1755,7 +1756,8 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
                 provider: "wallet",
                 cryptoCurrency: "gram",
                 address: address,
-                paymentMethod: nil
+                paymentMethod: nil,
+                baseCurrency: self.context.walletContext?.stateValue.fiat.selectedCurrency.code
             )
             |> deliverOnMainQueue).start(next: { [weak self] session in
                 guard let self else {
