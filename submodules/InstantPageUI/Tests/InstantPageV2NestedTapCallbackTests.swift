@@ -56,8 +56,8 @@ private func makeTableItem(_ items: [InstantPageV2LaidOutItem]) -> InstantPageV2
     ))
 }
 
-/// An expanded `<details>` whose body holds `items`.
-private func makeDetailsItem(_ items: [InstantPageV2LaidOutItem]) -> InstantPageV2LaidOutItem {
+/// A `<details>` whose body holds `items`, expanded unless asked otherwise.
+private func makeDetailsItem(_ items: [InstantPageV2LaidOutItem], isExpanded: Bool = true) -> InstantPageV2LaidOutItem {
     let (titleItem, _, _) = layoutTextItemWithString(makePlainLabelPiece("More"), boundingWidth: 300.0, offset: CGPoint())
     return .details(InstantPageV2DetailsItem(
         frame: CGRect(x: 0.0, y: 0.0, width: 320.0, height: 160.0),
@@ -66,8 +66,8 @@ private func makeDetailsItem(_ items: [InstantPageV2LaidOutItem]) -> InstantPage
         titleTextItem: titleItem!,
         titleFrame: CGRect(x: 0.0, y: 0.0, width: 320.0, height: 40.0),
         separatorColor: .clear,
-        isExpanded: true,
-        innerLayout: makeLayout(items),
+        isExpanded: isExpanded,
+        innerLayout: isExpanded ? makeLayout(items) : nil,
         defaultExpanded: true,
         rtl: false
     ))
@@ -86,7 +86,8 @@ private func descendants<T: UIView>(of view: UIView, ofType type: T.Type) -> [T]
 
 /// A table cell and a `<details>` body are `InstantPageV2View`s of their own, but the host sets its
 /// tap callbacks on the root page view only. A button, document or Update button inside one must
-/// still reach them; before, a URL pill in a table cell did nothing at all when tapped.
+/// still reach them; before, a URL pill in a table cell did nothing at all when tapped. (A document
+/// row is not covered: without a render context the renderer draws a placeholder in its place.)
 final class InstantPageV2NestedTapCallbackTests: XCTestCase {
     private let theme = InstantPageTheme.chatMessageGeometryTheme()
 
@@ -141,6 +142,28 @@ final class InstantPageV2NestedTapCallbackTests: XCTestCase {
 
         let rowView = try XCTUnwrap(descendants(of: pageView, ofType: InstantPageV2ButtonRowView.self).first)
         XCTAssertFalse(rowView.superview === pageView, "the row must be inside the details body's own page view")
+        rowView.onButtonTapped?(button, Promise<Bool>())
+
+        XCTAssertEqual(tapped, [button])
+    }
+
+    /// The body of a `<details>` that was laid out collapsed is built only when it expands, inside
+    /// the reused details view's own update, and every view on the way is a reused one.
+    func testAButtonInADetailsBodyBuiltOnExpandReachesTheHost() throws {
+        let button = InstantPageButton(text: .plain("Website"), action: .url("https://core.telegram.org"), color: nil)
+        var tapped: [InstantPageButton] = []
+        let pageView = self.render([makeDetailsItem([makeButtonRowItem(button)], isExpanded: false)]) { pageView in
+            pageView.buttonTapped = { button, _ in
+                tapped.append(button)
+            }
+        }
+        XCTAssertTrue(descendants(of: pageView, ofType: InstantPageV2ButtonRowView.self).isEmpty)
+        let detailsView = try XCTUnwrap(descendants(of: pageView, ofType: InstantPageV2DetailsView.self).first)
+
+        pageView.update(layout: makeLayout([makeDetailsItem([makeButtonRowItem(button)])]), theme: self.theme, animation: .None)
+
+        XCTAssertTrue(descendants(of: pageView, ofType: InstantPageV2DetailsView.self).first === detailsView, "the details view must be reused")
+        let rowView = try XCTUnwrap(descendants(of: pageView, ofType: InstantPageV2ButtonRowView.self).first)
         rowView.onButtonTapped?(button, Promise<Bool>())
 
         XCTAssertEqual(tapped, [button])

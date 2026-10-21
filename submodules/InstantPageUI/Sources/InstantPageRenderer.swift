@@ -228,6 +228,7 @@ public final class InstantPageV2View: UIView {
     /// it owns, but a table cell and a `<details>` body are page views of their own, built by their
     /// container and replaced as it lays out. So an item's tap looks its callback up when it fires,
     /// on the nearest page view that has one: without this, a URL pill in a table cell did nothing.
+    /// The walk is not bounded by `trueRegistryRoot`: a body built on expand is its own registry root.
     private func hostCallback<T>(_ keyPath: KeyPath<InstantPageV2View, T?>) -> T? {
         var current: UIView? = self
         while let view = current {
