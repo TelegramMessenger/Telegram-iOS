@@ -1229,10 +1229,15 @@ be a cycle.
   bubble, and the menu / inline-bot panels — keep the panel as their only indicator. Threading a
   promise into a new caller therefore silently *removes* its panel; that is the intent, but only if
   that caller actually renders the promise.
-- **A button inside `<details>` or a table cell is inert, and so never shimmers.** The nested
-  `InstantPageV2View`s built in `InstantPageRenderer.swift` never get `buttonTapped` propagated —
-  only `rootMediaRegistryHost` is pushed down, by `propagateRegistryHost`. Pre-existing; unrelated to
-  the loading effect, but it is why a nested button does nothing at all.
+- **A button inside `<details>` or a table cell reaches the host through `hostCallback`** (fixed
+  2026-10-22, issue #3: a URL pill in a table cell did nothing on tap). A table cell and a details body
+  are `InstantPageV2View`s of their own, built by their container and replaced as it lays out, while
+  the host sets `buttonTapped`, `documentTapped` and `unsupportedActionTapped` on the root page view
+  only. So the item views' closures look the callback up when they fire, on the nearest enclosing page
+  view that has it, instead of reading their own page view's (nil) property; pushing the closures down
+  at layout would miss a details body created on expand. `checkboxTapped` is still not reached from a
+  nested view (its interactivity is decided at layout from the property). Pinned by
+  `InstantPageV2NestedTapCallbackTests`.
 
 ## Unsupported blocks (InstantPageBlock.unsupported)
 
@@ -1310,10 +1315,10 @@ message in the app.
   The view positions its button there and layout-only hosts test against it; `in size:` rather than
   the layout's own `size` because a host may stretch the pill wider and the button is pinned to the
   trailing edge.
-- **A pill nested in a `<details>` body or a table cell still has an inert button.** Tap arbitration
-  finds it, but nested `InstantPageV2View`s only get `detailsTapped` forwarded — `unsupportedActionTapped`
-  (like `checkboxTapped`, `buttonTapped` and `documentTapped`) is not propagated into sub-layout
-  views, so the closure is nil there. Pre-existing, and not specific to the pill.
+- **A pill nested in a `<details>` body or a table cell reaches `unsupportedActionTapped` too.** Tap
+  arbitration finds it, and since 2026-10-22 its closure looks the callback up on the nearest enclosing
+  page view that has it (`hostCallback`, see "Inline buttons & document blocks"), as nested buttons and
+  documents do.
 - **Reveal cost is `.nonText`.** The pill pops in atomically with its position in the stream, like a
   button row.
 

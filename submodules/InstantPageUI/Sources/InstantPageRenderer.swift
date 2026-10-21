@@ -224,6 +224,21 @@ public final class InstantPageV2View: UIView {
     /// is inert) so the pill's width does not change between preview and sent message.
     public var unsupportedActionTapped: (() -> Void)?
 
+    /// The host sets `buttonTapped`, `documentTapped` and `unsupportedActionTapped` on the page view
+    /// it owns, but a table cell and a `<details>` body are page views of their own, built by their
+    /// container and replaced as it lays out. So an item's tap looks its callback up when it fires,
+    /// on the nearest page view that has one: without this, a URL pill in a table cell did nothing.
+    private func hostCallback<T>(_ keyPath: KeyPath<InstantPageV2View, T?>) -> T? {
+        var current: UIView? = self
+        while let view = current {
+            if let pageView = view as? InstantPageV2View, let callback = pageView[keyPath: keyPath] {
+                return callback
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
     var itemViews: [InstantPageItemView] = []
     private var itemViewStableIds: [InstantPageV2StableItemId] = []
     /// Whether any item view currently carries a collapsed-quote fade. Lets the fade pass return
@@ -988,14 +1003,14 @@ public final class InstantPageV2View: UIView {
             // Re-wire on reuse: the closure captures self, and a reused view may have been created
             // against a previous InstantPageV2View.
             v.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return v
         case let .buttonRow(row):
             guard let v = existingView as? InstantPageV2ButtonRowView else { return nil }
             v.update(item: row, theme: theme)
             v.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return v
         case let .mediaImage(media):
@@ -1022,7 +1037,7 @@ public final class InstantPageV2View: UIView {
             guard let v = existingView as? InstantPageV2DocumentView, let rc = self.renderContext else { return nil }
             // Re-wire: a recycled view may belong to a previous InstantPageV2View (see onDocumentTapped).
             v.onDocumentTapped = { [weak self] file in
-                self?.documentTapped?(file)
+                self?.hostCallback(\.documentTapped)?(file)
             }
             v.update(item: document, theme: theme, renderContext: rc)
             return v
@@ -1040,7 +1055,7 @@ public final class InstantPageV2View: UIView {
             // Re-wire on reuse: the closure captures self, and a reused view may have been created
             // against a previous InstantPageV2View.
             v.onActionTapped = { [weak self] in
-                self?.unsupportedActionTapped?()
+                self?.hostCallback(\.unsupportedActionTapped)?()
             }
             return v
         }
@@ -1179,7 +1194,7 @@ public final class InstantPageV2View: UIView {
             if let renderContext = self.renderContext {
                 let view = InstantPageV2DocumentView(item: document, renderContext: renderContext, theme: theme)
                 view.onDocumentTapped = { [weak self] file in
-                    self?.documentTapped?(file)
+                    self?.hostCallback(\.documentTapped)?(file)
                 }
                 return view
             } else {
@@ -1190,19 +1205,19 @@ public final class InstantPageV2View: UIView {
         case let .inlineButton(button):
             let view = InstantPageV2InlineButtonView(item: button, theme: theme)
             view.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return view
         case let .buttonRow(row):
             let view = InstantPageV2ButtonRowView(item: row, theme: theme)
             view.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return view
         case let .unsupportedContent(unsupported):
             let view = InstantPageV2UnsupportedView(item: unsupported, theme: theme, renderContext: self.renderContext)
             view.onActionTapped = { [weak self] in
-                self?.unsupportedActionTapped?()
+                self?.hostCallback(\.unsupportedActionTapped)?()
             }
             return view
         case let .thinking(thinking):
