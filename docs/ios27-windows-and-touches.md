@@ -105,6 +105,14 @@ in `-[ASDisplayNode setFrame:]` (debug) or a skipped frame and a misplaced anima
 animate inside the item node and never cross windows; so do sticker sends, which are the other users of the
 file's layer-level `convertAnimatingSourceRect…` helpers.
 
+The third victim did not crash, it was only late: a context menu whose content is a controller (the chat
+preview of a long press on a chat-list search result) is a global overlay too, and with the keyboard up
+`ContextControllerExtractedPresentationNode` converted the source row's centre straight into it to animate
+the preview in and out (and to place it as a popover on layouts that present floating panels). The point
+came back as (inf, inf), so the preview and its actions sprang in from an infinite offset: the screen blurred,
+stayed empty for the whole 0.42 s spring, and the menu then appeared at its final place at once. Those three
+sites use `convertAcrossWindows` now.
+
 ## A layer that renders nothing receives no touches
 
 **`-hitTest:` is not the whole story.** A view whose layer renders nothing at all — `backgroundColor`
