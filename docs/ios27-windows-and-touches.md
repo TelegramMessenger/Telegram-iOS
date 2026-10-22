@@ -110,7 +110,7 @@ preview of a long press on a chat-list search result) is a global overlay too, a
 `ContextControllerExtractedPresentationNode` converted the source row's centre straight into it to animate
 the preview in and out (and to place it as a popover on layouts that present floating panels). The point
 came back as (inf, inf), so the preview and its actions sprang in from an infinite offset: the screen blurred,
-stayed empty for the whole 0.42 s spring, and the menu then appeared at its final place at once. Those three
+stayed empty until the 0.42 s spring ended, and the menu then appeared at its final place at once. Those three
 sites use `convertAcrossWindows` now.
 
 ## A layer that renders nothing receives no touches
