@@ -414,6 +414,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private var hasActiveLiquidMorph = false
     private var liquidMorphReferenceInfo: ContextControllerReferenceViewInfo?
     private var liquidMorphReferenceRect: CGRect?
+    private var appliedActionsTopOverflow: CGFloat = 0.0
     private let actionsStackNode: ContextControllerActionsStackNodeImpl
     private let additionalActionsStackNode: ContextControllerActionsStackNode
     
@@ -1490,12 +1491,21 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     self.actionsStackNode.clearStoredScrollingState()
                     
                     self.scroller.contentOffset = CGPoint(x: 0.0, y: storedScrollingState)
+                } else if actionsTopOverflow != self.appliedActionsTopOverflow {
+                    // The overflow is what the menu is scrolled by to sit at its reference: when a relayout (rotation,
+                    // a fold) changes it, move the offset with it, or the menu drifts off its reference and, once it
+                    // fits, keeps an offset that leaves its top out of reach.
+                    let maxContentOffsetY = max(0.0, contentSize.height - layout.size.height)
+                    let contentOffsetY = max(0.0, min(maxContentOffsetY, previousContentOffset.y + actionsTopOverflow - self.appliedActionsTopOverflow))
+                    self.scroller.contentOffset = CGPoint(x: 0.0, y: contentOffsetY)
                 }
                 if case .none = stateTransition, transition.isAnimated {
                     let contentOffset = self.scroller.contentOffset
                     transition.animateOffsetAdditive(layer: self.scrollNode.layer, offset: previousContentOffset.y - contentOffset.y)
                 }
             }
+            
+            self.appliedActionsTopOverflow = actionsTopOverflow
             
             self.actionsStackNode.updatePanSelection(isEnabled: contentSize.height <= layout.size.height)
             
