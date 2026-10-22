@@ -414,6 +414,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private var hasActiveLiquidMorph = false
     private var liquidMorphReferenceInfo: ContextControllerReferenceViewInfo?
     private var liquidMorphReferenceRect: CGRect?
+    private var appliedActionsTopOverflow: CGFloat = 0.0
     private let actionsStackNode: ContextControllerActionsStackNodeImpl
     private let additionalActionsStackNode: ContextControllerActionsStackNode
     
@@ -764,6 +765,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             contentActionsSpacing += 3.0
         }
         
+        // Read before the scroller is resized, which may clamp its offset to the previous content.
+        let contentOffsetBeforeLayout = self.scroller.contentOffset
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
         if self.scrollNode.frame != CGRect(origin: CGPoint(), size: layout.size) {
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
@@ -1276,8 +1279,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 totalActionsHeight += 10.0 + additionalActionsSize.height
             }
             
-            var actionsFrame: CGRect
+            var actionsAboveReference = false
             if case let .reference(source) = self.source, let actionsPosition = (source.transitionInfo() ?? self.liquidMorphReferenceInfo)?.actionsPosition, case .top = actionsPosition {
+                actionsAboveReference = true
+            }
+            
+            var actionsFrame: CGRect
+            if actionsAboveReference {
                 actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.minY - contentActionsSpacing - totalActionsHeight), size: actionsSize)
             } else {
                 actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
@@ -1353,11 +1361,22 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 actionsFrame = actionsFrame.offsetBy(dx: customPosition.x, dy: customPosition.y)
             }
             
+            // A menu that opens above its reference (a tab bar item, say) and is taller than the space above it would
+            // start above the screen, where the scroller cannot reach: its content only extends downward. Lay the menu
+            // out from the top inset instead and make the content taller by the overflow, so it opens scrolled to where
+            // it was and its top can be scrolled into view.
+            var actionsTopOverflow: CGFloat = 0.0
+            if morphMenuAnchor == nil, actionsAboveReference, actionsFrame.minY < contentTopInset {
+                actionsTopOverflow = contentTopInset - actionsFrame.minY
+                actionsFrame.origin.y = contentTopInset
+            }
+            
             // iPhone Duo: on a side with a side strip the menu stays out of the strip where a corner block (the
             // status corner) reaches its height, and may use the strip where none does (the input panel's band
-            // rule). Sides without a strip, and every other device, keep the edge clamp above.
+            // rule). Sides without a strip, and every other device, keep the edge clamp above. A menu that scrolls from
+            // above the top inset is checked over its whole range on screen, from where it opens to where it scrolls.
             do {
-                let band = layout.sideInsets(forBandFrom: actionsFrame.minY, to: actionsFrame.maxY + (additionalActionsSize.height > 0.0 ? additionalActionsSize.height + 10.0 : 0.0))
+                let band = layout.sideInsets(forBandFrom: actionsFrame.minY - actionsTopOverflow, to: actionsFrame.maxY + (additionalActionsSize.height > 0.0 ? additionalActionsSize.height + 10.0 : 0.0))
                 let stripLeft: CGFloat = layout.sideStrip(edge: .left) != nil ? band.left : 0.0
                 let stripRight: CGFloat = layout.sideStrip(edge: .right) != nil ? band.right : 0.0
                 if stripRight > 0.0, actionsFrame.maxX > layout.size.width - stripRight - actionsEdgeInset {
@@ -1456,6 +1475,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             let contentHeight: CGFloat
             if self.actionsStackNode.topPositionLock != nil || self.currentReactionsPositionLock != nil {
                 contentHeight = layout.size.height
+            } else if actionsTopOverflow > 0.0 {
+                contentHeight = layout.size.height + actionsTopOverflow
             } else {
                 if keepInPlace, case .extracted = self.source {
                     contentHeight = (layout.statusBarHeight ?? 0.0) + actionsFrame.height + abs(actionsFrame.minY) + bottomInset + layout.intrinsicInsets.bottom
@@ -1472,12 +1493,21 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     self.actionsStackNode.clearStoredScrollingState()
                     
                     self.scroller.contentOffset = CGPoint(x: 0.0, y: storedScrollingState)
+                } else if actionsTopOverflow != self.appliedActionsTopOverflow {
+                    // The overflow is what the menu is scrolled by to sit at its reference: when a relayout (rotation,
+                    // a fold) changes it, move the offset with it, or the menu drifts off its reference and, once it
+                    // fits, keeps an offset that leaves its top out of reach.
+                    let maxContentOffsetY = max(0.0, contentSize.height - layout.size.height)
+                    let contentOffsetY = max(0.0, min(maxContentOffsetY, contentOffsetBeforeLayout.y + actionsTopOverflow - self.appliedActionsTopOverflow))
+                    self.scroller.contentOffset = CGPoint(x: 0.0, y: contentOffsetY)
                 }
                 if case .none = stateTransition, transition.isAnimated {
                     let contentOffset = self.scroller.contentOffset
                     transition.animateOffsetAdditive(layer: self.scrollNode.layer, offset: previousContentOffset.y - contentOffset.y)
                 }
             }
+            
+            self.appliedActionsTopOverflow = actionsTopOverflow
             
             self.actionsStackNode.updatePanSelection(isEnabled: contentSize.height <= layout.size.height)
             
