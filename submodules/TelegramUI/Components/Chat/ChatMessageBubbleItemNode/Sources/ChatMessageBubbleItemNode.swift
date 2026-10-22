@@ -5059,7 +5059,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.contentContainersWrapperNode.view.mask = currentMaskView
             }
             
-            currentMaskView?.frame = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: 0.0), size: backgroundFrame.size).insetBy(dx: -1.0, dy: -1.0)
+            // backgroundFrame already includes layoutInsets.top, which holds an attached date header: a mask at
+            // y = 0 sits that far above the bubble, showing selection backgrounds over the header and cutting off the
+            // group's bottom.
+            currentMaskView?.frame = backgroundFrame.insetBy(dx: -1.0, dy: -1.0)
             currentMaskView?.image = bubbleMaskForType(backgroundType, graphics: graphics)
         } else {
             strongSelf.contentContainersWrapperNode.view.mask = nil
