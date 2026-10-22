@@ -24,6 +24,7 @@ swift_library(
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/TextFormat:TextFormat",
         "//submodules/ManagedFile",
+        "//submodules/HLSPlayback:HLSPlayback",
     ],
     visibility = [
         "//visibility:public",

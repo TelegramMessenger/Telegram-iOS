@@ -11,7 +11,8 @@ public let internal_isHardwareAv1Supported: Bool = {
     return value
 }()
 
-protocol ChunkMediaPlayerSourceImpl: AnyObject {
+// What feeds a ChunkMediaPlayerV2 its parts. The player reports every seek and its playback position back to it.
+public protocol ChunkMediaPlayerSourceImpl: AnyObject {
     var partsState: Signal<ChunkMediaPlayerPartsState, NoError> { get }
     
     func seek(id: Int, position: Double)
@@ -56,6 +57,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
         case externalParts(Signal<ChunkMediaPlayerPartsState, NoError>)
         case directFetch(ResourceDescription)
+        case custom(ChunkMediaPlayerSourceImpl)
     }
     
     public struct MediaDataReaderParams {
@@ -289,6 +291,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             self.source = ChunkMediaPlayerExternalSourceImpl(partsState: partsState)
         case let .directFetch(resource):
             self.source = ChunkMediaPlayerDirectFetchSourceImpl(resource: resource)
+        case let .custom(source):
+            self.source = source
         }
         
         self.updateTimerState()

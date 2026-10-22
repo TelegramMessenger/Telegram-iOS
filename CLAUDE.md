@@ -1280,6 +1280,35 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   (not `//third-party/twidget:all`: it includes the iOS test). `WidgetRuntime`'s own host suites (`:WidgetRuntimeTests`,
   the WPT runner, the render gates, the gumbo and twidget fork tests) are in the runtime record's "Tests".
 
+## Native HLS player (`HLSPlayback`)
+
+HLS videos play through `submodules/HLSPlayback`, a Foundation-only Swift port of the parts of hls.js 1.7.3 our streams
+use: the playlist parser, the EWMA estimator, ABR with abandon, a buffer model and an event-driven
+`HLSPlaybackController`. The app's environment (`TelegramUniversalVideoContent/Sources/HLSNative/`) feeds
+`ChunkMediaPlayerV2` through its `.custom` source, and `HLSVideoNativeContentNode` is the content node. hls.js in
+JavaScriptCore is gone. The deviations from hls.js (D1–D12), the failure policy, the logs and the measurements are in
+[`docs/native-hls-player.md`](docs/native-hls-player.md). None of this shows up as a build error:
+
+- **Levels are sorted by height** (`HLSLevels.sorted`), and every level index is into that order.
+- **Disk reads never sample** the bandwidth estimate. Loads go through MediaBox's own file context (`TelegramEngine.resources`),
+  never a private one, so the player joins the chat preload's in-flight fetch.
+- **One preload-quality rule** (`HLSLevels.preloadQualityKey`) serves the chat preload, the inline gate, the player's
+  start and the inline cap. The bubble thumbnail follows it only when the chat preload runs.
+- **A part is the level's init plus one segment**, never the bytes between them (a `sidx` there makes FFmpeg report the
+  whole video's duration). A part ends at the later of its tracks' ends (`HLSPartTiming`): a stream's audio can stop
+  before its video, and a part cut at the audio's end leaves a hole the player waits at.
+- **`HLSVideoContent` takes `captureProtected` from both callers.** The inline node moves to the gallery, so the bubble
+  passes the gallery's conditions too, `message.paidContent != nil` included.
+- **The abandon rule never runs before the first part is appended**, as hls.js waits for `media.readyState`. Without
+  it a slow cold start abandoned and reloaded its first segment forever.
+- **No network failure is terminal** (the owner's rule). A fetch waits for the server for as long as it takes; only a
+  fatal error ends one, and a range fetch reports that as completion, so check the bytes
+  (`fetchedResourceRangeUntilOnDisk`). Every HLS fetch retries with backoff, and a failing level is avoided for a
+  cool-down, never for good. Only content (a rejected playlist) is final.
+- Goldens (`Tests/HLSJSGoldens.swift`) are hls.js's own output: regenerate with
+  `sh submodules/HLSPlayback/Tools/hlsjs-goldens/generate.sh`, never by hand. Host tests:
+  `./build-input/bazel-9.2.0-darwin-arm64 test //submodules/HLSPlayback:HLSPlaybackTests`.
+
 ## Rust MTProto engine on iOS
 
 The Rust MTProto engine (`third-party/mtproto-engine`, Swift wrapper `submodules/MTProtoRustEngine`)
