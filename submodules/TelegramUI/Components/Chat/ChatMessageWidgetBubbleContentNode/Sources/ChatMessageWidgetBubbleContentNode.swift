@@ -17,11 +17,11 @@ import UnsupportedContentPill
 import WallpaperBackgroundNode
 import MessageWidgetStorage
 
-/// Whether widget messages render as widgets: the client's own flag (Debug Settings ▸ "Widget messages"; widget-sandbox
-/// v0.1.0, integration.md "Enabling") on and the app-config kill switch off. Off, a widget message shows as unsupported
-/// media with its caption.
-public func chatMessageWidgetRenderingEnabled(context: AccountContext) -> Bool {
-    return context.sharedContext.immediateExperimentalUISettings.widgetMessages && !MessageWidgetKillSwitch.isEngaged
+/// Whether widget messages render as widgets: on unless the app configuration's kill switch is engaged (on by
+/// default since 2026-10-22, when the debug flag went). Off, a widget message shows as unsupported media with its
+/// caption.
+public func chatMessageWidgetRenderingEnabled() -> Bool {
+    return !MessageWidgetKillSwitch.isEngaged
 }
 
 /// One subscription for the whole process, started by the first pass that lays a widget out (on main): every widget
@@ -118,7 +118,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             guard let self, let item = self.item, let laidOutEnabled = self.laidOutEnabled else {
                 return
             }
-            if chatMessageWidgetRenderingEnabled(context: item.context) != laidOutEnabled {
+            if chatMessageWidgetRenderingEnabled() != laidOutEnabled {
                 item.controllerInteraction.requestMessageUpdate(item.message.id, false, nil)
             }
         })
@@ -219,7 +219,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             let anchors = MessageWidgetAnchors(width: widget?.width ?? 0, height: widget?.height ?? 0)
             let source = widget?.html() ?? ""
             // Whether the widget may run at all: the client's flag, and a payload that decodes to some HTML.
-            let enabled = chatMessageWidgetRenderingEnabled(context: item.context)
+            let enabled = chatMessageWidgetRenderingEnabled()
             let renderable = enabled && !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let heightKey = AnyHashable(item.message.stableId)
 

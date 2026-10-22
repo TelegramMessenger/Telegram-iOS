@@ -155,8 +155,9 @@ namespace litehtml
         // Charges a var() splice of `bytes` to the style-byte budget (and to this element, for refresh); false if refused.
         bool        charge_splice(size_t bytes) const;
         // Telegram (VENDOR.md edit 33): the master sheet's cascaded value of `name` for this element (nullptr if it
-        // declares none): its matched master rules that style the element itself, in the order they applied.
-        const property_value* master_value(string_id name) const;
+        // declares none): its matched master rules that style the element itself, in the order they applied. Edit 50:
+        // with `layer` (revert-layer), the master's @layer rules' value when they set one, else the engine's.
+        const property_value* master_value(string_id name, bool layer = false) const;
         // Replaces revert declarations with master_value, charging a copy as a var() splice; before subst_vars.
         void                  resolve_reverts();
         // Telegram (VENDOR.md edit 21): refresh in document order, for a document whose replay could pass the budget.

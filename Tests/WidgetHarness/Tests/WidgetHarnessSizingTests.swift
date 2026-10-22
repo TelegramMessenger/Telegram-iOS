@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import TelegramUIPreferences
+import MessageWidget
 @testable import WidgetHarnessLib
 
 /// Tier 1 (in the app process): the widget bubble's size from its anchors, the fallback pill, the hard clip and the
@@ -96,11 +97,14 @@ final class WidgetHarnessSizingTests: XCTestCase {
         XCTAssertEqual(bubbles[0].width, bubbles[1].width)
     }
 
-    func testTheFlagOffShowsThePillWithTheCaption() throws {
+    func testTheKillSwitchShowsThePillWithTheCaption() throws {
+        defer {
+            MessageWidgetKillSwitch.isEngaged = false
+        }
         var options = WidgetHarnessLaunchOptions()
         options.set = .conformance
         options.postFilter = "visual/01-boxes"
-        options.widgetMessages = false
+        options.killSwitch = true
         let lines = try self.load(options, until: { lines in !lines.isEmpty && lines.allSatisfy { $0.contains(" pill") } })
         XCTAssertFalse(lines.isEmpty)
         for line in lines {

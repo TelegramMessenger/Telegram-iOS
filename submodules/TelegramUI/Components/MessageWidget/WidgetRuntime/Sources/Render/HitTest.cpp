@@ -127,6 +127,10 @@ bool elementBorderBox(const litehtml::element& element, RenderBox& out) {
 }
 
 void transformRects(const litehtml::element& element, std::vector<RenderBox>& rects) {
+    // The element's own transform and every ancestor's, composed innermost first and applied to each rect once (review
+    // minors, Task 4): a bounding box taken at every level inflated a rect whose rotation a child undoes.
+    litehtml::transform_matrix total;
+    bool transformed = false;
     for (const litehtml::element* el = &element; el && !rects.empty(); el = el->parent().get()) {
         std::shared_ptr<litehtml::render_item> item;
         el->for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
@@ -141,21 +145,26 @@ void transformRects(const litehtml::element& element, std::vector<RenderBox>& re
         if (m.is_identity()) {
             continue;
         }
-        for (RenderBox& r : rects) {
-            double left = 0, top = 0, right = 0, bottom = 0;
-            bool first = true;
-            for (const auto& [x, y] : {std::pair{r.x, r.y}, std::pair{r.x + r.width, r.y}, std::pair{r.x, r.y + r.height},
-                                       std::pair{r.x + r.width, r.y + r.height}}) {
-                const double mx = double(m.a) * x + double(m.c) * y + double(m.tx);
-                const double my = double(m.b) * x + double(m.d) * y + double(m.ty);
-                left = first ? mx : std::min(left, mx);
-                right = first ? mx : std::max(right, mx);
-                top = first ? my : std::min(top, my);
-                bottom = first ? my : std::max(bottom, my);
-                first = false;
-            }
-            r = RenderBox{left, top, right - left, bottom - top};
+        total = transformed ? total.then(m) : m;
+        transformed = true;
+    }
+    if (!transformed) {
+        return;
+    }
+    for (RenderBox& r : rects) {
+        double left = 0, top = 0, right = 0, bottom = 0;
+        bool first = true;
+        for (const auto& [x, y] : {std::pair{r.x, r.y}, std::pair{r.x + r.width, r.y}, std::pair{r.x, r.y + r.height},
+                                   std::pair{r.x + r.width, r.y + r.height}}) {
+            const double mx = double(total.a) * x + double(total.c) * y + double(total.tx);
+            const double my = double(total.b) * x + double(total.d) * y + double(total.ty);
+            left = first ? mx : std::min(left, mx);
+            right = first ? mx : std::max(right, mx);
+            top = first ? my : std::min(top, my);
+            bottom = first ? my : std::max(bottom, my);
+            first = false;
         }
+        r = RenderBox{left, top, right - left, bottom - top};
     }
 }
 

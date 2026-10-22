@@ -60,6 +60,62 @@ WR_TEST(testTapDispatchesInOrder) {
     CHECK_EQ(env.env().eval("t"), std::string("1,7,a"));
 }
 
+/// Pointer Events' setPointerCapture (profile 1's input.drag): an element takes a press's pointer events from the next
+/// one on, gotpointercapture before it and lostpointercapture after the pointerup; touch events stay with the touch's
+/// target. Four of the user's games (2026-10-22, Fixtures 11-14) call it on every button press.
+WR_TEST(testSetPointerCaptureTakesThePress) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("const a = document.getElementById('a'), b = document.getElementById('b'); window.cap = [];"
+                            "for (const t of ['gotpointercapture', 'lostpointercapture', 'pointermove', 'pointerup', "
+                            "'touchmove', 'touchend']) for (const el of [a, b]) el.addEventListener(t, e => "
+                            "cap.push(t + ':' + el.id));"
+                            "a.addEventListener('pointerdown', e => { b.setPointerCapture(e.pointerId); "
+                            "cap.push('has:' + b.hasPointerCapture(e.pointerId) + a.hasPointerCapture(e.pointerId)); }); 1"),
+             std::string("1"));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 30, 40, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 45, 40, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 45, 40, 7, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("cap.join(' ')"),
+             std::string("has:truefalse gotpointercapture:b pointermove:b touchmove:a pointerup:b lostpointercapture:b "
+                         "touchend:a"));
+    CHECK_EQ(env.env().eval("b.hasPointerCapture(7)"), std::string("false"));
+}
+
+/// A button that captures its own press, as the games' do, still clicks; a released capture leaves the press with its
+/// target.
+WR_TEST(testACapturedPressStillClicksAndReleaseRestoresTheTarget) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("const a = document.getElementById('a'), b = document.getElementById('b');"
+                            "a.onpointerdown = e => a.setPointerCapture(e.pointerId); 1"),
+             std::string("1"));
+    tap(env, 40, 40);
+    CHECK_EQ(log(env), std::string("pointerdown:a touchstart:a pointerup:a touchend:a mousedown:a mouseup:a click:a"));
+    CHECK_EQ(env.env().eval("log.length = 0; a.onpointerdown = e => { b.setPointerCapture(e.pointerId); "
+                            "b.releasePointerCapture(e.pointerId); window.held = b.hasPointerCapture(e.pointerId); }; 1"),
+             std::string("1"));
+    tap(env, 40, 40);
+    CHECK_EQ(log(env), std::string("pointerdown:a touchstart:a pointerup:a touchend:a mousedown:a mouseup:a click:a"));
+    CHECK_EQ(env.env().eval("held"), std::string("false"));
+}
+
+/// No active pointer with that id is a NotFoundError, for set and release alike; a disconnected element is an
+/// InvalidStateError.
+WR_TEST(testPointerCaptureErrors) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("const a = document.getElementById('a'); const name = f => { try { f(); return 'ok'; } "
+                            "catch (e) { return e.name; } };"
+                            "[name(() => a.setPointerCapture(7)), name(() => a.releasePointerCapture(7)), "
+                            "a.hasPointerCapture(7)].join()"),
+             std::string("NotFoundError,NotFoundError,false"));
+    CHECK_EQ(env.env().eval("a.onpointerdown = e => { window.errors = [name(() => a.setPointerCapture(e.pointerId + 1)), "
+                            "name(() => document.createElement('div').setPointerCapture(e.pointerId))].join(); }; 1"),
+             std::string("1"));
+    tap(env, 40, 40);
+    CHECK_EQ(env.env().eval("errors"), std::string("NotFoundError,InvalidStateError"));
+}
+
 WR_TEST(testMoveOverTheSlopCancelsTheClick) {
     RenderEnv env(kBoxes);
     wr::HostState& host = wr::HostState::of(env.ctx());

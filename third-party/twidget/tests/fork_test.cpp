@@ -544,6 +544,22 @@ int main() {
         CHECK(in && std::abs(float(in->parent()->get_placement().width) - 64.0f) < 0.5f);
     }
 
+    // Edit 49: a calc text-indent applies whatever its value at a zero percentage base (min(10%, 40px) is 0 there), and
+    // a calc font size with a percentage reads its em as the parent's size, as the percentage does.
+    {
+        auto doc = litehtml_test::layout(c, "<html><body style='margin:0'>"
+                                            "<div style='width:200px;text-indent:min(10%, 40px)'><span id=t1>aaaaaaaaaaaaaaaaaaaaaaaa</span> <span id=t2>bb</span></div>"
+                                            "<div style='width:200px;text-indent:calc(-10% + 4px)'><span id=t3>cc</span></div>"
+                                            "<div style='font-size:20px'><div id=f style='font-size:calc(1em + 10%)'>x</div></div>"
+                                            "</body></html>", 300);
+        const auto text_x = [&](const char* id) { auto el = by_id(doc, id); return el ? float(el->children().front()->get_placement().x) : -1000.0f; };
+        CHECK(std::abs(text_x("t1") - 20.0f) < 0.5f);
+        CHECK(std::abs(text_x("t2") - 0.0f) < 0.5f);
+        CHECK(std::abs(text_x("t3") + 16.0f) < 0.5f);
+        const auto f = by_id(doc, "f");
+        CHECK(f && std::abs(float(f->css().get_font_size()) - 22.0f) < 0.01f);
+    }
+
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }
     std::printf("twidget fork: OK\n");
     return 0;

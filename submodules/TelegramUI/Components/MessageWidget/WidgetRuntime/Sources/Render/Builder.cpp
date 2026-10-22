@@ -217,14 +217,11 @@ private:
 /// dir of its own (ltr, rtl or auto, in any case); ltr when there is none. A node visit per node and a scan of the text
 /// read are charged.
 std::string_view autoDirection(JSContext* ctx, AtomNames& names, DOMState& state, Element& element) {
+    // Compared, never copied: a value of any length costs what a short one does (final review C1).
     const auto ownDirection = [&](Element& e) {
         const std::optional<String> dir = e.attributeValue(ctx, state.name(Name::dir));
-        if (!dir) {
-            return false;
-        }
-        std::string value = dir->utf8ForParse();
-        std::transform(value.begin(), value.end(), value.begin(), asciiLower);
-        return value == "ltr" || value == "rtl" || value == "auto";
+        return dir && (dir->equalsIgnoringASCIICase("ltr") || dir->equalsIgnoringASCIICase("rtl") ||
+                       dir->equalsIgnoringASCIICase("auto"));
     };
     Node* node = element.firstChildNode();
     while (node) {
@@ -377,12 +374,17 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         if (!decided.kept || !keys.insert(decided.name).second) {
             continue;
         }
-        // dir (fidelity plan, Task 11): matched whatever its case by the UA's [dir=rtl] and [dir=ltr], which the renderer
-        // is given lowercased, and auto resolved here to the direction of the element's text.
+        // dir (fidelity plan, Task 11; review minors, Task 2): given to the renderer lowercased, as HTML matches [dir]
+        // values whatever their case, but otherwise as written, so an author's [dir=auto] matches and [dir=rtl] does not
+        // match an auto that resolves to rtl. The direction it gives, auto resolved here to the direction of the
+        // element's text, reaches the UA's rules as the host marker data-tg-dir.
+        std::string hostDirection;
         if (ns == markup::ElementNamespace::HTML && decided.name == "dir") {
             std::transform(decided.value.begin(), decided.value.end(), decided.value.begin(), asciiLower);
-            if (decided.value == "auto") {
-                decided.value = std::string(autoDirection(ctx, names, state, element));
+            if (decided.value == "ltr" || decided.value == "rtl") {
+                hostDirection = decided.value;
+            } else if (decided.value == "auto") {
+                hostDirection = std::string(autoDirection(ctx, names, state, element));
             }
         }
         // An <img src> profile 1 refuses, the empty one included, renders the 48 px placeholder (V4 plan, Task 6; RB
@@ -420,6 +422,9 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         }
         if (placeholder) {
             addHostMarker("data-tg-placeholder", std::string());
+        }
+        if (!hostDirection.empty()) {
+            addHostMarker("data-tg-dir", hostDirection);
         }
     }
     // A canvas draws as litehtml's image of its bitmap (V5d plan, Task 4): a source of its own, whatever src the widget
@@ -1185,8 +1190,8 @@ namespace {
 constexpr std::string_view kWidgetUAStylesheet =
     "summary{display:list-item;list-style-type:none}"
     "q::before{content:\"\\201C\"}q::after{content:\"\\201D\"}"
-    // HTML's [dir] rules (fidelity plan, Task 11): the Builder lowercases dir and resolves auto.
-    "[dir=ltr]{direction:ltr}[dir=rtl]{direction:rtl}";
+    // HTML's [dir] rules (fidelity plan, Task 11), on the Builder's marker of the direction dir gives (auto resolved).
+    "[data-tg-dir=ltr]{direction:ltr}[data-tg-dir=rtl]{direction:rtl}";
 
 } // namespace
 

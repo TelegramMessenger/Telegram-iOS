@@ -698,30 +698,40 @@ namespace litehtml
     }
 
     // Telegram (VENDOR.md edit 33).
-    const property_value* html_tag::master_value(string_id name) const
+    const property_value* html_tag::master_value(string_id name, bool layer) const
     {
-        const property_value* result = nullptr;
-        for(const auto& usel : m_used_styles)
+        // The rules of the master's @layer (`layered`) or the engine's own, in the order they applied.
+        const auto cascaded = [&](bool layered) {
+            const property_value* result = nullptr;
+            for(const auto& usel : m_used_styles)
+            {
+                if(usel->m_sheet != 0 || !usel->m_used || (usel->m_selector->m_layer != 0) != layered) // edit 41: revert skips a layer
+                    continue;
+                bool pseudo_element = false;
+                for(const auto& attr : usel->m_selector->m_right.m_attrs)
+                    pseudo_element = pseudo_element || attr.type == select_pseudo_element;
+                if(pseudo_element)
+                    continue;
+                const property_value& value = usel->m_selector->m_style->get_property(name);
+                if(value.is<invalid>())
+                    continue;
+                if(!result || !result->m_important || value.m_important)
+                    result = &value;
+            }
+            return result;
+        };
+        // Edit 50: revert-layer rolls back to the layer, and past it as revert does when the layer sets nothing.
+        if(layer)
         {
-            if(usel->m_sheet != 0 || !usel->m_used || usel->m_selector->m_layer != 0) // edit 41: revert skips a layer
-                continue;
-            bool pseudo_element = false;
-            for(const auto& attr : usel->m_selector->m_right.m_attrs)
-                pseudo_element = pseudo_element || attr.type == select_pseudo_element;
-            if(pseudo_element)
-                continue;
-            const property_value& value = usel->m_selector->m_style->get_property(name);
-            if(value.is<invalid>())
-                continue;
-            if(!result || !result->m_important || value.m_important)
-                result = &value;
+            if(const property_value* value = cascaded(true))
+                return value;
         }
-        return result;
+        return cascaded(false);
     }
 
     void html_tag::resolve_reverts()
     {
-        m_style.resolve_reverts([this](string_id name) { return master_value(name); },
+        m_style.resolve_reverts([this](string_id name, bool layer) { return master_value(name, layer); },
                                 [this](size_t bytes) { return bytes == 0 || charge_splice(bytes); });
     }
 

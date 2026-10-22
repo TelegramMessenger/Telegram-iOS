@@ -222,6 +222,13 @@ interface PointerEvent : MouseEvent {
   readonly attribute long persistentDeviceId;
 };
 
+// Pointer Events' capture (profile 1's input.drag; Sources/Events/Taps.cpp).
+partial interface Element {
+  undefined setPointerCapture(long pointerId);
+  undefined releasePointerCapture(long pointerId);
+  boolean hasPointerCapture(long pointerId);
+};
+
 enum TouchType {
   "direct",
   "stylus"

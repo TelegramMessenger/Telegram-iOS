@@ -1206,7 +1206,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     earlier one stood.
     - **33.1** `style.h`: `initial`, `unset` and `revert` marker types, appended to `property_value`'s variant (the
       replaced line under `#if 0`). `style::add_property` stores them as it stores `inherit`, over a shorthand's
-      longhands (`global_keyword_property`); `revert-layer` is `revert` (there are no layers). The raw declaration
+      longhands (`global_keyword_property`); `revert-layer` was `revert` (there were no layers; edit 50 stops it at the
+      master's layer). The raw declaration
       copies keep the keyword's text, as they keep `inherit`'s.
     - **33.2** `html_tag::get_property` answers `initial` with the property's initial value (its `default_value`);
       `unset` falls through as no declaration does, so it inherits an inherited property and is initial otherwise.
@@ -1345,7 +1346,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     - **46.3** `calc_auto_margins`: a block whose margins are both set, in a right-to-left containing block, ignores
       `margin-left` (CSS 2.1 §10.3.3) and ends at its right margin; the shift is returned like an auto margin's.
     - Not yet: floats, the absolutely positioned static position and table columns are as in LTR (the order of a
-      line's items is edit 47). The `[dir]` rules and `dir=auto` are WidgetRuntime's (its UA sheet and the Builder).
+      line's items is edit 47). The `[dir]` rules and `dir=auto` are WidgetRuntime's (its UA sheet and the Builder; since
+      the review minors the rules match the host marker `data-tg-dir`, so an author's `[dir]` sees `dir` as written).
 
 47. **Bidi reordering of a line's items, phase 2 of right-to-left** (2026-10-22, fidelity plan, Task 13).
     - **47.1** `document_container::bidi_levels(runs, rtl, levels)`: a hook (default: false, the logical order kept)
@@ -1397,6 +1399,22 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       `style::combine`, the cap at 64 nodes and the oversized sum refused at once, and no tree outliving its lengths: a parsed length copied, moved and reassigned leaves none
       alive, and a second layout and patch of the same page leaves no more alive than the first, the rest being
       `style::add`'s process-wide declaration cache (edit 11)), and by `FidelityRenderTests.testMathWithPercentages`.
+
+49. **Calc consumers the review found** (2026-10-22, review-minors plan, Task 1). A calc's `val()` is its value at a
+    zero percentage base (edit 48.2), so two sites read it wrong: the three `text-indent` gates in
+    `render_inline_context.cpp` (`val() != 0`, and the content-mode fast path's `val() == 0`) also pass for a calc, so
+    `text-indent: min(10%, 40px)` indents; and a calc font size with a percentage (`css_properties.cpp`) evaluates with
+    `calc_value(parent_sz, calc_fonts_for(…))`, its em the parent's size as the non-percentage path's `to_pixels` reads
+    it, not 16. The replaced lines are under `#if 0`. Pinned by `fork_test.cpp` ("Edit 49"); WidgetRuntime's font cache
+    key keys a calc length by its tree for the same reason (`WidgetContainer.cpp` `appendLength`,
+    `FidelityRenderTests.testCalcDecorationThicknessKeysTheFont`).
+
+50. **`revert-layer` stops at the master's layer** (2026-10-22, review-minors plan, Task 3). Edit 33 read `revert-layer`
+    as `revert`, which skips the master's `@layer` (edit 41) to the engine's own rules. In the reference renderer the
+    UA layer is an author-origin layer, so an unlayered author `revert-layer` rolls back to it: `struct revert` gains
+    `layer`, set for `revert-layer`, and `html_tag::master_value(name, layer)` answers the layered master rules' value
+    when they set one, else the engine's (a property the layer does not set rolls back as `revert` does).
+    `style::resolve_reverts`' callback takes the flag. Pinned by `FidelityRenderTests.testRevertLayerStopsAtTheUALayer`.
 
 ## The iOS font resolver
 

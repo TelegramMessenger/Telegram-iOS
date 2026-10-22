@@ -54,7 +54,7 @@ One leading dash (`--widget-set` is ignored silently).
 |---|---|---|
 | `-widget-set` | `conformance` (widget-sandbox v0.1.1's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
-| `-widget-flag` | `on`, `off` (Debug Settings ▸ "Widget messages") | `on` |
+| `-widget-kill-switch` | `on` (the app config's `ios_killswitch_disable_message_widgets` engaged: every widget a pill) | `off` |
 | `-widget-anchors` | `<W>x<H>`, overriding every post's anchors | the post's |
 | `-widget-caption` | `off` (the widget alone in its bubble: its corners, the tail, the date over it) | on |
 | `-harness-theme` | `dark` | light |

@@ -2341,6 +2341,8 @@ void RenderTree::nodeInserted(Node& node) {
         this->noteAutoDirection(node.parent());
         return;
     }
+    // dir=auto reads text the renderer does not draw (review minors, Task 2).
+    this->noteAutoDirection(node.parent());
     // Not heard by the journal (an element no build renders), yet counted by a build against profile 1's node cap
     // (V4 plan, Task 7; final review C2): kept as an upper bound beside the published count.
     if (!m_current.document) {
@@ -2367,8 +2369,9 @@ void RenderTree::nodeRemoved(Node& node, Node& oldParent) {
     }
     if (!m_journal.rebuildPending() && (this->rendered(&node) || this->rendered(&oldParent))) {
         this->record(node, JournalKind::Removed);
-        this->noteAutoDirection(&oldParent);
     }
+    // dir=auto reads text the renderer does not draw (review minors, Task 2).
+    this->noteAutoDirection(&oldParent);
 }
 
 void RenderTree::childrenChanged(Node& parent) {
@@ -2393,6 +2396,10 @@ void RenderTree::attributeChanged(Element& element, JSAtom localName, Namespace 
         this->record(element, JournalKind::Attribute);
         m_domAttributeChanges.insert(&element);
     }
+    // An element's own dir takes its text out of its dir=auto ancestor's resolution, and back in (review minors, Task 2).
+    if (ns == Namespace::None && localName == DOMState::of(m_ctx).name(Name::dir)) {
+        this->noteAutoDirection(element.parent());
+    }
 }
 
 void RenderTree::animatedStyleChanged(Element& element) {
@@ -2411,8 +2418,9 @@ void RenderTree::characterDataChanged(Node& node) {
     }
     if (this->rendered(&node) || this->rendered(node.parent())) {
         this->record(node, JournalKind::Text);
-        this->noteAutoDirection(node.parent());
     }
+    // dir=auto reads text the renderer does not draw (review minors, Task 2).
+    this->noteAutoDirection(node.parent());
 }
 
 void RenderTree::noteAutoDirection(Node* from) {
@@ -2431,19 +2439,19 @@ void RenderTree::noteAutoDirection(Node* from) {
             if (local == state.name(Name::script) || local == state.name(Name::style) || local == state.name(Name::textarea)) {
                 return;
             }
+            // Compared, never copied: a value or a name of any length costs what a short one does (final review C1).
             const std::optional<String> dir = element.attributeValue(m_ctx, state.name(Name::dir));
             if (!dir) {
-                if (String::fromAtom(m_ctx, local).utf8ForParse() == "bdi") {
+                if (String::fromAtom(m_ctx, local).equalsASCII("bdi")) {
                     return;
                 }
                 continue;
             }
-            std::string value = dir->utf8ForParse();
-            std::transform(value.begin(), value.end(), value.begin(), [](char c) { return c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c; });
-            if (value == "auto" && (this->rendered(&element) || this->rendered(element.parent()))) {
+            const bool automatic = dir->equalsIgnoringASCIICase("auto");
+            if (automatic && (this->rendered(&element) || this->rendered(element.parent()))) {
                 this->record(element, JournalKind::Attribute);
             }
-            if (value == "ltr" || value == "rtl" || value == "auto") {
+            if (automatic || dir->equalsIgnoringASCIICase("ltr") || dir->equalsIgnoringASCIICase("rtl")) {
                 return;
             }
         } catch (const Aborted&) {

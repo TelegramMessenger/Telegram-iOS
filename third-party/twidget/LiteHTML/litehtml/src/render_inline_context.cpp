@@ -25,7 +25,11 @@ litehtml::rendered_width litehtml::render_item_inline_context::measure(pixel_t x
        css().get_width().is_predefined() && css().get_min_width().is_predefined() && css().get_max_width().is_predefined() &&
        !css().contains(contain_size) && !css().contains(contain_inline_size) &&
        (css().get_list_style_type() == list_style_type_none || css().get_list_style_position() != list_style_position_inside) &&
+#if 0
        css().get_text_indent().val() == 0 &&
+#else
+       css().get_text_indent().val() == 0 && !css().get_text_indent().is_calc() && // Telegram (VENDOR.md edit 49)
+#endif
        !m_children.empty())
     {
         calc_outlines(cb.width);
@@ -257,7 +261,12 @@ void litehtml::render_item_inline_context::fix_line_width(element_float flt, con
                     line_left       += sz_font;
                 }
 
+#if 0
                 if(pixel_t(src_el()->css().get_text_indent().val()) != 0_px)
+#else
+                // Telegram (VENDOR.md edit 49).
+                if(src_el()->css().get_text_indent().is_calc() || pixel_t(src_el()->css().get_text_indent().val()) != 0_px)
+#endif
                 {
                     line_left += src_el()->css().get_text_indent().calc_percent(self_size.width);
                 }
@@ -314,7 +323,12 @@ litehtml::pixel_t litehtml::render_item_inline_context::new_box(const std::uniqu
         {
             first_line_margin = src_el()->css().get_font_size();
         }
+#if 0
         if(pixel_t(src_el()->css().get_text_indent().val()) != 0_px)
+#else
+        // Telegram (VENDOR.md edit 49): a calc's val() is its value at a zero percentage base.
+        if(src_el()->css().get_text_indent().is_calc() || pixel_t(src_el()->css().get_text_indent().val()) != 0_px)
+#endif
         {
             text_indent = src_el()->css().get_text_indent().calc_percent(self_size.width);
         }

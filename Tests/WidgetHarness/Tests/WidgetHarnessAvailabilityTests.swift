@@ -42,6 +42,18 @@ final class WidgetHarnessAvailabilityTests: XCTestCase {
         return { lines in !lines.isEmpty && lines.allSatisfy { $0.contains(" \(state)") } }
     }
 
+    /// Widget messages are on by default (the user, 2026-10-22): with the app's own settings, no debug switch turned on,
+    /// a widget runs; only the server's kill switch turns them off.
+    func testWidgetsRunWithTheAppsDefaultSettings() throws {
+        let root = try self.root()
+        var options = WidgetHarnessLaunchOptions()
+        options.set = .fixture
+        options.postFilter = "box-240"
+        root.reload(options: options)
+        let lines = self.bubbles(root, until: self.all("widget"))
+        XCTAssertTrue(self.all("widget")(lines), lines.joined(separator: "\n"))
+    }
+
     func testSwitchingWidgetsOffAndOnRelaysOutAnOpenChat() throws {
         let root = try self.root()
         var options = WidgetHarnessLaunchOptions()
@@ -50,7 +62,6 @@ final class WidgetHarnessAvailabilityTests: XCTestCase {
         root.reload(options: options)
         defer {
             MessageWidgetKillSwitch.isEngaged = false
-            root.setWidgetMessages(true)
         }
         // Settled: its boot has reported a height (no relayout of its own is still due, which would read the new flag
         // by itself) and a moment has passed.
@@ -58,21 +69,13 @@ final class WidgetHarnessAvailabilityTests: XCTestCase {
         XCTAssertTrue(settled(self.bubbles(root, until: settled)), "the widget never ran")
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
 
-        // Debug Settings ▸ "Widget messages" off: the running widget stops and the pill takes its place.
-        root.setWidgetMessages(false)
-        let off = self.bubbles(root, until: self.all("pill"))
-        XCTAssertTrue(self.all("pill")(off), off.joined(separator: "\n"))
-        XCTAssertEqual(self.liveWidgetViews(in: root.view), 0)
-
-        // On again: the pill becomes the widget.
-        root.setWidgetMessages(true)
-        let on = self.bubbles(root, until: self.all("widget"))
-        XCTAssertTrue(self.all("widget")(on), on.joined(separator: "\n"))
-
-        // The server's kill switch, both ways.
+        // The server's kill switch engaged: the running widget stops and the pill takes its place.
         MessageWidgetKillSwitch.isEngaged = true
         let killed = self.bubbles(root, until: self.all("pill"))
         XCTAssertTrue(self.all("pill")(killed), killed.joined(separator: "\n"))
+        XCTAssertEqual(self.liveWidgetViews(in: root.view), 0)
+
+        // Released: the pill becomes the widget.
         MessageWidgetKillSwitch.isEngaged = false
         let restored = self.bubbles(root, until: self.all("widget"))
         XCTAssertTrue(self.all("widget")(restored), restored.joined(separator: "\n"))

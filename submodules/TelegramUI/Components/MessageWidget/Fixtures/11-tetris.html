@@ -1,0 +1,193 @@
+<!--
+  showcase: widget profile 1, SDK v1 (corpus/showcase/README.md)
+  idea: falling-block puzzle on one canvas (the mario model): 7-bag, wall kicks, ghost, levels; fixed-step rAF clock; SVG buttons with auto-repeat; best score in localStorage
+-->
+<style>
+  :root { color-scheme: light dark; --pad: light-dark(#e8e8ee, #1c1c22); }
+  body { margin: 0; background: var(--pad); font-family: system-ui, sans-serif; }
+  canvas { display: block; width: 100%; height: 480px; background: #111118; }
+  nav { display: grid; grid-template-columns: repeat(3, 80px) 1fr; gap: 6px; padding: 8px; touch-action: none; }
+  nav button { height: 46px; display: flex; align-items: center; justify-content: center; }
+  svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  #pp { grid-column: 4; grid-row: 1 / span 2; justify-self: end; width: 80px; height: auto; }
+  #pp .pz, #pp.run .pl { display: none; }
+  #pp.run .pz { display: block; }
+</style>
+<canvas id="cv"></canvas>
+<nav>
+  <button id="pp" data-k="p" role="button"><svg class="pl" viewBox="0 0 24 24"><path d="M9 7v10l8-5z" fill="currentColor"/></svg><svg class="pz" viewBox="0 0 24 24"><path d="M9.5 7v10M14.5 7v10" stroke-width="3"/></svg></button>
+  <button data-k="q" role="button"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9L4 8.5M4 3.5v5h5"/></svg></button>
+  <button data-k="d" role="button"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+  <button data-k="u" role="button"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9L20 8.5M20 3.5v5h-5"/></svg></button>
+  <button data-k="l" role="button"><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>
+  <button data-k="h" role="button"><svg viewBox="0 0 24 24"><path d="m7 4 5 5 5-5M7 10l5 5 5-5M5 20h14"/></svg></button>
+  <button data-k="r" role="button"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>
+</nav>
+<script>
+const W = 10, H = 20; // well size in cells
+const cv = document.getElementById('cv'), C = cv.getContext('2d'), pp = document.getElementById('pp');
+// 3:4 up to 480 px tall (the bubble stops at 600 px); the well fills the height
+const cw = cv.clientWidth || 360, ch = Math.min(480, Math.round(cw * 4 / 3)), dpr = devicePixelRatio || 1;
+cv.style.height = ch + 'px'; cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+const S = cv.height / H, SX = (W + cv.width / S) / 2;
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// box size, spawn cells (x, y), colour
+const P = [
+  [4, [0, 1, 1, 1, 2, 1, 3, 1], '#3cd0f0'], // I
+  [2, [0, 0, 1, 0, 0, 1, 1, 1], '#f0d43c'], // O
+  [3, [1, 0, 0, 1, 1, 1, 2, 1], '#b05cf0'], // T
+  [3, [1, 0, 2, 0, 0, 1, 1, 1], '#5cdc5c'], // S
+  [3, [0, 0, 1, 0, 1, 1, 2, 1], '#f05050'], // Z
+  [3, [0, 0, 0, 1, 1, 1, 2, 1], '#4c7cf0'], // J
+  [3, [2, 0, 0, 1, 1, 1, 2, 1], '#f0a03c'], // L
+];
+const cells = (t, r) => {
+  const [n, c] = P[t], out = [];
+  for (let i = 0; i < 8; i += 2) {
+    let x = c[i], y = c[i + 1];
+    for (let k = 0; k < r; k++) [x, y] = [n - 1 - y, x];
+    out.push([x, y]);
+  }
+  return out;
+};
+const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
+
+let well, bag, cur, next, score, lines, level, best = store.get('tw-tetris', 0);
+let state = 0; // 0 title, 1 playing, 2 paused, 3 game over
+let fall = 0, lock = 0, flash = 0, full = [];
+const held = {}, rep = {};
+
+const fits = (t, r, x, y) => cells(t, r).every(([a, b]) => {
+  const cx = x + a, cy = y + b;
+  return cx >= 0 && cx < W && cy < H && (cy < 0 || !well[cy][cx]);
+});
+const draw7 = () => {
+  if (!bag.length) { bag = [0, 1, 2, 3, 4, 5, 6]; for (let i = 6; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [bag[i], bag[j]] = [bag[j], bag[i]]; } }
+  return bag.pop();
+};
+const spawn = () => {
+  cur = { t: next, r: 0, x: P[next][0] == 2 ? 4 : 3, y: next ? -1 : -2 };
+  next = draw7();
+  lock = 0;
+  if (!fits(cur.t, 0, cur.x, cur.y)) {
+    state = 3;
+    if (score > best) store.set('tw-tetris', best = score);
+  }
+};
+const start = () => {
+  well = Array.from({ length: H }, () => Array(W).fill(0));
+  bag = []; next = draw7(); score = lines = level = 0; full = []; flash = 0;
+  state = 1; spawn();
+};
+const move = (dx, dy) => {
+  if (!fits(cur.t, cur.r, cur.x + dx, cur.y + dy)) return false;
+  cur.x += dx; cur.y += dy; if (dx) lock = 0;
+  return true;
+};
+const rotate = (d) => {
+  const r = (cur.r + d) % 4;
+  for (const [dx, dy] of KICKS) if (fits(cur.t, r, cur.x + dx, cur.y + dy)) { cur.r = r; cur.x += dx; cur.y += dy; lock = 0; return; }
+};
+const land = () => {
+  for (const [a, b] of cells(cur.t, cur.r)) if (cur.y + b >= 0) well[cur.y + b][cur.x + a] = cur.t + 1;
+  full = [];
+  well.forEach((row, y) => row.every(Boolean) && full.push(y));
+  if (full.length) { flash = 18; cur = null; } else spawn();
+};
+const clearRows = () => {
+  for (const y of full) { well.splice(y, 1); well.unshift(Array(W).fill(0)); }
+  score += [0, 100, 300, 500, 800][full.length] * (level + 1);
+  lines += full.length; level = lines / 10 | 0; full = [];
+  if (score > best) store.set('tw-tetris', best = score);
+  spawn();
+};
+const hardDrop = () => { let n = 0; while (move(0, 1)) n++; score += 2 * n; land(); };
+const ghostY = () => { let y = cur.y; while (fits(cur.t, cur.r, cur.x, y + 1)) y++; return y; };
+
+// fixed 60 Hz step
+const step = () => {
+  if (state != 1) return;
+  if (flash) { if (!--flash) clearRows(); return; }
+  for (const k of 'lr') if (held[k] && ++rep[k] > 10 && rep[k] % 3 == 0) move(k == 'l' ? -1 : 1, 0);
+  if (held.d && ++rep.d % 3 == 0 && move(0, 1)) score++, fall = 0;
+  if (++fall >= Math.max(3, 48 - level * 5)) { fall = 0; move(0, 1); }
+  if (!fits(cur.t, cur.r, cur.x, cur.y + 1) && ++lock > 30) land();
+};
+const press = (k) => {
+  if (k == 'p') { if (state == 1) state = 2; else if (state == 2) state = 1; else start(); return; }
+  if (state != 1 || !cur) return;
+  rep[k] = 0;
+  if (k == 'l') move(-1, 0); else if (k == 'r') move(1, 0);
+  else if (k == 'd') { if (move(0, 1)) score++, fall = 0; }
+  else if (k == 'u') rotate(1); else if (k == 'q') rotate(3); else if (k == 'h') hardDrop();
+};
+
+const box = (x, y, col, a = 1) => {
+  C.globalAlpha = a; C.fillStyle = col;
+  C.fillRect(x * S + 1, y * S + 1, S - 2, S - 2);
+  C.fillStyle = '#fff3'; C.fillRect(x * S + 1, y * S + 1, S - 2, S / 6);
+  C.globalAlpha = 1;
+};
+const text = (s, x, y, size, col = '#fff', align = 'left') => {
+  C.font = `700 ${size * S | 0}px system-ui, sans-serif`; C.fillStyle = col; C.textAlign = align;
+  C.fillText(s, x * S, y * S);
+};
+const render = (t) => {
+  C.fillStyle = '#111118'; C.fillRect(0, 0, cv.width, cv.height);
+  C.fillStyle = '#1c1c28'; C.fillRect(0, 0, W * S, H * S);
+  C.strokeStyle = '#ffffff0c'; C.beginPath();
+  for (let i = 1; i < W; i++) { C.moveTo(i * S, 0); C.lineTo(i * S, H * S); }
+  for (let i = 1; i < H; i++) { C.moveTo(0, i * S); C.lineTo(W * S, i * S); }
+  C.stroke();
+  if (well) {
+    well.forEach((row, y) => row.forEach((v, x) => v && box(x, y, full.includes(y) && flash & 4 ? '#fff' : P[v - 1][2])));
+    if (cur) {
+      const col = P[cur.t][2], gy = ghostY();
+      for (const [a, b] of cells(cur.t, cur.r)) {
+        box(cur.x + a, gy + b, col, .25);
+        if (cur.y + b >= 0) box(cur.x + a, cur.y + b, col);
+      }
+    }
+    text('NEXT', SX, 1.4, .7, '#aaa', 'center');
+    const [n] = P[next], o = SX - n / 2 * .8;
+    C.save(); C.translate(o * S, 2 * S); C.scale(.8, .8);
+    for (const [a, b] of cells(next, 0)) box(a, b + (n == 4 ? -.5 : 0), P[next][2]);
+    C.restore();
+    [['SCORE', score], ['LINES', lines], ['LEVEL', level + 1], ['BEST', Math.max(best, score)]].forEach(([k, v], i) => {
+      text(k, SX, 6.4 + i * 2.6, .6, '#aaa', 'center');
+      text(String(v), SX, 7.5 + i * 2.6, .9, '#fff', 'center');
+    });
+  } else {
+    text('BEST', SX, 6.4, .6, '#aaa', 'center');
+    text(String(best), SX, 7.5, .9, '#fff', 'center');
+  }
+  if (state != 1) {
+    C.fillStyle = '#000a'; C.fillRect(0, 0, W * S, H * S);
+    const title = ['TETRIS', 'PAUSED', '', 'GAME OVER'][state];
+    text(title, 5, 9, 1.4, '#fff', 'center');
+    if (state != 2 || t & 512) text(state == 2 ? 'tap to resume' : 'tap to play', 5, 11, .7, '#ccc', 'center');
+  }
+};
+
+let last = 0, acc = 0, run;
+const frame = (t) => {
+  acc += Math.min(100, t - (last || t)); last = t;
+  for (; acc > 16.6; acc -= 16.67) step();
+  render(t);
+  if (run != (state == 1)) pp.classList.toggle('run', run = state == 1);
+  requestAnimationFrame(frame);
+};
+
+for (const b of document.querySelectorAll('[data-k]')) {
+  const k = b.dataset.k;
+  b.onpointerdown = (e) => { e.stopPropagation(); held[k] = 1; press(k); b.setPointerCapture(e.pointerId); };
+  b.onpointerup = b.onpointercancel = () => { held[k] = 0; };
+}
+cv.onpointerdown = () => { if (state == 0 || state == 3) start(); else if (state == 2) state = 1; };
+requestAnimationFrame(frame);
+</script>

@@ -735,7 +735,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case coreListChatBackend(Bool)
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
-    case widgetMessages(Bool)
     case insertWidgetConformanceSet
     case insertWidgetCorpus
     case forceRLottieBackend(Bool)
@@ -791,7 +790,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .widgetMessages, .insertWidgetConformanceSet, .insertWidgetCorpus:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetCorpus:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -950,9 +949,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .fakeWalletTransfers:
             // Appended right after `springSendAnimation`; see the ordering note above.
             return 74
-        case .widgetMessages:
-            // Appended right after `fakeWalletTransfers`; see the ordering note above.
-            return 75
         case .insertWidgetConformanceSet:
             return 76
         case .insertWidgetCorpus:
@@ -1463,16 +1459,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.fakeWalletTransfers = value
-                        return EnginePreferencesEntry(settings)
-                    })
-                }).start()
-            })
-        case let .widgetMessages(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Widget messages", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.widgetMessages = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -2032,7 +2018,6 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         if let data = context?.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 {
             entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
         }
-        entries.append(.widgetMessages(experimentalSettings.widgetMessages))
         entries.append(.insertWidgetConformanceSet)
         entries.append(.insertWidgetCorpus)
         

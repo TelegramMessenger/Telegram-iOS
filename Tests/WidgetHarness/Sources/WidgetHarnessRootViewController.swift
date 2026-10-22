@@ -66,7 +66,7 @@ public final class WidgetHarnessRootViewController: UIViewController {
 
         let settings = HarnessSettings()
         settings.useDarkTheme = self.options.useDarkTheme
-        settings.widgetMessages = self.options.widgetMessages
+        MessageWidgetKillSwitch.isEngaged = self.options.killSwitch
         self.settings = settings
         self.overrideUserInterfaceStyle = self.options.useDarkTheme ? .dark : .light
         let context = HarnessAccountContext(account: harnessAccount, settings: settings)
@@ -93,13 +93,6 @@ public final class WidgetHarnessRootViewController: UIViewController {
         }
         host.listView.view.frame = self.view.bounds
         host.updateLayout(size: self.view.bounds.size, topInset: self.view.safeAreaInsets.top + WidgetHarnessRootViewController.readoutHeight, bottomInset: self.view.safeAreaInsets.bottom)
-    }
-
-    /// Flips Debug Settings ▸ "Widget messages" in the open chat, as the app's shared account context does when the
-    /// setting changes: the live settings change, then `MessageWidgetAvailability` tells the bubbles.
-    public func setWidgetMessages(_ enabled: Bool) {
-        self.settings?.widgetMessages = enabled
-        MessageWidgetAvailability.noteChange()
     }
 
     /// Settings ▸ Appearance ▸ Text Size changed while the chat is open.

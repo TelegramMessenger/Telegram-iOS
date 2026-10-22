@@ -97,6 +97,19 @@ WR_TEST(testTheWindowSizes) {
     CHECK_EQ(env.env().eval("innerHeight"), std::string("96"));
 }
 
+/// devicePixelRatio (CSSOM View; profile 1's canvas.hidpi) is the scale the widget is drawn at, the render options'
+/// pixelSnapScale (the screen's), and a bare global as in a browser: a game sizes its canvas's backing store by it, and
+/// four of the user's games (2026-10-22, Fixtures 11-14) stopped at their first line without it.
+WR_TEST(testDevicePixelRatioIsTheDrawingScale) {
+    RenderEnv one(kBoxes);
+    CHECK_EQ(one.env().eval("[typeof devicePixelRatio, devicePixelRatio, window.devicePixelRatio].join()"),
+             std::string("number,1,1"));
+    wr::RenderOptions threeTimes;
+    threeTimes.pixelSnapScale = 3;
+    RenderEnv three(kBoxes, threeTimes);
+    CHECK_EQ(three.env().eval("devicePixelRatio"), std::string("3"));
+}
+
 WR_TEST(testAQueryLoopStopsAtTheLayoutQueryLimit) {
     RenderEnv env("<!doctype html><div id=a style=\"height:20px\">x</div>"
                   "<script>window.a = document.getElementById('a');</script>");

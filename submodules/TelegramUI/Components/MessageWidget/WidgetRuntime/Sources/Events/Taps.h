@@ -18,6 +18,7 @@
 
 namespace wr {
 
+class Element;
 class EventTarget;
 
 enum class PointerPhase : uint8_t { Down, Move, Up, Cancel };
@@ -36,7 +37,19 @@ public:
     /// past the slop) and queues the phase's task. Never throws: a task that cannot be queued stops the widget.
     void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary);
 
+    /// Pointer Events' capture, task side: `element` takes the press's pointer events from the next one on
+    /// (gotpointercapture before it, lostpointercapture after the pointerup or pointercancel); touch events stay with the
+    /// touch's target, and the compatibility mouse events and the click with the down target. A touch's implicit capture
+    /// (the down target) is not reported: hasPointerCapture answers only for an explicit one. Throws DOMError:
+    /// NotFoundError when no press is dispatching pointer `pointerId`, InvalidStateError when `element` is not connected.
+    void setCapture(JSContext* ctx, Element& element, int32_t pointerId);
+    void releaseCapture(JSContext* ctx, Element& element, int32_t pointerId);
+    bool hasCapture(const Element& element, int32_t pointerId) const;
+
 private:
+    /// Makes the pending capture the current one, firing lostpointercapture at the old and gotpointercapture at the new;
+    /// the target of the press's next pointer event.
+    EventTarget& pointerTarget(JSContext* ctx, double x, double y, bool primary);
     void runDown(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
     void runMove(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
     void runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool moved);
@@ -54,6 +67,10 @@ private:
 
     // The task side: the tap's target from its down task to its up or cancel task, and what canceled its defaults.
     Ref<EventTarget> m_target;
+    /// The press's pointer, and its explicit capture: pending (set by script) and current (reported to script).
+    int32_t m_taskPointerId = 0;
+    Ref<EventTarget> m_pendingCapture;
+    Ref<EventTarget> m_capture;
     /// The press's number (HostState::beginPress), active while its pointer and mouse events dispatch.
     uint64_t m_press = 0;
     bool m_pointerCanceled = false;

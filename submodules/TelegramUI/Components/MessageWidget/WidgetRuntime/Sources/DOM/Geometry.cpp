@@ -408,4 +408,10 @@ int32_t Window::innerHeight(JSContext* ctx) {
     return render ? rounded(render->documentHeight()) : 0;
 }
 
+double Window::devicePixelRatio(JSContext* ctx) {
+    HostState* host = HostState::find(ctx);
+    RenderTree* render = host ? host->render() : nullptr;
+    return render ? render->options().pixelSnapScale : 1.0;
+}
+
 } // namespace wr

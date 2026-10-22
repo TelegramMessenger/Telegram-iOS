@@ -74,10 +74,10 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertTrue(afterTap.contains("openLink https://example.org/harness"), afterTap)
     }
 
-    func testTheFlagOffPillAndItsCaption() {
-        let app = self.launch(["-widget-flag", "off", "-widget-post", "visual/01-boxes"])
+    func testTheKillSwitchPillAndItsCaption() {
+        let app = self.launch(["-widget-kill-switch", "on", "-widget-post", "visual/01-boxes"])
         let value = self.waitForReadout(app) { $0.contains(" pill") }
-        self.attachScreenshot(app, "flag off")
+        self.attachScreenshot(app, "kill switch engaged")
         let bubbles = value.split(separator: "\n").filter { $0.hasPrefix("bubble ") }
         XCTAssertFalse(bubbles.isEmpty, value)
         for line in bubbles {

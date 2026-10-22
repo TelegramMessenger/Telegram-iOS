@@ -1030,15 +1030,15 @@ a bubble of its own, the message's text as its caption below. The authority is w
 and self-checks; v0.1.1 clarified profile 1 without changing it); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md` (its §8 is the v0.1.1 delta and what this client decided for it)
 (milestones V1–V6). Every widget runs on the native runtime,
 `WidgetRuntime`, whose record, invariants, limits and measurements are
-[`docs/message-widgets-native-runtime.md`](docs/message-widgets-native-runtime.md). Off by default:
-`chatMessageWidgetRenderingEnabled` needs Debug Settings ▸ "Widget messages" (`ExperimentalUISettings.widgetMessages`)
-and no `ios_killswitch_disable_message_widgets` in the app config (`MessageWidgetKillSwitch.isEngaged`, set once per
-app configuration by `AccountContextImpl`, because `getAppConfigValue` is expensive). Off, or when the payload does not
+[`docs/message-widgets-native-runtime.md`](docs/message-widgets-native-runtime.md). On by default (the user,
+2026-10-22, which removed the Debug Settings flag): `chatMessageWidgetRenderingEnabled()` is false only while the app
+config carries `ios_killswitch_disable_message_widgets` (`MessageWidgetKillSwitch.isEngaged`, set once per app
+configuration by `AccountContextImpl`, because `getAppConfigValue` is expensive). Then, or when the payload does not
 decode or the widget fails to start, the bubble shows the shared "please update" pill (`UnsupportedContentPill`)
-inside a normal bubble, so the caption keeps its bubble, and no date. Switching either while a chat is open re-lays its
-widget bubbles out: the kill switch's setter and `SharedAccountContextImpl` (when `widgetMessages` changes) post
-`MessageWidgetAvailability`'s change, and a bubble whose last pass answered the gate differently asks for its own
-relayout, because nothing else lays out a widget whose size never changes (`WidgetHarnessAvailabilityTests`). The chat list and the forward panels read the
+inside a normal bubble, so the caption keeps its bubble, and no date. The kill switch flipping while a chat is open
+re-lays its widget bubbles out: its setter posts `MessageWidgetAvailability`'s change, and a bubble whose last pass
+answered the gate differently asks for its own relayout, because nothing else lays out a widget whose size never
+changes (`WidgetHarnessAvailabilityTests`). The chat list and the forward panels read the
 caption, or "Widget" for a widget with none (`MessageContentKind.widget`). The `.tgw` widget files and ```` ```tgwidget ````
 code blocks of the earlier milestones are removed (V1): `messageMediaWidget` is the only delivery. Code:
 `submodules/TelegramUI/Components/MessageWidget/{MessageWidget,MessageWidgetRendering,WidgetRuntimeIOS,WidgetRuntime}`

@@ -185,8 +185,49 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
     }
 }
 
+void TapState::setCapture(JSContext* ctx, Element& element, int32_t pointerId) {
+    if (!m_target || pointerId != m_taskPointerId) {
+        throw DOMError{"NotFoundError", "No active pointer has that id."};
+    }
+    if (!element.isConnected(ctx)) {
+        throw DOMError{"InvalidStateError", "The element is not connected."};
+    }
+    m_pendingCapture = Ref<EventTarget>::retain(ctx, &element);
+}
+
+void TapState::releaseCapture(JSContext*, Element& element, int32_t pointerId) {
+    if (!m_target || pointerId != m_taskPointerId) {
+        throw DOMError{"NotFoundError", "No active pointer has that id."};
+    }
+    if (this->hasCapture(element, pointerId)) {
+        m_pendingCapture = Ref<EventTarget>();
+    }
+}
+
+bool TapState::hasCapture(const Element& element, int32_t pointerId) const {
+    return m_target && pointerId == m_taskPointerId && m_pendingCapture.get() == &element;
+}
+
+EventTarget& TapState::pointerTarget(JSContext* ctx, double x, double y, bool primary) {
+    if (m_capture.get() != m_pendingCapture.get()) {
+        Ref<EventTarget> lost = std::move(m_capture);
+        m_capture = m_pendingCapture;
+        if (lost) {
+            firePointer(ctx, "lostpointercapture", *lost, x, y, m_taskPointerId, primary, false, 0, 0, 0);
+        }
+        if (m_capture) {
+            Ref<EventTarget> got = m_capture;
+            firePointer(ctx, "gotpointercapture", *got, x, y, m_taskPointerId, primary, false, 0, 0, 0);
+        }
+    }
+    return m_capture ? *m_capture : *m_target;
+}
+
 void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {
     m_target = Ref<EventTarget>();
+    m_pendingCapture = Ref<EventTarget>();
+    m_capture = Ref<EventTarget>();
+    m_taskPointerId = pointerId;
     m_pointerCanceled = false;
     m_touchCanceled = false;
     EventTarget* target = hitTarget(ctx, x, y);
@@ -217,7 +258,10 @@ void TapState::runMove(JSContext* ctx, double x, double y, int32_t pointerId, bo
     const double movementY = y - m_lastY;
     m_lastX = x;
     m_lastY = y;
-    firePointer(ctx, "pointermove", *target, x, y, pointerId, primary, true, -1, 1, 0.5, movementX, movementY);
+    {
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        firePointer(ctx, "pointermove", *pointer, x, y, pointerId, primary, true, -1, 1, 0.5, movementX, movementY);
+    }
     fireTouch(ctx, "touchmove", *target, x, y, pointerId, true, true);
 }
 
@@ -225,15 +269,19 @@ void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool
     if (!m_target) {
         return;
     }
-    Ref<EventTarget> target = std::move(m_target);
-    m_target = Ref<EventTarget>();
     // The press is over; the hover stays, as touch browsers keep it.
     HostState& state = HostState::of(ctx);
-    state.userActions().setPointer(ctx, dynamic_cast<Element*>(target.get()), nullptr);
+    state.userActions().setPointer(ctx, dynamic_cast<Element*>(m_target.get()), nullptr);
     {
         HostState::PressScope press(state, m_press);
-        firePointer(ctx, "pointerup", *target, x, y, pointerId, primary, true, 0, 0, 0);
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        firePointer(ctx, "pointerup", *pointer, x, y, pointerId, primary, true, 0, 0, 0);
+        // The capture ends with the press: lostpointercapture after the pointerup.
+        m_pendingCapture = Ref<EventTarget>();
+        this->pointerTarget(ctx, x, y, primary);
     }
+    Ref<EventTarget> target = std::move(m_target);
+    m_target = Ref<EventTarget>();
     if (!fireTouch(ctx, "touchend", *target, x, y, pointerId, false, true)) {
         m_touchCanceled = true;
     }
@@ -256,11 +304,28 @@ void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, 
     if (!m_target) {
         return;
     }
+    HostState::of(ctx).userActions().setPointer(ctx, dynamic_cast<Element*>(m_target.get()), nullptr);
+    {
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        firePointer(ctx, "pointercancel", *pointer, x, y, pointerId, primary, false, 0, 0, 0);
+        m_pendingCapture = Ref<EventTarget>();
+        this->pointerTarget(ctx, x, y, primary);
+    }
     Ref<EventTarget> target = std::move(m_target);
     m_target = Ref<EventTarget>();
-    HostState::of(ctx).userActions().setPointer(ctx, dynamic_cast<Element*>(target.get()), nullptr);
-    firePointer(ctx, "pointercancel", *target, x, y, pointerId, primary, false, 0, 0, 0);
     fireTouch(ctx, "touchcancel", *target, x, y, pointerId, false, false);
+}
+
+void Element::setPointerCapture(JSContext* ctx, int32_t pointerId) {
+    HostState::of(ctx).taps().setCapture(ctx, *this, pointerId);
+}
+
+void Element::releasePointerCapture(JSContext* ctx, int32_t pointerId) {
+    HostState::of(ctx).taps().releaseCapture(ctx, *this, pointerId);
+}
+
+bool Element::hasPointerCapture(JSContext* ctx, int32_t pointerId) {
+    return HostState::of(ctx).taps().hasCapture(*this, pointerId);
 }
 
 } // namespace wr

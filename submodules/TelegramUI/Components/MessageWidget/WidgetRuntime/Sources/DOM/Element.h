@@ -147,6 +147,10 @@ public:
     // CSSOM View's geometry (V3 plan, Task 3; Sources/DOM/Geometry.cpp). Each one is a layout query.
     Ref<DOMRectList> getClientRects(JSContext* ctx);
     Ref<DOMRect> getBoundingClientRect(JSContext* ctx);
+    /// Pointer Events' capture (Sources/Events/Taps.cpp): the element takes a press's pointer events from the next one.
+    void setPointerCapture(JSContext* ctx, int32_t pointerId);
+    void releasePointerCapture(JSContext* ctx, int32_t pointerId);
+    bool hasPointerCapture(JSContext* ctx, int32_t pointerId);
 
     // Web Animations' Animatable (V5e plan, Task 3; Sources/Animation/Animatable.cpp).
     Ref<Animation> animate(JSContext* ctx, std::optional<Object> keyframes, std::variant<Unrestricted, idl::KeyframeAnimationOptions> options);

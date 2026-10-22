@@ -44,6 +44,9 @@ public:
     /// has no viewport of its own.
     int32_t innerWidth(JSContext* ctx);
     int32_t innerHeight(JSContext* ctx);
+    /// The scale the widget is drawn at (RenderOptions::pixelSnapScale, the screen's; 1 before a render exists). Read
+    /// without a layout: it is the host's, not the document's.
+    double devicePixelRatio(JSContext* ctx);
     /// CSSOM's getComputedStyle (V3 plan, Task 4; Sources/DOM/StyleDeclaration.cpp): a new, read-only declaration whose
     /// values are computed at every read.
     Ref<CSSStyleDeclaration> getComputedStyle(JSContext* ctx, Element* element, std::optional<String> pseudoElt);

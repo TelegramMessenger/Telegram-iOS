@@ -58,6 +58,8 @@ void appendLength(std::string& key, const litehtml::css_length& length) {
     appendInt(key, length.predef());
     appendFloat(key, length.val());
     appendInt(key, static_cast<long long>(length.units()));
+    // A calc's val() is its value at a zero percentage base, so its tree is the key (twidget edit 48).
+    appendString(key, length.is_calc() ? length.to_string() : std::string());
 }
 
 // The font cache's key: every field of the description, exactly. litehtml's own font_description::hash() is not used
@@ -469,23 +471,34 @@ bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl
             reinterpret_cast<const void*>(&ubidi_close),
             reinterpret_cast<const void*>(&ubidi_setPara),
             reinterpret_cast<const void*>(&ubidi_getLevelAt),
+            reinterpret_cast<const void*>(&u_charDirection),
         };
         return std::all_of(std::begin(functions), std::end(functions), [](const void* f) { return f != nullptr; });
     }();
     if (!available) {
         return false;
     }
-    // The line's text in UTF-16, each run's first unit recorded (a malformed byte reads as U+FFFD).
+    // The line's text in UTF-16, each run sampled at its first strong character (L, R or AL), else at its first unit
+    // (review minors, Task 5: a run can start with a neutral, whose level is its neighbours'); a malformed byte reads as
+    // U+FFFD.
     std::u16string text;
     std::vector<int32_t> starts;
     starts.reserve(runs.size());
     for (const std::string& run : runs) {
         starts.push_back(int32_t(text.size()));
+        bool strongSeen = false;
         for (size_t i = 0; i < run.size();) {
             UChar32 c = 0;
             int32_t offset = int32_t(i);
             U8_NEXT_OR_FFFD(reinterpret_cast<const uint8_t*>(run.data()), offset, int32_t(run.size()), c);
             i = size_t(offset);
+            if (!strongSeen) {
+                const UCharDirection direction = u_charDirection(c);
+                if (direction == U_LEFT_TO_RIGHT || direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC) {
+                    starts.back() = int32_t(text.size());
+                    strongSeen = true;
+                }
+            }
             if (c > 0xFFFF) {
                 text.push_back(char16_t(U16_LEAD(c)));
                 text.push_back(char16_t(U16_TRAIL(c)));

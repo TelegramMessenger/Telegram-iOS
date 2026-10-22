@@ -448,6 +448,14 @@ void litehtml::css_properties::compute_font(const html_tag* el, const document::
         }
     } else
     {
+        // Telegram (VENDOR.md edit 49): a calc with a percentage reads its em as the parent's size, as the
+        // non-percentage path's to_pixels does.
+        if(sz.is_calc() && sz.units() == css_units_percentage)
+        {
+            font_metrics fm;
+            fm.x_height = fm.font_size = parent_sz;
+            font_size                  = sz.calc_value(parent_sz, doc->calc_fonts_for(fm));
+        } else
         if(sz.units() == css_units_percentage)
         {
             font_size = sz.calc_percent(parent_sz);

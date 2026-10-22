@@ -554,7 +554,7 @@ namespace litehtml
         {
             return inherit_property(name, important);
         }
-        // Telegram (VENDOR.md edit 33): the other CSS-wide keywords. revert-layer is revert: there are no layers.
+        // Telegram (VENDOR.md edit 33): the other CSS-wide keywords; revert-layer stops at the master's layer (edit 50).
         if(ident == "initial")
         {
             return global_keyword_property(name, property_value(initial(), important));
@@ -565,7 +565,7 @@ namespace litehtml
         }
         if(ident == "revert" || ident == "revert-layer")
         {
-            return global_keyword_property(name, property_value(revert(), important));
+            return global_keyword_property(name, property_value(revert{ident == "revert-layer"}, important));
         }
 
         int         idx[4];
@@ -2563,15 +2563,15 @@ namespace litehtml
     } // namespace
 
     // Telegram (VENDOR.md edit 33).
-    void style::resolve_reverts(const std::function<const property_value*(string_id)>& master,
-                                const std::function<bool(size_t)>&                      admit)
+    void style::resolve_reverts(const std::function<const property_value*(string_id, bool)>& master,
+                                const std::function<bool(size_t)>&                            admit)
     {
         for(auto& prop : m_properties)
         {
             if(!prop.second.is<revert>())
                 continue;
             property_value resolved(unset(), false);
-            if(const property_value* value = master(prop.first))
+            if(const property_value* value = master(prop.first, prop.second.get<revert>().layer))
             {
                 if(admit(value_heap(*value)))
                     resolved = *value;

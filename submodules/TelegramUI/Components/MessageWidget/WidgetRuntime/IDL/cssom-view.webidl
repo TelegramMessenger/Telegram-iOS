@@ -68,6 +68,7 @@ interface DOMPoint : DOMPointReadOnly {
 partial interface Window {
   [Replaceable] readonly attribute long innerWidth;
   [Replaceable] readonly attribute long innerHeight;
+  [Replaceable] readonly attribute double devicePixelRatio;
   [NewObject] MediaQueryList matchMedia(DOMString query);
 };
 

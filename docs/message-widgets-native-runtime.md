@@ -10,7 +10,8 @@ client's V milestones.
 **Status (2026-10-19): M1a to M1d are done, and the app runs every message widget on `WidgetRuntime`.** Since V1 of
 the widgets v0.1.0 client (spec `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`) a widget
 arrives as `messageMediaWidget` in a
-bubble of its own, behind Debug Settings ▸ "Widget messages"; the root `CLAUDE.md`'s "Message widgets" has the client
+bubble of its own, on by default since 2026-10-22 (only the app config's kill switch turns it off); the root
+`CLAUDE.md`'s "Message widgets" has the client
 side. V1 changed three runtime facts recorded below: the host sheet is the spec renderer's root CSS, a widget's height
 is clamped to 50…600, and there is no source cap. V1 also re-vendored widget-sandbox at tag v0.1.0 (237 listed
 files, 99 attacks, 19 compat, 9 out-of-profile, and the conformance set); the corpus suites pass on it, but the
@@ -771,20 +772,32 @@ runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for
   `vertical-align`, `border-collapse`, `user-select`, `direction`, and a calc as its tree.
 - **Styles** (edits 31 to 33, 39, 48): every named colour, `:lang()` (nothing matches without a `lang` in the chain, as
   in a browser with no Content-Language), `:empty` (any text piece counts, as in Blink; a child-list patch rebuilds),
-  `initial`, `unset` and `revert` (resolved from the element's matched master rules at every compute; on a
-  pseudo-element `revert` is `unset`), `word-break`, `word-spacing`, `quotes` (stored and read back; `<q>` keeps literal
+  `initial`, `unset`, `revert` and `revert-layer` (resolved from the element's matched master rules at every compute:
+  `revert` skips the UA layer to the engine's rules, `revert-layer` stops at it; on a pseudo-element both are
+  `unset`), `word-break`, `word-spacing`, `quotes` (stored and read back; `<q>` keeps literal
   marks), `font-feature-settings` (`tnum` only, mapped to the host's tabular figures), `min-content`, `max-content` and
-  `fit-content` widths, and `calc()`, `min()`, `max()`, `clamp()` mixing a percentage with a length.
+  `fit-content` widths, and `calc()`, `min()`, `max()`, `clamp()` mixing a percentage with a length (`text-indent`
+  and `font-size` included, its em the parent's, and keyed by its tree in the font cache).
 - **Layout and paint** (edits 31, 34 to 38, 40, 46, 47): empty `auto` table columns, `list-style-image`, `translate`,
   `rotate` and `scale` as properties (the transformed rects feed `getClientRects`, `getBoundingClientRect` and
   `IntersectionObserver`; layout boxes, `offset*`, `client*` and `ResizeObserver` stay untransformed, as CSSOM View
   says), the colour-stop fix-up, Blink's dash and dot metrics, `object-fit`/`object-position`, SVG `<use>` and per-run
   `tspan` text, `text-overflow: ellipsis`, and right-to-left: `direction`, `dir` (`auto` from the first strong
-  character, kept current by text and structure changes), `start`/`end` alignment, and each line's items in bidi order
-  from ICU's levels (`document_container::bidi_levels`, answered by `WidgetContainer` from `ubidi`).
+  character, drawn or not, kept current by text and structure changes and by a descendant's own `dir`), `start`/`end`
+  alignment, and each line's items in bidi order from ICU's levels (`document_container::bidi_levels`, answered by
+  `WidgetContainer` from `ubidi`, each item at the level of its first strong character). The direction `dir` gives
+  reaches the UA's rules as the Builder's host marker `data-tg-dir`, so an author's `[dir=auto]` matches and
+  `[dir=rtl]` does not match an `auto` that resolves to rtl, as in a browser.
 - **The runtime's UA sheet** (`kWidgetUAStylesheet`, unlayered, after litehtml's master): `<q>`'s marks, the `[dir]`
   rules, and a pressed `<button>` without author CSS (a press restyles by rebuilding when the build renders a button).
-- **Events:** `movementX` and `movementY` on pointer and mouse moves.
+- **Events:** `movementX` and `movementY` on pointer and mouse moves; Pointer Events' `setPointerCapture`,
+  `releasePointerCapture` and `hasPointerCapture` (2026-10-22): an explicit capture takes the press's pointer events
+  from the next one, `gotpointercapture` before it and `lostpointercapture` after the `pointerup`; touch events stay
+  with the touch's target and the click with the down target, and a touch's implicit capture is not reported.
+- **`devicePixelRatio`** (2026-10-22, profile 1's `canvas.hidpi`): the scale the widget is drawn at
+  (`RenderOptions::pixelSnapScale`, the screen's), read without a layout. Games size their canvases' backing stores by
+  it; without it four of the user's games (`Fixtures/11`–`14`, played by `GamesTests` at 1× and 3×) stopped at their
+  first line.
 
 What still differs, on purpose or for now (none is measured by a conformance check today):
 - **`css.background.basic` stays partly:** the first `data:` PNG of `auto/05-colour-backgrounds-b` (widget-sandbox

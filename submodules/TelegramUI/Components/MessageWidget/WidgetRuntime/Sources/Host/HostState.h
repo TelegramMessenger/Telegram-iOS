@@ -67,6 +67,8 @@ public:
     void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary) {
         m_taps.pointer(ctx, phase, x, y, pointerId, primary);
     }
+    /// The press's pointer state, for Pointer Events' capture (Element::setPointerCapture).
+    TapState& taps() { return m_taps; }
     /// SDK v1 §2.5, user activation (widget-sandbox v0.1.0 packages/core/src/host/user-activation.ts): each trusted
     /// pointer press (Taps, from its pointerdown to its click) is numbered, and its number is active while one of its
     /// pointer and mouse events dispatches (PressScope), and so in the microtask checkpoint after each of their

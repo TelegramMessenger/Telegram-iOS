@@ -29,6 +29,8 @@ namespace litehtml
     };
     struct revert
     {
+        // Telegram (VENDOR.md edit 50): revert-layer, which stops at the master's @layer (edit 41) where revert skips it.
+        bool layer = false;
     };
 
 #if 0
@@ -140,8 +142,8 @@ namespace litehtml
         // Telegram (VENDOR.md edit 33): replaces each revert with `master(name)`, the master sheet's value (nullptr:
         // none, so it is unset), keeping the reverting declaration's importance and order. `admit` is asked for the
         // heap a copy holds before it is made; refused, the property is unset.
-        void resolve_reverts(const std::function<const property_value*(string_id)>& master,
-                             const std::function<bool(size_t)>&                      admit);
+        void resolve_reverts(const std::function<const property_value*(string_id, bool)>& master,
+                             const std::function<bool(size_t)>&                            admit);
 
       private:
         void inherit_property(string_id name, bool important);

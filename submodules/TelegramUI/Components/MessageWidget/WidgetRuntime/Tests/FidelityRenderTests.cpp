@@ -412,6 +412,18 @@ WR_TEST(testUseOfAnElementAndHostileUses) {
     CHECK(!paints.empty() && paints.size() <= 8192);
 }
 
+/// Review minors, Task 1 (M2): the font cache's key holds a calc length's tree, not its value at a zero percentage
+/// base, so two decoration thicknesses with equal px parts get fonts of their own.
+WR_TEST(testCalcDecorationThicknessKeysTheFont) {
+    RenderEnv env(page("", "<p style='font-size:20px'><span style='text-decoration:underline;text-decoration-thickness:"
+                           "calc(10% + 1px)'>a</span> <span style='text-decoration:underline;text-decoration-thickness:"
+                           "calc(30% + 1px)'>b</span></p>"));
+    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
+    const std::string dump = tree ? tree->dump() : std::string();
+    CHECK(dump.find("%:10") != std::string::npos);
+    CHECK(dump.find("%:30") != std::string::npos);
+}
+
 /// Fidelity plan, Task 9, review: the instance budget is the document's, not each <svg>'s, so many small svgs each using
 /// a large fan-out record at most 8,192 instanced elements together (each svg having its own budget let a few KB of markup
 /// record gigabytes of paths). A later svg draws what the earlier ones left.
@@ -544,6 +556,88 @@ WR_TEST(testRightToLeftPhaseOne) {
     checkEval(env, "(r => Math.round(r.left))($('e').getBoundingClientRect())", "0");
     checkEval(env, "(r => Math.round(r.left))($('l').getBoundingClientRect())", "0");
     checkEval(env, "(r => [r.left, r.right].map(Math.round).join())($('b').getBoundingClientRect())", "180,200");
+}
+
+/// Review minors, Task 5 (M8): a bidi unit takes the level of its first strong character, not of its first character:
+/// a piece can start with a neutral ("(" before a Hebrew word), whose level is the paragraph's here. Both Hebrew words
+/// are at level 1, so they swap and the earlier ends rightmost, as in Chrome (whose box for it also holds the "(" left
+/// of the run, so only the right edges compare).
+WR_TEST(testABidiUnitTakesItsStrongLevel) {
+    RenderEnv env(page("p{margin:0;width:300px}", "<p>ab <b id=b>(\xd7\x90\xd7\x90</b> <i id=i>\xd7\x91\xd7\x91</i></p>"));
+    checkEval(env, "$('b').getBoundingClientRect().right > $('i').getBoundingClientRect().right", "true");
+}
+
+/// Review minors, Task 4 (M7): an element's client rect maps through its own and every ancestor's transform composed,
+/// not through a bounding box per level: a rotation undone by the child's leaves the child's own box, and a scale(0)
+/// collapses to a finite point.
+WR_TEST(testNestedTransformsCompose) {
+    RenderEnv env(page("div{width:100px;height:100px}", "<div id=out style='margin:50px;transform:rotate(45deg)'>"
+                       "<div id=in style='transform:rotate(-45deg)'></div></div><div style='margin:50px;transform:"
+                       "rotate(45deg)'><div id=z style='transform:scale(0)'></div></div>"));
+    checkEval(env, "(o => (i => [i.width, i.height, i.left + i.width / 2 - (o.left + o.width / 2), i.top + i.height / 2 - "
+                   "(o.top + o.height / 2)].map(Math.round).join())($('in').getBoundingClientRect()))"
+                   "($('out').getBoundingClientRect())",
+              "100,100,0,0");
+    checkEval(env, "(r => [r.width, r.height, Number.isFinite(r.left) && Number.isFinite(r.top)].join())"
+                   "($('z').getBoundingClientRect())",
+              "0,0,true");
+}
+
+/// Review minors, Task 3 (M6): revert-layer in an unlayered author rule rolls back to the UA layer's value (in the
+/// reference the layer is an author-origin @layer), where revert skips the layer to the engine's own UA value; a property
+/// the layer does not set rolls back as revert does.
+WR_TEST(testRevertLayerStopsAtTheUALayer) {
+    RenderEnv env(page("", "<p id=a style='margin:revert'>x</p><p id=b style='margin:revert-layer'>x</p><p id=c>x</p>"
+                           "<div id=d style='color:revert-layer'>x</div><div id=e>x</div>"));
+    checkEval(env, "[cs('b', 'margin-top') == cs('c', 'margin-top'), cs('a', 'margin-top') == cs('a', 'font-size'), "
+                   "cs('a', 'margin-top') == cs('c', 'margin-top'), cs('d', 'color') == cs('e', 'color')].join()",
+              "true,true,false,true");
+}
+
+/// Review minors, Task 2 (M5): the resolved direction reaches the renderer as a host marker (data-tg-dir), so an author's
+/// [dir] selectors see the attribute as written, as in a browser: [dir=auto] matches a dir=auto element and [dir=rtl]
+/// does not, whatever it resolves to; a widget's own data-tg-dir is dropped and steers nothing.
+WR_TEST(testAuthorDirSelectorsSeeTheAttributeAsWritten) {
+    RenderEnv env(page("[dir=rtl]{color:rgb(255,0,0)} [dir=auto]{background-color:rgb(0,0,255)}",
+                       "<p id=p dir=auto>\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</p><p id=q data-tg-dir=rtl>abc</p><p id=plain>abc</p>"));
+    checkEval(env, "[cs('p', 'direction'), cs('p', 'color') == cs('plain', 'color'), "
+                   "cs('p', 'background-color') == cs('plain', 'background-color'), cs('q', 'direction')].join()",
+              "rtl,true,false,ltr");
+}
+
+/// Review minors, final review C1: the dir=auto walks (RenderTree::noteAutoDirection up from every change,
+/// autoDirection down from an auto element at each flush) compare each element's dir and name without copying them, so
+/// their uncharged work does not grow with a value's length: 64 nested elements with a 1 MiB dir each under an auto root,
+/// and 50 text changes with a layout query each, copied about 3 GB before.
+WR_TEST(testDirAutoWalksDoNotCopyLongValues) {
+    RenderEnv env(page("", "<div id=root dir=auto></div>"));
+    checkEval(env, "const v = 'x'.repeat(1 << 20); let n = $('root'); for (let i = 0; i < 64; i++) { const e = "
+                   "document.createElement('div'); e.setAttribute('dir', v); n.appendChild(e); n = e; } "
+                   "window.leaf = n.appendChild(document.createTextNode('a')); 1",
+              "1");
+    env.flush();
+    const auto start = std::chrono::steady_clock::now();
+    checkEval(env, "for (let i = 0; i < 50; i++) { leaf.data = 'b' + i; $('root').getBoundingClientRect(); } 1", "1");
+    const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    std::printf("    50 changes under 64 long dir values: %.3f s\n", seconds);
+    CHECK(seconds < 1.0);
+}
+
+/// Review minors, Task 2 (M4): dir=auto is resolved again when a descendant's dir changes (an element with its own dir is
+/// skipped by the resolution) and when text the renderer does not draw changes (the resolution reads the DOM), each as a
+/// rebuild resolves it.
+WR_TEST(testDirAutoFollowsDescendantsAndUnrenderedText) {
+    RenderEnv env(page("p{width:200px}", "<p dir=auto id=p><span dir=ltr id=s>Hi</span> \xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</p>"
+                                          "<p dir=auto id=r><noscript id=n>abc</noscript>\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</p>"));
+    checkEval(env, "[cs('p', 'direction'), cs('r', 'direction')].join()", "rtl,ltr");
+    checkEval(env, "$('s').removeAttribute('dir'); 1", "1");
+    env.flush();
+    checkEval(env, "cs('p', 'direction')", "ltr");
+    expectMatchesRebuild(env, "a descendant's dir removed");
+    checkEval(env, "$('n').firstChild.data = '\xd7\x90\xd7\x91\xd7\x92'; 1", "1");
+    env.flush();
+    checkEval(env, "cs('r', 'direction')", "rtl");
+    expectMatchesRebuild(env, "text under an unrendered element");
 }
 
 /// The direction follows the DOM: a dir set by script re-aligns the subtree it inherits into, and a text edit under

@@ -75,8 +75,6 @@ public final class HarnessSharedAccountContext: SharedAccountContext {
             value.useInputDecEngine = false
             value.inputDecTextBackend = false
         }
-        // Read by `chatMessageWidgetRenderingEnabled` (the widget bubble).
-        value.widgetMessages = self.settings.widgetMessages
         return value
     }
 

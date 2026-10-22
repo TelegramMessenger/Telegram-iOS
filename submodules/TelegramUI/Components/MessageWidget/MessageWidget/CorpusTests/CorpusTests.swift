@@ -14,7 +14,8 @@ final class CorpusTests: MessageWidgetTestCase {
     /// The uncaught errors that are APIs WidgetRuntime does not have yet, by their message: a corpus widget throwing one
     /// is a known gap, printed below, not a failure. Every entry goes when its API lands.
     static let knownGaps: [String] = [
-        // The bundled libraries (profile 1's Chart.js and d3, client spec V6): out-of-profile/chartjs-* and d3-*.
+        // Chart.js and d3 from a CDN: profile 1 bundles no library (js.libraries is out), so out-of-profile/chartjs-*
+        // and d3-* stop at their first use, as the profile says.
         "Chart is not defined",
         "d3 is not defined",
         // Never: a widget cannot fetch.

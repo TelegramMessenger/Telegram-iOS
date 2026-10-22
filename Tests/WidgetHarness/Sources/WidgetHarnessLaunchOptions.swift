@@ -13,8 +13,9 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var set: WidgetHarnessSet = .conformance
     /// Only the posts whose widget path contains this.
     public var postFilter: String?
-    /// The client's flag (`ExperimentalUISettings.widgetMessages`).
-    public var widgetMessages: Bool = true
+    /// The server's kill switch (`MessageWidgetKillSwitch`, the app configuration's
+    /// `ios_killswitch_disable_message_widgets`): engaged, every widget message shows the pill.
+    public var killSwitch: Bool = false
     /// Overrides every post's size anchors.
     public var anchors: (width: Int32, height: Int32)?
     public var useDarkTheme: Bool = false
@@ -26,12 +27,12 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public init() {}
 
     public static func ==(lhs: WidgetHarnessLaunchOptions, rhs: WidgetHarnessLaunchOptions) -> Bool {
-        return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.widgetMessages == rhs.widgetMessages
+        return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.killSwitch == rhs.killSwitch
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
             && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions
     }
 
-    /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-flag on|off`,
+    /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-kill-switch on|off`,
     /// `-widget-anchors <W>x<H>`, `-widget-caption off`, `-harness-theme dark`, `-harness-side incoming`.
     public static func parse(_ arguments: [String]) -> WidgetHarnessLaunchOptions {
         func value(_ key: String) -> String? {
@@ -45,9 +46,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
             options.set = set
         }
         options.postFilter = value("-widget-post")
-        if value("-widget-flag") == "off" {
-            options.widgetMessages = false
-        }
+        options.killSwitch = value("-widget-kill-switch") == "on"
         if let anchors = value("-widget-anchors") {
             let parts = anchors.split(separator: "x").compactMap { Int32($0) }
             if parts.count == 2 {
