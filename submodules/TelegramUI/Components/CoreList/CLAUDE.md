@@ -654,6 +654,8 @@ clock); `TestScrollEngine` has no render server.
   **Unverified on a device** (the iPhone simulator takes no pointer input): whether a notch during
   momentum is swallowed or jumps back, how far each burst coasts, whether the first notch waits on
   `NavigationContainer`'s pop recognizer. Check those on an iPad with a mouse before changing this path.
+  If bursts over-coast, the likely cause is `UIScrollView`'s discrete release clamp, which `ReleaseDecision`
+  does not model (analysis §4, "Discrete / paging flick"). The News feeds share this recognizer.
 
 ### Gestures and touches
 
