@@ -507,7 +507,7 @@ turn, dedupe across queued and in-flight sets, and answer after 0.2 s with five 
 one zero-duration `.preserveVisibleContent` pass). An accepted response applies even if its edge was left;
 continuations are fresh requests; disabling advances a generation; replacing the engine keeps state.
 `CoreVirtualListView` stays policy-free. `PhysicsScrollView` is the standalone `ScrollPhysics` consumer
-(touch + trackpad, both deceleration modes).
+(touch + trackpad + mouse wheel, both deceleration modes).
 
 ## Scroll physics replica
 
@@ -647,6 +647,13 @@ clock); `TestScrollEngine` has no render server.
   fast-scroll multiplier to trackpad scroll is unverified — don't "fix" by analogy.
 - `UIScrollView` clamps `bounds.origin.y` writes: set content limits before non-zero offsets in tests.
   Trackpad scroll ignores `pan.setTranslation(.zero)`: keep the engine's explicit translation baseline.
+- **The mouse wheel shares the trackpad's indirect path.** `PhysicsPanGestureRecognizer` allows `.all`
+  scroll types; with only `.continuous` the wheel never reached the pan and the chat history did not
+  scroll on iPad. A wheel gesture gets no touch-down, the trackpad rubber-band coefficient, and the
+  `shouldReceive(event:)` forced `.began` + translation baseline when a notch lands on moving content.
+  **Unverified on a device** (the iPhone simulator takes no pointer input): whether a notch during
+  momentum is swallowed or jumps back, how far each burst coasts, whether the first notch waits on
+  `NavigationContainer`'s pop recognizer. Check those on an iPad with a mouse before changing this path.
 
 ### Gestures and touches
 

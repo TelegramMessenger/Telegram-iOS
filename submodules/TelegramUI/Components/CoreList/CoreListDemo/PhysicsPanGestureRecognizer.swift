@@ -6,9 +6,9 @@ import UIKit.UIGestureRecognizerSubclass
 /// so it can't do this — and to resume a bounce when a tap lifts without a drag. Pan behaviour is
 /// otherwise unchanged (we always call `super`).
 ///
-/// Trackpad and mouse-wheel (indirect) scroll send no `UITouch`, so the touch-down catch above doesn't fire for it;
-/// the scroll view catches a trackpad finger-down via the public `UIGestureRecognizerDelegate`
-/// `gestureRecognizer(_:shouldReceive:)` (UIEvent) callback instead.
+/// Indirect scroll (trackpad two-finger, mouse wheel) sends no `UITouch`, so the touch-down catch above
+/// doesn't fire for it; the scroll view catches at the start of an indirect scroll via the public
+/// `UIGestureRecognizerDelegate` `gestureRecognizer(_:shouldReceive:)` (UIEvent) callback instead.
 final class PhysicsPanGestureRecognizer: UIPanGestureRecognizer {
     /// Fired the instant a finger lands (before the pan recognizes a drag), carrying the touch
     /// event's timestamp — the analogue of `-[UIScrollView _beginTrackingWithEvent:]` reading
