@@ -871,9 +871,9 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    if (strongSelf.peerId.namespace == Namespaces.Peer.CloudUser || strongSelf.peerId.namespace == Namespaces.Peer.SecretChat) && user.id != strongSelf.context.account.peerId && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !EnginePeer.user(user).isService {
+                    if peerInfoCanReportUser(user, accountPeerId: strongSelf.context.account.peerId) {
                         // On a secret chat's profile this reports the user: the secret chat itself cannot be reported.
-                        items.append(strongSelf.reportContextMenuItem(peerId: user.id))
+                        items.append(strongSelf.reportContextMenuItem())
                     }
                     
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(user), chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
@@ -993,7 +993,7 @@ extension PeerInfoScreenNode {
                         canReport = false
                     }
                     if canReport {
-                        items.append(strongSelf.reportContextMenuItem(peerId: channel.id))
+                        items.append(strongSelf.reportContextMenuItem())
                     }
                     
                     if canSetupAutoremoveTimeout {
@@ -1240,7 +1240,7 @@ extension PeerInfoScreenNode {
                         canReport = false
                     }
                     if canReport {
-                        items.append(strongSelf.reportContextMenuItem(peerId: group.id))
+                        items.append(strongSelf.reportContextMenuItem())
                     }
                     
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(group), chatPeer: EnginePeer(group), cachedData: strongSelf.data?.cachedData)
@@ -1313,11 +1313,11 @@ extension PeerInfoScreenNode {
         }
     }
     
-    private func reportContextMenuItem(peerId: EnginePeer.Id) -> ContextMenuItem {
+    private func reportContextMenuItem() -> ContextMenuItem {
         return .action(ContextMenuActionItem(text: self.presentationData.strings.ReportPeer_Report, icon: { theme in
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] c, _ in
-            self?.openReport(type: .default, peerId: peerId, contextController: c)
+            self?.openReport(type: .default, contextController: c)
         }))
     }
 }

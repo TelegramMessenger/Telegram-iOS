@@ -437,6 +437,18 @@ func infoItems(
                     }
                 }
                 
+                // Report is in the More menu; a header without More (a secret chat with a non-contact) offers it as a
+                // row instead. On a secret chat it reports the user.
+                var isSecretChat = false
+                if let chatPeer = data.chatPeer, case .secretChat = chatPeer {
+                    isSecretChat = true
+                }
+                if !peerInfoUserHeaderHasMore(user, isSecretChat: isSecretChat, isContact: data.isContact) && peerInfoCanReportUser(user, accountPeerId: context.account.peerId) {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: ItemReport, text: presentationData.strings.ReportPeer_Report, action: {
+                        interaction.openReport(.default)
+                    }))
+                }
+                
                 if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
                     items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: ItemEncryptionKey, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
                         interaction.openEncryptionKey()

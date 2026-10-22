@@ -3677,8 +3677,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    /// `peerId` is the peer the report sheet (`.default`) reports when it is not the one the profile is opened for: a secret chat's profile reports its user.
-    func openReport(type: PeerInfoReportType, peerId: EnginePeer.Id? = nil, contextController: ContextControllerProtocol?) {
+    func openReport(type: PeerInfoReportType, contextController: ContextControllerProtocol?) {
         self.view.endEditing(true)
         
         switch type {
@@ -3719,7 +3718,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         default:
             contextController?.dismiss()
             
-            let reportSubject = ReportContentSubject.peer(peerId ?? self.peerId, sourceMessageId: self.sourceMessageId)
+            // A secret chat cannot be reported: its profile reports the user it is with, from the More menu and from
+            // the list row alike. Never the secret chat's own id, which the request cannot address.
+            var reportedPeerId = self.peerId
+            if self.peerId.namespace == Namespaces.Peer.SecretChat {
+                guard let chatPeer = self.data?.chatPeer, case let .secretChat(secretChat) = chatPeer else {
+                    return
+                }
+                reportedPeerId = secretChat.regularPeerId
+            }
+            let reportSubject = ReportContentSubject.peer(reportedPeerId, sourceMessageId: self.sourceMessageId)
             self.context.sharedContext.makeContentReportScreen(context: self.context, subject: reportSubject, forceDark: false, present: { [weak self] controller in
                 self?.controller?.push(controller)
             }, completion: {

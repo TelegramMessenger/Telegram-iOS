@@ -2668,6 +2668,18 @@ func peerInfoHeaderActionButtons(peer: EnginePeer?, isSecretChat: Bool, isContac
     return result
 }
 
+/// Whether a user's profile (or a secret chat's, which reports its user) offers Report. It is in the More menu, and
+/// where the header has no More (`peerInfoUserHeaderHasMore`) a list row offers it instead.
+func peerInfoCanReportUser(_ user: TelegramUser, accountPeerId: EnginePeer.Id) -> Bool {
+    return user.id != accountPeerId && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !EnginePeer.user(user).isService
+}
+
+/// Whether a user's (or a secret chat's) profile header has the More button. The profile's list offers what the menu
+/// would otherwise hold (Report) when it has none.
+func peerInfoUserHeaderHasMore(_ user: TelegramUser, isSecretChat: Bool, isContact: Bool) -> Bool {
+    return !(isSecretChat && !isContact) && !user.flags.contains(.isSupport)
+}
+
 func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if case let .user(user) = peer {
@@ -2700,8 +2712,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?,
             result.append(.stop)
         }
         
-        if (isSecretChat && !isContact) || user.flags.contains(.isSupport) {
-        } else {
+        if peerInfoUserHeaderHasMore(user, isSecretChat: isSecretChat, isContact: isContact) {
             result.append(.more)
         }
     } else if case let .channel(channel) = peer {
