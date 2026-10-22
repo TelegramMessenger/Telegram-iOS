@@ -10695,9 +10695,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if remainingTime == 0 {
                 self.updateSlowmodeStatusTimerValue = nil
                 self.updateSlowmodeStatusDisposable.set(nil)
-                self.updateChatPresentationInterfaceState(interactive: false, {
-                    $0.updatedSlowmodeState(nil)
-                })
+                // Not from inside the update that called this, which would then lay out the finished countdown after
+                // the nested update cleared it. The next update drops it (updateChatPresentationInterfaceStateImpl).
+                Queue.mainQueue().justDispatch { [weak self] in
+                    self?.updateChatPresentationInterfaceState(interactive: false, { $0 })
+                }
             } else {
                 if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
                     self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
