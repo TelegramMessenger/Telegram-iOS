@@ -59,6 +59,8 @@ final class DeleteChatInputPanelNode: ChatInputPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         self.presentationInterfaceState = interfaceState
         
+        self.button.accessibilityLabel = interfaceState.strings.GroupInfo_DeleteAndExit
+        
         let titleSize = self.title.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
