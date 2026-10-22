@@ -721,19 +721,54 @@ private func canArchivePeer(id: EnginePeer.Id, accountPeerId: EnginePeer.Id) -> 
 }
 
 private func communitySourcePeer(peerData: ChatListItemContent.PeerData, message: EngineMessage) -> EnginePeer? {
-    guard case .community = peerData.peer.peer else {
+    return communitySourcePeer(chatPeer: peerData.peer, message: message)
+}
+
+private func communitySourcePeer(chatPeer: EngineRenderedPeer, message: EngineMessage) -> EnginePeer? {
+    guard case .community = chatPeer.peer else {
         return nil
     }
-    guard message.id.peerId != peerData.peer.peerId else {
+    guard message.id.peerId != chatPeer.peerId else {
         return nil
     }
     if let sourcePeer = message.enginePeers[message.id.peerId] {
         return sourcePeer
     }
-    if let sourcePeer = peerData.peer.peers[message.id.peerId] {
+    if let sourcePeer = chatPeer.peers[message.id.peerId] {
         return sourcePeer
     }
     return nil
+}
+
+enum ChatListCommunitySourcePlacement: Equatable {
+    /// After the author on the line above the preview ("Author ▸ Source").
+    case authorLine
+    /// In front of the preview, after the author ("Author › Source: text", `chatListCommunityPreviewAuthor`), as a
+    /// group's author is inlined.
+    case previewPrefix
+}
+
+/// The chat a collapsed community row names for its last message, and where. A row with folder tags has one preview
+/// line, because the tags take the last one, so the name goes in front of the preview: on a line of its own it pushed
+/// the preview onto the tags' line, under them.
+func chatListCommunitySource(chatPeer: EngineRenderedPeer, message: EngineMessage, hasTags: Bool) -> (peer: EnginePeer, placement: ChatListCommunitySourcePlacement)? {
+    guard let sourcePeer = communitySourcePeer(chatPeer: chatPeer, message: message) else {
+        return nil
+    }
+    return (sourcePeer, hasTags ? .previewPrefix : .authorLine)
+}
+
+/// The author a community row with folder tags names before the source chat in front of the preview ("Author › Source:
+/// text"), the order of the line above the preview without tags. `authorTitle` is the author that line would show. No
+/// author when it shows none, or when the author is the source chat itself (a channel's post), which would name it twice.
+func chatListCommunityPreviewAuthor(authorTitle: String?, authorId: EnginePeer.Id?, sourcePeerId: EnginePeer.Id) -> String? {
+    guard let authorTitle, !authorTitle.isEmpty else {
+        return nil
+    }
+    if authorId == sourcePeerId {
+        return nil
+    }
+    return authorTitle
 }
 
 public struct ChatListItemFilterData: Equatable {
@@ -2668,6 +2703,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            var communitySource: (peer: EnginePeer, title: String, placement: ChatListCommunitySourcePlacement)?
+            if case let .peer(peerData) = item.content, let message = messages.last, let source = chatListCommunitySource(chatPeer: peerData.peer, message: message, hasTags: !itemTags.isEmpty) {
+                let sourceTitle = source.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                if !sourceTitle.isEmpty {
+                    communitySource = (source.peer, sourceTitle, source.placement)
+                }
+            }
+            
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             var chatListQuoteSearchResult: CachedChatListSearchResult?
@@ -2901,9 +2944,23 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                         }
-                        if let inlineAuthorPrefix = inlineAuthorPrefix {
-                            composedString = NSMutableAttributedString()
-                            composedString.append(NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor))
+                        var previewPrefix: NSAttributedString?
+                        if let inlineAuthorPrefix {
+                            previewPrefix = NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor)
+                        }
+                        if let communitySource, case .previewPrefix = communitySource.placement {
+                            let communityPrefix = NSMutableAttributedString()
+                            let authorTitle = (hideAuthor || authorIsCurrentChat) ? nil : peerText
+                            if let author = chatListCommunityPreviewAuthor(authorTitle: authorTitle, authorId: message.author?.id, sourcePeerId: communitySource.peer.id) {
+                                communityPrefix.append(NSAttributedString(string: author, font: textFont, textColor: theme.titleColor))
+                                // The author line draws this arrow as an image, tinted like this.
+                                communityPrefix.append(NSAttributedString(string: " \u{203A} ", font: textFont, textColor: theme.messageTextColor))
+                            }
+                            communityPrefix.append(NSAttributedString(string: "\(communitySource.title): ", font: textFont, textColor: theme.titleColor))
+                            previewPrefix = communityPrefix
+                        }
+                        if let previewPrefix {
+                            composedString = NSMutableAttributedString(attributedString: previewPrefix)
                             composedString.append(messageString)
                         } else {
                             composedString = NSMutableAttributedString(attributedString: messageString)
@@ -3780,12 +3837,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 effectiveAuthorTitle = nil
             }
             
-            if case let .peer(peerData) = item.content, case .community = peerData.peer.peer, let message = messages.last, let sourcePeer = communitySourcePeer(peerData: peerData, message: message) {
-                let sourceTitle = sourcePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                if !sourceTitle.isEmpty {
-                    forumThreads.append((id: sourcePeer.id.toInt64(), threadPeer: nil, title: NSAttributedString(string: sourceTitle, font: textFont, textColor: theme.titleColor), iconId: nil, iconColor: nil))
-                    authorTopicArrowColor = theme.messageTextColor
-                }
+            if let communitySource, case .authorLine = communitySource.placement {
+                forumThreads.append((id: communitySource.peer.id.toInt64(), threadPeer: nil, title: NSAttributedString(string: communitySource.title, font: textFont, textColor: theme.titleColor), iconId: nil, iconColor: nil))
+                authorTopicArrowColor = theme.messageTextColor
             }
 
             let (authorLayout, authorApply) = authorLayout(item.context, rawContentWidth - badgeSize, item.presentationData.theme, effectiveAuthorTitle, forumThreads, authorTopicArrowColor)
