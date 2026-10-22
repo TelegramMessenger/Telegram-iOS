@@ -10713,7 +10713,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         strongSelf.updateSlowmodeStatusTimerValue = nil
-                        strongSelf.updateSlowmodeStatus()
+                        // Drops the finished countdown in this run loop turn, and re-arms the timer if it fired early.
+                        strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0 })
                     }))
                 }
             }
