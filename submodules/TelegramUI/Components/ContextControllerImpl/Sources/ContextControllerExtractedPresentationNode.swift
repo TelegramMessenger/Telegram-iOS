@@ -765,6 +765,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             contentActionsSpacing += 3.0
         }
         
+        // Read before the scroller is resized, which may clamp its offset to the previous content.
+        let contentOffsetBeforeLayout = self.scroller.contentOffset
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
         if self.scrollNode.frame != CGRect(origin: CGPoint(), size: layout.size) {
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
@@ -1496,7 +1498,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     // a fold) changes it, move the offset with it, or the menu drifts off its reference and, once it
                     // fits, keeps an offset that leaves its top out of reach.
                     let maxContentOffsetY = max(0.0, contentSize.height - layout.size.height)
-                    let contentOffsetY = max(0.0, min(maxContentOffsetY, previousContentOffset.y + actionsTopOverflow - self.appliedActionsTopOverflow))
+                    let contentOffsetY = max(0.0, min(maxContentOffsetY, contentOffsetBeforeLayout.y + actionsTopOverflow - self.appliedActionsTopOverflow))
                     self.scroller.contentOffset = CGPoint(x: 0.0, y: contentOffsetY)
                 }
                 if case .none = stateTransition, transition.isAnimated {
