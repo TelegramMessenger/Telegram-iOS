@@ -40,6 +40,7 @@ final class NotificationRecipientAccountTests: XCTestCase {
 
     func testASingleAccountIsNotNamed() {
         XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1)], notificationsFromAllAccounts: true, isCurrentAccount: true))
+        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1)], notificationsFromAllAccounts: false, isCurrentAccount: true))
     }
 
     func testSeveralAccountsAreNamed() {
