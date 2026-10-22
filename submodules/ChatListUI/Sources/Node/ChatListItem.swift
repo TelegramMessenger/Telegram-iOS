@@ -743,7 +743,8 @@ private func communitySourcePeer(chatPeer: EngineRenderedPeer, message: EngineMe
 enum ChatListCommunitySourcePlacement: Equatable {
     /// After the author on the line above the preview ("Author ▸ Source").
     case authorLine
-    /// In front of the preview ("Source: text"), as a group's author is inlined.
+    /// In front of the preview, after the author ("Author › Source: text", `chatListCommunityPreviewAuthor`), as a
+    /// group's author is inlined.
     case previewPrefix
 }
 
@@ -755,6 +756,19 @@ func chatListCommunitySource(chatPeer: EngineRenderedPeer, message: EngineMessag
         return nil
     }
     return (sourcePeer, hasTags ? .previewPrefix : .authorLine)
+}
+
+/// The author a community row with folder tags names before the source chat in front of the preview ("Author › Source:
+/// text"), the order of the line above the preview without tags. `authorTitle` is the author that line would show. No
+/// author when it shows none, or when the author is the source chat itself (a channel's post), which would name it twice.
+func chatListCommunityPreviewAuthor(authorTitle: String?, authorId: EnginePeer.Id?, sourcePeerId: EnginePeer.Id) -> String? {
+    guard let authorTitle, !authorTitle.isEmpty else {
+        return nil
+    }
+    if authorId == sourcePeerId {
+        return nil
+    }
+    return authorTitle
 }
 
 public struct ChatListItemFilterData: Equatable {
@@ -2930,13 +2944,23 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                         }
-                        var previewPrefix = inlineAuthorPrefix
+                        var previewPrefix: NSAttributedString?
+                        if let inlineAuthorPrefix {
+                            previewPrefix = NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor)
+                        }
                         if let communitySource, case .previewPrefix = communitySource.placement {
-                            previewPrefix = communitySource.title
+                            let communityPrefix = NSMutableAttributedString()
+                            let authorTitle = (hideAuthor || authorIsCurrentChat) ? nil : peerText
+                            if let author = chatListCommunityPreviewAuthor(authorTitle: authorTitle, authorId: message.author?.id, sourcePeerId: communitySource.peer.id) {
+                                communityPrefix.append(NSAttributedString(string: author, font: textFont, textColor: theme.titleColor))
+                                // The author line draws this arrow as an image, tinted like this.
+                                communityPrefix.append(NSAttributedString(string: " \u{203A} ", font: textFont, textColor: theme.messageTextColor))
+                            }
+                            communityPrefix.append(NSAttributedString(string: "\(communitySource.title): ", font: textFont, textColor: theme.titleColor))
+                            previewPrefix = communityPrefix
                         }
                         if let previewPrefix {
-                            composedString = NSMutableAttributedString()
-                            composedString.append(NSAttributedString(string: "\(previewPrefix): ", font: textFont, textColor: theme.titleColor))
+                            composedString = NSMutableAttributedString(attributedString: previewPrefix)
                             composedString.append(messageString)
                         } else {
                             composedString = NSMutableAttributedString(attributedString: messageString)

@@ -61,4 +61,20 @@ final class ChatListCommunitySourceTests: XCTestCase {
         let groupRow = EngineRenderedPeer(peerId: self.groupId, peers: [self.groupId: EnginePeer(self.group)], associatedMedia: [:])
         XCTAssertNil(chatListCommunitySource(chatPeer: groupRow, message: self.message(in: self.groupId, peers: [self.group]), hasTags: true))
     }
+
+    // With tags the preview line reads "Author › Source: text", in the order of the line it replaces.
+
+    func testWithTagsTheAuthorComesBeforeTheSourceChat() {
+        let authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(300))
+        XCTAssertEqual(chatListCommunityPreviewAuthor(authorTitle: "Alice", authorId: authorId, sourcePeerId: self.groupId), "Alice")
+    }
+
+    func testAPostByTheSourceChatItselfIsNotNamedTwice() {
+        XCTAssertNil(chatListCommunityPreviewAuthor(authorTitle: "Source Group", authorId: self.groupId, sourcePeerId: self.groupId))
+    }
+
+    func testARowThatShowsNoAuthorPrefixesTheSourceChatAlone() {
+        XCTAssertNil(chatListCommunityPreviewAuthor(authorTitle: nil, authorId: nil, sourcePeerId: self.groupId))
+        XCTAssertNil(chatListCommunityPreviewAuthor(authorTitle: "", authorId: nil, sourcePeerId: self.groupId))
+    }
 }
