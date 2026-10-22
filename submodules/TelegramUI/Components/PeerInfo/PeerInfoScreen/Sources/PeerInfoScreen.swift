@@ -548,7 +548,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.updateBlocked(block: block)
             },
             openReport: { [weak self] type in
-                self?.openReport(type: type, contextController: nil, backAction: nil)
+                self?.openReport(type: type, contextController: nil)
             },
             openDeleteReaction: { [weak self] messageId in
                 self?.openDeleteReaction(messageId: messageId)
@@ -3677,7 +3677,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    func openReport(type: PeerInfoReportType, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)?) {
+    func openReport(type: PeerInfoReportType, contextController: ContextControllerProtocol?) {
         self.view.endEditing(true)
         
         switch type {
@@ -3718,7 +3718,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         default:
             contextController?.dismiss()
             
-            let reportSubject = ReportContentSubject.peer(self.peerId, sourceMessageId: self.sourceMessageId)
+            // A secret chat cannot be reported: its profile reports the user it is with, from the More menu and from
+            // the list row alike. Never the secret chat's own id, which the request cannot address.
+            var reportedPeerId = self.peerId
+            if self.peerId.namespace == Namespaces.Peer.SecretChat {
+                guard let chatPeer = self.data?.chatPeer, case let .secretChat(secretChat) = chatPeer else {
+                    return
+                }
+                reportedPeerId = secretChat.regularPeerId
+            }
+            let reportSubject = ReportContentSubject.peer(reportedPeerId, sourceMessageId: self.sourceMessageId)
             self.context.sharedContext.makeContentReportScreen(context: self.context, subject: reportSubject, forceDark: false, present: { [weak self] controller in
                 self?.controller?.push(controller)
             }, completion: {
