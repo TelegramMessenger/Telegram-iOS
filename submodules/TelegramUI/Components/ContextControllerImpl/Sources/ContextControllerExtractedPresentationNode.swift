@@ -1065,7 +1065,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 // strip. Elsewhere this is the regular width class.
                 if layout.presentsFloatingPanels {
                     if let transitionInfo = source.transitionInfo(), let (sourceView, sourceRect) = transitionInfo.sourceNode() {
-                        let sourcePoint = sourceView.convert(sourceRect.center, to: self.view)
+                        let sourcePoint = sourceView.convertAcrossWindows(sourceRect, to: self.view).center
                         
                         contentRect = CGRect(origin: CGPoint(x: sourcePoint.x - floor(contentSize.width * 0.5), y: sourcePoint.y - floor(contentSize.height * 0.5)), size: contentSize)
                         if contentRect.origin.x < 0.0 {
@@ -1685,7 +1685,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
             } else if let contentNode = controllerContentNode {
                 if case let .controller(source) = self.source, let transitionInfo = source.transitionInfo(), let (sourceView, sourceRect) = transitionInfo.sourceNode() {
-                    let sourcePoint = sourceView.convert(sourceRect.center, to: self.view)
+                    // Not `sourceView.convert(_:to: self.view)`: while the keyboard is up the menu is in the keyboard
+                    // window, and the direct conversion from the app window answers (inf, inf). The preview then springs
+                    // in from infinity and only appears when the spring ends (a long press on a chat-list search result
+                    // with the keyboard up). See docs/ios27-windows-and-touches.md.
+                    let sourcePoint = sourceView.convertAcrossWindows(sourceRect, to: self.view).center
                     animationInContentYDistance = contentRect.midY - sourcePoint.y
                 } else {
                     animationInContentYDistance = 0.0
@@ -2121,7 +2125,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             if let contentNode = controllerContentNode {
                 if case let .controller(source) = self.source, let transitionInfo = source.transitionInfo(), let (sourceView, sourceRect) = transitionInfo.sourceNode() {
-                    let sourcePoint = sourceView.convert(sourceRect.center, to: self.view)
+                    let sourcePoint = sourceView.convertAcrossWindows(sourceRect, to: self.view).center
                     animationInContentYDistance = contentRect.midY - sourcePoint.y
                 } else {
                     animationInContentYDistance = 0.0
