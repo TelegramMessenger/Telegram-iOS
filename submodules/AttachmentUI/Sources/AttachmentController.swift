@@ -1145,6 +1145,26 @@ public class AttachmentController: ViewController, MinimizableController {
         private var isAnimating = false
         private var pendingRegularLayoutAnimateIn = false
 
+        /// The attach-button morph of a glass appearance while it runs. A dismiss that starts before it ends
+        /// takes its views over and morphs back from where they are, instead of leaving them to finish
+        /// growing to the full sheet on top of the dismissal.
+        private final class GlassAppearanceTransition {
+            let containerView: ClipContainerView
+            let localGlassView: GlassBackgroundView
+            let buttonIcon: UIView
+            let sourceGlassView: GlassBackgroundView
+            let targetFrame: CGRect
+
+            init(containerView: ClipContainerView, localGlassView: GlassBackgroundView, buttonIcon: UIView, sourceGlassView: GlassBackgroundView, targetFrame: CGRect) {
+                self.containerView = containerView
+                self.localGlassView = localGlassView
+                self.buttonIcon = buttonIcon
+                self.sourceGlassView = sourceGlassView
+                self.targetFrame = targetFrame
+            }
+        }
+        private var glassAppearanceTransition: GlassAppearanceTransition?
+
         override func didEnterHierarchy() {
             super.didEnterHierarchy()
 
@@ -1246,10 +1266,18 @@ public class AttachmentController: ViewController, MinimizableController {
                         localGlassView.contentView.addSubview(buttonIcon)
                         ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: 0.0, toRadius: 10.0)
 
+                        let appearanceTransition = GlassAppearanceTransition(containerView: containerView, localGlassView: localGlassView, buttonIcon: buttonIcon, sourceGlassView: sourceGlassView, targetFrame: targetFrame)
+                        self.glassAppearanceTransition = appearanceTransition
+
                         containerView.update(bounds: CGRect(origin: .zero, size: targetFrame.size), cornerRadii: self.container.sheetCornerRadii, boundsTransition: scaleTransition, cornersTransition: cornersTransition)
                         scaleTransition.animateBounds(layer: containerView.layer, from: CGRect(origin: .zero, size: CGSize(width: targetFrame.width, height: targetFrame.width)))
                         scaleTransition.animateTransformScale(view: containerView, from: sourceButtonScale)
                         positionTransition.animatePosition(layer: containerView.layer, from: sourceButtonFrame.center, to: containerView.center, completion: { _ in
+                            guard self.glassAppearanceTransition === appearanceTransition else {
+                                // A dismiss took the morph over (see animateOut).
+                                return
+                            }
+                            self.glassAppearanceTransition = nil
                             self.container.suppressesBottomCorners = false
                             self.container.bounds = initialContainerBounds
                             self.container.frame = initialContainerFrame
@@ -1297,7 +1325,7 @@ public class AttachmentController: ViewController, MinimizableController {
                 })
             case .compact:
                 let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
 
                 if case .glass = controller.style, let attachmentButton = controller.attachmentButton {
                     let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .customSpring(damping: 110.0, initialVelocity: initialVelocity ?? 0.0))
@@ -1306,34 +1334,53 @@ public class AttachmentController: ViewController, MinimizableController {
 
                     let buttonTransition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
 
-                    let initialFrame = self.container.clipNode.view.convert(self.container.clipNode.view.bounds, to: self.view)
+                    // A dismiss during the appearance morph reverses it from where it is on screen.
+                    let appearanceTransition = self.glassAppearanceTransition
+                    self.glassAppearanceTransition = nil
+
+                    let initialFrame = appearanceTransition?.targetFrame ?? self.container.clipNode.view.convert(self.container.clipNode.view.bounds, to: self.view)
 
                     let targetButtonFrame = attachmentButton.convert(attachmentButton.bounds, to: self.view)
                     let targetButtonScale = targetButtonFrame.width / initialFrame.width
 
-                    if let sourceGlassView = findParentGlassBackgroundView(attachmentButton), let glassParams = sourceGlassView.params {
-                        let containerView = ClipContainerView()
-                        containerView.frame = initialFrame
-                        
-                        containerView.update(bounds: CGRect(origin: .zero, size: initialFrame.size), cornerRadii: self.container.sheetCornerRadii, boundsTransition: .immediate, cornersTransition: .immediate)
-                        self.view.addSubview(containerView)
+                    if let sourceGlassView = appearanceTransition?.sourceGlassView ?? findParentGlassBackgroundView(attachmentButton), let glassParams = sourceGlassView.params {
+                        let containerView: ClipContainerView
+                        let localGlassView: GlassBackgroundView
+                        if let appearanceTransition {
+                            containerView = appearanceTransition.containerView
+                            containerView.pinToPresentation()
+                            localGlassView = appearanceTransition.localGlassView
+                            appearanceTransition.buttonIcon.removeFromSuperview()
+                            sourceGlassView.isHidden = false
+                        } else {
+                            containerView = ClipContainerView()
+                            containerView.frame = initialFrame
 
-                        let localGlassView = GlassBackgroundView()
-                        localGlassView.update(
-                            size: initialFrame.size,
-                            cornerRadius: 0.0,
-                            isDark: glassParams.isDark,
-                            tintColor: glassParams.tintColor,
-                            transition: .immediate
-                        )
-                        localGlassView.frame = CGRect(origin: .zero, size: initialFrame.size)
-                        containerView.contentView.addSubview(localGlassView)
+                            containerView.update(bounds: CGRect(origin: .zero, size: initialFrame.size), cornerRadii: self.container.sheetCornerRadii, boundsTransition: .immediate, cornersTransition: .immediate)
+                            self.view.addSubview(containerView)
+
+                            localGlassView = GlassBackgroundView()
+                            localGlassView.update(
+                                size: initialFrame.size,
+                                cornerRadius: 0.0,
+                                isDark: glassParams.isDark,
+                                tintColor: glassParams.tintColor,
+                                transition: .immediate
+                            )
+                            localGlassView.frame = CGRect(origin: .zero, size: initialFrame.size)
+                            containerView.contentView.addSubview(localGlassView)
+                        }
+                        // What the morph starts from on screen: the full sheet, or wherever an interrupted appearance had got to.
+                        let startTransform = containerView.layer.transform
+                        let startScale = sqrt((startTransform.m11 * startTransform.m11) + (startTransform.m12 * startTransform.m12) + (startTransform.m13 * startTransform.m13))
+                        let startWidth = containerView.layer.bounds.width * startScale
+                        let startCenter = containerView.layer.position
 
                         let clipInnerFrame = self.container.container.view.convert(self.container.container.view.bounds, to: self.container.view)
                         self.container.bounds = CGRect(origin: .zero, size: self.container.bounds.size)
                         self.container.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((initialFrame.width - self.container.frame.width) / 2.0), y: -clipInnerFrame.minY), size: self.container.frame.size)
                         self.container.isUserInteractionEnabled = false
-                        self.container.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
+                        self.container.view.layer.animateAlpha(from: CGFloat(self.container.view.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: 0.12, removeOnCompletion: false)
                         containerView.contentView.addSubnode(self.container)
 
                         let buttonIcon = GlassBackgroundView.ContentImageView()
@@ -1359,9 +1406,9 @@ public class AttachmentController: ViewController, MinimizableController {
                         })
 
                         localGlassView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
-                        scaleTransition.animateTransformScale(view: sourceGlassView, from: 1.0 / targetButtonScale)
+                        scaleTransition.animateTransformScale(view: sourceGlassView, from: startWidth / targetButtonFrame.width)
 
-                        positionTransition.animatePosition(layer: sourceGlassView.layer, from: self.view.convert(initialFrame.center, to: sourceGlassView.superview), to: sourceGlassView.center)
+                        positionTransition.animatePosition(layer: sourceGlassView.layer, from: self.view.convert(startCenter, to: sourceGlassView.superview), to: sourceGlassView.center)
                     }
                 } else {
                     let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -1884,5 +1931,19 @@ private final class ClipContainerView: UIView {
         boundsTransition.updateFrame(view: self.clipView, frame: CGRect(origin: .zero, size: bounds.size))
         boundsTransition.updatePosition(layer: self.contentView.layer, position: CGPoint(x: bounds.size.width * 0.5, y: bounds.size.height * 0.5))
         boundsTransition.updateBounds(layer: self.contentView.layer, bounds: bounds)
+    }
+
+    /// Stops the running morph where it is on screen, so the next `update` and transitions start from there.
+    func pinToPresentation() {
+        for layer in [self.layer, self.clipView.layer, self.contentView.layer] {
+            if let presentation = layer.presentation(), let keys = layer.animationKeys() {
+                for key in keys {
+                    if let animation = layer.animation(forKey: key) as? CAPropertyAnimation, let keyPath = animation.keyPath {
+                        layer.setValue(presentation.value(forKeyPath: keyPath), forKeyPath: keyPath)
+                    }
+                }
+            }
+            layer.removeAllAnimations()
+        }
     }
 }
