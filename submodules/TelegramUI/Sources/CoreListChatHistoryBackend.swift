@@ -282,6 +282,9 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // first computation always counts as a change.
     private var internalDisplayedItemRange: ListViewDisplayedItemRange?
     var opaqueTransactionState: Any? = nil
+    // Animated passes whose duration has not elapsed yet. When the last one lands, the content offset is
+    // reported again (see the landing report in `chatHistoryTransaction`).
+    private var animatedPassesInFlight = 0
 
     // MARK: - Interactive-drag origin
     //
@@ -1166,15 +1169,32 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 animatesInsertions: animatesInsertions,
                 transition: transition
             )
-            // The range reported at the end of this transaction is where the rows are drawn now, before the pass has
-            // moved them, and nothing reports it again when a programmatic pass lands (`onVisibleWindowChanged` fires
-            // only on user scrolls). Without this report, what an animated jump brings on screen would stay
-            // unprocessed (read marks, unseen mentions and reactions) until the next drag or the history's 10 s refresh. ListViewImpl
-            // reports the landed range at the transaction itself, where its model is already final; here that would
-            // be the settled geometry, which mid-fling is the fling's destination (see `forEachVisibleItemNode`).
+            // The range and the content offset reported at the end of this transaction describe where the rows are
+            // drawn now, before the pass has moved them, and nothing reports either again when a programmatic pass
+            // lands (`onVisibleWindowChanged` fires only on user scrolls). Without these reports, what an animated
+            // jump brings on screen would stay unprocessed until the next drag or the next transaction: the range
+            // drives unseen mentions and reactions (and the history's 10 s refresh would catch it), and the offset
+            // drives read marks, since the chat reads the messages it finds on screen in `visibleContentOffsetChanged`
+            // (a go-down tap left a quiet chat unread). ListViewImpl reports both at the transaction itself, where
+            // its model is already final; here that would be the settled geometry, which mid-fling is the fling's
+            // destination (see `forEachVisibleItemNode`).
+            //
+            // The offset is reported only when the LAST pass in flight lands. Before that the presented geometry is
+            // part-way through a later pass, whose own transaction has already reported its settled offset, and the
+            // chat's chrome (the go-down button, the overscroll control) acts on that value. With nothing in flight
+            // the presented and settled offsets agree, or the user is scrolling and the scroll path reports the
+            // presented one every frame anyway, so this report moves no chrome; it lets the chat see the landed rows.
             if !transition.isImmediate {
+                self.animatedPassesInFlight += 1
                 Queue.mainQueue().after(transition.duration * UIView.animationDurationFactor(), { [weak self] in
-                    self?.updateVisibleItemRange(force: false)
+                    guard let self else {
+                        return
+                    }
+                    self.updateVisibleItemRange(force: false)
+                    self.animatedPassesInFlight -= 1
+                    if self.animatedPassesInFlight == 0 {
+                        self.updateVisibleContentOffset(transition: .immediate, geometry: .presented)
+                    }
                 })
             }
         }
