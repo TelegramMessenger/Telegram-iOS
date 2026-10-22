@@ -979,10 +979,10 @@ private final class NotificationServiceHandler {
                 }
 
                 // Read up front so that the first content handed over, the one shown if the
-                // extension runs out of time, already names the account. Only with several
-                // accounts: every transaction here takes the database write lock the app may hold.
+                // extension runs out of time, already names the account. Only when it is named:
+                // every transaction here takes the database write lock the app may hold.
                 let recipientAccountName: Signal<String?, NoError>
-                if notificationsNameRecipientAccount(records: records.records) {
+                if notificationsNameRecipientAccount(records: records.records, notificationsFromAllAccounts: inAppNotificationSettings.displayNotificationsFromAllAccounts, isCurrentAccount: isCurrentAccount) {
                     recipientAccountName = stateManager.postbox.transaction { transaction -> String? in
                         return notificationRecipientAccountName(accountPeer: transaction.getPeer(accountPeerId).flatMap(EnginePeer.init))
                     }
