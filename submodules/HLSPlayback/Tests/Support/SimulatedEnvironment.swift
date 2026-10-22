@@ -25,6 +25,8 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
         var priority: HLSLoadPriority
         var startTime: Double
         var completionTime: Double = 0.0
+        // When the load completed, failed or was cancelled.
+        var endTime: Double?
         var networkBytes: Int64 = 0
         var cancelled: Bool = false
         var completed: Bool = false
@@ -43,6 +45,8 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
     
     var bandwidth: Double = 10_000_000.0
     var latency: Double = 0.05
+    // When set, network loads are delivered by this link, in parts, instead of by `bandwidth` and `latency`.
+    var link: SimulatedLink?
     var progressChunk: Int64?
     // The next this many loads (matching `failingLoadFilter`, when set) fail after `latency`.
     var failingLoads: Int = 0
@@ -77,6 +81,8 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
     private var loadDepth = 0
     
     weak var controller: HLSPlaybackController?
+    // Told of every load as it is issued.
+    var onLoad: ((_ level: Int, _ range: Range<Int64>) -> Void)?
     
     // MARK: Disk
     
@@ -215,6 +221,7 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
     
     func load(level: Int, range: Range<Int64>, priority: HLSLoadPriority, progress: @escaping (Int64) -> Void, completion: @escaping (HLSLoadOutcome) -> Void) -> HLSCancellable {
         let index = self.loads.count
+        self.onLoad?(level, range)
         self.loads.append(LoadRecord(level: level, range: range, priority: priority, startTime: self.now))
         
         if self.loadDepth > 20 {
@@ -234,6 +241,7 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
         }
         
         var pending: [HLSCancellable] = []
+        var usesLink = false
         if self.stalledLoads > 0 || self.stalledLoadIndices.contains(index) {
             if self.stalledLoads > 0 {
                 self.stalledLoads -= 1
@@ -245,8 +253,32 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
                     return
                 }
                 self.loads[index].failed = true
+                self.loads[index].endTime = self.now
                 completion(.failed)
             }))
+        } else if let link = self.link, !self.missingRanges(level: level, range: range).isEmpty {
+            // Delivered by the shared link, part by part.
+            usesLink = true
+            let missing = self.missingRanges(level: level, range: range)
+            let missingBytes = missing.reduce(Int64(0), { $0 + Int64($1.count) })
+            var deliveredBytes: Int64 = 0
+            link.enqueue(loadId: index, level: level, bytes: missingBytes, environment: self, landed: { [weak self] size in
+                guard let self else {
+                    return
+                }
+                let from = deliveredBytes
+                deliveredBytes += size
+                self.deliver(level: level, ranges: SimulatedEnvironment.slice(missing, from: from, to: deliveredBytes))
+                self.loads[index].networkBytes = deliveredBytes
+                if deliveredBytes >= missingBytes {
+                    self.loads[index].completed = true
+                    self.loads[index].completionTime = self.now
+                    self.loads[index].endTime = self.now
+                    completion(.completed(networkBytes: missingBytes, isSampleable: isSampleable))
+                } else {
+                    progress(deliveredBytes)
+                }
+            })
         } else {
             let missing = self.missingRanges(level: level, range: range)
             let missingBytes = missing.reduce(Int64(0), { $0 + Int64($1.count) })
@@ -274,6 +306,7 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
                     if isLast {
                         self.loads[index].completed = true
                         self.loads[index].completionTime = self.now
+                    self.loads[index].endTime = self.now
                         let estimateBefore = self.controller?.estimate
                         completion(.completed(networkBytes: missingBytes, isSampleable: isSampleable))
                         if missingBytes == 0 && self.controller?.estimate != estimateBefore {
@@ -293,6 +326,10 @@ final class SimulatedEnvironment: HLSPlaybackEnvironment {
             }
             if let self, !self.loads[index].completed, !self.loads[index].failed {
                 self.loads[index].cancelled = true
+                self.loads[index].endTime = self.now
+                if usesLink {
+                    self.link?.cancel(loadId: index, environment: self)
+                }
             }
         }
         return token
@@ -392,21 +429,40 @@ enum TestStreams {
 final class ControllerHarness {
     let levels: [HLSLevel]
     let environment = SimulatedEnvironment()
-    let seed = HLSBandwidthSeed()
+    let store: HLSBandwidthStore
+    let networkClass: HLSNetworkClass
     let controller: HLSPlaybackController
     var playlists: [HLSMediaPlaylist]
     private(set) var bufferUpdates: [[HLSBufferedPart]] = []
     private(set) var logLines: [String] = []
     private(set) var position: Double = 0.0
     
-    init(levels: [HLSLevel] = TestStreams.fourLevels, seconds: Double = 120.0, preloadLevel: Int = 2, playlists: [HLSMediaPlaylist]? = nil, configuration: HLSPlaybackController.Configuration = HLSPlaybackController.Configuration(), seedValue: Double? = nil) {
+    // `priorEstimate`: what a previous player measured on this network class, as one 4 s sample at that rate, 20 s
+    // before this one starts.
+    // The controller tests that pin load order, ranges and timings run one segment load at a time, the order they
+    // were written for; the pipeline tests and the lab run the production configuration (two in flight, D13).
+    static var oneLoadAtATime: HLSPlaybackController.Configuration {
+        var configuration = HLSPlaybackController.Configuration()
+        configuration.maxSegmentLoadsInFlight = 1
+        return configuration
+    }
+
+    init(levels: [HLSLevel] = TestStreams.fourLevels, seconds: Double = 120.0, preloadLevel: Int = 2, playlists: [HLSMediaPlaylist]? = nil, configuration: HLSPlaybackController.Configuration = ControllerHarness.oneLoadAtATime, store: HLSBandwidthStore = HLSBandwidthStore(), priorEstimate: Double? = nil, networkClass: HLSNetworkClass = .unknown) {
         self.levels = levels
         self.playlists = playlists ?? levels.map { TestStreams.uniform(level: $0, seconds: seconds) }
-        self.seed.value = seedValue
-        self.controller = HLSPlaybackController(levels: levels, preloadLevel: preloadLevel, configuration: configuration, environment: self.environment, seed: self.seed)
+        self.store = store
+        self.networkClass = networkClass
+        if let priorEstimate {
+            let _ = store.sample(durationMs: 4000.0, bytes: Int64(priorEstimate * 4.0 / 8.0), networkClass: networkClass, defaultEstimate: priorEstimate, now: -20.0)
+        }
+        self.controller = HLSPlaybackController(levels: levels, preloadLevel: preloadLevel, configuration: configuration, environment: self.environment, bandwidthStore: store)
+        self.controller.setNetworkClass(networkClass)
         self.environment.controller = self.controller
         self.controller.onBufferChanged = { [weak self] parts, _ in
             self?.bufferUpdates.append(parts)
+        }
+        self.environment.onLoad = { [weak self] level, range in
+            self?.checkLoadIsNotBuffered(level: level, range: range)
         }
         self.controller.onLog = { [weak self] line in
             self?.logLines.append(line)
@@ -471,22 +527,68 @@ final class ControllerHarness {
         }
     }
     
-    // Each sample is one completed, sampleable network load: its network bytes over its whole duration (D1, D2).
+    // Each sample is one completed, sampleable network load's network bytes (D1), over busy time of the link (D2): the
+    // samples together are never charged more time than the network loads spanned, and a load that overlapped no other
+    // is charged exactly its own duration.
     func assertSamplesMatchNetworkLoads(file: StaticString = #filePath, line: UInt = #line) {
+        let networkLoads = self.environment.loads.filter { $0.endTime != nil && ($0.networkBytes > 0 || $0.cancelled || $0.failed) }
         var candidates = self.environment.loads.filter { $0.completed && $0.networkBytes > 0 && !self.environment.externallyFetchedLevels.contains($0.level) && $0.range != self.playlists[$0.level].initSegment }
+        var sampledMs = 0.0
         for sample in self.loggedSamples {
-            if let index = candidates.firstIndex(where: { $0.networkBytes == sample.bytes && abs(($0.completionTime - $0.startTime) * 1000.0 - sample.durationMs) < 0.01 }) {
-                candidates.remove(at: index)
-            } else {
+            sampledMs += sample.durationMs
+            let index = candidates.firstIndex(where: { $0.networkBytes == sample.bytes && abs(($0.completionTime - $0.startTime) * 1000.0 - sample.durationMs) < 0.01 }) ?? candidates.firstIndex(where: { $0.networkBytes == sample.bytes })
+            guard let index else {
                 XCTFail("sample of \(sample.bytes) bytes in \(sample.durationMs) ms matches no network load", file: file, line: line)
+                continue
+            }
+            let load = candidates.remove(at: index)
+            let overlapsAnother = networkLoads.contains(where: { other in
+                return !(other.startTime == load.startTime && other.range == load.range && other.level == load.level) && (other.startTime < load.completionTime && (other.endTime ?? 0.0) > load.startTime)
+            })
+            if !overlapsAnother {
+                XCTAssertEqual(sample.durationMs, (load.completionTime - load.startTime) * 1000.0, accuracy: 0.01, "a load alone on the link is charged its own duration", file: file, line: line)
             }
         }
+        // The union of the network loads' intervals.
+        var unionMs = 0.0
+        var current: (start: Double, end: Double)?
+        for interval in networkLoads.map({ ($0.startTime, $0.endTime ?? $0.startTime) }).sorted(by: { $0.0 < $1.0 }) {
+            if let value = current, interval.0 <= value.end {
+                current = (value.start, max(value.end, interval.1))
+            } else {
+                if let value = current {
+                    unionMs += (value.end - value.start) * 1000.0
+                }
+                current = interval
+            }
+        }
+        if let value = current {
+            unionMs += (value.end - value.start) * 1000.0
+        }
+        XCTAssertLessThanOrEqual(sampledMs, unionMs + 0.01 * Double(self.loggedSamples.count), "samples charged more time than the network loads spanned", file: file, line: line)
         XCTAssertEqual(candidates.count, 0, "network segment loads that were never sampled: \(candidates)", file: file, line: line)
+    }
+    
+    // A segment whose time span is already buffered, at any level, is never loaded again.
+    private(set) var bufferedRefetches: [String] = []
+    
+    private func checkLoadIsNotBuffered(level: Int, range: Range<Int64>) {
+        guard level >= 0 && level < self.playlists.count, range != self.playlists[level].initSegment, let segment = self.playlists[level].segments.first(where: { $0.byteRange.upperBound == range.upperBound }) else {
+            return
+        }
+        var model = HLSBufferModel()
+        for part in self.buffered {
+            model.insert(part)
+        }
+        if model.bufferedRanges.contains(where: { $0.lowerBound <= segment.start + 0.01 && $0.upperBound >= segment.end - 0.01 }) {
+            self.bufferedRefetches.append("level \(level) index \(segment.index) [\(segment.start), \(segment.end)) loaded while buffered")
+        }
     }
     
     func assertInvariants(file: StaticString = #filePath, line: UInt = #line) {
         self.environment.assertInvariants(file: file, line: line)
         self.assertSamplesMatchNetworkLoads(file: file, line: line)
+        XCTAssertEqual(self.bufferedRefetches, [], file: file, line: line)
     }
     
     var appendedKeys: [HLSSegmentKey] {

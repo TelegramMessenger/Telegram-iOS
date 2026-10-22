@@ -305,7 +305,7 @@ final class HLSPlaybackControllerFailureTests: XCTestCase {
         XCTAssertEqual(h.segmentLoads.last?.range, h.playlists[0].segments[1].byteRange)
         XCTAssertEqual(h.controller.estimate, 290_000.0)
         // The next video does not start from the estimate the abandon proved wrong.
-        XCTAssertEqual(h.seed.value, 290_000.0)
+        XCTAssertEqual(h.store.estimator(for: .unknown)?.estimate, 290_000.0)
         h.assertInvariants()
     }
     
@@ -402,10 +402,10 @@ final class HLSPlaybackControllerFailureTests: XCTestCase {
         h.assertInvariants()
     }
     
-    // After an abandon resets the estimate, the pick after the forced one uses it, not the higher seed the player
+    // After an abandon resets the estimate, the pick after the forced one uses it, not the higher prior the player
     // started with. The opening and level 1's replacement are on disk, so no network sample comes in between.
     func testThePickAfterTheForcedOneUsesTheResetEstimate() {
-        let h = ControllerHarness(seedValue: 5_000_000.0)
+        let h = ControllerHarness(priorEstimate: 5_000_000.0)
         h.environment.bandwidth = 20_000_000.0
         h.environment.bandwidthForLevel = [3: 300_000.0]
         h.environment.progressChunk = 65_536

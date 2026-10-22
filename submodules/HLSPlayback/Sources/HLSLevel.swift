@@ -39,9 +39,9 @@ public enum HLSLevels {
         return sortedKeys.first(where: { $0 >= 600 }) ?? sortedKeys.first
     }
     
-    // The start rule: the manual level; else the highest level within the cap whose opening is on disk; else the
-    // preload level, clamped to the cap.
-    public static func startLevel(cap: Int, preloadLevel: Int, manualLevel: Int?, isOpeningOnDisk: (Int) -> Bool) -> Int {
+    // The start rule: the manual level; else the highest level within the cap whose opening is on disk; else the level
+    // the network class's estimate picks, when the caller takes it, else the preload level, clamped to the cap.
+    public static func startLevel(cap: Int, preloadLevel: Int, manualLevel: Int?, estimateLevel: Int? = nil, isOpeningOnDisk: (Int) -> Bool) -> Int {
         if let manualLevel {
             return manualLevel
         }
@@ -52,6 +52,6 @@ public enum HLSLevels {
                 }
             }
         }
-        return min(preloadLevel, cap)
+        return min(estimateLevel ?? preloadLevel, cap)
     }
 }

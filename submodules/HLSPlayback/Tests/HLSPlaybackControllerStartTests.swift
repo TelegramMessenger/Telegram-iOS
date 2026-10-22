@@ -177,21 +177,21 @@ final class HLSPlaybackControllerStartTests: XCTestCase {
         h.assertInvariants()
     }
     
-    func testSeedIsUpdatedAfterNetworkSample() {
+    func testSamplesGoToTheStore() {
         let h = ControllerHarness()
         h.environment.bandwidth = 4_000_000.0
         h.setPlaylists()
-        XCTAssertNil(h.seed.value)
+        XCTAssertNil(h.store.estimator(for: .unknown))
         h.controller.start()
         h.environment.advance(by: 5.0)
         
         XCTAssertNotNil(h.controller.estimate)
-        XCTAssertEqual(h.seed.value, h.controller.estimate)
+        XCTAssertEqual(h.store.estimator(for: .unknown)?.estimate, h.controller.estimate)
         h.assertInvariants()
     }
     
-    func testSeedDecidesTheFirstNetworkLevelAfterADiskOpening() {
-        let h = ControllerHarness(seedValue: 20_000_000.0)
+    func testANewPlayerStartsFromTheStoresEstimate() {
+        let h = ControllerHarness(priorEstimate: 20_000_000.0)
         h.cache(level: 2, seconds: 5.0)
         h.setPlaylists()
         h.controller.start()
@@ -403,7 +403,7 @@ final class HLSPlaybackControllerStartTests: XCTestCase {
         
         XCTAssertFalse(h.appendedKeys.isEmpty)
         XCTAssertNil(h.controller.estimate)
-        XCTAssertNil(h.seed.value)
+        XCTAssertNil(h.store.estimator(for: .unknown))
         XCTAssertTrue(h.loggedSamples.isEmpty)
         h.assertInvariants()
     }
@@ -465,7 +465,7 @@ final class HLSPlaybackControllerStartTests: XCTestCase {
     func testReleasingTheControllerCancelsItsLoads() {
         let environment = SimulatedEnvironment()
         let levels = TestStreams.fourLevels
-        var controller: HLSPlaybackController? = HLSPlaybackController(levels: levels, preloadLevel: 2, environment: environment, seed: HLSBandwidthSeed())
+        var controller: HLSPlaybackController? = HLSPlaybackController(levels: levels, preloadLevel: 2, environment: environment, bandwidthStore: HLSBandwidthStore())
         for (level, playlist) in levels.map({ TestStreams.uniform(level: $0, seconds: 60.0) }).enumerated() {
             controller?.setPlaylist(playlist, level: level)
         }
@@ -545,7 +545,40 @@ final class HLSPlaybackControllerStartTests: XCTestCase {
         XCTAssertEqual(h.appendedKeys.first, HLSSegmentKey(level: 2, index: 0))
         XCTAssertEqual(h.environment.loads.filter({ $0.level == 2 && $0.range.lowerBound == 0 }).count, 1)
         XCTAssertFalse(h.logLines.contains(where: { $0.contains("abandon") }))
-        XCTAssertEqual(h.seed.value, h.controller.estimate)
+        XCTAssertEqual(h.store.estimator(for: .unknown)?.estimate, h.controller.estimate)
         h.assertInvariants()
+    }
+
+    func testTheTimelineRecordsTheFirstLoadAndAppend() {
+        let h = ControllerHarness()
+        h.environment.appendDelay = 0.1
+        h.controller.updatePlayback(position: 0.0, isPlaying: true, rate: 1.0)
+        h.setPlaylists()
+        h.controller.start()
+        h.environment.advance(by: 30.0)
+
+        let timeline = h.controller.timeline
+        let firstLoad = h.environment.loads[0]
+        XCTAssertEqual(timeline.started, 0.0)
+        XCTAssertEqual(timeline.firstLoadIssued, 0.0)
+        XCTAssertEqual(timeline.firstLoadCompleted ?? -1.0, firstLoad.completionTime, accuracy: 1e-9)
+        XCTAssertEqual(timeline.firstAppendRequested ?? -1.0, firstLoad.completionTime, accuracy: 1e-9)
+        XCTAssertEqual(timeline.firstAppendCompleted ?? -1.0, firstLoad.completionTime + 0.1, accuracy: 1e-9)
+        XCTAssertEqual(h.controller.networkBytesLoaded, h.environment.loads.filter({ $0.completed }).reduce(Int64(0), { $0 + $1.networkBytes }))
+        XCTAssertEqual(h.controller.diskBytesAppended, 0)
+        XCTAssertEqual(h.controller.abandonCount, 0)
+    }
+
+    func testDiskBytesAppendedCountsPartsFromDisk() {
+        let h = ControllerHarness()
+        h.cache(level: 2, seconds: 10.0)
+        h.controller.updatePlayback(position: 0.0, isPlaying: true, rate: 1.0)
+        h.setPlaylists()
+        h.controller.start()
+        h.environment.advance(by: 1.0)
+
+        let playlist = h.playlists[2]
+        let expected = Int64(playlist.segments[0].byteRange.count + playlist.segments[1].byteRange.count)
+        XCTAssertEqual(h.controller.diskBytesAppended, expected)
     }
 }

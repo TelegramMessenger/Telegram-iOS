@@ -108,10 +108,16 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     
     private var playerStatusDisposable: Disposable?
     private var connectionStatusDisposable: Disposable?
+    private var networkTypeDisposable: Disposable?
     
     private let startInitTime = CFAbsoluteTimeGetCurrent()
+    // The same moment on the controller's clock (`HLSNativeEnvironment.now`).
+    private let controllerInitTime = CACurrentMediaTime()
     private var startPlayTime: Double?
     private var didLogStart = false
+    private let stats = HLSPlaybackStats()
+    private var isEffectivelyPlaying = false
+    private var networkClass = "unknown"
     
     init(context: AccountContext, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, levels: [HLSLevel], qualityFiles: [HLSNativeQualityFile], loopVideo: Bool, enableSound: Bool, baseRate: Double, captureProtected: Bool, thumbnail: Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError>) {
         self.fileReference = fileReference
@@ -177,6 +183,7 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             }
             didProcessFramesToDisplay = true
             self.playerNode.isHidden = false
+            self.stats.noteFirstFrame(now: CACurrentMediaTime())
             self.logStartIfNeeded()
         }
         
@@ -209,7 +216,11 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
         
         self.playerStatusDisposable = (self.player.status
         |> deliverOnMainQueue).startStrict(next: { [weak self] status in
-            self?._status.set(status)
+            guard let self else {
+                return
+            }
+            self._status.set(status)
+            self.noteStatus(status.status)
         })
         
         let fileId = fileReference.media.fileId.id
@@ -245,6 +256,7 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             }
             self.lastPosition = position
             self.controller.updatePlayback(position: position, isPlaying: isPlaying, rate: self.requestedBaseRate)
+            self.stats.notePlayhead(level: self.controller.level(at: position), isPlaying: self.isEffectivelyPlaying, now: CACurrentMediaTime())
             self.updateVideoQualityState()
         }
         self.environment.onDiskStateKnown = { [weak self] in
@@ -254,6 +266,15 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             Logger.shared.log("HLSNative", "\(fileId): disk state known ms=\(Int((CFAbsoluteTimeGetCurrent() - self.startInitTime) * 1000.0))")
             self.controller.start()
         }
+        self.networkTypeDisposable = (context.account.networkType
+        |> deliverOnMainQueue).startStrict(next: { [weak self] networkType in
+            guard let self else {
+                return
+            }
+            let networkClass = HLSVideoNativeContentNode.networkClass(networkType)
+            self.networkClass = networkClass.rawValue
+            self.controller.setNetworkClass(networkClass)
+        })
         self.connectionStatusDisposable = (context.account.network.connectionStatus
         |> deliverOnMainQueue).startStrict(next: { [weak self] status in
             switch status {
@@ -273,11 +294,13 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     }
     
     deinit {
+        self.logSession()
         self.controller.stop()
         self.playlistLoader.cancel()
         self.partStore.removeAll()
         self.playerStatusDisposable?.dispose()
         self.connectionStatusDisposable?.dispose()
+        self.networkTypeDisposable?.dispose()
     }
     
     // MARK: Controller
@@ -304,6 +327,55 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     // Without sound the video plays at most at the preload quality.
     private func applyCap() {
         self.controller.setCap(self.enableSound ? nil : self.preloadLevel)
+    }
+    
+    // The bandwidth estimate is kept per kind of network (`HLSBandwidthStore`). Cellular is one class: the radio
+    // technology changes under a playing video (LTE and 5G hand over often, and 5G reads as `.unknown`), and a class
+    // change drops the samples in flight and starts from another estimator.
+    private static func networkClass(_ networkType: NetworkType) -> HLSNetworkClass {
+        switch networkType {
+        case .none:
+            return HLSNetworkClass("none")
+        case .wifi:
+            return HLSNetworkClass("wifi")
+        case .cellular:
+            return HLSNetworkClass("cellular")
+        }
+    }
+
+    // MARK: Metrics
+    
+    private func noteStatus(_ status: MediaPlayerPlaybackStatus) {
+        let now = CACurrentMediaTime()
+        switch status {
+        case let .buffering(_, whilePlaying, _, _):
+            self.isEffectivelyPlaying = false
+            self.stats.noteStatus(isBuffering: true, isPlayRequested: whilePlaying, now: now)
+        case .playing:
+            self.isEffectivelyPlaying = true
+            self.stats.noteStatus(isBuffering: false, isPlayRequested: true, now: now)
+        case .paused:
+            self.isEffectivelyPlaying = false
+            self.stats.noteStatus(isBuffering: false, isPlayRequested: false, now: now)
+        }
+        self.stats.notePlayhead(level: self.controller.level(at: self.lastPosition), isPlaying: self.isEffectivelyPlaying, now: now)
+    }
+    
+    // Milliseconds from the node's creation to a controller timeline moment, -1 when it has not happened.
+    private func sinceInitMs(_ time: Double?) -> Int {
+        return time.map { Int(($0 - self.controllerInitTime) * 1000.0) } ?? -1
+    }
+    
+    private func logSession() {
+        let summary = self.stats.summary
+        let levels = summary.secondsPerLevel.sorted(by: { $0.key < $1.key }).compactMap { level, seconds -> String? in
+            guard level >= 0 && level < self.levels.count else {
+                return nil
+            }
+            return "\(self.levels[level].key):\(String(format: "%.1f", seconds))"
+        }.joined(separator: ",")
+        let estimate = self.controller.estimate.map { "\(Int($0))" } ?? "none"
+        Logger.shared.log("HLSSession", "HLSSession file=\(self.fileReference.media.fileId.id) network=\(self.networkClass) stalls=\(summary.stallCount) stallMs=\(Int(summary.stallTime * 1000.0)) seekWaits=\(summary.seekWaitCount) seekWaitMs=\(Int(summary.seekWaitTime * 1000.0)) playedMs=\(Int(summary.playedTime * 1000.0)) levels=\(levels.isEmpty ? "none" : levels) switches=\(summary.levelSwitches) networkBytes=\(self.controller.networkBytesLoaded) diskBytes=\(self.controller.diskBytesAppended) abandons=\(self.controller.abandonCount) estimate=\(estimate)")
     }
     
     // MARK: Start time
@@ -334,7 +406,8 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
         case .none:
             firstSegment = "unknown"
         }
-        let line = "HLSStart file=\(self.fileReference.media.fileId.id) engine=native initToPlayMs=\(initToPlayMs) playToFirstFrameMs=\(playToFirstFrameMs) initToFirstFrameMs=\(initToFirstFrameMs) startQuality=\(startQuality) firstSegment=\(firstSegment) sound=\(self.enableSound ? 1 : 0)"
+        let timeline = self.controller.timeline
+        let line = "HLSStart file=\(self.fileReference.media.fileId.id) engine=native initToPlayMs=\(initToPlayMs) playToFirstFrameMs=\(playToFirstFrameMs) initToFirstFrameMs=\(initToFirstFrameMs) startQuality=\(startQuality) firstSegment=\(firstSegment) sound=\(self.enableSound ? 1 : 0) startedMs=\(self.sinceInitMs(timeline.started)) firstLoadMs=\(self.sinceInitMs(timeline.firstLoadIssued)) firstLoadDoneMs=\(self.sinceInitMs(timeline.firstLoadCompleted)) firstAppendMs=\(self.sinceInitMs(timeline.firstAppendRequested)) firstAppendDoneMs=\(self.sinceInitMs(timeline.firstAppendCompleted))"
         Logger.shared.log("HLSStart", line)
         #if DEBUG
         NSLog("%@", line)
@@ -393,6 +466,7 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     
     func seek(_ timestamp: Double) {
         assert(Queue.mainQueue().isCurrent())
+        self.stats.noteSeek(now: CACurrentMediaTime())
         self.seekId += 1
         self.player.seek(timestamp: timestamp, play: nil)
     }
@@ -433,6 +507,10 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             })
         }
         
+        if case .none = seek {
+        } else {
+            self.stats.noteSeek(now: CACurrentMediaTime())
+        }
         self.player.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
         self.applyCap()
     }

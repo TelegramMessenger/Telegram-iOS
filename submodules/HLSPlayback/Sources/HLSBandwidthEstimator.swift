@@ -32,6 +32,13 @@ public struct HLSEWMA: Equatable {
         }
         return self.rawEstimate
     }
+    
+    // The same estimate, carried by `weight`: as if one sample of that weight and value had been taken.
+    public func withTotalWeight(_ weight: Double) -> HLSEWMA {
+        let estimate = self.estimate
+        let rawEstimate = self.alpha != 0.0 ? estimate * (1.0 - pow(self.alpha, weight)) : estimate
+        return HLSEWMA(halfLife: self.halfLife, estimate: rawEstimate, totalWeight: weight)
+    }
 }
 
 // Bandwidth in bits per second, as hls.js estimates it: the minimum of a fast and a slow EWMA over download time.
@@ -81,39 +88,24 @@ public struct HLSBandwidthEstimator: Equatable {
         }
     }
     
+    // Seconds of downloading behind the estimate.
+    public var totalWeight: Double {
+        return self.fast.totalWeight
+    }
+    
+    // The same estimate with each average's weight capped at `weight` and then multiplied by `decay`: a prior that the
+    // next samples move more than the history it summarizes would have let them.
+    public func withMaximumWeight(_ weight: Double, decay: Double) -> HLSBandwidthEstimator {
+        var result = self
+        result.fast = self.fast.withTotalWeight(min(weight, self.fast.totalWeight) * decay)
+        result.slow = self.slow.withTotalWeight(min(weight, self.slow.totalWeight) * decay)
+        return result
+    }
+    
     // hls.js's `resetEstimator(value)`.
     public mutating func reset(defaultEstimate: Double) {
         self.defaultEstimate = defaultEstimate
         self.fast = HLSEWMA(halfLife: HLSBandwidthEstimator.fastHalfLife)
         self.slow = HLSEWMA(halfLife: HLSBandwidthEstimator.slowHalfLife)
-    }
-}
-
-// The last estimate any player in the process reached (deviation D3). In memory only, and a value without weight:
-// a player starts from it as its default, so the first real sample replaces it completely.
-public final class HLSBandwidthSeed {
-    public static let shared = HLSBandwidthSeed()
-    
-    private let lock = NSLock()
-    private var storedValue: Double?
-    
-    public init() {
-    }
-    
-    public var value: Double? {
-        get {
-            self.lock.lock()
-            defer {
-                self.lock.unlock()
-            }
-            return self.storedValue
-        }
-        set {
-            self.lock.lock()
-            defer {
-                self.lock.unlock()
-            }
-            self.storedValue = newValue
-        }
     }
 }

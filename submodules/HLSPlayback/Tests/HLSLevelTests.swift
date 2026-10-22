@@ -45,4 +45,14 @@ final class HLSLevelTests: XCTestCase {
     func testManualStartLevelWins() {
         XCTAssertEqual(HLSLevels.startLevel(cap: 1, preloadLevel: 2, manualLevel: 3, isOpeningOnDisk: { $0 == 0 }), 3)
     }
+    
+    // With nothing cached, the level the shared estimate picks, within the cap, in place of the preload quality.
+    func testStartLevelTakesTheEstimatesLevelWhenNothingIsCached() {
+        XCTAssertEqual(HLSLevels.startLevel(cap: 3, preloadLevel: 2, manualLevel: nil, estimateLevel: 3, isOpeningOnDisk: { _ in false }), 3)
+        XCTAssertEqual(HLSLevels.startLevel(cap: 2, preloadLevel: 2, manualLevel: nil, estimateLevel: 3, isOpeningOnDisk: { _ in false }), 2)
+    }
+    
+    func testACachedOpeningWinsOverTheEstimate() {
+        XCTAssertEqual(HLSLevels.startLevel(cap: 3, preloadLevel: 2, manualLevel: nil, estimateLevel: 3, isOpeningOnDisk: { $0 == 1 }), 1)
+    }
 }

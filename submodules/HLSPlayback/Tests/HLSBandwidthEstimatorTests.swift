@@ -43,22 +43,6 @@ final class HLSBandwidthEstimatorTests: XCTestCase {
         XCTAssertEqual(estimator.estimate, 1_000_000.0)
     }
     
-    func testSeedIsSharedAndValueOnly() {
-        let seed = HLSBandwidthSeed()
-        XCTAssertNil(seed.value)
-        seed.value = 3_000_000.0
-        XCTAssertEqual(seed.value, 3_000_000.0)
-        
-        // A seed is a default value, not a sample: the first real sample replaces it completely.
-        var estimator = HLSBandwidthEstimator(defaultEstimate: seed.value ?? 0.0)
-        XCTAssertFalse(estimator.canEstimate)
-        XCTAssertEqual(estimator.estimate, 3_000_000.0)
-        estimator.sample(durationMs: 2000.0, bytes: 100_000)
-        XCTAssertEqual(estimator.estimate, 400_000.0, accuracy: 1e-6)
-        
-        XCTAssertTrue(HLSBandwidthSeed.shared === HLSBandwidthSeed.shared)
-    }
-    
     func testEWMAZeroFactorCorrection() {
         var ewma = HLSEWMA(halfLife: 3.0)
         ewma.sample(weight: 0.25, value: 1000.0)
