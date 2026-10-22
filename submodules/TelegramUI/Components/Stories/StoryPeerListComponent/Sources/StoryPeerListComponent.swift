@@ -367,8 +367,10 @@ public final class StoryPeerListComponent: Component {
         /// coming in Edit mode), the collapsed content eases from where it stood to where the new band places it, on a
         /// spring as long as the update's animation: this is the remaining distance, springing to zero.
         private var titleOriginOffsetCurve: NavigationSpringCurve?
-        /// The row and content widths the collapsed content was last placed with.
-        private var titleOriginWidths: (container: CGFloat, content: CGFloat)?
+        /// The same for the expanded title, which the band places too (`StoryPeerListTitleLayout.expandedTitleOrigin`).
+        private var expandedTitleOriginOffsetCurve: NavigationSpringCurve?
+        /// The row and content widths the collapsed content and the expanded title were last placed with.
+        private var titleOriginWidths: (container: CGFloat, content: CGFloat, expandedTitle: CGFloat)?
         
         /// Whether the collapsed title shows its text (`StoryPeerListTitleLayout.showsTitleText`), and the fade between.
         private var showsTitleText: Bool?
@@ -951,7 +953,7 @@ public final class StoryPeerListComponent: Component {
             let hiddenTitleWidth = titleSize.width * (1.0 - titleTextFraction)
             let titleWidth = collapsedState.titleWidth - hiddenTitleWidth
             let placedContentWidth = centralContentWidth - hiddenTitleWidth
-            self.titleOriginWidths = (itemLayout.containerSize.width, placedContentWidth)
+            self.titleOriginWidths = (itemLayout.containerSize.width, placedContentWidth, titleWidth)
             collapsedContentOrigin = StoryPeerListTitleLayout.contentOrigin(containerWidth: itemLayout.containerSize.width, contentWidth: placedContentWidth, minX: component.minTitleX, maxX: component.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: CACurrentMediaTime()) ?? 0.0)
             
             let collapsedContentOriginOffset: CGFloat = 0.0
@@ -1445,7 +1447,8 @@ public final class StoryPeerListComponent: Component {
             if self.sortedItems.isEmpty {
                 titleContentOffset = collapsedTitleOffset
             } else {
-                titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
+                let expandedTitleOrigin = StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: itemLayout.containerSize.width, titleWidth: titleWidth, minX: component.minTitleX, maxX: component.maxTitleX) + (self.expandedTitleOriginOffsetCurve?.value(at: CACurrentMediaTime()) ?? 0.0)
+                titleContentOffset = titleMinContentOffset.interpolate(to: expandedTitleOrigin, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
                 titleContentOffset += -expandBoundsFraction * 4.0
             }
             
@@ -1626,6 +1629,16 @@ public final class StoryPeerListComponent: Component {
             return result
         }
         
+        /// The offset left to spring away when a band change moves a title origin from `from` (where it stood under the old
+        /// band, excluding an offset still in flight) to `to`, carrying over that in-flight offset and its velocity.
+        private static func bandChangeCurve(from: CGFloat, to: CGFloat, current: NavigationSpringCurve?, now: Double, duration: Double) -> NavigationSpringCurve? {
+            let from = from + (current?.value(at: now) ?? 0.0)
+            if from == to {
+                return nil
+            }
+            return NavigationSpringCurve(startTime: now, from: from - to, velocity: current?.velocity(at: now) ?? 0.0, target: 0.0, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+        }
+
         func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let incomingAnimation = transition.animation
             var transition = transition
@@ -1639,15 +1652,30 @@ public final class StoryPeerListComponent: Component {
                     // Where the content stands now, against where the new band places it. Only the content's actual
                     // movement springs: a band change that does not move it (content centred far from both sides)
                     // starts nothing.
-                    let from = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: now) ?? 0.0)
-                    let to = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: component.minTitleX, maxX: component.maxTitleX)
-                    self.titleOriginOffsetCurve = from == to ? nil : NavigationSpringCurve(startTime: now, from: from - to, velocity: self.titleOriginOffsetCurve?.velocity(at: now) ?? 0.0, target: 0.0, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+                    self.titleOriginOffsetCurve = View.bandChangeCurve(
+                        from: StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX),
+                        to: StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: component.minTitleX, maxX: component.maxTitleX),
+                        current: self.titleOriginOffsetCurve,
+                        now: now,
+                        duration: duration
+                    )
+                    self.expandedTitleOriginOffsetCurve = View.bandChangeCurve(
+                        from: StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: widths.container, titleWidth: widths.expandedTitle, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX),
+                        to: StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: widths.container, titleWidth: widths.expandedTitle, minX: component.minTitleX, maxX: component.maxTitleX),
+                        current: self.expandedTitleOriginOffsetCurve,
+                        now: now,
+                        duration: duration
+                    )
                 } else {
                     self.titleOriginOffsetCurve = nil
+                    self.expandedTitleOriginOffsetCurve = nil
                 }
             }
             if let titleOriginOffsetCurve = self.titleOriginOffsetCurve, now >= titleOriginOffsetCurve.restTime {
                 self.titleOriginOffsetCurve = nil
+            }
+            if let expandedTitleOriginOffsetCurve = self.expandedTitleOriginOffsetCurve, now >= expandedTitleOriginOffsetCurve.restTime {
+                self.expandedTitleOriginOffsetCurve = nil
             }
 
             var useAnimation = false
@@ -1742,7 +1770,7 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.titleOriginOffsetCurve != nil || self.titleTextAnimation != nil {
+            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.titleOriginOffsetCurve != nil || self.expandedTitleOriginOffsetCurve != nil || self.titleTextAnimation != nil {
                 self.startAnimatorIfNeeded()
             } else if let animator = self.animator {
                 self.animator = nil

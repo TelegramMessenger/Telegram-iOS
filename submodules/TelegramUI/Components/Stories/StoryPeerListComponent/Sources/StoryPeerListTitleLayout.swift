@@ -24,6 +24,13 @@ enum StoryPeerListTitleLayout {
         return centred + (balanced - centred) * fraction
     }
 
+    /// The title's left edge (with its lock and status) when the stories are expanded and it is alone on its row: placed
+    /// between the buttons like the collapsed content, so a band the right buttons narrow (a proxy) does not put the
+    /// title under them. Where it is clear of both sides this is the row's centre.
+    static func expandedTitleOrigin(containerWidth: CGFloat, titleWidth: CGFloat, minX: CGFloat, maxX: CGFloat) -> CGFloat {
+        return StoryPeerListTitleLayout.contentOrigin(containerWidth: containerWidth, contentWidth: titleWidth, minX: minX, maxX: maxX)
+    }
+
     /// Whether the title's text fits, given the content's width with it.
     static func showsTitleText(contentWidth: CGFloat, minX: CGFloat, maxX: CGFloat) -> Bool {
         return contentWidth <= maxX - StoryPeerListTitleLayout.trailingMargin - (minX + StoryPeerListTitleLayout.leadingMargin)
