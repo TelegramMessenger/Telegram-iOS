@@ -48,25 +48,8 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
         }
     }
     |> mapToSignal { filters, secretChatsByUserId, userIdBySecretChatId -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
-        // Each folder peer followed by the secret chats it carries. A no-op, and allocation-free,
-        // for an account with no secret chats in any folder.
         func expand(_ peerIds: [EnginePeer.Id]) -> [EnginePeer.Id] {
-            if secretChatsByUserId.isEmpty {
-                return peerIds
-            }
-            var result: [EnginePeer.Id] = []
-            var seen = Set<EnginePeer.Id>()
-            for peerId in peerIds {
-                if seen.insert(peerId).inserted {
-                    result.append(peerId)
-                }
-                for secretChatId in secretChatsByUserId[peerId] ?? [] {
-                    if seen.insert(secretChatId).inserted {
-                        result.append(secretChatId)
-                    }
-                }
-            }
-            return result
+            return chatListFilterBadgePeerIds(peerIds, secretChatsByUserId: secretChatsByUserId)
         }
         
         var unreadCountItems: [EngineRawUnreadMessageCountsItem] = []
@@ -245,7 +228,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                             }
                         }
                     }
-                    for peerId in expand(data.includePeers.peers + data.includePeers.pinnedPeers) {
+                    for peerId in chatListFilterBadgeIncludedPeerIds(data.includePeers, secretChatsByUserId: secretChatsByUserId) {
                         if let (tag, peerCount, hasUnmuted, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
                             var matches = true
                             if tags.contains(tag) {
@@ -313,4 +296,29 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
             return (totalBadge, result)
         }
     }
+}
+
+// Each folder peer followed by the secret chats it carries, each named once. The badge adds one per
+// listed unread chat, so a duplicate counts a chat twice: a chat pinned in a folder is in both
+// `includePeers.peers` and `includePeers.pinnedPeers`.
+func chatListFilterBadgePeerIds(_ peerIds: [EnginePeer.Id], secretChatsByUserId: [EnginePeer.Id: [EnginePeer.Id]]) -> [EnginePeer.Id] {
+    var result: [EnginePeer.Id] = []
+    var seen = Set<EnginePeer.Id>()
+    for peerId in peerIds {
+        if seen.insert(peerId).inserted {
+            result.append(peerId)
+        }
+        for secretChatId in secretChatsByUserId[peerId] ?? [] {
+            if seen.insert(secretChatId).inserted {
+                result.append(secretChatId)
+            }
+        }
+    }
+    return result
+}
+
+// The peers a folder names, each of whose unread chats the folder's badge counts on top of its
+// categories.
+func chatListFilterBadgeIncludedPeerIds(_ includePeers: ChatListFilterIncludePeers, secretChatsByUserId: [EnginePeer.Id: [EnginePeer.Id]]) -> [EnginePeer.Id] {
+    return chatListFilterBadgePeerIds(includePeers.peers + includePeers.pinnedPeers, secretChatsByUserId: secretChatsByUserId)
 }
