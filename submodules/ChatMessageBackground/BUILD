@@ -33,6 +33,10 @@ swift_library(
         ":ChatMessageBackground",
         "//submodules/Display:Display",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
     ],
 )
 

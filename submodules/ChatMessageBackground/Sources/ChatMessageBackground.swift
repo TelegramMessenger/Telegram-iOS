@@ -546,6 +546,8 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     private var currentType: ChatMessageBackgroundType?
     private var currentMaskMode: Bool?
+    // The wallpaper's `hasBubbleBackground` answer `backgroundContent` was built for.
+    private var contentDrawsBubble: Bool?
     private var theme: ChatPresentationThemeData?
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
     private weak var backgroundNode: WallpaperBackgroundNode?
@@ -622,8 +624,9 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     public func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode inputMaskMode: Bool, backgroundNode: WallpaperBackgroundNode?) {
         let maskMode = self.fixedMaskMode ?? inputMaskMode
 
+        var typeUpdated = false
         if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics || self.backgroundNode !== backgroundNode {
-            let typeUpdated = self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.backgroundNode !== backgroundNode
+            typeUpdated = self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.backgroundNode !== backgroundNode
 
             self.currentType = type
             self.theme = theme
@@ -655,36 +658,56 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
                 backgroundContent.frame = self.bounds
             }
 
-            if typeUpdated {
-                if let backgroundContent = self.backgroundContent {
-                    self.backgroundContent = nil
-                    backgroundContent.removeFromSupernode()
-                }
-
-                switch type {
-                case .none:
-                    break
-                case .incoming:
-                    if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .incoming) {
-                        backgroundContent.frame = self.bounds
-                        self.backgroundContent = backgroundContent
-                        self.insertSubnode(backgroundContent, at: 0)
-                    }
-                case .outgoing:
-                    if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .outgoing) {
-                        backgroundContent.frame = self.bounds
-                        self.backgroundContent = backgroundContent
-                        self.insertSubnode(backgroundContent, at: 0)
-                    }
-                }
-            }
-            
             if let maskView = self.maskView {
                 maskView.image = self.overrideMask ? nil : bubbleMaskForType(type, graphics: essentialGraphics)
             }
 
             // A mask created or re-imaged just now has no bands yet.
             self.updateTearBands(animation: .None)
+        }
+
+        self.updateContent(type: type, backgroundNode: backgroundNode, typeUpdated: typeUpdated)
+    }
+
+    /// Runs on every pass, not only when the type changes, because `ChatMessageBackground.setType`
+    /// re-asks `hasBubbleBackground` on every pass and drops its own image when the wallpaper says
+    /// yes. If the answer flips after a bubble's first layout and only one of the two follows it,
+    /// neither draws: the bubble's contents sit on the bare wallpaper.
+    func updateContent(type: ChatMessageBackgroundType, backgroundNode: WallpaperBackgroundNode?, typeUpdated: Bool) {
+        let drawsBubble: Bool
+        switch type {
+        case .none:
+            drawsBubble = false
+        case .incoming:
+            drawsBubble = backgroundNode?.hasBubbleBackground(for: .incoming) ?? false
+        case .outgoing:
+            drawsBubble = backgroundNode?.hasBubbleBackground(for: .outgoing) ?? false
+        }
+        if !typeUpdated && self.contentDrawsBubble == drawsBubble {
+            return
+        }
+        self.contentDrawsBubble = drawsBubble
+
+        if let backgroundContent = self.backgroundContent {
+            self.backgroundContent = nil
+            backgroundContent.removeFromSupernode()
+        }
+
+        switch type {
+        case .none:
+            break
+        case .incoming:
+            if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .incoming) {
+                backgroundContent.frame = self.bounds
+                self.backgroundContent = backgroundContent
+                self.insertSubnode(backgroundContent, at: 0)
+            }
+        case .outgoing:
+            if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .outgoing) {
+                backgroundContent.frame = self.bounds
+                self.backgroundContent = backgroundContent
+                self.insertSubnode(backgroundContent, at: 0)
+            }
         }
     }
         
