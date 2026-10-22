@@ -115,6 +115,7 @@ DEST="$(xcrun simctl get_app_container "$K3" "$BUNDLE" app)"   # installed bundl
 [ -x "$SRC/Telegram" ] || { echo "no fresh bundle at SRC=$SRC — aborting"; exit 1; }
 xcrun simctl terminate "$K3" "$BUNDLE" 2>/dev/null            # terminate before replacing the running binary
 rm -rf "$DEST" && cp -Rp "$SRC" "$DEST"                        # replace bundle in place; data container untouched
+rm -rf "$STAGE"   # the copy is installed; every staging left behind keeps ~580 MB in $TMPDIR (58 GiB had piled up by 2026-10-22)
 xcrun simctl launch "$K3" "$BUNDLE"
 ```
 
