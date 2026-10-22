@@ -10695,20 +10695,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if remainingTime == 0 {
                 self.updateSlowmodeStatusTimerValue = nil
                 self.updateSlowmodeStatusDisposable.set(nil)
-                self.updateChatPresentationInterfaceState(interactive: false, {
-                    $0.updatedSlowmodeState(nil)
-                })
+                // Not from inside the update that called this, which would then lay out the finished countdown after
+                // the nested update cleared it. The next update drops it (updateChatPresentationInterfaceStateImpl).
+                Queue.mainQueue().justDispatch { [weak self] in
+                    self?.updateChatPresentationInterfaceState(interactive: false, { $0 })
+                }
             } else {
                 if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
                     self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
+                    // Fires when the countdown reaches zero, not a whole number of seconds after a truncated now,
+                    // which left "0:00" on screen for up to a second.
+                    let delay = max(0.0, Double(slowmodeActiveUntilTimestamp) - Date().timeIntervalSince1970)
                     self.updateSlowmodeStatusDisposable.set((Signal<Never, NoError>.complete()
-                    |> suspendAwareDelay(Double(remainingTime), granularity: 1.0, queue: .mainQueue())
+                    |> suspendAwareDelay(delay, granularity: 1.0, queue: .mainQueue())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.updateSlowmodeStatusTimerValue = nil
-                        strongSelf.updateSlowmodeStatus()
+                        // Drops the finished countdown in this run loop turn, and re-arms the timer if it fired early.
+                        strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0 })
                     }))
                 }
             }
