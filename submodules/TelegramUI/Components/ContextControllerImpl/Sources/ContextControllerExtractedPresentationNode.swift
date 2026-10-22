@@ -1353,6 +1353,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 actionsFrame = actionsFrame.offsetBy(dx: customPosition.x, dy: customPosition.y)
             }
             
+            // A menu that opens above its reference (a tab bar item, say) and is taller than the space above it would
+            // start above the screen, where the scroller cannot reach: its content only extends downward. Lay the menu
+            // out from the top inset instead and make the content taller by the overflow, so it opens scrolled to where
+            // it was and its top can be scrolled into view.
+            var actionsTopOverflow: CGFloat = 0.0
+            if morphMenuAnchor == nil, case let .reference(reference) = self.source, (reference.transitionInfo() ?? self.liquidMorphReferenceInfo)?.actionsPosition == .top, actionsFrame.minY < contentTopInset {
+                actionsTopOverflow = contentTopInset - actionsFrame.minY
+                actionsFrame.origin.y = contentTopInset
+            }
+            
             // iPhone Duo: on a side with a side strip the menu stays out of the strip where a corner block (the
             // status corner) reaches its height, and may use the strip where none does (the input panel's band
             // rule). Sides without a strip, and every other device, keep the edge clamp above.
@@ -1456,6 +1466,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             let contentHeight: CGFloat
             if self.actionsStackNode.topPositionLock != nil || self.currentReactionsPositionLock != nil {
                 contentHeight = layout.size.height
+            } else if actionsTopOverflow > 0.0 {
+                contentHeight = layout.size.height + actionsTopOverflow
             } else {
                 if keepInPlace, case .extracted = self.source {
                     contentHeight = (layout.statusBarHeight ?? 0.0) + actionsFrame.height + abs(actionsFrame.minY) + bottomInset + layout.intrinsicInsets.bottom
