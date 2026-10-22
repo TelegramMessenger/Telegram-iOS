@@ -13,6 +13,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageItemCommon
 import ChatControllerInteraction
 import MessageWidget
+import TextSelectionNode
 import UnsupportedContentPill
 import WallpaperBackgroundNode
 import MessageWidgetStorage
@@ -85,6 +86,13 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     /// Where the widget of the message the last pass laid out commits its storage (SDK v1 §5.4); its key is also the
     /// one the writes on hide and teardown flush.
     private var storageSink: MessageWidgetStorageSink?
+
+    /// The bubble is lifted into its context menu (sdk-v1 §5.10: text the widget marked selectable selects there).
+    private var isExtracted = false
+    /// The live widget view lifted with it.
+    private weak var extractedWidgetView: MessageWidgetView?
+    private var textSelectionAdapter: MessageWidgetTextSelectionAdapter?
+    private var textSelectionNode: TextSelectionNode?
 
     required public init(lottieSettings: LottieRenderingSettings) {
         self.registry = MessageWidgetRegistry()
@@ -445,7 +453,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
 
                         if isMainThreadPass {
                             if let live = registry.view(path: ChatMessageWidgetBubbleContentNode.path, source: source) {
-                                for subview in self.clipView.subviews where subview !== live {
+                                for subview in self.clipView.subviews where subview !== live && subview !== self.textSelectionNode?.highlightAreaNode.view {
                                     subview.removeFromSuperview()
                                 }
                                 if live.superview !== self.clipView {
@@ -454,9 +462,28 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                 (live as? MessageWidgetView)?.onBottomCornerColorsChange = { [weak self] _, _ in
                                     self?.updateTailColor()
                                 }
+                                if let widgetView = live as? MessageWidgetView, widgetView.interactiveTransitionGestureRecognizerTest == nil {
+                                    // SDK v1 §5.5: a press that takes horizontal drags for the widget keeps the back swipe
+                                    // to the screen's edge; it begins after 2 pt, before the widget's own drag does.
+                                    widgetView.interactiveTransitionGestureRecognizerTest = { [weak widgetView] point in
+                                        return widgetView?.claimsHorizontalDrag(at: point) ?? false
+                                    }
+                                }
                                 // Laid out at its own width; its height is the content's, which the clip cuts at the bubble's.
                                 live.frame = CGRect(origin: CGPoint(), size: CGSize(width: widgetWidth, height: max(widgetHeight, reported ?? 0.0)))
+                                if self.isExtracted && self.extractedWidgetView !== live {
+                                    // Lifted, and the widget was replaced (an edit's new HTML): its selection goes with it.
+                                    self.tearDownTextSelection(animated: false)
+                                    self.releaseExtractedWidgetView()
+                                    self.extractWidgetView()
+                                }
+                                self.layoutTextSelection()
                             } else {
+                                if self.isExtracted {
+                                    // Lifted, and the widget went (the kill switch's pill): so does its selection.
+                                    self.tearDownTextSelection(animated: false)
+                                    self.releaseExtractedWidgetView()
+                                }
                                 for subview in self.clipView.subviews {
                                     subview.removeFromSuperview()
                                 }
@@ -525,6 +552,187 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         if value, let widgetView = self.clipView.subviews.first as? MessageWidgetView {
             widgetView.cancelTouches()
         }
+        if !value {
+            self.endExtraction()
+        }
+    }
+
+    override public func updateIsExtractedToContextPreview(_ value: Bool) {
+        // Both hooks end it, as in the text and rich bubbles: the send animation fires only this one.
+        if value {
+            self.isExtracted = true
+            self.extractWidgetView()
+        } else {
+            self.endExtraction()
+        }
+    }
+
+    override public func resignTextSelection() {
+        self.textSelectionNode?.cancelSelection()
+    }
+
+    // MARK: text selection (sdk-v1 §2.4, §5.10)
+
+    /// Lifts the live widget view with the bubble: it keeps running, takes no input, and exports what the reader may
+    /// select, which `updateTextSelection` puts under a `TextSelectionNode` as the rich bubble does its page.
+    private func extractWidgetView() {
+        guard self.isExtracted, !self.clipView.isHidden, let widgetView = self.clipView.subviews.first as? MessageWidgetView, widgetView !== self.extractedWidgetView else {
+            return
+        }
+        self.extractedWidgetView = widgetView
+        widgetView.onSelectableTextChange = { [weak self, weak widgetView] in
+            guard let self, let widgetView, widgetView === self.extractedWidgetView else {
+                return
+            }
+            self.updateTextSelection()
+        }
+        widgetView.setExtracted(true)
+        self.updateTextSelection()
+    }
+
+    private func releaseExtractedWidgetView() {
+        if let widgetView = self.extractedWidgetView {
+            widgetView.onSelectableTextChange = nil
+            widgetView.setExtracted(false)
+        }
+        self.extractedWidgetView = nil
+    }
+
+    private func endExtraction() {
+        self.tearDownTextSelection(animated: true)
+        self.isExtracted = false
+        self.releaseExtractedWidgetView()
+    }
+
+    /// The widget exported new selectable text (the widget keeps running): the selection is put over it, or kept on the
+    /// text it was made on (its two ends found again by Text node), or dropped when either end is gone.
+    private func updateTextSelection() {
+        guard self.isExtracted, let widgetView = self.extractedWidgetView, let item = self.item else {
+            self.tearDownTextSelection(animated: true)
+            return
+        }
+        // Copy is the only action, so where the chat forbids copying nothing selects.
+        let copyAllowed = (!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()) || item.message.id.peerId.isVerificationCodes
+        guard copyAllowed, let text = widgetView.selectableText, !text.isEmpty, let rootNode = item.controllerInteraction.chatControllerNode() else {
+            self.tearDownTextSelection(animated: true)
+            return
+        }
+        if let adapter = self.textSelectionAdapter, let textSelectionNode = self.textSelectionNode {
+            let previous = adapter.text
+            let range = textSelectionNode.getSelection()
+            adapter.update(text)
+            self.layoutTextSelection()
+            guard let range, range.length > 0 else {
+                return
+            }
+            if let remapped = text.remap(range, from: previous) {
+                if remapped == range {
+                    textSelectionNode.updateLayout()
+                } else {
+                    textSelectionNode.setSelection(range: remapped, displayMenu: false)
+                }
+            } else {
+                textSelectionNode.cancelSelection()
+            }
+            return
+        }
+
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        let theme = item.presentationData.theme.theme
+        let selectionColor = incoming ? theme.chat.message.incoming.textSelectionColor : theme.chat.message.outgoing.textSelectionColor
+        let knobColor = incoming ? theme.chat.message.incoming.textSelectionKnobColor : theme.chat.message.outgoing.textSelectionKnobColor
+        let adapter = MessageWidgetTextSelectionAdapter(text: text)
+        let textSelectionNode = TextSelectionNode(
+            theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: theme.overallDarkAppearance),
+            strings: item.presentationData.strings,
+            textNodeOrView: .node(adapter),
+            updateIsActive: { [weak self] value in
+                self?.updateIsTextSelectionActive?(value)
+            },
+            present: { [weak self] c, a in
+                guard let self, let item = self.item else {
+                    return
+                }
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
+                    item.controllerInteraction.presentControllerInCurrent(c, a)
+                } else {
+                    item.controllerInteraction.presentGlobalOverlayController(c, a)
+                }
+            },
+            rootView: { [weak rootNode] in
+                return rootNode?.view
+            },
+            performAction: { [weak self] _, action in
+                self?.performTextSelectionAction(action)
+            }
+        )
+        textSelectionNode.enableCopy = true
+        textSelectionNode.enableQuote = false
+        textSelectionNode.enableLookup = false
+        textSelectionNode.enableTranslate = false
+        textSelectionNode.enableShare = false
+        textSelectionNode.enableSpeak = false
+        self.textSelectionAdapter = adapter
+        self.textSelectionNode = textSelectionNode
+        self.addSubnode(adapter)
+        // Over the widget, which may paint its own background, and inside the bubble's clip so it keeps the corners.
+        self.clipView.addSubview(textSelectionNode.highlightAreaNode.view)
+        self.addSubnode(textSelectionNode)
+        self.layoutTextSelection()
+    }
+
+    /// The overlay covers the widget's visible area; the adapter's coordinates are the widget view's (the document's).
+    private func layoutTextSelection() {
+        guard let adapter = self.textSelectionAdapter, let textSelectionNode = self.textSelectionNode, let widgetView = self.extractedWidgetView else {
+            return
+        }
+        adapter.frame = self.clipView.convert(widgetView.frame, to: self.view)
+        textSelectionNode.frame = self.clipView.frame
+        textSelectionNode.highlightAreaNode.frame = self.clipView.bounds
+        textSelectionNode.updateLayout()
+    }
+
+    /// Copy copies what is highlighted when it is tapped, read from the live export (the widget kept running since the
+    /// menu was shown).
+    private func performTextSelectionAction(_ action: TextSelectionAction) {
+        guard case .copy = action, let item = self.item, let adapter = self.textSelectionAdapter, let range = self.textSelectionNode?.getSelection() else {
+            return
+        }
+        let text = adapter.text.text
+        let clamped = NSIntersectionRange(range, NSRange(location: 0, length: text.length))
+        guard clamped.length > 0 else {
+            return
+        }
+        // Whole characters, whatever the knobs left: never half of a surrogate pair on the pasteboard.
+        let selected = text.rangeOfComposedCharacterSequences(for: clamped)
+        item.controllerInteraction.performTextSelectionAction(item.message, true, NSAttributedString(string: text.substring(with: selected)), nil, .copy)
+    }
+
+    /// Removes the selection overlay. Every un-lift path reaches this: the overlay takes every point of the widget, so one
+    /// left behind would take every touch the widget should get (the rich bubble's `tearDownTextSelection`).
+    private func tearDownTextSelection(animated: Bool) {
+        if let adapter = self.textSelectionAdapter {
+            self.textSelectionAdapter = nil
+            adapter.removeFromSupernode()
+        }
+        guard let textSelectionNode = self.textSelectionNode else {
+            return
+        }
+        self.textSelectionNode = nil
+        // Its menu goes with it (final review I1): the node holds its menu weakly and dismisses nothing when it goes, so a
+        // teardown while the bubble stays lifted (the widget replaced, stopped or unselectable) left the menu floating.
+        textSelectionNode.cancelSelection()
+        self.updateIsTextSelectionActive?(false)
+        if animated {
+            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.highlightAreaNode.view.removeFromSuperview()
+                textSelectionNode?.removeFromSupernode()
+            })
+        } else {
+            textSelectionNode.highlightAreaNode.view.removeFromSuperview()
+            textSelectionNode.removeFromSupernode()
+        }
     }
 
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
@@ -534,10 +742,16 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             }
             return ChatMessageBubbleContentTapAction(content: .none)
         }
-        // A live widget takes its own taps (MessageWidgetView); the long press stays with the bubble, whose context
-        // menu opens over the widget too (`hasLongTapAction: false`). A stopped widget leaves everything to the bubble.
+        // A live widget takes its own touches (MessageWidgetView) where it handles them, as a message button does: the tap
+        // is the widget's at once (the bubble waits for no double tap there) and so is a long press, whose release clicks
+        // (`.ignore` keeps `hasLongTapAction`, which stops the bubble's context gesture). Anywhere else the bubble has a
+        // double tap, its quick reaction (sdk-v1 §5.5), and a long press, its context menu. A stopped widget leaves
+        // everything to the bubble.
         if self.clipView.frame.contains(point) && self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path) {
-            return ChatMessageBubbleContentTapAction(content: .ignore, hasLongTapAction: false)
+            if let widgetView = self.clipView.subviews.first as? MessageWidgetView, widgetView.pressTakesTaps(at: self.view.convert(point, to: widgetView), duringTouch: isEstimating) {
+                return ChatMessageBubbleContentTapAction(content: .ignore)
+            }
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
         return ChatMessageBubbleContentTapAction(content: .none)
     }

@@ -1,6 +1,8 @@
 // Taps (M1d plan, Task 2): the host's pointer phases, hit-tested on the runtime's own layout (RenderTree::nodeAt) and
 // dispatched as touch browsers dispatch a tap.
 // - Down: pointerdown, then touchstart, at the hit node, which becomes the tap's target (a touch's implicit capture).
+//   A primary press also decides its gesture claim (GestureClaim) and whether it takes taps, which the host reads once
+//   the task has run.
 // - Move: dropped until either axis has moved kTapSlop px from the down point; after that, pointermove and touchmove at
 //   the target, but only when the widget listens for one of them (ListenedTypes, as today's renderer forwards).
 // - Up: pointerup, then touchend, at the target. Then, when it is a click, the compatibility mousedown and mouseup and
@@ -22,6 +24,16 @@ class Element;
 class EventTarget;
 
 enum class PointerPhase : uint8_t { Down, Move, Up, Cancel };
+
+/// The drags of a primary press the widget takes for itself (sdk-v1 §5.5; protocol.md, "Touch gestures inside a
+/// scrolling host"): `x` when the touch-action of the target or an ancestor below <html> forbids horizontal panning
+/// (none, pan-y, pinch-zoom, …), `y` when one forbids vertical panning (none, pan-x, …), both when the widget cancels the
+/// press's pointerdown or touchstart. touch-action is read as the press starts, before its handlers run, as browsers fix
+/// it at touchstart. The host keeps swipe-to-reply off a press with `x` and the list still under one with `y`.
+struct GestureClaim {
+    bool x = false;
+    bool y = false;
+};
 
 /// The slop, in CSS px: a move shorter than this on both axes is not delivered, and a tap that never moved past it is a
 /// click.
@@ -45,6 +57,14 @@ public:
     void setCapture(JSContext* ctx, Element& element, int32_t pointerId);
     void releaseCapture(JSContext* ctx, Element& element, int32_t pointerId);
     bool hasCapture(const Element& element, int32_t pointerId) const;
+    /// The claim of the last press whose down task has run: none for a press on nothing or not the primary pointer.
+    GestureClaim claim() const { return m_claim; }
+    /// Whether the last primary press whose down task has run landed on something the widget handles: a listener for a
+    /// press's events (click, pointerdown, pointerup, touchstart, touchend, mousedown, mouseup) on the event's path
+    /// (the target, its ancestors, the document, the window), an element on that path with activation behaviour outside
+    /// a disabled control, a drag claim or a canceled pointerdown or touchstart. The client takes a tap there at once,
+    /// as it does a message button's; anywhere else it waits for a double tap, the bubble's (sdk-v1 §5.5).
+    bool takesTaps() const { return m_takesTaps; }
 
 private:
     /// Makes the pending capture the current one, firing lostpointercapture at the old and gotpointercapture at the new;
@@ -75,6 +95,8 @@ private:
     uint64_t m_press = 0;
     bool m_pointerCanceled = false;
     bool m_touchCanceled = false;
+    GestureClaim m_claim;
+    bool m_takesTaps = false;
 };
 
 } // namespace wr

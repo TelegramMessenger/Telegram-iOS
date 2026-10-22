@@ -15,13 +15,16 @@ import ChatMessageItemCommon
 import ChatMessageItemImpl
 import ChatMessageBubbleContentNode
 import ChatMessageBubbleItemNode
+import ChatHistoryListViewBackend
 import ChatMessageWidgetBubbleContentNode
 import MessageWidget
+import TextSelectionNode
 import UnsupportedContentPill
 
 /// The REAL chat bubbles (`ChatMessageItemImpl` → `ChatMessageBubbleItemNode` → `ChatMessageWidgetBubbleContentNode` and the
-/// caption's text node) in a real `ListViewImpl`, rotated as the chat's history is, showing in-memory widget messages.
-/// Synthetic: the list host itself and the interaction closures, which record what the bubble asks for in `events`.
+/// caption's text node) in the chat's own history backend (`makeCoreListChatHistoryBackend`), rotated as the chat's history
+/// is, showing in-memory widget messages. Synthetic: the rotated wrapper (`ChatHistoryListNodeImpl` in the chat) and the
+/// interaction closures, which record what the bubble asks for in `events`.
 public final class WidgetHarnessListHost {
     /// The other side of the chat (as the composer harness's), and the account's own peer for outgoing messages.
     public static let chatPeer = TelegramUser(
@@ -34,7 +37,10 @@ public final class WidgetHarnessListHost {
     /// Stable ids never repeat in a process: the widget height cache and the registry are keyed by them.
     private static var nextStableId: UInt32 = 1
 
-    public let listView: ListViewImpl
+    /// The rotated surface the root view hosts, as `ChatHistoryListNodeImpl` is in the chat: the π rotation is the
+    /// wrapper's, the backend stays at identity with `rotated` set.
+    public let node: ASDisplayNode
+    private let listView: ChatHistoryListViewBackend
     private let context: AccountContext
     private var messages: [EngineRawMessage] = []
     private var paths: [EngineMessage.Id: String] = [:]
@@ -44,17 +50,36 @@ public final class WidgetHarnessListHost {
     /// Settings ▸ Appearance ▸ Text Size, when set after the context's (`setFontSize`).
     private var fontSize: PresentationFontSize?
     private var extractionEndTimer: SwiftSignalKit.Timer?
+    /// The bubble's own recognizers, off while the stand-in menu holds it (`openContextMenu`).
+    private var disabledRecognizers: [UIGestureRecognizer] = []
 
-    /// What the bubbles asked for, in order: `openLink <url>`, `appStore`, `contextMenu <path>`, `contextMenuEnded <path>`.
+    /// What the bubbles asked for, in order: `openLink <url>`, `appStore`, `contextMenu <path>`, `contextMenuEnded <path>`,
+    /// `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction, a double tap), `selectionMenu
+    /// <titles>` / `selectionMenuDismissed` (a text selection's menu), `copy <text>` (its Copy, `\n` for a newline); and
+    /// `back` (the root's stand-in back swipe began).
     public private(set) var events: [String] = []
+
+    /// `-harness-menu hold`: the stand-in context menu stays open until `endContextMenu()` (else it ends after 2 s).
+    public var holdsMenu = false
+    /// `-harness-copy-protected on`: the chat forbids copying (`isCopyProtectionEnabled`). Set before `load`.
+    public var copyProtected = false
+    /// The stand-in context menu opened (true) or ended.
+    public var onContextMenuChange: ((Bool) -> Void)?
+    /// A text selection asked to show its menu: the root shows its actions as buttons.
+    public var onSelectionMenu: ((WidgetHarnessContextMenuController) -> Void)?
+
+    /// Records what the screen around the list saw (the root's back swipe).
+    public func record(_ event: String) {
+        self.events.append(event)
+    }
 
     public init(context: AccountContext) {
         self.context = context
-        self.listView = ListViewImpl()
-        // The chat's history is bottom-up: the list is rotated and its items are laid out rotated back.
-        self.listView.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
-        // A widget runs only from a layout pass on the main thread (the registry and its runtime are main-thread only).
-        self.listView.useMainQueueTransactions = true
+        self.node = ASDisplayNode()
+        // The chat's history is bottom-up: the wrapper is rotated and the items are laid out rotated back.
+        self.node.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        self.listView = makeCoreListChatHistoryBackend(rotated: true)
+        self.node.addSubnode(self.listView)
         self.controllerInteraction = self.makeControllerInteraction()
     }
 
@@ -120,22 +145,20 @@ public final class WidgetHarnessListHost {
         let previousCount = self.items.count
         // Index 0 is the bottom of the rotated list: the newest message.
         self.items = messages.reversed().map(self.makeItem)
-        self.listView.transaction(
+        self.listView.chatHistoryTransaction(
             deleteIndices: (0 ..< previousCount).map { ListViewDeleteItem(index: $0, directionHint: nil) },
-            insertIndicesAndItems: self.items.enumerated().map { ListViewInsertItem(index: $0.offset, previousIndex: nil, item: $0.element, directionHint: nil) },
+            insertIndicesAndItems: self.items.enumerated().map { ChatHistoryListViewInsertItem(index: $0.offset, previousIndex: nil, stableId: self.stableId(atListIndex: $0.offset), item: $0.element, directionHint: nil) },
             updateIndicesAndItems: [],
             options: [.Synchronous, .LowLatency],
             scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Up),
-            updateSizeAndInsets: nil,
-            stationaryItemRange: nil,
-            updateOpaqueState: nil,
-            completion: { _ in })
+            updateOpaqueState: nil)
     }
 
     public func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat) {
         // Rotated: the list's top inset is the screen's bottom.
         let insets = UIEdgeInsets(top: bottomInset, left: 0.0, bottom: topInset, right: 0.0)
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.frame = CGRect(origin: CGPoint(), size: size)
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: 0.0, curve: .Default(duration: nil)), updateOpaqueState: nil)
     }
 
     /// Settings ▸ Appearance ▸ Text Size changed in the open chat: every item again with the new presentation data, in
@@ -143,7 +166,7 @@ public final class WidgetHarnessListHost {
     public func setFontSize(_ fontSize: PresentationFontSize) {
         self.fontSize = fontSize
         self.items = self.messages.reversed().map(self.makeItem)
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: self.items.enumerated().map { ListViewUpdateItem(index: $0.offset, previousIndex: $0.offset, item: $0.element, directionHint: nil) }, options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: self.items.enumerated().map { ChatHistoryListViewUpdateItem(index: $0.offset, previousIndex: $0.offset, stableId: self.stableId(atListIndex: $0.offset), item: $0.element, directionHint: nil) }, options: [.Synchronous, .LowLatency], updateOpaqueState: nil)
     }
 
     /// The indices (0 = the first message, the top of the chat) of the widget messages whose path contains `part`.
@@ -162,7 +185,12 @@ public final class WidgetHarnessListHost {
         guard listIndex < self.items.count else {
             return
         }
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateOpaqueState: nil)
+    }
+
+    /// The list item's stable id, the backend's identity: its message's (index 0 is the newest message).
+    private func stableId(atListIndex index: Int) -> UInt64 {
+        return UInt64(self.messages[self.messages.count - 1 - index].stableId)
     }
 
     private func makeItem(_ message: EngineRawMessage) -> ListViewItem {
@@ -172,7 +200,7 @@ public final class WidgetHarnessListHost {
             fontSize: self.fontSize ?? presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false,
             chatBubbleCorners: presentationData.chatBubbleCorners)
-        let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: nil)
+        let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, isCopyProtectionEnabled: self.copyProtected, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: nil)
         return ChatMessageItemImpl(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(id: WidgetHarnessListHost.chatPeer.id), associatedData: associatedData, controllerInteraction: self.controllerInteraction!, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
     }
 
@@ -185,7 +213,7 @@ public final class WidgetHarnessListHost {
         let listIndex = self.messages.count - 1 - messageIndex
         let item = self.makeItem(self.messages[messageIndex])
         self.items[listIndex] = item
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: listIndex, previousIndex: listIndex, item: item, directionHint: nil)], options: [.Synchronous, .LowLatency], updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil)], options: [.Synchronous, .LowLatency], updateOpaqueState: nil)
     }
 
     private func bubbleNode(for id: EngineMessage.Id) -> ChatMessageBubbleItemNode? {
@@ -199,37 +227,97 @@ public final class WidgetHarnessListHost {
     }
 
     /// The chat's long press opens its context menu, which extracts the bubble; the harness stands in for the menu by
-    /// telling the content nodes what the extraction tells them, and ends it 2 s later.
+    /// telling the content nodes what the extraction tells them (both hooks, as the chat's context source does), and ends
+    /// it 2 s later unless it `holdsMenu`.
     private func openContextMenu(_ message: EngineRawMessage) {
         let path = self.paths[message.id] ?? "?"
         self.events.append("contextMenu \(path)")
-        self.endExtraction()
+        self.endContextMenu()
         if let node = self.bubbleNode(for: message.id) {
             for contentNode in node.contentNodes {
                 contentNode.willUpdateIsExtractedToContextPreview(true)
+                contentNode.updateIsExtractedToContextPreview(true)
             }
         }
         self.extractedMessageId = message.id
-        let timer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
-            self?.endExtraction()
-        }, queue: Queue.mainQueue())
-        self.extractionEndTimer = timer
-        timer.start()
+        // In the chat the menu moves the bubble's content out from under the bubble's own recognizers (its long press,
+        // taps, swipe to reply); here it stays in place, so they are switched off until the menu ends.
+        if let node = self.bubbleNode(for: message.id), let contentView = node.contentNodes.first?.view {
+            var view = contentView.superview
+            while let current = view {
+                for recognizer in current.gestureRecognizers ?? [] where recognizer.isEnabled {
+                    recognizer.isEnabled = false
+                    self.disabledRecognizers.append(recognizer)
+                }
+                if current === node.view {
+                    break
+                }
+                view = current.superview
+            }
+        }
+        self.onContextMenuChange?(true)
+        if !self.holdsMenu {
+            let timer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
+                self?.endContextMenu()
+            }, queue: Queue.mainQueue())
+            self.extractionEndTimer = timer
+            timer.start()
+        }
     }
 
-    private func endExtraction() {
+    /// Opens the stand-in context menu on the newest widget message, as its long press would: what a test that is about
+    /// the lifted bubble, not the long press, starts from.
+    public func openContextMenuOnNewestWidget() {
+        guard let message = self.messages.last(where: { message in
+            message.media.contains(where: { $0 is TelegramMediaWidget })
+        }) else {
+            return
+        }
+        self.openContextMenu(message)
+    }
+
+    /// Ends the stand-in context menu, if one is open.
+    public func endContextMenu() {
         self.extractionEndTimer?.invalidate()
         self.extractionEndTimer = nil
         guard let id = self.extractedMessageId else {
             return
         }
         self.extractedMessageId = nil
+        for recognizer in self.disabledRecognizers {
+            recognizer.isEnabled = true
+        }
+        self.disabledRecognizers.removeAll()
         if let node = self.bubbleNode(for: id) {
             for contentNode in node.contentNodes {
                 contentNode.willUpdateIsExtractedToContextPreview(false)
+                contentNode.updateIsExtractedToContextPreview(false)
             }
         }
         self.events.append("contextMenuEnded \(self.paths[id] ?? "?")")
+        self.onContextMenuChange?(false)
+    }
+
+    /// The selection menus shown and not yet dismissed. Presenting is what keeps a menu alive in the chat
+    /// (`TextSelectionNode` holds its menu weakly), so the harness, which presents nothing, keeps them until dismissed.
+    private var shownMenus: [WidgetHarnessContextMenuController] = []
+
+    /// A text selection's menu: recorded with its actions' titles, shown by the root as buttons.
+    private func presentOverlay(_ controller: ViewController) {
+        guard let menu = controller as? WidgetHarnessContextMenuController else {
+            return
+        }
+        self.shownMenus.append(menu)
+        menu.dismissed = { [weak self, weak menu] in
+            self?.shownMenus.removeAll { $0 === menu }
+        }
+        self.events.append("selectionMenu " + menu.actions.map(WidgetHarnessContextMenuController.title(of:)).joined(separator: ","))
+        self.onSelectionMenu?(menu)
+    }
+
+    /// The root's selection-menu buttons went away because the menu was dismissed.
+    public func recordSelectionMenuDismissed() {
+        self.events.append("selectionMenuDismissed")
     }
 
     // MARK: - The readout
@@ -294,11 +382,16 @@ public final class WidgetHarnessListHost {
             return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _, _ in }, openMessageContextMenu: { [weak self] message, _, _, _, _, _ in
                 self?.openContextMenu(message)
             }, openMessageReactionContextMenu: { _, _, _, _ in
-            }, updateMessageReaction: { _, _, _, _ in }, activateMessagePinch: { _ in
+            }, updateMessageReaction: { [weak self] message, _, _, _ in
+                // The quick reaction: the bubble's double tap (sdk-v1 §5.5).
+                guard let self else {
+                    return
+                }
+                self.events.append("reaction \(self.paths[message.id] ?? "?")")
+            }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
             }, navigateToThreadMessage: { _, _, _ in
-            }, tapMessage: { _ in
-        }, clickThroughMessage: { _, _ in
+            }, tapMessage: nil, clickThroughMessage: { _, _ in
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _, _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
         }, editGif: { _, _ in
@@ -311,13 +404,21 @@ public final class WidgetHarnessListHost {
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
             return nil
-        }, chatControllerNode: {
-            return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, openConferenceCall: { _ in
+        }, chatControllerNode: { [weak self] in
+            // A text selection needs a root to present its menu over; the harness's menu is synthetic, so any node will do.
+            return self?.node
+        }, presentGlobalOverlayController: { [weak self] controller, _ in
+            self?.presentOverlay(controller)
+        }, callPeer: { _, _ in }, openConferenceCall: { _ in
         }, longTap: { _, _ in }, todoItemLongTap: { _, _ in }, pollOptionLongTap: { _, _ in
-        }, openCheckoutOrReceipt: { _, _ in }, openSearch: { }, setupReply: { _ in
+        }, openCheckoutOrReceipt: { _, _ in }, openSearch: { }, setupReply: { [weak self] messageId in
+            // Swipe-to-reply completed on a bubble (sdk-v1 §5.5: the chat's gesture, unless the widget claimed x).
+            guard let self else {
+                return
+            }
+            self.events.append("reply \(self.paths[messageId] ?? "?")")
         }, canSetupReply: { _ in
-            return .none
+            return .reply
         }, canSendMessages: {
             return false
         }, navigateToFirstDateMessage: { _, _ in
@@ -334,7 +435,10 @@ public final class WidgetHarnessListHost {
         }, scheduleCurrentMessage: { _ in
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
-        }, performTextSelectionAction: { _, _, _, _, _ in
+        }, performTextSelectionAction: { [weak self] _, _, text, _, action in
+            if case .copy = action {
+                self?.events.append("copy " + text.string.replacingOccurrences(of: "\n", with: "\\n"))
+            }
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

@@ -4,6 +4,40 @@ import SwiftSignalKit
 import Display
 import ChatMessageItemImpl
 
+public struct ChatHistoryListViewInsertItem {
+    public let index: Int
+    public let previousIndex: Int?
+    public let stableId: UInt64
+    public let item: ListViewItem
+    public let directionHint: ListViewItemOperationDirectionHint?
+    public let forceAnimateInsertion: Bool
+    
+    public init(index: Int, previousIndex: Int?, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, forceAnimateInsertion: Bool = false) {
+        self.index = index
+        self.previousIndex = previousIndex
+        self.stableId = stableId
+        self.item = item
+        self.directionHint = directionHint
+        self.forceAnimateInsertion = forceAnimateInsertion
+    }
+}
+
+public struct ChatHistoryListViewUpdateItem {
+    public let index: Int
+    public let previousIndex: Int
+    public let stableId: UInt64
+    public let item: ListViewItem
+    public let directionHint: ListViewItemOperationDirectionHint?
+    
+    public init(index: Int, previousIndex: Int, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
+        self.index = index
+        self.previousIndex = previousIndex
+        self.stableId = stableId
+        self.item = item
+        self.directionHint = directionHint
+    }
+}
+
 // A chat-specific abstraction of the list-view backend used by ChatHistoryListNodeImpl.
 //
 // This is the minimal surface ChatHistoryListNodeImpl actually accesses on its list view — exactly

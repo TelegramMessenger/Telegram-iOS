@@ -58,13 +58,15 @@ void appendLength(std::string& key, const litehtml::css_length& length) {
     appendInt(key, length.predef());
     appendFloat(key, length.val());
     appendInt(key, static_cast<long long>(length.units()));
-    // A calc's val() is its value at a zero percentage base, so its tree is the key (twidget edit 48).
+    // A calc's val() is its value at a zero percentage base, so its tree is the key (twidget edit 48), as
+    // calc_node::to_string prints it: terms equal to six significant digits share a font.
     appendString(key, length.is_calc() ? length.to_string() : std::string());
 }
 
-// The font cache's key: every field of the description, exactly. litehtml's own font_description::hash() is not used
-// because it leaves some out (a colour's current-color flag, a transparent shadow's geometry); with every field, a
-// cached font is always one the host made from an equal description, whatever earlier builds asked for.
+// The font cache's key: every field of the description, exactly (a calc length as its printed tree, below).
+// litehtml's own font_description::hash() is not used because it leaves some out (a colour's current-color flag, a
+// transparent shadow's geometry); with every field, a cached font is always one the host made from an equal
+// description, whatever earlier builds asked for.
 std::string fontKey(const litehtml::font_description& d) {
     std::string key;
     appendString(key, d.family);
@@ -451,6 +453,11 @@ litehtml::uint_ptr WidgetContainer::create_font(const litehtml::font_description
     return reinterpret_cast<litehtml::uint_ptr>(new FontHandle{found->second.font, found->second.description});
 }
 
+std::vector<float> WidgetContainer::caretOffsets(litehtml::uint_ptr hFont, std::string_view utf8) const {
+    const std::shared_ptr<const HostFont>& font = fontOf(hFont);
+    return font ? m_host.caretOffsets(*font, utf8) : std::vector<float>();
+}
+
 void WidgetContainer::delete_font(litehtml::uint_ptr hFont) {
     delete reinterpret_cast<FontHandle*>(hFont);
 }
@@ -471,7 +478,6 @@ bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl
             reinterpret_cast<const void*>(&ubidi_close),
             reinterpret_cast<const void*>(&ubidi_setPara),
             reinterpret_cast<const void*>(&ubidi_getLevelAt),
-            reinterpret_cast<const void*>(&u_charDirection),
         };
         return std::all_of(std::begin(functions), std::end(functions), [](const void* f) { return f != nullptr; });
     }();

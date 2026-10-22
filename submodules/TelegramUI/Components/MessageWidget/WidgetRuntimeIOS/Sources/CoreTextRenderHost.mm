@@ -94,6 +94,11 @@ ShapedText CoreTextRenderHost::shape(const HostFont& hostFont, std::string_view 
     return shaped;
 }
 
+std::vector<float> CoreTextRenderHost::caretOffsets(const HostFont& font, std::string_view utf8) {
+    const std::string text(utf8);
+    return m_container->caretOffsets(text.c_str(), static_cast<const IOSHostFont&>(font).handle);
+}
+
 void CoreTextRenderHost::transformText(std::string& utf8, litehtml::text_transform transform) {
     m_container->transformText(utf8, transform);
 }

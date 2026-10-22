@@ -97,6 +97,9 @@ private final class CoreListChatScrollMotion {
 // This is a proof of concept: it targets display / scroll / load-more only. Members outside that
 // scope are safe stubs (no-ops / plain storage) and must never crash. Architecture, invariants, and
 // deferred items: docs/chat/corelist-chat-history-backend.md
+//
+// Made through `makeCoreListChatHistoryBackend(rotated:)`, the one public entry point: the chat's
+// history and the widget harness both host it.
 final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBackend {
     // Matches ListViewImpl's rotation math: the wrapper (ChatHistoryListNodeImpl) applies the chat's
     // π rotation to itself, and each chat item node (ChatMessageItemView.init(rotated:)) applies its
@@ -107,7 +110,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     var rotated: Bool = false
 
     // Internal rather than private: the header adapter in CoreListChatHistoryHeaders.swift
-    // enumerates attachments through it. Still invisible outside TelegramUI.
+    // enumerates attachments through it. Still invisible outside this module.
     let coreList: CoreVirtualListView
 
     private let scrollMotion = CoreListChatScrollMotion()
@@ -2151,4 +2154,12 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
         // is still correct for this row, but the new node's own array is empty.
         self.applyAttachedItems()
     }
+}
+
+/// The chat history's CoreList backend. `rotated` is construction-only, so it is set here, before the upcast, and is
+/// not on the `ChatHistoryListViewBackend` contract.
+public func makeCoreListChatHistoryBackend(rotated: Bool) -> ChatHistoryListViewBackend {
+    let backend = CoreListChatHistoryBackend()
+    backend.rotated = rotated
+    return backend
 }

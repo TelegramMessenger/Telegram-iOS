@@ -1972,6 +1972,57 @@ lh::pixel_t LHContainer::text_width(const char* text, lh::uint_ptr hFont)
     return static_cast<float>(w);
 }
 
+// Telegram (VENDOR.md edit 52): draw_text's two paths, read back. Simple text (printable ASCII, one glyph per byte)
+// is drawn at the shaper's xs; any other through the cached CTLine, whose caret offsets CoreText enumerates in one pass
+// (a query per index costs the line's length each, so a long run was quadratic: final review C1). A boundary's offset
+// is its character's leading edge, the end's the last character's trailing edge, a boundary inside a surrogate pair
+// takes the pair's start, and one CoreText reports nothing for takes the boundary before it.
+std::vector<float> LHContainer::caret_offsets(const char* text, lh::uint_ptr hFont)
+{
+    auto* f = reinterpret_cast<Font*>(hFont);
+    if(!f || !f->shared || !text)
+        return {};
+    if(!*text)
+        return {0.0f};
+    SimpleRun simple;
+    if(ShapeSimple(*f->shared, text, simple))
+    {
+        std::vector<float> offsets(simple.count + 1);
+        for(size_t i = 0; i < simple.count; i++)
+            offsets[i] = static_cast<float>(simple.xs[i]);
+        offsets[simple.count] = static_cast<float>(simple.width);
+        return offsets;
+    }
+    CTLineRef line = CopyLine(*f->shared, text);
+    if(!line)
+        return {};
+    CFStringRef str = CFStringCreateWithCString(nullptr, text, kCFStringEncodingUTF8);
+    std::vector<float> offsets;
+    if(str)
+    {
+        const CFIndex units = CFStringGetLength(str);
+        offsets.assign(static_cast<size_t>(units) + 1, NAN);
+        float* const out = offsets.data();
+        CTLineEnumerateCaretOffsets(line, ^(double offset, CFIndex index, bool leadingEdge, bool*) {
+            if(index < 0 || index >= units)
+                return;
+            if(leadingEdge)
+                out[index] = static_cast<float>(offset);
+            else if(std::isnan(out[index + 1]))
+                out[index + 1] = static_cast<float>(offset);
+        });
+        for(CFIndex i = 0; i <= units; i++)
+        {
+            const bool inside = i > 0 && i < units && CFStringIsSurrogateLowCharacter(CFStringGetCharacterAtIndex(str, i));
+            if(inside || std::isnan(offsets[size_t(i)]))
+                offsets[size_t(i)] = i > 0 ? offsets[size_t(i - 1)] : 0.0f;
+        }
+        CFRelease(str);
+    }
+    CFRelease(line);
+    return offsets;
+}
+
 static void DrawDecoration(CGContextRef ctx, CGFloat x, CGFloat y, CGFloat w, CGFloat t, int style)
 {
     switch(style)
@@ -4812,6 +4863,11 @@ CTFontRef LHHostContainer::nativeFont(lh::uint_ptr font)
 double LHHostContainer::textWidth(const char* text, lh::uint_ptr font)
 {
     return m_impl->container.text_width(text, font).value();
+}
+
+std::vector<float> LHHostContainer::caretOffsets(const char* text, lh::uint_ptr font)
+{
+    return m_impl->container.caret_offsets(text, font);
 }
 
 std::shared_ptr<lh::text_breaker> LHHostContainer::createTextBreaker(const std::string& text, lh::uint_ptr font)

@@ -1,0 +1,23 @@
+<!-- Gestures (sdk-v1 §5.5): #free claims nothing, so a drag on it is the chat's (the list scrolls, a horizontal one
+     swipes to reply or back); #claim is touch-action: none, so the widget takes the touch's drags both ways; #pany is
+     touch-action: pan-y, so it takes horizontal drags and leaves vertical ones to the list. The first pointermove the
+     widget gets makes it 10px taller (the readout's size shows the widget got it). -->
+<style>
+  body { margin: 0; }
+  #free, #claim, #pany { height: 100px; }
+  #free { background: #8cf; }
+  #claim { background: #fc8; touch-action: none; }
+  #pany { background: #8e8; touch-action: pan-y; }
+</style>
+<div id="free">free</div>
+<div id="claim">claim</div>
+<div id="pany">pan-y</div>
+<script>
+  let moved = false;
+  document.addEventListener('pointermove', () => {
+    if (!moved) {
+      moved = true;
+      document.body.style.paddingBottom = '10px';
+    }
+  });
+</script>

@@ -812,7 +812,9 @@ public final class TextSelectionNode: ASDisplayNode {
                     return
                 }
                 self.contextMenu?.dismiss()
-                self.setSelection(range: realFullRange, displayMenu: true)
+                // The text as it is now: a host whose text changes under an open menu (a message widget keeps running)
+                // would otherwise get the length it had when the menu appeared.
+                self.setSelection(range: NSRange(location: 0, length: self.textNodeOrView.currentText?.length ?? realFullRange.length), displayMenu: true)
             })
             if self.selectAllAfterCopy {
                 actions.insert(selectAllAction, at: self.enableCopy ? 1 : 0)

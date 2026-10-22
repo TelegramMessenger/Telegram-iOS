@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 class LHHostContainer
 {
@@ -27,6 +28,8 @@ class LHHostContainer
     static void                             deleteFont(litehtml::uint_ptr font);
     static CTFontRef                        nativeFont(litehtml::uint_ptr font);
     double                                  textWidth(const char* text, litehtml::uint_ptr font);
+    // Edit 52: where the painter draws each UTF-16 boundary of `text` (LHContainer::caret_offsets).
+    std::vector<float>                      caretOffsets(const char* text, litehtml::uint_ptr font);
     std::shared_ptr<litehtml::text_breaker> createTextBreaker(const std::string& text, litehtml::uint_ptr font);
     void                                    transformText(std::string& text, litehtml::text_transform transform);
     bool                                    pathContains(const litehtml::vector_path& path, float x, float y);

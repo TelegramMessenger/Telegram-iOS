@@ -162,6 +162,14 @@ public final class MessageWidgetInstance {
 
     public private(set) var layoutVersion: Int = 0
     public private(set) var deadReason: String?
+    /// What the widget lets the reader select while its bubble is lifted into the context menu (sdk-v1 §5.10): the last
+    /// export applied, nil when nothing is selectable or the bubble is not lifted.
+    public private(set) var selectableText: MessageWidgetSelectableText?
+    /// Called on main after `selectableText` changes.
+    public var onSelectableTextChange: (() -> Void)?
+    /// The bubble is lifted into its context menu: the widget keeps running, exports its selectable text after every
+    /// publish, takes no input, and main waits for none of its tasks (the selection spec, §5.3).
+    private(set) var extracted = false
     public private(set) var lastError: String?
     /// The runtime could not be created or the widget did not start: the host draws the block as code instead.
     public private(set) var failedToStart = false
@@ -432,12 +440,55 @@ public final class MessageWidgetInstance {
     // MARK: internal (view, tests)
 
     /// A touch is waited for (spec D6); its task carries the tap's permission (`MessageWidgetCore.touch`).
-    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) {
+    /// A press's down answers what the press is to the widget (SDK v1 §5.5); `.unanswered` when the down has not run
+    /// within the wait.
+    @discardableResult
+    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
         guard self.bootQueued, !self.destroyed, self.deadReason == nil else {
+            return .none
+        }
+        // Lifted, the widget takes no input; only a cancel, which ends a press the lift interrupted, still reaches it.
+        if self.extracted && action != 3 {
+            return .none
+        }
+        var press: MessageWidgetPress = .none
+        let finished = self.perform(.touch, wait: true) { core in
+            press = core.touch(action: action, at: point, pointer: pointer, primary: primary)
+        }
+        return finished ? press : .unanswered
+    }
+
+    /// The bubble was lifted into its context menu, or put back (`MessageWidgetView.setExtracted`).
+    func setExtracted(_ extracted: Bool) {
+        guard extracted != self.extracted else {
             return
         }
-        self.perform(.touch, wait: true) { core in
-            core.touch(action: action, at: point, pointer: pointer, primary: primary)
+        self.extracted = extracted
+        if extracted {
+            self.requestSelectionExport()
+        } else {
+            self.updateSelectableText(nil)
+        }
+    }
+
+    /// Queues the export after the tasks queued so far; never waited for, and one still queued is replaced.
+    private func requestSelectionExport() {
+        guard self.extracted, self.bootQueued, !self.destroyed, self.deadReason == nil else {
+            return
+        }
+        let visibleHeight = self.maximumHeight
+        self.perform(.selection, wait: false, key: "selection") { core in
+            core.exportSelection(visibleHeight: visibleHeight)
+        }
+    }
+
+    private func updateSelectableText(_ text: MessageWidgetSelectableText?) {
+        guard text != self.selectableText else {
+            return
+        }
+        self.selectableText = text
+        DispatchQueue.main.async { [weak self] in
+            self?.onSelectableTextChange?()
         }
     }
 
@@ -623,6 +674,7 @@ public final class MessageWidgetInstance {
         case let .frozen(reason):
             if self.deadReason == nil {
                 self.deadReason = reason
+                self.updateSelectableText(nil)
                 self.frameRequested = false
                 self.viewStorage?.setDead()
                 if !self.startedStopped {
@@ -649,6 +701,14 @@ public final class MessageWidgetInstance {
             DispatchQueue.main.async { [weak self] in
                 self?.onLayoutChange?()
             }
+        }
+        if snapshot.exportsSelection {
+            if self.extracted {
+                self.updateSelectableText(snapshot.selectableText)
+            }
+        } else if self.extracted, snapshot.kind != .draw, snapshot.needsDraw || changed {
+            // Every publish while lifted re-exports: a transform animation moves text without a layout change.
+            self.requestSelectionExport()
         }
         for call in snapshot.bridgeCalls {
             DispatchQueue.main.async { [weak self] in
@@ -700,7 +760,7 @@ public final class MessageWidgetInstance {
     /// is visible and not demoted (spec D6); `key` replaces a fire of the same timer still waiting. A destroyed widget's
     /// fire queues nothing (`perform`).
     private func timerFired(key: String, _ body: @escaping () -> Void) {
-        self.perform(key == "wake" ? .wake : .timer, wait: self.visible && !self.demoted, key: key) { _ in
+        self.perform(key == "wake" ? .wake : .timer, wait: self.visible && !self.demoted && !self.extracted, key: key) { _ in
             body()
         }
     }
@@ -753,7 +813,7 @@ public final class MessageWidgetInstance {
         self.frameRequested = false
         self.frameInFlight = true
         let time = CACurrentMediaTime() * 1000.0
-        self.perform(.frame, wait: self.visible && !self.demoted, key: "frame") { core in
+        self.perform(.frame, wait: self.visible && !self.demoted && !self.extracted, key: "frame") { core in
             core.frame(time: time)
         }
         self.updateDisplayLink()

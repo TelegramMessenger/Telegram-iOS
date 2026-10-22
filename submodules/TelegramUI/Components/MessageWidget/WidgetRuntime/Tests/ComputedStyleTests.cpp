@@ -3,8 +3,11 @@
 // keywords as written. A property the renderer does not model reads "".
 #include <string>
 
+#include <litehtml.h>
 #include <litehtml/string_id.h>
 
+#include "Sources/Render/ComputedStyle.h"
+#include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
@@ -110,6 +113,59 @@ WR_TEST(testUserSelectComputes) {
                 "none/none,text/text,auto/auto,text/text,auto/auto,text/text,none/none");
 }
 
+namespace {
+
+/// The laid-out element whose id attribute is `id`, found by walking the published litehtml document.
+const litehtml::element* laidOutById(const litehtml::element& element, const char* id) {
+    const char* attribute = element.get_attr("id");
+    if (attribute && std::string(attribute) == id) {
+        return &element;
+    }
+    for (const auto& child : element.children()) {
+        if (const litehtml::element* found = laidOutById(*child, id)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+bool selects(RenderEnv& env, const char* id) {
+    env.flush();
+    const litehtml::element* element = laidOutById(*env.render().document()->root(), id);
+    CHECK(element != nullptr);
+    return element && wr::selectsText(*element);
+}
+
+} // namespace
+
+/// Text selection (sdk-v1 §2.4, §5.10): profile 1 keeps a var() value for user-select, and it resolves like any other.
+WR_TEST(testUserSelectResolvesVar) {
+    RenderEnv env("<!doctype html><html><head><style>:root{--s:text} #v{user-select:var(--s)}</style></head><body>"
+                  "<p id=v>x</p><script>window.v = document.getElementById('v');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(v).userSelect", "text");
+    CHECK(selects(env, "v"));
+}
+
+/// The effective value: the nearest ancestor-or-self whose own value is not auto decides; the UA layer's `none` on the
+/// root ends the walk.
+WR_TEST(testSelectsTextWalksToTheNearestDecidingAncestor) {
+    RenderEnv env("<!doctype html><html><body><div id=t style=\"user-select:text\"><b id=b>w</b>"
+                  "<span id=n style=\"user-select:none\"><i id=i>x</i></span></div><p id=p>y</p></body></html>");
+    CHECK(selects(env, "t"));
+    CHECK(selects(env, "b"));
+    CHECK(!selects(env, "n"));
+    CHECK(!selects(env, "i"));
+    CHECK(!selects(env, "p"));
+}
+
+/// `-webkit-user-select` is the same property: alone it selects, and of the two the later declaration wins.
+WR_TEST(testWebkitUserSelectIsTheSameProperty) {
+    RenderEnv env("<!doctype html><html><body><p id=w style=\"-webkit-user-select:text\">w</p>"
+                  "<p id=o style=\"user-select:text;-webkit-user-select:none\">o</p></body></html>");
+    CHECK(selects(env, "w"));
+    CHECK(!selects(env, "o"));
+}
+
 /// v0.1.1 plan, Task 3 (auto/22-ua-defaults): vertical-align and border-collapse read back as keywords; the UA layer
 /// sets sup on the baseline and tables collapsed, and border-collapse is inherited.
 WR_TEST(testVerticalAlignAndBorderCollapse) {
@@ -170,4 +226,97 @@ WR_TEST(testTheFidelityProperties) {
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundSize", "cover, auto");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundPosition", "0px 0px, 50% 100%");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundRepeat", "repeat, repeat-x");
+}
+
+/// Profile 1's properties the renderer keeps no value of (2026-10-22): the element's own declaration as written (var()
+/// substituted), an inherited one from the nearest ancestor that declares it, else the initial value; the CSS-wide
+/// keywords cascade as they do for the others.
+WR_TEST(testUnmodeledPropertiesAnswerTheirDeclarations) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#p { pointer-events: none; color-scheme: dark; --d: 3s; } "
+                  "#a { animation-name: spin; animation-duration: var(--d); counter-reset: item; unicode-bidi: isolate; } "
+                  "#b { pointer-events: inherit; animation-name: initial; }"
+                  "</style></head><body><div id=p><div id=a>a</div><div id=b>b</div><div id=c>c</div></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).animationName", "spin");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).animationDuration", "3s");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).counterReset", "item");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).unicodeBidi", "isolate");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(c).animationName", "none");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(c).pointerEvents", "none");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(c).colorScheme", "dark");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(b).pointerEvents", "none");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(b).animationName", "none");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).getPropertyValue('unicode-bidi')", "isolate");
+}
+
+/// Profile 1's longhands the renderer keeps (computed-style plan, Task 2), each at its default and declared, resolved as
+/// CSSOM says: a positioned element's offsets are its used px, transform-origin is in px of its box, the rest their
+/// computed values.
+WR_TEST(testExactLonghands) {
+    RenderEnv env("<!doctype html><html><head><style>body { margin: 0; } div { margin: 0; } "
+                  "#box { position: relative; width: 200px; height: 100px; } "
+                  "#rel10 { position: relative; left: 10px; top: 5px; } "
+                  "#abs { position: absolute; left: 10%; top: 0; width: 100px; height: 40px; } "
+                  "#fl { display: flex; flex-direction: column; flex-wrap: wrap; justify-content: center; "
+                  "align-items: center; align-content: space-between; row-gap: 4px; column-gap: 6px; } "
+                  "#it { flex-grow: 2; flex-shrink: 0; flex-basis: 10px; order: 3; align-self: flex-end; z-index: 2; "
+                  "position: relative; } "
+                  "#mm { min-width: 10px; max-width: 50%; min-height: 5px; max-height: 30px; } "
+                  "#tx { letter-spacing: 2px; text-transform: uppercase; text-indent: 12px; text-overflow: ellipsis; "
+                  "overflow: hidden; overflow-wrap: anywhere; clear: both; } "
+                  "#li { list-style-position: inside; } #of { object-fit: cover; object-position: left top; } "
+                  "#ar { aspect-ratio: 2 / 1; width: 40px; } #to { width: 100px; height: 40px; } "
+                  "#to2 { width: 100px; height: 40px; transform-origin: left top; } "
+                  "#oo { outline: 2px solid red; outline-offset: 3px; } #bs { box-shadow: 1px 2px 3px red; } "
+                  "#td { text-decoration: underline; text-decoration-thickness: 2px; } "
+                  "#bo { background-origin: content-box; } "
+                  "#br { border-top-left-radius: 4px; border-bottom-right-radius: 4px 2px; } "
+                  "#wb { -webkit-backdrop-filter: blur(2px); } "
+                  "</style></head><body><div id=box><div id=st>s</div><div id=rel style='position:relative'>r</div>"
+                  "<div id=rel10>r</div><div id=abs>a</div></div>"
+                  "<div id=fl><div id=it>i</div></div><div id=mm>m</div><div id=tx>t</div><ul><li id=li>l</li></ul>"
+                  "<div id=of>o</div><div id=ar>a</div><div id=to>t</div><div id=to2>t</div><div id=oo>o</div>"
+                  "<div id=bs>b</div><div id=td>t</div><div id=bo>b</div><div id=br>b</div><div id=wb>w</div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.cs = (e, p) => getComputedStyle(e).getPropertyValue(p);"
+                  "window.all = (e, ps) => ps.map(p => cs(e, p)).join('|');</script></body></html>");
+    // Offsets: static computed (auto), relative used (0px, or the opposite's negation), absolute used from the layout.
+    CHECK_JS_EQ(env.env(), "all(st, ['left', 'top', 'right', 'bottom', 'z-index'])", "auto|auto|auto|auto|auto");
+    CHECK_JS_EQ(env.env(), "all(rel, ['left', 'top', 'right', 'bottom'])", "0px|0px|0px|0px");
+    CHECK_JS_EQ(env.env(), "all(rel10, ['left', 'top', 'right', 'bottom'])", "10px|5px|-10px|-5px");
+    CHECK_JS_EQ(env.env(), "all(abs, ['left', 'top', 'right', 'bottom'])", "20px|0px|80px|60px");
+    // Flex and alignment.
+    CHECK_JS_EQ(env.env(), "all(fl, ['flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-content', "
+                           "'row-gap', 'column-gap'])",
+                "column|wrap|center|center|space-between|4px|6px");
+    CHECK_JS_EQ(env.env(), "all(it, ['flex-grow', 'flex-shrink', 'flex-basis', 'order', 'align-self', 'z-index'])",
+                "2|0|10px|3|flex-end|2");
+    CHECK_JS_EQ(env.env(), "all(st, ['flex-direction', 'flex-wrap', 'flex-grow', 'flex-shrink', 'flex-basis', 'order', "
+                           "'align-self', 'align-items', 'justify-content', 'row-gap'])",
+                "row|nowrap|0|1|auto|0|auto|normal|normal|normal");
+    // Sizes.
+    CHECK_JS_EQ(env.env(), "all(mm, ['min-width', 'max-width', 'min-height', 'max-height'])", "10px|50%|5px|30px");
+    CHECK_JS_EQ(env.env(), "all(st, ['min-width', 'max-width', 'min-height', 'max-height'])", "auto|none|auto|none");
+    // Text.
+    CHECK_JS_EQ(env.env(), "all(tx, ['letter-spacing', 'text-transform', 'text-indent', 'text-overflow', "
+                           "'overflow-wrap', 'word-wrap', 'clear'])",
+                "2px|uppercase|12px|ellipsis|anywhere|anywhere|both");
+    // overflow-wrap inherits the UA layer's break-word (widget-sandbox v0.1.1's root rule).
+    CHECK_JS_EQ(env.env(), "all(st, ['letter-spacing', 'text-transform', 'text-indent', 'text-overflow', "
+                           "'overflow-wrap', 'clear'])",
+                "normal|none|0px|clip|break-word|none");
+    CHECK_JS_EQ(env.env(), "cs(li, 'list-style-position') + '|' + cs(st, 'list-style-position')", "inside|outside");
+    // Replaced content, boxes, decoration.
+    CHECK_JS_EQ(env.env(), "all(of, ['object-fit', 'object-position']) + '|' + all(st, ['object-fit', 'object-position'])",
+                "cover|0% 0%|fill|50% 50%");
+    CHECK_JS_EQ(env.env(), "cs(ar, 'aspect-ratio') + '|' + cs(st, 'aspect-ratio')", "2 / 1|auto");
+    CHECK_JS_EQ(env.env(), "cs(to, 'transform-origin') + '|' + cs(to2, 'transform-origin')", "50px 20px|0px 0px");
+    CHECK_JS_EQ(env.env(), "cs(oo, 'outline-offset') + '|' + cs(st, 'outline-offset')", "3px|0px");
+    CHECK_JS_EQ(env.env(), "cs(bs, 'box-shadow') + '|' + cs(st, 'box-shadow')", "rgb(255, 0, 0) 1px 2px 3px 0px|none");
+    CHECK_JS_EQ(env.env(), "cs(td, 'text-decoration-thickness') + '|' + cs(st, 'text-decoration-thickness')", "2px|auto");
+    CHECK_JS_EQ(env.env(), "cs(bo, 'background-origin') + '|' + cs(st, 'background-origin')", "content-box|padding-box");
+    CHECK_JS_EQ(env.env(), "all(br, ['border-top-left-radius', 'border-bottom-right-radius', 'border-top-right-radius'])",
+                "4px|4px 2px|0px");
+    CHECK_JS_EQ(env.env(), "cs(wb, '-webkit-backdrop-filter') + '|' + cs(wb, 'backdrop-filter')", "blur(2px)|blur(2px)");
 }

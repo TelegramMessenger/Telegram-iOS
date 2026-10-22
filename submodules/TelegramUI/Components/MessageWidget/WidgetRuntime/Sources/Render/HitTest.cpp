@@ -126,12 +126,16 @@ bool elementBorderBox(const litehtml::element& element, RenderBox& out) {
     return unionOfRects(elementClientRects(element), out);
 }
 
-void transformRects(const litehtml::element& element, std::vector<RenderBox>& rects) {
-    // The element's own transform and every ancestor's, composed innermost first and applied to each rect once (review
-    // minors, Task 4): a bounding box taken at every level inflated a rect whose rotation a child undoes.
-    litehtml::transform_matrix total;
+bool visualTransform(const litehtml::element& element, Affine& out, uint64_t* visited) {
+    // The element's own transform and every ancestor's, composed innermost first and applied once (review minors,
+    // Task 4): a bounding box taken at every level inflated a rect whose rotation a child undoes. In double, as each
+    // level used to map: nested large scales pass a float's range.
+    Affine total;
     bool transformed = false;
-    for (const litehtml::element* el = &element; el && !rects.empty(); el = el->parent().get()) {
+    for (const litehtml::element* el = &element; el; el = el->parent().get()) {
+        if (visited) {
+            (*visited)++;
+        }
         std::shared_ptr<litehtml::render_item> item;
         el->for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
             if (!item) {
@@ -145,10 +149,24 @@ void transformRects(const litehtml::element& element, std::vector<RenderBox>& re
         if (m.is_identity()) {
             continue;
         }
-        total = transformed ? total.then(m) : m;
+        const Affine level{m.a, m.b, m.c, m.d, m.tx, m.ty};
+        total = transformed ? Affine{total.a * level.a + total.b * level.c, total.a * level.b + total.b * level.d,
+                                     total.c * level.a + total.d * level.c, total.c * level.b + total.d * level.d,
+                                     total.tx * level.a + total.ty * level.c + level.tx,
+                                     total.tx * level.b + total.ty * level.d + level.ty}
+                            : level;
         transformed = true;
     }
-    if (!transformed) {
+    out = total;
+    return transformed;
+}
+
+void transformRects(const litehtml::element& element, std::vector<RenderBox>& rects) {
+    if (rects.empty()) {
+        return;
+    }
+    Affine total;
+    if (!visualTransform(element, total)) {
         return;
     }
     for (RenderBox& r : rects) {
@@ -156,8 +174,8 @@ void transformRects(const litehtml::element& element, std::vector<RenderBox>& re
         bool first = true;
         for (const auto& [x, y] : {std::pair{r.x, r.y}, std::pair{r.x + r.width, r.y}, std::pair{r.x, r.y + r.height},
                                    std::pair{r.x + r.width, r.y + r.height}}) {
-            const double mx = double(total.a) * x + double(total.c) * y + double(total.tx);
-            const double my = double(total.b) * x + double(total.d) * y + double(total.ty);
+            const double mx = total.a * x + total.c * y + total.tx;
+            const double my = total.b * x + total.d * y + total.ty;
             left = first ? mx : std::min(left, mx);
             right = first ? mx : std::max(right, mx);
             top = first ? my : std::min(top, my);

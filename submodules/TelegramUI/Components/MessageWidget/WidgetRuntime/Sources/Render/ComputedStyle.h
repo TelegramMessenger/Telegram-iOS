@@ -27,4 +27,17 @@ std::string computedValue(litehtml::element& element, std::string_view name, Pse
 /// `::before` / `:before` and the like (ASCII case-insensitive), or None for anything else, empty included.
 PseudoElement pseudoElementNamed(std::string_view name);
 
+/// `user-select` (widget-sandbox v0.1.1, D18; sdk-v1 §2.4): profile 1's three values. `-webkit-user-select` is the same
+/// property (twidget edit 45).
+enum class UserSelect : uint8_t { Auto, None, Text };
+
+/// The element's own `user-select`, var() substituted as for every declaration; anything but `none` or `text`
+/// (no declaration, a CSS-wide keyword, a var() that does not resolve to either) is Auto. Not inherited.
+UserSelect ownUserSelect(const litehtml::element& element);
+
+/// Whether text in `element` (or, for a text piece, in its parent) is selectable: the nearest ancestor-or-self whose own
+/// value is not Auto decides, and the UA layer's `none` on the root ends the walk (sdk-v1 §5.10). Charges nothing: the
+/// caller does, from `visited`, which gains one per element walked.
+bool selectsText(const litehtml::element& element, uint64_t* visited = nullptr);
+
 } // namespace wr

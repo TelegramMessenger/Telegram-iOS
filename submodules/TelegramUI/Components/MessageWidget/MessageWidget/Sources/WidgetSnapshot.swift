@@ -16,6 +16,8 @@ struct WidgetSnapshot {
         /// Draws the tiles the tasks before it changed (MessageWidgetInstance queues one, never waited for, after a
         /// snapshot that needs it): drawing is off the critical path, which is the size.
         case draw
+        /// The selectable text, exported while the widget's bubble is lifted into its context menu (sdk-v1 §5.10).
+        case selection
     }
 
     enum State: Equatable {
@@ -48,4 +50,7 @@ struct WidgetSnapshot {
     let diagnostics: [(kind: String, detail: String)]
     /// The units the task spent over every budget it ran on (its meter): demotion reads them (spec D6).
     let units: UInt64
+    /// A `.selection` task's export: nil when nothing is selectable, past its budget, or once the widget has stopped.
+    let selectableText: MessageWidgetSelectableText?
+    let exportsSelection: Bool
 }

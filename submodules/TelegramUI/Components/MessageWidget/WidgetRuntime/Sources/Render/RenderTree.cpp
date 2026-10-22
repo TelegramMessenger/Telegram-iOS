@@ -2126,6 +2126,21 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
 
 // Task 10b.
 
+std::optional<SelectableText> RenderTree::selectableText(uint64_t budget, double visibleHeight) {
+    if (!m_current.document) {
+        return SelectableText{};
+    }
+    SelectableTextSource source;
+    source.root = m_current.document->root().get();
+    source.keyOf = [this](const litehtml::element& element) { return this->keyOf(element); };
+    source.caretOffsets = [this](litehtml::uint_ptr font, std::string_view utf8) {
+        return m_container.caretOffsets(font, utf8);
+    };
+    source.budget = budget;
+    source.visibleHeight = visibleHeight;
+    return exportSelectableText(source);
+}
+
 NodeKey RenderTree::keyOf(const litehtml::element& element) {
     RenderBuild& build = m_keyBuild ? *m_keyBuild : m_current;
     auto mapped = build.elements.find(&element);

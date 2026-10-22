@@ -41,7 +41,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   only, so the node boots and queries a widget only in a main-thread pass. The chat history's CoreList backend lays
   out on main; `ListViewImpl` (other lists, and the chat under `ios_killswitch_disable_corelist_chat_backend`) lays
   out off main except in a `.Synchronous` transaction, so there the bubble keeps its placeholder or cached height and
-  shows no widget until a main-thread pass. The widget harness's list sets `useMainQueueTransactions` for this reason.
+  shows no widget until a main-thread pass. The widget harness hosts the chat's CoreList backend
+  (`makeCoreListChatHistoryBackend`), never `ListViewImpl`.
 - **Off main, on a pool of two threads.** `MessageWidgetCore` (its `WRSession`, `WidgetTreeRenderer`,
   `WidgetTileDrawer`) runs only inside the widget's tasks on `MessageWidgetPool` (two 8 MB threads, a serial queue per
   widget, no thread pinning: QuickJS re-reads its stack top on every entry); `MessageWidgetInstance` (main) applies
@@ -107,9 +108,9 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 - **The master sheet ends in the renderer's UA layer** (widget-sandbox `profile.json` `tables.uaStylesheet`, generated
   into `ProfileTables.inc` with each `:where(X)` written as X and its `@layer tw-ua{…}` kept): root font and colour
   from the theme and text tokens, the body margin as the padding token, defaults for headings, lists, tables, quotes,
-  `pre`, links (no underline) and `<button>`. Text is unselectable: `user-select` computes as written (profile 1's
-  value sets, `css.values`, hold for every property that has one) but the view selects nothing, the exception sdk-v1
-  §2.4 accepts (D18). The bubble passes text tokens from the chat's message text (`messageWidgetTheme`: Text Size,
+  `pre`, links (no underline) and `<button>`. Its `user-select: none` on the root makes text unselectable until the
+  widget writes `user-select: text` (D18; profile 1's value sets, `css.values`, hold for every property that has one);
+  such text selects in the lifted bubble ("Text selection" below). The bubble passes text tokens from the chat's message text (`messageWidgetTheme`: Text Size,
   line height 1.3, the text bubble's insets as padding), so a Text Size change alone is a theme change that lays the
   widget out again. In the master a `@layer` is an origin above litehtml's own rules whatever their specificity, and
   `revert` skips it (twidget edit 41), as a browser rolls an author layer back to its UA sheet; author rules win over
@@ -213,16 +214,55 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +
   source; a new message stable id destroys it; a widget that failed to start is remembered, not re-booted). Height
   changes ride the layout (`reportedHeight`, then the height cache) and `requestMessageUpdate`.
-- **Touches.** A touch inside a live widget is the widget's: `tapActionAtPoint` answers `.ignore` with
-  `hasLongTapAction: false`, so a fast double tap never becomes a quick reaction while a long press still opens the
-  context menu (`ChatMessageBubbleItemNode`'s `.ignore` arm: `contextMenuOnLongPress`). The context gesture recognizes
-  alongside the widget's recognizer, so when the menu takes the bubble (`willUpdateIsExtractedToContextPreview(true)`)
-  the node cancels the widget's touch (`MessageWidgetView.cancelTouches`), or lifting the finger would also click
-  (`testALongPressOpensTheMenuAndDoesNotClick`). **The widget view takes touches through
-  `MessageWidgetTouchRecognizer`, never `touchesEnded`:** a recognizer above the bubble recognizes every tap and
-  cancels the touched view's touches, so a view-level widget sees began → cancelled and never clicks. The recognizer
-  cannot be prevented by a tap, can be by a pan (a drag on a widget scrolls the chat), and recognizes on the touch's
-  end. A tap makes no `click` on or inside a disabled form control, as in browsers.
+- **Touches.** A tap on something a live widget handles is the widget's at once, as on a message button: each press
+  answers `takesTaps` (`TapState::takesTaps`: a click, pointer, touch or mouse down/up listener on the event's path, the
+  document's and the window's included, an element with activation behaviour outside a disabled control, or a drag
+  claim), and there `tapActionAtPoint` answers `.ignore` (keeping `hasLongTapAction`), so the bubble takes neither a
+  double tap nor a long press: a held press stays the widget's and its release clicks (the user, 2026-10-22; sdk-v1
+  §5.5 gives every long press to the bubble). Anywhere else it answers `.none`: the bubble waits for a double tap (the
+  quick reaction), a long press opens the message's menu, and the widget's recognizer fails at the touch's end, leaving
+  the touch to the bubble. The bubble asks before the widget's recognizer has the touch, and UIKit decides which of the
+  touch's recognizers hears it first: a question that finds no press starts it there and the recognizer adopts it
+  (`MessageWidgetView.pressTakesTaps`, `MessageWidgetTouchRecognizer.pressAnswerOrBegin`), and while the touch is down
+  its press answers wherever the question comes from (the press animation scales the bubble, so a held finger's point
+  drifts). Both had read as the widget's, so on K3 no long press opened the menu. When the menu takes the bubble
+  (`willUpdateIsExtractedToContextPreview(true)`) the node cancels the widget's touch (`MessageWidgetView.cancelTouches`),
+  or lifting the finger would also click (`testALongPressOpensTheMenuAndDoesNotClick`). **The widget view takes touches
+  through `MessageWidgetTouchRecognizer`, never `touchesEnded`:** a recognizer above the bubble recognizes every tap
+  and cancels the touched view's touches, so a view-level widget sees began → cancelled and never clicks. The
+  recognizer cannot be prevented by a tap, can be by a pan, and recognizes on the touch's end. A tap makes no `click`
+  on or inside a disabled form control, as in browsers.
+- **Text selection is the lifted bubble's** (sdk-v1 §2.4, §5.10; the user, 2026-10-22: as in a text or rich bubble,
+  Copy only, the widget keeps running). Lifting the bubble into its menu (`updateIsExtractedToContextPreview`) calls
+  `MessageWidgetView.setExtracted(true)`: the widget keeps running and drawing but takes no input (a cancel still ends
+  the press the lift interrupted), main waits for none of its tasks, and after every publish a `.selection` task
+  exports what it lets the reader select (`RenderTree::selectableText` → `WRSession.selectableText` →
+  `MessageWidgetSelectableText`). The export is the host's work: never waited for, on a budget of its own
+  (`MessageWidgetCore.selectionWorkUnits`, 6,000,000) that never reaches the widget's meter, stops it or demotes it;
+  past it, that layout selects nothing. The bubble puts a `TextSelectionNode` over a `TextNodeProtocol` adapter of the
+  export (`MessageWidgetTextSelectionAdapter`, swapped in place, since the node keeps its text node for good), as the
+  rich bubble does its page. A selection follows the Text nodes its ends are in across exports, widened to whole
+  characters, and is dropped when either goes; its menu stays where it appeared and Copy reads the live selection; the
+  menu is Copy and Select All, and where the chat forbids copying nothing selects. One selection per bubble: a content
+  node that begins one resigns the others' (`ChatMessageBubbleContentNode.resignTextSelection`, from
+  `ChatMessageBubbleItemNode`). **Every un-lift path removes the overlay and dismisses its menu** (both extraction
+  hooks, the widget replaced, stopped or turned into the pill): the overlay takes every point of the widget. A point
+  within 4 pt of a word's glyphs hits it. Harness: `-harness-menu hold`, the `selectionMenu`/`copy` events,
+  `WidgetHarnessUITests`' selection tests and `WidgetHarnessSelectionTests`.
+- **Drags are decided per press** (sdk-v1 §5.5). The runtime answers each primary press's claim once its down task has
+  run (`TapState::claim`, `WRSession.gestureClaim`): `x` when the touch-action of the target or an ancestor below
+  `<html>` forbids horizontal panning, `y` vertical, both when the widget cancels the press's `pointerdown` or
+  `touchstart`; touch-action is read before the handlers run, as browsers fix it at touchstart. With neither, a drag is
+  the chat's (the list scrolls, swipe-to-reply and the back swipe work) and the widget's touch ends as cancelled. Along
+  a claimed axis the recognizer begins at 4 pt (`claimDistance`, under the chat's 10 pt pans) and fails every
+  recognizer still possible above it: exclusion alone does not, because `ContextGesture` recognizes alongside anything
+  that is not a pan. **The back swipe begins at 2 pt and asks in its own `touchesBegan`, before the widget's recognizer
+  has the touch**, so `interactiveTransitionGestureRecognizerTest` starts the press itself
+  (`MessageWidgetView.claimsHorizontalDrag(at:)`) and the recognizer adopts it; a claimed press keeps the back swipe to
+  the screen's edge. Swipe-to-reply cancels the bubble's long press when it begins
+  (`ChatMessageBubbleItemNode.swipeToReplyGesture`): its beginning does not fail `ContextGesture`, and on the CoreList
+  chat the menu opened 0.23 s into every swipe over a widget. `WidgetHarnessUITests` drive all of it
+  (`Fixtures/touch-drag.html`).
 - **Local widget messages, for development** (DEBUG builds). Debug Settings ▸ "Insert widget conformance set" posts
   widget-sandbox's conformance channel (`conformance/channel.json`, parsed by `MessageWidgetChannel`, each widget
   followed by its reference pictures) to Saved Messages, and "Insert widget corpus" the corpus, as Local-namespace

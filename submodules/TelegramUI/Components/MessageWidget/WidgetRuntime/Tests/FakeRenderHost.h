@@ -74,6 +74,8 @@ public:
     std::shared_ptr<litehtml::text_breaker> createTextBreaker(const wr::HostFont& font, const std::string& utf8) override;
     /// One glyph per byte (the byte's value), each 8 px.
     wr::ShapedText shape(const wr::HostFont& font, std::string_view utf8) override;
+    /// 8 px per byte, as textWidth measures; the bytes of one code point all count before its end.
+    std::vector<float> caretOffsets(const wr::HostFont& font, std::string_view utf8) override;
     /// ASCII only: upper, lower, or each word's first letter upper.
     void transformText(std::string& utf8, litehtml::text_transform transform) override;
     double defaultFontSize() const override { return 16; }

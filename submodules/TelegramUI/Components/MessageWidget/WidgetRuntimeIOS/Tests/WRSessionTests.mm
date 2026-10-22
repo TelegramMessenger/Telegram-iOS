@@ -216,6 +216,196 @@ void drain(WRSession* session) {
     XCTAssertTrue([delegate.bridgeCalls containsObject:@"openLink [\"https://example.org/tapped\"]"]);
 }
 
+/// sdk-v1 §5.5: a press reports the drag axes the widget takes and whether it takes taps, once its down task has run.
+- (void)testAPressReportsItsGestureClaim {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* session = [self sessionWith:delegate];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head><style>body{margin:0;padding:0} div{position:"
+                                            "absolute;top:0;width:40px;height:40px}</style></head><body>"
+                                            "<div style='left:0'></div><div style='left:50px;touch-action:pan-y'></div>"
+                                            "<div style='left:100px;touch-action:none'></div>"
+                                            "<button style='position:absolute;top:0;left:150px;width:40px;height:40px;padding:0;border:0'></button>"
+                                            "</body></html>"]);
+    XCTAssertEqual(session.gestureClaim, (WRGestureAxes)0);
+    XCTAssertFalse(session.pressTakesTaps);
+    const CGFloat xs[] = {20, 70, 120, 170};
+    const WRGestureAxes expected[] = {0, WRGestureAxesHorizontal, WRGestureAxesHorizontal | WRGestureAxesVertical, 0};
+    const BOOL takesTaps[] = {NO, YES, YES, YES};
+    for (int i = 0; i < 4; i++) {
+        [session pointer:WRPointerPhaseDown at:CGPointMake(xs[i], 20) pointerId:1 primary:YES];
+        drain(session);
+        XCTAssertEqual(session.gestureClaim, expected[i]);
+        XCTAssertEqual(session.pressTakesTaps, takesTaps[i]);
+        [session pointer:WRPointerPhaseUp at:CGPointMake(xs[i], 20) pointerId:1 primary:YES];
+        drain(session);
+    }
+}
+
+static std::vector<WRSelectableRun> runsOf(WRSelectableText* text) {
+    std::vector<WRSelectableRun> runs(text.runs.length / sizeof(WRSelectableRun));
+    if (!runs.empty()) {
+        [text.runs getBytes:runs.data() length:runs.size() * sizeof(WRSelectableRun)];
+    }
+    return runs;
+}
+
+static std::vector<float> caretsOf(WRSelectableText* text, const WRSelectableRun& run) {
+    std::vector<float> carets(run.length + 1);
+    [text.carets getBytes:carets.data() range:NSMakeRange(run.caretIndex * sizeof(float), carets.size() * sizeof(float))];
+    return carets;
+}
+
+static WRSelectableText* selectable(WRSession* session, NSString* body) {
+    NSString* source = [NSString stringWithFormat:@"<!doctype html><html><head><style>body{margin:0} p{margin:0}</style></head>"
+                                                  "<body>%@</body></html>", body];
+    if (![session bootWithSource:source]) {
+        return nil;
+    }
+    return [session selectableTextWithBudget:UINT64_MAX visibleHeight:600];
+}
+
+/// Text selection (sdk-v1 §5.10): the session exports what the widget marked user-select: text (visual/16-selection).
+- (void)testTheSelectableTextIsTheMarkedText {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    WRSelectableText* text = selectable(session, @"<div style='user-select:text'>You can select this sentence, <b>this bold "
+                                                 "word</b> too, and copy it.</div><div>This sentence cannot be selected.</div>");
+    XCTAssertEqualObjects(text.text, @"You can select this sentence, this bold word too, and copy it.");
+    XCTAssertGreaterThan(runsOf(text).size(), 0u);
+}
+
+/// Each run's caret offsets start at 0, rise, and end where layout measured the word, on both of LHContainer's drawing
+/// paths: the simple shaper (at most 64 printable ASCII bytes) and the CTLine.
+- (void)testCaretOffsetsMatchTheDrawnGlyphs {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    NSString* longWord = [@"" stringByPaddingToLength:80 withString:@"abcdefgh" startingAtIndex:0];
+    WRSelectableText* text = selectable(session, [NSString stringWithFormat:@"<p style='user-select:text;width:2000px'>"
+                                                                            "simpleword %@</p>", longWord]);
+    const std::vector<WRSelectableRun> runs = runsOf(text);
+    XCTAssertEqual(runs.size(), 2u);
+    for (const WRSelectableRun& run : runs) {
+        const std::vector<float> carets = caretsOf(text, run);
+        XCTAssertEqualWithAccuracy(carets.front(), 0, 0.01);
+        for (size_t i = 1; i < carets.size(); i++) {
+            XCTAssertGreaterThan(carets[i], carets[i - 1]);
+        }
+        XCTAssertEqualWithAccuracy(carets.back(), run.box.size.width, 0.5);
+    }
+}
+
+/// Review Focus 1: a boundary inside a surrogate pair is at the pair's start, so nothing lands between its halves.
+- (void)testCaretOffsetsOfAnEmojiPair {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    WRSelectableText* text = selectable(session, @"<p style='user-select:text'>a\U0001F600b</p>");
+    const std::vector<WRSelectableRun> runs = runsOf(text);
+    XCTAssertEqual(runs.size(), 1u);
+    if (runs.size() == 1) {
+        const std::vector<float> carets = caretsOf(text, runs[0]);
+        XCTAssertEqual(carets.size(), 5u);
+        XCTAssertEqual(carets[2], carets[1]);
+        XCTAssertGreaterThan(carets[3], carets[1]);
+    }
+}
+
+/// Review Focus 3: a right-to-left word's offsets descend from its right edge.
+- (void)testAnRTLRunMapsPointsToItsCharacters {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    WRSelectableText* text = selectable(session, @"<p dir=rtl style='user-select:text'>שלום</p>");
+    const std::vector<WRSelectableRun> runs = runsOf(text);
+    XCTAssertEqual(runs.size(), 1u);
+    if (runs.size() == 1) {
+        const std::vector<float> carets = caretsOf(text, runs[0]);
+        XCTAssertEqualWithAccuracy(carets.front(), runs[0].box.size.width, 0.5);
+        XCTAssertEqualWithAccuracy(carets.back(), 0, 0.5);
+        for (size_t i = 1; i < carets.size(); i++) {
+            XCTAssertLessThan(carets[i], carets[i - 1]);
+        }
+    }
+}
+
+/// The text is what is drawn: an uppercase ß is SS, and the run's length is the drawn text's.
+- (void)testTextTransformChangesTheDrawnLength {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    WRSelectableText* text = selectable(session, @"<p style='user-select:text;text-transform:uppercase'>straße</p>");
+    XCTAssertEqualObjects(text.text, @"STRASSE");
+    const std::vector<WRSelectableRun> runs = runsOf(text);
+    XCTAssertEqual(runs.size(), 1u);
+    if (runs.size() == 1) {
+        XCTAssertEqual(runs[0].length, 7u);
+        XCTAssertEqual(runs[0].nodeOffset, 0u);
+    }
+}
+
+/// The export is the host's: no work counted to the widget, no stop, nothing a script can see.
+- (void)testTheExportDoesNotTouchTheWidget {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertNotNil(selectable(session, @"<p style='user-select:text'>some words to select</p>"));
+    [session setWorkLimitAfter:1000000];
+    NSString* before = [session evaluateForTesting:@"String(getSelection())"];
+    const uint64_t units = session.workUnits;
+    XCTAssertNil([session selectableTextWithBudget:10 visibleHeight:600]);
+    XCTAssertNotNil([session selectableTextWithBudget:UINT64_MAX visibleHeight:600]);
+    XCTAssertEqual(session.workUnits, units);
+    XCTAssertEqual(session.stopReason, WRStopReasonNone);
+    XCTAssertFalse(session.failed);
+    XCTAssertEqualObjects([session evaluateForTesting:@"String(getSelection())"], before);
+}
+
+/// The cost suite's reference loop (third-party/quickjs-ng tests/quickjs_work_cost_test.c): wall time per unit of work,
+/// best of three, in this process.
+- (double)referenceNanosecondsPerUnit {
+    double best = INFINITY;
+    for (int i = 0; i < 3; i++) {
+        WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+        XCTAssertTrue([session bootWithSource:@"<!doctype html><p>x</p>"]);
+        [session setWorkLimitAfter:20000000];
+        const uint64_t before = session.workUnits;
+        const CFTimeInterval t0 = CACurrentMediaTime();
+        [session evaluateForTesting:@"let s = 0; for (;;) s = (s + 1) | 0;"];
+        const double seconds = CACurrentMediaTime() - t0;
+        best = MIN(best, seconds * 1e9 / (double)MAX(session.workUnits - before, (uint64_t)1));
+    }
+    return best;
+}
+
+/// Wall time per charged unit of the selectable text export of `body`, best of three.
+- (double)exportNanosecondsPerUnit:(NSString*)body {
+    double best = INFINITY;
+    for (int i = 0; i < 3; i++) {
+        WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+        XCTAssertNotNil(selectable(session, body));
+        const CFTimeInterval t0 = CACurrentMediaTime();
+        WRSelectableText* text = [session selectableTextWithBudget:UINT64_MAX visibleHeight:1e9];
+        const double seconds = CACurrentMediaTime() - t0;
+        // It measured an export: text was selected, and in quantity.
+        XCTAssertGreaterThan(text.runs.length / sizeof(WRSelectableRun), 0u);
+        XCTAssertGreaterThan(text.text.length, 4000u);
+        best = MIN(best, seconds * 1e9 / (double)MAX(text.units, (uint64_t)1));
+    }
+    return best;
+}
+
+/// Final review C1: the export is charged in proportion to its work on CoreText, so a hostile page cannot make it run
+/// long for little charge: at most twice the reference's wall time per unit. One long run on the CTLine path (no
+/// wrapping, so one run: a caret query per character made it quadratic, ~2 minutes at the text cap for ~0.1M units),
+/// and many words past the simple shaper's 64 bytes.
+- (void)testTheSelectableExportCostsNoMorePerUnitThanJS {
+    const double js = [self referenceNanosecondsPerUnit];
+    NSString* longRun = [NSString stringWithFormat:@"<p style='user-select:text;white-space:nowrap'>%@</p>",
+                                                   [@"" stringByPaddingToLength:32768 withString:@"a" startingAtIndex:0]];
+    NSString* word = [@"" stringByPaddingToLength:100 withString:@"bcdefghij" startingAtIndex:0];
+    NSMutableString* words = [NSMutableString stringWithString:@"<p style='user-select:text'>"];
+    // A Text node each: one value is capped at 65,536 units, and a page past it exports nothing (and measures nothing).
+    for (int i = 0; i < 1000; i++) {
+        [words appendFormat:@"<span>%@%d</span> ", word, i];
+    }
+    [words appendString:@"</p>"];
+    const double run = [self exportNanosecondsPerUnit:longRun];
+    const double many = [self exportNanosecondsPerUnit:words];
+    NSLog(@"ns per unit: js %.2f, one long run %.2f (%.2fx), long words %.2f (%.2fx)", js, run, run / js, many, many / js);
+    XCTAssertLessThan(run, 2.0 * js);
+    XCTAssertLessThan(many, 2.0 * js);
+}
+
 - (void)testMemoryStopIsFatal {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];

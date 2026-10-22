@@ -1,6 +1,6 @@
 # CoreList chat-history backend
 
-`CoreListChatHistoryBackend` (`submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift`) is an
+`CoreListChatHistoryBackend` (`submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift`) is an
 alternative chat-history list backend built on the vendored `CoreList` module's `CoreVirtualListView`
 (a from-scratch UIKit virtualized list — see `submodules/TelegramUI/Components/CoreList/CLAUDE.md`).
 

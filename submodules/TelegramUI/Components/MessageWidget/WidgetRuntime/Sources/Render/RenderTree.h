@@ -214,6 +214,7 @@
 #include "Sources/Render/Journal.h"
 #include "Sources/Render/LayerTree.h"
 #include "Sources/Render/RenderHost.h"
+#include "Sources/Render/SelectableText.h"
 #include "Sources/Render/HitTest.h"
 #include "Sources/Render/ComputedStyle.h"
 #include "Sources/Render/LayerMirror.h"
@@ -365,6 +366,10 @@ public:
     /// to its parent element; a pseudo-element to its host), honouring `pointer-events: none` and descending into an
     /// `<svg>`. The document element when nothing is hit; nullptr with no document.
     Node* nodeAt(double x, double y) const;
+    /// The selectable text of the published layout (sdk-v1 §5.10; SelectableText.h), on a budget of its own: nullopt
+    /// when it would pass `budget`. Text whose box lies wholly at or below `visibleHeight` is left out. Runs no script,
+    /// flushes nothing and charges nothing to the widget; it may give Text nodes their NodeKeys, as a mirror does.
+    std::optional<SelectableText> selectableText(uint64_t budget, double visibleHeight);
     /// dumpLayout(*document()), "" before the first build.
     std::string layoutDump() const;
     /// `<!doctype html>` and then the rendered tree in HTML's serialization, as Serializer.cpp writes it: the rendered

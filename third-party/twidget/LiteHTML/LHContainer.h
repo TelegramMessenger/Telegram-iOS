@@ -144,6 +144,9 @@ class LHContainer : public litehtml::document_container
     void               delete_font(litehtml::uint_ptr hFont) override;
     static CTFontRef    native_font(litehtml::uint_ptr hFont);
     litehtml::pixel_t  text_width(const char* text, litehtml::uint_ptr hFont) override;
+    // Telegram (VENDOR.md edit 52): where draw_text puts each UTF-16 boundary of `text` (its length + 1 x offsets from
+    // the text's left), for WidgetRuntime's text selection; empty when the text cannot be laid out.
+    std::vector<float> caret_offsets(const char* text, litehtml::uint_ptr hFont);
     std::shared_ptr<litehtml::text_breaker> create_text_breaker(const std::string& text, litehtml::uint_ptr font) override;
     void draw_text(litehtml::uint_ptr hdc, const char* text, litehtml::uint_ptr hFont, litehtml::web_color color,
                    const litehtml::position& pos) override;

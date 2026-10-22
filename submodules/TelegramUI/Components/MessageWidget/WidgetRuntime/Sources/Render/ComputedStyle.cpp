@@ -1,6 +1,7 @@
 #include "Sources/Render/ComputedStyle.h"
 
 #include <algorithm>
+#include <unordered_map>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -469,6 +470,224 @@ std::string backgroundRepeat(const litehtml::background& bg) {
     });
 }
 
+/// The initial value (computed form) of a profile 1 property `value` has no exact answer for, or nullptr when `name` is
+/// not one (getComputedStyle then answers "", as for any name it does not know).
+const char* initialValue(std::string_view name) {
+    static const std::unordered_map<std::string_view, const char*> initial = {
+        {"align-content", "normal"}, {"align-items", "normal"}, {"align-self", "auto"}, {"justify-content", "normal"},
+        {"justify-items", "normal"}, {"place-content", "normal"}, {"place-items", "normal"}, {"place-self", "auto"},
+        {"flex-direction", "row"}, {"flex-wrap", "nowrap"}, {"flex-flow", "row nowrap"}, {"flex-grow", "0"},
+        {"flex-shrink", "1"}, {"flex-basis", "auto"}, {"flex", "0 1 auto"}, {"order", "0"}, {"row-gap", "normal"},
+        {"column-gap", "normal"}, {"gap", "normal"}, {"grid-auto-columns", "auto"}, {"grid-auto-rows", "auto"},
+        {"grid-auto-flow", "row"}, {"grid-template-columns", "none"}, {"grid-template-rows", "none"},
+        {"grid-template-areas", "none"}, {"grid-row", "auto"}, {"grid-column", "auto"}, {"grid-area", "auto"},
+        {"top", "auto"}, {"right", "auto"}, {"bottom", "auto"}, {"left", "auto"}, {"inset", "auto"},
+        {"min-width", "auto"}, {"min-height", "auto"}, {"max-width", "none"}, {"max-height", "none"}, {"z-index", "auto"},
+        {"letter-spacing", "normal"}, {"text-transform", "none"}, {"text-indent", "0px"}, {"text-overflow", "clip"},
+        {"overflow-wrap", "normal"}, {"word-wrap", "normal"}, {"unicode-bidi", "normal"}, {"pointer-events", "auto"},
+        {"clear", "none"}, {"list-style-position", "outside"}, {"list-style", "outside none disc"},
+        {"object-fit", "fill"}, {"object-position", "50% 50%"}, {"aspect-ratio", "auto"},
+        {"transform-origin", "50% 50%"}, {"translate", "none"}, {"rotate", "none"}, {"scale", "none"},
+        {"box-shadow", "none"}, {"background-origin", "padding-box"}, {"border-radius", "0px"},
+        {"border-top-left-radius", "0px"}, {"border-top-right-radius", "0px"}, {"border-bottom-right-radius", "0px"},
+        {"border-bottom-left-radius", "0px"}, {"outline-offset", "0px"}, {"counter-increment", "none"},
+        {"counter-reset", "none"}, {"font-feature-settings", "normal"}, {"font-variant-numeric", "normal"},
+        {"stroke-dasharray", "none"}, {"stroke-dashoffset", "0px"}, {"text-decoration-thickness", "auto"},
+        {"color-scheme", "normal"}, {"animation-name", "none"}, {"animation-duration", "0s"},
+        {"animation-timing-function", "ease"}, {"animation-delay", "0s"}, {"animation-iteration-count", "1"},
+        {"animation-direction", "normal"}, {"animation-fill-mode", "none"}, {"animation-play-state", "running"},
+        {"animation", "none 0s ease 0s 1 normal none running"}, {"transition-property", "all"},
+        {"transition-duration", "0s"}, {"transition-timing-function", "ease"}, {"transition-delay", "0s"},
+        {"transition-behavior", "normal"}, {"transition", "all 0s ease 0s"}, {"background", "rgba(0, 0, 0, 0) none"},
+        {"font", "16px sans-serif"}, {"border", "0px none rgb(0, 0, 0)"}, {"border-top", "0px none rgb(0, 0, 0)"},
+        {"border-right", "0px none rgb(0, 0, 0)"}, {"border-bottom", "0px none rgb(0, 0, 0)"},
+        {"border-left", "0px none rgb(0, 0, 0)"}, {"border-width", "0px"}, {"border-style", "none"},
+        {"border-color", "rgb(0, 0, 0)"}, {"outline", "rgb(0, 0, 0) none 0px"},
+        {"-webkit-backdrop-filter", "none"},
+    };
+    const auto it = initial.find(name);
+    return it == initial.end() ? nullptr : it->second;
+}
+
+/// Inherited among those (CSS's "Inherited: yes").
+bool inheritedProperty(std::string_view name) {
+    return name == "letter-spacing" || name == "text-transform" || name == "text-indent" || name == "pointer-events" ||
+           name == "list-style-position" || name == "list-style" || name == "overflow-wrap" || name == "word-wrap" ||
+           name == "color-scheme" || name == "font-feature-settings" || name == "font-variant-numeric" || name == "font" ||
+           name == "stroke-dasharray" || name == "stroke-dashoffset";
+}
+
+/// A profile 1 property `value` has no exact answer for yet: the element's own declaration as written (with var()
+/// substituted), else an inherited property's nearest ancestor's, else its initial value; the CSS-wide keywords as they
+/// cascade. "" for a name that is not one. Walks at most the tree's depth (256).
+std::string declaredOrInitial(const Source& s, std::string_view name) {
+    const char* initial = initialValue(name);
+    if (!initial) {
+        return std::string();
+    }
+    const bool inherited = inheritedProperty(name);
+    for (const litehtml::element* el = s.element; el; el = el->parent().get()) {
+        const auto* tag = dynamic_cast<const litehtml::html_tag*>(el);
+        std::string declared = tag ? tag->raw_declaration(std::string(name)) : std::string();
+        std::string keyword = declared;
+        std::transform(keyword.begin(), keyword.end(), keyword.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+        if (keyword == "initial" || ((keyword == "unset" || keyword == "revert" || keyword == "revert-layer") && !inherited)) {
+            return initial;
+        }
+        if (!declared.empty() && keyword != "inherit" && keyword != "unset" && keyword != "revert" && keyword != "revert-layer") {
+            return declared;
+        }
+        if (declared.empty() && !inherited) {
+            return initial;
+        }
+    }
+    return initial;
+}
+
+/// A length that may be a keyword (`none`, `auto`, …): the keyword's own name when predefined.
+std::string lengthOrKeyword(const litehtml::css_length& length, std::string_view keyword) {
+    return length.is_predefined() ? std::string(keyword) : computedLength(length);
+}
+
+/// flex_align_items with its flags (align-items, align-self, justify-items).
+std::string alignment(litehtml::flex_align_items value) {
+    const int flags = int(value);
+    std::string base = keyword(litehtml::flex_align_items_strings, flags & 0xFF);
+    if (base == "baseline" && (flags & litehtml::flex_align_items_last)) {
+        return "last baseline";
+    }
+    if (flags & litehtml::flex_align_items_safe) {
+        return "safe " + base;
+    }
+    if (flags & litehtml::flex_align_items_unsafe) {
+        return "unsafe " + base;
+    }
+    return base;
+}
+
+bool isBoxContainer(const litehtml::css_properties& css) {
+    const litehtml::style_display display = css.get_display();
+    return display == litehtml::display_flex || display == litehtml::display_inline_flex ||
+           display == litehtml::display_grid || display == litehtml::display_inline_grid;
+}
+
+bool isFlexContainer(const litehtml::css_properties& css) {
+    return css.get_display() == litehtml::display_flex || css.get_display() == litehtml::display_inline_flex;
+}
+
+bool isFlexItem(const Source& s) {
+    auto parent = s.element ? s.element->parent() : nullptr;
+    return parent && isFlexContainer(parent->css());
+}
+
+/// The element's own raw declaration of `name` ("" without one).
+std::string ownDeclaration(const Source& s, const char* name) {
+    const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
+    return tag ? tag->raw_declaration(name) : std::string();
+}
+
+/// CSSOM's resolved top/right/bottom/left: a static element's computed value; a relative one's used px (a percentage of
+/// its containing block, the opposite's negation for auto, else 0); an absolute or fixed one's used px from the layout,
+/// against its containing block's padding box.
+std::string offset(const Source& s, char side) {
+    const litehtml::css_offsets& offsets = s.css.get_offsets();
+    const auto declared = [&](char which) -> const litehtml::css_length& {
+        return which == 't' ? offsets.top : which == 'b' ? offsets.bottom : which == 'l' ? offsets.left : offsets.right;
+    };
+    const litehtml::element_position position = s.css.get_position();
+    if (position == litehtml::element_position_static || !s.element) {
+        return computedLength(declared(side));
+    }
+    const bool vertical = side == 't' || side == 'b';
+    if (position == litehtml::element_position_relative || position == litehtml::element_position_sticky) {
+        double base = 0;
+        if (auto parent = s.element->parent(); parent && parent->get_render_item()) {
+            const litehtml::position p = parent->get_render_item()->pos();
+            base = vertical ? toDouble(p.height) : toDouble(p.width);
+        }
+        const auto resolve = [&](const litehtml::css_length& length) {
+            return length.units() == litehtml::css_units_percentage ? base * length.val() / 100.0 : double(length.val());
+        };
+        const litehtml::css_length& own = declared(side);
+        if (!own.is_predefined()) {
+            return px(resolve(own));
+        }
+        const litehtml::css_length& opposite = declared(side == 't' ? 'b' : side == 'b' ? 't' : side == 'l' ? 'r' : 'l');
+        return opposite.is_predefined() ? "0px" : px(-resolve(opposite));
+    }
+    if (!s.box) {
+        return computedLength(declared(side));
+    }
+    // The containing block: the nearest positioned ancestor (any, for fixed: the root's box stands for the viewport).
+    litehtml::element* block = nullptr;
+    for (auto el = s.element->parent(); el; el = el->parent()) {
+        if (el->get_render_item() && (position == litehtml::element_position_fixed ? !el->parent()
+                                                                                       : el->css().get_position() != litehtml::element_position_static)) {
+            block = el.get();
+            break;
+        }
+        if (!el->parent()) {
+            block = el.get();
+        }
+    }
+    if (!block || !block->get_render_item()) {
+        return computedLength(declared(side));
+    }
+    const auto box = block->get_render_item();
+    const litehtml::position cb = box->get_placement();
+    const double cbLeft = toDouble(cb.x) + toDouble(box->border_left());
+    const double cbTop = toDouble(cb.y) + toDouble(box->border_top());
+    const double cbRight = toDouble(cb.x) + toDouble(cb.width) - toDouble(box->border_right());
+    const double cbBottom = toDouble(cb.y) + toDouble(cb.height) - toDouble(box->border_bottom());
+    const litehtml::position me = s.box->get_placement();
+    switch (side) {
+    case 'l':
+        return px(toDouble(me.x) - toDouble(s.box->margin_left()) - cbLeft);
+    case 't':
+        return px(toDouble(me.y) - toDouble(s.box->margin_top()) - cbTop);
+    case 'r':
+        return px(cbRight - (toDouble(me.x) + toDouble(me.width) + toDouble(s.box->margin_right())));
+    default:
+        return px(cbBottom - (toDouble(me.y) + toDouble(me.height) + toDouble(s.box->margin_bottom())));
+    }
+}
+
+/// transform-origin's resolved value: px of the element's border box.
+std::string transformOrigin(const Source& s) {
+    double width = 0, height = 0;
+    if (s.box) {
+        const litehtml::position placement = s.box->get_placement();
+        width = toDouble(placement.width);
+        height = toDouble(placement.height);
+    }
+    const auto resolve = [](const litehtml::css_length& length, double size) {
+        return length.units() == litehtml::css_units_percentage ? size * length.val() / 100.0 : double(length.val());
+    };
+    return px(resolve(s.css.get_transform_origin_x(), width)) + " " + px(resolve(s.css.get_transform_origin_y(), height));
+}
+
+std::string boxShadows(const Source& s) {
+    const litehtml::box_shadow_vector& shadows = s.css.get_box_shadows();
+    if (shadows.empty()) {
+        return "none";
+    }
+    std::string out;
+    for (const litehtml::box_shadow& shadow : shadows) {
+        if (!out.empty()) {
+            out += ", ";
+        }
+        out += color(shadow.color, s.css) + " " + lengthValue(shadow.x) + " " + lengthValue(shadow.y) + " " +
+               lengthValue(shadow.blur) + " " + lengthValue(shadow.spread) + (shadow.inset ? " inset" : "");
+    }
+    return out;
+}
+
+std::string radius(const litehtml::css_length& x, const litehtml::css_length& y) {
+    const std::string horizontal = lengthValue(x);
+    const std::string vertical = lengthValue(y);
+    return horizontal == vertical ? horizontal : horizontal + " " + vertical;
+}
+
 std::string value(const Source& s, std::string_view name) {
     const litehtml::css_properties& css = s.css;
     if (name == "display") {
@@ -658,12 +877,16 @@ std::string value(const Source& s, std::string_view name) {
         return css.get_direction() == litehtml::direction_rtl ? "rtl" : "ltr";
     }
     // widget-sandbox v0.1.1 (D18): not inherited, so the element's own declaration (twidget edit 45: either name, the
-    // later winning), else auto; the UA layer gives the root none. The renderer selects nothing either way (an accepted
-    // exception: text stays unselectable until the client implements selection).
+    // later winning), else auto; the UA layer gives the root none. What the client selects follows selectsText.
     if (name == "user-select" || name == "-webkit-user-select") {
-        const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
-        const std::string declared = tag ? tag->raw_declaration("user-select") : std::string();
-        return declared.empty() ? "auto" : declared;
+        switch (s.element ? ownUserSelect(*s.element) : UserSelect::Auto) {
+        case UserSelect::None:
+            return "none";
+        case UserSelect::Text:
+            return "text";
+        case UserSelect::Auto:
+            return "auto";
+        }
     }
     if (name == "quotes") {
         // Inherited, kept as written (twidget edit 32.4); "" is auto.
@@ -675,7 +898,144 @@ std::string value(const Source& s, std::string_view name) {
     if (name == "word-break") {
         return keyword(litehtml::word_break_strings, int(css.get_word_break()));
     }
-    return std::string();
+    // Computed-style plan, Task 2: profile 1's longhands the renderer keeps, resolved as CSSOM says.
+    if (char side = sideOf(name)) {
+        return offset(s, side);
+    }
+    // litehtml computes the container's flex properties on flex or grid containers and the item's on flex items only;
+    // elsewhere the declaration as written, else the initial value (edit 51).
+    if ((name == "flex-direction" || name == "flex-wrap") && !isFlexContainer(css)) {
+        return declaredOrInitial(s, name);
+    }
+    if ((name == "align-items" || name == "row-gap" || name == "column-gap") && !isBoxContainer(css)) {
+        return declaredOrInitial(s, name);
+    }
+    if ((name == "flex-grow" || name == "flex-shrink" || name == "flex-basis") && !isFlexItem(s)) {
+        return declaredOrInitial(s, name);
+    }
+    if (name == "flex-direction") {
+        return keyword(litehtml::flex_direction_strings, int(css.get_flex_direction()));
+    }
+    if (name == "flex-wrap") {
+        return keyword(litehtml::flex_wrap_strings, int(css.get_flex_wrap()));
+    }
+    if (name == "flex-grow") {
+        return number(css.get_flex_grow());
+    }
+    if (name == "flex-shrink") {
+        return number(css.get_flex_shrink());
+    }
+    if (name == "flex-basis") {
+        const litehtml::css_length& basis = css.get_flex_basis();
+        return basis.is_predefined() ? keyword(litehtml::flex_basis_strings, basis.predef()) : computedLength(basis);
+    }
+    if (name == "order") {
+        return std::to_string(css.get_order());
+    }
+    if (name == "align-items") {
+        return alignment(css.get_flex_align_items());
+    }
+    if (name == "align-self") {
+        return alignment(css.get_flex_align_self());
+    }
+    if (name == "justify-items") {
+        return alignment(css.get_justify_items());
+    }
+    // litehtml's value cannot tell an undeclared one (CSS's normal) from its default: the declaration first (edit 51).
+    if (name == "justify-content" || name == "align-content") {
+        const bool justify = name == "justify-content";
+        const std::string declared = ownDeclaration(s, justify ? "justify-content" : "align-content");
+        if (!declared.empty() || !isBoxContainer(css)) {
+            return declaredOrInitial(s, name);
+        }
+        if (justify) {
+            const int value = int(css.get_flex_justify_content());
+            return value == litehtml::flex_justify_content_flex_start ? "normal" : keyword(litehtml::flex_justify_content_strings, value);
+        }
+        const int value = int(css.get_flex_align_content());
+        return value == litehtml::flex_align_content_stretch ? "normal" : keyword(litehtml::flex_align_content_strings, value);
+    }
+    if (name == "row-gap" || name == "column-gap") {
+        return lengthOrKeyword(name == "row-gap" ? css.get_row_gap() : css.get_column_gap(), "normal");
+    }
+    if (name == "min-width" || name == "min-height") {
+        return lengthOrKeyword(name == "min-width" ? css.get_min_width() : css.get_min_height(), "auto");
+    }
+    if (name == "max-width" || name == "max-height") {
+        return lengthOrKeyword(name == "max-width" ? css.get_max_width() : css.get_max_height(), "none");
+    }
+    if (name == "letter-spacing") {
+        // litehtml keeps px (normal is 0).
+        return css.get_letter_spacing() == litehtml::pixel_t(0) ? "normal" : px(toDouble(css.get_letter_spacing()));
+    }
+    if (name == "text-transform") {
+        return keyword(litehtml::text_transform_strings, int(css.get_text_transform()));
+    }
+    if (name == "text-indent") {
+        return computedLength(css.get_text_indent());
+    }
+    if (name == "text-overflow") {
+        return keyword(litehtml::text_overflow_strings, int(css.get_text_overflow()));
+    }
+    if (name == "overflow-wrap" || name == "word-wrap") {
+        return keyword(litehtml::overflow_wrap_strings, int(css.get_overflow_wrap()));
+    }
+    if (name == "clear") {
+        return keyword(litehtml::element_clear_strings, int(css.get_clear()));
+    }
+    if (name == "list-style-position") {
+        return keyword(litehtml::list_style_position_strings, int(css.get_list_style_position()));
+    }
+    if (name == "object-fit") {
+        return keyword(litehtml::object_fit_strings, int(css.get_object_fit()));
+    }
+    if (name == "object-position") {
+        return lengthValue(css.get_object_position_x()) + " " + lengthValue(css.get_object_position_y());
+    }
+    if (name == "aspect-ratio") {
+        return css.get_aspect_ratio() > 0 ? number(css.get_aspect_ratio()) + " / 1" : "auto";
+    }
+    if (name == "transform-origin") {
+        return transformOrigin(s);
+    }
+    if (name == "outline-offset") {
+        return px(toDouble(css.get_outline_offset()));
+    }
+    if (name == "box-shadow") {
+        return boxShadows(s);
+    }
+    if (name == "text-decoration-thickness") {
+        const litehtml::css_length& thickness = css.get_text_decoration_thickness();
+        return thickness.is_predefined() ? keyword(litehtml::style_text_decoration_thickness_strings, thickness.predef())
+                                         : computedLength(thickness);
+    }
+    if (name == "background-origin") {
+        const litehtml::background& bg = css.get_bg();
+        return layers(bg, [&](size_t i) -> std::string {
+            const int* box = layerAt(bg.m_origin, i);
+            return box ? keyword(litehtml::background_box_strings, *box) : std::string("padding-box");
+        });
+    }
+    if (name == "-webkit-backdrop-filter") {
+        return filterList(css.get_backdrop_filter());
+    }
+    if (name.size() > 7 && name.rfind("border-", 0) == 0 && name.substr(name.size() - 7) == "-radius") {
+        const litehtml::css_border_radius& r = css.get_borders().radius;
+        const std::string_view corner = name.substr(7, name.size() - 14);
+        if (corner == "top-left") {
+            return radius(r.top_left_x, r.top_left_y);
+        }
+        if (corner == "top-right") {
+            return radius(r.top_right_x, r.top_right_y);
+        }
+        if (corner == "bottom-right") {
+            return radius(r.bottom_right_x, r.bottom_right_y);
+        }
+        if (corner == "bottom-left") {
+            return radius(r.bottom_left_x, r.bottom_left_y);
+        }
+    }
+    return declaredOrInitial(s, name);
 }
 
 } // namespace
@@ -694,6 +1054,23 @@ const std::vector<std::string>& computedPropertyNames() {
         "text-decoration-color",
         "text-decoration-line", "text-decoration-style", "touch-action", "transform", "user-select", "vertical-align",
         "visibility", "white-space", "width", "word-break", "word-spacing",
+        // Every other profile 1 property (2026-10-22, declaredOrInitial and the exact answers after it).
+        "-webkit-backdrop-filter", "align-content", "align-items", "align-self", "animation", "animation-delay",
+        "animation-direction", "animation-duration", "animation-fill-mode", "animation-iteration-count", "animation-name",
+        "animation-play-state", "animation-timing-function", "aspect-ratio", "background", "background-origin", "border",
+        "border-bottom", "border-bottom-left-radius", "border-bottom-right-radius", "border-color", "border-left",
+        "border-radius", "border-right", "border-style", "border-top", "border-top-left-radius", "border-top-right-radius",
+        "border-width", "bottom", "box-shadow", "clear", "color-scheme", "column-gap", "counter-increment",
+        "counter-reset", "flex", "flex-basis", "flex-direction", "flex-flow", "flex-grow", "flex-shrink", "flex-wrap",
+        "font", "font-feature-settings", "font-variant-numeric", "gap", "grid-area", "grid-auto-columns",
+        "grid-auto-flow", "grid-auto-rows", "grid-column", "grid-row", "grid-template-areas", "grid-template-columns",
+        "grid-template-rows", "inset", "justify-content", "justify-items", "left", "letter-spacing", "list-style",
+        "list-style-position", "max-height", "max-width", "min-height", "min-width", "object-fit", "object-position",
+        "order", "outline", "outline-offset", "overflow-wrap", "place-content", "place-items", "place-self",
+        "pointer-events", "right", "rotate", "row-gap", "scale", "stroke-dasharray", "stroke-dashoffset",
+        "text-decoration-thickness", "text-indent", "text-overflow", "text-transform", "top", "transform-origin",
+        "transition", "transition-behavior", "transition-delay", "transition-duration", "transition-property",
+        "transition-timing-function", "translate", "unicode-bidi", "word-wrap", "z-index",
     };
     return names;
 }
@@ -743,6 +1120,39 @@ std::string computedValue(litehtml::element& element, std::string_view name, Pse
     source.pseudo = pseudo;
     source.pseudoMissing = pseudoMissing;
     return value(source, name);
+}
+
+UserSelect ownUserSelect(const litehtml::element& element) {
+    const auto* tag = dynamic_cast<const litehtml::html_tag*>(&element);
+    if (!tag) {
+        return UserSelect::Auto;
+    }
+    std::string declared = tag->raw_declaration("user-select");
+    std::transform(declared.begin(), declared.end(), declared.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    if (declared == "text") {
+        return UserSelect::Text;
+    }
+    if (declared == "none") {
+        return UserSelect::None;
+    }
+    return UserSelect::Auto;
+}
+
+bool selectsText(const litehtml::element& element, uint64_t* visited) {
+    for (const litehtml::element* el = &element; el; el = el->parent().get()) {
+        if (visited) {
+            (*visited)++;
+        }
+        switch (ownUserSelect(*el)) {
+        case UserSelect::Text:
+            return true;
+        case UserSelect::None:
+            return false;
+        case UserSelect::Auto:
+            break;
+        }
+    }
+    return false;
 }
 
 } // namespace wr

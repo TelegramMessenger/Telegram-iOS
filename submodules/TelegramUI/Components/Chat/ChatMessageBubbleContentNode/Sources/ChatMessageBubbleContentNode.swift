@@ -328,6 +328,11 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     open func updateIsExtractedToContextPreview(_ value: Bool) {
     }
 
+    /// Clears this node's text selection, if it has one: another content node of the bubble began one (a bubble shows one
+    /// selection at a time).
+    open func resignTextSelection() {
+    }
+
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
     }
 

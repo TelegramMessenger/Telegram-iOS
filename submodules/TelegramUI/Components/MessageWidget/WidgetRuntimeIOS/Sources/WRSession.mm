@@ -135,6 +135,24 @@ public:
 - (instancetype)initWithTree:(std::shared_ptr<const wr::LayerTree>)tree;
 @end
 
+@interface WRSelectableText ()
+- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets units:(uint64_t)units;
+@end
+
+@implementation WRSelectableText
+
+- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets units:(uint64_t)units {
+    if ((self = [super init])) {
+        _text = [text copy];
+        _runs = [runs copy];
+        _carets = [carets copy];
+        _units = units;
+    }
+    return self;
+}
+
+@end
+
 @implementation WRTree
 
 - (instancetype)initWithTree:(std::shared_ptr<const wr::LayerTree>)tree {
@@ -528,6 +546,23 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
+- (WRGestureAxes)gestureClaim {
+    std::lock_guard<std::recursive_mutex> guard(_lock);
+    if (_failed || !_runtime) {
+        return 0;
+    }
+    const wr::GestureClaim claim = wr::HostState::of(_runtime->context()).gestureClaim();
+    return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0);
+}
+
+- (BOOL)pressTakesTaps {
+    std::lock_guard<std::recursive_mutex> guard(_lock);
+    if (_failed || !_runtime) {
+        return NO;
+    }
+    return wr::HostState::of(_runtime->context()).pressTakesTaps();
+}
+
 - (WRStopReason)stopReason {
     std::lock_guard<std::recursive_mutex> guard(_lock);
     if (_failed || !_runtime) {
@@ -620,6 +655,40 @@ static WRStepResult stepOf(wr::StepResult result) {
         wr::HostState::of(ctx).flushRender(ctx);
         [self noteTree];
         return result ? text(*result) : nil;
+    });
+}
+
+- (WRSelectableText*)selectableTextWithBudget:(uint64_t)units visibleHeight:(CGFloat)visibleHeight {
+    WR_GUARD(nil, {
+        wr::RenderTree* render = [self renderTree];
+        if (!render) {
+            return nil;
+        }
+        std::optional<wr::SelectableText> exported;
+        try {
+            // A read of the published layout: a failure here is the export's, never the widget's (no latch).
+            exported = render->selectableText(units, double(visibleHeight));
+        } catch (...) {
+            return nil;
+        }
+        if (!exported) {
+            return nil;
+        }
+        NSMutableData* runs = [NSMutableData dataWithLength:exported->runs.size() * sizeof(WRSelectableRun)];
+        NSMutableData* carets = [NSMutableData data];
+        WRSelectableRun* out = static_cast<WRSelectableRun*>(runs.mutableBytes);
+        uint32_t caretIndex = 0;
+        for (const wr::SelectableRun& run : exported->runs) {
+            const double* t = run.transform;
+            *out++ = WRSelectableRun{run.start, run.length, CGRectMake(run.box.x, run.box.y, run.box.width, run.box.height),
+                                     CGAffineTransformMake(t[0], t[1], t[2], t[3], t[4], t[5]), run.node, run.nodeOffset,
+                                     caretIndex};
+            [carets appendBytes:run.carets.data() length:run.carets.size() * sizeof(float)];
+            caretIndex += uint32_t(run.carets.size());
+        }
+        NSString* text = [[NSString alloc] initWithCharacters:reinterpret_cast<const unichar*>(exported->text.data())
+                                                       length:exported->text.size()];
+        return [[WRSelectableText alloc] initWithText:text runs:runs carets:carets units:exported->units];
     });
 }
 

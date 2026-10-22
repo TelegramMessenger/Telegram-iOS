@@ -67,6 +67,10 @@ public:
     void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary) {
         m_taps.pointer(ctx, phase, x, y, pointerId, primary);
     }
+    /// The gesture claim of the last press (TapState::claim), once its down task has run.
+    GestureClaim gestureClaim() const { return m_taps.claim(); }
+    /// Whether the last press takes taps (TapState::takesTaps), once its down task has run.
+    bool pressTakesTaps() const { return m_taps.takesTaps(); }
     /// The press's pointer state, for Pointer Events' capture (Element::setPointerCapture).
     TapState& taps() { return m_taps; }
     /// SDK v1 §2.5, user activation (widget-sandbox v0.1.0 packages/core/src/host/user-activation.ts): each trusted

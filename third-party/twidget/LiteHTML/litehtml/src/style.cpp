@@ -381,6 +381,14 @@ namespace litehtml
         "touch-action",
         // Telegram (VENDOR.md edit 45): the same, -webkit-user-select written as user-select (add_property).
         "user-select",
+        // Telegram (VENDOR.md edit 51): profile 1's properties litehtml keeps no value of, for getComputedStyle.
+        "counter-increment", "counter-reset", "unicode-bidi", "color-scheme", "grid-template-areas", "grid-auto-columns",
+        "grid-auto-flow", "font-feature-settings", "font-variant-numeric",
+        // Telegram (VENDOR.md edit 51): litehtml keeps these, but its value cannot tell an undeclared one from a
+        // declared one (z-index auto reads 0, justify-content and align-content default to flex-start and stretch).
+        "z-index", "justify-content", "align-content",
+        // Telegram (VENDOR.md edit 51): litehtml computes these on flex or grid containers or flex items only.
+        "flex-direction", "flex-wrap", "align-items", "row-gap", "column-gap", "flex-shrink", "flex-basis",
     };
 
     static const std::map<string_id, string_id>& raw_declaration_ids()

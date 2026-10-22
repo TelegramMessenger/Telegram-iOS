@@ -5108,7 +5108,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             containerSupernode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode.contentNode ?? strongSelf.clippingNode
                         }
                         containerSupernode.addSubnode(contentNode)
-                        contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
+                        contentNode.updateIsTextSelectionActive = { [weak strongSelf, weak contextSourceNode, weak contentNode] value in
+                            // One selection at a time in a bubble (a widget's and its caption's): the others go first,
+                            // so their going does not end the distraction-free mode this one starts.
+                            if value, let strongSelf, let contentNode {
+                                for other in strongSelf.contentNodes where other !== contentNode {
+                                    other.resignTextSelection()
+                                }
+                            }
                             contextSourceNode?.updateDistractionFreeMode?(value)
                         }
                         contentNode.updateIsExtractedToContextPreview(contextSourceNode.isExtractedToContextPreview)
@@ -6114,8 +6121,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         }
                     case .ignore:
                         // `contextMenuOnLongPress` is false for every `.ignore` that keeps the default
-                        // `hasLongTapAction: true`, which stops the context gesture (:909). A live message
-                        // widget passes `hasLongTapAction: false`: holding it opens the message's menu.
+                        // `hasLongTapAction: true`, which stops the context gesture (:909); one that passes
+                        // `hasLongTapAction: false` lets holding it open the message's menu.
                         if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
                             return .action(InternalBubbleTapAction.Action({
                                 tapMessage(item.message)
@@ -7309,6 +7316,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     self.swipeToReplyFeedback?.prepareImpact()
                 }
                 self.item?.controllerInteraction.cancelInteractiveKeyboardGestures()
+                // The swipe takes the touch from the long press, as a scroll does (`willBeginDragging` cancels the
+                // rows' context gestures): the reply beginning does not fail the context gesture, which otherwise opens
+                // the menu mid-swipe wherever it is armed (measured on the CoreList chat, 2026-10-22: the menu
+                // opened 0.23 s into a swipe on a widget).
+                self.mainContainerNode.cancelGesture()
             case .changed:
                 var translation = recognizer.translation(in: self.view)
                 func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {

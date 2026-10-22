@@ -111,6 +111,8 @@ public:
     litehtml::uint_ptr create_font(const litehtml::font_description& descr, const litehtml::document* doc,
                                    litehtml::font_metrics* fm) override;
     void delete_font(litehtml::uint_ptr hFont) override;
+    /// RenderHost::caretOffsets for the font behind litehtml's handle; empty for no font.
+    std::vector<float> caretOffsets(litehtml::uint_ptr hFont, std::string_view utf8) const;
     litehtml::pixel_t text_width(const char* text, litehtml::uint_ptr hFont) override;
     std::shared_ptr<litehtml::text_breaker> create_text_breaker(const std::string& text, litehtml::uint_ptr hFont) override;
     /// twidget edit 47 (fidelity plan, Task 13): each unit's level from ICU's bidi algorithm over the line's text, a unit

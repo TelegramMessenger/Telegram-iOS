@@ -23,13 +23,18 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var incoming: Bool = false
     /// Each widget message carries its caption (the post's text); off, the widget is alone in its bubble.
     public var captions: Bool = true
+    /// `-harness-menu hold`: the stand-in context menu stays open until `harness.endMenu` is tapped.
+    public var holdsMenu: Bool = false
+    /// `-harness-copy-protected on`: the chat forbids copying.
+    public var copyProtected: Bool = false
 
     public init() {}
 
     public static func ==(lhs: WidgetHarnessLaunchOptions, rhs: WidgetHarnessLaunchOptions) -> Bool {
         return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.killSwitch == rhs.killSwitch
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
-            && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions
+            && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions && lhs.holdsMenu == rhs.holdsMenu
+            && lhs.copyProtected == rhs.copyProtected
     }
 
     /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-kill-switch on|off`,
@@ -56,6 +61,8 @@ public struct WidgetHarnessLaunchOptions: Equatable {
         options.useDarkTheme = value("-harness-theme") == "dark"
         options.incoming = value("-harness-side") == "incoming"
         options.captions = value("-widget-caption") != "off"
+        options.holdsMenu = value("-harness-menu") == "hold"
+        options.copyProtected = value("-harness-copy-protected") == "on"
         return options
     }
 }

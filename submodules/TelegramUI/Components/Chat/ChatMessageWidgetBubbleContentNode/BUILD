@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidgetStorage",
         "//submodules/TelegramUI/Components/UnsupportedContentPill",
+        "//submodules/TextSelectionNode",
         "//submodules/WallpaperBackgroundNode",
     ],
     visibility = [

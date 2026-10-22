@@ -67,6 +67,15 @@ public:
     /// nullptr: litehtml's own breaking.
     virtual std::shared_ptr<litehtml::text_breaker> createTextBreaker(const HostFont& font, const std::string& utf8) = 0;
     virtual ShapedText shape(const HostFont& font, std::string_view utf8) = 0;
+    /// Text selection (sdk-v1 §5.10): the x offset of every UTF-16 boundary of `utf8` (its UTF-16 length + 1 values,
+    /// the first at the text's start) where the host draws it with `font`, in CSS px from the text's left; right to left
+    /// they descend. A boundary inside a surrogate pair has the pair's start offset. Empty when the host cannot tell:
+    /// that text is then not selectable.
+    virtual std::vector<float> caretOffsets(const HostFont& font, std::string_view utf8) {
+        (void)font;
+        (void)utf8;
+        return {};
+    }
     virtual void transformText(std::string& utf8, litehtml::text_transform transform) = 0;
     virtual double defaultFontSize() const = 0;
     virtual std::string defaultFontName() const = 0;

@@ -137,7 +137,17 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   listeners and reverts when the click is canceled, a label clicks its control, a summary toggles its details, a
   submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
   `:active` live in `UserActions`; a change to them rebuilds the render tree, and only when the build's `<style>` text
-  names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild.
+  names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. A primary press also decides
+  its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
+  task has run): the axes the computed touch-action of the target and its ancestors below `<html>` forbids panning on,
+  read from the layout the press was hit-tested on before its handlers run, or both when the widget cancels the
+  press's `pointerdown` or `touchstart` (the reference learns that from the previous press; ours dispatches before it
+  answers). It answers too whether the press lands on something the widget handles (`TapState::takesTaps`,
+  `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element with activation
+  behaviour outside a disabled control, or a drag claim; the client gives the widget the tap and the long press there,
+  as on a message button, and the double tap and the long press (the reaction and the menu) to the bubble anywhere
+  else. The client's side is the message widgets guide's (`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`)
+  "Touches" and "Drags are decided per press".
 - **The SDK (V2a, widget-sandbox v0.1.0 `docs/sdk-v1.md`).** `window.TelegramWidget` (unforgeable) is SDK v1, and the
   runtime applies its policy itself; the app's core only passes the calls on. Calls reach `wr::Host::bridgeCall` as a
   method and a JSON array of strings: `ready`, `openLink`, `openTelegramLink` and `haptic`.
@@ -718,9 +728,10 @@ neutralised is `css.box.logical`, whose RTL check needs `direction` layout (out 
   `CSSPolicyTests.testTheRewritesAreLinear`: its callers charge its input linearly.
 - **The DOM side:** no focus (`focus()`/`blur()` no-ops, a tap focuses nothing, `activeElement` is the body),
   `HTMLDialogElement` as the sandbox has it, an input's selection methods no-ops, `matchMedia` false past 1,024 units,
-  and no selection: `user-select` computes as the widget writes it (the UA layer's `none` on the root, `text` where a
-  widget enables it; profile 1's value set drops `all` and `contain`), but nothing is selectable, the exception sdk-v1
-  §2.4 accepts (D18) until the client builds selection.
+  and selection only through the client: `user-select` computes as the widget writes it (the UA layer's `none` on the
+  root, `text` where a widget enables it; profile 1's value set drops `all` and `contain`), the client selects what the
+  selectable text export (below) gives it, and `getSelection()` stays the stub: the widget never learns what the reader
+  selected.
 
 **The agreement points** (where a rebuild, a patch and the parity re-parse must read the same function), as built:
 
@@ -819,6 +830,39 @@ What still differs, on purpose or for now (none is measured by a conformance che
 - **`text-overflow`:** an atomic inline at the cut is hidden with no `…`; inline boxes' backgrounds after the cut still
   draw.
 - **`touch-action: initial`** (and `unset`, `revert`) reads back as written; the hit test reads it as the parent's.
+
+## The selectable text (text selection, sdk-v1 §2.4, §5.10)
+
+`RenderTree::selectableText(budget, visibleHeight)` (`Sources/Render/SelectableText.h`) is what the client may let the
+reader select of the published layout, built on the widget's queue while its bubble is lifted into the context menu
+(the message widgets guide's "Text selection"):
+- **Selectable:** a piece of a Text node whose effective `user-select` is `text` (`selectsText`: the nearest
+  ancestor-or-self whose own value is not `auto` decides; the UA layer's root `none` ends the walk; `var()` arrives
+  substituted, as litehtml substitutes every raw declaration), that is drawn (`visibility: hidden` is not, `opacity: 0`
+  is), and that its ancestors' overflow clips and `[0, visibleHeight)` do not wholly hide. Generated content (`::before`,
+  `::after`), list markers and the ellipsis are not selectable, as in Chromium. `clip-path` is not consulted.
+- **Its text** is the drawn text (`display_text()`, text-transform applied, a piece cut at an ellipsis only its drawn
+  part) in document order, one UTF-16 string: collapsible white space between two runs is one space, a `<br>`, a
+  preserved newline and a change of block container one newline, never at the start, never two in a row. Spaces are
+  separators, not runs; the client merges a line's runs into one highlight.
+- **Each run** (a drawn render item; a word broken across lines is one run per fragment) carries its box, its caret
+  offsets (`RenderHost::caretOffsets`: on iOS read back from LHContainer's own two drawing paths, twidget edit 52, so
+  the knobs sit on the glyphs; a surrogate pair's inside takes its start), its ancestors' composed transform
+  (`visualTransform`, shared with `transformRects`) and its Text node's `NodeKey` with its offset in that node's drawn
+  text, which is how a selection survives a new layout.
+- **Work:** the host's, never the widget's. It runs no script, flushes nothing, and charges a counter of its own at
+  Work.h's rates, each before its work: `kNodeVisit` per element and ancestor step, `kLayoutBox` per run it considers
+  (kept or not: the walk and the placement are its cost), `kScanEightUnits` per eight units, and `kCaretUnit` (3) per
+  UTF-16 unit the host places carets for. Past its budget it is nothing, and it never stops, fails, latches or demotes
+  the widget (`WRSession` catches a failure inside it without latching). On CoreText the carets of a run cost its
+  length (twidget edit 52 enumerates them in one pass; a query per index was quadratic, final review C1), and building
+  a line the cache no longer holds costs about as much again: `WRSessionTests.testTheSelectableExportCostsNoMorePerUnitThanJS`
+  holds one 32,768-unit no-wrap run and 1,000 words past the simple shaper's 64 bytes under twice the reference loop's
+  wall time per unit (0.51× and 0.65× measured, 2026-10-22). Measured at the render limits (10,000 one-piece Text nodes
+  holding the 262,144-unit text budget, all selectable; `SelectableTextTests.testWhatTheExportCostsAtTheTextLimits`):
+  1,259,504 units, 9,996 runs. The client's budget, `MessageWidgetCore.selectionWorkUnits`, is 6,000,000 (four times
+  that, rounded up to a whole million). The corpus is not a calibration here: only the conformance set's
+  `visual/16-selection` and `auto/06-text-fonts-c` write `user-select: text`.
 
 ## Limits (decided in M1a to M1d)
 

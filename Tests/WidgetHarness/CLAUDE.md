@@ -15,10 +15,22 @@ building `:all`, traps that print no failure and reading a build's own exit code
 `ChatMessageWidgetBubbleContentNode` (and the caption's `ChatMessageTextBubbleContentNode`) → `MessageWidgetRegistry` /
 `MessageWidgetInstance` → `WidgetRuntime`. Every line from the chat item down is the shipping code.
 
-**Synthetic:** the app context (`Tests/ComposerHarness/AppContext`), the list host (`WidgetHarnessListHost`: a
-`ListViewImpl` rotated as the chat's history, with `useMainQueueTransactions = true`, where the chat uses CoreList), the
-`ChatControllerInteraction` closures (they record what the bubble asks for), the context menu (a long press records
-`contextMenu`, tells the bubble's content nodes the menu extracted them, and ends 2 s later), and the messages
+**Real too:** the list. `WidgetHarnessListHost` hosts the chat's own history backend
+(`makeCoreListChatHistoryBackend`, CoreList), so its scroll pan, its gesture arbitration and its main-thread layout
+are the chat's. Never put a widget under `ListViewImpl` here: the chat no longer uses it, and gestures that passed
+there failed on CoreList (2026-10-22: a horizontal swipe on a widget opened the menu instead of replying).
+
+**Synthetic:** the app context (`Tests/ComposerHarness/AppContext`), the rotated wrapper around the list (the chat's
+`ChatHistoryListNodeImpl`), the root's back swipe (an `InteractiveTransitionGestureRecognizer` to the right that
+every pan below waits for, as `NavigationContainer` declares; it records `back`), the
+`ChatControllerInteraction` closures (they record what the bubble asks for; `tapMessage` is nil, as `ChatController`
+passes it: a non-nil one makes the bubble take every tap as a single tap, so no double tap reaches it), the context menu (a long press records
+`contextMenu`, tells the bubble's content nodes the menu extracted them through both hooks, as the chat's context
+source does, switches off the bubble's own recognizers above its content (in the chat the menu moves the content out
+from under them), and ends 2 s later, or when `harness.endMenu` is tapped under `-harness-menu hold`), the text
+selection's menu (`WidgetHarnessContextMenuController`, installed as the context menu controller provider: it never
+shows itself, the root shows its actions as buttons, and the list host keeps it until it is dismissed, since
+`TextSelectionNode` holds its menu weakly and only presenting keeps one alive in the chat), and the messages
 (in-memory `Message`s in a 1:1 chat with "Harness Chat", outgoing unless `-harness-side incoming`). Findings about the chat's layout AROUND the bubble
 are provisional until reproduced in the app.
 
@@ -59,6 +71,8 @@ One leading dash (`--widget-set` is ignored silently).
 | `-widget-caption` | `off` (the widget alone in its bubble: its corners, the tail, the date over it) | on |
 | `-harness-theme` | `dark` | light |
 | `-harness-side` | `incoming` (the posts come from the other side of the chat) | outgoing |
+| `-harness-menu` | `hold` (the stand-in context menu stays open until `harness.endMenu`; `harness.openMenu` opens it on the newest widget bubble without a long press) | ends after 2 s |
+| `-harness-copy-protected` | `on` (the chat forbids copying: `isCopyProtectionEnabled`) | off |
 
 A hosted (Tier 1) test calls `WidgetHarnessRootViewController.reload(options:)` instead.
 
@@ -75,12 +89,18 @@ contextMenu fixture/open-link.html
 contextMenuEnded fixture/open-link.html
 ```
 
-- The size is the widget area's (the clip view, or the pill); the `@x,y` is its centre in the root view's
-  coordinates, which a Tier 2 test taps.
+- The size is the widget area's (the clip view, or the pill); the `@x,y` is its centre in the window's coordinates,
+  which a Tier 2 test taps (the root view sits about 10 pt off them inside the system's presentation views; aim for
+  text needs the window's). A widget reports its height after its boot: wait for the readout to leave the 160 pt
+  placeholder (`x160 `) before aiming inside a widget.
 - The state is `widget` (a live `MessageWidgetView` is attached), `pill` (the unsupported pill) or `placeholder`.
 - `+caption`: the bubble holds another content node (the caption's text).
 - Events: `openLink <url>` (the bubble asked to open a link; the chat would show "Open link?" — ` (not concealed)` is
-  appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`.
+  appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
+  `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
+  `back` (the root's back swipe began), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
+  joined by `,`; each is a button `harness.menu.<title>` under the readout), `selectionMenuDismissed` (that menu went
+  away) and `copy <text>` (its Copy, a newline written `\n`).
 - Changing the format means changing every test that parses it.
 
 ## The conformance set (widget-sandbox v0.1.1, `conformance/CLIENTS.md`)

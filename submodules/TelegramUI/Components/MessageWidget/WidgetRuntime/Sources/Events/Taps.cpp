@@ -1,7 +1,11 @@
 #include "Sources/Events/Taps.h"
 
+#include <cctype>
 #include <cmath>
 #include <functional>
+#include <iterator>
+#include <optional>
+#include <string>
 #include <string_view>
 
 #include "Generated/Bindings.h"
@@ -15,9 +19,11 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Host/Task.h"
 #include "Sources/Host/Window.h"
+#include "Sources/Render/ComputedStyle.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
+#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -61,6 +67,92 @@ bool insideDisabledControl(JSContext* ctx, EventTarget& target) {
         }
     }
     return false;
+}
+
+// The axes the computed touch-action of `target` and its ancestors below <html> forbids panning on, on the layout the
+// press was hit-tested on (protocol.md's walk: auto and manipulation say nothing, none takes both, any other value takes
+// each axis it has no pan-* keyword for). Charged per element visited and per byte of each value read.
+GestureClaim touchActionClaim(JSContext* ctx, EventTarget& target) {
+    GestureClaim claim;
+    RenderTree* render = HostState::of(ctx).render();
+    if (!render) {
+        return claim;
+    }
+    for (Node* n = dynamic_cast<Node*>(&target); n; n = n->parentNode(ctx)) {
+        Node* parent = n->parentNode(ctx);
+        if (!parent || !parent->isElement()) {
+            break;
+        }
+        if (!n->isElement()) {
+            continue;
+        }
+        charge(ctx, work::kNodeVisit);
+        std::optional<std::string> value = render->computedStyleValue(*n, "touch-action", PseudoElement::None);
+        if (!value) {
+            continue;
+        }
+        chargeScan(ctx, value->size());
+        bool panX = false;
+        bool panY = false;
+        bool silent = false;
+        size_t i = 0;
+        while (i < value->size()) {
+            while (i < value->size() && std::isspace(static_cast<unsigned char>((*value)[i]))) {
+                i++;
+            }
+            size_t end = i;
+            while (end < value->size() && !std::isspace(static_cast<unsigned char>((*value)[end]))) {
+                end++;
+            }
+            std::string token = value->substr(i, end - i);
+            for (char& c : token) {
+                c = char(std::tolower(static_cast<unsigned char>(c)));
+            }
+            i = end;
+            if (token.empty()) {
+                continue;
+            }
+            if (token == "none") {
+                return GestureClaim{true, true};
+            }
+            silent = silent || token == "auto" || token == "manipulation";
+            panX = panX || token == "pan-x" || token == "pan-left" || token == "pan-right";
+            panY = panY || token == "pan-y" || token == "pan-up" || token == "pan-down";
+        }
+        if (silent) {
+            continue;
+        }
+        claim.x = claim.x || !panX;
+        claim.y = claim.y || !panY;
+    }
+    return claim;
+}
+
+// Whether a press at `target` lands on something the widget handles (TapState::takesTaps), before its events
+// dispatch. Charged per target visited and per listener list walked.
+bool handlesPress(JSContext* ctx, EventTarget& target) {
+    static constexpr std::string_view kTypes[] = {"click", "pointerdown", "pointerup", "touchstart", "touchend",
+                                                  "mousedown", "mouseup"};
+    Atom atoms[std::size(kTypes)] = {Atom::fromUTF8(ctx, kTypes[0]), Atom::fromUTF8(ctx, kTypes[1]),
+                                     Atom::fromUTF8(ctx, kTypes[2]), Atom::fromUTF8(ctx, kTypes[3]),
+                                     Atom::fromUTF8(ctx, kTypes[4]), Atom::fromUTF8(ctx, kTypes[5]),
+                                     Atom::fromUTF8(ctx, kTypes[6])};
+    const auto listens = [&](EventTarget& t) {
+        for (const Atom& atom : atoms) {
+            if (t.hasListenersFor(ctx, atom.get())) {
+                return true;
+            }
+        }
+        return false;
+    };
+    const bool disabled = insideDisabledControl(ctx, target);
+    for (Node* n = dynamic_cast<Node*>(&target); n; n = n->parentNode(ctx)) {
+        charge(ctx, work::kNodeVisit);
+        if (listens(*n) || (!disabled && n->isElement() && n->hasActivationBehavior(ctx))) {
+            return true;
+        }
+    }
+    return listens(HostState::of(ctx).window());
 }
 
 // A trusted UI event of `type` at `target`, bubbling and cancelable as each type is; returns false when canceled.
@@ -230,11 +322,15 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
     m_taskPointerId = pointerId;
     m_pointerCanceled = false;
     m_touchCanceled = false;
+    m_claim = GestureClaim();
+    m_takesTaps = false;
     EventTarget* target = hitTarget(ctx, x, y);
     if (!target) {
         return;
     }
     m_target = Ref<EventTarget>::retain(ctx, target);
+    const GestureClaim claim = primary ? touchActionClaim(ctx, *target) : GestureClaim();
+    const bool handles = primary && handlesPress(ctx, *target);
     HostState& state = HostState::of(ctx);
     m_press = state.beginPress();
     UserActions& actions = state.userActions();
@@ -245,6 +341,10 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
         m_pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, primary, true, 0, 1, 0.5);
     }
     m_touchCanceled = !fireTouch(ctx, "touchstart", *target, x, y, pointerId, true, true);
+    if (primary) {
+        m_claim = (m_pointerCanceled || m_touchCanceled) ? GestureClaim{true, true} : claim;
+        m_takesTaps = handles || m_claim.x || m_claim.y;
+    }
 }
 
 void TapState::runMove(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {

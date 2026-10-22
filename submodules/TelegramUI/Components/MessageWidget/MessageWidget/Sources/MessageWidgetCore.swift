@@ -23,6 +23,13 @@ final class MessageWidgetCore {
     static var budgetsForTesting: (parse: UInt64, boot: UInt64, task: UInt64)?
     /// The longest bridge method name; a longer one is ignored.
     static let maximumBridgeMethodLength = 64
+    /// The selectable text's export (sdk-v1 §5.10): the host's work, on a budget of its own that is never the widget's
+    /// and never stops it. Four times the export at the render limits (1,259,504 units: 10,000 one-piece Text nodes
+    /// holding the 262,144-unit text budget, SelectableTextTests, carets charged at `work::kCaretUnit`), rounded up to a
+    /// whole million.
+    static let selectionWorkUnits: UInt64 = 6_000_000
+    /// Tests only: replaces `selectionWorkUnits`.
+    static var selectionBudgetForTesting: UInt64?
 
     private let source: String
     private let stoppedLabel: String
@@ -58,6 +65,8 @@ final class MessageWidgetCore {
     private var diagnostics: [(kind: String, detail: String)] = []
     private var diagnosticCount = 0
     private var lastError: String?
+    /// What the running task exported for the selection, when it is a `.selection` task.
+    private var exportedSelection: (text: MessageWidgetSelectableText?, done: Bool) = (nil, false)
     private var sequence = 0
     /// The running task's meter (nil between tasks), and the session's work counter as last added to it.
     private var meter: WorkMeter?
@@ -129,7 +138,8 @@ final class MessageWidgetCore {
         self.meter = nil
         self.sequence += 1
         let wantsFrame = self.state == .live && self.session?.wantsAnimationFrame() == true
-        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent)
+        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
+        self.exportedSelection = (nil, false)
         self.bridgeCalls.removeAll()
         if !self.storageCommits.isEmpty {
             // Posted before the snapshot is handed over, so they reach main ahead of the snapshot's bridge calls.
@@ -228,10 +238,11 @@ final class MessageWidgetCore {
 
     /// One touch phase, queued as the session's task and run with whatever else is runnable, after what was runnable
     /// before it. The press's permission for a link call is the runtime's (SDK v1 §2.5: one call per press, from the
-    /// press's own events only).
-    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) {
+    /// press's own events only). A primary press's down answers what the press is to the widget (SDK v1 §5.5).
+    @discardableResult
+    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
         guard self.state == .live, let session = self.session else {
-            return
+            return .none
         }
         let phase: WRPointerPhase
         switch action {
@@ -247,10 +258,22 @@ final class MessageWidgetCore {
         let now = CACurrentMediaTime() * 1000.0
         self.drain(at: now)
         guard self.state == .live, !self.isStopped(session) else {
-            return
+            return .none
         }
         session.pointer(phase, at: point, pointerId: pointer, primary: primary)
         self.drain(at: now)
+        guard phase == .down, primary else {
+            return .none
+        }
+        let axes = session.gestureClaim
+        var claim: MessageWidgetGestureClaim = []
+        if axes.contains(.horizontal) {
+            claim.insert(.horizontal)
+        }
+        if axes.contains(.vertical) {
+            claim.insert(.vertical)
+        }
+        return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps)
     }
 
     /// One animation frame, while the widget is visible and wants one.
@@ -271,6 +294,17 @@ final class MessageWidgetCore {
         }
         session.setVisible(visible)
         self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// A `.selection` task's body: the selectable text of the current layout, text wholly below `visibleHeight` left out
+    /// (sdk-v1 §5.10). Its work is the export's own and never reaches the widget's meter or budget.
+    func exportSelection(visibleHeight: CGFloat) {
+        var text: MessageWidgetSelectableText?
+        if self.state == .live, let session = self.session {
+            let budget = MessageWidgetCore.selectionBudgetForTesting ?? MessageWidgetCore.selectionWorkUnits
+            text = session.selectableText(withBudget: budget, visibleHeight: visibleHeight).map(MessageWidgetSelectableText.init)
+        }
+        self.exportedSelection = (text?.isEmpty == false ? text : nil, true)
     }
 
     /// A `.draw` task's body: `run` draws the tiles; this records the request it answers.

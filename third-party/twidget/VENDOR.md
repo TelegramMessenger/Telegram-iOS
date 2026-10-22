@@ -1416,6 +1416,26 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     when they set one, else the engine's (a property the layer does not set rolls back as `revert` does).
     `style::resolve_reverts`' callback takes the flag. Pinned by `FidelityRenderTests.testRevertLayerStopsAtTheUALayer`.
 
+51. **Raw declarations for getComputedStyle** (2026-10-22, computed-style plan, Task 1). profile 1's properties litehtml
+    keeps no value of (`counter-increment`, `counter-reset`, `unicode-bidi`, `color-scheme`, `grid-template-areas`,
+    `grid-auto-columns`, `grid-auto-flow`, `font-feature-settings`, `font-variant-numeric`) join `raw_declaration_names`
+    (`style.cpp`), as `touch-action` did (edit 30.1), so WidgetRuntime's getComputedStyle answers what the element
+    declared, `var()` substituted, rather than the initial value. So do properties litehtml keeps in a form that
+    cannot tell an undeclared value from a declared one (`z-index`, whose auto reads 0; `justify-content` and
+    `align-content`, which default to flex-start and stretch where CSS's initial value is normal) or computes only on
+    flex or grid containers or flex items (`flex-direction`, `flex-wrap`, `align-items`, `row-gap`, `column-gap`,
+    `flex-shrink`, `flex-basis`). Insertions only; a raw copy exists only on an element that declares the property,
+    counted as its other declarations are.
+52. **Caret offsets for text selection** (2026-10-22, text-selection plan, Task 3). `LHContainer::caret_offsets` (and
+    `LHHostContainer::caretOffsets`) reads back where `draw_text` puts each UTF-16 boundary of a text: the simple
+    shaper's per-glyph xs and its width for printable ASCII (one glyph per byte), otherwise the cached `CTLine`'s caret
+    offsets, enumerated in one pass (`CTLineEnumerateCaretOffsets`: a boundary is its character's leading edge, the end
+    the last character's trailing edge; a boundary inside a surrogate pair takes the pair's start, one CoreText reports
+    nothing for the boundary before it; right-to-left text descends). A query per index
+    (`CTLineGetOffsetForStringIndex`) costs the line's length each, which made a long run quadratic (final review C1:
+    minutes at the text cap). WidgetRuntime's iOS host answers `RenderHost::caretOffsets` with it, so a selection's knobs sit where
+    the glyphs are drawn on both paths. Additions only.
+
 ## The iOS font resolver
 
 `ResolveFont`'s twin keeps the macOS resolution order and generic-family names verbatim: each

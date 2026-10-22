@@ -228,3 +228,115 @@ WR_TEST(testMovementAddsUpToTheDrag) {
     CHECK_EQ(env.env().eval("const m = new MouseEvent('x', {movementX: 3, movementY: -4}); [m.movementX, m.movementY].join()"),
              std::string("3,-4"));
 }
+
+namespace {
+
+// The axes the primary press at (x, y) claims (sdk-v1 §5.5), as "x", "y", "xy" or "-".
+std::string claimAt(RenderEnv& env, double x, double y, bool primary = true) {
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, x, y, 7, primary);
+    env.env().drain();
+    const wr::GestureClaim claim = host.gestureClaim();
+    host.pointer(env.ctx(), PointerPhase::Up, x, y, 7, primary);
+    env.env().drain();
+    std::string axes = std::string(claim.x ? "x" : "") + (claim.y ? "y" : "");
+    return axes.empty() ? "-" : axes;
+}
+
+} // namespace
+
+/// sdk-v1 §5.5, protocol.md "Touch gestures inside a scrolling host": a press claims the axes an ancestor's computed
+/// touch-action forbids panning on (the walk stops below <html>), and both when the widget cancels its pointerdown or
+/// touchstart.
+WR_TEST(testThePressClaimsTheAxesItsTouchActionForbids) {
+    RenderEnv env(
+        "<!doctype html><html style='touch-action:none'><head><style>body{margin:0;padding:0} div{position:absolute;"
+        "top:0;width:40px;height:40px}</style></head><body>"
+        "<div id=free style='left:0'></div>"
+        "<div id=none style='left:50px;touch-action:none'></div>"
+        "<div id=pany style='left:100px;touch-action:pan-y'><div id=inner style='left:0;touch-action:auto'></div></div>"
+        "<div id=panx style='left:150px;touch-action:PAN-LEFT'></div>"
+        "<div id=both style='left:200px;touch-action:pan-x pan-y'></div>"
+        "<div id=pinch style='left:250px;touch-action:pinch-zoom'></div>"
+        "<div id=manip style='left:300px;touch-action:manipulation'></div>"
+        "<div id=down style='left:350px'></div>"
+        "<div id=start style='left:400px'></div>"
+        "<script>document.getElementById('down').addEventListener('pointerdown', e => e.preventDefault());"
+        "document.getElementById('start').addEventListener('touchstart', e => e.preventDefault());</script>"
+        "</body></html>");
+    CHECK_EQ(claimAt(env, 20, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 70, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 120, 20), std::string("x"));
+    CHECK_EQ(claimAt(env, 170, 20), std::string("y"));
+    CHECK_EQ(claimAt(env, 220, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 270, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 320, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 370, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 420, 20), std::string("xy"));
+    // A press on nothing, and a press that is not the primary pointer's, claim nothing.
+    CHECK_EQ(claimAt(env, 600, 300), std::string("-"));
+    CHECK_EQ(claimAt(env, 70, 20, false), std::string("-"));
+}
+
+/// touch-action is read as the press starts, as browsers fix it at touchstart: a handler that changes it changes the
+/// next press, not this one.
+WR_TEST(testTheClaimIsTheTouchActionBeforeTheHandlers) {
+    RenderEnv env(
+        "<!doctype html><html><head><style>body{margin:0;padding:0} #a{position:absolute;left:0;top:0;width:40px;"
+        "height:40px}</style></head><body><div id=a></div><script>"
+        "document.getElementById('a').addEventListener('pointerdown', e => { e.target.style.touchAction = 'none'; });"
+        "</script></body></html>");
+    CHECK_EQ(claimAt(env, 20, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 20, 20), std::string("xy"));
+}
+
+namespace {
+
+// Whether the primary press at (x, y) takes taps, as "taps" or "-".
+std::string takesTapsAt(RenderEnv& env, double x, double y) {
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, x, y, 7, true);
+    env.env().drain();
+    const bool takes = host.pressTakesTaps();
+    host.pointer(env.ctx(), PointerPhase::Up, x, y, 7, true);
+    env.env().drain();
+    return takes ? "taps" : "-";
+}
+
+} // namespace
+
+/// The client's double tap (sdk-v1 §5.5, decided like message buttons): a press on something the widget handles takes
+/// the tap at once and the bubble does not wait for a double tap there; anywhere else a double tap is the bubble's
+/// quick reaction. Something to handle: a listener for a press's events on the event's path, an element with activation
+/// behaviour outside a disabled control, or a drag claim.
+WR_TEST(testAPressTakesTapsWhereTheWidgetHandlesThem) {
+    RenderEnv env(
+        "<!doctype html><html><head><style>body{margin:0;padding:0} .b{position:absolute;top:0;width:40px;height:40px;"
+        "display:block;margin:0;padding:0;border:0}</style></head><body>"
+        "<div class=b id=plain style='left:0'></div>"
+        "<button class=b style='left:50px'></button>"
+        "<a class=b href='https://example.org' style='left:100px'></a>"
+        "<div class=b id=listen style='left:150px'><span class=b style='left:0'></span></div>"
+        "<div class=b onclick='1' style='left:200px'></div>"
+        "<button class=b disabled style='left:250px'></button>"
+        "<div class=b style='left:300px;touch-action:none'></div>"
+        "<div class=b id=move style='left:350px'></div>"
+        "<div class=b id=down style='left:400px'></div>"
+        "<script>document.getElementById('listen').addEventListener('click', () => {});"
+        "document.getElementById('move').addEventListener('pointermove', () => {});"
+        "document.getElementById('down').addEventListener('pointerdown', () => {});</script>"
+        "</body></html>");
+    CHECK_EQ(takesTapsAt(env, 20, 20), std::string("-"));
+    CHECK_EQ(takesTapsAt(env, 70, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 120, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 170, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 220, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 270, 20), std::string("-"));
+    CHECK_EQ(takesTapsAt(env, 320, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 370, 20), std::string("-"));
+    CHECK_EQ(takesTapsAt(env, 420, 20), std::string("taps"));
+    CHECK_EQ(takesTapsAt(env, 600, 300), std::string("-"));
+    // A listener on the document (event delegation) handles every press.
+    CHECK_EQ(env.env().eval("document.addEventListener('pointerup', () => {}); 1"), std::string("1"));
+    CHECK_EQ(takesTapsAt(env, 20, 20), std::string("taps"));
+}

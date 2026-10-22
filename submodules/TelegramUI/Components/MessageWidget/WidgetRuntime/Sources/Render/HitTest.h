@@ -3,6 +3,7 @@
 // the document's (the space layoutDump reports), with (0, 0) at the top-left of the rendered document.
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <litehtml.h>
@@ -26,6 +27,16 @@ bool unionOfRects(const std::vector<RenderBox>& rects, RenderBox& out);
 
 /// The union of elementClientRects; false when there is none.
 bool elementBorderBox(const litehtml::element& element, RenderBox& out);
+
+/// A 2D affine map: (x, y) → (a·x + c·y + tx, b·x + d·y + ty).
+struct Affine {
+    double a = 1, b = 0, c = 0, d = 1, tx = 0, ty = 0;
+};
+
+/// The transforms of `element` and each ancestor, composed innermost first (render_item::get_visual_transform): what
+/// maps `element`'s layout boxes into the document. False (and `out` the identity) when none of them is transformed.
+/// `visited`, when given, gains one per element walked.
+bool visualTransform(const litehtml::element& element, Affine& out, uint64_t* visited = nullptr);
 
 /// Maps `rects` (layout boxes of `element`, document coordinates) through the transforms of `element` and each ancestor,
 /// innermost first (render_item::get_visual_transform: transform, translate, rotate and scale about the origin), each rect

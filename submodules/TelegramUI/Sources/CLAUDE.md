@@ -8,11 +8,13 @@ narrowed surface (the `ChatHistoryListNode` protocol in `AccountContext` plus cu
 `ListView` API. The custom item-delete animation duration reaches the list through `ListViewImpl`'s
 `getCustomItemDeleteAnimationDuration` closure hook.
 
-`ChatHistoryListViewBackend` (`ChatHistoryListViewBackend.swift`) is a chat-specific protocol declaring exactly the members
-`ChatHistoryListNodeImpl` uses on its list view. Two implementations:
+`ChatHistoryListViewBackend` is a chat-specific protocol declaring exactly the members `ChatHistoryListNodeImpl` uses on
+its list view. It lives in a module of its own with the CoreList backend
+(`submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend`, made by `makeCoreListChatHistoryBackend`), so the
+widget harness hosts the chat's own list. Two implementations:
 - `ListViewImpl`, through a retroactive `extension ListViewImpl: ChatHistoryListViewBackend {}` in that file, which keeps
   `Display` free of chat concepts.
-- `CoreListChatHistoryBackend` (`CoreListChatHistoryBackend.swift`), on `CoreVirtualListView` in
+- `CoreListChatHistoryBackend` (`CoreListChatHistoryBackend.swift` in that module), on `CoreVirtualListView` in
   `submodules/TelegramUI/Components/CoreList/` (engine, animation model, demo/test project: its
   [`CLAUDE.md`](../Components/CoreList/CLAUDE.md)). Keyed on message `stableId`, it is the **default for the rotated
   history** (`makeListView(rotated:useCoreListBackend:)`); the `rotated: false` lists that share the initializer keep

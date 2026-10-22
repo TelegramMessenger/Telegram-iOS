@@ -37,6 +37,7 @@ import UrlHandling
 import TextFormat
 import ChatNewThreadInfoItem
 import PhoneNumberFormat
+import ChatHistoryListViewBackend
 import Postbox
 
 struct ChatTopVisibleMessageRange: Equatable {
@@ -134,40 +135,6 @@ struct ChatHistoryViewTransition {
     var flashIndicators: Bool
     var pinnedAnchor: MessageIndex?
     var keepInPlaceAnchor: MessageIndex?
-}
-
-public struct ChatHistoryListViewInsertItem {
-    public let index: Int
-    public let previousIndex: Int?
-    public let stableId: UInt64
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    public let forceAnimateInsertion: Bool
-    
-    public init(index: Int, previousIndex: Int?, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, forceAnimateInsertion: Bool = false) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.stableId = stableId
-        self.item = item
-        self.directionHint = directionHint
-        self.forceAnimateInsertion = forceAnimateInsertion
-    }
-}
-
-public struct ChatHistoryListViewUpdateItem {
-    public let index: Int
-    public let previousIndex: Int
-    public let stableId: UInt64
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    
-    public init(index: Int, previousIndex: Int, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.stableId = stableId
-        self.item = item
-        self.directionHint = directionHint
-    }
 }
 
 struct ChatHistoryListViewTransition {
@@ -857,9 +824,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     // construction-only `rotated` flag need not appear on the ChatHistoryListViewBackend contract.
     private static func makeListView(rotated: Bool, useCoreListBackend: Bool) -> ChatHistoryListViewBackend {
         if useCoreListBackend {
-            let backend = CoreListChatHistoryBackend()
-            backend.rotated = rotated
-            return backend
+            return makeCoreListChatHistoryBackend(rotated: rotated)
         }
         let listView = ListViewImpl()
         listView.rotated = rotated

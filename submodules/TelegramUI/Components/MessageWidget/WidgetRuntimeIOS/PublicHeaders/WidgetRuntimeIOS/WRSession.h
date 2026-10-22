@@ -31,6 +31,12 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
     WRPointerPhaseCancel,
 };
 
+/// The drag axes a press takes for the widget (sdk-v1 §5.5).
+typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
+    WRGestureAxesHorizontal = 1 << 0,
+    WRGestureAxesVertical = 1 << 1,
+};
+
 @class WRSession;
 
 @protocol WRSessionDelegate <NSObject>
@@ -57,6 +63,36 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 /// The tree's `rect` (CSS px) painted at `scale`: a premultiplied BGRA image of ceil(size × scale) pixels, at most
 /// 4096 a side; nil past that or for an empty rect.
 - (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale CF_RETURNS_RETAINED;
+@end
+
+/// One run of a selectable text: a drawn word, or part of one, in a layout box.
+typedef struct {
+    /// Its first UTF-16 unit in WRSelectableText.text, and how many.
+    uint32_t start;
+    uint32_t length;
+    /// Its layout box, CSS px, before `transform`.
+    CGRect box;
+    /// Box space → the document (its ancestors' CSS transforms, composed).
+    CGAffineTransform transform;
+    /// Its Text node (a key stable across layouts) and the UTF-16 offset of `start` in that node's drawn text.
+    uint64_t node;
+    uint32_t nodeOffset;
+    /// Its length + 1 caret offsets start at this index of WRSelectableText.carets.
+    uint32_t caretIndex;
+} WRSelectableRun;
+
+/// The text a widget lets the reader select (sdk-v1 §2.4, §5.10: its effective user-select is text), as drawn, in
+/// document order. Immutable; readable on any thread.
+@interface WRSelectableText : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@property (nonatomic, readonly) NSString *text;
+/// WRSelectableRun[], in `text` order; separators between runs belong to none.
+@property (nonatomic, readonly) NSData *runs;
+/// float[]: each run's caret offsets (CSS px from its box's left, one per UTF-16 boundary; descending right to left).
+@property (nonatomic, readonly) NSData *carets;
+/// What the export spent, in work units (its own, never the widget's).
+@property (nonatomic, readonly) uint64_t units;
 @end
 
 @interface WRSession : NSObject
@@ -118,6 +154,13 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 - (void)setVisible:(BOOL)visible;
 /// One phase of a tap at `point` (CSS px), queued as a task.
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary;
+/// sdk-v1 §5.5: the drags the last primary press takes for the widget (the touch-action of its target and the target's
+/// ancestors, or a canceled pointerdown or touchstart), once a step has run its down task; none without a runtime.
+@property (nonatomic, readonly) WRGestureAxes gestureClaim;
+/// Whether the last primary press landed on something the widget handles (a press listener on its path, a link, a
+/// button, a checkbox, a label, a summary, or a drag claim), once a step has run its down task; NO without a runtime.
+/// The client takes a tap there at once and waits for a double tap anywhere else (sdk-v1 §5.5).
+@property (nonatomic, readonly) BOOL pressTakesTaps;
 
 @property (nonatomic, readonly) WRStopReason stopReason;
 @property (nonatomic, readonly) uint64_t workUnits;
@@ -138,6 +181,11 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 - (nullable NSArray<NSValue *> *)changedRects;
 /// Drops the runtime. Trees already handed out stay valid.
 - (void)teardown;
+/// The selectable text of the current layout (sdk-v1 §5.10) on its own work budget: no script runs, nothing is
+/// flushed, and nothing the widget can observe changes (its work units included). nil past the budget, with no runtime
+/// or after a failure; a text with no runs when nothing is selectable. Text wholly at or below `visibleHeight` CSS px
+/// is left out. Never stops or fails the session.
+- (nullable WRSelectableText *)selectableTextWithBudget:(uint64_t)units visibleHeight:(CGFloat)visibleHeight;
 /// The live document's `<html>` attribute `name` (the conformance runner reads `data-conformance` there): no script
 /// runs and nothing is flushed (the name's string, allocated in the widget's heap, is the only work). nil when absent,
 /// before the boot, after a failure or teardown.

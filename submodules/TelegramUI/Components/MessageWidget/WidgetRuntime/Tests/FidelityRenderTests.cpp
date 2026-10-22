@@ -581,6 +581,11 @@ WR_TEST(testNestedTransformsCompose) {
     checkEval(env, "(r => [r.width, r.height, Number.isFinite(r.left) && Number.isFinite(r.top)].join())"
                    "($('z').getBoundingClientRect())",
               "0,0,true");
+    // Composed in double, as each level used to map: two nested scale(1e20) are 1e40, past a float, and stay finite.
+    RenderEnv huge(page("div{width:10px;height:10px}", "<div style='transform:scale(1e20)'><div id=h "
+                        "style='transform:scale(1e20)'></div></div>"));
+    checkEval(huge, "(r => [r.left, r.top, r.width, r.height].every(Number.isFinite))($('h').getBoundingClientRect())",
+              "true");
 }
 
 /// Review minors, Task 3 (M6): revert-layer in an unlayered author rule rolls back to the UA layer's value (in the
@@ -588,10 +593,11 @@ WR_TEST(testNestedTransformsCompose) {
 /// the layer does not set rolls back as revert does.
 WR_TEST(testRevertLayerStopsAtTheUALayer) {
     RenderEnv env(page("", "<p id=a style='margin:revert'>x</p><p id=b style='margin:revert-layer'>x</p><p id=c>x</p>"
-                           "<div id=d style='color:revert-layer'>x</div><div id=e>x</div>"));
+                           "<u id=d style='text-decoration:revert-layer'>x</u>"));
+    // <u>'s underline is the engine's alone: revert-layer finds nothing in the layer and keeps rolling back to it.
     checkEval(env, "[cs('b', 'margin-top') == cs('c', 'margin-top'), cs('a', 'margin-top') == cs('a', 'font-size'), "
-                   "cs('a', 'margin-top') == cs('c', 'margin-top'), cs('d', 'color') == cs('e', 'color')].join()",
-              "true,true,false,true");
+                   "cs('a', 'margin-top') == cs('c', 'margin-top'), cs('d', 'text-decoration-line')].join()",
+              "true,true,false,underline");
 }
 
 /// Review minors, Task 2 (M5): the resolved direction reaches the renderer as a host marker (data-tg-dir), so an author's

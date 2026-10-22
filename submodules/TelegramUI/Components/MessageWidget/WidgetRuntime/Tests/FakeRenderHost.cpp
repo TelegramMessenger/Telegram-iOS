@@ -134,6 +134,22 @@ wr::ShapedText FakeRenderHost::shape(const wr::HostFont&, std::string_view utf8)
     return shaped;
 }
 
+std::vector<float> FakeRenderHost::caretOffsets(const wr::HostFont&, std::string_view utf8) {
+    std::vector<float> offsets{0.0f};
+    size_t i = 0;
+    while (i < utf8.size()) {
+        const uint8_t lead = uint8_t(utf8[i]);
+        const size_t bytes = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
+        const float start = offsets.back();
+        i = std::min(utf8.size(), i + bytes);
+        if (bytes == 4) {
+            offsets.push_back(start); // inside the surrogate pair
+        }
+        offsets.push_back(8.0f * float(i));
+    }
+    return offsets;
+}
+
 void FakeRenderHost::transformText(std::string& utf8, litehtml::text_transform transform) {
     switch (transform) {
     case litehtml::text_transform_uppercase:

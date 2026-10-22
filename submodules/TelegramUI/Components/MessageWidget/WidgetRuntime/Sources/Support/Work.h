@@ -45,6 +45,10 @@ inline constexpr uint64_t kIntlOpen = 2000;
 /// Eight UTF-16 units ICU case-maps for a language with case rules of its own (toLocaleUpperCase('tr'), v0.1.1 plan,
 /// Task 10), on top of the copy's scan; WorkCostTests holds it.
 inline constexpr uint64_t kCaseMapEightUnits = 1;
+/// A UTF-16 unit of a run the host places carets for (RenderHost::caretOffsets: on iOS CoreText's caret enumeration
+/// over the line it draws, or the simple shaper's), for the selectable text export; charged before the host is asked.
+/// WRSessionTests' testTheSelectableExportCostsNoMorePerUnitThanJS holds it.
+inline constexpr uint64_t kCaretUnit = 3;
 /// A box litehtml lays out and paints, pre-charged before render() (nothing charges inside a litehtml callback).
 inline constexpr uint64_t kLayoutBox = 8;
 /// Canvas 2D (V5d plan, Task 3): per 64 canvas pixels an op may touch (its bounds clipped to the bitmap).

@@ -57,6 +57,8 @@ public:
     double textWidth(const HostFont& font, std::string_view utf8) override;
     std::shared_ptr<litehtml::text_breaker> createTextBreaker(const HostFont& font, const std::string& utf8) override;
     ShapedText shape(const HostFont& font, std::string_view utf8) override;
+    /// LHContainer's own placement of the text (twidget edit 52): the simple shaper's or the CTLine's, as it draws.
+    std::vector<float> caretOffsets(const HostFont& font, std::string_view utf8) override;
     void transformText(std::string& utf8, litehtml::text_transform transform) override;
     double defaultFontSize() const override;
     std::string defaultFontName() const override;
