@@ -1276,8 +1276,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 totalActionsHeight += 10.0 + additionalActionsSize.height
             }
             
-            var actionsFrame: CGRect
+            var actionsAboveReference = false
             if case let .reference(source) = self.source, let actionsPosition = (source.transitionInfo() ?? self.liquidMorphReferenceInfo)?.actionsPosition, case .top = actionsPosition {
+                actionsAboveReference = true
+            }
+            
+            var actionsFrame: CGRect
+            if actionsAboveReference {
                 actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.minY - contentActionsSpacing - totalActionsHeight), size: actionsSize)
             } else {
                 actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
@@ -1358,16 +1363,17 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             // out from the top inset instead and make the content taller by the overflow, so it opens scrolled to where
             // it was and its top can be scrolled into view.
             var actionsTopOverflow: CGFloat = 0.0
-            if morphMenuAnchor == nil, case let .reference(reference) = self.source, (reference.transitionInfo() ?? self.liquidMorphReferenceInfo)?.actionsPosition == .top, actionsFrame.minY < contentTopInset {
+            if morphMenuAnchor == nil, actionsAboveReference, actionsFrame.minY < contentTopInset {
                 actionsTopOverflow = contentTopInset - actionsFrame.minY
                 actionsFrame.origin.y = contentTopInset
             }
             
             // iPhone Duo: on a side with a side strip the menu stays out of the strip where a corner block (the
             // status corner) reaches its height, and may use the strip where none does (the input panel's band
-            // rule). Sides without a strip, and every other device, keep the edge clamp above.
+            // rule). Sides without a strip, and every other device, keep the edge clamp above. A menu that scrolls from
+            // above the top inset is checked over its whole range on screen, from where it opens to where it scrolls.
             do {
-                let band = layout.sideInsets(forBandFrom: actionsFrame.minY, to: actionsFrame.maxY + (additionalActionsSize.height > 0.0 ? additionalActionsSize.height + 10.0 : 0.0))
+                let band = layout.sideInsets(forBandFrom: actionsFrame.minY - actionsTopOverflow, to: actionsFrame.maxY + (additionalActionsSize.height > 0.0 ? additionalActionsSize.height + 10.0 : 0.0))
                 let stripLeft: CGFloat = layout.sideStrip(edge: .left) != nil ? band.left : 0.0
                 let stripRight: CGFloat = layout.sideStrip(edge: .right) != nil ? band.right : 0.0
                 if stripRight > 0.0, actionsFrame.maxX > layout.size.width - stripRight - actionsEdgeInset {
