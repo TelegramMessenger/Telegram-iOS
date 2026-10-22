@@ -230,6 +230,10 @@ public class ChatMessageBackground: ASDisplayNode {
     
     public func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
+        // `self.maskMode` is never stored, so this never returns and the image below follows the
+        // wallpaper's `hasBubbleBackground` on every pass. `ChatMessageBubbleBackdrop.updateContent`
+        // follows the same answer; a guard that returns here must also compare that answer, or a
+        // flip leaves the bubble drawn by neither.
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
         }
@@ -546,7 +550,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     private var currentType: ChatMessageBackgroundType?
     private var currentMaskMode: Bool?
-    // The wallpaper's `hasBubbleBackground` answer `backgroundContent` was built for.
+    /// The wallpaper's `hasBubbleBackground` answer `backgroundContent` was built for.
     private var contentDrawsBubble: Bool?
     private var theme: ChatPresentationThemeData?
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
@@ -666,6 +670,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             self.updateTearBands(animation: .None)
         }
 
+        // Outside the block above on purpose: see `updateContent`.
         self.updateContent(type: type, backgroundNode: backgroundNode, typeUpdated: typeUpdated)
     }
 
@@ -673,6 +678,8 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     /// re-asks `hasBubbleBackground` on every pass and drops its own image when the wallpaper says
     /// yes. If the answer flips after a bubble's first layout and only one of the two follows it,
     /// neither draws: the bubble's contents sit on the bare wallpaper.
+    ///
+    /// Internal for the tests; everything else goes through `setType`.
     func updateContent(type: ChatMessageBackgroundType, backgroundNode: WallpaperBackgroundNode?, typeUpdated: Bool) {
         let drawsBubble: Bool
         switch type {

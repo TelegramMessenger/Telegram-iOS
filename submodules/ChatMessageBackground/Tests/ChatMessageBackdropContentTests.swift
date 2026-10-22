@@ -116,6 +116,34 @@ final class ChatMessageBackdropContentTests: XCTestCase {
         XCTAssertFalse(backdrop.hasImage)
     }
 
+    /// A new wallpaper node or theme rebuilds even when the answer is the same: the old portal
+    /// mirrors the old source.
+    func testATypeUpdateRebuildsTheContent() {
+        let wallpaperNode = FakeWallpaperNode()
+        wallpaperNode.drawsBubbles = true
+        let backdrop = ChatMessageBubbleBackdrop()
+
+        backdrop.updateContent(type: self.type, backgroundNode: wallpaperNode, typeUpdated: true)
+        let content = backdrop.backgroundContent
+        backdrop.updateContent(type: self.type, backgroundNode: wallpaperNode, typeUpdated: true)
+
+        XCTAssertTrue(backdrop.hasImage)
+        XCTAssertFalse(backdrop.backgroundContent === content)
+        XCTAssertEqual(wallpaperNode.madeBubbleBackgrounds, 2)
+    }
+
+    func testABubbleWithoutABackgroundHasNoContent() {
+        let wallpaperNode = FakeWallpaperNode()
+        wallpaperNode.drawsBubbles = true
+        let backdrop = ChatMessageBubbleBackdrop()
+
+        backdrop.updateContent(type: self.type, backgroundNode: wallpaperNode, typeUpdated: true)
+        XCTAssertTrue(backdrop.hasImage)
+
+        backdrop.updateContent(type: .none, backgroundNode: wallpaperNode, typeUpdated: true)
+        XCTAssertFalse(backdrop.hasImage)
+    }
+
     /// A pass that changes nothing must not rebuild the content: each rebuild adds a portal to the
     /// wallpaper's source view.
     func testAnUnchangedAnswerKeepsTheContent() {
