@@ -11,6 +11,17 @@ public enum SearchDisplayControllerMode {
     case navigation
 }
 
+/// The search bar's frame in `.list` mode. With no status bar height the bar starts 20pt above the top, which suits the
+/// legacy fields, drawn at the bar's bottom. A glass field is drawn at the top of its frame, in a search row already
+/// placed below the status bar, so its frame starts at the row's top instead (offset, the field sat 20pt above the row:
+/// iPhone Duo's unfolded landscape, whose list pane has no status bar). The frame's bottom stays where it was.
+private func listSearchBarFrame(navigationBarFrame: CGRect, fieldStyle: SearchBarStyle) -> CGRect {
+    if case .glass = fieldStyle, navigationBarFrame.minY < 0.0 {
+        return CGRect(x: navigationBarFrame.minX, y: 0.0, width: navigationBarFrame.width, height: navigationBarFrame.maxY)
+    }
+    return navigationBarFrame
+}
+
 public final class SearchDisplayController {
     private final class BackgroundNode: ASDisplayNode {
         var isTransparent: Bool = false
@@ -189,7 +200,7 @@ public final class SearchDisplayController {
                     searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
                 }
             } else {
-                searchBarFrame = navigationBarFrame
+                searchBarFrame = listSearchBarFrame(navigationBarFrame: navigationBarFrame, fieldStyle: searchBar.fieldStyle)
                 navigationBarHeight = navigationBarFrame.maxY + 8.0
             }
             transition.updateFrame(node: searchBar, frame: searchBarFrame)
@@ -286,7 +297,11 @@ public final class SearchDisplayController {
         }
         
         if !self.searchBarIsExternal, let searchBar = self.searchBar {
-            searchBar.frame = navigationBarFrame
+            if case .list = self.mode {
+                searchBar.frame = listSearchBarFrame(navigationBarFrame: navigationBarFrame, fieldStyle: searchBar.fieldStyle)
+            } else {
+                searchBar.frame = navigationBarFrame
+            }
             insertSubnode(searchBar, true)
             searchBar.layout()
             
