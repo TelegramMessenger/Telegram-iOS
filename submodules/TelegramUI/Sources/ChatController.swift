@@ -10701,8 +10701,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
                     self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
+                    // Fires when the countdown reaches zero, not a whole number of seconds after a truncated now,
+                    // which left "0:00" on screen for up to a second.
+                    let delay = max(0.0, Double(slowmodeActiveUntilTimestamp) - Date().timeIntervalSince1970)
                     self.updateSlowmodeStatusDisposable.set((Signal<Never, NoError>.complete()
-                    |> suspendAwareDelay(Double(remainingTime), granularity: 1.0, queue: .mainQueue())
+                    |> suspendAwareDelay(delay, granularity: 1.0, queue: .mainQueue())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return

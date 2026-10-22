@@ -293,6 +293,16 @@ public struct ChatSlowmodeState: Equatable {
         self.timeout = timeout
         self.variant = variant
     }
+
+    /// A countdown restricts sending until it reaches zero; pending messages restrict it until they are sent.
+    public func isActive(at timestamp: Int32) -> Bool {
+        switch self.variant {
+        case let .timestamp(untilTimestamp):
+            return untilTimestamp > timestamp
+        case .pendingMessages:
+            return true
+        }
+    }
 }
 
 public final class ChatPinnedMessage: Equatable {
