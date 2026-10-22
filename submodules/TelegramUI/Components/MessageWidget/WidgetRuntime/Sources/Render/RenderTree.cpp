@@ -355,6 +355,32 @@ std::vector<RenderBox> RenderTree::clientRects(const Node& node) const {
     return rects;
 }
 
+std::vector<RenderBox> RenderTree::visualRects(const Node& node, std::vector<RenderBox> rects) const {
+    if (!m_current.document) {
+        return rects;
+    }
+    auto it = m_current.nodes.find(const_cast<Node*>(&node));
+    if (it != m_current.nodes.end() && it->second.element) {
+        transformRects(*it->second.element, rects);
+    }
+    return rects;
+}
+
+std::optional<RenderBox> RenderTree::visualBox(const Node& node, std::optional<RenderBox> box) const {
+    if (!box) {
+        return box;
+    }
+    return visualRects(node, {*box}).front();
+}
+
+std::optional<RenderBox> RenderTree::visualBorderBox(const Node& node) const {
+    RenderBox box;
+    if (!unionOfRects(visualRects(node, clientRects(node)), box)) {
+        return std::nullopt;
+    }
+    return box;
+}
+
 std::optional<RenderBox> RenderTree::borderBox(const Node& node) const {
     if (!m_current.document) {
         return std::nullopt;
@@ -650,6 +676,7 @@ void RenderTree::rebuild(JSContext* ctx) {
     m_mirrorWalks++;
     m_buildCount++;
     m_journal.clear();
+    m_unheardNodes = 0;
     for (const std::string& kind : m_current.limits) {
         runtime.host().diagnostic("render-limit", kind);
     }
@@ -785,6 +812,8 @@ struct TextPlan {
     std::string escaped;
     size_t oldCount = 0;
     size_t newCount = 0;
+    /// The data's text units (RenderEntry::units).
+    TextUnits units;
     /// replace_text's output: reserved, so the litehtml phase allocates nothing of ours.
     std::vector<litehtml::element::ptr> pieces;
 };
@@ -796,8 +825,9 @@ struct AttributePlan {
     litehtml::string_map wanted;
     /// Whether they differ from litehtml's (list_index aside): the element is re-matched once, else not at all.
     bool changed = false;
-    /// The budget the element's attributes use now (RenderEntry::bytes).
+    /// The budget the element's attributes use now (RenderEntry::bytes), and their text units (RenderEntry::units).
     size_t bytes = 0;
+    TextUnits units;
     /// Its start tag as the render input carries it; only when the options keep it.
     std::string startTag;
 };
@@ -850,6 +880,31 @@ private:
 /// budget (`allowance` steps) holds the bound, so the patch is never cut by it.
 bool selectorStepsFit(int64_t used, int64_t bound, int64_t allowance) {
     return bound <= allowance && used < litehtml::document::default_selector_steps - bound;
+}
+
+/// Whether `node` is in the tree whose root is `document`; work::kNodeVisit per node walked.
+bool inDocument(JSContext* ctx, Node& node, const Node* document) {
+    for (Node* at = &node; at; at = at->parent()) {
+        charge(ctx, work::kNodeVisit);
+        if (!at->parent()) {
+            return at == document;
+        }
+    }
+    return false;
+}
+
+/// The nodes of `root`'s inclusive subtree a build counts against kMaxRenderNodes (Builder.cpp's countNodes and
+/// countUnbuilt): all but a `<script>`'s descendants. work::kNodeVisit each.
+size_t nodesForTheCap(JSContext* ctx, Node& root) {
+    const JSAtom script = DOMState::of(ctx).name(Name::script);
+    auto isScript = [&](Node& n) { return n.isElement() && static_cast<Element&>(n).hasHTMLName(script); };
+    size_t count = 0;
+    for (Node* node = &root; node;) {
+        charge(ctx, work::kNodeVisit);
+        count++;
+        node = node->firstChildNode() && !isScript(*node) ? node->nextInTreeOrder(&root) : node->nextSkippingChildren(&root);
+    }
+    return count;
 }
 
 size_t childIndex(const litehtml::element::ptr& parent, const litehtml::element* child) {
@@ -909,6 +964,7 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
     uint64_t boxes = m_current.boxes;
     uint64_t textBytes = m_current.textBytes;
     uint64_t bytes = m_current.bytes;
+    TextUnits units = m_current.textUnits;
     // ---- Planning: nothing of litehtml's or of the published build's is touched. ----
     try {
         const Vector<JournalEntry>& entries = m_journal.entries();
@@ -945,15 +1001,18 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                 }
                 // The budget the other nodes leave this element (Ruling 7): a fresh build cuts at it.
                 const uint64_t others = bytes - entry.bytes;
+                // And the text units (V4 plan, Task 7): a fresh build counts them in tree order, so a value that does not
+                // fit beside the others is one the build leaves out.
+                const TextUnits otherUnits = units - entry.units;
                 AttributePlan plan;
                 // Ruling E22: the scan is the build's own (scanAttributes); the attributes it replaces, litehtml's.
                 const uint64_t scanStart = JS_GetWorkUnits(rt);
-                RenderAttributes scanned =
-                    renderElementAttributes(ctx, element, size_t(others), keepInput, keepInput ? &plan.startTag : nullptr);
+                RenderAttributes scanned = renderElementAttributes(ctx, element, size_t(others), otherUnits, keepInput,
+                                                                   keepInput ? &plan.startTag : nullptr);
                 contentUnits += JS_GetWorkUnits(rt) - scanStart;
                 replacedUnits += attributesLowerUnits(*entry.element);
-                if (scanned.overBudget || scanned.styleTooLong) {
-                    return this->refused("over a byte or style limit");
+                if (scanned.overBudget || scanned.styleTooLong || scanned.textLeftOut) {
+                    return this->refused("over a byte, style or text limit");
                 }
                 // What changed: litehtml's attributes against the DOM's, by lowercased name. litehtml keeps one
                 // attribute of its own, list_index, which layout writes on list items.
@@ -974,9 +1033,11 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                     }
                 }
                 bytes = others + scanned.bytes;
+                units = otherUnits + scanned.units;
                 plan.entry = &entry;
                 plan.element = entry.element;
                 plan.bytes = scanned.bytes;
+                plan.units = scanned.units;
                 attributePlans.push_back(std::move(plan));
                 continue;
             }
@@ -1005,6 +1066,12 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
             // The budget the other nodes leave this one (Ruling 7): a fresh build cuts at it.
             const uint64_t others = bytes - entry.bytes;
             TextPlan plan;
+            // Profile 1's text limits (V4 plan, Task 7): past one, a fresh build leaves the Text out.
+            plan.units = renderTextUnits(data);
+            const TextUnits otherUnits = units - entry.units;
+            if (!renderTextFits(plan.units, otherUnits)) {
+                return this->refused("over a text limit");
+            }
             if (others > kMaxRenderBytes || !renderUtf8AtMost(data, kMaxRenderBytes - size_t(others), plan.utf8) ||
                 plan.utf8.empty()) {
                 return this->refused("over the byte budget, or empty");
@@ -1030,6 +1097,7 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
             boxes = uint64_t(int64_t(boxes) + growth);
             textBytes = uint64_t(int64_t(textBytes) + int64_t(plan.utf8.size()) - int64_t(entry.bytes));
             bytes = others + plan.utf8.size();
+            units = otherUnits + plan.units;
             if (keepInput) {
                 Element& parentElement = static_cast<Element&>(*domParent);
                 const bool raw = parentElement.isHTMLElement() &&
@@ -1181,12 +1249,14 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                 m_current.elements.insert(std::move(handle));
             }
             entry.bytes = plan.utf8.size();
+            entry.units = plan.units;
         }
         for (AttributePlan& plan : attributePlans) {
             if (plan.changed && !document.set_element_attributes(plan.element, plan.wanted)) {
                 throw Abandon{"abandoned: set_element_attributes refused"};
             }
             plan.entry->bytes = plan.bytes;
+            plan.entry->units = plan.units;
         }
         document.commit_patch();
         // The steps the matching took, within the bound and so within the allowance: charging them cannot stop. Nothing
@@ -1213,6 +1283,7 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         m_current.boxes = boxes;
         m_current.textBytes = textBytes;
         m_current.bytes = bytes;
+        m_current.textUnits = units;
         if (keepInput) {
             std::vector<ptrdiff_t> before(patches.size() + 1, 0);
             for (size_t i = 0; i < patches.size(); i++) {
@@ -1381,7 +1452,6 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
     // ---- Planning: nothing of litehtml's published tree or of the published build is touched. The subtrees are made
     // with the document, detached. ----
     try {
-        const bool widen = document.structure_reaches_siblings();
         // 1. The parents whose children changed. The document's own (the document element) and a <style>'s (its sheet)
         // rebuild.
         std::vector<Node*> dirtyNodes;
@@ -1406,6 +1476,10 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
             dirtyNodes.push_back(&node);
             dirty.push_back(&found->second);
         }
+        // Sibling combinators or positional pseudo-classes outside a rule's subject: every child of a dirty parent is
+        // built again. A rule positional in its subject alone (twidget edit 42, the UA layer's `body>:first-child`) only
+        // has the fork match a reached parent's other children again at the commit (planned in step 5).
+        const bool widen = document.structure_reaches_siblings();
         // What the released entries held of the counts. An entry is released once; its node's place in the element map
         // goes with it at the patch. Ruling E22: and of the filter loop's bound, by the weight it was counted with (one
         // pass over the rules finds the tags the sheets create pseudo-elements for).
@@ -1414,6 +1488,7 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         uint64_t releasedBoxes = 0;
         uint64_t releasedText = 0;
         uint64_t releasedBytes = 0;
+        TextUnits releasedUnits;
         size_t releasedElements = 0;
         size_t releasedForms = 0;
         size_t releasedKeys = 0;
@@ -1425,6 +1500,7 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
             released.push_back(node);
             replacedUnits += entryLowerUnits(entry->second);
             releasedBytes += entry->second.bytes;
+            releasedUnits += entry->second.units;
             if (entry->second.element) {
                 matchedRemoved += litehtml::document::matching_weight(*entry->second.element, creators);
                 releasedBoxes++;
@@ -1543,6 +1619,10 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         // 3. What comes: each DOM child with no element, built from the DOM as it is, within what the rest of the
         // document uses of the limits (Rulings 7, E6, E9): a subtree a fresh build would cut rebuilds.
         totals.bytes = size_t(m_current.bytes - releasedBytes);
+        // Profile 1's text units leave with what is released; the node count does not (a released node may stay in the
+        // DOM, unrendered), so it stays an upper bound and the subtrees add theirs (V4 plan, Task 7).
+        totals.textUnits = m_current.textUnits - releasedUnits;
+        totals.nodes = m_current.nodeCount + m_unheardNodes;
         totals.elements = m_current.elementCount - releasedElements;
         totals.formControls = m_current.formControlCount - releasedForms;
         totals.seq = m_current.nextSeq;
@@ -1647,14 +1727,19 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         const uint64_t grownBuckets = (staging.nodes.bucket_count() != nodeBuckets ? staging.nodes.bucket_count() : 0) +
                                       (staging.elements.bucket_count() != elementBuckets ? staging.elements.bucket_count() : 0);
         contentUnits -= std::min(contentUnits, uint64_t(grownBuckets * sizeof(void*)) >> JS_WORK_ALLOC_SHIFT);
-        // A Comment (or another node that does not render) inserted under a mapped parent is visited by a build's walk.
+        // A Comment (or another node that does not render) inserted under a mapped parent is visited by a build's walk,
+        // and counted against the node cap (final review C2): none was built above.
         for (const JournalEntry& journaled : m_journal.entries()) {
             charge(ctx, work::kNodeVisit);
             const Node* node = journaled.node.get();
             if ((journaled.kinds & journalBit(JournalKind::Inserted)) != 0 && !node->isElement() &&
                 node->type() != NodeType::Text && node->parent() && m_current.nodes.count(node->parent())) {
                 contentUnits += work::kRenderNode;
+                totals.nodes++;
             }
+        }
+        if (totals.nodes > kMaxRenderNodes) {
+            return this->refused("the node cap");
         }
         // 4. Text and attribute changes beside the structure. A node built here, or going, is read with its subtree.
         // A kept node's own change makes the journal mixed, which rebuilds (the selection rule), and so does a <style>'s
@@ -1725,8 +1810,34 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
                 stepPlan.inserted.emplace_back(replacement.parent, root);
             }
         }
+        // twidget edit 42: the element children of a dirty parent a subject positional rule reaches, which the commit
+        // matches again (their own attributes), charged as an attribute patch charges a re-match.
+        std::vector<std::shared_ptr<litehtml::html_tag>> positioned;
+        if (!widen) {
+            for (RenderEntry* entry : dirty) {
+                if (!document.positions_reach(entry->element)) {
+                    continue;
+                }
+                for (const litehtml::element::ptr& child : entry->element->children()) {
+                    charge(ctx, work::kRenderNode);
+                    if (auto tag = std::dynamic_pointer_cast<litehtml::html_tag>(child); tag && !child->is_text()) {
+                        positioned.push_back(tag);
+                    }
+                }
+            }
+        }
+        for (const std::shared_ptr<litehtml::html_tag>& tag : positioned) {
+            stepPlan.rematched.emplace_back(tag, &tag->attributes());
+        }
+        if (!positioned.empty()) {
+            uint64_t rematched = 0;
+            for (const std::shared_ptr<litehtml::html_tag>& tag : positioned) {
+                rematched += litehtml::document::matching_weight(*tag, creators);
+            }
+            charge(ctx, renderFilterUnits(rematched, document.selector_count()));
+        }
         matched = size_t(staging.boxes);
-        if (!stepPlan.inserted.empty()) {
+        if (!stepPlan.inserted.empty() || !stepPlan.rematched.empty()) {
             charge(ctx, (uint64_t(document.selector_count()) + matched) * work::kSimpleSelectorTest);
             stepBound = document.selector_step_bound(stepPlan);
             // Rulings E21 and E22: the filter loop over every rule for each new element, the pseudo-elements a match can
@@ -1953,6 +2064,9 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         m_current.boxes = boxes;
         m_current.textBytes = textBytes;
         m_current.bytes = totals.bytes;
+        m_current.textUnits = totals.textUnits;
+        m_current.nodeCount = totals.nodes;
+        m_unheardNodes = 0;
         m_current.elementCount = totals.elements;
         m_current.formControlCount = totals.formControls;
         m_current.nextSeq = totals.seq;
@@ -2094,7 +2208,9 @@ std::shared_ptr<const LayerTree> RenderTree::recordForTesting() {
 }
 
 void RenderTree::userActionStateChanged() {
-    if (m_current.document && m_current.usesUserActionPseudo) {
+    // A rendered <button> takes the UA sheet's pressed opacity (button:not([disabled]):active, the profile's UA sheet),
+    // whatever the widget's own CSS mentions (fidelity plan, Task 3).
+    if (m_current.document && (m_current.usesUserActionPseudo || m_current.formControlCount > 0)) {
         m_journal.markRebuild();
     }
 }
@@ -2217,8 +2333,30 @@ void RenderTree::record(Node& node, JournalKind kind) {
 // touches the rendered tree (the file comment in RenderTree.h).
 
 void RenderTree::nodeInserted(Node& node) {
-    if (!m_journal.rebuildPending() && this->rendered(node.parent())) {
+    if (m_journal.rebuildPending()) {
+        return;
+    }
+    if (this->rendered(node.parent())) {
         this->record(node, JournalKind::Inserted);
+        this->noteAutoDirection(node.parent());
+        return;
+    }
+    // Not heard by the journal (an element no build renders), yet counted by a build against profile 1's node cap
+    // (V4 plan, Task 7; final review C2): kept as an upper bound beside the published count.
+    if (!m_current.document) {
+        return;
+    }
+    try {
+        if (!inDocument(m_ctx, node, m_document.get())) {
+            return;
+        }
+        m_unheardNodes += nodesForTheCap(m_ctx, node);
+    } catch (...) {
+        // The charge refused by the budget, or the memory limit: latched, and Aborted unwinds the mutation.
+        abortForCaughtException(m_ctx);
+    }
+    if (m_current.nodeCount + m_unheardNodes > kMaxRenderNodes) {
+        m_journal.markRebuild();
     }
 }
 
@@ -2229,6 +2367,7 @@ void RenderTree::nodeRemoved(Node& node, Node& oldParent) {
     }
     if (!m_journal.rebuildPending() && (this->rendered(&node) || this->rendered(&oldParent))) {
         this->record(node, JournalKind::Removed);
+        this->noteAutoDirection(&oldParent);
     }
 }
 
@@ -2272,13 +2411,53 @@ void RenderTree::characterDataChanged(Node& node) {
     }
     if (this->rendered(&node) || this->rendered(node.parent())) {
         this->record(node, JournalKind::Text);
+        this->noteAutoDirection(node.parent());
+    }
+}
+
+void RenderTree::noteAutoDirection(Node* from) {
+    DOMState& state = DOMState::of(m_ctx);
+    for (Node* node = from; node && !m_journal.rebuildPending(); node = node->parent()) {
+        if (node->type() != NodeType::Element) {
+            continue;
+        }
+        auto& element = static_cast<Element&>(*node);
+        try {
+            charge(m_ctx, work::kNodeVisit);
+            if (!element.isHTMLElement()) {
+                continue;
+            }
+            const JSAtom local = element.localNameAtom();
+            if (local == state.name(Name::script) || local == state.name(Name::style) || local == state.name(Name::textarea)) {
+                return;
+            }
+            const std::optional<String> dir = element.attributeValue(m_ctx, state.name(Name::dir));
+            if (!dir) {
+                if (String::fromAtom(m_ctx, local).utf8ForParse() == "bdi") {
+                    return;
+                }
+                continue;
+            }
+            std::string value = dir->utf8ForParse();
+            std::transform(value.begin(), value.end(), value.begin(), [](char c) { return c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c; });
+            if (value == "auto" && (this->rendered(&element) || this->rendered(element.parent()))) {
+                this->record(element, JournalKind::Attribute);
+            }
+            if (value == "ltr" || value == "rtl" || value == "auto") {
+                return;
+            }
+        } catch (const Aborted&) {
+            throw;
+        } catch (...) {
+            abortForCaughtException(m_ctx);
+        }
     }
 }
 
 RenderTree& installRender(JSContext* ctx, RenderHost& host, RenderOptions options) {
     HostState& state = HostState::of(ctx);
     state.setInitialTheme(options.theme);
-    options.rootDeclarations = themeRootDeclarations(state.themeParams(), options.theme, state.buttonTokens());
+    options.rootDeclarations = themeRootDeclarations(state.themeParams(), options.theme, state.buttonTokens(), state.textTokens());
     state.setRender(std::make_unique<RenderTree>(ctx, host, std::move(options)));
     return *state.render();
 }

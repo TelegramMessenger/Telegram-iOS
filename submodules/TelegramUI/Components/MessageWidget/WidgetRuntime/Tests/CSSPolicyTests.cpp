@@ -2,6 +2,10 @@
 // an @supports condition and a URL, as the reference validator applies them (widget-sandbox v0.1.0 css-sanitizer.ts,
 // url-policy.ts, css-supports.ts). Every rule here is what the renderer's copy of a widget gets (Task 3b's hooks) and
 // what CSS.supports answers (Keep and Augment only).
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -102,7 +106,12 @@ WR_TEST(testTheDeclarationRules) {
                  {"font", "caption", "Keep|caption"},
                  {"font", "12px", "Drop|"},
                  {"text-shadow", "0 0 1px red", "Drop|"},
-                 {"user-select", "text", "Drop|"},
+                 {"user-select", "text", "Keep|text"},   // in profile 1 since widget-sandbox v0.1.1
+                 {"-webkit-user-select", "none", "Keep|none"},
+                 {"user-select", "all", "Drop|"},          // outside css.values["user-select"]
+                 {"-webkit-user-select", "contain", "Drop|"},
+                 {"user-select", "text auto", "Drop|"},
+                 {"user-select", "var(--s)", "Keep|var(--s)"},
                  {"clip-path", "circle(50%)", "Drop|"},
                  {"filter", "blur(2px) grayscale(1)", "Rewrite|blur(2px)"},
                  {"filter", "blur(2px) sepia(1) brightness(2)", "Rewrite|blur(2px) brightness(2)"},
@@ -304,4 +313,64 @@ WR_TEST(testThePolicyIsPure) {
     litehtml::string_id id;
     CHECK(!litehtml::_find_id(name, id));
     CHECK(!litehtml::_find_id("q-v4-never-seen-7f3a9c", id));
+}
+
+namespace {
+
+/// The fastest of `runs` runs of `f`, in seconds.
+double fastest(int runs, const std::function<void()>& f) {
+    double best = 1e9;
+    for (int i = 0; i < runs; i++) {
+        const auto start = std::chrono::steady_clock::now();
+        f();
+        best = std::min(best, std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count());
+    }
+    return best;
+}
+
+/// Whether `f(n)` grows linearly: eight times the input costs at most 24 times the time (a quadratic costs 64).
+bool linear(const char* what, size_t n, const std::function<void(size_t)>& f) {
+    const double small = fastest(5, [&] { f(n); });
+    const double large = fastest(2, [&] { f(8 * n); });
+    const bool ok = large <= 24 * std::max(small, 1e-4);
+    if (!ok) {
+        std::printf("    %s: %zu → %.4f s, %zu → %.4f s\n", what, n, small, 8 * n, large);
+    }
+    return ok;
+}
+
+} // namespace
+
+/// The final review's C1: the core's rewrites are linear in their input, which callers charge linearly. css_token has
+/// no move, so a rewrite that erased or inserted in the middle of a vector copied the rest of it each time, and a
+/// family list rescanned every group it kept.
+WR_TEST(testTheRewritesAreLinear) {
+    CHECK(linear("selector :disabled rewrites", 1000, [](size_t n) {
+        std::string text = "a";
+        for (size_t i = 0; i < n; i++) {
+            text += ":disabled";
+        }
+        const litehtml::css_token_vector values = tokens(text);
+        CHECK(policy::selector(values).verdict == Verdict::Augment);
+    }));
+    CHECK(linear("filter prune", 1000, [](size_t n) {
+        std::string text;
+        for (size_t i = 0; i < n; i++) {
+            text += "sepia(1) ";
+        }
+        text += "blur(1px)";
+        const litehtml::css_token_vector values = tokens(text);
+        CHECK(policy::declaration("filter", values).verdict == Verdict::Rewrite);
+    }));
+    CHECK(linear("font family groups", 2000, [](size_t n) {
+        std::string text;
+        for (size_t i = 0; i < n; i++) {
+            text += "a(),";
+        }
+        for (size_t i = 0; i < n; i++) {
+            text += "serif,";
+        }
+        text += "serif";
+        CHECK(!policy::reduceFontFamilyText(text).empty());
+    }));
 }

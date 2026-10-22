@@ -236,6 +236,9 @@ namespace litehtml
         // Telegram (VENDOR.md edit 17): the elements set_element_attribute re-matched in the session, which commit_patch
         // restyles.
         std::vector<std::shared_ptr<element>>   m_patch_restyle;
+        // Telegram (VENDOR.md edit 42): the parents whose children the session changed and a subject positional rule
+        // reaches (positions_reach): commit_patch matches their element children again.
+        std::vector<std::shared_ptr<element>>   m_patch_position_parents;
         // Telegram (VENDOR.md edit 17): pieces the session replaced or forgot (replaced text, a re-matched element's
         // pseudo-element content), kept alive until commit_patch and not counted by text_element_allowed, so that a patch
         // counts what a fresh build would; the count of the text pieces they hold.
@@ -262,6 +265,14 @@ namespace litehtml
         style                                   m_root_declarations;
         bool                                    m_has_root_declarations = false;
         int                                     m_selector_scope = -1;
+        // Telegram (VENDOR.md edit 42): the rules whose positional pseudo-classes are in their subject alone (selector_scope
+        // bit 16): the subject's tag and, under a child combinator, its parent's (star_id: any).
+        struct subject_position
+        {
+            string_id tag;
+            string_id parent;
+        };
+        std::vector<subject_position>           m_subject_positions;
         int                                     m_ids_selectable = -1;
         std::unordered_set<string_id>           m_left_classes;
         std::unordered_set<string_id>           m_left_ids;
@@ -275,6 +286,16 @@ namespace litehtml
         std::string                             m_master_styles;
         mutable uint32_t                        m_paint_generation = 1;
         uint64_t                                m_match_epoch      = 1;
+        // Telegram (VENDOR.md edit 39): intrinsic-width measuring passes under way, and keyword boxes laying out in full
+        // around the box being laid out.
+        mutable int                             m_intrinsic_measuring = 0;
+        mutable int                             m_intrinsic_depth     = 0;
+        // Telegram (VENDOR.md edit 38): the elements every <svg> drew inside <use> instances at its last paint, and the
+        // document's ids for <use>, gathered once per match epoch and paint generation.
+        mutable int                                                   m_use_instanced = 0;
+        mutable std::unordered_map<std::string, std::weak_ptr<element>> m_svg_ids;
+        mutable uint64_t                                              m_svg_ids_epoch      = 0;
+        mutable uint32_t                                              m_svg_ids_generation = 0;
         bool                                    m_has_svg          = false;
         bool                                    m_cull_paint       = false;
         struct html_hole
@@ -329,6 +350,12 @@ namespace litehtml
         pixel_t   render(pixel_t max_width, render_type rt = render_all);
         void      draw(uint_ptr hdc, pixel_t x, pixel_t y, const position* clip, bool cull = false);
         uint32_t  paint_generation() const { return m_paint_generation; }
+        // Telegram (VENDOR.md edit 39).
+        int&      intrinsic_measuring() const { return m_intrinsic_measuring; }
+        int&      intrinsic_depth() const { return m_intrinsic_depth; }
+        // Telegram (VENDOR.md edit 38).
+        int&                  use_instanced() const { return m_use_instanced; }
+        std::shared_ptr<element> svg_element_by_id(const std::string& id) const;
         void      note_svg() { m_has_svg = true; }
         bool      has_svg() const { return m_has_svg; }
         void      invalidate_paint() const { m_paint_generation = m_paint_generation + 1 == 0 ? 1 : m_paint_generation + 1; }
@@ -339,6 +366,8 @@ namespace litehtml
             return m_def_color;
         }
         void                         cvt_units(css_length& val, const font_metrics& metrics, pixel_t size) const;
+        // Telegram (VENDOR.md edit 48): what a calc's font-relative terms are worth for `metrics`.
+        calc_fonts                   calc_fonts_for(const font_metrics& metrics) const;
         pixel_t                      to_pixels(const css_length& val, const font_metrics& metrics, pixel_t size) const;
         pixel_t                      width() const;
         pixel_t                      height() const;
@@ -585,6 +614,11 @@ namespace litehtml
         // Whether the sheets hold sibling combinators or positional pseudo-classes (selector_scope() & 3), so that a change
         // to a parent's children can change how its other children match.
         bool structure_reaches_siblings();
+        // Telegram (VENDOR.md edit 42): that, or a rule whose positional pseudo-classes are in its subject alone can match
+        // one of `parent`'s element children (positions_reach): a change to them then changes how the others match.
+        bool structure_reaches_siblings(const std::shared_ptr<element>& parent);
+        bool positions_reach(const std::shared_ptr<element>& parent);
+        void note_position_parent(const std::shared_ptr<element>& parent);
         // The pieces append_text would append to `parent` (one in a raw-text parent, else split_text's words and one el_space
         // per whitespace character), made without a parent and without asking text_element_allowed: for a subtree that
         // insert_subtree counts, whose predicate refuses one past the cap. `pieces` gets them (appended).

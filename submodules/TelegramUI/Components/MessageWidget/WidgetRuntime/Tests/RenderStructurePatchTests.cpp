@@ -5,6 +5,7 @@
 // planning leaves the published state alone (Review Focus 2).
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <cstdio>
 #include <functional>
 #include <map>
@@ -200,6 +201,9 @@ WR_TEST(testRandomEditsMatchARebuild) {
         bool structural = false;
         /// What goes first in the body (a build's cut then drops what follows it).
         std::string prefix;
+        /// Whether the group must patch at least once: :empty makes every child-list change rebuild, and a <q> the edits
+        /// insert (the UA sheet's quote marks are ::before content) every text change, so that group checks parity only.
+        bool mustPatch = true;
     };
     const std::string base = ".box{padding:2px;border:1px solid #000} .x{color:#c00;font-weight:bold} .y{background:#ff0}"
                              " [hidden]{display:none} li{margin:1px} td{padding:2px} p{margin:2px}";
@@ -234,15 +238,31 @@ WR_TEST(testRandomEditsMatchARebuild) {
                "<template id=tpl><i class=x>tpl one</i><b>tpl two</b></template>"
                "<div id=c class=y>tail</div>" + filler + "</body>";
     };
+    // The bytes in a class (profile 1's text budgets do not count it, and they hold a document's text well under 1 MiB:
+    // V4 plan, Task 7).
     std::string bytes;
     {
         RenderEnv probe(pageOf(base, "<p id=filler></p>"));
         const size_t room = wr::kMaxRenderBytes - size_t(probe.render().renderBytes()) - 40;
-        bytes = "<p id=filler>";
-        for (size_t n = 0; n + 1000 <= room; n += 1000) {
-            bytes += std::string(999, 'x') + " ";
+        bytes = "<p id=filler class=" + std::string(room - std::strlen("class"), 'x') + "></p>";
+    }
+    // Profile 1's document text budget 40 units short of full (V4 plan, Task 7), in paragraphs under the cap on one text.
+    std::string text;
+    {
+        RenderEnv probe(pageOf(base, "<div id=filler></div>"));
+        size_t room = wr::kTextBudgetUnits - probe.render().renderedTextUnits().units - 40;
+        text = "<div id=filler>";
+        while (room > 0) {
+            const size_t paragraph = std::min<size_t>(room, 60000);
+            text += "<p>";
+            for (size_t n = 0; n < paragraph; n += 1000) {
+                const size_t word = std::min<size_t>(1000, paragraph - n);
+                text += std::string(word - 1, 'x') + (word > 1 ? " " : "x");
+            }
+            text += "</p>";
+            room -= paragraph;
         }
-        bytes += std::string(room % 1000, 'x') + "</p>";
+        text += "</div>";
     }
     // The pieces 8 short of the cap, with a <table> after the filler whose whitespace a build asks the cap for last (I2).
     const std::string lastTable = "<table id=filler2>\n<tbody><tr><td>t</td></tr></tbody>\n</table>";
@@ -280,12 +300,20 @@ WR_TEST(testRandomEditsMatchARebuild) {
         {"near the form-control limit", 18, 18, base, controls},
         {"near litehtml's element cap (refused elements)", 19, 19, base, ""},
         {"near the byte budget", 20, 20, base, bytes},
+        {"near the text budget", 21, 21, base, text},
+        // Fidelity plan, Task 2: :empty (a parent's match follows its children) and :lang() (an ancestor's attribute),
+        // with an element in a lang="ru" subtree for the edits to move in and out.
+        {":empty and :lang()", 22, 24, base + " :empty{outline:1px solid #f0f} span:empty{padding:1px} :lang(ru) b{color:#0a0}"
+                                    " p:not(:empty){margin:3px}", ""},
     };
     groups[3].limit = "text-pieces";
     groups[4].limit = "the selector-step budget";
     groups[5].limit = "form-controls";
     groups[6].limit = "elements";
     groups[7].limit = "bytes";
+    groups[8].limit = "text-budget";
+    groups[9].prefix = "<div lang=ru id=ru><b>ru</b><span></span></div>";
+    groups[9].mustPatch = false;
     // Divs the <table> refuses, up to 11 short of litehtml's 20,000 with the elements the page renders (all but the
     // <template>): litehtml counts each refused one, the maps none (I2). The seed's insertions are tables of refused rows
     // (make(13): one element linked, two refused), so a build's count crosses the cap before the linked count the fork
@@ -414,7 +442,9 @@ globalThis.__edit = (() => {
             }
             // Production's options beside the oracle's: the same flushes without the render input (Ruling E11), held
             // to the rebuild's layout and tree.
-            wr::RenderOptions production = env.options();
+            // The render tree's options as they are now (its root declarations: the theme's variables, which the UA
+            // layer's values read), not the construction's.
+            wr::RenderOptions production = env.render().options();
             production.keepRenderInput = false;
             wr::RenderTree plain(env.ctx(), env.host(), production);
             plain.rebuild(env.ctx());
@@ -470,7 +500,7 @@ globalThis.__edit = (() => {
                     "seed " + std::to_string(seed) + ", edit " + std::to_string(edits) + " (" + path + "): " + done;
                 // The oracle (rebuildDump's fresh tree, kept here for the limits a build hits, which a patch must cut
                 // at as a rebuild does).
-                wr::RenderTree fresh(env.ctx(), env.host(), env.options());
+                wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
                 JSRuntime* rt = env.env().runtime().jsRuntime();
                 const uint64_t freshStart = JS_GetWorkUnits(rt);
                 fresh.rebuild(env.ctx());
@@ -521,7 +551,7 @@ globalThis.__edit = (() => {
     // Every group patched something and rebuilt something (random batches mix a kept node's own change with
     // structure in every group), and each near-limit group reached its limit at least once.
     for (const Group& group : groups) {
-        CHECK(group.patched > 0);
+        CHECK(group.patched > 0 || !group.mustPatch);
         CHECK(group.rebuilt > 0);
         if (!group.limit.empty() && !group.reached) {
             std::printf("  %s never reached %s\n", group.name, group.limit.c_str());
@@ -656,12 +686,9 @@ WR_TEST(testStructureRebuildsUnderCountersAndPseudoContent) {
 // it), and a build that hit one is never patched.
 WR_TEST(testStructurePatchRespectsLimits) {
     {
-        // The byte budget: 1,048,000 bytes of text, then 1,000 more.
-        std::string page = "<!doctype html><body><p id=big>";
-        for (int n = 0; n < 1048; n++) {
-            page += std::string(999, 'x') + " ";
-        }
-        page += "</p><p id=p>p</p></body>";
+        // The byte budget: 1,048,000 bytes of a class (profile 1's text budgets do not count it: V4 plan, Task 7), then
+        // 1,000 more of text.
+        std::string page = "<!doctype html><body><p id=big class=" + std::string(1048000, 'x') + "></p><p id=p>p</p></body>";
         RenderEnv env(page);
         CHECK(env.env().host().diagnostics.empty());
         patches(env, byId("p") + ".append('y'.repeat(300))");
@@ -1508,7 +1535,8 @@ WR_TEST(testAnUnmappedNodesOwnChangeRebuilds) {
         rebuilds(env, "const d = document.createElement('div'); d.id = 'x'; " + byId("t") + ".append(d)",
                  "refused by can_insert_subtree");
         CHECK(env.render().renderLimits().empty());
-        rebuilds(env, byId("c") + ".append(document.createElement('i')); " + byId("x") + ".setAttribute('title', 'y'.repeat(" +
+        // A datetime: profile 1's text budgets do not count it (a title over 65,536 units is left out: V4 plan, Task 7).
+        rebuilds(env, byId("c") + ".append(document.createElement('i')); " + byId("x") + ".setAttribute('datetime', 'y'.repeat(" +
                           std::to_string(title) + "))",
                  "an unmapped node's own change");
         // The limits too are a fresh build's: `bytes` for the longest title.

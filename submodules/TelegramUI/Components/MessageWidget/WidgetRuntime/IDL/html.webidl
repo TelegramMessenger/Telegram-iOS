@@ -28,6 +28,8 @@ interface HTMLElement : Element {
   // metadata attributes
   [CEReactions, Reflect] attribute DOMString title;
   [CEReactions, Reflect] attribute DOMString lang;
+  // Reflected as written (HTML limits it to the known values ltr, rtl and auto: a divergence).
+  [CEReactions, Reflect] attribute DOMString dir;
 
   // user interaction
   [CEReactions, Reflect] attribute boolean hidden;
@@ -50,6 +52,10 @@ interface HTMLInputElement : HTMLElement {
   [CEReactions, Reflect] attribute DOMString name;
   [CEReactions, Reflect] attribute DOMString type;
   [CEReactions, Reflect] attribute DOMString value;
+
+  // No-ops, as in profile 1's sandbox (V4 plan, Task 8; RB §8.1): the element is not rendered.
+  undefined select();
+  undefined setSelectionRange(unsigned long start, unsigned long end, optional DOMString direction);
 };
 
 [Exposed=Window]
@@ -68,6 +74,17 @@ interface HTMLLabelElement : HTMLElement {
 [Exposed=Window]
 interface HTMLDetailsElement : HTMLElement {
   [CEReactions, Reflect] attribute boolean open;
+};
+
+// As profile 1's sandbox has it (V4 plan, Task 8; RB §8.2): show() and showModal() set open, close() removes it and
+// fires close synchronously. The renderer's copy is an inert div: no top layer, no ::backdrop.
+[Exposed=Window]
+interface HTMLDialogElement : HTMLElement {
+  [CEReactions, Reflect] attribute boolean open;
+  attribute DOMString returnValue;
+  undefined show();
+  undefined showModal();
+  undefined close(optional DOMString returnValue);
 };
 
 // The img members a canvas source needs (V5d plan, Task 5; README.md).

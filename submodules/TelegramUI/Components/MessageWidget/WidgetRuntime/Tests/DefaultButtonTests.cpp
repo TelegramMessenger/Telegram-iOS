@@ -2,6 +2,7 @@
 // button tokens (the root's --tg-button-* variables, the profile's UA stylesheet), and any author CSS overrides it.
 #include <string>
 
+#include "Sources/Events/Taps.h"
 #include "Sources/Host/HostState.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
@@ -44,4 +45,19 @@ WR_TEST(testAuthorCSSOverridesTheButton) {
 WR_TEST(testADisabledButtonTakesTheDisabledOpacity) {
     RenderEnv env(kPage);
     CHECK_EQ(env.env().eval("[cs('d', 'opacity'), cs('b', 'opacity')].join()"), std::string("0.5,1"));
+}
+
+/// Fidelity plan, Task 3 (D1): the UA sheet's pressed opacity applies to a button the widget did not style, with no
+/// user-action pseudo-class in the widget's own CSS.
+WR_TEST(testAnUnstyledButtonShowsItsPress) {
+    RenderEnv env("<!doctype html><html><head><style>body{margin:0} #b{position:absolute;left:0;top:0;width:80px;height:30px}"
+                  "</style></head><body><button id=b>Go</button>"
+                  "<script>window.cs = (id, p) => getComputedStyle(document.getElementById(id))[p];</script></body></html>");
+    CHECK_EQ(env.env().eval("cs('b', 'opacity')"), std::string("1"));
+    wr::HostState::of(env.ctx()).pointer(env.ctx(), wr::PointerPhase::Down, 40, 15, 1, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("cs('b', 'opacity')"), std::string("0.7"));
+    wr::HostState::of(env.ctx()).pointer(env.ctx(), wr::PointerPhase::Up, 40, 15, 1, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("cs('b', 'opacity')"), std::string("1"));
 }

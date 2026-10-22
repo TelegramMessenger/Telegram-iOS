@@ -101,6 +101,13 @@ namespace litehtml
         };
         bool         m_layout_dirty   = true;
         bool         m_relayout_pending = false;
+        // Telegram (VENDOR.md edit 40): text-overflow: ellipsis. A text piece cut at its line's ellipsis draws only its
+        // first m_ellipsis_bytes bytes (-1: all), then the ellipsis m_ellipsis_at past its left in m_ellipsis_block's
+        // font and colour (it is part of the piece's own paint); a piece after it is not drawn.
+        int                    m_ellipsis_bytes  = -1;
+        bool                   m_ellipsis_hidden = false;
+        pixel_t                m_ellipsis_at     = 0_px;
+        std::weak_ptr<element> m_ellipsis_block;
         bool         m_out_of_flow    = true;
         uint64_t     m_layout_epoch   = 0;
         layout_entry m_last_layout;
@@ -549,6 +556,18 @@ namespace litehtml
         pixel_t measure_height(pixel_t x, pixel_t y, const containing_block_context& containing_block_size,
                                formatting_context* fmt_ctx, bool second_pass = false);
         void           mark_layout_dirty();
+        // Telegram (VENDOR.md edit 40).
+        int            ellipsis_bytes() const { return m_ellipsis_bytes; }
+        bool           ellipsis_hidden() const { return m_ellipsis_hidden; }
+        pixel_t        ellipsis_at() const { return m_ellipsis_at; }
+        std::shared_ptr<element> ellipsis_block() const { return m_ellipsis_block.lock(); }
+        void           set_ellipsis(int bytes, bool hidden, pixel_t at = 0_px, const std::shared_ptr<element>& block = nullptr)
+        {
+            m_ellipsis_bytes  = bytes;
+            m_ellipsis_hidden = hidden;
+            m_ellipsis_at     = at;
+            m_ellipsis_block  = block;
+        }
         bool           relayout_boundary() const;
         void           relayout();
         bool           layout_dirty() const { return m_layout_dirty; }

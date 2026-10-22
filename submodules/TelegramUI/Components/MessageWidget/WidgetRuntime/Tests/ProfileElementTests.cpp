@@ -47,12 +47,12 @@ void expectMatchesRebuild(RenderEnv& env, const char* what) {
 
 /// The render input laid out through litehtml's own parser, as RenderBuildTests' build-path parity does.
 std::string parsedLayout(RenderEnv& env) {
-    wr::WidgetContainer container(env.host(), env.options());
+    wr::WidgetContainer container(env.host(), env.render().options());
     std::string out;
     {
         litehtml::document::ptr parsed = litehtml::document::createFromString(
-            litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.options().hostCSS));
-        parsed->render(litehtml::pixel_t(float(env.options().width)));
+            litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.render().options().hostCSS));
+        parsed->render(litehtml::pixel_t(float(env.render().options().width)));
         out = wr::dumpLayout(*parsed);
     }
     return out;

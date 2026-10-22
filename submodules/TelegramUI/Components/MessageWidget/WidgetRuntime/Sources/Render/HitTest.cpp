@@ -51,6 +51,11 @@ litehtml::element::ptr hitElement(const litehtml::document& document, double x, 
             for (auto& c : value) {
                 c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             }
+            // pointer-events is inherited: inherit, unset and revert (no master sheet rule declares it) take the
+            // parent's; initial is auto.
+            if (value == "inherit" || value == "unset" || value == "revert" || value == "revert-layer") {
+                continue;
+            }
             return value != "none";
         }
         return true;
@@ -119,6 +124,39 @@ bool unionOfRects(const std::vector<RenderBox>& rects, RenderBox& out) {
 
 bool elementBorderBox(const litehtml::element& element, RenderBox& out) {
     return unionOfRects(elementClientRects(element), out);
+}
+
+void transformRects(const litehtml::element& element, std::vector<RenderBox>& rects) {
+    for (const litehtml::element* el = &element; el && !rects.empty(); el = el->parent().get()) {
+        std::shared_ptr<litehtml::render_item> item;
+        el->for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
+            if (!item) {
+                item = ri;
+            }
+        });
+        if (!item) {
+            continue;
+        }
+        const litehtml::transform_matrix m = item->get_visual_transform();
+        if (m.is_identity()) {
+            continue;
+        }
+        for (RenderBox& r : rects) {
+            double left = 0, top = 0, right = 0, bottom = 0;
+            bool first = true;
+            for (const auto& [x, y] : {std::pair{r.x, r.y}, std::pair{r.x + r.width, r.y}, std::pair{r.x, r.y + r.height},
+                                       std::pair{r.x + r.width, r.y + r.height}}) {
+                const double mx = double(m.a) * x + double(m.c) * y + double(m.tx);
+                const double my = double(m.b) * x + double(m.d) * y + double(m.ty);
+                left = first ? mx : std::min(left, mx);
+                right = first ? mx : std::max(right, mx);
+                top = first ? my : std::min(top, my);
+                bottom = first ? my : std::max(bottom, my);
+                first = false;
+            }
+            r = RenderBox{left, top, right - left, bottom - top};
+        }
+    }
 }
 
 } // namespace wr

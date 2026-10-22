@@ -782,9 +782,9 @@ WR_TEST(testOpsReplayOnThePreviousTree) {
 }
 
 // A text change that gives paragraph 1 an extra line moves the paragraphs after it: Frames only, and the only text
-// shaped again is paragraph 1's.
+// shaped again is paragraph 1's. (A whole-pixel line: a fractional move paints again, testAFractionalMovePaintsAgain.)
 WR_TEST(testAMovedParagraphIsAFrameNotACapture) {
-    RenderEnv env("<!doctype html><style>p{margin:0;background:#eee}</style><body style='margin:0;height:200px'>"
+    RenderEnv env("<!doctype html><style>p{margin:0;background:#eee;line-height:20px}</style><body style='margin:0;height:200px'>"
                   "<p id=p1>short</p><p id=p2>the second paragraph</p><p id=p3>the third</p></body>");
     std::shared_ptr<const LayerTree> before = env.render().layerTree();
     const MirrorNode* second = before ? inlineWith(*before, "second") : nullptr;
@@ -838,6 +838,33 @@ WR_TEST(testAMovedParagraphIsAFrameNotACapture) {
     CHECK(flattensAsRecorded(env, "p1 takes two lines"));
     CHECK(equalsAFreshMirror(env, "p1 takes two lines"));
     CHECK(env.render().changedRects().has_value() && !env.render().changedRects()->empty());
+}
+
+// v0.1.1 plan, Task 2: the UA layer's line height (1.35 of 15px: 20.25px) moves the paragraphs after one that gains a
+// line by a fraction of a pixel, and painting rounds in document coordinates, so the moved content is painted again
+// (Content) rather than framed alone, and the mirror is a fresh one's.
+WR_TEST(testAFractionalMovePaintsAgain) {
+    RenderEnv env("<!doctype html><style>p{margin:0;background:#eee}</style><body style='margin:0;height:200px'>"
+                  "<p id=p1>short</p><p id=p2>the second paragraph</p><p id=p3>the third</p></body>");
+    std::shared_ptr<const LayerTree> before = env.render().layerTree();
+    const MirrorNode* second = before ? inlineWith(*before, "second") : nullptr;
+    CHECK(second != nullptr);
+    if (!before || !second) {
+        return;
+    }
+    const std::set<wr::LayerId> moved = idsWithKey(*before, second->key);
+    const uint64_t builds = env.render().buildCount();
+    edit(env, "document.getElementById('p1').firstChild.data = 'a first paragraph long enough to take two lines'");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK(!isReset(env.render().layerOps()));
+    std::map<wr::LayerId, std::set<LayerOp::Kind>> named;
+    for (const LayerOp& op : env.render().layerOps()) {
+        named[op.node].insert(op.kind);
+    }
+    for (wr::LayerId id : moved) {
+        CHECK(named.count(id) && named[id].count(LayerOp::Content));
+    }
+    CHECK(equalsAFreshMirror(env, "a fractional move"));
 }
 
 // A paint-order property changed by a class: position and float rebuild the fork's render tree (Reset); opacity keeps
@@ -957,7 +984,7 @@ WR_TEST(testStructuralEditPublishesReset) {
 // A clipper that moves takes its clip with it: what it clips gets a Frame and a Clip, its own Box a Frame alone (its
 // clip covers its children, not itself), and the clip chain equals a fresh walk's (paint_clip against draw_children).
 WR_TEST(testAMovedClipperClipsWhatItHolds) {
-    RenderEnv env("<!doctype html><style>p{margin:0}</style><body style='margin:0;height:200px'><p id=p1>short</p>"
+    RenderEnv env("<!doctype html><style>p{margin:0;line-height:20px}</style><body style='margin:0;height:200px'><p id=p1>short</p>"
                   "<div style='overflow:hidden;border-radius:4px;background:#eee'><p>clipped text</p></div></body>");
     std::shared_ptr<const LayerTree> before = env.render().layerTree();
     const MirrorNode* run = before ? inlineWith(*before, "clipped") : nullptr;
@@ -1028,7 +1055,8 @@ WR_TEST(testANewBoxBesideACaptionAfterTheRowsIsAReset) {
             const std::string caption =
                 "<caption id=cap" + std::string(target == "cap" ? "" : " style='border:1px solid #000'") + ">cap</caption>";
             const std::string rows = "<tr><td class=y>c1</td></tr><tr id=tr2><td id=td2>c2</td></tr>";
-            RenderEnv env("<!doctype html><style>.y{background-color:#eee} .d{background-color:#ff0} td{padding:2px}</style>"
+            // No border: the UA layer's cell border would be the cell's first decoration.
+            RenderEnv env("<!doctype html><style>.y{background-color:#eee} .d{background-color:#ff0} td{padding:2px;border:0}</style>"
                           "<body style='margin:0;height:200px'><table style='background-color:#ddd'>" +
                           (after ? rows + caption : caption + rows) + "</table></body>");
             CHECK(env.render().renderInput().find(after ? "</tbody><caption" : "</caption><tbody") != std::string::npos);

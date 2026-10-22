@@ -886,9 +886,10 @@ static void testSetAttributeRefusals() {
     // An id and an attribute name in an ancestor position.
     attributeRefused("#x p{color:#c00}", "div", {}, "id", "x");
     attributeRefused("[hidden] p{color:#c00}", "div", {}, "hidden", "");
-    // Positional selectors and sibling combinators anywhere in the sheets.
-    attributeRefused("p:nth-child(2){color:#c00}", "div", {}, "class", "z");
-    attributeRefused("p:first-child{color:#c00}", "div", {}, "id", "z");
+    // Sibling combinators anywhere in the sheets. (A positional pseudo-class reads an element's place, which no
+    // attribute changes: VENDOR.md edit 42.)
+    attributePatchedMatchesFresh("p:nth-child(2){color:#c00}", "div", {}, "class", "z");
+    attributePatchedMatchesFresh("p:first-child{color:#c00}", "div", {}, "id", "z");
     attributeRefused("div + p{color:#c00}", "div", {}, "class", "z");
     // Counters.
     attributeRefused("p{counter-increment:n}", "div", {}, "class", "z");
@@ -1109,6 +1110,34 @@ static element::ptr childAt(const element::ptr& parent, size_t index) {
     return *it;
 }
 
+// VENDOR.md edit 42: a rule positional in its subject alone lets an insertion or a removal through, and the commit
+// matches the parent's other element children again, so the result is a fresh document's; a parent the rule cannot reach
+// (its children's tags) is left alone.
+static void testSubjectPositionsMatchSiblingsAgain() {
+    const char* sheet = "p:first-child{color:#00c} p:last-child{color:#0c0} p:nth-child(2n){background:#eee}"
+                        " body>:first-child{margin-top:7px} li:first-child{color:#c00}";
+    std::vector<Spec> kids = {el("p", "one"), el("p", "two"), el("div", "", {}, {el("span", "s")}), el("p", "three")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    CHECK(doc->insert_subtree(body, 0, build(doc, el("p", "new first"))));
+    kids.insert(kids.begin(), el("p", "new first"));
+    structureMatchesFresh(c, doc, sheet, kids, "insert at 0 under positions");
+    CHECK(doc->insert_subtree(body, body->children().size(), build(doc, el("p", "new last"))));
+    kids.push_back(el("p", "new last"));
+    structureMatchesFresh(c, doc, sheet, kids, "append under positions");
+    CHECK(doc->remove_subtree(childAt(body, 0)));
+    kids.erase(kids.begin());
+    structureMatchesFresh(c, doc, sheet, kids, "remove the first under positions");
+    // Into the div: no rule's subject is a span, and the div is no body.
+    auto div = childAt(body, 2);
+    CHECK(!doc->positions_reach(div));
+    CHECK(doc->insert_subtree(div, 0, build(doc, el("span", "t"))));
+    kids[2].kids.insert(kids[2].kids.begin(), el("span", "t"));
+    structureMatchesFresh(c, doc, sheet, kids, "insert where no position reaches");
+    CHECK(doc->positions_reach(body));
+}
+
 static void testInsertRemoveMatchesFresh() {
     const char* sheet = ".a{color:#c00;background:#00f} p{margin:2px} li{color:#0a0} td{padding:3px;border:1px solid #000}"
                         " .n{font-weight:bold;background:#fc0} b{color:#090} .box p{color:#00c}";
@@ -1225,10 +1254,11 @@ static void testStructureRefusals() {
     // What the parent's own appendChild refuses: a <table> takes tbody, thead, tfoot and caption only.
     const std::vector<Spec> table = {el("table", "", {}, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "c")})})})};
     refuseInsert("a tr into the table", "", {0}, el("tr", "", {}, {el("td", "d")}), &table);
-    // Counters; sibling combinators and positional pseudo-classes (replace_children is the change for those).
+    // Counters; sibling combinators and positional pseudo-classes outside a rule's subject (replace_children is the
+    // change for those; one in the subject alone matches the siblings again: testSubjectPositionsMatchSiblingsAgain).
     refuseInsert("with counter-increment", "p{counter-increment:x}", {}, el("p", "x"));
     refuseRemove("with counter-increment", "div{counter-increment:x}", 2);
-    refuseInsert("with :nth-child", "p:nth-child(2n){color:red}", {}, el("p", "x"));
+    refuseInsert("with :nth-child outside the subject", "p:nth-child(2n) b{color:red}", {}, el("p", "x"));
     refuseInsert("with +", "p + div{color:red}", {}, el("p", "x"));
     refuseRemove("with ~", "p ~ div{color:red}", 2);
     // Pseudo-element content: already possible, or brought by the subtree (a tag a rule names; a control with lh-* rules).
@@ -2309,6 +2339,7 @@ int main() {
     testBuildCapsMatchCreateNode();
     testMasterCssIsTwidgets();
     testInsertRemoveMatchesFresh();
+    testSubjectPositionsMatchSiblingsAgain();
     testStructureRefusals();
     testStructureCaps();
     testReplaceChildrenUnderPositionalSelectors();

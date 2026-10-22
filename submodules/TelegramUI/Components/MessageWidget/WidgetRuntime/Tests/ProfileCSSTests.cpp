@@ -65,9 +65,7 @@ WR_TEST(testTheMasterSheetIsTrustedInEveryDocument) {
         RenderEnv first(page("p{color:red}", "<p>a</p>"), options);
         checkEval(first, "document.querySelector('p') !== null", "true");
     }
-    // `#none:active` makes a press rebuild the styles (a sheet without a user-action pseudo does not), so the master's
-    // `button:not([disabled]):active` rule can apply.
-    RenderEnv second(page("#b{position:absolute;left:0;top:50px;width:80px;height:30px} #none:active{color:red}",
+    RenderEnv second(page("#b{position:absolute;left:0;top:50px;width:80px;height:30px}",
                           "<a id=l href=#x>l</a><button id=b>b</button>"),
                      options);
     checkEval(second, "cs('l', 'cursor')", "pointer");

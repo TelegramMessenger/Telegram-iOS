@@ -4,12 +4,16 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
+#include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include <litehtml.h>
 
 #include "Sources/Host/CSSPolicy.h"
+#include "Sources/Host/ICU.h"
 #include "Sources/Render/DataUrl.h"
 #include "Sources/Render/LayerTree.h"
 
@@ -295,7 +299,7 @@ std::shared_ptr<const LayerTree> WidgetContainer::record(litehtml::document& doc
     } closing{m_open};
     m_open.assign(1, &root);
     document.draw(reinterpret_cast<litehtml::uint_ptr>(&root), litehtml::pixel_t(0), litehtml::pixel_t(0), nullptr);
-    return std::make_shared<const LayerTree>(width, height, std::move(root));
+    return std::make_shared<const LayerTree>(width, height, std::move(root), canvasColor(document));
 }
 
 // The recorder's bounds rules (LayerTree.h, PaintItem::bounds), from an item's payload; each draw_* below computes the
@@ -455,6 +459,61 @@ litehtml::pixel_t WidgetContainer::text_width(const char* text, litehtml::uint_p
         return 0;
     }
     return px(m_host.textWidth(*font, text));
+}
+
+bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl, std::vector<uint8_t>& levels) {
+    // Weak imports: a null address is a function this iOS's libicucore lacks.
+    static const bool available = [] {
+        const void* const functions[] = {
+            reinterpret_cast<const void*>(&ubidi_open),
+            reinterpret_cast<const void*>(&ubidi_close),
+            reinterpret_cast<const void*>(&ubidi_setPara),
+            reinterpret_cast<const void*>(&ubidi_getLevelAt),
+        };
+        return std::all_of(std::begin(functions), std::end(functions), [](const void* f) { return f != nullptr; });
+    }();
+    if (!available) {
+        return false;
+    }
+    // The line's text in UTF-16, each run's first unit recorded (a malformed byte reads as U+FFFD).
+    std::u16string text;
+    std::vector<int32_t> starts;
+    starts.reserve(runs.size());
+    for (const std::string& run : runs) {
+        starts.push_back(int32_t(text.size()));
+        for (size_t i = 0; i < run.size();) {
+            UChar32 c = 0;
+            int32_t offset = int32_t(i);
+            U8_NEXT_OR_FFFD(reinterpret_cast<const uint8_t*>(run.data()), offset, int32_t(run.size()), c);
+            i = size_t(offset);
+            if (c > 0xFFFF) {
+                text.push_back(char16_t(U16_LEAD(c)));
+                text.push_back(char16_t(U16_TRAIL(c)));
+            } else {
+                text.push_back(char16_t(c));
+            }
+        }
+        if (run.empty()) {
+            text.push_back(u'\uFFFC');
+        }
+    }
+    if (text.size() > size_t(INT32_MAX)) {
+        return false;
+    }
+    std::unique_ptr<UBiDi, void (*)(UBiDi*)> bidi(ubidi_open(), ubidi_close);
+    if (!bidi) {
+        return false;
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    ubidi_setPara(bidi.get(), text.data(), int32_t(text.size()), rtl ? 1 : 0, nullptr, &status);
+    if (U_FAILURE(status)) {
+        return false;
+    }
+    levels.clear();
+    for (int32_t start : starts) {
+        levels.push_back(ubidi_getLevelAt(bidi.get(), start));
+    }
+    return true;
 }
 
 std::shared_ptr<litehtml::text_breaker> WidgetContainer::create_text_breaker(const std::string& text,

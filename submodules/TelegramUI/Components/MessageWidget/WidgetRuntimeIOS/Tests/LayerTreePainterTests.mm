@@ -16,6 +16,7 @@
 #include "Sources/Host/Boot.h"
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Host/HostState.h"
+#include "Sources/Render/Builder.h"
 #include "Sources/Render/LayerTree.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
@@ -167,7 +168,11 @@ size_t paintedPixels(CGImageRef image) {
         if (!tree) {
             continue;
         }
-        LHDocument* document = [[LHDocument alloc] initWithHTML:@(html.c_str()) css:@(kHostCSS)];
+        // LHDocument with the runtime's master (the UA layer, an origin above the master's other rules) and the theme's
+        // root declarations, which the layer's values read.
+        const std::string master = wr::masterWithHostCSS(wr::RenderOptions().hostCSS) + "\nhtml{" +
+                                   wr::HostState::of(booted.runtime->context()).render()->options().rootDeclarations + "}";
+        LHDocument* document = [[LHDocument alloc] initWithHTML:@(html.c_str()) css:@(master.c_str())];
         CGSize size = [document layoutWithMaxWidth:300 preferredWidth:300];
         const CGFloat height = std::min<CGFloat>(std::ceil(size.height), tree->height());
         const CGRect rect = CGRectMake(0, 0, 300, height);
@@ -241,8 +246,36 @@ size_t paintedPixels(CGImageRef image) {
 
 /// A rounded border whose sides differ (a CSS spinner: one side coloured) fills its whole ring: the parts of the ring
 /// inside the inner rect's corners belong to a side too. They were left unpainted, a square hole in a round ring.
+// Fidelity plan, Task 8 (twidget edit 36): Blink's dash metrics. A 6px dashed side 100px long: dashes 2w = 12 and a gap
+// fitted near w so the side starts and ends with a dash, 6 dashes and gaps of 5.6 ([0, 12], [17.6, 29.6], …, [88, 100]).
+// Dotted: round dots w across, 9 of them with gaps of 5.75, centred at 3, 14.75, 26.5, …, 97.
+- (void)testDashesAndDotsFollowBlinksMetrics {
+    Booted booted("<!doctype html><html><head></head><body style=\"margin:0\">"
+                  "<div style=\"width:88px;height:28px;border:6px dashed rgb(0,0,0)\"></div>"
+                  "<div style=\"width:88px;height:28px;border:6px dotted rgb(0,0,0)\"></div></body></html>",
+                  1);
+    std::shared_ptr<const wr::LayerTree> tree = booted.tree();
+    XCTAssertTrue(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    CGImageRef image = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(0, 0, 100, 80), 1);
+    XCTAssertTrue(image != nullptr);
+    std::vector<uint8_t> px = rgba(image, 100, 80);
+    CGImageRelease(image);
+    auto alpha = [&](int x, int y) { return int(px[(size_t(y) * 100 + size_t(x)) * 4 + 3]); };
+    // Dashed, top side (y 3): ink at 5, 20 and 95; the gap at 14.
+    XCTAssertEqual(alpha(5, 3), 255);
+    XCTAssertEqual(alpha(14, 3), 0);
+    XCTAssertEqual(alpha(20, 3), 255);
+    XCTAssertEqual(alpha(95, 3), 255);
+    // Dotted, top side (y 40 + 3): the dot centred at 85.25 covers 83; 89 is in the gap before the last, at 97.
+    XCTAssertGreaterThan(alpha(83, 43), 200);
+    XCTAssertEqual(alpha(89, 43), 0);
+}
+
 - (void)testARoundedBorderWithOneSideColouredFillsItsRing {
-    Booted booted("<!doctype html><html><head></head><body><div style=\"width:46px;height:46px;border-radius:50%;"
+    Booted booted("<!doctype html><html><head></head><body style=\"margin:8px\"><div style=\"width:46px;height:46px;border-radius:50%;"
                   "border:6px solid rgb(221,221,221);border-top-color:rgb(51,102,204);box-sizing:border-box\"></div>"
                   "</body></html>",
                   1);

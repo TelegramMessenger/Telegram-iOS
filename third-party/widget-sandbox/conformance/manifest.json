@@ -24,7 +24,7 @@
  },
  "coverage": {
   "auto": 245,
-  "visual": 105,
+  "visual": 114,
   "catalogue": 255,
   "external": {
    "limit.nodes": "corpus/attacks (pnpm test:attacks): node flood",
@@ -174,9 +174,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7737,
-   "gzip": 3499,
-   "gzip6": 3501
+   "bytes": 7747,
+   "gzip": 3505,
+   "gzip6": 3506
   },
   {
    "id": "auto/01-html-elements-b",
@@ -220,21 +220,21 @@
     },
     {
      "id": "html.el.blockquote",
-     "name": "blockquote is indented 40px",
+     "name": "blockquote is set off by the UA layer: a 3px bar and 0.75em before the text",
      "native": {
       "chromium": "pass"
      }
     },
     {
      "id": "html.el.blockquote",
-     "name": "figure is indented 40px",
+     "name": "figure has no indent",
      "native": {
       "chromium": "pass"
      }
     },
     {
      "id": "html.el.lists",
-     "name": "ul is padded 40px",
+     "name": "ul is padded 1.5em",
      "native": {
       "chromium": "pass"
      }
@@ -255,7 +255,7 @@
     },
     {
      "id": "html.el.lists",
-     "name": "dd is indented 40px",
+     "name": "dd is indented 1.5em",
      "native": {
       "chromium": "pass"
      }
@@ -297,7 +297,7 @@
     },
     {
      "id": "html.el.table",
-     "name": "th is bold and centred",
+     "name": "th is bold and start-aligned",
      "native": {
       "chromium": "pass"
      }
@@ -318,9 +318,9 @@
     }
    ],
    "stages": [],
-   "bytes": 6678,
-   "gzip": 3114,
-   "gzip6": 3114
+   "bytes": 6873,
+   "gzip": 3225,
+   "gzip6": 3225
   },
   {
    "id": "auto/01-html-elements-c",
@@ -458,7 +458,7 @@
     },
     {
      "id": "html.el.a-fragment",
-     "name": "a[href=#…] is a link (UA link colour, underline)",
+     "name": "a[href=#…] is a link (the link colour, no underline)",
      "native": {
       "chromium": "pass"
      }
@@ -472,7 +472,7 @@
     },
     {
      "id": "html.el.a-external",
-     "name": "it is still drawn as a link",
+     "name": "it is still drawn as a link (not the text colour, no underline)",
      "native": {
       "chromium": "pass"
      }
@@ -493,9 +493,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7882,
-   "gzip": 3484,
-   "gzip6": 3488
+   "bytes": 8050,
+   "gzip": 3513,
+   "gzip6": 3517
   },
   {
    "id": "auto/02-attributes-images-a",
@@ -615,7 +615,7 @@
      "id": "html.attr.legacy-presentational",
      "name": "cellpadding is dropped",
      "native": {
-      "chromium": "fail"
+      "chromium": "pass"
      }
     },
     {
@@ -655,9 +655,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8008,
-   "gzip": 3431,
-   "gzip6": 3432
+   "bytes": 8018,
+   "gzip": 3436,
+   "gzip6": 3437
   },
   {
    "id": "auto/02-attributes-images-b",
@@ -750,7 +750,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/02-attributes-images-b/raster.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "svgimg",
@@ -773,12 +774,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/02-attributes-images-b/svgimg.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.9853
     }
    ],
-   "bytes": 9004,
-   "gzip": 3501,
-   "gzip6": 3506
+   "bytes": 9014,
+   "gzip": 3504,
+   "gzip6": 3510
   },
   {
    "id": "auto/03-layout-a",
@@ -949,7 +951,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/03-layout-a/flex.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "grid",
@@ -972,12 +975,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/03-layout-a/grid.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     }
    ],
-   "bytes": 10062,
-   "gzip": 3585,
-   "gzip6": 3594
+   "bytes": 10072,
+   "gzip": 3588,
+   "gzip6": 3597
   },
   {
    "id": "auto/03-layout-b",
@@ -1183,9 +1187,9 @@
      }
     }
    ],
-   "bytes": 8487,
-   "gzip": 3452,
-   "gzip6": 3456
+   "bytes": 8497,
+   "gzip": 3458,
+   "gzip6": 3461
   },
   {
    "id": "auto/03-layout-c",
@@ -1366,9 +1370,9 @@
      }
     }
    ],
-   "bytes": 9296,
-   "gzip": 3645,
-   "gzip6": 3646
+   "bytes": 9306,
+   "gzip": 3651,
+   "gzip6": 3653
   },
   {
    "id": "auto/04-values-units",
@@ -1625,9 +1629,9 @@
     }
    ],
    "stages": [],
-   "bytes": 9381,
-   "gzip": 3738,
-   "gzip6": 3740
+   "bytes": 9391,
+   "gzip": 3744,
+   "gzip6": 3746
   },
   {
    "id": "auto/05-colour-backgrounds-a",
@@ -1728,7 +1732,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/basic.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "modern",
@@ -1751,7 +1756,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/modern.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "mix",
@@ -1774,7 +1780,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/mix.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "light-dark",
@@ -1802,9 +1809,9 @@
      }
     }
    ],
-   "bytes": 6947,
-   "gzip": 2826,
-   "gzip6": 2830
+   "bytes": 6957,
+   "gzip": 2834,
+   "gzip6": 2836
   },
   {
    "id": "auto/05-colour-backgrounds-b",
@@ -1923,7 +1930,8 @@
      ],
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/clip-text.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.5998
     },
     {
      "name": "linear",
@@ -2061,12 +2069,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/object-fit.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.0143
     }
    ],
-   "bytes": 8311,
-   "gzip": 3201,
-   "gzip6": 3200
+   "bytes": 8321,
+   "gzip": 3207,
+   "gzip6": 3206
   },
   {
    "id": "auto/06-text-fonts-a",
@@ -2216,9 +2225,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7958,
-   "gzip": 3205,
-   "gzip6": 3206
+   "bytes": 7968,
+   "gzip": 3211,
+   "gzip6": 3212
   },
   {
    "id": "auto/06-text-fonts-b",
@@ -2385,15 +2394,15 @@
     }
    ],
    "stages": [],
-   "bytes": 8385,
-   "gzip": 3356,
-   "gzip6": 3357
+   "bytes": 8395,
+   "gzip": 3362,
+   "gzip6": 3364
   },
   {
    "id": "auto/06-text-fonts-c",
    "set": "auto",
    "file": "auto/06-text-fonts-c.html",
-   "title": "Ellipsis, text-shadow, emoji and decoration (pixels), RTL and shaping, emoji, selection",
+   "title": "Ellipsis, text-shadow, emoji and decoration (pixels), RTL and shaping, emoji, opt-in selection",
    "kind": [
     "self",
     "pixel"
@@ -2454,9 +2463,23 @@
     },
     {
      "id": "css.text.selection",
-     "name": "user-select: text cannot re-enable selection",
+     "name": "not selectable by default (none on the root); user-select: text enables it",
      "native": {
       "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.text.selection",
+     "name": "a child of user-select: text is selectable too (auto or text)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.text.selection",
+     "name": "user-select: all is outside the profile (dropped)",
+     "native": {
+      "chromium": "skip"
      }
     }
    ],
@@ -2514,7 +2537,8 @@
      ],
      "refs": {
       "chromium": "refs/auto/06-text-fonts-c/text-shadow.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.3521
     },
     {
      "name": "emoji",
@@ -2569,9 +2593,9 @@
      }
     }
    ],
-   "bytes": 6719,
-   "gzip": 2974,
-   "gzip6": 2976
+   "bytes": 7215,
+   "gzip": 3171,
+   "gzip6": 3173
   },
   {
    "id": "auto/07-selectors-a",
@@ -2709,9 +2733,9 @@
     }
    ],
    "stages": [],
-   "bytes": 5971,
-   "gzip": 2611,
-   "gzip6": 2612
+   "bytes": 5981,
+   "gzip": 2617,
+   "gzip6": 2619
   },
   {
    "id": "auto/07-selectors-b",
@@ -2887,9 +2911,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8461,
-   "gzip": 3466,
-   "gzip6": 3466
+   "bytes": 8471,
+   "gzip": 3473,
+   "gzip6": 3473
   },
   {
    "id": "auto/08-at-rules",
@@ -3095,9 +3119,9 @@
     }
    ],
    "stages": [],
-   "bytes": 9570,
-   "gzip": 3692,
-   "gzip6": 3694
+   "bytes": 9580,
+   "gzip": 3698,
+   "gzip6": 3701
   },
   {
    "id": "auto/09-transforms-effects-a",
@@ -3214,7 +3238,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/transform-3d.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.411
     },
     {
      "name": "blur",
@@ -3284,7 +3309,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/filter-other.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "filter-url",
@@ -3307,12 +3333,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/filter-url.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.3036
     }
    ],
-   "bytes": 8717,
-   "gzip": 3278,
-   "gzip6": 3278
+   "bytes": 8727,
+   "gzip": 3285,
+   "gzip6": 3284
   },
   {
    "id": "auto/09-transforms-effects-b",
@@ -3412,7 +3439,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/blend.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.1199
     },
     {
      "name": "clip-path",
@@ -3435,7 +3463,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/clip-path.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.5156
     },
     {
      "name": "mask",
@@ -3458,7 +3487,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/mask.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.7492
     },
     {
      "name": "opacity",
@@ -3484,9 +3514,9 @@
      }
     }
    ],
-   "bytes": 6986,
-   "gzip": 2843,
-   "gzip6": 2843
+   "bytes": 6996,
+   "gzip": 2849,
+   "gzip6": 2849
   },
   {
    "id": "auto/10-css-animations",
@@ -3618,7 +3648,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/keyframes.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "alternate",
@@ -3641,7 +3672,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/alternate.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "steps",
@@ -3664,7 +3696,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/steps.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "colour",
@@ -3710,7 +3743,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/fill-forwards.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "transition",
@@ -3733,12 +3767,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/transition.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     }
    ],
-   "bytes": 9195,
-   "gzip": 3518,
-   "gzip6": 3518
+   "bytes": 9205,
+   "gzip": 3524,
+   "gzip6": 3524
   },
   {
    "id": "auto/11-web-animations",
@@ -3892,7 +3927,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/animate.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "css-control",
@@ -3915,7 +3951,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/css-control.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "offsets",
@@ -3938,7 +3975,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/offsets.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "easing",
@@ -3961,12 +3999,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/easing.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     }
    ],
-   "bytes": 9362,
-   "gzip": 3611,
-   "gzip6": 3611
+   "bytes": 9372,
+   "gzip": 3617,
+   "gzip6": 3617
   },
   {
    "id": "auto/12-canvas-a",
@@ -4187,9 +4226,9 @@
      }
     }
    ],
-   "bytes": 8873,
-   "gzip": 3625,
-   "gzip6": 3627
+   "bytes": 8883,
+   "gzip": 3631,
+   "gzip6": 3633
   },
   {
    "id": "auto/12-canvas-b",
@@ -4494,9 +4533,9 @@
      }
     }
    ],
-   "bytes": 9138,
-   "gzip": 3610,
-   "gzip6": 3612
+   "bytes": 9148,
+   "gzip": 3616,
+   "gzip6": 3619
   },
   {
    "id": "auto/13-svg-a",
@@ -4684,9 +4723,9 @@
      }
     }
    ],
-   "bytes": 7136,
-   "gzip": 3242,
-   "gzip6": 3241
+   "bytes": 7146,
+   "gzip": 3248,
+   "gzip6": 3248
   },
   {
    "id": "auto/13-svg-b",
@@ -4736,7 +4775,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/clip-mask.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.5746
     },
     {
      "name": "filters",
@@ -4760,7 +4800,8 @@
      "maxDiff": 0.1,
      "refs": {
       "chromium": "refs/auto/13-svg-b/filters.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.2697
     },
     {
      "name": "smil",
@@ -4783,7 +4824,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/smil.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "image",
@@ -4806,7 +4848,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/image.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.9915
     },
     {
      "name": "foreign-object",
@@ -4829,12 +4872,13 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/foreign-object.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.641
     }
    ],
-   "bytes": 5521,
-   "gzip": 2459,
-   "gzip6": 2458
+   "bytes": 5531,
+   "gzip": 2465,
+   "gzip6": 2464
   },
   {
    "id": "auto/14-dom-layout-api-a",
@@ -4960,9 +5004,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7395,
-   "gzip": 3218,
-   "gzip6": 3217
+   "bytes": 7405,
+   "gzip": 3223,
+   "gzip6": 3221
   },
   {
    "id": "auto/14-dom-layout-api-b",
@@ -5136,9 +5180,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8084,
-   "gzip": 3513,
-   "gzip6": 3515
+   "bytes": 8094,
+   "gzip": 3518,
+   "gzip6": 3520
   },
   {
    "id": "auto/15-js-runtime-a",
@@ -5260,9 +5304,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7149,
-   "gzip": 3059,
-   "gzip6": 3060
+   "bytes": 7159,
+   "gzip": 3065,
+   "gzip6": 3066
   },
   {
    "id": "auto/15-js-runtime-b",
@@ -5513,9 +5557,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7763,
-   "gzip": 3378,
-   "gzip6": 3378
+   "bytes": 7773,
+   "gzip": 3384,
+   "gzip6": 3384
   },
   {
    "id": "auto/15-js-runtime-c",
@@ -5625,9 +5669,9 @@
     }
    ],
    "stages": [],
-   "bytes": 6725,
-   "gzip": 2995,
-   "gzip6": 2996
+   "bytes": 6735,
+   "gzip": 3003,
+   "gzip6": 3002
   },
   {
    "id": "auto/16-sdk-taps-a",
@@ -5780,9 +5824,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8493,
-   "gzip": 3646,
-   "gzip6": 3647
+   "bytes": 8503,
+   "gzip": 3652,
+   "gzip6": 3653
   },
   {
    "id": "auto/16-sdk-taps-b",
@@ -5928,9 +5972,9 @@
     }
    ],
    "stages": [],
-   "bytes": 7146,
-   "gzip": 3171,
-   "gzip6": 3172
+   "bytes": 7156,
+   "gzip": 3177,
+   "gzip6": 3179
   },
   {
    "id": "auto/16-sdk-taps-c",
@@ -6093,9 +6137,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8286,
-   "gzip": 3473,
-   "gzip6": 3473
+   "bytes": 8296,
+   "gzip": 3480,
+   "gzip6": 3480
   },
   {
    "id": "auto/17-drag-hover",
@@ -6252,12 +6296,13 @@
      "maxDiff": 0.3,
      "refs": {
       "chromium": "refs/auto/17-drag-hover/no-selection.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     }
    ],
-   "bytes": 8820,
-   "gzip": 3790,
-   "gzip6": 3791
+   "bytes": 8830,
+   "gzip": 3797,
+   "gzip6": 3798
   },
   {
    "id": "auto/18-out-of-profile",
@@ -6420,9 +6465,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8500,
-   "gzip": 3565,
-   "gzip6": 3565
+   "bytes": 8510,
+   "gzip": 3566,
+   "gzip6": 3566
   },
   {
    "id": "auto/19-limits",
@@ -6507,9 +6552,9 @@
     }
    ],
    "stages": [],
-   "bytes": 6004,
-   "gzip": 2809,
-   "gzip6": 2811
+   "bytes": 6014,
+   "gzip": 2815,
+   "gzip6": 2818
   },
   {
    "id": "auto/20-client-behaviour",
@@ -6659,9 +6704,9 @@
     }
    ],
    "stages": [],
-   "bytes": 8674,
-   "gzip": 3768,
-   "gzip6": 3768
+   "bytes": 8684,
+   "gzip": 3774,
+   "gzip6": 3774
   },
   {
    "id": "auto/21-no-keyboard",
@@ -6776,9 +6821,164 @@
     }
    ],
    "stages": [],
-   "bytes": 6714,
-   "gzip": 3123,
-   "gzip6": 3123
+   "bytes": 6724,
+   "gzip": 3130,
+   "gzip6": 3130
+  },
+  {
+   "id": "auto/22-ua-defaults",
+   "set": "auto",
+   "file": "auto/22-ua-defaults.html",
+   "title": "The UA layer: the root on the text tokens over the bubble, text defaults, author CSS wins",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "html.el.blockquote",
+    "html.el.headings",
+    "html.el.inline-text",
+    "html.el.lists",
+    "html.el.pre",
+    "html.el.structure",
+    "html.el.sub-sup",
+    "html.el.table",
+    "tw.theme-params"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.theme-params",
+     "name": "root: no background (the bubble is the canvas), the text colour",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "tw.theme-params",
+     "name": "a[href]: link colour, no underline; <a> without href: text colour",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "tw.theme-params",
+     "name": "figcaption is --tg-theme-hint-color",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.structure",
+     "name": "root: the text tokens, system-ui",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.structure",
+     "name": "body: the padding token as margin, no padding",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.structure",
+     "name": "p: 0.6em margins; hr: one 1px line, no height",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.headings",
+     "name": "h1–h6: 1.6, 1.35, 1.2, 1.07, 1, 0.87 em",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.headings",
+     "name": "headings: 600, line height 1.25; h2 0.75em above, 0.35em below",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.inline-text",
+     "name": "small 0.85em; b 600; code monospace 0.9em",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.sub-sup",
+     "name": "sup: 0.75em on the baseline, raised by position",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.lists",
+     "name": "ul: 1.5em start padding, disc; nested: circle, no margin; ol: decimal",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.lists",
+     "name": "dt 600; dd indented 1.5em",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.table",
+     "name": "table: collapsed, cells touch; th 600, start-aligned",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.table",
+     "name": "cells: 1px line under, 0.3em above, no outer padding at the ends",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.pre",
+     "name": "pre: wraps, monospace 0.9em, code inside keeps the size",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.blockquote",
+     "name": "blockquote: 3px bar, 0.75em padding; no indent, as figure",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.structure",
+     "name": "author rules win over the layer",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 8611,
+   "gzip": 3766,
+   "gzip6": 3768
   },
   {
    "id": "visual/01-boxes",
@@ -6885,12 +7085,13 @@
      }
     }
    ],
-   "bytes": 4657,
-   "gzip": 2008,
-   "gzip6": 2008,
+   "bytes": 4666,
+   "gzip": 2010,
+   "gzip6": 2010,
    "refImages": {
     "light": "refs/visual/01-boxes.png"
-   }
+   },
+   "height": 448
   },
   {
    "id": "visual/02-colours-gradients",
@@ -6992,7 +7193,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/02-colours-gradients/functions.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "background",
@@ -7013,18 +7215,19 @@
      }
     }
    ],
-   "bytes": 5512,
+   "bytes": 5521,
    "gzip": 2471,
    "gzip6": 2472,
    "refImages": {
     "light": "refs/visual/02-colours-gradients.png"
-   }
+   },
+   "height": 560
   },
   {
-   "id": "visual/03-text",
+   "id": "visual/03-text-a",
    "set": "visual",
-   "file": "visual/03-text.html",
-   "title": "Text: system font families, weights, decoration, alignment, ellipsis, RTL and Arabic shaping, emoji; line clamp and text-shadow out",
+   "file": "visual/03-text-a.html",
+   "title": "Text (1/2): system font families, weights, decoration, alignment",
    "hint": "Fonts differ between platforms: compare the structure (which line is bold, where text breaks, what is underlined), not the exact letter shapes.",
    "kind": [
     "pixel"
@@ -7033,12 +7236,7 @@
     "css.font.basic",
     "css.font.generic",
     "css.text.align",
-    "css.text.decoration",
-    "css.text.emoji",
-    "css.text.line-clamp",
-    "css.text.overflow",
-    "css.text.rtl",
-    "css.text.shadow"
+    "css.text.decoration"
    ],
    "themes": [
     "light"
@@ -7065,7 +7263,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/03-text/families.chromium.png"
+      "chromium": "refs/visual/03-text-a/families.chromium.png"
      }
     },
     {
@@ -7081,7 +7279,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/03-text/weights.chromium.png"
+      "chromium": "refs/visual/03-text-a/weights.chromium.png"
      }
     },
     {
@@ -7097,9 +7295,46 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/03-text/align.chromium.png"
+      "chromium": "refs/visual/03-text-a/align.chromium.png"
      }
-    },
+    }
+   ],
+   "bytes": 4864,
+   "gzip": 2114,
+   "gzip6": 2115,
+   "refImages": {
+    "light": "refs/visual/03-text-a.png"
+   },
+   "height": 428
+  },
+  {
+   "id": "visual/03-text-b",
+   "set": "visual",
+   "file": "visual/03-text-b.html",
+   "title": "Text (2/2): ellipsis, RTL and Arabic shaping, emoji; line clamp and text-shadow out",
+   "hint": "Fonts differ between platforms: compare the structure (which line is bold, where text breaks, what is underlined), not the exact letter shapes.",
+   "kind": [
+    "pixel"
+   ],
+   "covers": [
+    "css.text.emoji",
+    "css.text.line-clamp",
+    "css.text.overflow",
+    "css.text.rtl",
+    "css.text.shadow"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [
     {
      "name": "ellipsis",
      "rect": null,
@@ -7113,8 +7348,9 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/03-text/ellipsis.chromium.png"
-     }
+      "chromium": "refs/visual/03-text-b/ellipsis.chromium.png"
+     },
+     "nativeVsTemplate": 0.2213
     },
     {
      "name": "scripts",
@@ -7129,7 +7365,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/03-text/scripts.chromium.png"
+      "chromium": "refs/visual/03-text-b/scripts.chromium.png"
      }
     },
     {
@@ -7145,16 +7381,18 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/03-text/text-shadow.chromium.png"
-     }
+      "chromium": "refs/visual/03-text-b/text-shadow.chromium.png"
+     },
+     "nativeVsTemplate": 0.3384
     }
    ],
-   "bytes": 7269,
-   "gzip": 2752,
-   "gzip6": 2756,
+   "bytes": 5297,
+   "gzip": 2314,
+   "gzip6": 2314,
    "refImages": {
-    "light": "refs/visual/03-text.png"
-   }
+    "light": "refs/visual/03-text-b.png"
+   },
+   "height": 428
   },
   {
    "id": "visual/04-layout",
@@ -7265,32 +7503,29 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/04-layout/float-columns.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.1241
     }
    ],
-   "bytes": 6313,
-   "gzip": 2435,
-   "gzip6": 2435,
+   "bytes": 6322,
+   "gzip": 2436,
+   "gzip6": 2438,
    "refImages": {
     "light": "refs/visual/04-layout.png"
-   }
+   },
+   "height": 544
   },
   {
-   "id": "visual/05-transforms-effects",
+   "id": "visual/05-transforms-effects-a",
    "set": "visual",
-   "file": "visual/05-transforms-effects.html",
-   "title": "2D transforms; 3D transforms out (must look flat); filter blur, brightness, drop-shadow and backdrop-filter blur/brightness; other filters, blend modes, clip-path and mask out",
+   "file": "visual/05-transforms-effects-a.html",
+   "title": "Transforms and effects (1/2): 2D transforms; 3D transforms out (must look flat); filter blur, brightness, drop-shadow",
    "hint": "Each box should look like the reference picture posted next to this message. The 3D row must look flat.",
    "kind": [
     "pixel"
    ],
    "covers": [
-    "css.backdrop-filter",
-    "css.blend",
-    "css.clip-path",
     "css.filter.blur-brightness-drop-shadow",
-    "css.filter.other",
-    "css.mask",
     "css.transform.2d",
     "css.transform.3d"
    ],
@@ -7319,7 +7554,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/transform-2d.chromium.png"
+      "chromium": "refs/visual/05-transforms-effects-a/transform-2d.chromium.png"
      }
     },
     {
@@ -7335,8 +7570,9 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/transform-3d.chromium.png"
-     }
+      "chromium": "refs/visual/05-transforms-effects-a/transform-3d.chromium.png"
+     },
+     "nativeVsTemplate": 0.4329
     },
     {
      "name": "filters",
@@ -7351,9 +7587,46 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/filters.chromium.png"
+      "chromium": "refs/visual/05-transforms-effects-a/filters.chromium.png"
      }
-    },
+    }
+   ],
+   "bytes": 4690,
+   "gzip": 2072,
+   "gzip6": 2078,
+   "refImages": {
+    "light": "refs/visual/05-transforms-effects-a.png"
+   },
+   "height": 352
+  },
+  {
+   "id": "visual/05-transforms-effects-b",
+   "set": "visual",
+   "file": "visual/05-transforms-effects-b.html",
+   "title": "Transforms and effects (2/2): backdrop-filter blur/brightness; other filters, blend modes, clip-path and mask out",
+   "hint": "Each box should look like the reference picture posted next to this message.",
+   "kind": [
+    "pixel"
+   ],
+   "covers": [
+    "css.backdrop-filter",
+    "css.blend",
+    "css.clip-path",
+    "css.filter.other",
+    "css.mask"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [
     {
      "name": "filters-other",
      "rect": null,
@@ -7367,8 +7640,9 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/filters-other.chromium.png"
-     }
+      "chromium": "refs/visual/05-transforms-effects-b/filters-other.chromium.png"
+     },
+     "nativeVsTemplate": 1
     },
     {
      "name": "backdrop",
@@ -7383,7 +7657,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/backdrop.chromium.png"
+      "chromium": "refs/visual/05-transforms-effects-b/backdrop.chromium.png"
      }
     },
     {
@@ -7399,16 +7673,18 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/05-transforms-effects/blend-clip-mask.chromium.png"
-     }
+      "chromium": "refs/visual/05-transforms-effects-b/blend-clip-mask.chromium.png"
+     },
+     "nativeVsTemplate": 0.4332
     }
    ],
-   "bytes": 7449,
-   "gzip": 2556,
-   "gzip6": 2565,
+   "bytes": 5653,
+   "gzip": 2144,
+   "gzip6": 2145,
    "refImages": {
-    "light": "refs/visual/05-transforms-effects.png"
-   }
+    "light": "refs/visual/05-transforms-effects-b.png"
+   },
+   "height": 352
   },
   {
    "id": "visual/06-css-animations",
@@ -7465,7 +7741,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/slide.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.6305
     },
     {
      "name": "spin-pulse",
@@ -7481,7 +7758,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/spin-pulse.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.8422
     },
     {
      "name": "steps",
@@ -7497,7 +7775,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/steps.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.5037
     },
     {
      "name": "frozen",
@@ -7529,15 +7808,17 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/transition.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.9824
     }
    ],
-   "bytes": 8059,
-   "gzip": 2895,
-   "gzip6": 2896,
+   "bytes": 8068,
+   "gzip": 2901,
+   "gzip6": 2902,
    "refImages": {
     "light": "refs/visual/06-css-animations.png"
-   }
+   },
+   "height": 544
   },
   {
    "id": "visual/07-web-animations",
@@ -7583,7 +7864,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/bounce.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "seek",
@@ -7599,7 +7881,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/seek.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "offsets",
@@ -7615,7 +7898,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/offsets.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "css-control",
@@ -7631,40 +7915,37 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/css-control.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.0154
     }
    ],
-   "bytes": 7443,
-   "gzip": 2665,
-   "gzip6": 2668,
+   "bytes": 7452,
+   "gzip": 2670,
+   "gzip6": 2673,
    "refImages": {
     "light": "refs/visual/07-web-animations.png"
-   }
+   },
+   "height": 464
   },
   {
-   "id": "visual/08-canvas",
+   "id": "visual/08-canvas-a",
    "set": "visual",
-   "file": "visual/08-canvas.html",
-   "title": "Canvas 2D drawing: shapes and paths, line styles, gradients and patterns, text, transforms and clipping, alpha; shadows, ctx.filter and conic gradients out; a chart",
+   "file": "visual/08-canvas-a.html",
+   "title": "Canvas 2D (1/2): shapes and paths, line styles, colours, gradients and patterns, text, alpha",
    "hint": "Each canvas should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
    ],
    "covers": [
     "canvas.alpha",
-    "canvas.clip",
     "canvas.colors",
-    "canvas.conic-gradient",
-    "canvas.filter",
     "canvas.gradients",
     "canvas.hidpi",
     "canvas.line-style",
     "canvas.path",
     "canvas.pattern",
     "canvas.rect",
-    "canvas.shadow",
-    "canvas.text",
-    "canvas.transform"
+    "canvas.text"
    ],
    "themes": [
     "light"
@@ -7691,7 +7972,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/shapes.chromium.png"
+      "chromium": "refs/visual/08-canvas-a/shapes.chromium.png"
      }
     },
     {
@@ -7707,7 +7988,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/paint.chromium.png"
+      "chromium": "refs/visual/08-canvas-a/paint.chromium.png"
      }
     },
     {
@@ -7723,9 +8004,50 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/text.chromium.png"
+      "chromium": "refs/visual/08-canvas-a/text.chromium.png"
      }
-    },
+    }
+   ],
+   "bytes": 6055,
+   "gzip": 2679,
+   "gzip6": 2679,
+   "refImages": {
+    "light": "refs/visual/08-canvas-a.png"
+   },
+   "height": 358
+  },
+  {
+   "id": "visual/08-canvas-b",
+   "set": "visual",
+   "file": "visual/08-canvas-b.html",
+   "title": "Canvas 2D (2/2): transforms and clipping; shadows, ctx.filter and conic gradients out; a chart",
+   "hint": "Each canvas should look like the reference picture posted next to this message.",
+   "kind": [
+    "pixel"
+   ],
+   "covers": [
+    "canvas.clip",
+    "canvas.conic-gradient",
+    "canvas.filter",
+    "canvas.hidpi",
+    "canvas.line-style",
+    "canvas.path",
+    "canvas.rect",
+    "canvas.shadow",
+    "canvas.transform"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [
     {
      "name": "transform-clip",
      "rect": null,
@@ -7739,7 +8061,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/transform-clip.chromium.png"
+      "chromium": "refs/visual/08-canvas-b/transform-clip.chromium.png"
      }
     },
     {
@@ -7755,7 +8077,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/candidates.chromium.png"
+      "chromium": "refs/visual/08-canvas-b/candidates.chromium.png"
      }
     },
     {
@@ -7771,33 +8093,30 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/08-canvas/chart.chromium.png"
+      "chromium": "refs/visual/08-canvas-b/chart.chromium.png"
      }
     }
    ],
-   "bytes": 8441,
-   "gzip": 3400,
-   "gzip6": 3403,
+   "bytes": 5621,
+   "gzip": 2625,
+   "gzip6": 2625,
    "refImages": {
-    "light": "refs/visual/08-canvas.png"
-   }
+    "light": "refs/visual/08-canvas-b.png"
+   },
+   "height": 352
   },
   {
-   "id": "visual/09-svg",
+   "id": "visual/09-svg-a",
    "set": "visual",
-   "file": "visual/09-svg.html",
-   "title": "Inline SVG: shapes, structure and viewBox, gradients, text, CSS on SVG; clipPath/mask, filters and SMIL out",
-   "hint": "Each picture should look like the reference picture posted next to this message. The last row moves.",
+   "file": "visual/09-svg-a.html",
+   "title": "Inline SVG (1/2): shapes, structure and viewBox, gradients, text",
+   "hint": "Each picture should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
    ],
    "covers": [
-    "svg.clip-mask",
-    "svg.css",
-    "svg.filters",
     "svg.gradients",
     "svg.shapes",
-    "svg.smil",
     "svg.structure",
     "svg.text"
    ],
@@ -7826,7 +8145,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/09-svg/shapes.chromium.png"
+      "chromium": "refs/visual/09-svg-a/shapes.chromium.png"
      }
     },
     {
@@ -7842,7 +8161,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/09-svg/structure-gradients.chromium.png"
+      "chromium": "refs/visual/09-svg-a/structure-gradients.chromium.png"
      }
     },
     {
@@ -7858,9 +8177,45 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/09-svg/text.chromium.png"
+      "chromium": "refs/visual/09-svg-a/text.chromium.png"
      }
-    },
+    }
+   ],
+   "bytes": 4913,
+   "gzip": 2386,
+   "gzip6": 2386,
+   "refImages": {
+    "light": "refs/visual/09-svg-a.png"
+   },
+   "height": 352
+  },
+  {
+   "id": "visual/09-svg-b",
+   "set": "visual",
+   "file": "visual/09-svg-b.html",
+   "title": "Inline SVG (2/2): CSS on SVG; clipPath/mask, filters and SMIL out",
+   "hint": "Each picture should look like the reference picture posted next to this message. Nothing moves: SMIL is out.",
+   "kind": [
+    "pixel"
+   ],
+   "covers": [
+    "svg.clip-mask",
+    "svg.css",
+    "svg.filters",
+    "svg.smil"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [
     {
      "name": "css",
      "rect": null,
@@ -7874,7 +8229,7 @@
      ],
      "reftest": false,
      "refs": {
-      "chromium": "refs/visual/09-svg/css.chromium.png"
+      "chromium": "refs/visual/09-svg-b/css.chromium.png"
      }
     },
     {
@@ -7890,8 +8245,9 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/09-svg/clip-filter.chromium.png"
-     }
+      "chromium": "refs/visual/09-svg-b/clip-filter.chromium.png"
+     },
+     "nativeVsTemplate": 0.3951
     },
     {
      "name": "smil",
@@ -7906,16 +8262,18 @@
      ],
      "reftest": true,
      "refs": {
-      "chromium": "refs/visual/09-svg/smil.chromium.png"
-     }
+      "chromium": "refs/visual/09-svg-b/smil.chromium.png"
+     },
+     "nativeVsTemplate": 0.7266
     }
    ],
-   "bytes": 7250,
-   "gzip": 3055,
-   "gzip6": 3055,
+   "bytes": 5218,
+   "gzip": 2356,
+   "gzip6": 2357,
    "refImages": {
-    "light": "refs/visual/09-svg.png"
-   }
+    "light": "refs/visual/09-svg-b.png"
+   },
+   "height": 352
   },
   {
    "id": "visual/10-images",
@@ -7975,7 +8333,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/10-images/svg-image.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.8973
     },
     {
      "name": "refused",
@@ -7991,7 +8350,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/10-images/refused.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.7602
     },
     {
      "name": "object-fit",
@@ -8010,12 +8370,13 @@
      }
     }
    ],
-   "bytes": 9288,
-   "gzip": 3156,
-   "gzip6": 3161,
+   "bytes": 9297,
+   "gzip": 3155,
+   "gzip6": 3160,
    "refImages": {
     "light": "refs/visual/10-images.png"
-   }
+   },
+   "height": 448
   },
   {
    "id": "visual/11-interaction",
@@ -8095,12 +8456,13 @@
     }
    ],
    "stages": [],
-   "bytes": 7094,
-   "gzip": 3134,
-   "gzip6": 3134,
+   "bytes": 7103,
+   "gzip": 3142,
+   "gzip6": 3142,
    "refImages": {
     "light": "refs/visual/11-interaction.png"
-   }
+   },
+   "height": 332
   },
   {
    "id": "visual/12-theme",
@@ -8150,13 +8512,14 @@
      }
     }
    ],
-   "bytes": 4027,
-   "gzip": 1976,
-   "gzip6": 1976,
+   "bytes": 4036,
+   "gzip": 1978,
+   "gzip6": 1978,
    "refImages": {
     "light": "refs/visual/12-theme.png",
     "dark": "refs/visual/12-theme.dark.png"
-   }
+   },
+   "height": 236
   },
   {
    "id": "visual/13-out-of-profile",
@@ -8206,7 +8569,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/forms.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.6194
     },
     {
      "name": "scroll-sticky",
@@ -8222,7 +8586,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/scroll-sticky.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0
     },
     {
      "name": "fonts",
@@ -8238,7 +8603,8 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/fonts.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.3812
     },
     {
      "name": "three-d",
@@ -8254,15 +8620,122 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/three-d.chromium.png"
-     }
+     },
+     "nativeVsTemplate": 0.436
     }
    ],
-   "bytes": 6373,
-   "gzip": 2620,
-   "gzip6": 2620,
+   "bytes": 6382,
+   "gzip": 2622,
+   "gzip6": 2622,
    "refImages": {
     "light": "refs/visual/13-out-of-profile.png"
-   }
+   },
+   "height": 494
+  },
+  {
+   "id": "visual/14-unstyled-document",
+   "set": "visual",
+   "file": "visual/14-unstyled-document.html",
+   "title": "Unstyled document: the renderer's defaults for the root and the text (no CSS at all)",
+   "hint": "Compare with the picture for the chat's theme: the bubble's own colour behind the text, the chat's text size, the same spacing, a table with row lines, the button in the client's style. Change the chat text size: the text follows.",
+   "kind": [],
+   "covers": [
+    "html.el.a-external",
+    "html.el.blockquote",
+    "html.el.button",
+    "html.el.headings",
+    "html.el.inline-text",
+    "html.el.lists",
+    "html.el.pre",
+    "html.el.structure",
+    "html.el.table",
+    "tw.theme-params"
+   ],
+   "themes": [
+    "light",
+    "dark"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 3049,
+   "gzip": 1670,
+   "gzip6": 1670,
+   "refImages": {
+    "light": "refs/visual/14-unstyled-document.png",
+    "dark": "refs/visual/14-unstyled-document.dark.png"
+   },
+   "height": 495
+  },
+  {
+   "id": "visual/15-body-background",
+   "set": "visual",
+   "file": "visual/15-body-background.html",
+   "title": "A body background without a margin reset fills the whole bubble (root background propagation)",
+   "hint": "The whole bubble is dark blue, edge to edge: no strip of the bubble's own colour around the text, in either theme.",
+   "kind": [],
+   "covers": [
+    "css.background.basic",
+    "html.el.structure"
+   ],
+   "themes": [
+    "light",
+    "dark"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 2391,
+   "gzip": 1360,
+   "gzip6": 1360,
+   "refImages": {
+    "light": "refs/visual/15-body-background.png",
+    "dark": "refs/visual/15-body-background.dark.png"
+   },
+   "height": 150
+  },
+  {
+   "id": "visual/16-selection",
+   "set": "visual",
+   "file": "visual/16-selection.html",
+   "title": "Text selection: nothing is selectable by default; user-select: text makes a paragraph selectable, its children included",
+   "hint": "Select text the way your client selects message text (on a phone through the bubble's menu, with a mouse by dragging): only the blue-bordered paragraph can be selected, the bold word in it too, and copying gives its text.",
+   "kind": [],
+   "covers": [
+    "behaviour.no-selection",
+    "css.text.selection"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 3317,
+   "gzip": 1762,
+   "gzip6": 1762,
+   "refImages": {
+    "light": "refs/visual/16-selection.png"
+   },
+   "height": 190
   },
   {
    "id": "visual/sdk/01-link-external",
@@ -8293,6 +8766,7 @@
    "refImages": {
     "light": "refs/visual/sdk/01-link-external.png"
    },
+   "height": 159,
    "group": "sdk",
    "expect": "A native confirmation with the full URL and Open / Cancel; Open goes to the browser (or the in-app browser, as the client usually does).",
    "contract": "docs/sdk-v1.md §2.5, §5.2"
@@ -8325,6 +8799,7 @@
    "refImages": {
     "light": "refs/visual/sdk/02-link-telegram.png"
    },
+   "height": 159,
    "group": "sdk",
    "expect": "The client's own t.me handling, with its usual confirmations; no external browser.",
    "contract": "docs/sdk-v1.md §2.5, §5.2"
@@ -8434,6 +8909,7 @@
    "refImages": {
     "light": "refs/visual/sdk/03-link-rejected.png"
    },
+   "height": 121,
    "group": "sdk",
    "expect": "No dialog for a non-https URL, user info, javascript:, tg:, a t.me URL through openLink or a 257-character URL (the widget gets a TypeError); a dialog for the 256-character one.",
    "contract": "docs/sdk-v1.md §2.5, §2.11"
@@ -8467,6 +8943,7 @@
    "refImages": {
     "light": "refs/visual/sdk/04-link-timer.png"
    },
+   "height": 159,
    "group": "sdk",
    "expect": "No dialog from the timer (the host drops it as activation-blocked); one dialog for the two calls of one press.",
    "contract": "docs/sdk-v1.md §2.5 (user activation)"
@@ -8499,6 +8976,7 @@
    "refImages": {
     "light": "refs/visual/sdk/05-haptics.png"
    },
+   "height": 276,
    "group": "sdk",
    "expect": "impact light/medium/heavy/rigid/soft, notification error/success/warning, selection played with the platform's generators; nothing on desktop and web.",
    "contract": "docs/sdk-v1.md §2.6, §5.3"
@@ -8532,6 +9010,7 @@
    "refImages": {
     "light": "refs/visual/sdk/06-haptics-rate.png"
    },
+   "height": 159,
    "group": "sdk",
    "expect": "A bucket of 5 refilled at 10 per second; the rest dropped silently; nothing from a hidden widget.",
    "contract": "docs/sdk-v1.md §2.6"
@@ -8566,6 +9045,7 @@
    "refImages": {
     "light": "refs/visual/sdk/07-storage-recreate.png"
    },
+   "height": 157,
    "group": "sdk",
    "expect": "localStorage and sessionStorage come back with the re-created widget (the client passes its copy at creation).",
    "contract": "docs/sdk-v1.md §2.8, §5.4"
@@ -8600,6 +9080,7 @@
    "refImages": {
     "light": "refs/visual/sdk/08-storage-restart.png"
    },
+   "height": 157,
    "group": "sdk",
    "expect": "localStorage is on disk per (account, chat, message); sessionStorage is in memory until the app restarts.",
    "contract": "docs/sdk-v1.md §2.8, §5.4"
@@ -8632,6 +9113,7 @@
    "refImages": {
     "light": "refs/visual/sdk/09-storage-delete.png"
    },
+   "height": 178,
    "group": "sdk",
    "expect": "Both areas are deleted with the message, with the chat or its history, with the account and on Clear cache.",
    "contract": "docs/sdk-v1.md §2.8, §5.4"
@@ -8689,6 +9171,7 @@
    "refImages": {
     "light": "refs/visual/sdk/10-storage-quota.png"
    },
+   "height": 121,
    "group": "sdk",
    "expect": "16384 bytes of keys and values per area; the refused setItem throws a DOMException named QuotaExceededError and stores nothing.",
    "contract": "docs/sdk-v1.md §2.8"
@@ -8721,6 +9204,7 @@
    "refImages": {
     "light": "refs/visual/sdk/11-crash-restart.png"
    },
+   "height": 157,
    "group": "sdk",
    "expect": "The frozen last frame with the localised badge; one rebuild after the first crash; none after the second, until the app restarts or the message gets new HTML.",
    "contract": "docs/sdk-v1.md §2.7, §5.7"
@@ -8756,6 +9240,7 @@
    "refImages": {
     "light": "refs/visual/sdk/12-drag-gestures.png"
    },
+   "height": 259,
    "group": "sdk",
    "expect": "The widget claims horizontal drags of the knob (touch-action: none, preventDefault); elsewhere the chat keeps swipe-to-reply and scrolling; double tap and long press stay with the bubble and never reach the widget.",
    "contract": "docs/sdk-v1.md §3.5, §5.5"
@@ -8782,12 +9267,13 @@
    "host": [],
    "checks": [],
    "stages": [],
-   "bytes": 3082,
-   "gzip": 1583,
-   "gzip6": 1583,
+   "bytes": 3094,
+   "gzip": 1591,
+   "gzip6": 1591,
    "refImages": {
     "light": "refs/visual/sdk/13-max-height.png"
    },
+   "height": 3078,
    "group": "sdk",
    "expect": "The bubble's height is the cap, 600 px on every client (the shared v0.1.0 value; maximumHeight / maxHeightDp / the web MAX_HEIGHT); content below is clipped.",
    "contract": "docs/sdk-v1.md §5.6"
@@ -8825,6 +9311,7 @@
     "light": "refs/visual/sdk/14-theme-palette.png",
     "dark": "refs/visual/sdk/14-theme-palette.dark.png"
    },
+   "height": 422,
    "group": "sdk",
    "expect": "Every themeParams key as #rrggbb, the same values as --tg-theme-* on the root, updated in one task with themeChanged.",
    "contract": "docs/sdk-v1.md §2.3, §5.1"
@@ -8857,6 +9344,7 @@
    "refImages": {
     "light": "refs/visual/sdk/15-storage-forward.png"
    },
+   "height": 153,
    "group": "sdk",
    "expect": "Storage keyed by (account, chat, message id): the destination chat's copy starts empty.",
    "contract": "docs/sdk-v1.md §2.8"
@@ -8889,6 +9377,7 @@
    "refImages": {
     "light": "refs/visual/sdk/16-bot-edit.png"
    },
+   "height": 153,
    "group": "sdk",
    "expect": "An edit with the same HTML keeps the running widget; with different HTML the widget restarts on the same storage.",
    "contract": "docs/sdk-v1.md §2.8"
@@ -8922,6 +9411,7 @@
    "refImages": {
     "light": "refs/visual/sdk/17-size-hint.png"
    },
+   "height": 240,
    "group": "sdk",
    "expect": "Width 0 = the bubble's width, W = a fixed width clamped to [200, max]; height 0 = auto (placeholder, then the reported 240 clamped to [50, 600], cached per message), H = a fixed clamp(H, 50, 600) that the content does not change.",
    "contract": "docs/sdk-v1.md §5.6"

@@ -12,6 +12,7 @@
 #include "Sources/Canvas/CanvasElement.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/CSSPolicy.h"
+#include "Sources/Host/ICU.h"
 #include "Sources/Host/MarkupPolicy.h"
 #include "Sources/Host/Profile.h"
 #include "Sources/Render/WidgetContainer.h"
@@ -211,6 +212,61 @@ private:
     std::unordered_map<JSAtom, std::string> m_names;
 };
 
+/// HTML's dir=auto (fidelity plan, Task 11): the direction of the first character of bidi class L, R or AL among the
+/// element's descendant text, in tree order, skipping bdi, script, style and textarea elements and every element with a
+/// dir of its own (ltr, rtl or auto, in any case); ltr when there is none. A node visit per node and a scan of the text
+/// read are charged.
+std::string_view autoDirection(JSContext* ctx, AtomNames& names, DOMState& state, Element& element) {
+    const auto ownDirection = [&](Element& e) {
+        const std::optional<String> dir = e.attributeValue(ctx, state.name(Name::dir));
+        if (!dir) {
+            return false;
+        }
+        std::string value = dir->utf8ForParse();
+        std::transform(value.begin(), value.end(), value.begin(), asciiLower);
+        return value == "ltr" || value == "rtl" || value == "auto";
+    };
+    Node* node = element.firstChildNode();
+    while (node) {
+        charge(ctx, work::kNodeVisit);
+        bool descend = true;
+        if (node->type() == NodeType::Element) {
+            auto& child = static_cast<Element&>(*node);
+            const std::string& local = names.name(child.localNameAtom());
+            descend = !(child.isHTMLElement() && (local == "bdi" || local == "script" || local == "style" || local == "textarea")) &&
+                      !ownDirection(child);
+        } else if (node->type() == NodeType::Text) {
+            const String data = static_cast<CharacterData&>(*node).dataString(ctx);
+            const JSStringView view = data.view();
+            for (uint32_t i = 0; i < view.length; i++) {
+                UChar32 c = view.utf16 ? view.utf16[i] : view.latin1[i];
+                if (view.utf16 && U16_IS_LEAD(c) && i + 1 < view.length && U16_IS_TRAIL(view.utf16[i + 1])) {
+                    c = U16_GET_SUPPLEMENTARY(c, view.utf16[i + 1]);
+                    i++;
+                }
+                const UCharDirection direction = u_charDirection(c);
+                if (direction == U_LEFT_TO_RIGHT || direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC) {
+                    chargeScan(ctx, i + 1);
+                    return direction == U_LEFT_TO_RIGHT ? "ltr" : "rtl";
+                }
+            }
+            chargeScan(ctx, view.length);
+            descend = false;
+        } else {
+            descend = false;
+        }
+        if (descend && node->firstChildNode()) {
+            node = node->firstChildNode();
+            continue;
+        }
+        while (node != &element && !node->nextSiblingNode()) {
+            node = node->parent();
+        }
+        node = node == &element ? nullptr : node->nextSiblingNode();
+    }
+    return "ltr";
+}
+
 /// The attribute's qualified name, which litehtml is given (Ruling 4).
 std::string qualifiedAttributeName(AtomNames& names, const Attribute& attribute) {
     if (attribute.prefix.atom == JS_ATOM_NULL) {
@@ -243,14 +299,24 @@ markup::RenderTag tagOf(JSContext* ctx, AtomNames& names, DOMState& state, const
     return markup::renderTagFor(ns, localName, adopted);
 }
 
+/// RB §7.2: the attributes the text budgets count, in either namespace: TextAttributes, data-* and aria-* (the host's
+/// own markers are made by the scan, never read, so they cost nothing).
+bool isTextAttribute(std::string_view name) {
+    return profile::contains(profile::MarkupTable::TextAttributes, name) || name.starts_with("data-") ||
+           name.starts_with("aria-");
+}
+
 /// The one reading of an element's attributes for litehtml, the build's and the in-place patch's (Ruling 8: a patch
 /// must agree with a rebuild). Each attribute is charged work::kRenderAttribute plus chargeScan of its value; profile 1
 /// decides what the renderer gets of it (markup::renderAttribute, V4 plan, Task 5): one it drops by name is skipped
 /// before its value is read, and one whose output name repeats an earlier one is left out; a `style` over 16 KiB is
 /// left out (styleTooLong); the budget is kMaxRenderBytes counting the names and values read from `usedBefore` on, and
-/// the attribute that would pass it ends the scan (overBudget).
+/// the attribute that would pass it ends the scan (overBudget). A text attribute's value and a `style`'s strings are
+/// counted against profile 1's text budgets from `unitsBefore` on (V4 plan, Task 7): one that does not fit is left out
+/// (textLeftOut).
 RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& state, Element& element,
-                                const markup::RenderTag& rendered, size_t usedBefore, bool keepInput) {
+                                const markup::RenderTag& rendered, size_t usedBefore, TextUnits unitsBefore,
+                                bool keepInput) {
     RenderAttributes out;
     std::unordered_set<std::string> keys;
     // A host marker (data-tg-tag, data-tg-link) goes to litehtml and the render input; the widget cannot write one
@@ -311,6 +377,14 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         if (!decided.kept || !keys.insert(decided.name).second) {
             continue;
         }
+        // dir (fidelity plan, Task 11): matched whatever its case by the UA's [dir=rtl] and [dir=ltr], which the renderer
+        // is given lowercased, and auto resolved here to the direction of the element's text.
+        if (ns == markup::ElementNamespace::HTML && decided.name == "dir") {
+            std::transform(decided.value.begin(), decided.value.end(), decided.value.begin(), asciiLower);
+            if (decided.value == "auto") {
+                decided.value = std::string(autoDirection(ctx, names, state, element));
+            }
+        }
         // An <img src> profile 1 refuses, the empty one included, renders the 48 px placeholder (V4 plan, Task 6; RB
         // §2.4, §3.5); the DOM's HTMLImageElement::state decides alike.
         const bool placeholder = ns == markup::ElementNamespace::HTML && rendered.tag == "img" && decided.name == "src" &&
@@ -318,6 +392,19 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         if (placeholder) {
             decided.value = std::string(WidgetContainer::kPlaceholderURL);
         }
+        // RB §7.2: a text attribute's value, and the strings of a `style` (raw text: OP12), count against the text
+        // budgets; one that does not fit is left out (RB §7.3: a slot refused at creation is omitted).
+        TextUnits units;
+        if (decided.name == "style") {
+            units = renderCssStringUnits(decided.value);
+        } else if (isTextAttribute(decided.name)) {
+            units = renderTextUnits(value);
+        }
+        if (!renderTextFits(units, unitsBefore + out.units)) {
+            out.textLeftOut = true;
+            continue;
+        }
+        out.units += units;
         if (keepInput && !(canvas && (decided.name == "width" || decided.name == "height" || decided.name == "src"))) {
             out.text += ' ';
             out.text += decided.name;
@@ -378,6 +465,8 @@ public:
         m_doc = place.document;
         m_baseDepth = place.parentDepth;
         m_bytes = totals.bytes;
+        m_units = totals.textUnits;
+        m_nodes = totals.nodes;
         m_elements = totals.elements;
         m_formControls = totals.formControls;
         m_textSeq = totals.seq;
@@ -389,6 +478,8 @@ public:
     bool runSubtree(Node& node, RenderSubtreeTotals& totals) {
         this->walk(node);
         totals.bytes = m_bytes;
+        totals.textUnits = m_units;
+        totals.nodes = m_nodes;
         totals.elements = m_elements;
         totals.formControls = m_formControls;
         totals.seq = m_textSeq;
@@ -476,6 +567,8 @@ public:
         m_build.matched = matchedBound;
         collectContainerLimits(m_container, m_build.limits);
         m_build.bytes = m_bytes;
+        m_build.textUnits = m_units;
+        m_build.nodeCount = m_nodes;
         m_build.elementCount = m_elements;
         m_build.formControlCount = m_formControls;
         m_build.nextSeq = m_textSeq;
@@ -506,6 +599,43 @@ private:
         return Step::Stop;
     }
 
+    /// Adds `count` nodes to the node count (RB §7.1 MAX_NODES); false once past kMaxRenderNodes, which a build notes and
+    /// the subtree mode refuses: the walk stops.
+    bool countNodes(size_t count) {
+        m_nodes += count;
+        if (m_nodes <= kMaxRenderNodes) {
+            return true;
+        }
+        if (m_roots) {
+            this->refuse();
+        } else {
+            noteLimit(m_build.limits, "nodes");
+        }
+        return false;
+    }
+
+    bool isScript(Node& node) const {
+        return node.isElement() && static_cast<Element&>(node).hasHTMLName(m_state.name(Name::script));
+    }
+
+    /// The nodes under `root`, whose children the walk does not build, counted at work::kNodeVisit each; a `<script>`'s
+    /// children are not counted (the reference's sandbox never sends them). False once past the cap.
+    bool countUnbuilt(Node& root) {
+        if (this->isScript(root)) {
+            return true;
+        }
+        Node* node = root.firstChildNode();
+        while (node) {
+            charge(m_ctx, work::kNodeVisit);
+            if (!this->countNodes(1)) {
+                return false;
+            }
+            const bool descend = node->firstChildNode() && !this->isScript(*node);
+            node = descend ? node->nextInTreeOrder(&root) : node->nextSkippingChildren(&root);
+        }
+        return true;
+    }
+
     void walk(Node& root) {
         Node* node = &root;
         while (node) {
@@ -514,6 +644,11 @@ private:
             // parent was rendered: a subtree that is not is skipped whole).
             while (m_stack.size() > this->baseFrames() && m_stack.back().node != node->parent()) {
                 this->close();
+            }
+            // Profile 1's node cap (V4 plan, Task 7), in tree order: every node the walk visits, and the ones under a node
+            // whose children it does not build.
+            if (!this->countNodes(1)) {
+                break;
             }
             Step step = Step::SkipChildren;
             if (node != &root && m_stack.empty()) {
@@ -524,6 +659,9 @@ private:
                 step = this->text(static_cast<CharacterData&>(*node));
             }
             if (step == Step::Stop) {
+                break;
+            }
+            if (step == Step::SkipChildren && node->firstChildNode() && !this->countUnbuilt(*node)) {
                 break;
             }
             node = step == Step::Descend ? node->nextInTreeOrder(&root) : node->nextSkippingChildren(&root);
@@ -606,18 +744,23 @@ private:
         }
         // The render input's names and start tag only when it is kept (Ruling E11).
         const std::string tagName = m_keepInput ? rendered.tag : std::string();
-        RenderAttributes scanned = scanAttributes(m_ctx, m_names, m_state, element, rendered, m_bytes, m_keepInput);
-        if (m_roots && (scanned.styleTooLong || scanned.overBudget)) {
+        RenderAttributes scanned =
+            scanAttributes(m_ctx, m_names, m_state, element, rendered, m_bytes, m_units, m_keepInput);
+        if (m_roots && (scanned.styleTooLong || scanned.overBudget || scanned.textLeftOut)) {
             return this->refuse();
         }
         if (scanned.styleTooLong) {
             noteLimit(m_build.limits, "style-attribute");
+        }
+        if (scanned.textLeftOut) {
+            noteLimit(m_build.limits, "text-budget");
         }
         if (scanned.overBudget) {
             noteLimit(m_build.limits, "bytes");
             return Step::Stop;
         }
         m_bytes += scanned.bytes;
+        m_units += scanned.units;
         litehtml::string_map& attributes = scanned.map;
         const std::string startTag = m_keepInput ? "<" + tagName + scanned.text + ">" : std::string();
 
@@ -646,6 +789,7 @@ private:
         }
         RenderEntry& entry = this->map(element, created);
         entry.bytes = scanned.bytes;
+        entry.units = scanned.units;
         entry.seq = m_textSeq++;
         m_build.boxes++;
         m_elements++;
@@ -712,6 +856,15 @@ private:
             noteLimit(m_build.limits, "css");
             return;
         }
+        // Profile 1's text budgets (V4 plan, Task 7; RB §7.2): the sheet's text, and the contents of its strings. A sheet
+        // that does not fit is not applied, and counts nothing.
+        const TextUnits text = renderTextUnits(sheet);
+        const TextUnits strings = renderCssStringUnits(utf8);
+        if (!renderTextFits(text, m_units) || !renderTextFits(strings, m_units + text)) {
+            noteLimit(m_build.limits, "text-budget");
+            return;
+        }
+        m_units += text + strings;
         if (utf8.empty()) {
             return;
         }
@@ -737,6 +890,18 @@ private:
         Frame& parent = m_stack.back();
         String data = text.dataString(m_ctx);
         chargeScan(m_ctx, data.length());
+        // Profile 1's text limits (V4 plan, Task 7; RB §7.1): a Text over kMaxTextValueUnits, or one the document's text
+        // budgets have no room left for, is mapped and renders nothing; the walk goes on.
+        const TextUnits units = renderTextUnits(data);
+        if (!renderTextFits(units, m_units)) {
+            if (m_roots) {
+                return this->refuse();
+            }
+            noteLimit(m_build.limits, units.units > kMaxTextValueUnits ? "text-node" : "text-budget");
+            RenderEntry& entry = this->map(text, nullptr);
+            entry.seq = m_textSeq++;
+            return Step::SkipChildren;
+        }
         std::string utf8;
         if (!utf8AtMost(data, this->remainingBytes(), utf8)) {
             if (m_roots) {
@@ -746,6 +911,7 @@ private:
             return Step::Stop;
         }
         m_bytes += utf8.size();
+        m_units += units;
         std::vector<litehtml::element::ptr> pieces;
         bool all = true;
         if (m_roots) {
@@ -778,6 +944,7 @@ private:
         }
         RenderEntry& entry = this->map(text, nullptr);
         entry.bytes = utf8.size();
+        entry.units = units;
         entry.seq = m_textSeq++;
         const size_t inputStart = m_build.input.size();
         entry.pieces.reserve(pieces.size());
@@ -827,6 +994,9 @@ private:
     /// The render byte budget used, and the `<style>` text applied (Ruling 7).
     size_t m_bytes = 0;
     size_t m_cssBytes = 0;
+    /// Profile 1's text units counted, and the nodes counted from the document node on (V4 plan, Task 7).
+    TextUnits m_units;
+    size_t m_nodes = 1;
     /// The elements and the form controls rendered (Rulings E9 and E6).
     size_t m_elements = 0;
     size_t m_formControls = 0;
@@ -858,6 +1028,8 @@ void RenderBuild::swap(RenderBuild& other) noexcept {
     std::swap(usesUserActionPseudo, other.usesUserActionPseudo);
     styleSheets.swap(other.styleSheets);
     std::swap(bytes, other.bytes);
+    std::swap(textUnits, other.textUnits);
+    std::swap(nodeCount, other.nodeCount);
     std::swap(elementCount, other.elementCount);
     std::swap(formControlCount, other.formControlCount);
     std::swap(nextSeq, other.nextSeq);
@@ -874,6 +1046,70 @@ uint64_t renderFilterUnits(uint64_t elements, uint64_t rules) {
     return elements * rules / 8 * work::kScanEightUnits;
 }
 
+TextUnits renderTextUnits(const String& s) {
+    const JSStringView view = s.view();
+    TextUnits out;
+    out.units = view.length;
+    if (view.utf16) {
+        for (uint32_t i = 0; i < view.length; i++) {
+            out.complex += view.utf16[i] >= 0x0590 ? 1 : 0;
+        }
+    }
+    return out;
+}
+
+TextUnits renderCssStringUnits(std::string_view css) {
+    TextUnits out;
+    // One character of the UTF-8 at `i`, counted as UTF-16 units.
+    const auto count = [&](size_t& i) {
+        const unsigned char lead = static_cast<unsigned char>(css[i]);
+        const size_t length = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
+        uint32_t cp = length == 1 ? lead : lead & (0xFF >> (length + 1));
+        for (size_t k = 1; k < length && i + k < css.size(); k++) {
+            cp = (cp << 6) | (static_cast<unsigned char>(css[i + k]) & 0x3F);
+        }
+        const size_t units = cp >= 0x10000 ? 2 : 1;
+        out.units += units;
+        out.complex += cp >= 0x0590 ? units : 0;
+        i += length;
+    };
+    const auto skip = [&](size_t& i) {
+        const unsigned char lead = static_cast<unsigned char>(css[i]);
+        i += lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
+    };
+    size_t i = 0;
+    while (i < css.size()) {
+        const char c = css[i];
+        if (c == '\\') {
+            // Outside a string a backslash skips itself and the next character.
+            skip(i);
+            if (i < css.size()) {
+                skip(i);
+            }
+        } else if (c == '"' || c == '\'') {
+            i++;
+            while (i < css.size() && css[i] != c) {
+                if (css[i] == '\\') {
+                    i++;
+                    if (i >= css.size()) {
+                        break;
+                    }
+                }
+                count(i);
+            }
+            i++;
+        } else {
+            skip(i);
+        }
+    }
+    return out;
+}
+
+bool renderTextFits(TextUnits value, TextUnits others) {
+    return value.units <= kMaxTextValueUnits && others.units + value.units <= kTextBudgetUnits &&
+           others.complex + value.complex <= kComplexTextBudgetUnits;
+}
+
 int64_t renderSelectorAllowance(JSContext* ctx) {
     const uint64_t limit = Runtime::from(ctx).workLimit();
     const uint64_t units = JS_GetWorkUnits(JS_GetRuntime(ctx));
@@ -884,12 +1120,12 @@ int64_t renderSelectorAllowance(JSContext* ctx) {
     return steps > uint64_t(INT64_MAX / 2) ? INT64_MAX / 2 : int64_t(steps);
 }
 
-RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, bool keepInput,
-                                         std::string* startTag) {
+RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, TextUnits unitsBefore,
+                                         bool keepInput, std::string* startTag) {
     AtomNames names(ctx);
     DOMState& state = DOMState::of(ctx);
     const markup::RenderTag rendered = tagOf(ctx, names, state, element);
-    RenderAttributes out = scanAttributes(ctx, names, state, element, rendered, usedBefore, keepInput && startTag);
+    RenderAttributes out = scanAttributes(ctx, names, state, element, rendered, usedBefore, unitsBefore, keepInput && startTag);
     if (startTag && keepInput && !out.overBudget) {
         *startTag = "<" + rendered.tag + out.text + ">";
     }
@@ -940,8 +1176,24 @@ void collectContainerLimits(const WidgetContainer& container, std::vector<std::s
     }
 }
 
+namespace {
+
+/// What HTML's rendering section gives elements that twidget's master sheet (shared with LHDocument, which renders
+/// HTML messages its own way) and the profile's UA layer leave out, for the conformance set (fidelity plan, Task 3): a
+/// summary as a list item (its marker stays the master's ::before triangle), <q>'s quotation marks. A link's colour is
+/// the layer's (`a[href]`, no underline: widget-sandbox v0.1.1).
+constexpr std::string_view kWidgetUAStylesheet =
+    "summary{display:list-item;list-style-type:none}"
+    "q::before{content:\"\\201C\"}q::after{content:\"\\201D\"}"
+    // HTML's [dir] rules (fidelity plan, Task 11): the Builder lowercases dir and resolves auto.
+    "[dir=ltr]{direction:ltr}[dir=rtl]{direction:rtl}";
+
+} // namespace
+
 std::string masterWithHostCSS(const std::string& hostCSS) {
     std::string master = litehtml::telegram_master_css();
+    master += "\n";
+    master += kWidgetUAStylesheet;
     // The profile's UA stylesheet (SDK v1 §2.4: a <button> the widget did not style), then the host's root CSS.
     master += "\n";
     master += profile::uaStylesheet();

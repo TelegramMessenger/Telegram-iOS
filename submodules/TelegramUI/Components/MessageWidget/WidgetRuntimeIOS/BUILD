@@ -32,6 +32,11 @@ objc_library(
     testonly = True,
     srcs = glob(["Tests/*.mm"]),
     copts = ["-std=gnu++20"],
+    # widget-sandbox v0.1.1's Intl fixture, its mapping and the drift list, as the test bundle's resources.
+    data = [
+        "//third-party/widget-sandbox:IntlCases",
+        "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:IntlCasesSupport",
+    ],
     sdk_frameworks = ["XCTest"],
     deps = [":WidgetRuntimeIOS"],
 )

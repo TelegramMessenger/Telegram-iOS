@@ -139,8 +139,8 @@ WR_TEST(testRemovedAttributeIsRemoved) {
 
 // What the fork refuses rebuilds, and agrees with a rebuild.
 WR_TEST(testAttributePatchFallsBack) {
-    // A class in an ancestor position of a selector, and positional and sibling selectors.
-    for (const char* sheet : {".on p{color:#c00}", "p:nth-child(2){color:#c00}", "div + p{color:#c00}"}) {
+    // A class in an ancestor position of a selector, and sibling selectors.
+    for (const char* sheet : {".on p{color:#c00}", "div + p{color:#c00}"}) {
         RenderEnv env(std::string("<!doctype html><style>") + sheet + "</style><body><div id=d><p>one</p><p>two</p></div></body>");
         const uint64_t builds = env.render().buildCount();
         edit(env, "document.getElementById('d').className = 'on'");
@@ -148,9 +148,19 @@ WR_TEST(testAttributePatchFallsBack) {
         CHECK_EQ(env.render().patchCount(), uint64_t(0));
         expectMatchesRebuild(env, sheet);
     }
-    RenderEnv env("<!doctype html><body><div id=d style='color:#c00'>d</div><table id=t><tr><td>c</td></tr></table>"
+    // A positional pseudo-class reads an element's place, which no attribute changes (twidget edit 42): it patches.
+    {
+        RenderEnv env("<!doctype html><style>p:nth-child(2){color:#c00}</style><body><div id=d><p>one</p><p>two</p></div></body>");
+        const uint64_t builds = env.render().buildCount();
+        edit(env, "document.getElementById('d').className = 'on'");
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().patchCount(), uint64_t(1));
+        expectMatchesRebuild(env, "positional");
+    }
+    // Inside a wrapper: a change to <body>'s own children widens to all of them (the UA layer's `body>:first-child`).
+    RenderEnv env("<!doctype html><body><div><div id=d style='color:#c00'>d</div><table id=t><tr><td>c</td></tr></table>"
                   "<select id=s><option id=o>one</option><option>two</option></select><textarea id=ta></textarea>"
-                  "<p id=p>p</p></body>");
+                  "<p id=p>p</p></div></body>");
     uint64_t builds = env.render().buildCount();
     // An inline style touching a custom property, var() or a counter, in or out.
     edit(env, "document.getElementById('d').setAttribute('style', '--x:1;color:#0c0')");
@@ -217,24 +227,24 @@ WR_TEST(testAttributePatchRespectsLimits) {
     CHECK_EQ(env.render().buildCount(), builds);
     CHECK_EQ(env.render().patchCount(), uint64_t(2));
     expectMatchesRebuild(env, "style under 16 KiB");
-    // Past the byte budget: 1.1 MB of one attribute value.
-    edit(env, "document.getElementById('p').setAttribute('data-x', 'y'.repeat(1100000))");
+    // Past the byte budget: 1.1 MB of one attribute value (one the text budgets do not count: V4 plan, Task 7).
+    edit(env, "document.getElementById('p').setAttribute('datetime', 'y'.repeat(1100000))");
     CHECK_EQ(env.render().buildCount(), ++builds);
     expectMatchesRebuild(env, "bytes");
     // Within the budget again: the smaller value patches in place.
-    edit(env, "document.getElementById('p').setAttribute('data-x', 'y'.repeat(500000))");
+    edit(env, "document.getElementById('p').setAttribute('datetime', 'y'.repeat(500000))");
     CHECK_EQ(env.render().buildCount(), ++builds);
-    edit(env, "document.getElementById('p').setAttribute('data-x', 'z'.repeat(400000))");
+    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(400000))");
     CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "smaller");
     // The budget a patch leaves is kept in step: a value that grows twice over, and then fits only because the first
     // growth was counted.
-    edit(env, "document.getElementById('p').setAttribute('data-x', 'z'.repeat(700000))");
+    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(700000))");
     CHECK_EQ(env.render().buildCount(), builds);
-    edit(env, "document.getElementById('p').setAttribute('data-x', 'z'.repeat(1000000))");
+    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(1000000))");
     CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "grown twice");
-    edit(env, "document.getElementById('d').setAttribute('data-y', 'w'.repeat(60000))");
+    edit(env, "document.getElementById('d').setAttribute('role', 'w'.repeat(60000))");
     CHECK_EQ(env.render().buildCount(), ++builds);   // 1,000,000 + 60,000 passes the budget
     expectMatchesRebuild(env, "over after growing");
 }
@@ -389,7 +399,9 @@ WR_TEST(testLinkInAnAncestorPositionRebuilds) {
 
 // I4: href x, y, x, y through the patch keeps :link (the match epoch).
 WR_TEST(testHrefRoundTripKeepsLink) {
-    RenderEnv env("<!doctype html><body><a href=x>link</a></body>", withMasterCSS("a:link{color:#909} a{color:#090}"));
+    // In a master layer after the UA layer's, which gives a[href] the link colour (twidget edit 41).
+    RenderEnv env("<!doctype html><body><a href=x>link</a></body>",
+                  withMasterCSS("@layer t{a:link{color:#909} a{color:#090}}"));
     const uint64_t builds = env.render().buildCount();
     for (const char* href : {"y", "x", "y"}) {
         edit(env, std::string("document.querySelector('a').setAttribute('href', '") + href + "')");

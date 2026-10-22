@@ -113,11 +113,62 @@ final class NativeCoreTests: MessageWidgetTestCase {
             + "<div id=\"t\" style=\"height:60px\">light</div><script>"
             + "TelegramWidget.onTheme(theme => { document.getElementById('t').textContent = theme; });"
             + "</script></body></html>")
-        XCTAssertEqual(self.pixel(self.render(view), 5, 5).r, 255)
+        // Right of the text (the UA layer's font draws "light" over the top-left corner).
+        XCTAssertEqual(self.pixel(self.render(view), 150, 40).r, 255)
         instance.setTheme(.dark)
-        XCTAssertEqual(self.pixel(self.render(view), 5, 5).r, 0)
+        XCTAssertEqual(self.pixel(self.render(view), 150, 40).r, 0)
         // The onTheme callbacks are a task of their own: it runs without anything else waking the widget.
         XCTAssertTrue(self.pump(until: { instance.evaluateForTesting("document.getElementById('t').textContent") == "dark" }, timeout: 2.0))
+    }
+
+    /// SDK v1 §2.4 (v0.1.1): a text-token change alone is a theme change, and the widget's layout follows it: a widget
+    /// with no CSS of its own is the padding token above and below its lines, each the font size times the line height
+    /// (rounded up to a point; the reference set is 8 + 3 × 20.25 + 8).
+    func testATextTokenChangeRelaysOut() {
+        let (instance, _) = self.booted("<!doctype html><p>x<br>x<br>x</p>", width: 300.0)
+        XCTAssertEqual(instance.layout(width: 300.0).height, 77.0)
+        instance.setTheme(MessageWidgetInstance.Theme(colorScheme: .light, text: MessageWidgetInstance.Theme.TextTokens(fontSize: 30.0, lineHeight: 1.3, padding: "6px 11px")))
+        XCTAssertEqual(instance.evaluateForTesting("getComputedStyle(document.documentElement).fontSize"), "30px")
+        XCTAssertEqual(instance.layout(width: 300.0).height, 129.0)
+    }
+
+    /// v0.1.1 plan, Task 6 (R4; sdk-v1 §2.4: a background set on the root or the body paints the whole bubble): below a
+    /// document shorter than its view (the 50 pt minimum, a fixed height) the view paints the canvas colour, the body's
+    /// here; a widget with no background leaves it transparent, so the bubble shows.
+    func testTheCanvasColourFillsTheViewBelowTheDocument() {
+        let (instance, view) = self.booted(NativeCoreTests.page.replacingOccurrences(of: "body{margin:0}", with: "body{margin:0;background:#00ff00}") + "<div style=\"height:30px\"></div></body></html>", width: 300.0)
+        XCTAssertEqual(instance.layout(width: 300.0).height, 50.0)
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 300.0, height: 120.0)
+        view.layoutIfNeeded()
+        let image = self.render(view)
+        for y in [10, 40, 100] {
+            let pixel = self.pixel(image, 150, y)
+            XCTAssertEqual([pixel.r, pixel.g, pixel.b], [0, 255, 0], "y \(y)")
+        }
+        let (plain, plainView) = self.booted(NativeCoreTests.page + "<div style=\"height:30px\"></div></body></html>", width: 300.0)
+        XCTAssertEqual(plain.layout(width: 300.0).height, 50.0)
+        plainView.frame = CGRect(x: 0.0, y: 0.0, width: 300.0, height: 120.0)
+        plainView.layoutIfNeeded()
+        let pixel = self.pixel(self.render(plainView), 150, 100)
+        XCTAssertEqual([pixel.r, pixel.g, pixel.b], [255, 255, 255])
+    }
+
+    /// No seam where the tree's painting ends and the canvas layer begins: the painter rounds boxes to whole CSS px, so
+    /// below a fractional document height every device pixel row is the canvas colour (a band of the bubble's showed).
+    func testTheCanvasHasNoSeamUnderAFractionalDocument() {
+        let (instance, view) = self.booted(NativeCoreTests.page.replacingOccurrences(of: "body{margin:0}", with: "body{margin:0;background:#00ff00}") + "<div style=\"height:70.6px\"></div></body></html>", scale: 3.0, width: 300.0)
+        let height = instance.layout(width: 300.0).height
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 300.0, height: height + 40.0)
+        view.layoutIfNeeded()
+        let image = self.render(view, scale: 3.0)
+        var seam: [Int] = []
+        for y in 0 ..< Int((height + 40.0) * 3.0) {
+            let pixel = self.devicePixel(image, 450, y)
+            if [pixel.r, pixel.g, pixel.b] != [0, 255, 0] {
+                seam.append(y)
+            }
+        }
+        XCTAssertEqual(seam, [])
     }
 
     func testHiddenWidgetWakesAtMostOncePerSecond() {

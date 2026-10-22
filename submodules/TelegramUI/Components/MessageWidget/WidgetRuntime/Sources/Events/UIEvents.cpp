@@ -104,6 +104,8 @@ void MouseEvent::initMouse(JSContext* ctx, const idl::MouseEventInit& init) {
     m_modifiers = Modifiers{init.ctrlKey, init.shiftKey, init.altKey, init.metaKey};
     m_button = init.button;
     m_buttons = init.buttons;
+    m_movementX = init.movementX;
+    m_movementY = init.movementY;
     hold(ctx, m_relatedTarget, init.relatedTarget);
 }
 

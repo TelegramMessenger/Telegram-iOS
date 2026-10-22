@@ -145,6 +145,11 @@ swift_library(
         "//Tests/ComposerHarness:HarnessAppContext",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramCore",
+        "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
+        # The app's widget theme, for the conformance runner's tests.
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         # MessageWidgetKillSwitch and MessageWidgetView, for the availability tests.
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
     ],

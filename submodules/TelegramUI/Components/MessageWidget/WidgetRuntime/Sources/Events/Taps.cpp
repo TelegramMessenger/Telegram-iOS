@@ -79,10 +79,12 @@ bool fire(JSContext* ctx, uint16_t iface, std::string_view type, EventTarget& ta
 }
 
 bool firePointer(JSContext* ctx, std::string_view type, EventTarget& target, double x, double y, int32_t pointerId,
-                 bool primary, bool cancelable, int16_t button, uint16_t buttons, double pressure) {
+                 bool primary, bool cancelable, int16_t button, uint16_t buttons, double pressure, double movementX = 0,
+                 double movementY = 0) {
     return fire<PointerEvent>(ctx, idl::kPointerEvent, type, target, cancelable, [&](PointerEvent& event) {
         event.setPoint(x, y);
         event.setButtons(button, buttons);
+        event.setMovement(movementX, movementY);
         event.setTouchPointer(ctx, pointerId, primary, pressure);
     });
 }
@@ -119,6 +121,8 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
         m_pointerId = pointerId;
         m_downX = x;
         m_downY = y;
+        m_lastX = x;
+        m_lastY = y;
         m_moved = false;
         break;
     case PointerPhase::Move: {
@@ -199,10 +203,6 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
         HostState::PressScope press(state, m_press);
         m_pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, primary, true, 0, 1, 0.5);
     }
-    // A down that is not canceled moves focus: to the nearest focusable inclusive ancestor, or to none (the body).
-    if (!m_pointerCanceled && primary) {
-        actions.setFocus(ctx, focusableAncestor(ctx, dynamic_cast<Node*>(target)));
-    }
     m_touchCanceled = !fireTouch(ctx, "touchstart", *target, x, y, pointerId, true, true);
 }
 
@@ -211,7 +211,13 @@ void TapState::runMove(JSContext* ctx, double x, double y, int32_t pointerId, bo
         return;
     }
     Ref<EventTarget> target = m_target;
-    firePointer(ctx, "pointermove", *target, x, y, pointerId, primary, true, -1, 1, 0.5);
+    // Pointer Lock 2's movement: from the last move delivered, the down point for the first (moves inside the slop are
+    // not delivered: the first that is carries them).
+    const double movementX = x - m_lastX;
+    const double movementY = y - m_lastY;
+    m_lastX = x;
+    m_lastY = y;
+    firePointer(ctx, "pointermove", *target, x, y, pointerId, primary, true, -1, 1, 0.5, movementX, movementY);
     fireTouch(ctx, "touchmove", *target, x, y, pointerId, true, true);
 }
 

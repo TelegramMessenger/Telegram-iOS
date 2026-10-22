@@ -12,6 +12,13 @@ struct WidgetFrame {
     var scale: CGFloat
     /// Keyed by `key(row:column:)`.
     var tiles: [Int: CGImage]
+    /// WidgetTreeRenderer.canvas as the tiles were drawn: the view paints the colour from `canvasTop` down.
+    var canvasColor: CGColor? = nil
+    var canvasTop: CGFloat = 0.0
+    /// The colour of the drawn widget's bottom-left and bottom-right pixel (1 pt square, unpremultiplied; nil where
+    /// transparent): what a bubble's tail continues, as a photo's tail continues the photo.
+    var bottomLeftColor: CGColor? = nil
+    var bottomRightColor: CGColor? = nil
 
     static func key(row: Int, column: Int) -> Int {
         return row << 16 | column
@@ -46,6 +53,8 @@ final class WidgetTileDrawer {
     /// What the last draw was of: the renderer's generation and the document size.
     private var drawnGeneration: UInt64 = .max
     private var drawnSize: CGSize = .zero
+    private var drawnCanvas: (color: CGColor, top: CGFloat)?
+    private var drawnCorners: (left: CGColor?, right: CGColor?) = (nil, nil)
 
     init(scale: CGFloat) {
         self.scale = scale
@@ -60,7 +69,7 @@ final class WidgetTileDrawer {
     /// the renderer's changed rects touch; none when nothing changed. A tile that cannot be drawn (nothing published
     /// yet) draws nothing: the result is the last size with no tiles, so main keeps the last frame.
     func draw(_ renderer: WidgetTreeRenderer) -> WidgetFrame {
-        let unchanged = WidgetFrame(size: self.drawnSize, scale: self.scale, tiles: [:])
+        let unchanged = WidgetFrame(size: self.drawnSize, scale: self.scale, tiles: [:], canvasColor: self.drawnCanvas?.color, canvasTop: self.drawnCanvas?.top ?? 0.0, bottomLeftColor: self.drawnCorners.left, bottomRightColor: self.drawnCorners.right)
         let size = renderer.documentSize
         let generation = renderer.generation
         if generation == self.drawnGeneration && size == self.drawnSize {
@@ -98,6 +107,34 @@ final class WidgetTileDrawer {
         }
         self.drawnGeneration = generation
         self.drawnSize = size
-        return WidgetFrame(size: size, scale: self.scale, tiles: tiles)
+        self.drawnCanvas = renderer.canvas
+        if size.width >= 1.0 && size.height >= 1.0 {
+            self.drawnCorners = (WidgetTileDrawer.color(of: renderer, at: CGRect(x: 0.0, y: size.height - 1.0, width: 1.0, height: 1.0)),
+                                 WidgetTileDrawer.color(of: renderer, at: CGRect(x: size.width - 1.0, y: size.height - 1.0, width: 1.0, height: 1.0)))
+        } else {
+            self.drawnCorners = (nil, nil)
+        }
+        return WidgetFrame(size: size, scale: self.scale, tiles: tiles, canvasColor: self.drawnCanvas?.color, canvasTop: self.drawnCanvas?.top ?? 0.0, bottomLeftColor: self.drawnCorners.left, bottomRightColor: self.drawnCorners.right)
+    }
+
+    /// The colour `renderer` paints over `rect` (one pixel at 1x), unpremultiplied; nil where it is transparent.
+    static func color(of renderer: WidgetTreeRenderer, at rect: CGRect) -> CGColor? {
+        guard let image = renderer.image(rect: rect, scale: 1.0) else {
+            return nil
+        }
+        var pixel: [UInt8] = [0, 0, 0, 0]
+        let drawn = pixel.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+                return false
+            }
+            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+            return true
+        }
+        guard drawn, pixel[3] > 0 else {
+            return nil
+        }
+        let alpha = CGFloat(pixel[3]) / 255.0
+        let channel: (UInt8) -> CGFloat = { min(1.0, CGFloat($0) / 255.0 / alpha) }
+        return CGColor(srgbRed: channel(pixel[0]), green: channel(pixel[1]), blue: channel(pixel[2]), alpha: alpha)
     }
 }

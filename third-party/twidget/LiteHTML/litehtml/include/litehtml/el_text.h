@@ -16,6 +16,8 @@ namespace litehtml
         bool        m_use_transformed;
         bool        m_draw_spaces;
         uint_ptr    m_measured_font = 0;
+        // Telegram (VENDOR.md edit 32.3): the measured width, before word-spacing.
+        pixel_t     m_measured_width = 0;
         int         m_measured_transform = -1;
         std::shared_ptr<text_breaker> m_breaker;
 

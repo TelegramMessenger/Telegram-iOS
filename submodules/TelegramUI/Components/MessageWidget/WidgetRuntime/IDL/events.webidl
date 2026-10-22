@@ -171,6 +171,9 @@ interface MouseEvent : UIEvent {
   readonly attribute unsigned short buttons;
   readonly attribute EventTarget? relatedTarget;
   boolean getModifierState(DOMString keyArg);
+  // Pointer Lock 2's MouseEvent extension (fidelity plan, Task 4): the delta from the last move delivered.
+  readonly attribute double movementX;
+  readonly attribute double movementY;
 };
 
 dictionary MouseEventInit : EventModifierInit {
@@ -181,6 +184,8 @@ dictionary MouseEventInit : EventModifierInit {
   short button = 0;
   unsigned short buttons = 0;
   EventTarget? relatedTarget = null;
+  double movementX = 0;
+  double movementY = 0;
 };
 
 dictionary PointerEventInit : MouseEventInit {

@@ -24,8 +24,10 @@ public struct ConformanceTest {
     /// The checks the widget is expected to publish (the widget-sandbox author: "the expected checks of each are in
     /// manifest.json"), so a run that never publishes still accounts for every one.
     public let expectedChecks: [ConformanceCheck]
+    /// A visual widget (`set: "visual"`): run only to see that it loads (CLIENTS.md: "without actions or crops").
+    public let loadOnly: Bool
 
-    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = []) {
+    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = [], loadOnly: Bool = false) {
         self.id = id
         self.fileURL = fileURL
         self.themes = themes
@@ -33,6 +35,7 @@ public struct ConformanceTest {
         self.stages = stages
         self.host = host
         self.expectedChecks = expectedChecks
+        self.loadOnly = loadOnly
     }
 
     /// The widget's file name without its folder and extension (`auto/03-layout-a` → `03-layout-a`).
@@ -104,49 +107,68 @@ public enum ConformanceManifest {
 
     /// Every test with `set: "auto"`, in the manifest's order.
     public static func loadAutomaticSet() throws -> [ConformanceTest] {
+        return try self.entries(set: "auto").map(self.test)
+    }
+
+    /// Every test with `set: "visual"`, in the manifest's order, load-only: its widget, its themes, nothing else.
+    public static func loadVisualSet() throws -> [ConformanceTest] {
+        let root = try self.bundleRoot()
+        return try self.entries(set: "visual").map { entry in
+            guard let id = entry["id"] as? String, let file = entry["file"] as? String else {
+                throw LoadError.unreadable("a test without id or file")
+            }
+            let themes = (entry["themes"] as? [String]).flatMap { $0.isEmpty ? nil : $0 } ?? ["light"]
+            return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: [], stages: [], host: [], loadOnly: true)
+        }
+    }
+
+    private static func entries(set: String) throws -> [[String: Any]] {
         let root = try self.bundleRoot()
         let data = try Data(contentsOf: root.appendingPathComponent("manifest.json"))
         guard let manifest = try JSONSerialization.jsonObject(with: data) as? [String: Any], let tests = manifest["tests"] as? [[String: Any]] else {
             throw LoadError.unreadable("manifest.json")
         }
-        return try tests.filter { ($0["set"] as? String) == "auto" }.map { entry in
-            guard let id = entry["id"] as? String, let file = entry["file"] as? String else {
-                throw LoadError.unreadable("a test without id or file")
-            }
-            let themes = (entry["themes"] as? [String]).flatMap { $0.isEmpty ? nil : $0 } ?? ["light"]
-            let stages: [ConformanceStage] = ((entry["stages"] as? [[String: Any]]) ?? []).compactMap { stage in
-                guard let name = stage["name"] as? String, let rect = stage["rect"] as? [Double], rect.count == 4 else {
-                    return nil
-                }
-                return ConformanceStage(name: name, rect: CGRect(x: rect[0], y: rect[1], width: rect[2], height: rect[3]), themes: (stage["themes"] as? [String]) ?? themes)
-            }
-            let host: [ConformanceHostCheck] = ((entry["host"] as? [[String: Any]]) ?? []).compactMap { check in
-                guard let id = check["id"] as? String else {
-                    return nil
-                }
-                var bridge: ConformanceHostCheck.Bridge?
-                if let call = check["bridge"] as? [String: Any], let method = call["method"] as? String {
-                    bridge = .init(method: method, argument: call["arg"] as? String, count: (call["count"] as? Int) ?? 1)
-                }
-                let height = check["height"] as? [String: Any]
-                return ConformanceHostCheck(
-                    id: id,
-                    name: (check["name"] as? String) ?? "",
-                    bridge: bridge,
-                    minHeight: (height?["min"] as? NSNumber)?.doubleValue,
-                    maxHeight: (height?["max"] as? NSNumber)?.doubleValue,
-                    focusChat: (check["focus"] as? String) == "chat",
-                    gesture: (check["gesture"] as? Bool) ?? false,
-                    xfail: (check["xfail"] as? Bool) ?? false
-                )
-            }
-            let expected: [ConformanceCheck] = ((entry["checks"] as? [[String: Any]]) ?? []).compactMap { check in
-                guard let id = check["id"] as? String, let name = check["name"] as? String else {
-                    return nil
-                }
-                return ConformanceCheck(id: id, name: name)
-            }
-            return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected)
+        return tests.filter { ($0["set"] as? String) == set }
+    }
+
+    private static func test(_ entry: [String: Any]) throws -> ConformanceTest {
+        let root = try self.bundleRoot()
+        guard let id = entry["id"] as? String, let file = entry["file"] as? String else {
+            throw LoadError.unreadable("a test without id or file")
         }
+        let themes = (entry["themes"] as? [String]).flatMap { $0.isEmpty ? nil : $0 } ?? ["light"]
+        let stages: [ConformanceStage] = ((entry["stages"] as? [[String: Any]]) ?? []).compactMap { stage in
+            guard let name = stage["name"] as? String, let rect = stage["rect"] as? [Double], rect.count == 4 else {
+                return nil
+            }
+            return ConformanceStage(name: name, rect: CGRect(x: rect[0], y: rect[1], width: rect[2], height: rect[3]), themes: (stage["themes"] as? [String]) ?? themes)
+        }
+        let host: [ConformanceHostCheck] = ((entry["host"] as? [[String: Any]]) ?? []).compactMap { check in
+            guard let id = check["id"] as? String else {
+                return nil
+            }
+            var bridge: ConformanceHostCheck.Bridge?
+            if let call = check["bridge"] as? [String: Any], let method = call["method"] as? String {
+                bridge = .init(method: method, argument: call["arg"] as? String, count: (call["count"] as? Int) ?? 1)
+            }
+            let height = check["height"] as? [String: Any]
+            return ConformanceHostCheck(
+                id: id,
+                name: (check["name"] as? String) ?? "",
+                bridge: bridge,
+                minHeight: (height?["min"] as? NSNumber)?.doubleValue,
+                maxHeight: (height?["max"] as? NSNumber)?.doubleValue,
+                focusChat: (check["focus"] as? String) == "chat",
+                gesture: (check["gesture"] as? Bool) ?? false,
+                xfail: (check["xfail"] as? Bool) ?? false
+            )
+        }
+        let expected: [ConformanceCheck] = ((entry["checks"] as? [[String: Any]]) ?? []).compactMap { check in
+            guard let id = check["id"] as? String, let name = check["name"] as? String else {
+                return nil
+            }
+            return ConformanceCheck(id: id, name: name)
+        }
+        return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected)
     }
 }

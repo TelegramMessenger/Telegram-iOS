@@ -115,8 +115,8 @@ public:
     /// relevant animations whose targets are connected.
     DocumentTimeline* timeline(JSContext* ctx);
     std::vector<Ref<Animation>> getAnimations(JSContext* ctx);
-    /// DocumentOrShadowRoot's activeElement (M1d plan, Task 3): the focused element of the main document, else its body
-    /// (else its document element); null for any other document.
+    /// DocumentOrShadowRoot's activeElement: the main document's body (else its document element), since profile 1 has
+    /// no focus (V4 plan, Task 8); null for any other document.
     Element* activeElement(JSContext* ctx);
     void setBody(JSContext* ctx, OrNull<HTMLElement> value);
     HTMLElement* head(JSContext* ctx);

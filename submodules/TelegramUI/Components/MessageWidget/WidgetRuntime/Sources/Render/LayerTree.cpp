@@ -9,6 +9,9 @@
 #include <type_traits>
 #include <utility>
 
+#include <litehtml/document.h>
+#include <litehtml/element.h>
+
 namespace wr {
 
 // Every payload's fields are listed once, in the put() functions below, and read through one of two sinks:
@@ -29,7 +32,7 @@ static_assert(sizeof(litehtml::web_color) == 5);
 static_assert(sizeof(litehtml::border_radiuses) == 32);
 static_assert(sizeof(litehtml::border) == 16);
 static_assert(sizeof(litehtml::borders) == 96);
-static_assert(sizeof(litehtml::css_length) == 8);
+static_assert(sizeof(litehtml::css_length) == 16);
 static_assert(sizeof(litehtml::shadow_paint) == 24);
 static_assert(sizeof(litehtml::background_layer) == 92);
 static_assert(sizeof(litehtml::background_layer::color_point) == 20);
@@ -40,10 +43,10 @@ static_assert(sizeof(litehtml::background_layer::conic_gradient) == 48);
 static_assert(sizeof(litehtml::list_marker) == 72);
 static_assert(sizeof(litehtml::vector_path) == 168);
 static_assert(sizeof(litehtml::svg_gradient) == 56);
-static_assert(sizeof(litehtml::filter_function) == 40);
+static_assert(sizeof(litehtml::filter_function) == 64);
 static_assert(sizeof(litehtml::paint_group) == 52);
 static_assert(sizeof(litehtml::transform_matrix) == 24);
-static_assert(sizeof(litehtml::font_description) == 160);
+static_assert(sizeof(litehtml::font_description) == 168);
 static_assert(sizeof(litehtml::font_description::text_shadow) == 20);
 #endif
 
@@ -115,6 +118,11 @@ public:
         separate();
         if (value.is_predefined()) {
             appendf("predef%d", value.predef());
+            return;
+        }
+        // twidget edit 48: a math function kept to layout, in its canonical form.
+        if (value.is_calc()) {
+            m_out += value.to_string();
             return;
         }
         static const char* const units[] = {"", "%", "in", "cm", "mm", "em", "ex", "pt", "pc", "px",
@@ -196,6 +204,13 @@ public:
         integer(value.predef());
         number(value.val());
         integer(static_cast<long long>(value.units()));
+        // twidget edit 48: a calc's tree, by its canonical form.
+        flag(value.is_calc());
+        if (value.is_calc()) {
+            const std::string tree = value.to_string();
+            tagged('c', uint64_t(tree.size()));
+            m_out += tree;
+        }
     }
     void identity(const void* value) { tagged('p', reinterpret_cast<uintptr_t>(value)); }
     void shaped(const ShapedText& value) {
@@ -1005,13 +1020,39 @@ void appendMoved(const Layer& from, Layer& into, float dx, float dy) {
     appendShifted(from, into, dx, dy);
 }
 
-LayerTree::LayerTree(double width, double height, Layer root)
-    : m_width(width), m_height(height), m_root(std::move(root)) {
+LayerTree::LayerTree(double width, double height, Layer root, litehtml::web_color canvas)
+    : m_width(width), m_height(height), m_canvas(canvas), m_root(std::move(root)) {
     std::call_once(m_flattened, [this] { m_itemCount = countItems(m_root); });
 }
 
-LayerTree::LayerTree(double width, double height, std::shared_ptr<const MirrorNode> root)
-    : m_width(width), m_height(height), m_mirror(std::move(root)) {}
+LayerTree::LayerTree(double width, double height, std::shared_ptr<const MirrorNode> root, litehtml::web_color canvas)
+    : m_width(width), m_height(height), m_canvas(canvas), m_mirror(std::move(root)) {}
+
+litehtml::web_color canvasColor(litehtml::document& document) {
+    const litehtml::element::ptr root = document.root();
+    if (!root) {
+        return litehtml::web_color::transparent;
+    }
+    const litehtml::background* background = root->get_background();
+    if (!background) {
+        return litehtml::web_color::transparent;
+    }
+    litehtml::web_color color = background->m_color;
+    if (color.is_current_color) {
+        // The element whose background it is: the root's own, else the body's it propagates.
+        litehtml::element::ptr owner = root;
+        if (root->get_background(true) == nullptr) {
+            for (const litehtml::element::ptr& child : root->children()) {
+                if (child->is_body()) {
+                    owner = child;
+                    break;
+                }
+            }
+        }
+        color = owner->css().get_color();
+    }
+    return color;
+}
 
 const Layer& LayerTree::root() const {
     std::call_once(m_flattened, [this] { flatten(); });

@@ -708,6 +708,51 @@ namespace litehtml
         return true;
     }
 
+    // Telegram (VENDOR.md edit 34).
+    bool parse_individual_transform(string_id name, const css_token_vector& tokens, transform_function& fn)
+    {
+        std::vector<css_token> args;
+        for(const auto& tok : tokens)
+        {
+            if(tok.type == WHITESPACE)
+                continue;
+            css_token arg = tok;
+            if(!fold_calc(arg) || (is_one_of(arg.type, NUMBER, PERCENTAGE, DIMENSION) && !std::isfinite(arg.n.number)))
+                return false;
+            args.push_back(arg);
+        }
+        if(args.empty() || args.size() > 2 || args[0].ident() == "none")
+            return false;
+        switch(name)
+        {
+        case _translate_:
+            fn.kind = transform_function::translate;
+            return fn.x.from_token(args[0], f_length_percentage) &&
+                   (args.size() == 1 || fn.y.from_token(args[1], f_length_percentage));
+        case _rotate_:
+            if(args.size() == 2 && args[0].ident() == "z")
+                args.erase(args.begin());
+            fn.kind = transform_function::rotate;
+            return args.size() == 1 && parse_radians(args[0], fn.v[0]);
+        case _scale_:
+            {
+                fn.kind  = transform_function::scale;
+                float sx = 1;
+                float sy = 1;
+                if(!parse_number(args[0], sx))
+                    return false;
+                sy = sx;
+                if(args.size() == 2 && !parse_number(args[1], sy))
+                    return false;
+                fn.v[0] = sx;
+                fn.v[1] = sy;
+                return true;
+            }
+        default:
+            return false;
+        }
+    }
+
     bool parse_transform(const css_token_vector& tokens, transform_vector& functions)
     {
         functions.clear();

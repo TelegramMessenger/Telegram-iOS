@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramUIPreferences
 import HarnessAppContext
 import MessageWidget
 
@@ -76,7 +77,7 @@ public final class WidgetHarnessRootViewController: UIViewController {
         self.listHost = host
         self.view.insertSubview(host.listView.view, belowSubview: self.readoutLabel)
         self.layoutList()
-        host.load(posts: WidgetHarnessPosts.load(self.options))
+        host.load(posts: WidgetHarnessPosts.load(self.options), incoming: self.options.incoming)
         self.updateReadout()
     }
 
@@ -99,6 +100,17 @@ public final class WidgetHarnessRootViewController: UIViewController {
     public func setWidgetMessages(_ enabled: Bool) {
         self.settings?.widgetMessages = enabled
         MessageWidgetAvailability.noteChange()
+    }
+
+    /// Settings ▸ Appearance ▸ Text Size changed while the chat is open.
+    public func setTextSize(_ fontSize: PresentationFontSize) {
+        self.listHost?.setFontSize(fontSize)
+        self.updateReadout()
+    }
+
+    /// The widget bubbles' widget areas and content bounds now (`WidgetHarnessListHost.widgetAreas`).
+    public func widgetAreas() -> [(path: String, area: CGRect, content: CGRect)] {
+        return self.listHost?.widgetAreas(in: self.view) ?? []
     }
 
     /// The readout's lines now (Tier 1 reads them directly).

@@ -195,6 +195,9 @@ namespace litehtml
 
     bool parse_box_shadow(const css_token_vector& tokens, box_shadow_vector& shadows, document_container* container);
     bool parse_transform(const css_token_vector& tokens, transform_vector& functions);
+    // Telegram (VENDOR.md edit 34): the value of the translate, rotate or scale property (`name`) as one transform
+    // function, 2D only; false for none and for anything else.
+    bool parse_individual_transform(string_id name, const css_token_vector& tokens, transform_function& fn);
     bool parse_filter(const css_token_vector& tokens, filter_vector& functions, document_container* container);
     bool parse_transform_origin(const css_token_vector& tokens, css_length& x, css_length& y);
     bool parse_grid_track_list(const css_token_vector& tokens, grid_track_list& list);

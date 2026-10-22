@@ -13,12 +13,17 @@
 
 namespace wr {
 
+/// The longest query profile 1's host answers (RB §8.3), in UTF-16 units: a longer one is false (V4 plan, Task 8).
+inline constexpr size_t kMaxMatchMediaUnits = 1024;
+
 class MediaQueryList final : public EventTarget {
 public:
-    /// `matches` is the answer at creation, as of the render tree's `report`-th media report.
-    MediaQueryList(JSContext* ctx, const std::string& media, bool matches, uint64_t report, uint64_t sequence)
+    /// `matches` is the answer at creation, as of the render tree's `report`-th media report. An `overlong` query (over
+    /// kMaxMatchMediaUnits as written) never matches.
+    MediaQueryList(JSContext* ctx, const std::string& media, bool matches, uint64_t report, uint64_t sequence,
+                   bool overlong)
         : m_media(media.begin(), media.end(), JSAllocator<char>(JS_GetRuntime(ctx))), m_lastMatches(matches),
-          m_lastReport(report), m_sequence(sequence) {}
+          m_lastReport(report), m_sequence(sequence), m_overlong(overlong) {}
 
     // MediaQueryList
     String media(JSContext* ctx);
@@ -42,6 +47,7 @@ private:
     uint64_t m_lastReport;
     /// Creation order: the report visits the lists oldest first.
     uint64_t m_sequence;
+    bool m_overlong;
     bool m_held = false;
 };
 

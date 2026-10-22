@@ -61,8 +61,15 @@ namespace litehtml
     class css
     {
         css_selector::vector m_selectors;
+        // Telegram (VENDOR.md edit 41): whether each @layer block's rules rank above the sheet's unlayered ones (the
+        // master sheet's), the block being parsed (0: none) and the last one numbered.
+        bool m_layered_origins = false;
+        int  m_layer           = 0;
+        int  m_layer_count     = 0;
 
       public:
+        void set_layered_origins(bool value) { m_layered_origins = value; } // Telegram (VENDOR.md edit 41)
+
         const css_selector::vector& selectors() const
         {
             return m_selectors;
@@ -85,6 +92,7 @@ namespace litehtml
     inline void css::add_selector(const css_selector::ptr& selector)
     {
         selector->m_order = static_cast<int>(m_selectors.size());
+        selector->m_layer = m_layer; // Telegram (VENDOR.md edit 41)
         m_selectors.push_back(selector);
     }
 

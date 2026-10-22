@@ -8,6 +8,8 @@
 #include "gradient.h"
 #include "web_color.h"
 
+#include <functional>
+
 namespace litehtml
 {
     struct invalid
@@ -16,10 +18,28 @@ namespace litehtml
     struct inherit
     {
     }; // "inherit" was specified as the value of this property
+    // Telegram (VENDOR.md edit 33): the other CSS-wide keywords as declared values. html_tag::get_property answers
+    // initial with the property's initial value and unset as if nothing were declared; html_tag::resolve_reverts
+    // replaces revert (and revert-layer) with the master sheet's value before the element computes.
+    struct initial
+    {
+    };
+    struct unset
+    {
+    };
+    struct revert
+    {
+    };
 
+#if 0
     struct property_value
         : variant<invalid, inherit, int, int_vector, css_length, length_vector, float, web_color, std::vector<image>,
                   std::string, std::vector<std::string>, size_vector, css_token_vector>
+#else
+    struct property_value
+        : variant<invalid, inherit, int, int_vector, css_length, length_vector, float, web_color, std::vector<image>,
+                  std::string, std::vector<std::string>, size_vector, css_token_vector, initial, unset, revert>
+#endif
     {
         bool m_important = false;
         bool m_has_var   = false; // css_token_vector, parsing is delayed because of var()
@@ -117,9 +137,17 @@ namespace litehtml
         }
 
         void subst_vars(const html_tag* el);
+        // Telegram (VENDOR.md edit 33): replaces each revert with `master(name)`, the master sheet's value (nullptr:
+        // none, so it is unset), keeping the reverting declaration's importance and order. `admit` is asked for the
+        // heap a copy holds before it is made; refused, the property is unset.
+        void resolve_reverts(const std::function<const property_value*(string_id)>& master,
+                             const std::function<bool(size_t)>&                      admit);
 
       private:
         void inherit_property(string_id name, bool important);
+        // Telegram (VENDOR.md edit 33): `marker` (initial, unset or revert) over a shorthand's longhands, as
+        // inherit_property does.
+        void global_keyword_property(string_id name, const property_value& marker);
 
         void parse_background(const css_token_vector& tokens, const std::string& baseurl, bool important,
                               document_container* container);
@@ -171,6 +199,11 @@ namespace litehtml
     template <typename Enum>
     bool parse_keyword(const css_token& tok, Enum& val, css_values keywords, int first_keyword_value = 0)
     {
+        // Telegram (VENDOR.md edit 31.3): only an identifier is a keyword (ident() is "" for any other token).
+        if(tok.type != IDENT)
+        {
+            return false;
+        }
         auto idx = keywords.value_index(tok.ident());
         if(!idx.has_value())
         {

@@ -281,18 +281,37 @@ void drain(WRSession* session) {
     XCTAssertEqualObjects(delegate.storageCommits, (@[ @"local b=2 a=1" ]));
 }
 
-/// §2.3 and §2.4: the palette and the button tokens given at creation are in the first build.
+/// §2.3 and §2.4: the palette, the button and the text tokens given at creation are in the first build.
 - (void)testThePaletteReachesTheWidget {
     WRSession* session = [[WRSession alloc] initWithWidth:300
                                                      dark:NO
                                               themeParams:@{ @"bg_color" : @"#102030" }
                                              buttonTokens:@{ @"bg" : @"#112233" }
+                                               textTokens:@{ @"fontSize" : @17, @"lineHeight" : @1.3, @"padding" : @"6px 11px" }
                                                     scale:2
                                                  delegate:[WRRecordingDelegate new]];
     XCTAssertTrue([session bootWithSource:@"<!doctype html><p>x</p>"]);
     XCTAssertEqualObjects([session evaluateForTesting:@"(s => [TelegramWidget.themeParams.bg_color, s.getPropertyValue('--tg-theme-bg-color').trim(),"
-                                                       " s.getPropertyValue('--tg-button-bg').trim()].join())(getComputedStyle(document.documentElement))"],
-                          @"#102030,#102030,#112233");
+                                                       " s.getPropertyValue('--tg-button-bg').trim(), s.fontSize, s.lineHeight,"
+                                                       " getComputedStyle(document.body).marginLeft].join())(getComputedStyle(document.documentElement))"],
+                          @"#102030,#102030,#112233,17px,22.1px,11px");
+}
+
+/// §2.4: a text-size change alone is a theme change: one themeChanged, and the root's font follows it; a token of the
+/// wrong type or out of its grammar is the reference value.
+- (void)testATextSizeChangeFiresThemeChanged {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><script>"
+                                            "window.n = 0; TelegramWidget.onEvent('themeChanged', () => n++);</script></body></html>"]);
+    drain(session);
+    [session setDark:NO themeParams:@{} buttonTokens:@{} textTokens:@{ @"fontSize" : @19, @"lineHeight" : @"1.3", @"padding" : @"6px" }];
+    drain(session);
+    XCTAssertEqualObjects([session evaluateForTesting:@"(s => [n, s.fontSize, s.getPropertyValue('--tg-text-line-height').trim(),"
+                                                       " s.getPropertyValue('--tg-text-padding').trim()].join())(getComputedStyle(document.documentElement))"],
+                          @"1,19px,1.35,6px");
+    [session setDark:NO themeParams:@{} buttonTokens:@{} textTokens:@{ @"fontSize" : @19, @"padding" : @"6px" }];
+    drain(session);
+    XCTAssertEqualObjects([session evaluateForTesting:@"n"], @"1");
 }
 
 /// A new palette in the same scheme is a theme change: one themeChanged, the new colour in themeParams.
@@ -301,7 +320,7 @@ void drain(WRSession* session) {
     XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><script>"
                                             "window.n = 0; TelegramWidget.onEvent('themeChanged', () => n++);</script></body></html>"]);
     drain(session);
-    [session setDark:NO themeParams:@{ @"bg_color" : @"#102030" } buttonTokens:@{}];
+    [session setDark:NO themeParams:@{ @"bg_color" : @"#102030" } buttonTokens:@{} textTokens:@{}];
     drain(session);
     XCTAssertEqualObjects([session evaluateForTesting:@"n + ':' + TelegramWidget.themeParams.bg_color"], @"1:#102030");
 }

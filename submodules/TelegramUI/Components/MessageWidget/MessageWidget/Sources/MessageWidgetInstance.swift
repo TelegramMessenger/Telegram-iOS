@@ -38,8 +38,9 @@ public enum MessageWidgetStorageArea: String {
 }
 
 public final class MessageWidgetInstance {
-    /// SDK v1 §2.3 and §2.4 (WidgetTheme): the chat's colour scheme, its palette (theme key → #rrggbb) and the client's
-    /// button tokens. Two themes are equal when all three are, so a palette change in the same scheme is a change.
+    /// SDK v1 §2.3 and §2.4 (WidgetTheme): the chat's colour scheme, its palette (theme key → #rrggbb), the client's
+    /// button tokens and its text tokens. Two themes are equal when all four are, so a palette or text-size change in
+    /// the same scheme is a change.
     public struct Theme: Equatable {
         public enum ColorScheme: Equatable {
             case light
@@ -83,14 +84,42 @@ public final class MessageWidgetInstance {
             }
         }
 
+        /// §2.4's text tokens (v0.1.1): the chat's message text. A token left nil is the reference value (15 px, 1.35,
+        /// `8px 12px`); the runtime checks each against its grammar.
+        public struct TextTokens: Equatable {
+            /// CSS px (points), 8–64: the Text Size setting.
+            public var fontSize: Double?
+            /// Unitless, 1–3.
+            public var lineHeight: Double?
+            /// The body's margin: one to four lengths in px, em or rem.
+            public var padding: String?
+
+            public init(fontSize: Double? = nil, lineHeight: Double? = nil, padding: String? = nil) {
+                self.fontSize = fontSize
+                self.lineHeight = lineHeight
+                self.padding = padding
+            }
+
+            /// As WRSession takes them.
+            var dictionary: [String: Any] {
+                var out: [String: Any] = [:]
+                out["fontSize"] = self.fontSize
+                out["lineHeight"] = self.lineHeight
+                out["padding"] = self.padding
+                return out
+            }
+        }
+
         public var colorScheme: ColorScheme
         public var params: [String: String]
         public var button: ButtonTokens
+        public var text: TextTokens
 
-        public init(colorScheme: ColorScheme, params: [String: String] = [:], button: ButtonTokens = ButtonTokens()) {
+        public init(colorScheme: ColorScheme, params: [String: String] = [:], button: ButtonTokens = ButtonTokens(), text: TextTokens = TextTokens()) {
             self.colorScheme = colorScheme
             self.params = params
             self.button = button
+            self.text = text
         }
 
         /// The scheme alone: the framework's defaults for every colour and token.
@@ -209,6 +238,9 @@ public final class MessageWidgetInstance {
     /// Main's frame: the latest image of every tile (the tile layers' own contents, so it costs nothing extra).
     private let tileScale: CGFloat
     private var tileImages: [Int: CGImage] = [:]
+    private var canvasColor: CGColor?
+    private var canvasTop: CGFloat = 0.0
+    private var bottomCornerColors: (left: CGColor?, right: CGColor?) = (nil, nil)
     private var frameSize: CGSize = .zero
     /// Tests only: the tasks main queued, by kind, waited for or not; the snapshots it applied, by kind.
     private(set) var queuedForTesting: [WidgetSnapshot.Kind: (waited: Int, unwaited: Int)] = [:]
@@ -340,7 +372,7 @@ public final class MessageWidgetInstance {
 
     /// The frame the view shows: every tile's latest image.
     var currentFrame: WidgetFrame {
-        return WidgetFrame(size: self.frameSize, scale: self.tileScale, tiles: self.tileImages)
+        return WidgetFrame(size: self.frameSize, scale: self.tileScale, tiles: self.tileImages, canvasColor: self.canvasColor, canvasTop: self.canvasTop, bottomLeftColor: self.bottomCornerColors.left, bottomRightColor: self.bottomCornerColors.right)
     }
 
     /// A theme change is waited for, like a width (spec D6), so the switch redraws in the same frame.
@@ -653,6 +685,9 @@ public final class MessageWidgetInstance {
     /// Merges a task's changed tiles into main's frame, drops the tiles outside its size, and shows it.
     private func applyFrame(_ changed: WidgetFrame) {
         self.frameSize = changed.size
+        self.canvasColor = changed.canvasColor
+        self.canvasTop = changed.canvasTop
+        self.bottomCornerColors = (changed.bottomLeftColor, changed.bottomRightColor)
         self.tileImages.merge(changed.tiles) { _, new in
             new
         }

@@ -47,6 +47,9 @@ private:
     int32_t m_pointerId = 0;
     double m_downX = 0;
     double m_downY = 0;
+    /// The last position delivered (a move's movementX/Y is from it).
+    double m_lastX = 0;
+    double m_lastY = 0;
     bool m_moved = false;
 
     // The task side: the tap's target from its down task to its up or cancel task, and what canceled its defaults.

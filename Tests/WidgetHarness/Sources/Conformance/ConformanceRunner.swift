@@ -1,5 +1,9 @@
 import Foundation
 import UIKit
+import TelegramCore
+import TelegramPresentationData
+import ChatMessageItemCommon
+import ChatMessageWidgetBubbleContentNode
 import MessageWidget
 
 /// What one run of a conformance widget recorded: `run.schema.json`'s run before it is encoded.
@@ -60,7 +64,7 @@ public struct ConformanceRun {
     }
 }
 
-/// Runs widget-sandbox v0.1.0's conformance widgets through the app's widget path (CLIENTS.md, "The runner, step by
+/// Runs widget-sandbox v0.1.1's conformance widgets through the app's widget path (CLIENTS.md, "The runner, step by
 /// step"): a `MessageWidgetInstance` with the app's pool and wait policy, its view in the harness's window so it is
 /// visible and gets its frames, and a stand-in chat input that has the focus before the widget loads. `runAll` runs one
 /// widget at a time by default: widgets running together share the pool's two threads, so a timing check (two
@@ -100,6 +104,12 @@ public final class ConformanceRunner {
             self.view = view
             self.deadline = deadline
         }
+    }
+
+    /// CLIENTS.md step 1, "the theme as in production" (ruling R6): the app's own theme for a widget in an incoming
+    /// bubble of the default chat theme (`messageWidgetTheme`), at the default Text Size in the compact layout.
+    public static func theme(_ scheme: String) -> MessageWidgetInstance.Theme {
+        return messageWidgetTheme(theme: scheme == "dark" ? defaultDarkPresentationTheme : defaultPresentationTheme, wallpaper: .builtin(WallpaperSettings()), incoming: true, fontSize: .regular, textInsets: ChatMessageItemLayoutConstants.compact.text.bubbleInsets)
     }
 
     public init(host: UIView) {
@@ -166,7 +176,7 @@ public final class ConformanceRunner {
             run.errors.append("the widget's file could not be read: \(test.fileURL.lastPathComponent)")
             return Active(test: test, run: run, instance: nil, view: nil, deadline: Date())
         }
-        guard let instance = MessageWidgetInstance(source: source, theme: theme == "dark" ? .dark : .light, stoppedLabel: "Widget stopped", maxMessageLength: 4096) else {
+        guard let instance = MessageWidgetInstance(source: source, theme: ConformanceRunner.theme(theme), stoppedLabel: "Widget stopped", maxMessageLength: 4096) else {
             run.errors.append("the widget runtime could not be created")
             return Active(test: test, run: run, instance: nil, view: nil, deadline: Date())
         }
@@ -192,7 +202,7 @@ public final class ConformanceRunner {
     /// Whether the run is over: it published `done` (or `awaiting` with actions to perform), stopped, failed to load, or
     /// ran out of time.
     private func poll(_ active: Active, width: CGFloat) -> Bool {
-        guard let instance = active.instance, let view = active.view, active.run.loaded else {
+        guard let instance = active.instance, let view = active.view, active.run.loaded, !active.test.loadOnly else {
             return true
         }
         active.size = self.layout(instance, view: view, width: width)
@@ -243,7 +253,7 @@ public final class ConformanceRunner {
             } else if let milliseconds = (action["wait"] as? NSNumber)?.doubleValue {
                 self.pump(milliseconds: milliseconds)
             } else if let theme = action["theme"] as? String {
-                instance.setTheme(theme == "dark" ? .dark : .light)
+                instance.setTheme(ConformanceRunner.theme(theme))
             } else if let visible = action["visible"] as? Bool {
                 instance.setVisible(visible)
             } else {

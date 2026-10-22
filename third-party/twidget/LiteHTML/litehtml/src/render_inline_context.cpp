@@ -180,6 +180,7 @@ litehtml::rendered_width litehtml::render_item_inline_context::_render_content(
             m_rendered_width.natural_width = std::max(m_rendered_width.natural_width, unbroken.width);
         }
     }
+    apply_ellipsis(self_size); // Telegram (VENDOR.md edit 40)
 
     if(!m_line_boxes.empty())
     {
@@ -327,9 +328,22 @@ litehtml::pixel_t litehtml::render_item_inline_context::new_box(const std::uniqu
     el_pos.el_pos.width    += text_indent + first_line_margin;
     auto new_pos            = fmt_ctx->place_to_left(el_pos);
 
+#if 0
     m_line_boxes.emplace_back(std::make_unique<line_box>(new_pos.top, new_pos.left + first_line_margin + text_indent,
                                                          new_pos.left + new_pos.width, css().line_height(),
                                                          css().get_font_metrics(), css().get_text_align()));
+#else
+    // Telegram (VENDOR.md edit 46): start and end against the block's direction; the computed value keeps them.
+    const bool rtl   = css().get_direction() == direction_rtl;
+    text_align align = css().get_text_align();
+    if(align == text_align_start)
+        align = rtl ? text_align_right : text_align_left;
+    else if(align == text_align_end)
+        align = rtl ? text_align_left : text_align_right;
+    m_line_boxes.emplace_back(std::make_unique<line_box>(new_pos.top, new_pos.left + first_line_margin + text_indent,
+                                                         new_pos.left + new_pos.width, css().line_height(),
+                                                         css().get_font_metrics(), align, rtl));
+#endif
 
     // Add items returned by finish_last_box function into the new line
     for(auto& it : items)
@@ -584,4 +598,71 @@ litehtml::pixel_t litehtml::render_item_inline_context::get_last_baseline()
         bl = src_el()->tag() == _input_ ? height() - margin_bottom() - control_baseline_inset() : height();
     }
     return bl;
+}
+
+// Telegram (VENDOR.md edit 40): text-overflow: ellipsis, in a block that clips. On each line wider than the content box,
+// the first text piece that reaches past the box less the ellipsis's width is cut after the code points that fit and
+// draws the ellipsis after them in the block's font and colour; every piece after it (an atomic inline at the cut too)
+// is not drawn. Inline boxes' own start and end are left alone.
+void litehtml::render_item_inline_context::apply_ellipsis(const containing_block_context& self_size)
+{
+    for(const auto& line : m_line_boxes)
+        for(const auto& item : line->items())
+            item->get_el()->set_ellipsis(-1, false);
+    const uint_ptr block_font = css().get_font();
+    if(css().get_text_overflow() != text_overflow_ellipsis || css().get_overflow_x() == overflow_visible || !block_font)
+        return;
+    document_container* container = src_el()->get_document()->container();
+    const pixel_t       right     = self_size.render_width;
+    const pixel_t       limit     = right - container->text_width("\xE2\x80\xA6", block_font);
+    for(const auto& line : m_line_boxes)
+    {
+        auto&   items      = line->items();
+        pixel_t line_right = 0_px;
+        for(const auto& item : items)
+            line_right = std::max(line_right, item->right());
+        if(line_right <= right)
+            continue;
+        bool cut = false;
+        for(const auto& item : items)
+        {
+            if(item->get_type() != line_box_item::type_text_part)
+                continue;
+            const auto& el = item->get_el();
+            if(cut)
+            {
+                el->set_ellipsis(-1, true);
+                continue;
+            }
+            if(item->right() <= limit)
+                continue;
+            cut             = true;
+            const auto text = std::dynamic_pointer_cast<el_text>(el->src_el());
+            const auto font = text && text->parent() ? text->parent()->css().get_font() : 0;
+            if(!text || !font)
+            {
+                el->set_ellipsis(-1, true);
+                continue;
+            }
+            const auto         part  = std::dynamic_pointer_cast<render_text>(el);
+            const std::string& drawn = part && part->is_fragment ? part->fragment_text : text->display_text();
+            const pixel_t      room  = limit - item->left();
+            // The code point boundaries, then the longest prefix that fits (prefix widths grow with length).
+            std::vector<size_t> ends;
+            for(size_t i = 1; i <= drawn.size(); i++)
+                if(i == drawn.size() || (static_cast<unsigned char>(drawn[i]) & 0xC0) != 0x80)
+                    ends.push_back(i);
+            size_t low = 0, high = ends.size(); // ends[0, low) fit
+            while(low < high)
+            {
+                const size_t mid = (low + high) / 2;
+                if(container->text_width(drawn.substr(0, ends[mid]).c_str(), font) <= room)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+            const pixel_t kept = low > 0 ? container->text_width(drawn.substr(0, ends[low - 1]).c_str(), font) : 0_px;
+            el->set_ellipsis(low > 0 ? static_cast<int>(ends[low - 1]) : 0, false, kept, src_el());
+        }
+    }
 }

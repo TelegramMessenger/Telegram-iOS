@@ -150,3 +150,25 @@ WR_TEST(testCreateEventKnowsTheUIEvents) {
              std::string("3:5:false"));
     CHECK_EQ(env.env().eval("new Touch({identifier: 2, target: document.body, clientX: 9}).clientX"), std::string("9"));
 }
+
+/// Fidelity plan, Task 4 (input.drag): a move's movementX/movementY is its delta from the last position delivered, the
+/// down point for the first (moves inside the slop are not delivered, and the first delivered one carries them), so the
+/// moves of a drag add up to its distance; down and up carry 0. Script can set them through MouseEventInit.
+WR_TEST(testMovementAddsUpToTheDrag) {
+    RenderEnv env("<!doctype html><html><head><style>body{margin:0} #k{width:300px;height:40px}</style></head><body>"
+                  "<div id=k></div><script>window.log = []; const k = document.getElementById('k');"
+                  "for (const type of ['pointerdown', 'pointermove', 'pointerup'])"
+                  "  k.addEventListener(type, e => log.push(type + ':' + e.movementX + ',' + e.movementY));"
+                  "</script></body></html>");
+    auto& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 10, 10, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 13, 11, 7, true);   // inside the slop: not delivered
+    host.pointer(env.ctx(), PointerPhase::Move, 30, 12, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 170, 14, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 170, 14, 7, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join(' ')"),
+             std::string("pointerdown:0,0 pointermove:20,2 pointermove:140,2 pointerup:0,0"));
+    CHECK_EQ(env.env().eval("const m = new MouseEvent('x', {movementX: 3, movementY: -4}); [m.movementX, m.movementY].join()"),
+             std::string("3,-4"));
+}

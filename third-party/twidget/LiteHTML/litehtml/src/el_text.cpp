@@ -61,6 +61,10 @@ void litehtml::el_text::compute_styles(bool /*recursive*/)
         css_w().set_font_metrics(el_parent->css().get_font_metrics());
         css_w().set_white_space(el_parent->css().get_white_space());
         css_w().set_overflow_wrap(el_parent->css().get_overflow_wrap());
+        // Telegram (VENDOR.md edit 32.2): word-break: break-all (and the legacy break-word) breaks anywhere, as
+        // overflow-wrap: anywhere does; keep-all is not modelled.
+        if(el_parent->css().get_word_break() == word_break_break_all || el_parent->css().get_word_break() == word_break_break_word)
+            css_w().set_overflow_wrap(overflow_wrap_anywhere);
         css_w().set_text_transform(el_parent->css().get_text_transform());
     }
     css_w().set_display(display_inline_text);
@@ -133,6 +137,12 @@ void litehtml::el_text::compute_styles(bool /*recursive*/)
                 m_use_transformed ? m_transformed_text.c_str() : m_text.c_str(), font);
             m_measured_font      = font;
             m_measured_transform = transform;
+            m_measured_width     = m_size.width; // Telegram (VENDOR.md edit 32.3)
+        }
+        // Telegram (VENDOR.md edit 32.3): word-spacing widens each space.
+        if(is_white_space() && el_parent)
+        {
+            m_size.width = m_measured_width + el_parent->css().get_word_spacing();
         }
     }
     m_draw_spaces = fm.draw_spaces;
@@ -188,8 +198,29 @@ void litehtml::el_text::draw(uint_ptr hdc, pixel_t x, pixel_t y, const position*
             if(font)
             {
                 web_color color = el_parent->css().get_color();
+#if 0
                 doc->container()->draw_text(hdc, text_item && text_item->is_fragment ? text_item->fragment_text.c_str() : display_text().c_str(), font,
                                             color, pos);
+#else
+                // Telegram (VENDOR.md edit 40): a piece cut at its line's ellipsis draws only what fits.
+                const std::string& drawn = text_item && text_item->is_fragment ? text_item->fragment_text : display_text();
+                const int          bytes = ri->ellipsis_bytes();
+                if(bytes < 0)
+                    doc->container()->draw_text(hdc, drawn.c_str(), font, color, pos);
+                else if(bytes > 0)
+                    doc->container()->draw_text(hdc, drawn.substr(0, static_cast<size_t>(bytes)).c_str(), font, color, pos);
+                // The ellipsis, on this piece's baseline, in the block's font and colour.
+                const auto block = bytes >= 0 ? ri->ellipsis_block() : nullptr;
+                if(const uint_ptr block_font = block ? block->css().get_font() : 0)
+                {
+                    const char* const   glyph = "\xE2\x80\xA6";
+                    const font_metrics& fm    = block->css().get_font_metrics();
+                    position ellipsis(pos.x + ri->ellipsis_at(),
+                                      pos.y + el_parent->css().get_font_metrics().ascent - fm.ascent,
+                                      doc->container()->text_width(glyph, block_font), fm.height);
+                    doc->container()->draw_text(hdc, glyph, block_font, block->css().get_color(), ellipsis);
+                }
+#endif
             }
         }
     }

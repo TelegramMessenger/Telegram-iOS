@@ -154,6 +154,11 @@ namespace litehtml
         const css_token_vector* find_custom_property(string_id name) const;
         // Charges a var() splice of `bytes` to the style-byte budget (and to this element, for refresh); false if refused.
         bool        charge_splice(size_t bytes) const;
+        // Telegram (VENDOR.md edit 33): the master sheet's cascaded value of `name` for this element (nullptr if it
+        // declares none): its matched master rules that style the element itself, in the order they applied.
+        const property_value* master_value(string_id name) const;
+        // Replaces revert declarations with master_value, charging a copy as a var() splice; before subst_vars.
+        void                  resolve_reverts();
         // Telegram (VENDOR.md edit 21): refresh in document order, for a document whose replay could pass the budget.
         void        refresh_clear_styles();
         void        refresh_replay_styles(int sheet);
@@ -171,11 +176,20 @@ namespace litehtml
             return m_style.get_property(name).is<std::string>();
         }
 #endif
+#if 0
         bool has_own_property(string_id name) const
         {
             const property_value& value = m_style.get_property(name);
             return !value.is<invalid>();
         }
+#else
+        // Telegram (VENDOR.md edit 33): unset is no declaration of its own.
+        bool has_own_property(string_id name) const
+        {
+            const property_value& value = m_style.get_property(name);
+            return !value.is<invalid>() && !value.is<unset>();
+        }
+#endif
         const css_token_vector* get_token_property(string_id name) const
         {
             const property_value& value = m_style.get_property(name);
@@ -252,6 +266,11 @@ namespace litehtml
         if(value.is<Type>())
         {
             return value.get<Type>();
+        }
+        // Telegram (VENDOR.md edit 33): initial is the initial value; unset falls through as no declaration does.
+        if(value.is<initial>())
+        {
+            return default_value;
         }
         if(inherited || value.is<inherit>())
         {

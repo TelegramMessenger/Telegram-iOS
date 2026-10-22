@@ -47,19 +47,9 @@ ACTIONS = {"keep": "ElementAction::Keep", "span": "ElementAction::Span", "div": 
 
 
 def ua_stylesheet(text):
-    """The profile's UA stylesheet for the master sheet: `@layer tw-ua{…}` unwrapped and each `:where(X)` written as X.
-    The master sheet already loses to every author rule, which is what both did (V2b plan, Task 2)."""
-    match = re.match(r"@layer [\w-]+\{", text)
-    if match:
-        depth = 0
-        for i in range(match.end() - 1, len(text)):
-            if text[i] == "{":
-                depth += 1
-            elif text[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    text = text[match.end():i] + text[i + 1:]
-                    break
+    """The profile's UA stylesheet for the master sheet: each `:where(X)` written as X (the master sheet already loses to
+    every author rule, which is what `:where()` does; V2b plan, Task 2). The `@layer tw-ua{…}` wrapper is kept: in the
+    master it is an origin above litehtml's own rules, which `revert` skips (twidget edit 41)."""
     return re.sub(r":where\(((?:[^()]|\([^()]*\))*)\)", r"\1", text)
 
 
@@ -78,8 +68,9 @@ def main():
         array("kCSSProperties", css["properties"]),
         array("kCSSFunctions", css["functions"]),
         array("kCSSUnits", css["units"]),
-        array("kCSSDisplayValues", css["values"]["display"]),
-        array("kCSSPositionValues", css["values"]["position"]),
+        # css.values, every property's keyword set (display, position, user-select, …) as "property:keyword".
+        array("kCSSValueSets", [p + ":" + v for p, values in css["values"].items() for v in values]),
+        array("kCSSValuedProperties", css["values"].keys()),
         array("kCSSPositionRewrites", css["rewrite"]["position"].keys()),
         array("kCSSOverflowRewrites", css["rewrite"]["overflow"].keys()),
         array("kCSSFilterFunctions", css["filterFunctions"]),
@@ -108,7 +99,8 @@ def main():
         pairs("kPositionRewrites", css["rewrite"]["position"].items()),
         pairs("kOverflowRewrites", css["rewrite"]["overflow"].items()),
         "",
-        "// SDK v1 §2.4's default <button>, for the master sheet (Builder's masterWithHostCSS).",
+        "// The renderer's UA layer (SDK v1 §2.4: the root, the text elements and the default <button>), for the master sheet",
+        "// (Builder's masterWithHostCSS).",
         'inline constexpr std::string_view kUAStylesheet = "%s";' % ua_stylesheet(tables["uaStylesheet"]).replace("\\", "\\\\").replace('"', '\\"'),
         "",
     ]

@@ -165,7 +165,7 @@ final class MessageWidgetCore {
             return
         }
         let delegate = SessionDelegate(core: self)
-        guard let session = WRSession(width: width, dark: theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, scale: self.scale, delegate: delegate) else {
+        guard let session = WRSession(width: width, dark: theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary, scale: self.scale, delegate: delegate) else {
             self.appendDiag("core-error", "the widget runtime could not be created")
             self.state = .failedToStart
             return
@@ -222,7 +222,7 @@ final class MessageWidgetCore {
             return
         }
         session.setWorkLimitAfter(self.taskBudget)
-        session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary)
+        session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 

@@ -83,8 +83,8 @@ WR_TEST(testTheTablesAreTheProfiles) {
         {CSSTable::Properties, "j(c.properties)"},
         {CSSTable::Functions, "j(c.functions)"},
         {CSSTable::Units, "j(c.units)"},
-        {CSSTable::DisplayValues, "j(c.values.display)"},
-        {CSSTable::PositionValues, "j(c.values.position)"},
+        {CSSTable::ValueSets, "j(Object.entries(c.values).flatMap(([k, v]) => v.map(x => k + ':' + x)))"},
+        {CSSTable::ValuedProperties, "j(Object.keys(c.values))"},
         {CSSTable::PositionRewrites, "j(Object.keys(c.rewrite.position))"},
         {CSSTable::OverflowRewrites, "j(Object.keys(c.rewrite.overflow))"},
         {CSSTable::FilterFunctions, "j(c.filterFunctions)"},
@@ -114,6 +114,11 @@ WR_TEST(testTheTablesAreTheProfiles) {
     }
     CHECK_EQ(joinedActions(), env.eval("j(Object.entries(p.tables.html.elements).map(([k, v]) => k + ':' + v))"));
     CHECK_EQ(std::string(wr::profile::defaultFont()), env.eval("c.fonts.default"));
+    // The UA layer is the profile's text with each :where(X) written as X and nothing else changed: the @layer wrapper
+    // stays, an origin of its own in the master (twidget edit 41; v0.1.1 plan, Task 2).
+    CHECK_EQ(std::string(wr::profile::uaStylesheet()),
+             env.eval("p.tables.uaStylesheet.replace(/:where\\(((?:[^()]|\\([^()]*\\))*)\\)/g, '$1')"));
+    CHECK(std::string(wr::profile::uaStylesheet()).rfind("@layer tw-ua{", 0) == 0);
     CHECK_EQ(std::to_string(wr::profile::kVersion), env.eval("String(p.profile)"));
 }
 

@@ -81,6 +81,11 @@ namespace litehtml
         size text_content_size() const;
         rendered_width measure(pixel_t x, pixel_t y, const containing_block_context& cb,
             formatting_context* fmt_ctx, bool second_pass = false, pixel_t* measured_height = nullptr) override;
+
+      private:
+        // Telegram (VENDOR.md edit 40): text-overflow: ellipsis, marked on the pieces of each line wider than the
+        // content box (render_item::set_ellipsis).
+        void apply_ellipsis(const containing_block_context& self_size);
     };
 } // namespace litehtml
 

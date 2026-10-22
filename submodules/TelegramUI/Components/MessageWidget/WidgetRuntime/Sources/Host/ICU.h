@@ -17,7 +17,9 @@ static_assert(U_DISABLE_RENAMING == 1, "libicucore exports unsuffixed names");
 #endif
 
 #include <unicode/parseerr.h>
+#include <unicode/uchar.h>
 #include <unicode/uidna.h>
+#include <unicode/ustring.h>
 #include <unicode/utypes.h>
 
 static_assert(U_ICU_VERSION_MAJOR_NUM >= 69, "the floor is ICU 69 (iOS 15.0)");
@@ -38,6 +40,16 @@ U_CAPI int32_t U_EXPORT2 uloc_toLanguageTag(const char* localeID, char* langtag,
 enum ULocAvailableType { ULOC_AVAILABLE_DEFAULT, ULOC_AVAILABLE_ONLY_LEGACY_ALIASES, ULOC_AVAILABLE_WITH_LEGACY_ALIASES };
 typedef struct UEnumeration UEnumeration;
 U_CAPI UEnumeration* U_EXPORT2 uloc_openAvailableByType(ULocAvailableType type, UErrorCode* status) WR_ICU_WEAK;
+
+// ubidi.h (fidelity plan, Task 13: WidgetContainer::bidi_levels). Not Intl's: icuAvailable() leaves them out, and the
+// container checks them itself, keeping the logical order on an ICU without them.
+typedef struct UBiDi UBiDi;
+typedef uint8_t UBiDiLevel;
+U_CAPI UBiDi* U_EXPORT2 ubidi_open(void) WR_ICU_WEAK;
+U_CAPI void U_EXPORT2 ubidi_close(UBiDi* pBiDi) WR_ICU_WEAK;
+U_CAPI void U_EXPORT2 ubidi_setPara(UBiDi* pBiDi, const UChar* text, int32_t length, UBiDiLevel paraLevel,
+                                    UBiDiLevel* embeddingLevels, UErrorCode* pErrorCode) WR_ICU_WEAK;
+U_CAPI UBiDiLevel U_EXPORT2 ubidi_getLevelAt(const UBiDi* pBiDi, int32_t charIndex) WR_ICU_WEAK;
 
 // umisc.h, ufieldpositer.h
 typedef struct UFieldPositionIterator UFieldPositionIterator;

@@ -52,10 +52,11 @@ like at its best within the profile every client draws.
   `ui-monospace, monospace` for code), a `.card` at `width: 100%` with no
   radius and no shadow of its own: the widget owns the whole bubble like a
   photo message, the host decides the width and clips with the bubble's
-  radius (the dev page and the feed mark these bubbles `.bubble.edge`,
-  `apps/web/src/style.css`: no padding, `overflow: hidden`, 18 px). The older groups
-  (`htmlbubbles-ported`, `common`) are 392 px cards inside a padded bubble,
-  matching Telegram's macOS beta, and keep that.
+  radius. Since v0.1.1 every bubble of the dev page, the feeds and the native
+  demos works that way, as on a client (`apps/web/src/style.css` `.bubble`: no
+  padding, `overflow: hidden`): the widget's body margin is the inset, so the
+  older groups (`htmlbubbles-ported`, `common`), 392 px cards with a body margin
+  of 0, now touch the bubble's edges.
 - Inside profile 1, so the validator removes nothing: no form controls (a
   slider is a drawn track dragged with pointer events or a segmented
   control, a text field is a set of presets, a checkbox is a toggle
@@ -120,8 +121,7 @@ corepack pnpm dev                                # 127.0.0.1:5173/?feed=1 — th
 `pnpm build:ios|macos|android|desktop` copies the group into the native demos
 (`packages/core/scripts/build-native-bundles.ts`); the iOS/macOS demo lists the
 `showcase/<batch>` sections, runs them with `--autorun showcase`, and the iOS
-chat feed's **Widgets** picker fills the feed with them (edge to edge, like
-the web feed; `--feed-set corpus=showcase`). The widgets use grid, transforms,
+chat feed's **Widgets** picker fills the feed with them (`--feed-set corpus=showcase`). The widgets use grid, transforms,
 SVG and canvas, so the Blitz and litehtml renderers show their gaps there,
 which is a fair thing to look at but not what the group is for.
 

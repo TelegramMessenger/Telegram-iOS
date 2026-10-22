@@ -57,7 +57,7 @@ String MediaQueryList::media(JSContext* ctx) {
 }
 
 bool MediaQueryList::matches(JSContext* ctx) {
-    return evaluate(ctx, this->query(), false);
+    return !m_overlong && evaluate(ctx, this->query(), false);
 }
 
 void MediaQueryList::addListener(JSContext* ctx, std::optional<CallbackInterface> callback) {
@@ -88,7 +88,7 @@ void MediaQueryList::listenersChanged(JSContext* ctx) {
         // would have stored, and the render tree kept the features it saw.
         const uint64_t reports = reportsOf(ctx);
         if (reports != m_lastReport) {
-            m_lastMatches = evaluate(ctx, this->query(), true);
+            m_lastMatches = !m_overlong && evaluate(ctx, this->query(), true);
             m_lastReport = reports;
         }
         window.holdMediaQueryList(ctx, *this);
@@ -132,9 +132,13 @@ Ref<MediaQueryList> Window::matchMedia(JSContext* ctx, String query) {
     bool cut = false;
     std::string media = query.utf8Prefix(work::kMaxMediaQueryBytes, &cut);
     media = cut ? std::string("not all") : normalizedQuery(media);
-    const bool matches = evaluate(ctx, media, false);
+    // Profile 1's host answers a query of at most kMaxMatchMediaUnits UTF-16 units as written (RB §8.3): a longer one is
+    // false whatever the features say, though its media reads as any other's (V4 plan, Task 8).
+    const bool overlong = query.length() > kMaxMatchMediaUnits;
+    const bool matches = !overlong && evaluate(ctx, media, false);
     m_mediaQueryListsMade = true;
-    return create<MediaQueryList>(ctx, idl::kMediaQueryList, ctx, media, matches, reportsOf(ctx), m_nextMediaQueryList++);
+    return create<MediaQueryList>(ctx, idl::kMediaQueryList, ctx, media, matches, reportsOf(ctx), m_nextMediaQueryList++,
+                                  overlong);
 }
 
 void Window::holdMediaQueryList(JSContext* ctx, MediaQueryList& list) {
@@ -183,7 +187,7 @@ void Window::reportMediaChanges(JSContext* ctx) {
     const uint64_t report = render->mediaReports() + 1;
     std::vector<Ref<MediaQueryList>> changed;
     for (Ref<MediaQueryList>& list : lists) {
-        const bool now = render->matchesMedia(ctx, list->query(), false);
+        const bool now = !list->m_overlong && render->matchesMedia(ctx, list->query(), false);
         if (now != list->m_lastMatches) {
             list->m_lastMatches = now;
             changed.push_back(list);

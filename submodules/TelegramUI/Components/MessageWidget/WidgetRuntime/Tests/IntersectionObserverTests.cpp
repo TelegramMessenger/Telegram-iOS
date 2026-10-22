@@ -44,6 +44,19 @@ WR_TEST(testAVisibleElementIsReportedIntersecting) {
     CHECK_EQ(env.env().eval("log.length"), std::string("1"));
 }
 
+/// Fidelity plan, Task 7: the target's rect is its transformed box, as getBoundingClientRect reports it.
+WR_TEST(testATransformedTargetIntersectsWhereItIsDrawn) {
+    RenderEnv env("<!doctype html><html><head></head><body style='margin:0'>"
+                  "<div id=root style='position:relative;overflow:hidden;width:100px;height:40px'>"
+                  "<div id=t style='width:100px;height:20px;transform:translateY(30px)'></div></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e; window.log = [];</script>"
+                  "</body></html>");
+    env.env().eval("new IntersectionObserver(es => es.forEach(e => log.push(e.intersectionRatio + ':' +"
+                   " Math.round(e.boundingClientRect.y) + ':' + Math.round(t.getBoundingClientRect().y))), { root }).observe(t); 1");
+    settle(env);
+    CHECK_EQ(env.env().eval("log.join()"), std::string("0.5:30:30"));
+}
+
 WR_TEST(testANotRenderedElementIsNotIntersecting) {
     RenderEnv env(kPage);
     env.env().eval("new IntersectionObserver(es => es.forEach(e => log.push(e.isIntersecting + ':' + e.intersectionRatio))).observe(n); 1");

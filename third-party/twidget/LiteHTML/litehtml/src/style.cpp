@@ -47,6 +47,10 @@ namespace litehtml
         {__webkit_font_smoothing_, font_smoothing_strings              },
         {_white_space_,            white_space_strings                 },
         {_overflow_wrap_,          overflow_wrap_strings               },
+        {_word_break_,             word_break_strings                  }, // Telegram (VENDOR.md edit 32.2)
+        {_object_fit_,             object_fit_strings                  }, // Telegram (VENDOR.md edit 37)
+        {_text_overflow_,          text_overflow_strings               }, // Telegram (VENDOR.md edit 40)
+        {_direction_,              direction_strings                   }, // Telegram (VENDOR.md edit 46)
 
         {_font_style_,             font_style_strings                  },
         {_font_variant_,           font_variant_strings                },
@@ -339,6 +343,22 @@ namespace litehtml
         }
     }
 
+    // Telegram (VENDOR.md edit 33).
+    void style::global_keyword_property(string_id name, const property_value& marker)
+    {
+        auto atomic_properties = at(shorthands, name);
+        if(!atomic_properties.empty())
+        {
+            for(auto atomic : atomic_properties)
+            {
+                add_parsed_property(atomic, marker);
+            }
+        } else
+        {
+            add_parsed_property(name, marker);
+        }
+    }
+
     void style::add_length_property(string_id name, const css_token& val, const css_values& keywords, int options,
                                     bool important)
     {
@@ -357,6 +377,10 @@ namespace litehtml
         "bottom", "box-shadow", "border-color", "max-height", "stroke-dashoffset", "fill", "stroke", "translate",
         "scale", "rotate", "filter", "letter-spacing", "font-size", "margin-top", "margin-left", "flex-grow",
         "transform-origin", "backdrop-filter", "pointer-events",
+        // Telegram (VENDOR.md edit 30.1): kept for getComputedStyle, which litehtml does not model.
+        "touch-action",
+        // Telegram (VENDOR.md edit 45): the same, -webkit-user-select written as user-select (add_property).
+        "user-select",
     };
 
     static const std::map<string_id, string_id>& raw_declaration_ids()
@@ -484,6 +508,11 @@ namespace litehtml
         {
             name = _backdrop_filter_;
         }
+        // Telegram (VENDOR.md edit 45): one property under both names, so the later declaration wins.
+        if(name == __webkit_user_select_)
+        {
+            name = _user_select_;
+        }
         // Telegram (VENDOR.md edit 15): a list past its cap is cut before anything keeps a copy of it.
         if(css_token_vector capped; cap_list_value(name, value, capped))
         {
@@ -524,6 +553,19 @@ namespace litehtml
         if(ident == "inherit")
         {
             return inherit_property(name, important);
+        }
+        // Telegram (VENDOR.md edit 33): the other CSS-wide keywords. revert-layer is revert: there are no layers.
+        if(ident == "initial")
+        {
+            return global_keyword_property(name, property_value(initial(), important));
+        }
+        if(ident == "unset")
+        {
+            return global_keyword_property(name, property_value(unset(), important));
+        }
+        if(ident == "revert" || ident == "revert-layer")
+        {
+            return global_keyword_property(name, property_value(revert(), important));
         }
 
         int         idx[4];
@@ -567,6 +609,10 @@ namespace litehtml
         case __webkit_font_smoothing_:
         case _white_space_:
         case _overflow_wrap_:
+        case _word_break_: // Telegram (VENDOR.md edit 32.2)
+        case _object_fit_: // Telegram (VENDOR.md edit 37)
+        case _text_overflow_: // Telegram (VENDOR.md edit 40)
+        case _direction_: // Telegram (VENDOR.md edit 46)
 
         case _font_style_:
         case _font_variant_:
@@ -637,6 +683,12 @@ namespace litehtml
         case _min_width_:
         case _min_height_:
             {
+                // Telegram (VENDOR.md edit 39): width and height also take the intrinsic keywords (width_keyword).
+                if(name == _width_ || name == _height_)
+                {
+                    constexpr auto keywords = split_css_values<4>("auto;min-content;max-content;fit-content");
+                    return add_length_property(name, val, keywords, f_length_percentage | f_positive, important);
+                }
                 constexpr auto auto_val = split_css_values<1>("auto");
                 return add_length_property(name, val, auto_val, f_length_percentage | f_positive, important);
             }
@@ -883,6 +935,11 @@ namespace litehtml
             add_parsed_property(name, property_value(get_repr(value, 0, -1, true), important));
             break;
 
+        // Telegram (VENDOR.md edit 32.1): kept as its text; compute_font reads "tnum" from it.
+        case _font_feature_settings_:
+            add_parsed_property(name, property_value(get_repr(value, 0, -1, true), important));
+            break;
+
         case _text_emphasis_color_:
             parse_text_emphasis_color(val, important, container);
             break;
@@ -1022,6 +1079,13 @@ namespace litehtml
                 return add_length_property(name, val, normal_val, f_length, important);
             }
 
+        // Telegram (VENDOR.md edit 32.3): word-spacing, as letter-spacing.
+        case _word_spacing_:
+            {
+                constexpr auto normal_val = split_css_values<1>("normal");
+                return add_length_property(name, val, normal_val, f_length, important);
+            }
+
         case _contain_:
             {
                 int  flags = 0;
@@ -1128,6 +1192,10 @@ namespace litehtml
         case _filter_:
         case _backdrop_filter_:
         case _transform_:
+        case _object_position_: // Telegram (VENDOR.md edit 37): parsed by compute_effects, as background-position
+        case _translate_: // Telegram (VENDOR.md edit 34)
+        case _rotate_:
+        case _scale_:
         case _transform_origin_:
         case _clip_path_:
         case _grid_template_columns_:
@@ -1166,6 +1234,12 @@ namespace litehtml
             //  ==================================  OTHER  ==================================
 
         case _cursor_:
+            str = get_repr(value, 0, -1, true);
+            add_parsed_property(name, property_value(str, important));
+            break;
+
+        // Telegram (VENDOR.md edit 32.4): quotes, kept as its text (getComputedStyle reads it).
+        case _quotes_:
             str = get_repr(value, 0, -1, true);
             add_parsed_property(name, property_value(str, important));
             break;
@@ -2413,6 +2487,7 @@ namespace litehtml
         }
     }
 
+#if 0
     void style::combine(const style& src)
     {
         for(const auto& property : src.m_properties)
@@ -2420,6 +2495,31 @@ namespace litehtml
             add_parsed_property(property.first, property.second);
         }
     }
+#else
+    // Telegram (VENDOR.md edit 43): in the order the declarations were written (their m_order), not the map's (by string
+    // id): subst_vars keeps a longhand written after a var() shorthand, so the element must know which came later.
+    namespace
+    {
+        std::vector<const std::pair<const string_id, property_value>*> written_order(const props_map& properties)
+        {
+            std::vector<const std::pair<const string_id, property_value>*> order;
+            order.reserve(properties.size());
+            for(const auto& property : properties)
+                order.push_back(&property);
+            std::stable_sort(order.begin(), order.end(),
+                             [](const auto* a, const auto* b) { return a->second.m_order < b->second.m_order; });
+            return order;
+        }
+    } // namespace
+
+    void style::combine(const style& src)
+    {
+        for(const auto* property : written_order(src.m_properties))
+        {
+            add_parsed_property(property->first, property->second);
+        }
+    }
+#endif
 
     // Telegram (VENDOR.md edit 21).
     namespace
@@ -2461,6 +2561,26 @@ namespace litehtml
             return 0;
         }
     } // namespace
+
+    // Telegram (VENDOR.md edit 33).
+    void style::resolve_reverts(const std::function<const property_value*(string_id)>& master,
+                                const std::function<bool(size_t)>&                      admit)
+    {
+        for(auto& prop : m_properties)
+        {
+            if(!prop.second.is<revert>())
+                continue;
+            property_value resolved(unset(), false);
+            if(const property_value* value = master(prop.first))
+            {
+                if(admit(value_heap(*value)))
+                    resolved = *value;
+            }
+            resolved.m_important = prop.second.m_important;
+            resolved.m_order     = prop.second.m_order;
+            prop.second          = std::move(resolved);
+        }
+    }
 
     size_t style::payload_bytes() const
     {
@@ -2505,11 +2625,19 @@ namespace litehtml
 
     void style::combine_fixed(const style& src)
     {
+#if 0
         for(const auto& property : src.m_properties)
         {
             if(value_heap(property.second) == 0)
                 add_parsed_property(property.first, property.second);
         }
+#else
+        for(const auto* property : written_order(src.m_properties)) // Telegram (VENDOR.md edit 43)
+        {
+            if(value_heap(property->second) == 0)
+                add_parsed_property(property->first, property->second);
+        }
+#endif
     }
 
     void style::max_payload_into(std::map<string_id, size_t>& most) const

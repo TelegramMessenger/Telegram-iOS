@@ -1024,9 +1024,9 @@ in [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md) under "Rich re
 A widget message carries `messageMediaWidget width:int height:int payload:bytes` (layer 233): a bot's size anchors and
 the widget's HTML, gzipped by the server. TelegramCore stores it as `TelegramMediaWidget` (Postbox keys `w`, `h`, `p`;
 `html()` gunzips with no size check of its own), and `ChatMessageWidgetBubbleContentNode` draws it as a live widget in
-a bubble of its own, the message's text as its caption below. The authority is widget-sandbox v0.1.0, vendored at
-`third-party/widget-sandbox` (tag v0.1.0, `d895dcb5`: `corpus/`, and `conformance/` with its channel, reference pictures
-and self-checks); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`
+a bubble of its own, the message's text as its caption below. The authority is widget-sandbox v0.1.1, vendored at
+`third-party/widget-sandbox` (tag v0.1.1, `e9654cab`: `corpus/`, and `conformance/` with its channel, reference pictures
+and self-checks; v0.1.1 clarified profile 1 without changing it); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md` (its §8 is the v0.1.1 delta and what this client decided for it)
 (milestones V1–V6). Every widget runs on the native runtime,
 `WidgetRuntime`, whose record, invariants, limits and measurements are
 [`docs/message-widgets-native-runtime.md`](docs/message-widgets-native-runtime.md). Off by default:
@@ -1050,6 +1050,15 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   (`WidgetTreeRenderer`), and to a fixed height under it: the node hands it over on every main-thread pass
   (`MessageWidgetRegistry.maximumHeight` → `MessageWidgetInstance.maximumHeight`, applied by its next `layout` →
   the renderer; an edit of the anchors keeps the runtime and changes it), so the document ends at the clip and a stopped widget's badge, drawn at the document's bottom, stays visible.
+- **The widget fills its bubble** (widget-sandbox v0.1.1, sdk-v1 §5.1): no padding of the bubble's own
+  (`ChatMessageWidgetBubbleContentNode.bubbleInset`, 0; the widget's body margin, the text tokens' padding, is the
+  inset), clipped at the bubble's own radii (`chatBubbleCorners`, the auxiliary radius where merged, as the bubble's
+  background draws them) and square where the tail joins. Where the bubble is taller than the document the view paints
+  the canvas colour (the runtime record, "The tree carries the canvas colour"), and the tail continues the widget's
+  bottom-corner colour (sampled with each tile draw, `WidgetFrame.bottomLeftColor`/`bottomRightColor`) through
+  `chatBubbleMediaCorner`'s mask, as a photo's tail continues the photo; a transparent corner leaves the bubble's own.
+  The date sits where a photo's does, 8 pt from the edges. Check it in the widget harness with `-widget-caption off`
+  and `-harness-side incoming`; the harness draws no outgoing gradient bubble (it has no wallpaper backdrop).
 - **Widgets exist only where the bubble lays out on main.** A widget's instance and the height cache are main-thread
   only, so the node boots and asks a widget only in a main-thread pass; its runtime runs on the pool below. The chat
   history's CoreList backend lays out on main; `ListViewImpl` (other lists, and the chat with
@@ -1122,11 +1131,23 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   appends).
   **Bounds:** the render limits (elements, form controls, `<style>` and text bytes, …) are `WidgetRuntime`'s, tabled in
   the runtime record's "Limits". A message has one widget (registry path `[]`).
-- **The host sheet is the spec renderer's root CSS** (widget-sandbox v0.1.0, `shadow-renderer.ts`):
-  `RenderOptions::hostCSS` (`WidgetRuntime/Sources/Render/RenderHost.h`) is `html { display: flow-root; position:
-  relative; min-height: 0 } head { display: none } body { display: block; margin: 8px }`, appended to litehtml's master
-  stylesheet (`masterWithHostCSS`, `Builder.cpp`), so an author's rules win over it whatever their specificity, as the
-  spec's `:where()` makes them. It replaced M1's text-bubble padding (`body { padding: 4px 9px }`) in V1.
+- **The master sheet ends in the renderer's UA layer** (widget-sandbox v0.1.1, `profile.json` `tables.uaStylesheet`,
+  generated into `ProfileTables.inc` with each `:where(X)` written as X and its `@layer tw-ua{…}` kept): the root's font
+  and colour from the theme and text tokens, the body's margin as the padding token, headings, lists, tables, quotes,
+  `pre`, links without an underline, the default `<button>`. Text stays unselectable: `user-select` computes as the
+  widget writes it (profile 1's value sets, `css.values`, hold for every property that has one), but the view selects
+  nothing, the exception sdk-v1 §2.4 accepts (D18). The bubble passes the text tokens from the chat's message
+  text (`messageWidgetTheme`: Text Size, line height 1.3, the text bubble's insets as the padding), so a Text Size change
+  alone is a theme change that lays the widget out again. In the master a `@layer` is an origin above litehtml's own
+  rules whatever their specificity, and `revert` skips it (twidget edit 41), as a browser rolls an author layer back to
+  its UA sheet. An author's rules win over all of it. Then the host sheet, the spec renderer's root CSS
+  (`RenderOptions::hostCSS`, `RenderHost.h`): `html { display: flow-root; position: relative; min-height: 0 } head {
+  display: none } body { display: block }`. The layer brought positional rules (`body>:first-child`, `td:last-child`)
+  and a fractional line height (1.35) into every document; two facts keep patching cheap and exact under them: a rule
+  positional in its subject alone re-matches only the touched parent's other children (twidget edit 42), and the layer
+  mirror paints content moved by a fraction of a pixel again rather than framing it (`LayerMirror::moved`). Test oracles
+  that build a document beside the env read `env.render().options()` (its root declarations, which the layer's `var()`s
+  need), never the construction's.
 - **Visible = bubble visible ∧ view in a window ∧ app active.** The list's visibility is geometric (a chat
   under a pushed screen keeps it) and the app stays alive in the background during calls and audio, so the
   instance also follows its view's `didMoveToWindow` and `MessageWidgetApplicationState`, which one subscription
@@ -1138,8 +1159,15 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   `LHHostSupport.h` (`LHHostContainer`, one `LHContainer` driven without an `LHDocument`): its fonts, text and ImageIO
   decoding are `WidgetRuntimeIOS`'s `CoreTextRenderHost`, and its CoreGraphics drawing is `LayerTreePainter`'s. Every
   local edit is numbered in `third-party/twidget/VENDOR.md` (AppKit guarded by `#if TARGET_OS_OSX`, Telegram's image
-  policy, the fork fixes, edits 12–21 for the native runtime, edit 22 the host support). Re-syncing: re-copy from
-  twidget, re-apply VENDOR.md's edits, run both suites.
+  policy, the fork fixes, edits 12–21 for the native runtime, edit 22 the host support, edits 30–48 for conformance).
+  Re-syncing: re-copy from twidget, re-apply VENDOR.md's edits, run both suites.
+- **Rendering follows Chromium's answers, as widget-sandbox's conformance set encodes them** (2026-10-22: in profile
+  162 pass / 1 partly / 0 fail of 174, held by the harness's ratchet). The one partly is upstream's: a `data:` PNG in
+  `auto/05-colour-backgrounds-b` has a bad CRC, which Chromium draws and ImageIO refuses. Right-to-left covers
+  `direction`, `dir` (`auto` included) and each line's bidi order from ICU (`document_container::bidi_levels`), not
+  floats, absolutely positioned static positions or table columns. A `calc()` mixing a percentage with a length is a
+  counted tree in `css_length` (16 bytes, was 8) of at most 64 nodes, because a cached declaration's one tree is
+  evaluated for every element it styles at every layout. What still differs: the runtime record's "Rendering fidelity".
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; from then on every call answers its empty default. A stop or a
   failure after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer`
@@ -1158,8 +1186,9 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
   - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
     The only way out is the bridge: `openLink` behind its prompt, one per tap (`MessageWidgetCore.bridge`). SDK v1 has
     no `sendMessage` (sdk-v1 §2.10); the runtime's still exists and the bubble ignores it until V2 removes it.
-  - **Loads.** Profile 1 decides the renderer's copy first (below): a remote `url()` declaration is dropped and a
-    refused `<img src>` renders the 48 px placeholder. Behind it the runtime's litehtml container, `WidgetContainer`,
+  - **Loads.** Profile 1 decides the renderer's copy first (below): its hooks drop a remote `url()` declaration and
+    an `@import` before any load is asked for, and `scanAttributes` turns a refused `<img src>` into the 48 px
+    placeholder. Behind it the runtime's litehtml container, `WidgetContainer`,
     is the boundary: it accepts only `data:` images of the profile's types (PNG, JPEG, GIF, WebP) and the placeholder,
     and refuses and counts every other load (`WRSession.refusedLoads`). `CoreTextRenderHost` decodes those under
     today's image policy (`LHHostContainer::createImage`: ImageIO's sniffing, ≤ 4096 px a side and 16 Mpx; the
@@ -1205,9 +1234,13 @@ and `…/Chat/ChatMessageWidgetBubbleContentNode`. None of it shows up as a buil
     what it wrote, while litehtml gets elements as `markup::renderTagFor` decides them (kept, an inert span or div with
     `data-tg-tag`, or dropped with their subtree), attributes as `markup::renderAttribute` does in `scanAttributes`
     (an external `a[href]` becomes `#` plus `data-tg-link`; a tap still reads the DOM's href), CSS through twidget
-    edit 29's hooks answered by `css::policy` (keep, augment, rewrite or drop; `CSS.supports` agrees), and images by
-    `imageSourceKept`. Each rule is one decision that a rebuild, the patches and the render input read alike; the
-    master, UA and host sheets are trusted. The record is the runtime doc's "Profile 1 is the renderer's".
+    edit 29's hooks answered by `css::policy` (keep, augment, rewrite or drop; `CSS.supports` agrees), images by one
+    predicate (`imageSourceKept`) in layout and the DOM, and the strict text and node budgets in tree order. Each rule
+    is one decision that a rebuild, the patches and the render input read alike. litehtml's master, the UA and the
+    host sheets are parsed once per process and cached, so the hooks pass them through whole (`trusted_styles`), and
+    every cache is keyed on the container's `sanitizer_key`. **Hooks are pure functions of their text and post no
+    diagnostics** (litehtml caches their answers by text). No focus exists (`focus()` is a no-op). The record, and
+    the divergences from the reference, are in the runtime doc's "Profile enforcement (V4)".
   - **The flush is atomic and runs no JS**, and the first one is in `boot`, after the parse and before any script, so
     a first script that never ends still leaves the parsed markup laid out.
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +

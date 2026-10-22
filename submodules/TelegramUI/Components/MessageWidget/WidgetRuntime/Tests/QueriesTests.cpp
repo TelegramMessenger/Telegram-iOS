@@ -1,6 +1,7 @@
 // CSSOM View's geometry queries (V3 plan, Task 3): each flushes what is pending and reads the published layout
 // (RenderTree::flushForQuery, then borderBox / clientRects / nodeAt / boxMetrics), in CSS px from the document's
-// top-left (there is no scrolling viewport). The default layout is 300 px wide under the host's `body { margin: 8px }`.
+// top-left (there is no scrolling viewport). The default layout is 300 px wide under the UA layer's body margin, the
+// padding token (its reference default `8px 12px` here: widget-sandbox v0.1.1).
 #include <string>
 
 #include "Sources/Runtime/Runtime.h"
@@ -12,7 +13,7 @@ using wr_test::RenderEnv;
 
 namespace {
 
-// a: 100×40 at (8, 8). p: below it, 20 px further in, a 2 px border and 3 px padding around 50×30, positioned;
+// a: 100×40 at (12, 8). p: below it, 20 px further in, a 2 px border and 3 px padding around 50×30, positioned;
 // c: a 10 px block inside p's content box, 4 px down.
 const char* const kBoxes =
     "<!doctype html><html><head></head><body><div id=a style=\"width:100px;height:40px\"></div>"
@@ -25,11 +26,11 @@ const char* const kBoxes =
 WR_TEST(testTheBoundingRectIsTheBorderBox) {
     RenderEnv env(kBoxes);
     CHECK_EQ(env.env().eval("var r = a.getBoundingClientRect(); [r.x, r.y, r.width, r.height, r.top, r.right, r.bottom, r.left].join(',')"),
-             std::string("8,8,100,40,8,108,48,8"));
+             std::string("12,8,100,40,8,112,48,12"));
     CHECK_EQ(env.env().eval("a.getBoundingClientRect() instanceof DOMRect && a.getBoundingClientRect() instanceof DOMRectReadOnly"),
              std::string("true"));
     CHECK_EQ(env.env().eval("JSON.stringify(a.getBoundingClientRect())"),
-             std::string("{\"x\":8,\"y\":8,\"width\":100,\"height\":40,\"top\":8,\"right\":108,\"bottom\":48,\"left\":8}"));
+             std::string("{\"x\":12,\"y\":8,\"width\":100,\"height\":40,\"top\":8,\"right\":112,\"bottom\":48,\"left\":12}"));
     // A new object per call.
     CHECK_EQ(env.env().eval("a.getBoundingClientRect() !== a.getBoundingClientRect()"), std::string("true"));
     // An element with no box: all zero.
@@ -60,12 +61,12 @@ WR_TEST(testElementFromPoint) {
 
 WR_TEST(testTheOffsetGeometry) {
     RenderEnv env(kBoxes);
-    // p's border box starts at (28, 48); its padding edge at (30, 50); c sits at (33, 57), 50 wide (p's content box).
+    // p's border box starts at (32, 48); its padding edge at (34, 50); c sits at (37, 57), 50 wide (p's content box).
     CHECK_EQ(env.env().eval("c.offsetParent === p"), std::string("true"));
     CHECK_EQ(env.env().eval("[c.offsetLeft, c.offsetTop, c.offsetWidth, c.offsetHeight].join(',')"), std::string("3,7,50,10"));
     // Without a positioned ancestor the offset parent is the body, and the offsets are the document's.
     CHECK_EQ(env.env().eval("a.offsetParent === document.body"), std::string("true"));
-    CHECK_EQ(env.env().eval("[a.offsetLeft, a.offsetTop, p.offsetLeft, p.offsetTop].join(',')"), std::string("8,8,28,48"));
+    CHECK_EQ(env.env().eval("[a.offsetLeft, a.offsetTop, p.offsetLeft, p.offsetTop].join(',')"), std::string("12,8,32,48"));
     CHECK_EQ(env.env().eval("document.body.offsetParent"), std::string("null"));
     CHECK_EQ(env.env().eval("document.createElement('div').offsetParent"), std::string("null"));
 }

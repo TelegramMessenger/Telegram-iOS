@@ -189,13 +189,16 @@ namespace litehtml
         font_metrics      m_font_metrics;
         pixel_t           m_baseline;
         text_align        m_text_align;
+        bool              m_rtl; // Telegram (VENDOR.md edit 46)
         rendered_width    m_rendered_width;
 
         std::list<std::unique_ptr<line_box_item>> m_items;
 
       public:
+        // Telegram (VENDOR.md edit 46): `align` is physical (start and end resolved against the block's direction);
+        // `rtl` puts a justified paragraph's last line at the right edge.
         line_box(pixel_t top, pixel_t left, pixel_t right, const css_line_height_t& line_height, const font_metrics& fm,
-                 text_align align) :
+                 text_align align, bool rtl = false) :
             m_top(top),
             m_left(left),
             m_right(right),
@@ -204,7 +207,8 @@ namespace litehtml
             m_default_line_height(line_height),
             m_font_metrics(fm),
             m_baseline(0),
-            m_text_align(align)
+            m_text_align(align),
+            m_rtl(rtl)
         {
         }
 
@@ -262,6 +266,8 @@ namespace litehtml
       private:
         bool           have_last_space() const;
         bool           is_break_only() const;
+        // Telegram (VENDOR.md edit 47): the line's units in visual order (UAX #9 rule L2), by moving each unit's slot.
+        void reorder_bidi();
         static pixel_t calc_va_baseline(const va_context& current, vertical_align va, const font_metrics& new_font,
                                         pixel_t top, pixel_t bottom);
     };

@@ -136,8 +136,8 @@ WR_TEST(testAnUnknownMediaKeywordDoesNotGrowTheIdTable) {
 WR_TEST(testMatchMediaIsChargedByTheQuery) {
     RenderEnv env(kEmpty);
     // Both queries are built before the measurement, so the measured script is the same few bytes.
-    // Under the 16 KB cap (testAnOverlongQueryIsRefused).
-    env.env().eval("window.s = '(min-width: 1px)'; window.q = s + ' and (min-width: 1px)'.repeat(700); 1");
+    // Under profile 1's 1,024 units (961: testAQueryOver1024UnitsIsFalse) and the 16 KB cap (testAnOverlongQueryIsRefused).
+    env.env().eval("window.s = '(min-width: 1px)'; window.q = s + ' and (min-width: 1px)'.repeat(45); 1");
     const uint64_t length = uint64_t(std::stoull(env.env().eval("q.length")));
     unitsOf(env, "matchMedia(s).matches");
     const uint64_t shortCost = unitsOf(env, "matchMedia(s).matches");
@@ -165,4 +165,11 @@ WR_TEST(testMatchMediaFollowsTheProfile) {
     for (const char* query : {"(max-width: 9999px)", "(prefers-reduced-motion: no-preference)"}) {
         CHECK_EQ(env.env().eval(std::string("String(matchMedia('") + query + "').matches)"), std::string("true"));
     }
+}
+
+/// RB §8.3: the host answers a query of at most 1,024 units; a longer one is false (V4 plan, Task 8).
+WR_TEST(testAQueryOver1024UnitsIsFalse) {
+    RenderEnv env(kEmpty);
+    CHECK_EQ(env.env().eval("String(matchMedia('(min-width: 1px)'.padEnd(1024)).matches)"), std::string("true"));
+    CHECK_EQ(env.env().eval("String(matchMedia('(min-width: 1px)'.padEnd(1025)).matches)"), std::string("false"));
 }

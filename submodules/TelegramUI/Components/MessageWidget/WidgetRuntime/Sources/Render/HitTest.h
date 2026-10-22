@@ -27,4 +27,9 @@ bool unionOfRects(const std::vector<RenderBox>& rects, RenderBox& out);
 /// The union of elementClientRects; false when there is none.
 bool elementBorderBox(const litehtml::element& element, RenderBox& out);
 
+/// Maps `rects` (layout boxes of `element`, document coordinates) through the transforms of `element` and each ancestor,
+/// innermost first (render_item::get_visual_transform: transform, translate, rotate and scale about the origin), each rect
+/// to the bounds of its four mapped corners, as CSSOM View's getClientRects reports them.
+void transformRects(const litehtml::element& element, std::vector<RenderBox>& rects);
+
 } // namespace wr

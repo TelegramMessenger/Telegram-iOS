@@ -103,6 +103,56 @@ static void SetStroke(CGContextRef ctx, const lh::web_color& c)
     CGContextSetStrokeColorWithColor(ctx, ContextColor(ctx, c));
 }
 
+// Telegram (VENDOR.md edit 36): Blink's dash metrics (StyledStrokeData). A dash is 2w long with a gap of w from 3px up,
+// 3w and 2w below; a dot is round and w across with a gap of w. The gap is then fitted (SelectBestDashGap) so an open
+// side starts and ends with a dash and a closed path closes on one. False when fewer than two fit: the line is solid.
+static bool FitDashes(CGFloat length, CGFloat w, bool dotted, bool closed, CGFloat& dash, CGFloat& gap)
+{
+    dash                = dotted ? w : w * (w >= 3 ? 2 : 3);
+    const CGFloat ideal = dotted ? w : w * (w >= 3 ? 1 : 2);
+    if(!(length > 0) || !(dash > 0))
+        return false;
+    const CGFloat fewer = std::floor((closed ? length : length + ideal) / (dash + ideal));
+    if(fewer < 2)
+        return false;
+    const CGFloat more      = fewer + 1;
+    const CGFloat fewerGap  = (length - fewer * dash) / (closed ? fewer : fewer - 1);
+    const CGFloat moreGap   = (length - more * dash) / (closed ? more : more - 1);
+    gap = moreGap <= 0 || std::fabs(fewerGap - ideal) < std::fabs(moreGap - ideal) ? fewerGap : moreGap;
+    return gap > 0;
+}
+
+// Telegram (VENDOR.md edit 36): strokes a→z, w wide, dashed or dotted as FitDashes fits it (solid when nothing fits).
+// Dots are centred from w/2 to the length less w/2, so the first and last touch the ends.
+static void StrokeStyledSegment(CGContextRef ctx, CGPoint a, CGPoint z, CGFloat w, bool dotted)
+{
+    const CGFloat length = std::hypot(z.x - a.x, z.y - a.y);
+    CGFloat       dash = 0, gap = 0;
+    CGContextSetLineWidth(ctx, w);
+    if(!FitDashes(length, w, dotted, false, dash, gap))
+    {
+        CGContextSetLineCap(ctx, kCGLineCapButt);
+        CGContextSetLineDash(ctx, 0, nullptr, 0);
+    } else if(dotted)
+    {
+        const CGFloat ux = (z.x - a.x) / length, uy = (z.y - a.y) / length;
+        // The end goes a hair past the last dot's centre, so rounding cannot drop it.
+        a                  = CGPointMake(a.x + ux * w / 2, a.y + uy * w / 2);
+        z                  = CGPointMake(z.x - ux * (w / 2 - 0.01), z.y - uy * (w / 2 - 0.01));
+        CGFloat pattern[2] = {0, dash + gap};
+        CGContextSetLineCap(ctx, kCGLineCapRound);
+        CGContextSetLineDash(ctx, 0, pattern, 2);
+    } else
+    {
+        CGFloat pattern[2] = {dash, gap};
+        CGContextSetLineCap(ctx, kCGLineCapButt);
+        CGContextSetLineDash(ctx, 0, pattern, 2);
+    }
+    CGContextMoveToPoint(ctx, a.x, a.y);
+    CGContextAddLineToPoint(ctx, z.x, z.y);
+    CGContextStrokePath(ctx);
+}
+
 static void AddRoundedRect(CGMutablePathRef path, CGRect r, const lh::border_radiuses& rad)
 {
     if(r.size.width <= 0 || r.size.height <= 0)
@@ -131,6 +181,27 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect r, const lh::border_rad
     if(tlx > 0 && tly > 0)
         CGPathAddCurveToPoint(path, nullptr, x0, y0 + tly - tly * k, x0 + tlx - tlx * k, y0, x0 + tlx, y0);
     CGPathCloseSubpath(path);
+}
+
+// Telegram (VENDOR.md edit 36): the length of AddRoundedRect's path (each corner a quarter ellipse, by Ramanujan's
+// approximation), for fitting dashes to a closed rounded border.
+static CGFloat RoundedRectLength(CGRect r, const lh::border_radiuses& rad)
+{
+    if(r.size.width <= 0 || r.size.height <= 0)
+        return 0;
+    const CGFloat hw = r.size.width / 2, hh = r.size.height / 2;
+    auto clampx = [&](lh::pixel_t v) { return std::min<CGFloat>(std::max<CGFloat>(F(v), 0), hw); };
+    auto clampy = [&](lh::pixel_t v) { return std::min<CGFloat>(std::max<CGFloat>(F(v), 0), hh); };
+    const CGFloat rx[4] = {clampx(rad.top_left_x), clampx(rad.top_right_x), clampx(rad.bottom_right_x), clampx(rad.bottom_left_x)};
+    const CGFloat ry[4] = {clampy(rad.top_left_y), clampy(rad.top_right_y), clampy(rad.bottom_right_y), clampy(rad.bottom_left_y)};
+    CGFloat length = 2 * (r.size.width + r.size.height);
+    for(int i = 0; i < 4; i++)
+    {
+        const CGFloat a = rx[i], b = ry[i];
+        length -= a + b;
+        length += M_PI / 4 * (3 * (a + b) - std::sqrt((3 * a + b) * (a + 3 * b)));
+    }
+    return length;
 }
 
 static lh::margins Uniform(CGFloat v)
@@ -3666,7 +3737,15 @@ void LHContainer::draw_borders(lh::uint_ptr hdc, const lh::borders& borders, con
                   sides[i]->style == sides[0]->style && visible(*sides[i]) == visible(*sides[0]);
     lh::border_style style = borders.top.style;
 
+#if 0
     if(uniform && (style == lh::border_style_dotted || style == lh::border_style_dashed))
+#else
+    // Telegram (VENDOR.md edit 36): only a rounded uniform dashed or dotted border strokes one closed path; square
+    // corners take the per-side path below, which fits each side from corner to corner.
+    const bool rounded = F(orad.top_left_x) > 0 || F(orad.top_right_x) > 0 || F(orad.bottom_right_x) > 0 ||
+                         F(orad.bottom_left_x) > 0;
+    if(uniform && rounded && (style == lh::border_style_dotted || style == lh::border_style_dashed))
+#endif
     {
         CGFloat w = T;
         CGContextAddPath(ctx, ring);
@@ -3675,12 +3754,25 @@ void LHContainer::draw_borders(lh::uint_ptr hdc, const lh::borders& borders, con
         mrad -= Uniform(w / 2);
         CGMutablePathRef mid = CGPathCreateMutable();
         AddRoundedRect(mid, CGRectInset(outer, w / 2, w / 2), mrad);
+#if 0
         CGFloat dots[]   = {0, w * 2};
         CGFloat dashes[] = {w * 2.5f, w * 1.5f};
         SetStroke(ctx, borders.top.color);
         CGContextSetLineWidth(ctx, w);
         CGContextSetLineCap(ctx, style == lh::border_style_dotted ? kCGLineCapRound : kCGLineCapButt);
         CGContextSetLineDash(ctx, 0, style == lh::border_style_dotted ? dots : dashes, 2);
+#else
+        // Telegram (VENDOR.md edit 36): Blink's metrics, fitted to the closed path.
+        const bool dotted = style == lh::border_style_dotted;
+        CGFloat    dash = 0, gap = 0;
+        const bool fits = FitDashes(RoundedRectLength(CGRectInset(outer, w / 2, w / 2), mrad), w, dotted, true, dash, gap);
+        CGFloat    dots[]   = {0, dash + gap};
+        CGFloat    dashes[] = {dash, gap};
+        SetStroke(ctx, borders.top.color);
+        CGContextSetLineWidth(ctx, w);
+        CGContextSetLineCap(ctx, dotted && fits ? kCGLineCapRound : kCGLineCapButt);
+        CGContextSetLineDash(ctx, 0, !fits ? nullptr : dotted ? dots : dashes, fits ? 2 : 0);
+#endif
         CGContextAddPath(ctx, mid);
         CGContextStrokePath(ctx);
         CGPathRelease(mid);
@@ -3763,6 +3855,7 @@ void LHContainer::draw_borders(lh::uint_ptr hdc, const lh::borders& borders, con
                 if(s.b->style == lh::border_style_dotted || s.b->style == lh::border_style_dashed)
                 {
                     CGContextClip(ctx);
+#if 0
                     CGFloat dots[]   = {0, s.w * 2};
                     CGFloat dashes[] = {s.w * 2.5, s.w * 1.5};
                     bool    dotted   = s.b->style == lh::border_style_dotted;
@@ -3773,6 +3866,11 @@ void LHContainer::draw_borders(lh::uint_ptr hdc, const lh::borders& borders, con
                     CGContextMoveToPoint(ctx, s.a.x, s.a.y);
                     CGContextAddLineToPoint(ctx, s.z.x, s.z.y);
                     CGContextStrokePath(ctx);
+#else
+                    // Telegram (VENDOR.md edit 36): Blink's metrics, fitted to the side from corner to corner.
+                    SetStroke(ctx, c);
+                    StrokeStyledSegment(ctx, s.a, s.z, s.w, s.b->style == lh::border_style_dotted);
+#endif
                 }
                 else
                 {

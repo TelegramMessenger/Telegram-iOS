@@ -45,6 +45,8 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
     ],
 )

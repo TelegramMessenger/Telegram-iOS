@@ -326,9 +326,9 @@ bool IntersectionObserver::update(JSContext* ctx, const RenderTree& render, doub
     if (!explicitRoot) {
         rootRect = RenderBox{0, 0, render.layoutWidth(), render.documentHeight()};
     } else if (std::optional<RenderBox> clip = render.overflowClip(*explicitRoot)) {
-        rootRect = clip;
+        rootRect = render.visualBox(*explicitRoot, clip);
     } else {
-        rootRect = render.borderBox(*explicitRoot);
+        rootRect = render.visualBorderBox(*explicitRoot);
     }
     RenderBox rootBounds;
     if (rootRect) {
@@ -342,7 +342,7 @@ bool IntersectionObserver::update(JSContext* ctx, const RenderTree& render, doub
     for (Observation& observation : m_observations) {
         charge(ctx, work::kLayoutBox);
         Element& target = *static_cast<Element*>(payloadOfKnown(observation.target.value));
-        std::optional<RenderBox> targetRect = render.borderBox(target);
+        std::optional<RenderBox> targetRect = render.visualBorderBox(target);
         bool isIntersecting = false;
         RenderBox intersection;
         if (targetRect && rootRect && (!explicitRoot || (explicitRoot != &target && isInclusiveAncestor(explicitRoot, &target)))) {
@@ -351,7 +351,7 @@ bool IntersectionObserver::update(JSContext* ctx, const RenderTree& render, doub
             for (Element* ancestor = target.parentElementNode(); ancestor && ancestor != explicitRoot && adjacent;
                  ancestor = ancestor->parentElementNode()) {
                 charge(ctx, work::kNodeVisit);
-                if (std::optional<RenderBox> clip = render.overflowClip(*ancestor)) {
+                if (std::optional<RenderBox> clip = render.visualBox(*ancestor, render.overflowClip(*ancestor))) {
                     rect = intersect(rect, *clip, adjacent);
                 }
             }

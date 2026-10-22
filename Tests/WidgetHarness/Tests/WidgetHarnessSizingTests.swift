@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import TelegramUIPreferences
 @testable import WidgetHarnessLib
 
 /// Tier 1 (in the app process): the widget bubble's size from its anchors, the fallback pill, the hard clip and the
@@ -120,6 +121,81 @@ final class WidgetHarnessSizingTests: XCTestCase {
             return
         }
         XCTAssertEqual(self.parse(line).height, 300, line)
+    }
+
+    /// SDK v1 §2.4 (v0.1.1): Settings ▸ Appearance ▸ Text Size reaches an open chat's widget as its font-size token, and
+    /// the widget lays out again: a widget with no CSS of its own (`text.html`) grows with the chat's text.
+    func testATextSizeChangeRelaysTheWidgetOut() throws {
+        var options = WidgetHarnessLaunchOptions()
+        options.set = .fixture
+        options.postFilter = "text.html"
+        let root = try self.root()
+        let lines = try self.load(options, until: { lines in lines.count == 1 && lines[0].contains(" widget") && !lines[0].contains("x160 ") })
+        let before = try XCTUnwrap(lines.first.map(self.parse), "\(lines)")
+        root.setTextSize(.extraLargeX2)
+        let after = try XCTUnwrap(self.centredBubble(root, "fixture/text.html", until: { self.parse($0).height > before.height }).map(self.parse))
+        XCTAssertGreaterThan(after.height, before.height)
+        XCTAssertEqual(after.state, "widget")
+    }
+
+    /// SDK v1 §5.1 (v0.1.1): the widget fills the bubble, with no padding of the bubble's own around it (the widget's body
+    /// margin is the inset), so a background it paints reaches the bubble's edges.
+    func testTheWidgetFillsItsBubble() throws {
+        var options = WidgetHarnessLaunchOptions()
+        options.set = .fixture
+        options.postFilter = "box-240"
+        let root = try self.root()
+        _ = try self.load(options, until: { lines in lines.count == 1 && lines[0].contains(" widget") && !lines[0].contains("x160 ") })
+        let areas = root.widgetAreas()
+        XCTAssertEqual(areas.count, 1)
+        guard let widget = areas.first else {
+            return
+        }
+        XCTAssertEqual(widget.area, widget.content, widget.path)
+    }
+
+    /// v0.1.1 plan, Task 6 (Review Focus 3): a widget's background reaches every edge of its bubble, the tail too, as a
+    /// photo fills its tail; box-240 is #33aa88 to its edges, alone in its bubble on either side.
+    func testABackgroundFillsTheTail() throws {
+        for incoming in [false, true] {
+            var options = WidgetHarnessLaunchOptions()
+            options.set = .fixture
+            options.postFilter = "box-240"
+            options.captions = false
+            options.incoming = incoming
+            let root = try self.root()
+            _ = try self.load(options, until: { lines in lines.count == 1 && lines[0].contains(" widget") && !lines[0].contains("x160 ") })
+            // The tiles land after the layout pass (a task of their own).
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+            let area = try XCTUnwrap(root.widgetAreas().first).area
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1.0
+            // 8 bits per channel, which `pixel` reads.
+            format.preferredRange = .standard
+            let image = UIGraphicsImageRenderer(bounds: root.view.bounds, format: format).image { _ in
+                root.view.drawHierarchy(in: root.view.bounds, afterScreenUpdates: true)
+            }
+            // 1 pt past the body's edge, 2 pt above its bottom: inside the tail.
+            let x = incoming ? area.minX - 1.5 : area.maxX + 1.0
+            let pixel = try XCTUnwrap(self.pixel(image, CGPoint(x: x, y: area.maxY - 2.0)))
+            // The box's colour, not the bubble's (within the colour conversion's rounding).
+            XCTAssertTrue(zip(pixel, [0x33, 0xaa, 0x88]).allSatisfy { abs($0 - $1) <= 2 }, "incoming \(incoming): \(pixel)")
+        }
+    }
+
+    /// The colour at `point` (points, at the image's 1x scale), or nil outside the image.
+    private func pixel(_ image: UIImage, _ point: CGPoint) -> [Int]? {
+        guard let cg = image.cgImage, let data = cg.dataProvider?.data, let bytes = CFDataGetBytePtr(data) else {
+            return nil
+        }
+        let x = Int(point.x), y = Int(point.y)
+        guard x >= 0, y >= 0, x < cg.width, y < cg.height else {
+            return nil
+        }
+        let offset = y * cg.bytesPerRow + x * (cg.bitsPerPixel / 8)
+        let littleEndian = cg.bitmapInfo.contains(.byteOrder32Little)
+        let (r, g, b) = littleEndian ? (bytes[offset + 2], bytes[offset + 1], bytes[offset]) : (bytes[offset], bytes[offset + 1], bytes[offset + 2])
+        return [Int(r), Int(g), Int(b)]
     }
 
     /// A bubble that scrolls away and back opens at its last reported height, never the 160 pt placeholder.

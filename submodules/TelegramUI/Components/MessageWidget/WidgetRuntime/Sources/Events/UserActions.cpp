@@ -86,18 +86,6 @@ void noteRender(JSContext* ctx) {
     }
 }
 
-void fireFocus(JSContext* ctx, std::string_view type, Element& target, Element* related, bool bubbles) {
-    Ref<FocusEvent> event = create<FocusEvent>(ctx, idl::kFocusEvent, ctx);
-    Atom atom = Atom::fromUTF8(ctx, type);
-    event->initialize(ctx, atom.get(), bubbles, false);
-    event->setComposed(true);
-    event->setView(ctx, &HostState::of(ctx).window());
-    event->setRelatedTarget(ctx, related);
-    event->setIsTrusted(true);
-    Ref<Element> held = Ref<Element>::retain(ctx, &target);
-    dispatch(ctx, *event, target);
-}
-
 // An `input` element's type keyword ("text" when absent).
 std::string inputType(JSContext* ctx, const Element& element) {
     std::string type = keyword(ctx, element, "type");
@@ -204,44 +192,12 @@ void clickControl(JSContext* ctx, Element& control, bool trusted) {
 
 // UserActions
 
-bool UserActions::focused(JSContext* ctx, Element& element) {
-    return m_focus.get() == &element && element.isConnected(ctx);
-}
-
-bool UserActions::focusWithin(JSContext* ctx, Element& element) {
-    Element* focus = this->focusedElement(ctx);
-    return focus && isInclusiveAncestor(element, focus);
-}
-
 bool UserActions::hovered(JSContext*, Element& element) {
     return m_hover && isInclusiveAncestor(element, m_hover.get());
 }
 
 bool UserActions::active(JSContext*, Element& element) {
     return m_active && isInclusiveAncestor(element, m_active.get());
-}
-
-Element* UserActions::focusedElement(JSContext* ctx) const {
-    return m_focus && m_focus->isConnected(ctx) ? m_focus.get() : nullptr;
-}
-
-void UserActions::setFocus(JSContext* ctx, Element* element) {
-    Element* current = this->focusedElement(ctx);
-    if (current == element) {
-        return;
-    }
-    Ref<Element> old = Ref<Element>::retain(ctx, current);
-    m_focus = element ? Ref<Element>::retain(ctx, element) : Ref<Element>();
-    noteRender(ctx);
-    if (old) {
-        fireFocus(ctx, "blur", *old, element, false);
-        fireFocus(ctx, "focusout", *old, element, true);
-    }
-    if (element) {
-        Ref<Element> next = Ref<Element>::retain(ctx, element);
-        fireFocus(ctx, "focus", *next, old.get(), false);
-        fireFocus(ctx, "focusin", *next, old.get(), true);
-    }
 }
 
 void UserActions::setPointer(JSContext* ctx, Element* hover, Element* active) {
@@ -255,7 +211,7 @@ void UserActions::setPointer(JSContext* ctx, Element* hover, Element* active) {
 
 void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
     bool changed = false;
-    for (Ref<Element>* ref : {&m_focus, &m_hover, &m_active}) {
+    for (Ref<Element>* ref : {&m_hover, &m_active}) {
         if (*ref && isInclusiveAncestor(node, ref->get())) {
             *ref = Ref<Element>();
             changed = true;
@@ -267,7 +223,6 @@ void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
 }
 
 void UserActions::clear() {
-    m_focus = Ref<Element>();
     m_hover = Ref<Element>();
     m_active = Ref<Element>();
 }
@@ -315,28 +270,11 @@ bool focusableKind(JSContext* ctx, Element& element) {
 
 } // namespace
 
-bool isFocusable(JSContext* ctx, Element& element) {
-    if (!element.isHTMLElement() || !element.isConnected(ctx) || isDisabledControl(ctx, element)) {
-        return false;
-    }
-    return parsedTabIndex(ctx, element).has_value() || focusableKind(ctx, element);
-}
-
 int32_t tabIndexOf(JSContext* ctx, Element& element) {
     if (std::optional<int32_t> parsed = parsedTabIndex(ctx, element)) {
         return *parsed;
     }
     return element.isHTMLElement() && focusableKind(ctx, element) ? 0 : -1;
-}
-
-Element* focusableAncestor(JSContext* ctx, Node* node) {
-    for (Node* n = node; n; n = n->parentNode(ctx)) {
-        charge(ctx, work::kNodeVisit);
-        if (n->isElement() && isFocusable(ctx, static_cast<Element&>(*n))) {
-            return static_cast<Element*>(n);
-        }
-    }
-    return nullptr;
 }
 
 // Activation

@@ -4,7 +4,7 @@ import XCTest
 
 /// widget-sandbox's corpus (every folder but `attacks`, which InstanceTests scans) through the whole pipeline.
 final class CorpusTests: MessageWidgetTestCase {
-    static let folders = ["common", "compat", "generated", "htmlbubbles-ported", "out-of-profile", "showcase"]
+    static let folders = ["common", "compat", "defaults", "generated", "htmlbubbles-ported", "out-of-profile", "showcase"]
     /// Deliberate misbehaviour, by widget-sandbox's own README (htmlbubbles-ported, "Status"): the Hang button runs
     /// `for (;;) {}` (the tap grid presses it) and the Buggy button throws on purpose.
     static let runaways: Set<String> = ["htmlbubbles-ported/11-live-scripts/15-pixel-bare.html"]
@@ -14,11 +14,7 @@ final class CorpusTests: MessageWidgetTestCase {
     /// The uncaught errors that are APIs WidgetRuntime does not have yet, by their message: a corpus widget throwing one
     /// is a known gap, printed below, not a failure. Every entry goes when its API lands.
     static let knownGaps: [String] = [
-        // canvas getContext, matchMedia's listeners and other members not bound yet.
-        "TypeError: not a function",
-        "localStorage is not defined",
-        "Intl is not defined",
-        // The bundled libraries (M3).
+        // The bundled libraries (profile 1's Chart.js and d3, client spec V6): out-of-profile/chartjs-* and d3-*.
         "Chart is not defined",
         "d3 is not defined",
         // Never: a widget cannot fetch.

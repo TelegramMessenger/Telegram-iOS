@@ -19,7 +19,7 @@ building `:all`, traps that print no failure and reading a build's own exit code
 `ListViewImpl` rotated as the chat's history, with `useMainQueueTransactions = true`, where the chat uses CoreList), the
 `ChatControllerInteraction` closures (they record what the bubble asks for), the context menu (a long press records
 `contextMenu`, tells the bubble's content nodes the menu extracted them, and ends 2 s later), and the messages
-(in-memory `Message`s in a 1:1 chat with "Harness Chat", outgoing). Findings about the chat's layout AROUND the bubble
+(in-memory `Message`s in a 1:1 chat with "Harness Chat", outgoing unless `-harness-side incoming`). Findings about the chat's layout AROUND the bubble
 are provisional until reproduced in the app.
 
 ## Build, test, run
@@ -52,11 +52,13 @@ One leading dash (`--widget-set` is ignored silently).
 
 | Argument | Values | Default |
 |---|---|---|
-| `-widget-set` | `conformance` (widget-sandbox v0.1.0's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`) | `conformance` |
+| `-widget-set` | `conformance` (widget-sandbox v0.1.1's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
 | `-widget-flag` | `on`, `off` (Debug Settings ▸ "Widget messages") | `on` |
 | `-widget-anchors` | `<W>x<H>`, overriding every post's anchors | the post's |
+| `-widget-caption` | `off` (the widget alone in its bubble: its corners, the tail, the date over it) | on |
 | `-harness-theme` | `dark` | light |
+| `-harness-side` | `incoming` (the posts come from the other side of the chat) | outgoing |
 
 A hosted (Tier 1) test calls `WidgetHarnessRootViewController.reload(options:)` instead.
 
@@ -81,12 +83,15 @@ contextMenuEnded fixture/open-link.html
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`.
 - Changing the format means changing every test that parses it.
 
-## The conformance set (widget-sandbox v0.1.0, `conformance/CLIENTS.md`)
+## The conformance set (widget-sandbox v0.1.1, `conformance/CLIENTS.md`)
 
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
-runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (40 runs), through
-`MessageWidgetInstance` with the app's pool and wait policy at width 390, one at a time (`ConformanceRunner.runAll`:
+runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (41 runs), through
+`MessageWidgetInstance` with the app's pool and wait policy at width 390, on the app's own theme for an incoming bubble
+of the default chat theme (`ConformanceRunner.theme`, `messageWidgetTheme`: CLIENTS.md step 1, "as in production"),
+then the visual set loaded only (41 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
+"the report then shows whether each widget loads"), one at a time (`ConformanceRunner.runAll`:
 widgets run together share the pool's two threads, and 10-css-animations' iteration check failed whenever the
 filter-heavy 09 pages ran beside it), each view in the window so it gets its frames, a stand-in chat input focused
 before loading. A run reads the widget's `<html data-conformance>` from the live DOM (`MessageWidgetInstance.documentElementAttribute`), waits at most 20 s for
@@ -104,6 +109,10 @@ $BZL test $CACHE //Tests/WidgetHarness:WidgetHarnessTests --test_filter=Conforma
 Tests/WidgetHarness/Tools/conformance_report.sh --record    # report.mjs → Conformance/report/, and the new baseline
 $BZL test $CACHE //Tests/WidgetHarness:WidgetHarnessTests --test_filter=ConformanceSetTests   # passes
 ```
+
+A recorded check that the manifest no longer has (an upstream tag renamed or removed it: `statuses` lists every check
+the manifest expects, so it is absent from the new run altogether) is **retired**: the test fails until it is recorded
+away the same way, and never as a regression (`ConformanceBaseline.compare`). A run that is gone is still a regression.
 
 `conformance_report.sh` (without `--record`) only judges the last run with the vendored `tools/report.mjs` into
 `Conformance/report/` (`summary.md`, the per-renderer JSON; the pixel diffs are dropped). Never record over a

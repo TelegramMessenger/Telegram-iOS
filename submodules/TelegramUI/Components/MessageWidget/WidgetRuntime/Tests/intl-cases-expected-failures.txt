@@ -1,0 +1,6 @@
+# widget-sandbox v0.1.1's Intl cases (fixtures/intl-cases.json) that answer differently from V8 here, one per line:
+# "<platform> <request as JSON> ## <reason>", platform `host` (macOS's system ICU, Tests/IntlCasesTests.cpp) or `ios`
+# (iOS's, WidgetRuntimeIOS/Tests/WRIntlCasesTests.mm). Never a tolerance: each line is one case and why. The list only
+# shrinks: a case that answers as V8 must be removed.
+host {"kind":"date","locale":"en-US","opts":{"timeZone":"UTC","dateStyle":"medium","timeStyle":"short"},"value":49530123} ## Apple's CLDR joins a medium date and a time with " at " ("Jan 1, 1970 at 1:45 PM", as Safari does); V8's ICU with ", "
+ios {"kind":"date","locale":"en-US","opts":{"timeZone":"UTC","dateStyle":"medium","timeStyle":"short"},"value":49530123} ## the same on iOS 26.5's ICU

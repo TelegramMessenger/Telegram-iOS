@@ -20,7 +20,7 @@ std::string idAt(RenderEnv& env, double x, double y) {
     if (node && node == wr::DOMState::of(env.ctx()).document().documentElementNode()) {
         return "html";
     }
-    for (const char* id : {"b", "s", "none", "v", "r"}) {
+    for (const char* id : {"b", "s", "none", "v", "r", "i", "u", "a", "t"}) {
         if (node && node == byId(env, id)) {
             return id;
         }
@@ -47,6 +47,40 @@ WR_TEST(testPointToNode) {
     CHECK(idAt(env, n->x + 5, n->y + 5) != std::string("none"));
     // Far outside everything: the document element.
     CHECK_EQ(idAt(env, 5000, 5000), std::string("html"));
+}
+
+/// pointer-events is inherited: inherit, unset and revert (no master rule) take the parent's none; initial is auto.
+WR_TEST(testPointerEventsKeywords) {
+    RenderEnv env("<!doctype html><body style='margin:0'><div style='pointer-events:none'>"
+                  "<div id=i style='pointer-events:inherit;height:20px'></div><div id=u style='pointer-events:unset;height:20px'>"
+                  "</div><div id=r style='pointer-events:revert;height:20px'></div>"
+                  "<div id=a style='pointer-events:initial;height:20px'></div></div></body>");
+    env.flush();
+    for (const char* id : {"i", "u", "r"}) {
+        auto box = env.render().borderBox(*byId(env, id));
+        CHECK(box.has_value() && idAt(env, box->x + 5, box->y + 5) != std::string(id));
+    }
+    auto a = env.render().borderBox(*byId(env, "a"));
+    CHECK(a.has_value());
+    CHECK_EQ(idAt(env, a->x + 5, a->y + 5), std::string("a"));
+}
+
+/// Fidelity plan, Task 7: the translate property moves where the box is hit, as transform does.
+WR_TEST(testTheTranslatePropertyMovesTheHit) {
+    RenderEnv env("<!doctype html><body style='margin:0'><div id=t style='width:40px;height:20px;translate:100px 0'></div></body>");
+    env.flush();
+    CHECK_EQ(idAt(env, 110, 10), std::string("t"));
+    CHECK(idAt(env, 10, 10) != std::string("t"));
+}
+
+/// Fidelity plan, Task 9: a hit inside a <use>'s instance is the use (the target's shapes are not in the tree there).
+WR_TEST(testAHitInsideAUseIsTheUse) {
+    RenderEnv env("<!doctype html><body style='margin:0'><svg id=v width=100 height=100><defs><symbol id=s viewBox='0 0 10 10'>"
+                  "<rect id=r width=10 height=10 /></symbol></defs><use id=u href='#s' x=50 y=50 width=20 height=20 /></svg>"
+                  "</body>");
+    env.flush();
+    CHECK_EQ(idAt(env, 60, 60), std::string("u"));
+    CHECK_EQ(idAt(env, 20, 20), std::string("v"));
 }
 
 WR_TEST(testSvgShapeHit) {

@@ -1,6 +1,7 @@
 #include "Sources/Render/LayerMirror.h"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <new>
 #include <set>
@@ -1552,7 +1553,14 @@ private:
             }
         }
         std::vector<LayerId> framed;
+        // Painting rounds a box to whole pixels and text to the snap grid, in document coordinates: content moved by a
+        // fraction of a pixel is not what painting it at its new place gives (widget-sandbox v0.1.1's line height 1.35
+        // makes such moves common), so the subtree is then painted again.
+        bool fractional = false;
         auto place = [&](LayerId id, const litehtml::pointF& origin) {
+            const litehtml::pointF before = current(id).origin;
+            const double dx = double(origin.x) - double(before.x), dy = double(origin.y) - double(before.y);
+            fractional = fractional || std::fabs(dx - std::round(dx)) > 1e-3 || std::fabs(dy - std::round(dy)) > 1e-3;
             frame(id, origin);
             framed.push_back(id);
         };
@@ -1589,6 +1597,17 @@ private:
             }
             if (affected && !reclip(id)) {
                 return lose();
+            }
+        }
+        if (fractional) {
+            for (const render_item* at : items) {
+                const ItemInfo* found = info(at);
+                if (!found) {
+                    continue;
+                }
+                if (!recaptureBox(at) || (!found->runs.empty() && !recaptureRuns(at))) {
+                    return false;
+                }
             }
         }
         return true;
@@ -1830,7 +1849,7 @@ private:
             }
         }
         const std::shared_ptr<const LayerTree> before = m.m_tree;
-        published.tree = std::make_shared<const LayerTree>(width, height, root);
+        published.tree = std::make_shared<const LayerTree>(width, height, root, canvasColor(*m.m_document));
         if (before && (before->width() != width || before->height() != height)) {
             published.changedRects = std::nullopt;
         } else {
@@ -1934,7 +1953,7 @@ std::shared_ptr<const LayerTree> LayerMirror::build(litehtml::document& document
         }
     }
     m_lost = walker.lost;
-    m_tree = std::make_shared<const LayerTree>(m_width, m_height, std::shared_ptr<const MirrorNode>(root));
+    m_tree = std::make_shared<const LayerTree>(m_width, m_height, std::shared_ptr<const MirrorNode>(root), canvasColor(document));
     if (observe) {
         document.set_render_observer(this);
         m_observing = true;

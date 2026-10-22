@@ -83,6 +83,19 @@ public final class WidgetTreeRenderer {
         return self.badge
     }
 
+    /// The canvas colour of the tree drawn (CSS 2.1 §14.2: the root's background, or the body's it propagates), and where
+    /// the tree's painting of it ends: the document's height in whole CSS px, as the painter rounds boxes (from the
+    /// rounded-up height a band up to a pixel tall stayed the bubble's colour); nil when the widget sets no background.
+    /// A host view taller than the document (the 50 pt minimum, a bubble's fixed height) paints it from `top` down (R4).
+    public var canvas: (color: CGColor, top: CGFloat)? {
+        guard let tree = self.tree, tree.canvasColor & 0xff != 0 else {
+            return nil
+        }
+        let rgba = tree.canvasColor
+        let channel: (UInt32) -> CGFloat = { shift in CGFloat((rgba >> shift) & 0xff) / 255.0 }
+        return (CGColor(srgbRed: channel(24), green: channel(16), blue: channel(8), alpha: channel(0)), floor(tree.size.height))
+    }
+
     /// The widget's size, the old ops renderer's (its `documentSize`): the width laid out at, which content wider
     /// than it overflows and is clipped to, and the height clamped to minimumHeight and the renderer's own maximum.
     public var documentSize: CGSize {

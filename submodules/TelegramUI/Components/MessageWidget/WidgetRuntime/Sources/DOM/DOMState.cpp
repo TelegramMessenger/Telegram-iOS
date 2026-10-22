@@ -24,7 +24,7 @@ static const std::pair<const char*, uint16_t> kHTMLInterfaces[] = {
     {"a", idl::kHTMLAnchorElement}, {"template", idl::kHTMLTemplateElement}, {"script", idl::kHTMLScriptElement},
     {"style", idl::kHTMLStyleElement}, {"input", idl::kHTMLInputElement}, {"button", idl::kHTMLButtonElement},
     {"label", idl::kHTMLLabelElement}, {"details", idl::kHTMLDetailsElement}, {"form", idl::kHTMLFormElement},
-    {"canvas", idl::kHTMLCanvasElement}, {"img", idl::kHTMLImageElement},
+    {"canvas", idl::kHTMLCanvasElement}, {"img", idl::kHTMLImageElement}, {"dialog", idl::kHTMLDialogElement},
 };
 
 // Every element the HTML standard defines (https://html.spec.whatwg.org/multipage/indices.html#elements-3), plus the

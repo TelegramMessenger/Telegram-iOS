@@ -1164,6 +1164,240 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       process-wide and keyed on text, so a hook must be a pure function of its text, and containers whose hooks differ
       must never share an entry: the test container and `WidgetContainer` build in one test process.
 
+30. **Computed values the runtime reads** (2026-10-22, fidelity plan, Task 1; insertions only).
+    - **30.1** `touch-action` joins the raw declarations (`raw_declaration_names`, `style.cpp`), as `pointer-events`
+      did: litehtml does not model it, and WidgetRuntime's getComputedStyle reads the element's own value.
+    - **30.2** `svg_computed_property(el, name)` (`el_svg.h`/`el_svg.cpp`): the painter's own lookup (`svg_property`,
+      inherited), public, so getComputedStyle's `fill`, `stroke` and `stroke-width` answer what is painted.
+
+31. **Small fidelity fixes** (2026-10-22, fidelity plan, Task 2; the conformance set's expectations, Chromium's).
+    - **31.1** CSS Color 4's `IndianRed`, `Indigo` and `RebeccaPurple` join the named colours, and `MediumPurple`
+      (`#9370DB`) and `PaleVioletRed` (`#DB7093`) take their CSS values (`web_color.cpp`).
+    - **31.2** `table_grid::calc_table_width` (`table.cpp`): auto columns whose max widths sum to 0 share what is left
+      equally, instead of leaving it to the fixed columns (a width-50 cell beside an empty one: `0/50 50/150`, as
+      upstream litehtml and browsers have it; the fork's rewrite had regressed it).
+    - **31.3** `list_style_type_strings` has 21 entries, `css_units_strings` and `appearance_strings` 16
+      (`css_values.h`): an extra empty slot matched any non-identifier token, whose `ident()` is "", so
+      `list-style: url(…)` set list-style-type 21 and never its image. `parse_keyword` (`style.h`) now takes identifiers
+      only.
+    - **31.4** `:lang()` (`html_tag.cpp`) matches the element's own or nearest ancestor's `lang` attribute (Selectors
+      4: ASCII case-insensitive, the range or the range and a hyphen), never the container's default language, and
+      `lang` joins the attributes whose change re-matches beyond the element (`collect_ancestor_names`,
+      `document.cpp`), on the subject compound too.
+    - **31.5** `:empty` (`string_id.h` `_empty_`, `html_tag.cpp`): no children but `::before`/`::after`, a text piece of
+      any data counting. A sheet using it sets `selector_scope()` bit 8 (`uses_empty`, `document.cpp`): insertion and
+      removal were refused for any scope already, and `can_replace_children` and `update_structure` now refuse for
+      bit 8 too, since a change of an element's children changes how the element itself matches.
+
+32. **Text properties litehtml lacked** (2026-10-22, fidelity plan, Task 5; string ids `_word_break_`,
+    `_word_spacing_`, `_font_feature_settings_`, `_quotes_`).
+    - **32.1** `font-feature-settings`, kept as its text and inherited (`style.cpp`, `css_properties`): `compute_font`
+      sets `font_description::tabular_nums` for `"tnum"` (on, or a non-zero value), as `font-variant-numeric:
+      tabular-nums` does. Other features are not read.
+    - **32.2** `word-break` (`normal|break-all|keep-all|break-word`, inherited, `css_values.h`): `el_text` breaks a
+      break-all (or legacy break-word) text anywhere, as `overflow-wrap: anywhere`; keep-all is not modelled.
+    - **32.3** `word-spacing` (a length or `normal`, inherited, converted as `letter-spacing`): `el_text` widens each
+      space piece by it, over the width it measured (`m_measured_width`, so a re-style never adds twice).
+    - **32.4** `quotes`, kept as its text and inherited (`css_properties::get_quotes()`, "" for auto), for
+      getComputedStyle; the quote keywords of `content` are not drawn (the runtime's UA sheet gives `<q>` literal
+      marks).
+33. **The CSS-wide keywords** (2026-10-22, fidelity plan, Task 6). Only `inherit` was handled; `initial`, `unset`,
+    `revert` and `revert-layer` fell to each property's parser, which refused them, so the declaration vanished and an
+    earlier one stood.
+    - **33.1** `style.h`: `initial`, `unset` and `revert` marker types, appended to `property_value`'s variant (the
+      replaced line under `#if 0`). `style::add_property` stores them as it stores `inherit`, over a shorthand's
+      longhands (`global_keyword_property`); `revert-layer` is `revert` (there are no layers). The raw declaration
+      copies keep the keyword's text, as they keep `inherit`'s.
+    - **33.2** `html_tag::get_property` answers `initial` with the property's initial value (its `default_value`);
+      `unset` falls through as no declaration does, so it inherits an inherited property and is initial otherwise.
+      `has_own_property` counts `unset` as no declaration (the replaced lines under `#if 0`).
+    - **33.3** `revert`: before `subst_vars`, `compute_styles` and `compute_background_style` call
+      `html_tag::resolve_reverts`, which replaces each `revert` with `master_value(name)`: the element's matched master
+      sheet rules (`m_used_styles` with `m_sheet == 0` and `m_used`, less those styling a pseudo-element), in the
+      order they applied, as `add_parsed_property` would combine them. Presentational hints are author level, so a
+      revert passes them. No master value is `unset`. A copy that holds heap is charged as a var() splice (edit 21;
+      refused, the property is `unset`). Being derived from `m_used_styles` on every compute, it follows every
+      restyle path. A pseudo-element has no master rules of its own, so a `revert` on one is `unset`.
+    - **33.4** A custom property set to `initial` has no value: `find_custom_property` and `get_custom_property`
+      stop there, so `var()` takes its fallback.
+34. **The individual transform properties** (2026-10-22, fidelity plan, Task 7; string ids `_translate_`,
+    `_rotate_`, `_scale_`). `translate`, `rotate` and `scale` were kept only as raw declarations (for transitions), so
+    they were neither painted nor measured, and an animated value (whose layer keeps no raw declarations) was lost.
+    - **34.1** `style.cpp` stores each as its token list, as `transform`'s.
+    - **34.2** `parse_individual_transform` (`css_effects`) reads one as a transform function, 2D only (the profile
+      refuses a z component and an axis): `translate` one or two lengths or percentages, `rotate` an angle (or `z` and
+      an angle), `scale` one or two numbers or percentages; `none` and anything else give nothing.
+    - **34.3** `css_properties::compute_effects` puts them before `transform`'s functions in `m_transform`, in the
+      order translate, rotate, scale (CSS Transforms 2 §6), so painting, hit testing and `get_visual_transform` follow
+      them unchanged; `get_transform_individual_count()` says how many there are, so the runtime's getComputedStyle
+      reports `transform`'s own functions alone.
+    - Not done: an SVG shape still takes a CSS transform only when it declares `transform` (`el_svg.cpp`'s
+      `has_own_property(_transform_)`), so a shape's `translate` alone is not applied.
+35. **Colour-stop fix-up** (2026-10-22, fidelity plan, Task 8; `background.cpp`
+    `gradient_base::prepare_color_points`, the replaced body under `#if 0`). CSS Images 3 §3.4.3: a stop with no
+    position stays unplaced until the first and last get 0 and 1; a position below an earlier one is raised to the
+    largest before it (`conic-gradient(a 0 25%, b 0 50%)` gave CG the locations 0, .25, 0, .5); the unplaced are spaced
+    evenly between their placed neighbours (the upstream spaced them from the sum of the two, so
+    `linear-gradient(a 20%, b, c 80%)` put b at 70%); only then do a non-repeating gradient's implicit 0 and 1 ends
+    join. An explicit 0 on the last stop is no longer read as "unplaced" and moved to 1.
+36. **Blink's dash metrics** (2026-10-22, fidelity plan, Task 8; `LHContainer.mm`, both platforms, the replaced lines
+    under `#if 0`). A dashed border's dash is 2w long with a gap of w from 3px up (3w and 2w below), a dotted border's dots
+    are round and w across with a gap of w (Blink's `StyledStrokeData`), and the gap is then fitted
+    (`SelectBestDashGap`, `FitDashes`) so a side starts and ends with a dash or dot, its corner squares inked; fewer than
+    two that fit draw the side solid. Each side is stroked from corner to corner (`StrokeStyledSegment`); a uniform
+    border takes that per-side path unless it is rounded, which strokes one closed path fitted to its length
+    (`RoundedRectLength`). The upstream drew dashes `{2.5w, 1.5w}` and dots every 2w from phase 0, unfitted. The CSS
+    specification leaves the pattern to the UA; this copies Chromium, which widget-sandbox's references are.
+37. **object-fit and object-position** (2026-10-22, fidelity plan, Task 8; string ids `_object_fit_`,
+    `_object_position_`). Neither existed, so an `<img>` was stretched over its content box. `object-fit`
+    (`fill|contain|cover|none|scale-down`) is a keyword property and `object-position` is read as `background-position`
+    is (default 50% 50%); `el_image::draw` hands the painter the object rect (CSS Images 3 §5.5) as the layer's
+    `origin_box`, its `clip_box` staying the content box.
+38. **SVG `<use>` and text runs** (2026-10-22, fidelity plan, Task 9; `el_svg.cpp`'s `svg_painter`, the replaced
+    lines under `#if 0`).
+    - **38.1** `<use>` drew nothing. `draw_use` resolves its `href` (or `xlink:href`) fragment against the document's
+      ids (`document::svg_element_by_id`: the first element with an id wins, gathered again when the match epoch, which
+      every attribute and structure patch moves, or the paint generation has moved), and draws the target
+      translated by `x` and `y` inside the use's own transform: a `symbol` (or `svg`) in a viewport of the use's
+      `width` and `height` (else the target's, else 100%) mapped from its `viewBox` by its `preserveAspectRatio`
+      (xMidYMid meet by default), with no clip; any other element as itself (`draw_children`'s new `only` parameter).
+      A target that is the use, one of its ancestors or an instance being drawn is refused; instances nest at most 8
+      deep (`kMaxUseDepth`) and the document's svgs draw at most 8,192 elements inside instances together
+      (`kMaxUseElements`), which bounds a `<use>` chain's exponential fan-out: each svg may draw what its own last paint
+      drew plus what the others' last paints left (`el_svg::use_budget`, `note_use_drawn`; a destroyed svg gives its share
+      back), and a hit test draws within the same share. A budget per painter let every `<svg>` draw 8,192, so a few KB
+      of small svgs using one fan-out recorded gigabytes of paths (the final review; `testUseBudgetIsTheDocuments`). The
+      target is drawn alone, not found by a walk over its siblings. A hit inside an instance is the outermost use. `svg_group_key` and
+      `cacheable_paint_key` already refuse a subtree holding a `<use>`, so no cached paint goes stale when a
+      referenced element changes.
+    - **38.2** `draw_text` drew the text's whole content as one run in the `<text>`'s fill. It now draws each Text
+      node as its own run in its element's font and fill (the text's, a `tspan`'s or an `a`'s); a `tspan`'s `x` and
+      `y` set the position and start a chunk, its `dx` and `dy` move it, and the move persists after it; whitespace
+      collapses across the runs as across one string; `text-anchor` shifts each chunk by its width. A hit is the run's
+      element. Per-character position lists use their first value, as before.
+39. **Intrinsic widths** (2026-10-22, fidelity plan, Task 12). `width` and `height` take `min-content`,
+    `max-content` and `fit-content` (`width_keyword`, predefined values beside `auto`; `style.cpp`), which everything
+    else reads as `auto`. A block whose width is one of them (not the root, not a table cell, not measured for content)
+    sizes its content box in `render_item_block::_render`: min-content from its content pass, max-content from one more
+    content pass with nothing to wrap at (1,000,000 px wide), fit-content as `min(max-content, max(min-content,
+    available))`; the content is then laid out again at that width. The two measuring passes lay every nested keyword
+    box out as `auto` (`document::intrinsic_measuring`, and no layout cache entry is read or written while one runs),
+    and only the fitted pass lays them out in full, at most 8 keyword boxes deep (`intrinsic_depth`); deeper ones lay
+    out as `auto`. When every pass laid every nested keyword box out in full, 40 nested `div{width:max-content}` never
+    finished (the work doubled per level, uncharged; the final review, pinned in `fork_test.cpp`).
+40. **`text-overflow: ellipsis`** (2026-10-22, fidelity plan, Task 12; string id `_text_overflow_`, `clip|ellipsis`,
+    not inherited). At the end of an inline context's content pass (`render_item_inline_context::apply_ellipsis`), in a
+    block that clips (`overflow-x` not `visible`), on each line wider than the content box the first text piece reaching
+    past the box less the ellipsis's width is cut after the code points that fit (`render_item::set_ellipsis`), and
+    every text part after it on the line (an atomic inline at the cut too) is not drawn (`draw_children` skips it, so
+    the paint walk does too). The cut piece draws its kept text and then `…` on its baseline in the block's font and
+    colour, as part of its own paint (`el_text::draw`), so the layer mirror records it with the piece. Inline boxes' own
+    backgrounds after the cut still draw.
+41. **A master `@layer` is an origin above the master** (2026-10-22, widget-sandbox v0.1.1 plan, Task 1). litehtml read a
+    `@layer` block's rules as unlayered. In the master sheet (`css::set_layered_origins`, set by `document` before the
+    master's parse) each block now numbers its rules (`css_selector::m_layer`), and the selector order is (layer,
+    specificity, order), so a layered master rule beats every engine master rule whatever their specificity (the profile's
+    UA layer over litehtml's `ul ul ul{list-style-type:square}`, `table[border] td`, `body{margin:8px}`), and
+    `html_tag::master_value` (edit 33.3) skips layered rules, so `revert` rolls back to litehtml's own sheet, as a
+    browser rolls an author layer back to its UA sheet. Author sheets are unchanged (their `@layer` stays unlayered; the
+    profile drops it anyway). The parsed master is cached with its selectors, and the match memo and
+    `refresh_replay_styles` keep the sorted order, so every restyle path follows.
+42. **Positions in a rule's subject alone** (2026-10-22, widget-sandbox v0.1.1 plan, Task 2). The UA layer brought
+    positional pseudo-classes into every document's master (`body>:first-child`, `th:last-child`, …), and any of them
+    made `selector_scope` refuse every attribute patch and every insertion and removal (or widen it to all of a parent's
+    children). Edit 42 tells them apart:
+    - **42.1** `scan_positions` (`document.cpp`, beside `scan_selector`, which the replaced call under `#if 0` used): a
+      positional pseudo-class in a rule's subject compound (or a selector list inside it) records the rule's subject and,
+      under a child combinator, parent tag (`m_subject_positions`, scope bit 16) instead of setting bit 2; anywhere else,
+      or with a sibling combinator or `of S`, the bits are as before.
+    - **42.2** An attribute patch refuses only on bits 1 and 4 (`can_set_element_attributes`): a position is read from an
+      element's place, which no attribute changes, and `:empty` (8) from its children.
+    - **42.3** An insertion or a removal is allowed under bit 16 (`can_insert_subtree`, `can_remove_subtree`); a parent it
+      touches whose element children such a rule can match (`positions_reach`: the parent's tag, a child's tag) is noted
+      (`note_position_parent`), and `commit_patch` matches its other element children again in place (`apply_retag` with
+      their own attributes) once the fresh subtrees are styled, adding them to the restyle. `update_structure` (the HTML
+      path) treats bit 16 as bit 2.
+43. **A rule's declarations in their written order** (2026-10-22, widget-sandbox v0.1.1 plan, Task 2; `style::combine`
+    and `combine_fixed`, the replaced loops under `#if 0`). The upstream copied a rule's properties onto an element in
+    its map's order (by string id), which renumbered them, so `subst_vars` could take a longhand written before a `var()`
+    shorthand for one written after it and keep it: the UA layer's `hr{border:0;border-top:1px solid var(…)}` drew no
+    rule. They are copied by their `m_order` now.
+44. **A relatively positioned inline box moves its content** (2026-10-22, widget-sandbox v0.1.1 plan, Task 2;
+    `line_box::finish`, the replaced call under `#if 0`). The upstream shifted an inline element's own render item once
+    for its start item and again for its end, so its text (whose placement adds it) painted twice as far and its inline
+    box (which the edges make, and which `getBoundingClientRect` reads) not at all; the UA layer's `sup{position:relative;
+    top:-.5em}` measured on the baseline. An inline's render item keeps no offset now; each line item takes the offsets
+    of its inline ancestors, an inline box's edges their own too, and a text piece or an atomic inline its own as before.
+
+45. **`user-select` read back** (2026-10-22, widget-sandbox v0.1.1 plan, Task 7; string ids `_user_select_`,
+    `__webkit_user_select_`). `user-select` joins the raw declarations (`raw_declaration_names`, `style.cpp`), as
+    `touch-action` did (edit 30.1): litehtml does not model it, and WidgetRuntime's getComputedStyle reads the element's
+    own value. `add_property` writes `-webkit-user-select` as `user-select` before keeping the copy, as it writes
+    `-webkit-backdrop-filter` as `backdrop-filter`, so the two names are one property and the later declaration wins.
+
+46. **`direction`, phase 1 of right-to-left** (2026-10-22, fidelity plan, Task 11; string id `_direction_`, `ltr|rtl`).
+    - **46.1** `direction` is an inherited keyword (`css_properties::get_direction`), stored with the other single
+      keywords (`style.cpp`). `unicode-bidi` is not modeled.
+    - **46.2** `text-align: start`/`end` keep their computed values; where a line box is built
+      (`render_inline_context.cpp`, the old call under `#if 0`) they resolve against the block's direction, so an RTL
+      line starts at the right edge and `end` is the left. `line_box` takes the physical alignment and `rtl`, which puts
+      a justified paragraph's last line at the right edge.
+    - **46.3** `calc_auto_margins`: a block whose margins are both set, in a right-to-left containing block, ignores
+      `margin-left` (CSS 2.1 §10.3.3) and ends at its right margin; the shift is returned like an auto margin's.
+    - Not yet: floats, the absolutely positioned static position and table columns are as in LTR (the order of a
+      line's items is edit 47). The `[dir]` rules and `dir=auto` are WidgetRuntime's (its UA sheet and the Builder).
+
+47. **Bidi reordering of a line's items, phase 2 of right-to-left** (2026-10-22, fidelity plan, Task 13).
+    - **47.1** `document_container::bidi_levels(runs, rtl, levels)`: a hook (default: false, the logical order kept)
+      that answers each unit's embedding level from the line's text (UAX #9 up to rule I2). WidgetRuntime's container
+      answers from ICU's `ubidi`; the test container leaves it unset.
+    - **47.2** `line_box::reorder_bidi`, called after the first pass of `finish` (alignment and justification already
+      laid out): a unit is one content item (a text piece, or an atomic inline as U+FFFC) with the inline start and
+      continuation edges before it and the end edges after it; rule L2 reverses runs from the highest level down to the
+      lowest odd one, and each unit's slot (its start to the next unit's start) is laid again in visual order, so the
+      alignment shift and the justification spacing are kept. A left-to-right line asks only when its text holds a
+      right-to-left character or control.
+    - **47.3** An inline's box (the second pass, the old code under `#if 0`) covers every item met while it is open,
+      its edges included, rather than its start edge to its end edge, which reordering can move apart; in logical order
+      the two are the same.
+    - Each text piece is drawn by the container in one call, so the order inside a piece (a word mixing scripts) is
+      the text engine's. An inline's start edge stays with its first logical content, so in a reversed span it sits
+      on the inside.
+48. **Math functions that mix a percentage with a length** (2026-10-22, fidelity plan, Task 10): `calc()`, `min()`,
+    `max()` and `clamp()` whose percentage resolves against the containing block at layout (`calc(50% - 10px)`,
+    `clamp(20px, 50%, 60px)`). The parse-time fold already turns math of one kind into a value; what it leaves is now a
+    tree rather than a dropped declaration.
+    - **48.1** `calc_node.h`/`calc_node.cpp` (new): an immutable tree (a sum of px, %, em, rem, ex and ch terms plus
+      children with factors; min, max, clamp), parsed from the function token by recursive descent (absolute units at
+      96 px per inch, a `<number>` zero allowed in a sum, nesting to 16, at most 32 arguments; a type mismatch, an unknown
+      unit or a division by zero or by a length is no tree). A tree holds at most 64 nodes (`calc_node::max_nodes`),
+      refused while parsing as soon as a sum's children pass it: a cached declaration's one tree is evaluated for every
+      element it styles at every layout, uncharged, and a `var()` splice can make one declaration as large as the style
+      budget (a 50,000-term sum under a million factors took 15 s to parse before the cap, every factor walking every
+      child). Trees are shared by an atomic count (`calc_ref`), because a
+      laid-out document's lengths are copied into trees another thread reads. `calc_node::live()` counts the nodes alive
+      in the process, for the leak pin.
+    - **48.2** `css_length` (insertions only, the old members under `#if 0`) holds the tree in its union beside the
+      value, flagged by `m_is_calc`; it grows from 8 bytes to 16 (the pointer's alignment). Copy, move and assignment share or release the tree; `set_value`,
+      `predef` and `operator=(float)` release it. A calc with a percentage reports `css_units_percentage`, one without
+      `css_units_px`; `val()` is its value with the percentage at 0, and `calc_percent(base)` evaluates the whole tree,
+      which is what every percentage consumer (gaps, flex-basis, font-size, the containing-block context) already calls.
+      `from_token` accepts a function token where the property takes a length, and a percentage only where it takes one
+      too; where the property takes no negative value (`f_positive`) the tree is wrapped as `max(0px, …)`
+      (`calc_node::at_least_zero`), as CSS clamps a math function to the property's range, so `flex-basis: calc(50% -
+      8px)` is a basis and not `auto`. A term or factor a float cannot hold makes no tree, as the parse-time fold refuses
+      an overflow. `to_string` prints `calc{…}`, for layout dumps.
+    - **48.3** `document::cvt_units` folds the font-relative terms at compute (`calc_fonts_for`: em is the element's
+      font size, rem the root's, ex and ch the font's x-height and `0` width); a tree left with no percentage becomes a
+      plain px length, one with a percentage stays a tree to layout. `to_pixels` evaluates a tree at the size it is given.
+    - **48.4** A gradient stop at a calc is placed at the line's length (`normalize_length`, `background.cpp`). A table
+      column whose width is a calc with a percentage lays out as `auto` (`table.cpp`, both the auto and the fixed
+      algorithm), the browsers' answer for a mixed percentage in a column being a separate algorithm litehtml lacks.
+    - Pinned by `fork_test.cpp` (the widths at a 200 px container, the font-relative fold, an in-place patch through
+      `style::combine`, the cap at 64 nodes and the oversized sum refused at once, and no tree outliving its lengths: a parsed length copied, moved and reassigned leaves none
+      alive, and a second layout and patch of the same page leaves no more alive than the first, the rest being
+      `style::add`'s process-wide declaration cache (edit 11)), and by `FidelityRenderTests.testMathWithPercentages`.
+
 ## The iOS font resolver
 
 `ResolveFont`'s twin keeps the macOS resolution order and generic-family names verbatim: each

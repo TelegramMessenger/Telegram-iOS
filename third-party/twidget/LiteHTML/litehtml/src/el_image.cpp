@@ -43,6 +43,44 @@ void litehtml::el_image::parse_attributes()
     }
 }
 
+// Telegram (VENDOR.md edit 37): the object rect (CSS Images 3 §5.5): object-fit sizes the natural size into the content
+// box, object-position places it by percentages of the space left over. fill, or no natural size, is the content box.
+static litehtml::position object_rect(const litehtml::position& box, const litehtml::size& natural,
+                                      const litehtml::css_properties& css)
+{
+    using namespace litehtml;
+    const object_fit fit = css.get_object_fit();
+    if(fit == object_fit_fill || natural.width <= 0_px || natural.height <= 0_px)
+        return box;
+    float       w  = float(natural.width);
+    float       h  = float(natural.height);
+    const float sx = float(box.width) / w;
+    const float sy = float(box.height) / h;
+    float       s  = 1;
+    switch(fit)
+    {
+    case object_fit_contain:
+        s = std::min(sx, sy);
+        break;
+    case object_fit_cover:
+        s = std::max(sx, sy);
+        break;
+    case object_fit_scale_down:
+        s = std::min(1.0f, std::min(sx, sy));
+        break;
+    default:
+        break;
+    }
+    w *= s;
+    h *= s;
+    position rect;
+    rect.width  = pixel_t(w);
+    rect.height = pixel_t(h);
+    rect.x      = box.x + css.get_object_position_x().calc_percent(box.width - pixel_t(w));
+    rect.y      = box.y + css.get_object_position_y().calc_percent(box.height - pixel_t(h));
+    return rect;
+}
+
 void litehtml::el_image::draw(uint_ptr hdc, pixel_t x, pixel_t y, const position* clip,
                               const std::shared_ptr<render_item>& ri)
 {
@@ -59,7 +97,14 @@ void litehtml::el_image::draw(uint_ptr hdc, pixel_t x, pixel_t y, const position
         {
             background_layer layer;
             layer.clip_box    = pos;
+#if 0
             layer.origin_box  = pos;
+#else
+            // Telegram (VENDOR.md edit 37): drawn at the object rect, clipped to the content box.
+            size natural;
+            get_document()->container()->get_image_size(m_src.c_str(), nullptr, natural);
+            layer.origin_box = object_rect(pos, natural, css());
+#endif
             layer.border_box  = pos;
             layer.border_box += ri->get_paddings();
             layer.border_box += ri->get_borders();

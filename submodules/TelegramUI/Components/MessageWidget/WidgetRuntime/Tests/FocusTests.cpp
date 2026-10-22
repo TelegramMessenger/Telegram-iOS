@@ -1,5 +1,6 @@
-// The focus model and the user-action pseudo-classes (M1d plan, Task 3): a tap focuses what it hits, focus() and blur()
-// move focus with HTML's events, and :hover, :active, :focus and :focus-within match and render.
+// Profile 1 has no focus (V4 plan, Task 8; RB §8.1): a tap moves no focus, focus() and blur() do nothing and fire
+// nothing, :focus and :focus-within never match, and document.activeElement is always the body. :hover and :active
+// still match and render.
 #include <string>
 
 #include "Sources/Events/Taps.h"
@@ -35,40 +36,30 @@ void up(RenderEnv& env, double x, double y) {
 
 } // namespace
 
-WR_TEST(testTapMovesFocus) {
+WR_TEST(testATapMovesNoFocus) {
     RenderEnv env(kTwo);
-    CHECK_EQ(env.env().eval("document.activeElement === document.body"), std::string("true"));
     down(env, 40, 25);
     up(env, 40, 25);
-    CHECK_EQ(env.env().eval("document.activeElement.id"), std::string("b"));
-    CHECK_EQ(env.env().eval("log.join(' ')"), std::string("focus:b:- focusin:b:- focusin:w:-"));
-    CHECK_EQ(env.env().eval("log.length = 0"), std::string("0"));
-    // A tap on what cannot take focus blurs to the body.
-    down(env, 130, 25);
-    up(env, 130, 25);
     CHECK_EQ(env.env().eval("document.activeElement === document.body"), std::string("true"));
-    CHECK_EQ(env.env().eval("log.join(' ')"), std::string("blur:b:- focusout:b:- focusout:w:-"));
+    CHECK_EQ(env.env().eval("log.join(' ')"), std::string(""));
 }
 
-WR_TEST(testFocusAndBlurMethods) {
+WR_TEST(testFocusAndBlurDoNothing) {
     RenderEnv env(kTwo);
-    CHECK_EQ(env.env().eval("b.focus(); d.focus(); document.activeElement.id"), std::string("b"));
-    CHECK_EQ(env.env().eval("d.tabIndex = 0; d.focus(); document.activeElement.id + ':' + b.tabIndex + ':' + "
-                            "document.createElement('div').tabIndex"),
-             std::string("d:0:-1"));
-    CHECK_EQ(env.env().eval("log.slice(-5).join(' ')"),
-             std::string("blur:b:d focusout:b:d focusout:w:d focus:d:b focusin:d:b"));
-    CHECK_EQ(env.env().eval("d.blur(); document.activeElement === document.body"), std::string("true"));
-    CHECK_EQ(env.env().eval("document.querySelector(':focus') === null"), std::string("true"));
-    CHECK_EQ(env.env().eval("b.focus(); [document.querySelector(':focus').id, "
-                            "document.querySelectorAll(':focus-within').length].join()"),
-             std::string("b,4"));
+    CHECK_EQ(env.env().eval("b.focus(); [document.activeElement === document.body, log.length].join()"),
+             std::string("true,0"));
+    CHECK_EQ(env.env().eval("b.blur(); d.focus(); d.blur(); [document.activeElement === document.body, log.length].join()"),
+             std::string("true,0"));
+    CHECK_EQ(env.env().eval("document.querySelector(':focus') === null && document.querySelector(':focus-within') === null"),
+             std::string("true"));
+    // tabIndex still reflects the attribute.
+    CHECK_EQ(env.env().eval("d.tabIndex = 0; [d.tabIndex, d.getAttribute('tabindex')].join()"), std::string("0,0"));
 }
 
-WR_TEST(testHoverActiveFocusRender) {
+WR_TEST(testHoverActiveRender) {
     RenderEnv env("<!doctype html><html><head><style>body{margin:0;padding:0} button{position:absolute;left:10px;"
                   "top:10px;width:80px;height:30px;display:block;border:0;background:#eee;color:#000}"
-                  "button:hover{background:#00f} button:active{color:#f00} button:focus{outline:1px solid #0f0}"
+                  "button:hover{background:#00f} button:active{color:#f00}"
                   "</style></head><body><button>b</button></body></html>");
     const std::string before = env.render().layerTree()->dump();
     down(env, 40, 25);
@@ -90,29 +81,15 @@ WR_TEST(testHoverActiveFocusRender) {
     CHECK_EQ(env.render().layerTree()->dump(), rebuilt2);
 }
 
-// V4 plan, Task 3b: :focus-within is out of profile 1 (sel.focus), so its rule leaves the sheet and focus renders nothing.
-WR_TEST(testFocusWithinRendersNothing) {
+// :focus-within is out of profile 1 (sel.focus, V4 plan, Task 3b), and nothing takes focus (Task 8).
+WR_TEST(testFocusWithinNeverMatches) {
     RenderEnv env("<!doctype html><html><head><style>body{margin:0;padding:0} #w{width:100px;height:50px}"
-                  "#w:focus-within{background:#f00}</style></head><body><div id=w><input id=i></div><script>"
+                  "#w:focus-within{background:#f00}</style></head><body><div id=w><button id=i>i</button></div><script>"
                   "window.i = document.getElementById('i');</script></body></html>");
     const std::string before = env.render().layerTree()->dump();
-    CHECK_EQ(env.env().eval("i.focus(); document.activeElement.id"), std::string("i"));
+    CHECK_EQ(env.env().eval("i.focus(); document.activeElement === document.body"), std::string("true"));
     env.flush();
     CHECK_EQ(env.render().layerTree()->dump(), before);
     auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
     CHECK_EQ(env.render().layerTree()->dump(), rebuilt);
-}
-
-WR_TEST(testRemovingTheFocusedElementUpdatesTheRender) {
-    RenderEnv env("<!doctype html><html><head><style>body{margin:0;padding:0} #w{width:100px;height:50px}"
-                  "#w:focus-within{background:#f00}</style></head><body><div id=w><input id=i></div><script>"
-                  "window.i = document.getElementById('i'); window.w = document.getElementById('w');</script></body></html>");
-    CHECK_EQ(env.env().eval("i.focus(); document.activeElement.id"), std::string("i"));
-    env.flush();
-    CHECK_EQ(env.env().eval("i.remove(); document.activeElement === document.body"), std::string("true"));
-    env.flush();
-    auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
-    CHECK_EQ(env.render().layerTree()->dump(), rebuilt);
-    // HTML's focus fixup: the removed element lost focus for good; putting it back does not refocus it.
-    CHECK_EQ(env.env().eval("w.append(i); document.activeElement === document.body"), std::string("true"));
 }

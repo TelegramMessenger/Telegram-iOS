@@ -207,3 +207,30 @@ otherwise after V6.
   script-created content and reads the profile's tables.
 - The runner's internals (reading `data-conformance`, the virtual clock for `wait`), within CLIENTS.md.
 - The order inside each milestone, and V5's order (by the report).
+
+## 8. The v0.1.1 delta (2026-10-22)
+
+widget-sandbox `v0.1.1` (`e9654cab`, 2026-10-21) is a clarification of profile 1: profile, SDK and protocol stay
+version 1 and every v0.1.0 widget stays valid. From then on it is the authority wherever §1 names v0.1.0 (vendored in
+`third-party/widget-sandbox`, VENDOR.md). What it asks of a client, and what this client decided:
+
+- **The renderer's UA layer** (`tables.uaStylesheet`): the root on the theme and text tokens, the text elements, the
+  default `<button>`, baked into the master sheet as an `@layer` that every author rule beats. Decided: the layer is an
+  origin above litehtml's own master and `revert` skips it (twidget edit 41), as a browser rolls an author layer back
+  to its UA sheet.
+- **Text tokens** (`WidgetTheme.text`: font size, line height, padding as the body's margin), always on the root with
+  the reference set for a token not passed. Decided: the chat's Text Size, a line height of 1.3, the text bubble's
+  insets (`6px 11px` compact, `6px 10px` regular); a text-size change alone is a theme change.
+- **The bubble is the canvas**: `bg_color` is the colour of the bubble the widget sits in, incoming or outgoing.
+  Decided: a gradient bubble passes its colours' average; the button is the bubble's own filled control
+  (`polls.bar`, its foreground knocked out to the bubble).
+- **No padding of the bubble's own**, clipped at its corner radius. Decided: the inset is 0 for every wallpaper, the
+  clip takes the bubble's radii and is square where the tail joins; the tail continues the widget's corner colour, as a
+  photo's tail continues the photo, and below a short document the view paints the canvas colour (`LayerTree::canvasColor`).
+- **`user-select`** joins profile 1 (D18); text is unselectable by default. Decided: `user-select` computes, the view
+  selects nothing (sdk-v1's accepted exception) until selection is built.
+- **Intl parity** (`intl-cases.json`, V8's answers). Decided: run on the host's and iOS's ICU with an explicit drift
+  list; toLocaleUpperCase/LowerCase follow the language's own case rules; a requested era keeps its width.
+- **The conformance runner** configures the host as in production. Decided: the app's own theme for an incoming bubble
+  of the default chat theme; the visual set is run too, loaded only.
+- Not taken from v0.1.1 yet: the narrower live-collection invalidation (cost only, no check depends on it).

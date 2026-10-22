@@ -15,8 +15,9 @@ side. V1 changed three runtime facts recorded below: the host sheet is the spec 
 is clamped to 50…600, and there is no source cap. V1 also re-vendored widget-sandbox at tag v0.1.0 (237 listed
 files, 99 attacks, 19 compat, 9 out-of-profile, and the conformance set); the corpus suites pass on it, but the
 measurements below (230 documents, 93 attacks) were taken on the earlier corpus and are not re-measured.
-Since V4 (2026-10-21) profile 1 is enforced on the renderer's copy of the document, never on the DOM: "Profile 1 is
-the renderer's" under M1c's invariants, which replaces M1c's "there is no validator".
+Since V4 (2026-10-21) profile 1 is enforced on the renderer's copy of the document, never on the DOM: "Profile
+enforcement (V4)", below, which replaces M1c's "there is no validator"; "Divergences from widget-sandbox v0.1.0" lists
+where it differs from the reference on purpose.
 The old runtime (widget-sandbox's JavaScript shim and trusted validator, `MessageWidgetEngine`, `WidgetDOM` and the
 ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14). Until M2 to M4, a widget that needs what is not
 built yet renders or behaves less well than it did: "What regresses until M2 to M4", below. M1a built:
@@ -152,11 +153,15 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     root style and no unclosed construct in one replaces them). A change of scheme or of any completed colour updates
     all of it at once and then fires `themeChanged`; anything else fires nothing. The iOS host (V2b) passes the chat's
     palette with the scheme, at creation (so the first build has it) and on every change, one theme change
-    (`HostState::setTheme`): the bubble's `messageWidgetTheme` maps the incoming bubble's colours to every key (a colour
-    with alpha composited over the bubble). With it come §2.4's button tokens (`ThemeButtonTokens`, each checked against
-    its grammar, set on the root as `--tg-button-*`), which the profile's UA stylesheet reads; the master sheet carries
-    that sheet unlayered and without `:where()` (it loses to every author rule anyway), so a `<button>` the widget did
-    not style is the client's solid button.
+    (`HostState::setTheme`): the bubble's `messageWidgetTheme` maps the colours of the bubble the widget sits in, incoming
+    or outgoing (v0.1.1), to every key (a colour with alpha composited over the bubble, a gradient bubble its colours'
+    average, the button the bubble's own filled control: `polls.bar` and its knocked-out foreground). With it come §2.4's button tokens (`ThemeButtonTokens`, set on the root as
+    `--tg-button-*` when passed) and, since v0.1.1, its text tokens (`ThemeTextTokens`: the chat's Text Size, a line
+    height of 1.3 and the text bubble's insets as the padding; the root always carries all three `--tg-text-*`, the
+    reference set 15px, 1.35, `8px 12px` standing for a token not passed or refused), each checked against the
+    reference's grammar. The profile's UA layer reads both, so a widget with no CSS of its own sets its text as a
+    message does and a `<button>` it did not style is the client's solid button. A text-size change alone is a theme
+    change: the widget lays out again and `themeChanged` fires.
   - *Links* (`Links.cpp`, §2.5): `openLink`/`openTelegramLink` check the URL as the reference's `checkLink` does and
     throw `TypeError` for anything else; the host gets it normalised (scheme and host lowercase, non-ASCII after the
     host as UTF-8 escapes). A checked call is posted only while a trusted press dispatches, one call per press, on a
@@ -306,7 +311,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - **images:** `css::policy::imageSourceKept` (PNG, JPEG, GIF or WebP `data:` URLs) in layout and in
     `HTMLImageElement::state` alike; a refused `<img src>`, the empty one included, renders the 48 px placeholder
     (`WidgetContainer::kPlaceholderURL`, `placeholderSVG`) with `data-tg-placeholder`, and the element loads at 48 × 48.
-  A hook is a pure function of its text and posts no diagnostic.
+  A hook is a pure function of its text and posts no diagnostic. The full record, with the strict budgets and the DOM
+  side, is "Profile enforcement (V4)".
 - **The container is the only way out.** litehtml has no I/O of its own: every load is a container callback
   (`load_image`, `get_image_size`, `draw_image`, `import_css`, `link`). `WidgetContainer` accepts `data:` images of
   profile 1's types and the placeholder (V4), and refuses and counts everything else, and `RenderHost` is never handed
@@ -321,6 +327,13 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   because a flush swaps the members they read. A `HostFont` or `HostImage` must be
   self-contained, because the tree outlives the host object that made it, and a host call never throws and never calls
   back into the runtime. Pinned by `testTreeOutlivesItsDocument` and `testTreeOutlivesTheRuntime`.
+- **The tree carries the canvas colour** (v0.1.1, `LayerTree::canvasColor`, `CanvasColorTests`): the background colour
+  litehtml paints on the root, its own or the body's it propagates, currentColor resolved, transparent when neither sets
+  one; computed at every publish, so a patch that changes it republishes it. The tree paints it over the document only,
+  and the painter rounds boxes to whole CSS px, so the iOS view paints it under the tiles from the document's floored
+  height down (`WidgetTreeRenderer.canvas`, `MessageWidgetView`'s canvas layer) where the bubble is taller than the
+  document: the 50 pt minimum, a fixed-height anchor. Starting at the rounded-up height left a band of the bubble's colour
+  (`testTheCanvasHasNoSeamUnderAFractionalDocument`).
 - **The flush runs no JS and is atomic.** It calls nothing JS-visible, dispatches no event, and is never run from
   `afterOutermostNative`. It builds on a new document with new maps and swaps them in only when the build, the layout,
   the mirror and the publish have succeeded; a stop or a failure leaves the document, maps, render input and published
@@ -593,7 +606,10 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 - **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over the system ICU, `libicucore`: `NumberFormat`,
   `DateTimeFormat`, `PluralRules`, `RelativeTimeFormat`, `ListFormat`, `Collator` and `getCanonicalLocales`, with
   `formatToParts` for the first two and `resolvedOptions` and `supportedLocalesOf` for all six; `Number`/`BigInt`/
-  `Date.prototype.toLocale*String` and `String.prototype.localeCompare` go through the same code. The classes are
+  `Date.prototype.toLocale*String` and `String.prototype.localeCompare` go through the same code, and
+  `toLocaleUpperCase`/`toLocaleLowerCase` are ECMA-402's TransformCase (v0.1.1): in a language with case rules of its
+  own (az, el, hy, lt, tr) ICU's mapping, charged `work::kCaseMapEightUnits` per eight units on top of the copy, with
+  no length limit but the engine's; in any other the engine's own mapping, kept at install. The classes are
   hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object: `NumberFormat`,
   `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are accessors returning a
   cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime. `Intl` is a lazy global (a
@@ -603,8 +619,13 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   record (its js_malloc'd payload); ICU objects live only in the runtime's `IntlCache` (32 handles, least recently used
   evicted), taken when a value is formatted, after every argument is converted, so no ICU handle or buffer is held
   while script runs. A number is formatted through an ICU number skeleton made from the record, a date through a
-  pattern ICU's pattern generator made at construction (an explicit hour cycle rewrites its hour letters), and the
-  resolved date fields are read back from that pattern. The default locale is the host's (`HostState::locale`, the
+  pattern ICU's pattern generator made at construction (an explicit hour cycle rewrites its hour letters, a requested
+  era its era field: Apple's CLDR answers a short era narrow, "A" for "AD"), and the resolved date fields are read back
+  from that pattern. **Parity with V8** is measured on widget-sandbox v0.1.1's fixture (`fixtures/intl-cases.json`,
+  166 requests with V8's answers): `:WidgetRuntimeIntlCasesTests` on the host's ICU and `WRIntlCasesTests` on iOS's run
+  each as a widget would (`Tests/IntlCases.js`); 165 answer as V8 on both, and the one that does not is in
+  `Tests/intl-cases-expected-failures.txt` with its reason (Apple's CLDR joins a medium date and a time with " at ",
+  as Safari does). The list only shrinks, and a case off the list fails. The default locale is the host's (`HostState::locale`, the
   app's language), resolved like a request; the default time zone is `Host::defaultTimeZone()` (the device's on iOS,
   UTC in the test hosts). The declarations are our own (`ICU.h`): the SDK ships only a few of ICU's headers, so the
   functions and enums are copied by hand from ICU 78.1's, every one `@stable` at ICU 69 or older, iOS 15.0's
@@ -617,8 +638,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   the used ones), `transform` as one 2D `matrix()`, `::before`/`::after` from the pseudo-element litehtml made (a
   missing one reads its host's values with `content: none`). Custom properties are looked up with `_find_id`, which
   never adds the name to litehtml's process-wide id table (twidget edit 23;
-  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). Not modeled, so constant: `direction` (ltr), `user-select`,
-  `touch-action`, `quotes` (auto). Known differences from browsers: `text-decoration-line` is merged with the
+  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). Not modeled, so constant: `direction` (ltr). Not modeled but
+  read back from the element's own declaration, else `auto` (not inherited): `touch-action` (twidget edit 30.1) and
+  `user-select` (edit 45; `-webkit-user-select` is the same property, the later declaration winning). Known differences from browsers: `text-decoration-line` is merged with the
   parent's (litehtml's), `background-image` other than `none`, `background-size`/`-position` and `filter` read "".
 - **Only the size is critical** (the user, 2026-10-19). Main waits for a task's snapshot within the turn's allowance
   (1,000,000 units, 20 ms), and that snapshot carries the size and no tiles; drawing is never waited for. A size change
@@ -642,10 +664,149 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   (`WidgetTreeRenderer.documentSize`), as the old renderer's was, not `contentSize.width`, which is the content's
   natural width and would shrink every widget. The height is `ceil(contentSize.height)` clamped to 50…600
   (`WidgetTreeRenderer.minimumHeight`/`maximumHeight`, widget-sandbox v0.1.0's bounds, V1) or to a bubble's fixed height
-  under 600 (`WidgetTreeRenderer(width:maximumHeight:)`, passed at the boot), and it includes the host
-  sheet, the spec renderer's root CSS (`RenderOptions::hostCSS`: `html { display: flow-root; position: relative;
-  min-height: 0 } head { display: none } body { display: block; margin: 8px }`), which goes with litehtml's master sheet
-  so an author's rules win over it whatever their specificity, as the spec's `:where()` makes them.
+  under 600 (`WidgetTreeRenderer(width:maximumHeight:)`, passed at the boot), and it includes the body's margin, the
+  padding token of widget-sandbox v0.1.1's UA layer, which the master sheet ends in before the host sheet (the spec
+  renderer's root CSS, `RenderOptions::hostCSS`: `html { display: flow-root; position: relative; min-height: 0 } head {
+  display: none } body { display: block }`); an author's rules win over both whatever their specificity, as the spec's
+  `:where()` makes them, and in the master the layer is an origin above litehtml's own rules that `revert` skips
+  (twidget edit 41).
+
+## Profile enforcement (V4)
+
+V4 (2026-10-21) enforces widget-sandbox v0.1.0's profile 1 on the renderer's copy of a widget, never on its DOM: script
+reads back everything it wrote (`getAttribute`, `tagName`, `element.style`, `<style>` text), while litehtml gets the
+document as the reference validator would have handed it over. An element the profile drops answers 0×0 rects and empty
+computed values, as any unrendered node does. Conformance went from in profile 124 / 30 / 8 / 0 and out of profile
+50 / 7 / 19 (neutralised / not yet / failing) to **130 / 24 / 8 / 0 and 75 / 1 / 0**; the one out-of-profile id not yet
+neutralised is `css.box.logical`, whose RTL check needs `direction` layout (out of V4's scope).
+
+**Where each rule sits.**
+- **The tables:** profile 1's `profile.json` plus the two lists it lacks (the text attributes and the CSS-valued SVG
+  attributes), generated into `Sources/Host/ProfileTables.inc` by `IDL/generate-profile-tables.py` and read through
+  `Sources/Host/Profile.h`. Nothing else holds a list.
+- **The CSS core:** `css::policy` (`Sources/Host/CSSPolicy.*`), pure and ctx-free: a declaration, a value, a selector
+  group, an at-rule, an `@media` prelude and an `@supports` condition each get a verdict, Keep, Augment (kept, with
+  something added: `ui-monospace` gains `monospace`), Rewrite (`position: sticky` becomes `relative`, `:disabled`
+  becomes `[disabled]`) or Drop. `CSS.supports` and `@supports` are true for Keep and Augment. The core never charges,
+  throws or interns a name; its callers charge first.
+- **The hooks:** twidget edit 29 asks the container at every place litehtml takes CSS from the widget, and
+  `WidgetContainer` answers with the core: `profile_declaration` (a rewrite edits the tokens in place),
+  `profile_substituted` (the value again after `var()` substitution), `sanitize_selector_list` (one group leaves its
+  list), `sanitize_media_query`, `evaluate_supports` and `sanitize_at_rule`. `RenderTree::matchesMedia` (`matchMedia`)
+  and the `@keyframes` reader (`CSSAnimationRules.cpp`) walk the same at-rules with the same verdicts, so an animation
+  can only name keyframes the renderer kept.
+- **Elements:** `markup::renderTagFor` (`Sources/Host/MarkupPolicy.*`), one decision for the build, both patches and the
+  render input: kept, rendered as an inert `span` or `div` carrying `data-tg-tag` (legacy, unknown, `dialog`, a second
+  `body`), or dropped with its subtree (form controls but `button`, media, embedding, `progress`, `meter`, an HTML
+  `title`). Only the document's own `html`, `head` and `body` are themselves.
+- **Attributes:** `markup::renderAttribute`, applied in `scanAttributes`, the one reading of an element's attributes:
+  `on*` and malformed names dropped, `data-*` and `aria-*` kept, the rest by the namespace's table; an external or
+  empty `a[href]` becomes `#` plus `data-tg-link` (a tap reads the DOM's own `href`), an SVG `use` or gradient `href`
+  must be a fragment, every other URL attribute goes; a CSS-valued SVG attribute must pass the value rules.
+- **Images:** `css::policy::imageSourceKept` (PNG, JPEG, GIF or WebP `data:` URLs), read by layout (`decide`), by the
+  DOM (`HTMLImageElement::state`) and by `scanAttributes`, which gives a refused `<img src>` (the empty one included)
+  `twplaceholder:` plus `data-tg-placeholder`. The container answers that URL with the reference's 48 px SVG, the one
+  SVG the host is ever handed, and the element loads at 48 × 48. A parsed image's `load`/`error` waits for the window's
+  load (`DOMState::parsingDocument`), when the page's listeners exist.
+- **The strict budgets** (`Builder.h`): a text value of at most 65,536 UTF-16 units, 262,144 units in the document,
+  8,192 complex-script units (>= U+0590), 50,000 nodes. A build hands them out in tree order, counting only what
+  renders: a Text that does not fit renders nothing, a text attribute or a `style` is left out, a sheet is not applied,
+  and the walk goes on; past the node cap it stops. The patches keep the counts in step: a structure patch only adds
+  to the node count, comments it inserts included, and an insertion the journal does not hear (under an element no
+  build renders) is counted beside it (`RenderTree::nodeInserted`), so the count stays an upper bound until the next
+  build, and past the cap the flush rebuilds. The policy core's rewrites are single passes, pinned by
+  `CSSPolicyTests.testTheRewritesAreLinear`: its callers charge its input linearly.
+- **The DOM side:** no focus (`focus()`/`blur()` no-ops, a tap focuses nothing, `activeElement` is the body),
+  `HTMLDialogElement` as the sandbox has it, an input's selection methods no-ops, `matchMedia` false past 1,024 units,
+  and no selection: `user-select` computes as the widget writes it (the UA layer's `none` on the root, `text` where a
+  widget enables it; profile 1's value set drops `all` and `contain`), but nothing is selectable, the exception sdk-v1
+  §2.4 accepts (D18) until the client builds selection.
+
+**The agreement points** (where a rebuild, a patch and the parity re-parse must read the same function), as built:
+
+| Point | Read by |
+|---|---|
+| The CSS verdicts | litehtml only, through the container hooks: the build's finalize, the attribute patch's re-match, the parity re-parse. A `<style>` change always rebuilds. |
+| An element's rendered tag | `renderTagFor`, through `tagOf`/`renderTagOf`: `Builder::element`, the attribute plan ("the rendered tag changed" refuses), the render input's tags. |
+| The attribute filter, the rewrites and the host markers | `scanAttributes` only, for the build and the attribute patch. |
+| Form-control counting | the rendered tag (`button` is the one control left). |
+| The text and node budgets | `renderTextFits` in `Builder::text`, `styleSheet` and `scanAttributes`, and in the text and attribute plans; the structure patch's totals. |
+| The image policy | `imageSourceKept`: `decide`, `decodeImageUncached`, `HTMLImageElement::state`, the placeholder rewrite. |
+| `@keyframes` against the kept at-rules | the same `mediaQueryInProfile`/`supportsCondition` walk. |
+| `matchMedia` against `@media` | one walker. |
+
+**The trusted pass-through.** litehtml's master sheet, the profile's UA sheet and the host sheet are parsed once per
+process per scheme and cached, so they must never meet a hook that would drop from them (`a:link`, the UA button's
+`:active`): edit 29 brackets their parse with `trusted_styles(true)`, and every hook passes everything inside it. The
+root declarations (the theme's `--tg-*` custom properties) are outside the bracket. Every author-sheet and declaration
+cache is keyed on `sanitizer_key()` (`WidgetContainer`'s `0x57520004`), so another container's answers are never
+served to a widget.
+
+**Hooks are pure, and post no diagnostics.** A hook is a function of the name, the tokens, the scheme, the viewport and
+the sanitizer key, because litehtml caches what it answered by text. So no hook reads widget state, and none posts a
+diagnostic: the reference's `tag-dropped`, `attr-dropped`, `css-dropped`, `url-blocked` and `profile` diagnostics have
+no counterpart. The strict budgets report through the render-limit channel (`text-node`, `text-budget`, `nodes`).
+
+**Edit 29** is one entry in `third-party/twidget/VENDOR.md` (items 29.1–29.7): the new container virtuals and their
+call sites in `style.cpp`, `stylesheet.cpp`, `document.cpp` and `media_query.cpp` (with `prefers-reduced-motion`),
+insertions only, a replaced line kept under `#if 0`. `:TwidgetProfileHooksTests` tests it on litehtml alone.
+
+**Tests.** `CSSPolicyTests`, `CSSSupportsTests` (the verdict), `ProfileCSSTests`, `ProfileTablesTests`,
+`MarkupPolicyTests`, `ProfileElementTests`, `ProfileAttributeTests`, `ProfileImageTests`, `RenderTextLimitTests`,
+`DialogTests` and the rewritten `FocusTests` in `:WidgetRuntimeTests`; the random-edit suite's "near the text budget"
+group; the corpus checks that no honest document reaches a text or node limit (`RenderCorpusTests`) and that only
+profile image types and the placeholder reach the host; `//third-party/twidget:TwidgetProfileHooksTests`; and the
+conformance ratchet, which runs the set one widget at a time (`Tests/WidgetHarness/CLAUDE.md`).
+
+## Rendering fidelity (widget-sandbox v0.1.1's conformance set)
+
+The fidelity plan (2026-10-22) took the renderer from 130 pass / 24 partly / 8 fail of v0.1.0's in-profile catalogue
+to **162 / 1 / 0 of v0.1.1's 174** (out of profile 75 neutralised / 0 / 0), judged by the harness's conformance ratchet
+(`Tests/WidgetHarness/CLAUDE.md`) against Chromium's expectations, which the conformance set encodes. The renderer's
+side is twidget edits 30 to 40 and 46 to 48 (`third-party/twidget/VENDOR.md`; 41 to 45 are the v0.1.1 update's); the
+runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for litehtml, `fork_test.cpp`.
+
+- **What a widget reads back** (edit 30): `getComputedStyle` answers `filter`, SVG `fill`/`stroke`/`stroke-width`,
+  `touch-action`, the background longhands per layer (a gradient layer reads `none`: litehtml keeps no gradient text),
+  `vertical-align`, `border-collapse`, `user-select`, `direction`, and a calc as its tree.
+- **Styles** (edits 31 to 33, 39, 48): every named colour, `:lang()` (nothing matches without a `lang` in the chain, as
+  in a browser with no Content-Language), `:empty` (any text piece counts, as in Blink; a child-list patch rebuilds),
+  `initial`, `unset` and `revert` (resolved from the element's matched master rules at every compute; on a
+  pseudo-element `revert` is `unset`), `word-break`, `word-spacing`, `quotes` (stored and read back; `<q>` keeps literal
+  marks), `font-feature-settings` (`tnum` only, mapped to the host's tabular figures), `min-content`, `max-content` and
+  `fit-content` widths, and `calc()`, `min()`, `max()`, `clamp()` mixing a percentage with a length.
+- **Layout and paint** (edits 31, 34 to 38, 40, 46, 47): empty `auto` table columns, `list-style-image`, `translate`,
+  `rotate` and `scale` as properties (the transformed rects feed `getClientRects`, `getBoundingClientRect` and
+  `IntersectionObserver`; layout boxes, `offset*`, `client*` and `ResizeObserver` stay untransformed, as CSSOM View
+  says), the colour-stop fix-up, Blink's dash and dot metrics, `object-fit`/`object-position`, SVG `<use>` and per-run
+  `tspan` text, `text-overflow: ellipsis`, and right-to-left: `direction`, `dir` (`auto` from the first strong
+  character, kept current by text and structure changes), `start`/`end` alignment, and each line's items in bidi order
+  from ICU's levels (`document_container::bidi_levels`, answered by `WidgetContainer` from `ubidi`).
+- **The runtime's UA sheet** (`kWidgetUAStylesheet`, unlayered, after litehtml's master): `<q>`'s marks, the `[dir]`
+  rules, and a pressed `<button>` without author CSS (a press restyles by rebuilding when the build renders a button).
+- **Events:** `movementX` and `movementY` on pointer and mouse moves.
+
+What still differs, on purpose or for now (none is measured by a conformance check today):
+- **`css.background.basic` stays partly:** the first `data:` PNG of `auto/05-colour-backgrounds-b` (widget-sandbox
+  v0.1.1) has a bad IDAT CRC. Chromium draws it; ImageIO refuses it, so that stage's background is missing (71.7 % of
+  its ink differs). A decoder that ignores CRCs is not one to ship for hostile input; the fix is upstream's.
+- **Right-to-left is the line's order only:** floats, the static position of an absolutely positioned box and table
+  column order stay left-to-right, and the UA layer's `padding-inline-*` stay dropped (`css.box.logical` is out of the
+  profile), so an RTL list indents on the left. Inside one text piece the order is the text engine's; in a reversed
+  span the start padding sits on the inside. A left-to-right line is reordered only when it holds a right-to-left
+  character or an RLM/RLE/RLO/RLI.
+- **`HTMLElement.dir` reflects as written** (a plain `[Reflect]`): `dir=RTL` reads `"RTL"`, not `"rtl"`.
+- **Nested intrinsic widths:** a keyword box more than 8 keyword boxes deep lays out as `auto` (Limits).
+- **Math:** a tree holds at most 64 nodes (Limits); a table column whose width is a calc with a percentage lays out as
+  `auto`; `CSS.supports` answers from the property's value grammar, so it can say true for a product the renderer
+  refuses (`calc(50% * 10px)`).
+- **Kept but not drawn:** `word-break: keep-all` breaks as `normal`; `font-feature-settings` other than `tnum`;
+  `quotes` on `<q>` and `open-quote`/`close-quote`; an SVG shape's `translate`/`rotate`/`scale` without `transform`.
+- **`max-content` around a percentage child** resolves the child against the 1,000,000 px measuring width, so such a
+  box is far too wide (`fit-content` is not affected).
+- **`text-overflow`:** an atomic inline at the cut is hidden with no `…`; inline boxes' backgrounds after the cut still
+  draw.
+- **`touch-action: initial`** (and `unset`, `revert`) reads back as written; the hit test reads it as the parent's.
 
 ## Limits (decided in M1a to M1d)
 
@@ -702,6 +863,14 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 | Diagnostics | 500 per core | `MessageWidgetCore` | dropped | the old core's |
 | `data:` images | profile 1's types only (V4); a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; the placeholder's SVG through `LHCreateSVGImage` (the only SVG the host is handed) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
 | Tiles | 128 pt; one image each, at most 4,096 px a side; a size change redraws every tile | `WidgetFrame.swift`, `LayerTreePainter.mm` | — | as before |
+| Text value (V4) | 65,536 UTF-16 units: a Text's data, a text attribute (`alt label placeholder title value`, `data-*`, `aria-*`), the strings of a `style` or a sheet | `Builder.h` `kMaxTextValueUnits` | the Text renders nothing (`text-node`); the attribute or style is left out (`text-budget`) | profile 1 strict `MAX_TEXT` |
+| Document text (V4) | 262,144 UTF-16 units, of which 8,192 complex-script (>= U+0590) | `kTextBudgetUnits`, `kComplexTextBudgetUnits` | what does not fit in tree order renders nothing (`text-budget`) | profile 1 strict `TEXT_BUDGET`, `COMPLEX_TEXT_BUDGET` |
+| Nodes (V4) | 50,000: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside | `kMaxRenderNodes` | the walk stops (`nodes`) | profile 1 `MAX_NODES` |
+| A refused `<img src>` (V4) | the 48 × 48 placeholder, `twplaceholder:` | `WidgetContainer::kPlaceholderURL`, `placeholderSVG` | — | the reference's placeholder; the element loads at 48 × 48 |
+| `matchMedia` query (V4) | 1,024 UTF-16 units as written | `MediaQueries.h` `kMaxMatchMediaUnits` | `matches` is false | the reference host's query length |
+| A math function (fidelity) | a tree of at most 64 nodes; 32 arguments to `min()`, `max()` or `clamp()`; nesting to 16 | `calc_node::max_nodes` (twidget edit 48) | the declaration is invalid, so not applied | a cached declaration's one tree is evaluated for every element it styles at every layout, uncharged, and a `var()` splice can make one declaration as large as the style budget |
+| SVG `<use>` (fidelity) | instances nest 8 deep; the document's svgs draw 8,192 elements inside instances together (each its last paint's share plus what the others left), hit tests within the same share | `el_svg.cpp` `kMaxUseDepth`, `kMaxUseElements`, `el_svg::use_budget` (twidget edit 38) | not drawn | bounds a `<use>` chain's exponential fan-out across every svg: a budget per svg let a few KB of small svgs record gigabytes of paths |
+| Intrinsic widths (fidelity) | nested `min-content`/`max-content`/`fit-content` boxes lay out in full 8 deep; the measuring passes lay them out as `auto` | `render_block.cpp` `kMaxIntrinsicDepth`, `document::intrinsic_measuring` (twidget edit 39) | laid out as `auto` | every pass laying out every nested keyword box doubled the work per level, uncharged |
 
 The resulting transient-heap bounds:
 - **Script markup at its cap:** 119,144,832 B (about 114 MiB).
@@ -845,6 +1014,39 @@ Two things the M1d plan wrote otherwise keep the old runtime's behaviour, so the
 goes with litehtml's master sheet (an author's rules win over it, as with `LHDocument`'s `MasterWithCSS`), and a
 snapshot's width is the layout width, not the content's natural width.
 
+## Divergences from widget-sandbox v0.1.0 (for the maintainers)
+
+What V4 does differently from the reference validator and sandbox at v0.1.0, on purpose. One line each:
+
+1. **No text churn limit.** The reference's `text-churn` bucket refills by wall-clock time; every limit here is a budget
+   of work, never of time.
+2. **Rendered elements are capped at 10,000** (Ruling E9), below the 50,000 nodes, which both count.
+3. **`var()` is judged after substitution:** `--p: sticky; position: var(--p)` lays out as `relative`. The reference
+   checks a value only as written, so `var()` bypasses its value rules.
+4. **The CPU limits are work units, not milliseconds** (spec §4.3).
+5. **Media and supports:** range syntax with units is in profile (`(width >= 400px)` matches; the reference reads `px`
+   as a feature and drops the rule); `@supports` mixing `and` and `or` without parentheses is invalid, so false, as in
+   browsers (the reference evaluates it left to right); `CSS.supports('content', 'attr(class)')` is false, the
+   renderer's own verdict (the reference skips strict `attr()` there and answers true); `@keyframes` inside a kept
+   `@media` apply whether or not the query matches now.
+6. **Absent members throw:** `showPopover`, `hidePopover`, `togglePopover`, `scrollIntoView` and the textarea's
+   `select()` are not defined, so a call throws `TypeError` where the reference does nothing; and **no diagnostics
+   report what the profile dropped**: no `tag-dropped`, `attr-dropped`, `css-dropped`, `url-blocked` or `profile`.
+7. **The text budgets count what renders, in tree order, on every build:** text under a dropped element, a comment's
+   data and a sheet that is not applied count nothing; a sheet's strings are read from its raw text (`"\5b57"` is five
+   units, not one); and what fits is decided by tree order, where the reference decides by the order of operations
+   over time.
+8. **A refused text change renders nothing:** the build is stateless, where the reference keeps the last accepted text.
+9. **`data-tg-link` and `data-tg-placeholder` never go stale:** a patch re-derives every attribute, so the markers follow
+   the current `href` and `src`.
+10. **`light-dark()`'s two branches are both checked.**
+11. **Canvas fonts are not reduced to the profile's families** (the canvas default is `sans-serif`).
+12. **WPT:** no row was lowered by V4 (focus included; `blur-event.window.js` still passes).
+13. Smaller ones: `tabIndex` defaults to 0 for HTML's focusable kinds (the sandbox: -1); `activeElement` with no body is
+    the document element (the sandbox: null); `drawImage` of a refused `<img>` draws the placeholder (the reference's
+    behaviour there is not established); a `<style>` whose text or strings do not fit is not applied and counts
+    nothing (the reference blanks the sheet and keeps its text charged).
+
 ## What regresses until M2 to M4
 
 The cost of the spec's D14 (the switch now, with no flag): a widget that needs what is not built yet renders or
@@ -886,10 +1088,15 @@ Host tests, from the repo root:
 ./build-input/bazel-9.2.0-darwin-arm64 test \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeTests \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBindingTests \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeIntlCasesTests \
   //build-system/WidgetIDL:WidgetIDLTests //third-party/quickjs-ng:QuickJSHostTests \
   //third-party/gumbo:GumboHtml5libTests --test_output=errors
 ./build-input/bazel-9.2.0-darwin-arm64 test //third-party/gumbo:GumboForkTests   # alone: its timing case is flaky under load
 ```
+
+V4's profile suites are in `:WidgetRuntimeTests` (listed under "Profile enforcement (V4)"); the fork's hooks are
+`//third-party/twidget:TwidgetProfileHooksTests`; `:WidgetRuntimeBuilderHtml5libTests` guards that the DOM's parse stays
+unfiltered.
 
 The WPT runner (vendored tests on a virtual clock; fails on any regression or unexpected change), and how to
 record new results:

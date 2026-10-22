@@ -7,6 +7,7 @@ inline constexpr std::string_view kCSSProperties[] = {
     "-webkit-backdrop-filter",
     "-webkit-font-smoothing",
     "-webkit-tap-highlight-color",
+    "-webkit-user-select",
     "align-content",
     "align-items",
     "align-self",
@@ -205,6 +206,7 @@ inline constexpr std::string_view kCSSProperties[] = {
     "transition-timing-function",
     "translate",
     "unicode-bidi",
+    "user-select",
     "vector-effect",
     "vertical-align",
     "visibility",
@@ -295,31 +297,41 @@ inline constexpr std::string_view kCSSUnits[] = {
     "vmin",
     "vw",
 };
-inline constexpr std::string_view kCSSDisplayValues[] = {
-    "block",
-    "flex",
-    "grid",
-    "inline",
-    "inline-block",
-    "inline-flex",
-    "inline-grid",
-    "inline-table",
-    "none",
-    "table",
-    "table-caption",
-    "table-cell",
-    "table-column",
-    "table-column-group",
-    "table-footer-group",
-    "table-header-group",
-    "table-row",
-    "table-row-group",
+inline constexpr std::string_view kCSSValueSets[] = {
+    "-webkit-user-select:auto",
+    "-webkit-user-select:none",
+    "-webkit-user-select:text",
+    "display:block",
+    "display:flex",
+    "display:grid",
+    "display:inline",
+    "display:inline-block",
+    "display:inline-flex",
+    "display:inline-grid",
+    "display:inline-table",
+    "display:none",
+    "display:table",
+    "display:table-caption",
+    "display:table-cell",
+    "display:table-column",
+    "display:table-column-group",
+    "display:table-footer-group",
+    "display:table-header-group",
+    "display:table-row",
+    "display:table-row-group",
+    "position:absolute",
+    "position:fixed",
+    "position:relative",
+    "position:static",
+    "user-select:auto",
+    "user-select:none",
+    "user-select:text",
 };
-inline constexpr std::string_view kCSSPositionValues[] = {
-    "absolute",
-    "fixed",
-    "relative",
-    "static",
+inline constexpr std::string_view kCSSValuedProperties[] = {
+    "-webkit-user-select",
+    "display",
+    "position",
+    "user-select",
 };
 inline constexpr std::string_view kCSSPositionRewrites[] = {
     "-webkit-sticky",
@@ -811,5 +823,6 @@ inline constexpr NamePair kOverflowRewrites[] = {
     {"scroll", "hidden"},
 };
 
-// SDK v1 §2.4's default <button>, for the master sheet (Builder's masterWithHostCSS).
-inline constexpr std::string_view kUAStylesheet = "button{appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}button:not([disabled]):active{opacity:var(--tg-button-pressed-opacity,.7)}button[disabled]{opacity:var(--tg-button-disabled-opacity,.5);cursor:default}*{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}";
+// The renderer's UA layer (SDK v1 §2.4: the root, the text elements and the default <button>), for the master sheet
+// (Builder's masterWithHostCSS).
+inline constexpr std::string_view kUAStylesheet = "@layer tw-ua{html{color:var(--tg-theme-text-color);font:var(--tg-text-font-size,15px)/var(--tg-text-line-height,1.35) system-ui,sans-serif;-webkit-text-size-adjust:none;text-size-adjust:none;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}body{margin:var(--tg-text-padding,8px 12px);padding:0}h1,h2,h3,h4,h5,h6{margin:.75em 0 .35em;font-weight:600;line-height:1.25}h1{font-size:1.6em}h2{font-size:1.35em}h3{font-size:1.2em}h4{font-size:1.07em}h5{font-size:1em}h6{font-size:.87em}p,ul,ol,menu,dl,pre,blockquote,figure,table{margin:.6em 0}ul,ol,menu{padding:0 0 0 1.5em;padding-inline-start:1.5em;padding-inline-end:0}ul,menu{list-style-type:disc}ol{list-style-type:decimal}li ul,li menu{list-style-type:circle}li ul,li ol,li menu,li dl{margin:0}dt{font-weight:600}dd{margin:0 0 0 1.5em;margin-inline-start:1.5em;margin-inline-end:0}table{border-collapse:collapse;border-spacing:0}caption{padding:0 0 .3em;color:var(--tg-theme-hint-color);font-size:.87em;text-align:left;text-align:start}th,td{padding:.3em .6em;border-bottom:1px solid var(--tg-theme-section-separator-color);text-align:left;text-align:start;vertical-align:top}th{font-weight:600}th:last-child,td:last-child{padding-right:0;padding-inline-end:0;padding-inline-start:.6em}th:first-child,td:first-child{padding-left:0;padding-inline-start:0;padding-inline-end:.6em}hr{height:0;margin:.6em 0;border:0;border-top:1px solid var(--tg-theme-section-separator-color)}pre,code,kbd,samp{font-family:ui-monospace,monospace;font-size:.9em}pre code,pre kbd,pre samp{font-size:1em}pre{padding:.5em .7em;border-radius:6px;background:rgba(128,128,128,.12);white-space:pre-wrap}blockquote{padding:0 0 0 .75em;padding-inline-start:.75em;padding-inline-end:0;border-left:3px solid var(--tg-theme-accent-text-color);border-inline-start:3px solid var(--tg-theme-accent-text-color);border-inline-end:0}figcaption{margin:.3em 0 0;color:var(--tg-theme-hint-color);font-size:.87em}img{max-width:100%}a[href]{color:var(--tg-theme-link-color);text-decoration:none}b,strong{font-weight:600}i,em,cite,dfn,var{font-style:italic}small{font-size:.85em}sub,sup{position:relative;font-size:.75em;line-height:0;vertical-align:baseline}sup{top:-.5em}sub{bottom:-.25em}mark{background:rgba(255,204,0,.4);color:inherit}body>:first-child{margin-top:0}body>:last-child{margin-bottom:0}button{appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}button:not([disabled]):active{opacity:var(--tg-button-pressed-opacity,.7)}button[disabled]{opacity:var(--tg-button-disabled-opacity,.5);cursor:default}}";

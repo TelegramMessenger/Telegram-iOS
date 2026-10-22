@@ -18,16 +18,21 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     /// Overrides every post's size anchors.
     public var anchors: (width: Int32, height: Int32)?
     public var useDarkTheme: Bool = false
+    /// The posts arrive from the other side of the chat (incoming bubbles) instead of being the account's own.
+    public var incoming: Bool = false
+    /// Each widget message carries its caption (the post's text); off, the widget is alone in its bubble.
+    public var captions: Bool = true
 
     public init() {}
 
     public static func ==(lhs: WidgetHarnessLaunchOptions, rhs: WidgetHarnessLaunchOptions) -> Bool {
         return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.widgetMessages == rhs.widgetMessages
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
+            && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions
     }
 
     /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-flag on|off`,
-    /// `-widget-anchors <W>x<H>`, `-harness-theme dark`.
+    /// `-widget-anchors <W>x<H>`, `-widget-caption off`, `-harness-theme dark`, `-harness-side incoming`.
     public static func parse(_ arguments: [String]) -> WidgetHarnessLaunchOptions {
         func value(_ key: String) -> String? {
             guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else {
@@ -50,6 +55,8 @@ public struct WidgetHarnessLaunchOptions: Equatable {
             }
         }
         options.useDarkTheme = value("-harness-theme") == "dark"
+        options.incoming = value("-harness-side") == "incoming"
+        options.captions = value("-widget-caption") != "off"
         return options
     }
 }

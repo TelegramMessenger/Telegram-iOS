@@ -16,12 +16,16 @@ public struct ConformanceBaseline: Codable, Equatable {
         self.runs = runs
     }
 
-    /// The run's statuses, judged as report.mjs judges them: what it published, `missing` for every check the manifest
+    /// The run's statuses, judged as report.mjs judges them (a load-only run: whether it loaded): what it published, `missing` for every check the manifest
     /// expects that it did not, `skip` for every check an action the runner could not perform feeds (the action's `ids`),
     /// `fail` for every check a run that did not load or was stopped published (`harness` checks aside), and the
     /// manifest's host checks (`"host · <id> · <name>"`) from what the host saw.
     public static func statuses(of run: ConformanceRun, test: ConformanceTest) -> [String: String] {
         let failed = !run.loaded || run.dead != nil
+        // A visual widget, run to see that it loads.
+        if test.loadOnly {
+            return ["load · loads": failed ? "fail" : "pass"]
+        }
         var skipped = Set<String>()
         for index in run.skippedActions where index < test.actions.count {
             for id in (test.actions[index]["ids"] as? [String]) ?? [] {
@@ -79,13 +83,21 @@ public struct ConformanceBaseline: Codable, Equatable {
         return ConformanceBaseline(runs: runs)
     }
 
-    /// Against `current`: regressions (passing here, not there; a run or check gone counts as `missing`) and
-    /// improvements (passing there, not here), each `"<run> <check>: <was> → <is>"`, sorted.
-    public func compare(_ current: ConformanceBaseline) -> (regressions: [String], improvements: [String]) {
+    /// Against `current`: regressions (passing here, not there; a run gone counts as `missing`), improvements (passing
+    /// there, not here), each `"<run> <check>: <was> → <is>"`, and the retired checks (`"<run> <check>"`): a recorded
+    /// check of a run `current` has that `current` does not list at all. `statuses` lists every check the manifest
+    /// expects (`missing` at worst), so such a check is one the manifest no longer has (an upstream tag renamed or removed
+    /// it), not one the widget stopped publishing. All sorted.
+    public func compare(_ current: ConformanceBaseline) -> (regressions: [String], improvements: [String], retired: [String]) {
         var regressions: [String] = []
         var improvements: [String] = []
+        var retired: [String] = []
         for (run, checks) in self.runs {
             for (check, was) in checks where ConformanceBaseline.passing.contains(was) {
+                if let now = current.runs[run], now[check] == nil {
+                    retired.append("\(run) \(check)")
+                    continue
+                }
                 let now = current.runs[run]?[check] ?? ConformanceBaseline.missing
                 if !ConformanceBaseline.passing.contains(now) {
                     regressions.append("\(run) \(check): \(was) → \(now)")
@@ -100,7 +112,7 @@ public struct ConformanceBaseline: Codable, Equatable {
                 }
             }
         }
-        return (regressions.sorted(), improvements.sorted())
+        return (regressions.sorted(), improvements.sorted(), retired.sorted())
     }
 
     /// Counts per status over every run, for the ledger and the test's print-out.

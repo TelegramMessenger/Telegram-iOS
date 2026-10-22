@@ -51,6 +51,9 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;
 @property (nonatomic, readonly) CGSize size;
+/// The canvas's colour (CSS 2.1 §14.2: the root's background colour, or the body's it propagates) as 0xRRGGBBAA; 0 when
+/// neither sets one. The tree paints it over the document only; a host view taller than the document paints it below.
+@property (nonatomic, readonly) uint32_t canvasColor;
 /// The tree's `rect` (CSS px) painted at `scale`: a premultiplied BGRA image of ceil(size × scale) pixels, at most
 /// 4096 a side; nil past that or for an empty rect.
 - (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale CF_RETURNS_RETAINED;
@@ -64,13 +67,16 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
                                   dark:(BOOL)dark
                                  scale:(CGFloat)scale
                               delegate:(id<WRSessionDelegate>)delegate;
-/// The same, with the chat's palette (SDK v1 §2.3: theme key → #rrggbb; unknown keys and other values are dropped) and
+/// The same, with the chat's palette (SDK v1 §2.3: theme key → #rrggbb; unknown keys and other values are dropped),
 /// the client's button tokens (§2.4: `bg`, `text`, `radius`, `font`, `padding`, `height` as strings, `pressedOpacity`,
-/// `disabledOpacity` as numbers; each checked against its grammar), in the first build already.
+/// `disabledOpacity` as numbers) and its text tokens (§2.4: `fontSize` and `lineHeight` as numbers, `padding` as a
+/// string; a missing or refused one is the reference value), each checked against its grammar, in the first build
+/// already.
 - (nullable instancetype)initWithWidth:(CGFloat)width
                                   dark:(BOOL)dark
                            themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
                           buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens
+                            textTokens:(NSDictionary<NSString *, id> *)textTokens
                                  scale:(CGFloat)scale
                               delegate:(id<WRSessionDelegate>)delegate;
 - (instancetype)init NS_UNAVAILABLE;
@@ -97,10 +103,12 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 /// A width or theme change rebuilds and flushes now; a theme change also queues the TelegramWidget.onTheme callbacks.
 - (void)setWidth:(CGFloat)width;
 - (void)setDark:(BOOL)dark;
-/// The scheme, the palette and the button tokens at once: one theme change (one themeChanged) when anything differs.
+/// The scheme, the palette, the button and the text tokens at once: one theme change (one themeChanged) when anything
+/// differs, a text-size change alone included.
 - (void)setDark:(BOOL)dark
      themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
-    buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens;
+    buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens
+      textTokens:(NSDictionary<NSString *, id> *)textTokens;
 /// SDK v1 §3.1: the stored areas, as [key, value] pairs in order, read once at the widget's first touch of each area.
 /// Set it before the boot.
 - (void)setStoragePreloadLocal:(NSArray<NSArray<NSString *> *> *)local session:(NSArray<NSArray<NSString *> *> *)session;

@@ -120,12 +120,25 @@ namespace litehtml
         bool              m_center_content = false;
         css_length        m_letter_spacing;
         std::string       m_font_variant_numeric; // Telegram: inherited like font-variant; see compute_font
+        // Telegram (VENDOR.md edit 32): inherited, each.
+        std::string       m_font_feature_settings;
+        css_length        m_word_spacing;
+        int               m_word_break = 0;
+        // Telegram (VENDOR.md edit 46): inherited.
+        int               m_direction = 0;
+        std::string       m_quotes;
         box_shadow_vector m_text_shadows;
         box_shadow_vector m_box_shadows;
         filter_vector     m_filter;
         filter_vector     m_backdrop_filter;
         clip_path_shape   m_clip_path;
         transform_vector  m_transform;
+        size_t            m_transform_individual = 0; // Telegram (VENDOR.md edit 34)
+        // Telegram (VENDOR.md edit 37): not inherited.
+        int               m_object_fit = 0;
+        int               m_text_overflow = 0; // Telegram (VENDOR.md edit 40): not inherited
+        css_length        m_object_position_x = css_length(50, css_units_percentage);
+        css_length        m_object_position_y = css_length(50, css_units_percentage);
         css_length        m_transform_origin_x = css_length(50, css_units_percentage);
         css_length        m_transform_origin_y = css_length(50, css_units_percentage);
         int               m_backface_hidden    = 0;
@@ -322,12 +335,26 @@ namespace litehtml
             m_flex_align_items     = align;
         }
         pixel_t                  get_letter_spacing() const { return pixel_t(m_letter_spacing.val()); }
+        // Telegram (VENDOR.md edit 32).
+        pixel_t                  get_word_spacing() const { return pixel_t(m_word_spacing.val()); }
+        word_break               get_word_break() const { return static_cast<word_break>(m_word_break); }
+        // Telegram (VENDOR.md edit 46).
+        direction                get_direction() const { return static_cast<direction>(m_direction); }
+        const std::string&       get_quotes() const { return m_quotes; }
         const box_shadow_vector& get_box_shadows() const { return m_box_shadows; }
         const filter_vector&     get_filter() const { return m_filter; }
         const filter_vector&     get_backdrop_filter() const { return m_backdrop_filter; }
         const box_shadow_vector& get_text_shadows() const { return m_text_shadows; }
         const clip_path_shape& get_clip_path() const { return m_clip_path; }
         const transform_vector&  get_transform() const { return m_transform; }
+        // Telegram (VENDOR.md edit 34): how many of get_transform()'s functions the translate, rotate and scale
+        // properties put before the transform property's own.
+        size_t                   get_transform_individual_count() const { return m_transform_individual; }
+        // Telegram (VENDOR.md edit 37).
+        object_fit               get_object_fit() const { return static_cast<object_fit>(m_object_fit); }
+        text_overflow            get_text_overflow() const { return static_cast<text_overflow>(m_text_overflow); }
+        const css_length&        get_object_position_x() const { return m_object_position_x; }
+        const css_length&        get_object_position_y() const { return m_object_position_y; }
         const css_length&        get_transform_origin_x() const { return m_transform_origin_x; }
         const css_length&        get_transform_origin_y() const { return m_transform_origin_y; }
         bool                     get_backface_hidden() const { return m_backface_hidden != 0; }

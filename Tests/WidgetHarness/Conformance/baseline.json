@@ -7,23 +7,23 @@
       "html.el.inline-text · code, kbd, samp are monospace" : "pass",
       "html.el.inline-text · i, em, cite, dfn, var are italic" : "pass",
       "html.el.inline-text · mark has a highlight" : "pass",
-      "html.el.inline-text · q adds quotation marks" : "fail",
+      "html.el.inline-text · q adds quotation marks" : "pass",
       "html.el.inline-text · small is smaller" : "pass",
       "html.el.inline-text · u, ins underline; s, del strike" : "pass",
       "html.el.sections · address is italic" : "pass",
       "html.el.sections · sectioning elements are blocks" : "pass",
       "html.el.structure · br starts a new line" : "pass",
       "html.el.structure · hr draws a rule" : "pass",
-      "html.el.structure · p has 1em block margins" : "fail",
+      "html.el.structure · p has 1em block margins" : "pass",
       "html.el.structure · wbr is a break opportunity" : "pass"
     },
     "auto\/01-html-elements-b\/light" : {
-      "html.el.blockquote · blockquote is indented 40px" : "pass",
-      "html.el.blockquote · figure is indented 40px" : "pass",
-      "html.el.lists · dd is indented 40px" : "pass",
+      "html.el.blockquote · blockquote is set off by the UA layer: a 3px bar and 0.75em before the text" : "pass",
+      "html.el.blockquote · figure has no indent" : "pass",
+      "html.el.lists · dd is indented 1.5em" : "pass",
       "html.el.lists · menu is a padded list" : "pass",
       "html.el.lists · ol items are numbered" : "pass",
-      "html.el.lists · ul is padded 40px" : "pass",
+      "html.el.lists · ul is padded 1.5em" : "pass",
       "html.el.lists · ul items have discs" : "pass",
       "html.el.pre · pre is monospace" : "pass",
       "html.el.pre · pre keeps the line break" : "pass",
@@ -33,17 +33,17 @@
       "html.el.table · cells sit side by side" : "pass",
       "html.el.table · colspan=2 spans both columns" : "pass",
       "html.el.table · rowspan=2 spans two rows" : "pass",
-      "html.el.table · th is bold and centred" : "pass"
+      "html.el.table · th is bold and start-aligned" : "pass"
     },
     "auto\/01-html-elements-c\/light" : {
       "html.el.a-external · an external href never reaches the renderer (a[href^=https] does not match)" : "pass",
-      "html.el.a-external · it is still drawn as a link" : "fail",
-      "html.el.a-fragment · a[href=#…] is a link (UA link colour, underline)" : "fail",
+      "html.el.a-external · it is still drawn as a link (not the text colour, no underline)" : "pass",
+      "html.el.a-fragment · a[href=#…] is a link (the link colour, no underline)" : "pass",
       "html.el.button · button has a box with padding" : "pass",
       "html.el.button · button has a visible background or border" : "pass",
       "html.el.details · closed details is only as tall as its summary" : "pass",
       "html.el.details · open details shows its content" : "pass",
-      "html.el.details · summary is a list item (disclosure marker)" : "fail",
+      "html.el.details · summary is a list item (disclosure marker)" : "pass",
       "html.el.legacy · big becomes a span: normal size" : "pass",
       "html.el.legacy · center becomes a div: no centring" : "pass",
       "html.el.legacy · font becomes a span: color=red is dropped" : "pass",
@@ -61,13 +61,13 @@
       "html.attr.contenteditable · contenteditable does not reach the renderer" : "pass",
       "html.attr.data-aria · aria-* reaches attribute selectors" : "pass",
       "html.attr.data-aria · data-* reaches attribute selectors" : "pass",
-      "html.attr.dir · dir=auto with Hebrew text resolves to rtl" : "fail",
-      "html.attr.dir · dir=rtl lays out inline boxes right to left" : "fail",
-      "html.attr.dir · dir=rtl sets direction" : "fail",
+      "html.attr.dir · dir=auto with Hebrew text resolves to rtl" : "pass",
+      "html.attr.dir · dir=rtl lays out inline boxes right to left" : "pass",
+      "html.attr.dir · dir=rtl sets direction" : "pass",
       "html.attr.draggable · draggable does not reach the renderer" : "pass",
       "html.attr.event-handlers · an inline onclick handler runs" : "pass",
       "html.attr.global · hidden hides" : "pass",
-      "html.attr.global · lang reaches the renderer (:lang(ru))" : "fail",
+      "html.attr.global · lang reaches the renderer (:lang(ru))" : "pass",
       "html.attr.global · style attribute applies" : "pass",
       "html.attr.legacy-presentational · align is dropped: no centring" : "pass",
       "html.attr.legacy-presentational · bgcolor is dropped" : "pass",
@@ -112,14 +112,14 @@
       "css.box.float · float:right sits at the right edge" : "pass",
       "css.box.logical · inline-size is dropped: the block keeps its full width" : "pass",
       "css.box.logical · margin-inline-start is dropped (profile 1: out)" : "pass",
-      "css.box.logical · margin-inline-start is dropped in RTL too" : "fail",
+      "css.box.logical · margin-inline-start is dropped in RTL too" : "pass",
       "css.box.logical · padding-block is dropped" : "pass",
       "css.box.outline · computed outline is 4px solid" : "pass",
       "css.box.outline · outline does not change the box" : "pass",
       "css.box.size · max-width caps width" : "pass",
       "css.box.size · min-width wins over width" : "pass",
       "css.box.size · width: 50%" : "pass",
-      "css.box.size · width: fit-content shrinks to the text" : "fail",
+      "css.box.size · width: fit-content shrinks to the text" : "pass",
       "css.box.sizing · border-box keeps the declared width" : "pass",
       "css.box.sizing · content-box adds the padding" : "pass",
       "css.box.spacing · margin-left offsets the box" : "pass",
@@ -130,7 +130,7 @@
     "auto\/03-layout-c\/light" : {
       "css.display.other · display: contents is dropped: the span stays one flex item" : "pass",
       "css.display.other · display: flow-root is dropped: the float is not contained (profile 1: out)" : "pass",
-      "css.display.table · table cells side by side, the second takes the rest" : "fail",
+      "css.display.table · table cells side by side, the second takes the rest" : "pass",
       "css.opacity · computed opacity" : "pass",
       "css.overflow.clip · overflow: clip is computed" : "pass",
       "css.overflow.clip · overflow: hidden clips hit testing" : "pass",
@@ -150,7 +150,7 @@
       "css.value.content · ::before content takes space" : "pass",
       "css.value.content · content: attr(data-label)" : "pass",
       "css.value.content · counters: counter-reset \/ increment \/ counter()" : "pass",
-      "css.value.content · quotes" : "fail",
+      "css.value.content · quotes" : "pass",
       "css.value.custom-properties · custom properties inherit" : "pass",
       "css.value.custom-properties · getPropertyValue reads a custom property" : "pass",
       "css.value.custom-properties · style.setProperty(--x) from script" : "pass",
@@ -158,15 +158,15 @@
       "css.value.custom-properties · var() from :root" : "pass",
       "css.value.env · env() resolves to its fallback or is dropped" : "pass",
       "css.value.keywords · !important beats the style attribute" : "pass",
-      "css.value.keywords · color: unset inherits" : "fail",
-      "css.value.keywords · display: initial is inline" : "fail",
-      "css.value.keywords · display: revert is the UA block" : "fail",
+      "css.value.keywords · color: unset inherits" : "pass",
+      "css.value.keywords · display: initial is inline" : "pass",
+      "css.value.keywords · display: revert is the UA block" : "pass",
       "css.value.keywords · width: inherit" : "pass",
       "css.value.math · calc() with var()" : "pass",
-      "css.value.math · calc(50% - 10px)" : "fail",
-      "css.value.math · clamp(20px, 50%, 60px)" : "fail",
-      "css.value.math · max(10px, 20%)" : "fail",
-      "css.value.math · min(50px, 30%)" : "fail",
+      "css.value.math · calc(50% - 10px)" : "pass",
+      "css.value.math · clamp(20px, 50%, 60px)" : "pass",
+      "css.value.math · max(10px, 20%)" : "pass",
+      "css.value.math · min(50px, 30%)" : "pass",
       "css.value.units · %" : "pass",
       "css.value.units · ch is the width of \"0\"" : "pass",
       "css.value.units · cm (2.54cm = 96px)" : "pass",
@@ -184,7 +184,7 @@
       "css.color.basic · #rgba hex" : "pass",
       "css.color.basic · currentColor" : "pass",
       "css.color.basic · hsl()" : "pass",
-      "css.color.basic · named colour" : "fail",
+      "css.color.basic · named colour" : "pass",
       "css.color.basic · transparent" : "pass",
       "css.color.light-dark · light-dark() picks the chat theme" : "pass",
       "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
@@ -193,16 +193,16 @@
       "css.color.basic · #rgba hex" : "pass",
       "css.color.basic · currentColor" : "pass",
       "css.color.basic · hsl()" : "pass",
-      "css.color.basic · named colour" : "fail",
+      "css.color.basic · named colour" : "pass",
       "css.color.basic · transparent" : "pass",
       "css.color.light-dark · light-dark() picks the chat theme" : "pass",
       "css.color.mix · color-mix() is dropped: no background (profile 1: out)" : "pass"
     },
     "auto\/05-colour-backgrounds-b\/light" : {
-      "css.background.basic · background-image keeps the data: image" : "fail",
-      "css.background.basic · background-position" : "fail",
-      "css.background.basic · background-repeat" : "fail",
-      "css.background.basic · background-size" : "fail",
+      "css.background.basic · background-image keeps the data: image" : "pass",
+      "css.background.basic · background-position" : "pass",
+      "css.background.basic · background-repeat" : "pass",
+      "css.background.basic · background-size" : "pass",
       "css.url.remote · a remote url() never reaches the renderer" : "pass"
     },
     "auto\/06-text-fonts-a\/light" : {
@@ -221,12 +221,12 @@
       "css.font.ui-families · the validator adds a generic fallback (ui-monospace → …, monospace)" : "pass",
       "css.font.ui-families · ui-monospace: i and M have the same advance" : "pass",
       "css.font.ui-families · ui-rounded with a fallback renders" : "pass",
-      "css.font.variant-numeric · font-feature-settings \"tnum\"" : "fail",
+      "css.font.variant-numeric · font-feature-settings \"tnum\"" : "pass",
       "css.font.variant-numeric · tabular-nums: 1111 as wide as 0000" : "pass"
     },
     "auto\/06-text-fonts-b\/light" : {
       "css.text.align · text-align: center" : "pass",
-      "css.text.align · text-align: end in RTL is the left edge" : "fail",
+      "css.text.align · text-align: end in RTL is the left edge" : "pass",
       "css.text.align · text-align: right" : "pass",
       "css.text.align · text-indent" : "pass",
       "css.text.decoration · text-decoration: underline" : "pass",
@@ -235,14 +235,14 @@
       "css.text.list-style · list-style-type: none" : "pass",
       "css.text.transform · letter-spacing: 5px adds 5px per letter" : "pass",
       "css.text.transform · text-transform: uppercase widens" : "pass",
-      "css.text.transform · word-spacing: 10px adds 10px per space" : "fail",
+      "css.text.transform · word-spacing: 10px adds 10px per space" : "pass",
       "css.text.vertical-align · vertical-align top and bottom" : "pass",
       "css.text.white-space · nowrap keeps one line" : "pass",
       "css.text.white-space · pre keeps the newline" : "pass",
       "css.text.white-space · pre-line keeps the newline, collapses the spaces" : "pass",
       "css.text.white-space · pre-wrap keeps the spaces" : "pass",
       "css.text.wrap · overflow-wrap: anywhere breaks a long word" : "pass",
-      "css.text.wrap · word-break: break-all breaks a long word" : "fail",
+      "css.text.wrap · word-break: break-all breaks a long word" : "pass",
       "css.text.writing-mode · writing-mode is neutralised (text stays horizontal)" : "pass"
     },
     "auto\/06-text-fonts-c\/light" : {
@@ -250,8 +250,10 @@
       "css.text.emoji · emoji glyph has an advance" : "pass",
       "css.text.emoji · flag sequence is one glyph" : "pass",
       "css.text.rtl · Arabic lam-alef is shaped (ligature narrower than its letters)" : "pass",
-      "css.text.rtl · Hebrew in dir=rtl starts at the right edge" : "fail",
-      "css.text.selection · user-select: text cannot re-enable selection" : "fail"
+      "css.text.rtl · Hebrew in dir=rtl starts at the right edge" : "pass",
+      "css.text.selection · a child of user-select: text is selectable too (auto or text)" : "pass",
+      "css.text.selection · not selectable by default (none on the root); user-select: text enables it" : "pass",
+      "css.text.selection · user-select: all is outside the profile (dropped)" : "pass"
     },
     "auto\/07-selectors-a\/light" : {
       "sel.basic · [attr$=v]" : "pass",
@@ -286,7 +288,7 @@
       "sel.is-where · :where() has zero specificity" : "pass",
       "sel.is-where · :where() matches" : "pass",
       "sel.root · :root custom property reaches descendants" : "pass",
-      "sel.structural · :empty" : "fail",
+      "sel.structural · :empty" : "pass",
       "sel.structural · :first-child, :nth-child(3), :nth-last-child(2), :last-child" : "pass",
       "sel.structural · :first-of-type, :nth-of-type(2), :last-of-type" : "pass",
       "sel.structural · :not(:empty)" : "pass",
@@ -346,17 +348,17 @@
       "at.supports · @supports with and\/not follows the profile" : "pass"
     },
     "auto\/09-transforms-effects-a\/light" : {
-      "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "fail",
-      "css.transform.2d · rotate(90deg) swaps the bounding box" : "fail",
-      "css.transform.2d · scale(2) with transform-origin 0 0" : "fail",
-      "css.transform.2d · the translate property" : "fail",
-      "css.transform.2d · translateX(30px) moves the box" : "fail",
+      "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "pass",
+      "css.transform.2d · rotate(90deg) swaps the bounding box" : "pass",
+      "css.transform.2d · scale(2) with transform-origin 0 0" : "pass",
+      "css.transform.2d · the translate property" : "pass",
+      "css.transform.2d · translateX(30px) moves the box" : "pass",
       "css.transform.3d · rotateY(60deg) is dropped: the box keeps its width" : "pass"
     },
     "auto\/09-transforms-effects-b\/light" : {
       "css.cursor · cursor reaches the renderer" : "pass",
       "css.pointer-events · pointer-events: none lets hits through" : "pass",
-      "css.touch-action · touch-action reaches the renderer" : "fail"
+      "css.touch-action · touch-action reaches the renderer" : "pass"
     },
     "auto\/10-css-animations\/light" : {
       "anim.easing · ease-in at 50% lags behind linear" : "pass",
@@ -403,7 +405,7 @@
       "canvas.draw-image · drawImage of a loaded <img>" : "pass"
     },
     "auto\/13-svg-a\/light" : {
-      "svg.css · a stylesheet fill reaches SVG (computed fill)" : "fail",
+      "svg.css · a stylesheet fill reaches SVG (computed fill)" : "pass",
       "svg.shapes · getBBox() of a rect" : "pass",
       "svg.shapes · getTotalLength() of a path" : "pass",
       "svg.structure · viewBox scales content (10 user units → 20px)" : "pass",
@@ -557,7 +559,7 @@
     },
     "auto\/17-drag-hover\/light" : {
       "css.pointer-events · a tap through a pointer-events: none overlay hits the button below" : "pass",
-      "input.drag · movementX adds up to the distance" : "fail",
+      "input.drag · movementX adds up to the distance" : "pass",
       "input.drag · pointerdown → pointermove (buttons=1) → pointerup moves the knob" : "pass",
       "input.drag · setPointerCapture keeps moves coming past the element" : "pass",
       "input.hover-events · pointerenter, pointerover, mouseenter reach the widget" : "skip",
@@ -586,13 +588,13 @@
       "sel.form-state · :checked does not match (the control is gone)" : "pass"
     },
     "auto\/19-limits\/light" : {
-      "behaviour.policy-strict · a 300 KB data-* attribute does not reach the renderer" : "fail",
+      "behaviour.policy-strict · a 300 KB data-* attribute does not reach the renderer" : "pass",
       "behaviour.policy-strict · attr() of a non-text attribute (class) is dropped" : "pass",
       "behaviour.policy-strict · attr() of a text attribute (data-*) works" : "pass",
       "limit.text-budget · 3000 CJK characters render" : "pass",
-      "limit.text-budget · past 8192 complex-script units in the document the text is refused" : "fail",
+      "limit.text-budget · past 8192 complex-script units in the document the text is refused" : "pass",
       "limit.text-node · a 60 KB text node renders" : "pass",
-      "limit.text-node · a text node over 64 KB is refused" : "fail",
+      "limit.text-node · a text node over 64 KB is refused" : "pass",
       "limit.timers · the 257th live timer throws RangeError" : "pass"
     },
     "auto\/20-client-behaviour\/light" : {
@@ -612,6 +614,148 @@
       "input.key-activation · Enter and Space add no clicks to a tapped button or link (one click each)" : "skip",
       "input.keyboard · no keydown, keyup, keypress, beforeinput or input event reaches the widget" : "skip",
       "js.focus · focus() does not make :focus match in the renderer" : "pass"
+    },
+    "auto\/22-ua-defaults\/light" : {
+      "html.el.blockquote · blockquote: 3px bar, 0.75em padding; no indent, as figure" : "pass",
+      "html.el.headings · h1–h6: 1.6, 1.35, 1.2, 1.07, 1, 0.87 em" : "pass",
+      "html.el.headings · headings: 600, line height 1.25; h2 0.75em above, 0.35em below" : "pass",
+      "html.el.inline-text · small 0.85em; b 600; code monospace 0.9em" : "pass",
+      "html.el.lists · dt 600; dd indented 1.5em" : "pass",
+      "html.el.lists · ul: 1.5em start padding, disc; nested: circle, no margin; ol: decimal" : "pass",
+      "html.el.pre · pre: wraps, monospace 0.9em, code inside keeps the size" : "pass",
+      "html.el.structure · author rules win over the layer" : "pass",
+      "html.el.structure · body: the padding token as margin, no padding" : "pass",
+      "html.el.structure · p: 0.6em margins; hr: one 1px line, no height" : "pass",
+      "html.el.structure · root: the text tokens, system-ui" : "pass",
+      "html.el.sub-sup · sup: 0.75em on the baseline, raised by position" : "pass",
+      "html.el.table · cells: 1px line under, 0.3em above, no outer padding at the ends" : "pass",
+      "html.el.table · table: collapsed, cells touch; th 600, start-aligned" : "pass",
+      "tw.theme-params · a[href]: link colour, no underline; <a> without href: text colour" : "pass",
+      "tw.theme-params · figcaption is --tg-theme-hint-color" : "pass",
+      "tw.theme-params · root: no background (the bubble is the canvas), the text colour" : "pass"
+    },
+    "visual\/01-boxes\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/02-colours-gradients\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/03-text-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/03-text-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/04-layout\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/05-transforms-effects-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/05-transforms-effects-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/06-css-animations\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/07-web-animations\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/08-canvas-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/08-canvas-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/09-svg-a\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/09-svg-b\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/10-images\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/11-interaction\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/12-theme\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/12-theme\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/13-out-of-profile\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/14-unstyled-document\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/14-unstyled-document\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/15-body-background\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/15-body-background\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/16-selection\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/01-link-external\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/02-link-telegram\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/03-link-rejected\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/04-link-timer\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/05-haptics\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/06-haptics-rate\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/07-storage-recreate\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/08-storage-restart\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/09-storage-delete\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/10-storage-quota\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/11-crash-restart\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/12-drag-gestures\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/13-max-height\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/14-theme-palette\/dark" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/14-theme-palette\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/15-storage-forward\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/16-bot-edit\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/17-size-hint\/light" : {
+      "load · loads" : "pass"
     }
   }
 }

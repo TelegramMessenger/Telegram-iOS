@@ -2,6 +2,7 @@
 #define LITEHTML_CSS_LENGTH_H
 
 #include <string>
+#include "calc_node.h"
 #include "css_tokenizer.h"
 #include "css_values.h"
 #include "pixel_type.h"
@@ -23,16 +24,51 @@ namespace litehtml
     // https://developer.mozilla.org/en-US/docs/Web/CSS/length
     class css_length
     {
+#if 0
         union {
             float m_value = 0;
             int   m_predef;
         };
         css_units m_units         = css_units_none;
         bool      m_is_predefined = false;
+#else
+        // Telegram (VENDOR.md edit 48): a math function mixing a percentage with a length (or a font-relative term,
+        // until computed) keeps its tree, one counted reference held in the union while m_is_calc is set.
+        union {
+            float            m_value = 0;
+            int              m_predef;
+            const calc_node* m_calc;
+        };
+        css_units m_units         = css_units_none;
+        bool      m_is_predefined = false;
+        bool      m_is_calc       = false;
+
+        void clear_calc()
+        {
+            if(m_is_calc)
+            {
+                calc_ref::drop(m_calc);
+                m_is_calc = false;
+                m_value   = 0;
+            }
+        }
+#endif
 
       public:
         css_length() = default;
         css_length(float val, css_units units = css_units_px);
+        // Telegram (VENDOR.md edit 48).
+        css_length(const css_length& other);
+        css_length(css_length&& other) noexcept;
+        css_length& operator=(const css_length& other);
+        css_length& operator=(css_length&& other) noexcept;
+        ~css_length() { clear_calc(); }
+        bool              is_calc() const { return m_is_calc; }
+        // The tree of a calc length (a new reference), null otherwise.
+        calc_ref          calc() const { return m_is_calc ? calc_ref(m_calc) : calc_ref(); }
+        void              set_calc(calc_ref node);
+        // A calc's value at a percentage base, font-relative terms (left before compute) by `fonts`.
+        pixel_t           calc_value(pixel_t percent_base, const calc_fonts& fonts) const;
         css_length& operator=(float val);
 
         bool              is_predefined() const;
@@ -55,8 +91,95 @@ namespace litehtml
     {
     }
 
+    inline css_length::css_length(const css_length& other) :
+        m_units(other.m_units),
+        m_is_predefined(other.m_is_predefined),
+        m_is_calc(other.m_is_calc)
+    {
+        if(m_is_calc)
+        {
+            m_calc = other.m_calc;
+            calc_ref::retain(m_calc);
+        } else
+        {
+            m_value = other.m_value; // also m_predef: the union's bits copied
+        }
+    }
+
+    inline css_length::css_length(css_length&& other) noexcept :
+        m_units(other.m_units),
+        m_is_predefined(other.m_is_predefined),
+        m_is_calc(other.m_is_calc)
+    {
+        if(m_is_calc)
+        {
+            m_calc          = other.m_calc;
+            other.m_is_calc = false;
+            other.m_value   = 0;
+        } else
+        {
+            m_value = other.m_value;
+        }
+    }
+
+    inline css_length& css_length::operator=(const css_length& other)
+    {
+        if(this != &other)
+        {
+            if(other.m_is_calc)
+                calc_ref::retain(other.m_calc);
+            clear_calc();
+            m_units         = other.m_units;
+            m_is_predefined = other.m_is_predefined;
+            m_is_calc       = other.m_is_calc;
+            if(m_is_calc)
+                m_calc = other.m_calc;
+            else
+                m_value = other.m_value;
+        }
+        return *this;
+    }
+
+    inline css_length& css_length::operator=(css_length&& other) noexcept
+    {
+        if(this != &other)
+        {
+            clear_calc();
+            m_units         = other.m_units;
+            m_is_predefined = other.m_is_predefined;
+            m_is_calc       = other.m_is_calc;
+            if(m_is_calc)
+            {
+                m_calc          = other.m_calc;
+                other.m_is_calc = false;
+                other.m_value   = 0;
+            } else
+            {
+                m_value = other.m_value;
+            }
+        }
+        return *this;
+    }
+
+    inline void css_length::set_calc(calc_ref node)
+    {
+        clear_calc();
+        if(!node)
+            return;
+        m_is_predefined = false;
+        m_is_calc       = true;
+        m_calc          = node.release();
+        m_units         = m_calc->has_percent() ? css_units_percentage : css_units_px;
+    }
+
+    inline pixel_t css_length::calc_value(pixel_t percent_base, const calc_fonts& fonts) const
+    {
+        return m_is_calc ? pixel_t(float(m_calc->eval(double(percent_base), fonts))) : 0_px;
+    }
+
     inline css_length& css_length::operator=(float val)
     {
+        clear_calc();
         m_value         = val;
         m_units         = css_units_px;
         m_is_predefined = false;
@@ -70,6 +193,7 @@ namespace litehtml
 
     inline void css_length::predef(int val)
     {
+        clear_calc();
         m_predef        = val;
         m_is_predefined = true;
     }
@@ -85,6 +209,7 @@ namespace litehtml
 
     inline void css_length::set_value(float val, css_units units)
     {
+        clear_calc();
         m_value         = val;
         m_is_predefined = false;
         m_units         = units;
@@ -92,6 +217,11 @@ namespace litehtml
 
     inline float css_length::val() const
     {
+        // Telegram (VENDOR.md edit 48): a calc's value with every percentage at 0 (calc_percent resolves it).
+        if(m_is_calc)
+        {
+            return float(m_calc->eval(0, calc_fonts()));
+        }
         if(!m_is_predefined)
         {
             return m_value;
@@ -106,6 +236,11 @@ namespace litehtml
 
     inline pixel_t css_length::calc_percent(pixel_t width) const
     {
+        // Telegram (VENDOR.md edit 48).
+        if(m_is_calc)
+        {
+            return calc_value(width, calc_fonts());
+        }
         if(!is_predefined())
         {
             if(units() == css_units_percentage)

@@ -244,6 +244,11 @@ namespace litehtml
         return true;
     }
 
+    namespace
+    {
+        bool generated_content(const element& el); // Telegram (VENDOR.md edit 42): defined with the structure patches
+    }
+
     void document::commit_patch()
     {
         if(!m_patch_pending)
@@ -280,6 +285,35 @@ namespace litehtml
                 el->apply_stylesheet(m_styles);
             for(const auto& el : fresh)
                 el->apply_stylesheet(m_user_css);
+            // Telegram (VENDOR.md edit 42): the other element children of a parent a subject positional rule reaches,
+            // matched again now that their places are final.
+            std::vector<element::ptr> parents;
+            parents.swap(m_patch_position_parents);
+            for(const auto& parent : parents)
+            {
+                element::ptr top = parent;
+                while(top && top != m_root)
+                    top = top->parent();
+                if(top != m_root)
+                    continue;
+                for(const auto& child : parent->children())
+                {
+                    auto tag = std::dynamic_pointer_cast<html_tag>(child);
+                    if(!tag || child->is_text() || generated_content(*child) ||
+                       std::find(fresh.begin(), fresh.end(), child) != fresh.end())
+                        continue;
+                    for(const auto& inner : child->children())
+                    {
+                        if(inner->tag() == __tag_before_ || inner->tag() == __tag_after_)
+                            release_pieces(inner);
+                    }
+                    const string_map attrs = tag->attributes();
+                    apply_retag(child, attrs, false);
+                    tag->forget_flips();
+                    if(std::find(m_patch_restyle.begin(), m_patch_restyle.end(), child) == m_patch_restyle.end())
+                        m_patch_restyle.push_back(child);
+                }
+            }
         }
         // Telegram (VENDOR.md edit 17): the session's re-matched elements join the new pieces.
 #if 0
@@ -370,6 +404,7 @@ namespace litehtml
         m_patch_growth    = 0;
         m_patch_new_text.clear();
         m_patch_restyle.clear();
+        m_patch_position_parents.clear(); // Telegram (VENDOR.md edit 42)
     }
 
     // Keeps `root` alive until commit_patch and stops text_element_allowed from counting its pieces.
@@ -665,8 +700,15 @@ namespace litehtml
             return false;
         // Sibling and positional selectors and counters anywhere in the sheets, and the names in ancestor positions
         // (selector_scope fills m_left_*), are what an attribute can reach beyond the element.
+#if 0
         if(selector_scope() != 0)
             return false;
+#else
+        // Telegram (VENDOR.md edit 42): a positional pseudo-class reads an element's place, which no attribute changes,
+        // and :empty its children: only sibling combinators (and `of S`, bit 1) and counters (4) reach beyond it.
+        if((selector_scope() & 5) != 0)
+            return false;
+#endif
         for(auto p = el->parent(); p; p = p->parent())
         {
             if(p->tag() == _select_)
@@ -948,8 +990,16 @@ namespace litehtml
     bool document::can_insert_subtree(const element::ptr& parent, size_t index, const element::ptr& subtree,
                                       structure_growth* pending)
     {
+#if 0
         if(!subtree || !structure_parent_allowed(parent) || index > parent->children().size() || selector_scope() != 0)
             return false;
+#else
+        // Telegram (VENDOR.md edit 42): a rule positional in its subject alone does not refuse: commit_patch matches the
+        // parent's other children again where it reaches them.
+        if(!subtree || !structure_parent_allowed(parent) || index > parent->children().size() ||
+           (selector_scope() & ~16) != 0)
+            return false;
+#endif
         structure_growth growth = pending ? *pending : structure_growth();
         if(!structure_insertable(parent, {subtree}, growth))
             return false;
@@ -960,8 +1010,14 @@ namespace litehtml
 
     bool document::can_remove_subtree(const element::ptr& subtree, structure_growth* pending)
     {
+#if 0
         if(!m_finalized || !m_root || selector_scope() != 0)
             return false;
+#else
+        // Telegram (VENDOR.md edit 42): as can_insert_subtree.
+        if(!m_finalized || !m_root || (selector_scope() & ~16) != 0)
+            return false;
+#endif
         structure_growth growth = pending ? *pending : structure_growth();
         if(!structure_removable(subtree, growth))
             return false;
@@ -973,8 +1029,14 @@ namespace litehtml
     bool document::can_replace_children(const element::ptr& parent, const std::vector<element::ptr>& subtrees,
                                         structure_growth* pending)
     {
+#if 0
         if(!structure_parent_allowed(parent) || (selector_scope() & 4))
             return false;
+#else
+        // Telegram (VENDOR.md edit 31.5): nor with :empty (the parent's own match changes).
+        if(!structure_parent_allowed(parent) || (selector_scope() & 12))
+            return false;
+#endif
         structure_growth growth = pending ? *pending : structure_growth();
         for(const auto& child : parent->children())
         {
@@ -993,6 +1055,38 @@ namespace litehtml
         return (selector_scope() & 3) != 0;
     }
 
+    // Telegram (VENDOR.md edit 42).
+    bool document::structure_reaches_siblings(const element::ptr& parent)
+    {
+        return structure_reaches_siblings() || positions_reach(parent);
+    }
+
+    void document::note_position_parent(const element::ptr& parent)
+    {
+        if(parent && positions_reach(parent) &&
+           std::find(m_patch_position_parents.begin(), m_patch_position_parents.end(), parent) == m_patch_position_parents.end())
+            m_patch_position_parents.push_back(parent);
+    }
+
+    bool document::positions_reach(const element::ptr& parent)
+    {
+        if(!parent || (selector_scope() & 16) == 0)
+            return false;
+        for(const auto& rule : m_subject_positions)
+        {
+            if(rule.parent != star_id && rule.parent != parent->tag())
+                continue;
+            for(const auto& child : parent->children())
+            {
+                if(child->is_text() || generated_content(*child) || !std::dynamic_pointer_cast<html_tag>(child))
+                    continue;
+                if(rule.tag == star_id || child->tag() == rule.tag)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     bool document::insert_subtree(const element::ptr& parent, size_t index, const element::ptr& subtree)
     {
         if(!can_insert_subtree(parent, index, subtree))
@@ -1002,6 +1096,7 @@ namespace litehtml
         note_style_change();
         m_layout_before_valid = false;
         m_patch_keep_tree     = false;
+        note_position_parent(parent); // Telegram (VENDOR.md edit 42)
         link_subtree(parent, index, subtree);
         return true;
     }
@@ -1015,6 +1110,7 @@ namespace litehtml
         note_style_change();
         m_layout_before_valid = false;
         m_patch_keep_tree     = false;
+        note_position_parent(subtree->parent()); // Telegram (VENDOR.md edit 42)
         unlink_subtree(subtree);
         return true;
     }

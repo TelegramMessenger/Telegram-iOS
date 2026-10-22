@@ -29,24 +29,19 @@ public:
     UserActions(const UserActions&) = delete;
     UserActions& operator=(const UserActions&) = delete;
 
-    bool focused(JSContext* ctx, Element& element) override;
-    bool focusWithin(JSContext* ctx, Element& element) override;
+    // Profile 1 has no focus (V4 plan, Task 8; RB §8.1): nothing is ever focused.
+    bool focused(JSContext*, Element&) override { return false; }
+    bool focusWithin(JSContext*, Element&) override { return false; }
     bool focusVisible(JSContext*, Element&) override { return false; }
     bool hovered(JSContext* ctx, Element& element) override;
     bool active(JSContext* ctx, Element& element) override;
 
-    /// The focused element while it is connected; nullptr otherwise (the body is the active element then).
-    Element* focusedElement(JSContext* ctx) const;
-    /// HTML's focusing steps for `element` (nullptr: blur to none). Nothing when it is already focused. Fires blur and
-    /// focusout at the old one, then focus and focusin at the new one, each with the other as relatedTarget.
-    void setFocus(JSContext* ctx, Element* element);
     /// The pointer's state: `hover` the element under the down, `active` the one pressed (nullptr when released).
     void setPointer(JSContext* ctx, Element* hover, Element* active);
     /// Drops every reference (the host state's destructor, while the context lives).
     void clear();
-    /// A node left the main document (RenderTree's mutation listener): HTML's focus fixup drops a focus inside it (no
-    /// events; the body is the active element), and the hover and press inside it go too. The render tree rebuilds
-    /// when its CSS uses the state.
+    /// A node left the main document (RenderTree's mutation listener): the hover and press inside it go. The render tree
+    /// rebuilds when its CSS uses the state.
     void nodeRemoved(JSContext* ctx, Node& node);
     /// While a label's activation clicks its control (so a click it made never activates a label again).
     bool labelActivating() const { return m_labelActivating; }
@@ -57,19 +52,14 @@ public:
     };
 
 private:
-    Ref<Element> m_focus;
     Ref<Element> m_hover;
     Ref<Element> m_active;
     bool m_labelActivating = false;
 };
 
-/// HTML "focusable area" for the profile: a[href], button, input (not hidden), select, textarea, a details' summary,
-/// or anything with a tabindex attribute; never a disabled form control.
-bool isFocusable(JSContext* ctx, Element& element);
-/// tabIndex's default: 0 for the focusable kinds above, -1 for the rest (an attribute that parses wins).
+/// tabIndex's default: 0 for HTML's focusable kinds (a[href], button, input but hidden, select, textarea, a details'
+/// summary), -1 for the rest (an attribute that parses wins).
 int32_t tabIndexOf(JSContext* ctx, Element& element);
-/// The nearest focusable inclusive ancestor of `node`, or nullptr.
-Element* focusableAncestor(JSContext* ctx, Node* node);
 
 /// DOM dispatch's activation hooks, for an HTML element (HTMLElement forwards to these).
 bool hasActivationBehavior(JSContext* ctx, HTMLElement& element);

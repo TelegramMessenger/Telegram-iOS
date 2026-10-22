@@ -9,7 +9,7 @@ enum WidgetCorpus {
         let source: String
     }
 
-    static let folders = ["attacks", "common", "compat", "generated", "htmlbubbles-ported", "out-of-profile", "showcase"]
+    static let folders = ["attacks", "common", "compat", "defaults", "generated", "htmlbubbles-ported", "out-of-profile", "showcase"]
 
     private final class Anchor {}
 

@@ -83,6 +83,8 @@ public:
     uint16_t buttons(JSContext*) { return m_buttons; }
     EventTarget* relatedTarget(JSContext*);
     bool getModifierState(JSContext* ctx, String key) { return m_modifiers.state(ctx, key); }
+    double movementX(JSContext*) { return m_movementX; }
+    double movementY(JSContext*) { return m_movementY; }
 
     // Native
     void setPoint(double x, double y) {
@@ -92,6 +94,10 @@ public:
     void setButtons(int16_t button, uint16_t buttons) {
         m_button = button;
         m_buttons = buttons;
+    }
+    void setMovement(double x, double y) {
+        m_movementX = x;
+        m_movementY = y;
     }
     /// DOM "dispatch": a click has activation behaviour to look for (Task 3).
     bool isActivationClick(JSContext* ctx) const override;
@@ -109,6 +115,8 @@ private:
     Modifiers m_modifiers;
     int16_t m_button = 0;
     uint16_t m_buttons = 0;
+    double m_movementX = 0;
+    double m_movementY = 0;
     Held m_relatedTarget;
 };
 

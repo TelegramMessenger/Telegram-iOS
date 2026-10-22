@@ -130,7 +130,8 @@ WR_TEST(testAWidthChangeRunsTheRenderingUpdate) {
     settle(env);
     wr::HostState::of(env.ctx()).setWidth(env.ctx(), 150);
     env.env().drain();
-    CHECK_EQ(env.env().eval("log.join()"), std::string("284,mq:true,134"));
+    // The body's content box: the width less the padding token's 12 px a side.
+    CHECK_EQ(env.env().eval("log.join()"), std::string("276,mq:true,126"));
 }
 
 /// What a capped round left is asked for at the next frame, not left for a task that may never come.

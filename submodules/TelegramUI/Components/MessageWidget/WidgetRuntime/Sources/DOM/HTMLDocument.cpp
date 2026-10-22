@@ -38,11 +38,7 @@ Element* Document::activeElement(JSContext* ctx) {
     if (!state || !state->hasDocument() || &state->document() != this) {
         return nullptr;
     }
-    if (HostState* host = HostState::find(ctx)) {
-        if (Element* focused = host->userActions().focusedElement(ctx)) {
-            return focused;
-        }
-    }
+    // Nothing is ever focused (V4 plan, Task 8): the body, else the document element.
     if (HTMLElement* body = this->body(ctx)) {
         return body;
     }

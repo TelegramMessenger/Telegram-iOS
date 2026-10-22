@@ -5,19 +5,19 @@
   "platform": "ios",
   "renderer": "telegram-native",
   "engine": "iOS 26.5, iPhone18,3 simulator",
-  "framework": "v0.1.0",
+  "framework": "v0.1.1",
   "policy": "strict",
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-21T18:54:02Z",
-  "commit": "d895dcb5"
+  "date": "2026-10-22T04:59:55Z",
+  "commit": "e9654cab"
  },
  "summary": {
   "in": {
-   "pass": 127,
-   "partial": 27,
-   "fail": 8,
+   "pass": 162,
+   "partial": 1,
+   "fail": 0,
    "xfail": 0,
    "xpass": 0,
    "skip": 1,
@@ -33,9 +33,9 @@
    "untested": 0
   },
   "out": {
-   "pass": 74,
-   "partial": 1,
-   "fail": 1,
+   "pass": 75,
+   "partial": 0,
+   "fail": 0,
    "xfail": 0,
    "xpass": 0,
    "skip": 6,
@@ -45,18 +45,17 @@
  "features": {
   "html.el.structure": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 3
+    "pass": 8
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-a",
      "kind": "check",
      "name": "p has 1em block margins",
-     "status": "fail",
-     "detail": "got 0, want 13 ±0.5",
+     "status": "pass",
+     "detail": "got 13, want 13 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -65,7 +64,7 @@
      "kind": "check",
      "name": "br starts a new line",
      "status": "pass",
-     "detail": "44 → 60",
+     "detail": "66 → 82",
      "theme": "light",
      "width": 390
     },
@@ -74,7 +73,7 @@
      "kind": "check",
      "name": "hr draws a rule",
      "status": "pass",
-     "detail": "340x2",
+     "detail": "340x1",
      "theme": "light",
      "width": 390
     },
@@ -83,7 +82,43 @@
      "kind": "check",
      "name": "wbr is a break opportunity",
      "status": "pass",
-     "detail": "h 32",
+     "detail": "h 64.00000762939453",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "root: the text tokens, system-ui",
+     "status": "pass",
+     "detail": "got \"17,22.1,true\", want \"17,22.1,true\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "body: the padding token as margin, no padding",
+     "status": "pass",
+     "detail": "got \"0,0,6,11,6,11\", want \"0,0,6,11,6,11\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "p: 0.6em margins; hr: one 1px line, no height",
+     "status": "pass",
+     "detail": "got \"0.6,1,0,0\", want \"0.6,1,0,0\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "author rules win over the layer",
+     "status": "pass",
+     "detail": "got \"1,21,400,5,square\", want \"1,21,400,5,square\"",
      "theme": "light",
      "width": 390
     }
@@ -93,7 +128,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 4
    },
    "evidence": [
     {
@@ -101,7 +136,7 @@
      "kind": "check",
      "name": "h1 > h2 > … > h6 font sizes",
      "status": "pass",
-     "detail": "26,19.5,15.21,13,10.79,8.71",
+     "detail": "20.8,17.55,15.6,13.91,13,11.31",
      "theme": "light",
      "width": 390
     },
@@ -110,7 +145,25 @@
      "kind": "check",
      "name": "headings are bold",
      "status": "pass",
-     "detail": "700,700",
+     "detail": "600,600",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "h1–h6: 1.6, 1.35, 1.2, 1.07, 1, 0.87 em",
+     "status": "pass",
+     "detail": "got \"1.6,1.35,1.2,1.07,1,0.87\", want \"1.6,1.35,1.2,1.07,1,0.87\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "headings: 600, line height 1.25; h2 0.75em above, 0.35em below",
+     "status": "pass",
+     "detail": "got \"600,1.25,0.75,0.35\", want \"600,1.25,0.75,0.35\"",
      "theme": "light",
      "width": 390
     }
@@ -145,10 +198,9 @@
   },
   "html.el.inline-text": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 6,
-    "fail": 1
+    "pass": 8
    },
    "evidence": [
     {
@@ -156,7 +208,7 @@
      "kind": "check",
      "name": "b, strong are bold",
      "status": "pass",
-     "detail": "700,700",
+     "detail": "600,600",
      "theme": "light",
      "width": 390
     },
@@ -183,7 +235,7 @@
      "kind": "check",
      "name": "code, kbd, samp are monospace",
      "status": "pass",
-     "detail": "monospace",
+     "detail": "ui-monospace, monospace",
      "theme": "light",
      "width": 390
     },
@@ -192,7 +244,7 @@
      "kind": "check",
      "name": "mark has a highlight",
      "status": "pass",
-     "detail": "255,255,0,1",
+     "detail": "255,204,0,0.4",
      "theme": "light",
      "width": 390
     },
@@ -201,7 +253,7 @@
      "kind": "check",
      "name": "small is smaller",
      "status": "pass",
-     "detail": "10.8333px",
+     "detail": "11.05px",
      "theme": "light",
      "width": 390
     },
@@ -209,8 +261,17 @@
      "test": "auto/01-html-elements-a",
      "kind": "check",
      "name": "q adds quotation marks",
-     "status": "fail",
-     "detail": "14.4599609375 vs 14.4599609375",
+     "status": "pass",
+     "detail": "23.1181640625 vs 14.4599609375",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "small 0.85em; b 600; code monospace 0.9em",
+     "status": "pass",
+     "detail": "got \"0.85,600,true,0.9\", want \"0.85,600,true,0.9\"",
      "theme": "light",
      "width": 390
     }
@@ -220,7 +281,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
@@ -228,7 +289,7 @@
      "kind": "check",
      "name": "sub sits lower, sup higher",
      "status": "pass",
-     "detail": "base 31-46 sub 48 sup 28",
+     "detail": "base 26-41 sub 42.4375 sup 24.125",
      "theme": "light",
      "width": 390
     },
@@ -237,7 +298,16 @@
      "kind": "check",
      "name": "sub and sup are smaller",
      "status": "pass",
-     "detail": "10.8333px",
+     "detail": "9.75px",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "sup: 0.75em on the baseline, raised by position",
+     "status": "pass",
+     "detail": "got \"0.75,baseline,relative\", want \"0.75,baseline,relative\"",
      "theme": "light",
      "width": 390
     }
@@ -247,7 +317,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
@@ -255,7 +325,7 @@
      "kind": "check",
      "name": "pre keeps the line break",
      "status": "pass",
-     "detail": "h 32",
+     "detail": "h 43.699997901916504",
      "theme": "light",
      "width": 390
     },
@@ -264,7 +334,16 @@
      "kind": "check",
      "name": "pre is monospace",
      "status": "pass",
-     "detail": "monospace",
+     "detail": "ui-monospace, monospace",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "pre: wraps, monospace 0.9em, code inside keeps the size",
+     "status": "pass",
+     "detail": "got \"true,true,0.9,1\", want \"true,true,0.9,1\"",
      "theme": "light",
      "width": 390
     }
@@ -274,24 +353,33 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-b",
      "kind": "check",
-     "name": "blockquote is indented 40px",
+     "name": "blockquote is set off by the UA layer: a 3px bar and 0.75em before the text",
      "status": "pass",
-     "detail": "got 40, want 40 ±0.5",
+     "detail": "3px 9.75px",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/01-html-elements-b",
      "kind": "check",
-     "name": "figure is indented 40px",
+     "name": "figure has no indent",
      "status": "pass",
-     "detail": "got 40, want 40 ±0.5",
+     "detail": "got 0, want 0 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "blockquote: 3px bar, 0.75em padding; no indent, as figure",
+     "status": "pass",
+     "detail": "got \"0,3,0.75,0\", want \"0,3,0.75,0\"",
      "theme": "light",
      "width": 390
     }
@@ -301,15 +389,15 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 7
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-b",
      "kind": "check",
-     "name": "ul is padded 40px",
+     "name": "ul is padded 1.5em",
      "status": "pass",
-     "detail": "got 40, want 40 ±0.5",
+     "detail": "got 19.5, want 19.5 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -334,9 +422,9 @@
     {
      "test": "auto/01-html-elements-b",
      "kind": "check",
-     "name": "dd is indented 40px",
+     "name": "dd is indented 1.5em",
      "status": "pass",
-     "detail": "got 40, want 40 ±0.5",
+     "detail": "got 19.5, want 19.5 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -345,7 +433,25 @@
      "kind": "check",
      "name": "menu is a padded list",
      "status": "pass",
-     "detail": "got 40, want 40 ±0.5",
+     "detail": "got 19.5, want 19.5 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "ul: 1.5em start padding, disc; nested: circle, no margin; ol: decimal",
+     "status": "pass",
+     "detail": "got \"1.5,disc,circle,0,decimal\", want \"1.5,disc,circle,0,decimal\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "dt 600; dd indented 1.5em",
+     "status": "pass",
+     "detail": "got \"600 1.5\", want \"600 1.5\"",
      "theme": "light",
      "width": 390
     }
@@ -355,7 +461,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 7
    },
    "evidence": [
     {
@@ -381,7 +487,7 @@
      "kind": "check",
      "name": "rowspan=2 spans two rows",
      "status": "pass",
-     "detail": "24 vs 12",
+     "detail": "26 vs 13",
      "theme": "light",
      "width": 390
     },
@@ -390,16 +496,34 @@
      "kind": "check",
      "name": "caption sits above the rows",
      "status": "pass",
-     "detail": "222 / 238",
+     "detail": "228.0859935283661 / 247.47898864746094",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/01-html-elements-b",
      "kind": "check",
-     "name": "th is bold and centred",
+     "name": "th is bold and start-aligned",
      "status": "pass",
-     "detail": "700 center",
+     "detail": "600 start",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "table: collapsed, cells touch; th 600, start-aligned",
+     "status": "pass",
+     "detail": "got \"collapse,true,600,true\", want \"collapse,true,600,true\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "cells: 1px line under, 0.3em above, no outer padding at the ends",
+     "status": "pass",
+     "detail": "got \"1,0.3,0,0\", want \"1,0.3,0,0\"",
      "theme": "light",
      "width": 390
     }
@@ -417,7 +541,7 @@
      "kind": "check",
      "name": "ruby renders as a span: rt stays inline, not above the base (profile 1: out)",
      "status": "pass",
-     "detail": "rt 278-301 ruby 278-301",
+     "detail": "rt 295.885986328125-318.885986328125 ruby 295.885986328125-318.885986328125",
      "theme": "light",
      "width": 390
     },
@@ -660,7 +784,7 @@
      "kind": "check",
      "name": "button has a visible background or border",
      "status": "pass",
-     "detail": "51,144,236,0.12",
+     "detail": "0,136,255,1",
      "theme": "light",
      "width": 390
     }
@@ -668,10 +792,9 @@
   },
   "html.el.details": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -696,8 +819,8 @@
      "test": "auto/01-html-elements-c",
      "kind": "check",
      "name": "summary is a list item (disclosure marker)",
-     "status": "fail",
-     "detail": "got \"block\", want \"list-item\"",
+     "status": "pass",
+     "detail": "got \"list-item\", want \"list-item\"",
      "theme": "light",
      "width": 390
     },
@@ -714,18 +837,17 @@
   },
   "html.el.a-fragment": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 1
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/01-html-elements-c",
      "kind": "check",
-     "name": "a[href=#…] is a link (UA link colour, underline)",
-     "status": "fail",
-     "detail": "17,17,17,1",
+     "name": "a[href=#…] is a link (the link colour, no underline)",
+     "status": "pass",
+     "detail": "0,75,173,1 none",
      "theme": "light",
      "width": 390
     },
@@ -742,10 +864,9 @@
   },
   "html.el.a-external": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -753,16 +874,16 @@
      "kind": "check",
      "name": "an external href never reaches the renderer (a[href^=https] does not match)",
      "status": "pass",
-     "detail": "17,17,17,1",
+     "detail": "0,75,173,1",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/01-html-elements-c",
      "kind": "check",
-     "name": "it is still drawn as a link",
-     "status": "fail",
-     "detail": "none",
+     "name": "it is still drawn as a link (not the text colour, no underline)",
+     "status": "pass",
+     "detail": "0,75,173,1 none",
      "theme": "light",
      "width": 390
     },
@@ -1040,10 +1161,9 @@
   },
   "html.attr.global": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
@@ -1068,8 +1188,8 @@
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "lang reaches the renderer (:lang(ru))",
-     "status": "fail",
-     "detail": "got \"17,17,17,1\", want \"0,100,0,1\"",
+     "status": "pass",
+     "detail": "got \"0,100,0,1\", want \"0,100,0,1\"",
      "theme": "light",
      "width": 390
     }
@@ -1077,17 +1197,17 @@
   },
   "html.attr.dir": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 3
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "dir=rtl sets direction",
-     "status": "fail",
-     "detail": "got \"ltr\", want \"rtl\"",
+     "status": "pass",
+     "detail": "got \"rtl\", want \"rtl\"",
      "theme": "light",
      "width": 390
     },
@@ -1095,8 +1215,8 @@
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "dir=rtl lays out inline boxes right to left",
-     "status": "fail",
-     "detail": "a 8 b 18",
+     "status": "pass",
+     "detail": "a 198 b 188",
      "theme": "light",
      "width": 390
     },
@@ -1104,8 +1224,8 @@
      "test": "auto/02-attributes-images-a",
      "kind": "check",
      "name": "dir=auto with Hebrew text resolves to rtl",
-     "status": "fail",
-     "detail": "got \"ltr\", want \"rtl\"",
+     "status": "pass",
+     "detail": "got \"rtl\", want \"rtl\"",
      "theme": "light",
      "width": 390
     }
@@ -1168,7 +1288,7 @@
      "kind": "check",
      "name": "cellpadding is dropped",
      "status": "pass",
-     "detail": "1px",
+     "detail": "0px",
      "theme": "light",
      "width": 390
     },
@@ -1293,10 +1413,9 @@
   },
   "svg.structure": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -1312,8 +1431,8 @@
      "test": "auto/13-svg-a",
      "kind": "stage",
      "name": "structure",
-     "status": "fail",
-     "detail": "diff 60.0 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -1321,10 +1440,9 @@
   },
   "svg.text": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -1340,8 +1458,8 @@
      "test": "auto/13-svg-a",
      "kind": "stage",
      "name": "text",
-     "status": "fail",
-     "detail": "diff 21.6 % of ink (max 50 %); #222 949/696px, #c33 0/235px, #36c 222/204px",
+     "status": "pass",
+     "detail": "diff 2.2 % of ink (max 50 %); #222 712/696px, #c33 237/235px, #36c 222/204px",
      "theme": "light",
      "width": 390
     }
@@ -1367,18 +1485,17 @@
   },
   "svg.css": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 1
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/13-svg-a",
      "kind": "check",
      "name": "a stylesheet fill reaches SVG (computed fill)",
-     "status": "fail",
-     "detail": "",
+     "status": "pass",
+     "detail": "rgb(204, 51, 51)",
      "theme": "light",
      "width": 390
     },
@@ -1701,17 +1818,17 @@
   },
   "css.display.table": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/03-layout-c",
      "kind": "check",
      "name": "table cells side by side, the second takes the rest",
-     "status": "fail",
-     "detail": "0/200 200/0",
+     "status": "pass",
+     "detail": "0/50 50/150",
      "theme": "light",
      "width": 390
     }
@@ -1746,10 +1863,9 @@
   },
   "css.box.size": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -1783,8 +1899,8 @@
      "test": "auto/03-layout-b",
      "kind": "check",
      "name": "width: fit-content shrinks to the text",
-     "status": "fail",
-     "detail": "w 200",
+     "status": "pass",
+     "detail": "w 6.7412109375",
      "theme": "light",
      "width": 390
     }
@@ -1837,10 +1953,9 @@
   },
   "css.box.border": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -1856,8 +1971,8 @@
      "test": "auto/03-layout-b",
      "kind": "stage",
      "name": "border",
-     "status": "fail",
-     "detail": "diff 37.8 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -1928,10 +2043,9 @@
   },
   "css.box.logical": {
    "status": "out",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -1965,8 +2079,8 @@
      "test": "auto/03-layout-b",
      "kind": "check",
      "name": "margin-inline-start is dropped in RTL too",
-     "status": "fail",
-     "detail": "got 20, want 200 ±0.5",
+     "status": "pass",
+     "detail": "got 200, want 200 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -1974,10 +2088,9 @@
   },
   "css.box.outline": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
@@ -2002,8 +2115,8 @@
      "test": "auto/05-colour-backgrounds-b",
      "kind": "stage",
      "name": "outline",
-     "status": "fail",
-     "detail": "diff 14.1 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.2 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -2074,17 +2187,17 @@
   },
   "css.box.object-fit": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-b",
      "kind": "stage",
      "name": "object-fit",
-     "status": "fail",
-     "detail": "diff 28.3 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -2308,18 +2421,17 @@
   },
   "css.color.basic": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 3,
-    "pass": 8
+    "pass": 11
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-a",
      "kind": "check",
      "name": "named colour",
-     "status": "fail",
-     "detail": "got \"0,0,0,0\", want \"102,51,153,1\"",
+     "status": "pass",
+     "detail": "got \"102,51,153,1\", want \"102,51,153,1\"",
      "theme": "light",
      "width": 390
     },
@@ -2363,8 +2475,8 @@
      "test": "auto/05-colour-backgrounds-a",
      "kind": "stage",
      "name": "basic",
-     "status": "fail",
-     "detail": "diff 25.0 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     },
@@ -2372,8 +2484,8 @@
      "test": "auto/05-colour-backgrounds-a",
      "kind": "check",
      "name": "named colour",
-     "status": "fail",
-     "detail": "got \"0,0,0,0\", want \"102,51,153,1\"",
+     "status": "pass",
+     "detail": "got \"102,51,153,1\", want \"102,51,153,1\"",
      "theme": "dark",
      "width": 390
     },
@@ -2516,17 +2628,18 @@
   },
   "css.background.basic": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "partial",
    "counts": {
-    "fail": 5
+    "pass": 4,
+    "fail": 1
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-b",
      "kind": "check",
      "name": "background-image keeps the data: image",
-     "status": "fail",
-     "detail": "",
+     "status": "pass",
+     "detail": "url(\"data:image/png;base64,iVBORw0KGgoAA",
      "theme": "light",
      "width": 390
     },
@@ -2534,8 +2647,8 @@
      "test": "auto/05-colour-backgrounds-b",
      "kind": "check",
      "name": "background-size",
-     "status": "fail",
-     "detail": "got \"\", want \"10px 12px\"",
+     "status": "pass",
+     "detail": "got \"10px 12px\", want \"10px 12px\"",
      "theme": "light",
      "width": 390
     },
@@ -2543,8 +2656,8 @@
      "test": "auto/05-colour-backgrounds-b",
      "kind": "check",
      "name": "background-position",
-     "status": "fail",
-     "detail": "got \"\", want \"1px 2px\"",
+     "status": "pass",
+     "detail": "got \"1px 2px\", want \"1px 2px\"",
      "theme": "light",
      "width": 390
     },
@@ -2552,8 +2665,8 @@
      "test": "auto/05-colour-backgrounds-b",
      "kind": "check",
      "name": "background-repeat",
-     "status": "fail",
-     "detail": "got \"\", want \"no-repeat\"",
+     "status": "pass",
+     "detail": "got \"no-repeat\", want \"no-repeat\"",
      "theme": "light",
      "width": 390
     },
@@ -2624,17 +2737,17 @@
   },
   "css.gradient.conic": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/05-colour-backgrounds-b",
      "kind": "stage",
      "name": "conic",
-     "status": "fail",
-     "detail": "diff 11.9 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.5 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -2840,10 +2953,9 @@
   },
   "css.font.variant-numeric": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -2859,8 +2971,8 @@
      "test": "auto/06-text-fonts-a",
      "kind": "check",
      "name": "font-feature-settings \"tnum\"",
-     "status": "fail",
-     "detail": "got 23.82, want 32.45 ±0.5",
+     "status": "pass",
+     "detail": "got 32.45, want 32.45 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -2868,10 +2980,9 @@
   },
   "css.text.align": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -2896,8 +3007,8 @@
      "test": "auto/06-text-fonts-b",
      "kind": "check",
      "name": "text-align: end in RTL is the left edge",
-     "status": "fail",
-     "detail": "got 114, want 0 ±1",
+     "status": "pass",
+     "detail": "got 0, want 0 ±1",
      "theme": "light",
      "width": 390
     },
@@ -2941,10 +3052,9 @@
   },
   "css.text.transform": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
@@ -2969,8 +3079,8 @@
      "test": "auto/06-text-fonts-b",
      "kind": "check",
      "name": "word-spacing: 10px adds 10px per space",
-     "status": "fail",
-     "detail": "got 0, want 20 ±1.5",
+     "status": "pass",
+     "detail": "got 20, want 20 ±1.5",
      "theme": "light",
      "width": 390
     }
@@ -3023,10 +3133,9 @@
   },
   "css.text.wrap": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -3042,8 +3151,8 @@
      "test": "auto/06-text-fonts-b",
      "kind": "check",
      "name": "word-break: break-all breaks a long word",
-     "status": "fail",
-     "detail": "16",
+     "status": "pass",
+     "detail": "64",
      "theme": "light",
      "width": 390
     }
@@ -3051,17 +3160,17 @@
   },
   "css.text.overflow": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/06-text-fonts-c",
      "kind": "stage",
      "name": "ellipsis",
-     "status": "fail",
-     "detail": "diff 13.7 % of ink (max 50 %); #36c 11/70px",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 50 %); #36c 77/70px",
      "theme": "light",
      "width": 390
     }
@@ -3133,7 +3242,7 @@
      "kind": "check",
      "name": "list-style-position: inside moves the text right",
      "status": "pass",
-     "detail": "61 vs 48",
+     "detail": "40.5 vs 27.5",
      "theme": "light",
      "width": 390
     },
@@ -3168,18 +3277,17 @@
   },
   "css.text.rtl": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 1
+    "pass": 2
    },
    "evidence": [
     {
      "test": "auto/06-text-fonts-c",
      "kind": "check",
      "name": "Hebrew in dir=rtl starts at the right edge",
-     "status": "fail",
-     "detail": "got 73.9, want 128 ±1",
+     "status": "pass",
+     "detail": "got 128, want 128 ±1",
      "theme": "light",
      "width": 390
     },
@@ -3240,18 +3348,36 @@
    ]
   },
   "css.text.selection": {
-   "status": "out",
-   "verdict": "fail",
+   "status": "in",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/06-text-fonts-c",
      "kind": "check",
-     "name": "user-select: text cannot re-enable selection",
-     "status": "fail",
-     "detail": "got \"auto\", want \"none\"",
+     "name": "not selectable by default (none on the root); user-select: text enables it",
+     "status": "pass",
+     "detail": "got \"none text\", want \"none text\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/06-text-fonts-c",
+     "kind": "check",
+     "name": "a child of user-select: text is selectable too (auto or text)",
+     "status": "pass",
+     "detail": "auto",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/06-text-fonts-c",
+     "kind": "check",
+     "name": "user-select: all is outside the profile (dropped)",
+     "status": "pass",
+     "detail": "auto",
      "theme": "light",
      "width": 390
     }
@@ -3259,17 +3385,17 @@
   },
   "css.transform.2d": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 5
+    "pass": 5
    },
    "evidence": [
     {
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "translateX(30px) moves the box",
-     "status": "fail",
-     "detail": "got 0, want 30 ±0.5",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3277,8 +3403,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "rotate(90deg) swaps the bounding box",
-     "status": "fail",
-     "detail": "40x20",
+     "status": "pass",
+     "detail": "20.00000174845553x40.00000087422774",
      "theme": "light",
      "width": 390
     },
@@ -3286,8 +3412,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "scale(2) with transform-origin 0 0",
-     "status": "fail",
-     "detail": "110 10",
+     "status": "pass",
+     "detail": "110 20",
      "theme": "light",
      "width": 390
     },
@@ -3295,8 +3421,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "the translate property",
-     "status": "fail",
-     "detail": "150,0",
+     "status": "pass",
+     "detail": "160,5",
      "theme": "light",
      "width": 390
     },
@@ -3304,8 +3430,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "stage",
      "name": "transform-2d",
-     "status": "fail",
-     "detail": "diff 37.0 % of ink (max 5 %)",
+     "status": "pass",
+     "detail": "diff 0.1 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -3340,18 +3466,17 @@
   },
   "css.filter.blur-brightness-drop-shadow": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "filter functions are kept",
-     "status": "fail",
-     "detail": "",
+     "status": "pass",
+     "detail": "blur(2px) brightness(1.5) drop-shadow(rgb(255, 0, 0) 1px 1px 0px)",
      "theme": "light",
      "width": 390
     },
@@ -3512,17 +3637,17 @@
   },
   "css.touch-action": {
    "status": "in",
-   "verdict": "fail",
+   "verdict": "pass",
    "counts": {
-    "fail": 1
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/09-transforms-effects-b",
      "kind": "check",
      "name": "touch-action reaches the renderer",
-     "status": "fail",
-     "detail": "got \"auto\", want \"none\"",
+     "status": "pass",
+     "detail": "got \"none\", want \"none\"",
      "theme": "light",
      "width": 390
     }
@@ -3683,18 +3808,17 @@
   },
   "css.value.math": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 4,
-    "pass": 1
+    "pass": 5
    },
    "evidence": [
     {
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "calc(50% - 10px)",
-     "status": "fail",
-     "detail": "got 200, want 90 ±0.5",
+     "status": "pass",
+     "detail": "got 90, want 90 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3702,8 +3826,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "min(50px, 30%)",
-     "status": "fail",
-     "detail": "got 200, want 50 ±0.5",
+     "status": "pass",
+     "detail": "got 50, want 50 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3711,8 +3835,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "max(10px, 20%)",
-     "status": "fail",
-     "detail": "got 200, want 40 ±0.5",
+     "status": "pass",
+     "detail": "got 40, want 40 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3720,8 +3844,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "clamp(20px, 50%, 60px)",
-     "status": "fail",
-     "detail": "got 200, want 60 ±0.5",
+     "status": "pass",
+     "detail": "got 60, want 60 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3792,10 +3916,9 @@
   },
   "css.value.keywords": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 3
+    "pass": 5
    },
    "evidence": [
     {
@@ -3811,8 +3934,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "display: initial is inline",
-     "status": "fail",
-     "detail": "got \"block\", want \"inline\"",
+     "status": "pass",
+     "detail": "got \"inline\", want \"inline\"",
      "theme": "light",
      "width": 390
     },
@@ -3820,8 +3943,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "color: unset inherits",
-     "status": "fail",
-     "detail": "got \"200,0,0,1\", want \"0,0,140,1\"",
+     "status": "pass",
+     "detail": "got \"0,0,140,1\", want \"0,0,140,1\"",
      "theme": "light",
      "width": 390
     },
@@ -3829,8 +3952,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "display: revert is the UA block",
-     "status": "fail",
-     "detail": "got \"inline\", want \"block\"",
+     "status": "pass",
+     "detail": "got \"block\", want \"block\"",
      "theme": "light",
      "width": 390
     },
@@ -3847,10 +3970,9 @@
   },
   "css.value.content": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "evidence": [
     {
@@ -3884,8 +4006,8 @@
      "test": "auto/04-values-units",
      "kind": "check",
      "name": "quotes",
-     "status": "fail",
-     "detail": "auto",
+     "status": "pass",
+     "detail": "\"«\" \"»\"",
      "theme": "light",
      "width": 390
     }
@@ -4073,10 +4195,9 @@
   },
   "sel.structural": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 4,
-    "fail": 1
+    "pass": 5
    },
    "evidence": [
     {
@@ -4110,8 +4231,8 @@
      "test": "auto/07-selectors-b",
      "kind": "check",
      "name": ":empty",
-     "status": "fail",
-     "detail": "got \"29,0,0,1\", want \"28,0,0,1\"",
+     "status": "pass",
+     "detail": "got \"28,0,0,1\", want \"28,0,0,1\"",
      "theme": "light",
      "width": 390
     },
@@ -4319,7 +4440,7 @@
      "kind": "check",
      "name": ":focus never matches (no keyboard focus in v1)",
      "status": "pass",
-     "detail": "17,17,17,1",
+     "detail": "255,255,255,1",
      "theme": "light",
      "width": 390
     }
@@ -5228,7 +5349,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "71.36862504482269",
+     "detail": "65.73037493228912",
      "theme": "light",
      "width": 390
     },
@@ -6218,7 +6339,7 @@
      "kind": "check",
      "name": "focus() does not make :focus match in the renderer",
      "status": "pass",
-     "detail": "17,17,17,1",
+     "detail": "255,255,255,1",
      "theme": "light",
      "width": 390
     },
@@ -6272,7 +6393,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "8,25,42",
+     "detail": "33,50,66",
      "theme": "light",
      "width": 390
     }
@@ -6930,7 +7051,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 4
+    "pass": 7
    },
    "evidence": [
     {
@@ -6965,7 +7086,34 @@
      "kind": "check",
      "name": "themeParams and --tg-theme-bg-color change with the theme, before themeChanged fires",
      "status": "pass",
-     "detail": "bg #ffffff → #212121, css #212121",
+     "detail": "bg #ffffff → #1a1a1a, css #1a1a1a",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "root: no background (the bubble is the canvas), the text colour",
+     "status": "pass",
+     "detail": "got \"0,0,0,0 0,0,0,1\", want \"0,0,0,0 0,0,0,1\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "a[href]: link colour, no underline; <a> without href: text colour",
+     "status": "pass",
+     "detail": "got \"0,75,173,1 none 0,0,0,1\", want \"0,75,173,1 none 0,0,0,1\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/22-ua-defaults",
+     "kind": "check",
+     "name": "figcaption is --tg-theme-hint-color",
+     "status": "pass",
+     "detail": "got \"119,130,140,1\", want \"119,130,140,1\"",
      "theme": "light",
      "width": 390
     }
@@ -7243,10 +7391,9 @@
   },
   "input.drag": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "evidence": [
     {
@@ -7271,8 +7418,8 @@
      "test": "auto/17-drag-hover",
      "kind": "check",
      "name": "movementX adds up to the distance",
-     "status": "fail",
-     "detail": "movementX 0 vs 160",
+     "status": "pass",
+     "detail": "movementX 160 vs 160",
      "theme": "light",
      "width": 390
     }
@@ -7460,10 +7607,9 @@
   },
   "limit.text-node": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -7479,8 +7625,8 @@
      "test": "auto/19-limits",
      "kind": "check",
      "name": "a text node over 64 KB is refused",
-     "status": "fail",
-     "detail": "16",
+     "status": "pass",
+     "detail": "0",
      "theme": "light",
      "width": 390
     }
@@ -7488,10 +7634,9 @@
   },
   "limit.text-budget": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 1,
-    "fail": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -7507,8 +7652,8 @@
      "test": "auto/19-limits",
      "kind": "check",
      "name": "past 8192 complex-script units in the document the text is refused",
-     "status": "fail",
-     "detail": "16",
+     "status": "pass",
+     "detail": "0",
      "theme": "light",
      "width": 390
     }
@@ -7792,18 +7937,17 @@
   },
   "behaviour.policy-strict": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "fail": 1,
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/19-limits",
      "kind": "check",
      "name": "a 300 KB data-* attribute does not reach the renderer",
-     "status": "fail",
-     "detail": "9,9,9,1",
+     "status": "pass",
+     "detail": "17,17,17,1",
      "theme": "light",
      "width": 390
     },
@@ -7841,8 +7985,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 2,
-    "pass": 13
+    "pass": 15
    },
    "stages": [],
    "host": []
@@ -7876,8 +8019,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 17,
-    "fail": 3
+    "pass": 20
    },
    "stages": [],
    "host": []
@@ -7894,8 +8036,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 14,
-    "fail": 4
+    "pass": 18
    },
    "stages": [],
    "host": []
@@ -7968,14 +8109,13 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 19,
-    "fail": 2
+    "pass": 21
    },
    "stages": [
     {
      "name": "border",
-     "diff": 0.3778,
-     "status": "fail"
+     "diff": 0.0003,
+     "status": "pass"
     }
    ],
    "host": []
@@ -7992,8 +8132,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 1,
-    "pass": 16
+    "pass": 17
    },
    "stages": [
     {
@@ -8016,8 +8155,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 24,
-    "fail": 8
+    "pass": 32
    },
    "stages": [],
    "host": []
@@ -8034,14 +8172,13 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 1,
-    "pass": 6
+    "pass": 7
    },
    "stages": [
     {
      "name": "basic",
-     "diff": 0.25,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "modern",
@@ -8073,8 +8210,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 1,
-    "pass": 6
+    "pass": 7
    },
    "stages": [
     {
@@ -8097,8 +8233,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 4,
-    "pass": 1
+    "pass": 5
    },
    "stages": [
     {
@@ -8123,8 +8258,8 @@
     },
     {
      "name": "conic",
-     "diff": 0.1192,
-     "status": "fail"
+     "diff": 0.0046,
+     "status": "pass"
     },
     {
      "name": "shadow",
@@ -8133,13 +8268,13 @@
     },
     {
      "name": "outline",
-     "diff": 0.1411,
-     "status": "fail"
+     "diff": 0.0024,
+     "status": "pass"
     },
     {
      "name": "object-fit",
-     "diff": 0.2832,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     }
    ],
    "host": []
@@ -8156,8 +8291,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 16,
-    "fail": 1
+    "pass": 17
    },
    "stages": [],
    "host": []
@@ -8174,8 +8308,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 16,
-    "fail": 3
+    "pass": 19
    },
    "stages": [],
    "host": []
@@ -8192,14 +8325,13 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 2,
-    "pass": 4
+    "pass": 8
    },
    "stages": [
     {
      "name": "ellipsis",
-     "diff": 0.1373,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "text-shadow",
@@ -8248,8 +8380,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 19,
-    "fail": 1
+    "pass": 20
    },
    "stages": [],
    "host": []
@@ -8300,14 +8431,13 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "fail": 5,
-    "pass": 1
+    "pass": 6
    },
    "stages": [
     {
      "name": "transform-2d",
-     "diff": 0.3705,
-     "status": "fail"
+     "diff": 0.0006,
+     "status": "pass"
     },
     {
      "name": "transform-3d",
@@ -8349,8 +8479,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 2,
-    "fail": 1
+    "pass": 3
    },
    "stages": [
     {
@@ -8595,8 +8724,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 4,
-    "fail": 1
+    "pass": 5
    },
    "stages": [
     {
@@ -8606,13 +8734,13 @@
     },
     {
      "name": "structure",
-     "diff": 0.5996,
-     "status": "fail"
+     "diff": 0,
+     "status": "pass"
     },
     {
      "name": "text",
-     "diff": 0.2165,
-     "status": "fail"
+     "diff": 0.0218,
+     "status": "pass"
     },
     {
      "name": "gradients",
@@ -8857,8 +8985,7 @@
    ],
    "counts": {
     "skip": 3,
-    "pass": 3,
-    "fail": 1
+    "pass": 4
    },
    "stages": [
     {
@@ -8898,8 +9025,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 5,
-    "fail": 3
+    "pass": 8
    },
    "stages": [],
    "host": []
@@ -8963,6 +9089,638 @@
      "detail": "openLink ×0 (want 0)"
     }
    ]
+  },
+  {
+   "id": "auto/22-ua-defaults",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 17
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/01-boxes",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/02-colours-gradients",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/03-text-a",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/03-text-b",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/04-layout",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/05-transforms-effects-a",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/05-transforms-effects-b",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/06-css-animations",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/07-web-animations",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/08-canvas-a",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/08-canvas-b",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/09-svg-a",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/09-svg-b",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/10-images",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/11-interaction",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/12-theme",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/12-theme",
+   "set": "visual",
+   "theme": "dark",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/13-out-of-profile",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/14-unstyled-document",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/14-unstyled-document",
+   "set": "visual",
+   "theme": "dark",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/15-body-background",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/15-body-background",
+   "set": "visual",
+   "theme": "dark",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/16-selection",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/01-link-external",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/02-link-telegram",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/03-link-rejected",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/04-link-timer",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/05-haptics",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/06-haptics-rate",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/07-storage-recreate",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/08-storage-restart",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/09-storage-delete",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/10-storage-quota",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/11-crash-restart",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/12-drag-gestures",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/13-max-height",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/14-theme-palette",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/14-theme-palette",
+   "set": "visual",
+   "theme": "dark",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/15-storage-forward",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/16-bot-edit",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/17-size-hint",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
   }
  ]
 }

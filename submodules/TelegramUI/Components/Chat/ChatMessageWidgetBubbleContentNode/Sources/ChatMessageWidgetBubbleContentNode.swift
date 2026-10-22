@@ -47,6 +47,10 @@ public func feedMessageWidgetApplicationState(context: AccountContext) {
 public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentNode {
     /// One widget per message, at this path in the registry.
     private static let path: [Int] = []
+    /// The padding of the bubble's own around the widget: none (widget-sandbox v0.1.1, sdk-v1 §5.1 "The widget view
+    /// fills the bubble"). The widget's body margin, the text tokens' padding, is the inset, and a background the widget
+    /// paints reaches the bubble's rounded edges.
+    static let bubbleInset: CGFloat = 0.0
 
     private let registry: MessageWidgetRegistry
     /// Clips the widget to the bubble's height and corners.
@@ -55,6 +59,13 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     /// Shown instead of the widget when it cannot run.
     private let pillView: UnsupportedContentPillView
+    /// Under the widget where the bubble's tail joins its bottom corner: the tail's shape (`chatBubbleMediaCorner`, the
+    /// mask a photo's tail corner uses) in the colour the widget shows at that corner, so a widget that paints to its
+    /// edge continues into the tail as a photo does.
+    private let tailLayer = CALayer()
+    private let tailMask = CALayer()
+    /// The tail's side while the widget's bottom corner joins one (true: the left, an incoming bubble's); nil without.
+    private var tailOnLeft: Bool?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
     private var availabilityObserver: NSObjectProtocol?
@@ -190,6 +201,11 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         // Below the date pill and anything else the bubble adds.
         self.view.insertSubview(self.clipView, at: 0)
         self.view.insertSubview(self.pillView, aboveSubview: self.clipView)
+        self.tailLayer.actions = ["position": NSNull(), "bounds": NSNull(), "backgroundColor": NSNull(), "hidden": NSNull()]
+        self.tailMask.actions = ["position": NSNull(), "bounds": NSNull(), "contents": NSNull()]
+        self.tailLayer.mask = self.tailMask
+        self.tailLayer.isHidden = true
+        self.view.layer.insertSublayer(self.tailLayer, below: self.clipView.layer)
     }
 
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -211,12 +227,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 incoming = false
             }
-            let bubbleInsets: UIEdgeInsets
-            if case .color = item.presentationData.theme.wallpaper {
-                bubbleInsets = UIEdgeInsets()
-            } else {
-                bubbleInsets = layoutConstants.image.bubbleInsets
-            }
+            let inset = ChatMessageWidgetBubbleContentNode.bubbleInset
+            let bubbleInsets = UIEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)
 
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let maximumWidgetWidth = max(1.0, constrainedSize.width - bubbleInsets.left - bubbleInsets.right)
@@ -259,9 +271,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     registry.onStorageCommit = { commit in
                         storageSink.commit(commit)
                     }
-                    // Another message's stable id (the node was recycled) destroys the runtime. SDK v1 §2.3, §5.1: the
-                    // chat's palette.
-                    registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                    // Another message's stable id (the node was recycled) destroys the runtime. SDK v1 §2.3, §2.4, §5.1:
+                    // the chat's palette and its message text.
+                    registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, incoming: incoming, fontSize: item.presentationData.fontSize, textInsets: layoutConstants.text.bubbleInsets))
                     // Not asked when it may not run: the pass then ends with no widget, which destroys a running one
                     // (the flag was just turned off).
                     if renderable {
@@ -383,8 +395,26 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     // A fixed-width widget in a wider bubble (a longer caption) is centred; the pill fills the bubble.
                     let frameWidth = showsPill ? boundingWidth - bubbleInsets.left - bubbleInsets.right : widgetWidth
                     let widgetFrame = CGRect(x: floor((boundingWidth - frameWidth) / 2.0), y: bubbleInsets.top, width: frameWidth, height: widgetHeight)
-                    let corners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
-                    let statusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height - bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
+                    // The bubble's own radii, as its background draws them (`messageBubbleImage`: a merged corner is the
+                    // auxiliary radius when the setting merges corners), so the widget's edge is the bubble's.
+                    let bubbleCorners = item.presentationData.chatBubbleCorners
+                    let mergedRadius = (bubbleCorners.mergeBubbleCorners && bubbleCorners.mainRadius >= 10.0) ? bubbleCorners.auxiliaryRadius : bubbleCorners.mainRadius
+                    let corners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: bubbleCorners.mainRadius, mergedRadius: mergedRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
+                    // The bubble's body is square where its tail joins it; an incoming bubble without tails is rounded there.
+                    let drawsTail = !incoming || bubbleCorners.hasTails
+                    var tailOnLeft: Bool?
+                    if drawsTail && !showsPill {
+                        if case .Tail = corners.bottomLeft {
+                            tailOnLeft = true
+                        } else if case .Tail = corners.bottomRight {
+                            tailOnLeft = false
+                        }
+                    }
+                    let tailImage = tailOnLeft.flatMap { PresentationResourcesChat.chatBubbleMediaCorner(item.presentationData.theme.theme, incoming: $0, mainRadius: bubbleCorners.mainRadius, inset: 0.0) }
+                    // The date sits where it sits on a photo: the photo's inset plus the status inset from the bubble's edge.
+                    let statusRight = layoutConstants.image.bubbleInsets.right + layoutConstants.image.statusInsets.right
+                    let statusBottom = layoutConstants.image.bubbleInsets.bottom + layoutConstants.image.statusInsets.bottom
+                    let statusFrame = CGRect(origin: CGPoint(x: layoutSize.width - statusRight - statusSize.width, y: layoutSize.height - statusBottom - statusSize.height), size: statusSize)
 
                     return (layoutSize, { [weak self] animation, _, _ in
                         guard let self else {
@@ -395,9 +425,19 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
 
                         self.clipView.frame = widgetFrame
                         self.clipMask.frame = CGRect(origin: CGPoint(), size: widgetFrame.size)
-                        self.clipMask.path = ChatMessageWidgetBubbleContentNode.roundedPath(size: widgetFrame.size, corners: corners)
+                        self.clipMask.path = ChatMessageWidgetBubbleContentNode.roundedPath(size: widgetFrame.size, corners: corners, drawsTail: drawsTail)
                         self.clipView.isHidden = showsPill
                         self.pillView.isHidden = !showsPill
+                        self.tailOnLeft = tailImage == nil ? nil : tailOnLeft
+                        if let tailOnLeft, let tailImage {
+                            // The image's body edge is 6 pt in from its tail side (mediaBubbleCornerImage).
+                            let size = tailImage.size
+                            let x = tailOnLeft ? widgetFrame.minX - (size.width - bubbleCorners.mainRadius - 1.0) : widgetFrame.maxX - (bubbleCorners.mainRadius + 1.0)
+                            self.tailLayer.frame = CGRect(x: x, y: widgetFrame.maxY - size.height, width: size.width, height: size.height)
+                            self.tailMask.frame = CGRect(origin: CGPoint(), size: size)
+                            self.tailMask.contentsScale = tailImage.scale
+                            self.tailMask.contents = tailImage.cgImage
+                        }
                         if showsPill {
                             self.pillView.frame = widgetFrame
                             self.pillView.update(layout: pillLayout, colors: pillColors, strings: pillStrings, size: widgetFrame.size, wallpaperBackgroundNode: item.controllerInteraction.presentationContext.backgroundNode, animation: animation)
@@ -411,6 +451,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                 if live.superview !== self.clipView {
                                     self.clipView.addSubview(live)
                                 }
+                                (live as? MessageWidgetView)?.onBottomCornerColorsChange = { [weak self] _, _ in
+                                    self?.updateTailColor()
+                                }
                                 // Laid out at its own width; its height is the content's, which the clip cuts at the bubble's.
                                 live.frame = CGRect(origin: CGPoint(), size: CGSize(width: widgetWidth, height: max(widgetHeight, reported ?? 0.0)))
                             } else {
@@ -419,6 +462,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                 }
                             }
                         }
+
+                        self.updateTailColor()
 
                         if let statusApply {
                             if self.dateAndStatusNode.supernode == nil {
@@ -435,14 +480,31 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         }
     }
 
-    /// A rounded rect with each corner's own radius (`ImageCorners`: a corner merged with a neighbour is smaller).
-    private static func roundedPath(size: CGSize, corners: ImageCorners) -> CGPath {
+    /// The tail takes the colour the live widget shows at the corner it joins; nothing without one.
+    private func updateTailColor() {
+        var color: CGColor?
+        if let tailOnLeft = self.tailOnLeft, !self.clipView.isHidden, let live = self.clipView.subviews.first as? MessageWidgetView {
+            color = tailOnLeft ? live.bottomCornerColors.left : live.bottomCornerColors.right
+        }
+        self.tailLayer.backgroundColor = color
+        self.tailLayer.isHidden = color == nil
+    }
+
+    /// A rounded rect with each corner's own radius (`ImageCorners`: a corner merged with a neighbour is smaller); the
+    /// corner the bubble's tail joins is square when the bubble draws one.
+    static func roundedPath(size: CGSize, corners: ImageCorners, drawsTail: Bool) -> CGPath {
         let path = CGMutablePath()
         let limit = min(size.width, size.height) / 2.0
-        let topLeft = min(corners.topLeft.radius, limit)
-        let topRight = min(corners.topRight.radius, limit)
-        let bottomLeft = min(corners.bottomLeft.radius, limit)
-        let bottomRight = min(corners.bottomRight.radius, limit)
+        let radius: (ImageCorner) -> CGFloat = { corner in
+            if case .Tail = corner, drawsTail {
+                return 0.0
+            }
+            return min(corner.radius, limit)
+        }
+        let topLeft = radius(corners.topLeft)
+        let topRight = radius(corners.topRight)
+        let bottomLeft = radius(corners.bottomLeft)
+        let bottomRight = radius(corners.bottomRight)
         path.move(to: CGPoint(x: topLeft, y: 0.0))
         path.addLine(to: CGPoint(x: size.width - topRight, y: 0.0))
         path.addArc(tangent1End: CGPoint(x: size.width, y: 0.0), tangent2End: CGPoint(x: size.width, y: topRight), radius: topRight)

@@ -42,6 +42,14 @@ void checkEval(RenderEnv& env, std::string_view code, std::string_view want) {
 
 } // namespace
 
+/// Fidelity plan, Task 7: an animation of the translate property moves the box (the animated layer keeps no raw
+/// declarations, so the property must be litehtml's own).
+WR_TEST(testAnAnimatedTranslateMovesTheBox) {
+    RenderEnv env(page("<div id=t class=box style='animation:nudge 10s linear -5s paused'></div>",
+                       "@keyframes nudge{from{translate:0 0}to{translate:40px 0}}"));
+    checkEval(env, "Math.round($('t').getBoundingClientRect().x)", "30");
+}
+
 /// auto/10 `#p-kf`: a paused animation at -2.5s of 10s is at 25%, and stays there.
 WR_TEST(testAPausedAnimationWithANegativeDelay) {
     RenderEnv env(page("<div id=p class=box style='animation:slide 10s linear -2.5s paused'></div>"));

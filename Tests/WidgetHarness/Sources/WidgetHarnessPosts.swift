@@ -69,6 +69,13 @@ enum WidgetHarnessPosts {
         if let filter = options.postFilter {
             posts = posts.filter { $0.path.contains(filter) }
         }
+        if !options.captions {
+            posts = posts.map { post in
+                var post = post
+                post.caption = ""
+                return post
+            }
+        }
         if let anchors = options.anchors {
             posts = posts.map { post in
                 var post = post

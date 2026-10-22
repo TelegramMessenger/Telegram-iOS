@@ -54,6 +54,9 @@ bool litehtml::render_item::layout_cacheable(formatting_context* fmt_ctx) const
     const document* doc = src_el()->doc_ptr();
     if(!doc || !doc->layout_cache_enabled() || m_out_of_flow)
         return false;
+    // Telegram (VENDOR.md edit 39): a measuring pass lays nested keyword boxes out as auto, which no later pass may reuse.
+    if(doc->intrinsic_measuring() > 0)
+        return false;
     const element_position position = css().get_position();
     if(position == element_position_absolute || position == element_position_fixed)
         return false;
@@ -296,6 +299,20 @@ litehtml::pixel_t litehtml::render_item::calc_auto_margins(pixel_t parent_width)
                 m_pos.width + m_borders.left + m_borders.right + m_padding.left + m_padding.right + m_margins.left;
             m_margins.right = parent_width - el_width;
             m_margins.right = std::max<pixel_t>(m_margins.right, 0_px);
+        }
+        // Telegram (VENDOR.md edit 46): over-constrained (neither margin auto) in a right-to-left containing block,
+        // margin-left is the one ignored (CSS 2.1 §10.3.3): the box ends at the right margin. The shift is returned.
+        if(!src_el()->css().get_margins().left.is_predefined() && !src_el()->css().get_margins().right.is_predefined())
+        {
+            const auto parent = src_el()->parent();
+            if(parent && parent->css().get_direction() == direction_rtl)
+            {
+                const pixel_t used =
+                    m_pos.width + m_borders.left + m_borders.right + m_padding.left + m_padding.right + m_margins.left + m_margins.right;
+                const pixel_t shift = parent_width - used;
+                m_margins.left += shift;
+                return shift;
+            }
         }
     }
     return 0_px;
@@ -1519,6 +1536,8 @@ void litehtml::render_item::draw_children(uint_ptr hdc, pixel_t x, pixel_t y, co
     for(const auto& el : m_children)
     {
         if(!doc->skip_paint.empty() && doc->skip_paint.count(el->src_el().get()))
+            continue;
+        if(el->ellipsis_hidden()) // Telegram (VENDOR.md edit 40): past its line's ellipsis
             continue;
         if(cull && el->ink(generation, true).misses(*clip, pos.x.value(), pos.y.value()))
             continue;

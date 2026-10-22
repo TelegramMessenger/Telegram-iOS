@@ -18,6 +18,14 @@ filegroup(
     visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
 )
 
+# The Intl parity fixture (VENDOR.md), for WidgetRuntime's host and iOS Intl tests.
+filegroup(
+    name = "IntlCases",
+    testonly = True,
+    srcs = ["fixtures/intl-cases.json"],
+    visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
+)
+
 # The corpus' documents as plain files, for host tests (WidgetRuntime's measurements).
 filegroup(
     name = "CorpusFiles",

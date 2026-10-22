@@ -173,33 +173,35 @@ void HostState::reportLinkDiagnostic(JSContext* ctx, std::string_view kind, cons
 }
 
 void HostState::themeChanged(JSContext* ctx, Theme theme) {
-    this->applyTheme(ctx, theme, m_palette, m_buttonTokens);
+    this->applyTheme(ctx, theme, m_palette, m_buttonTokens, m_textTokens);
 }
 
 void HostState::setThemeParams(JSContext* ctx, const ThemePalette& palette, const ThemeButtonTokens& tokens) {
-    this->applyTheme(ctx, m_theme, palette, checkButtonTokens(tokens));
+    this->applyTheme(ctx, m_theme, palette, checkButtonTokens(tokens), m_textTokens);
 }
 
-void HostState::setTheme(JSContext* ctx, Theme theme, const ThemePalette& palette, const ThemeButtonTokens& tokens) {
-    this->applyTheme(ctx, theme, palette, checkButtonTokens(tokens));
+void HostState::setTheme(JSContext* ctx, Theme theme, const ThemePalette& palette, const ThemeButtonTokens& tokens,
+                         const ThemeTextTokens& text) {
+    this->applyTheme(ctx, theme, palette, checkButtonTokens(tokens), checkTextTokens(text));
 }
 
-void HostState::applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, ThemeButtonTokens tokens) {
+void HostState::applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, ThemeButtonTokens tokens, ThemeTextTokens text) {
     if (Runtime::from(ctx).stopReason() != StopReason::None) {
         return;
     }
     ThemeParams params = completeThemeParams(palette, theme);
     m_palette = std::move(palette);
-    if (theme == m_theme && params == m_themeParams && tokens == m_buttonTokens) {
+    if (theme == m_theme && params == m_themeParams && tokens == m_buttonTokens && text == m_textTokens) {
         return;
     }
     m_theme = theme;
     m_themeParams = std::move(params);
     m_buttonTokens = std::move(tokens);
+    m_textTokens = std::move(text);
     m_themeGeneration++;
     try {
         if (m_render) {
-            m_render->setTheme(ctx, theme, themeRootDeclarations(m_themeParams, theme, m_buttonTokens));
+            m_render->setTheme(ctx, theme, themeRootDeclarations(m_themeParams, theme, m_buttonTokens, m_textTokens));
         }
         m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [](JSContext* ctx) {
             HostState::of(ctx).window().TelegramWidget(ctx)->runEvent(ctx, TelegramWidget::Event::ThemeChanged);

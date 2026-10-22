@@ -1,8 +1,12 @@
 import XCTest
 import UIKit
+import TelegramCore
+import TelegramPresentationData
+import ChatMessageItemCommon
+import ChatMessageWidgetBubbleContentNode
 @testable import WidgetHarnessLib
 
-/// Tier 1: the conformance runner (widget-sandbox v0.1.0, `conformance/CLIENTS.md`) loads a widget through the app's
+/// Tier 1: the conformance runner (widget-sandbox v0.1.1, `conformance/CLIENTS.md`) loads a widget through the app's
 /// widget path and reads the result its harness publishes on `<html data-conformance>`. Fixtures stand in for the auto
 /// set's widgets: one that publishes, one whose harness throws before it can.
 final class ConformanceRunnerTests: XCTestCase {
@@ -11,15 +15,44 @@ final class ConformanceRunnerTests: XCTestCase {
         return ConformanceRunner(host: root.view)
     }
 
-    private func fixture(_ name: String, actions: [[String: Any]] = []) throws -> ConformanceTest {
+    private func fixture(_ name: String, actions: [[String: Any]] = [], themes: [String] = ["light"]) throws -> ConformanceTest {
         let url = try XCTUnwrap(Bundle.main.resourceURL?.appendingPathComponent("Fixtures/Conformance/\(name).html"))
-        return ConformanceTest(id: "fixture/\(name)", fileURL: url, themes: ["light"], actions: actions, stages: [], host: [])
+        return ConformanceTest(id: "fixture/\(name)", fileURL: url, themes: themes, actions: actions, stages: [], host: [])
+    }
+
+    /// CLIENTS.md step 1 (ruling R6): the host as in production, so the widget gets the app's own theme: the palette of
+    /// the bubble it sits in and the chat's text tokens, not the framework's defaults.
+    func testTheRunnerUsesTheAppsTheme() throws {
+        let runs = try self.runner().runAll([self.fixture("conformance-theme", themes: ["light", "dark"])], timeout: 5.0)
+        XCTAssertEqual(runs.count, 2)
+        for (run, presentation) in zip(runs, [defaultPresentationTheme, defaultDarkPresentationTheme]) {
+            let app = messageWidgetTheme(theme: presentation, wallpaper: .builtin(WallpaperSettings()), incoming: true, fontSize: .regular, textInsets: ChatMessageItemLayoutConstants.compact.text.bubbleInsets)
+            XCTAssertEqual(run.status, "done", run.theme)
+            XCTAssertEqual(run.checks.map { $0.count >= 4 ? $0[3] : "" }, [app.params["bg_color"] ?? "", "17px"], run.theme)
+        }
+    }
+
+    /// CLIENTS.md: "Run the visual set the same way if you like, without actions or crops; the report then shows whether
+    /// each widget loads." A visual run ends once its widget has loaded, and the baseline records only that it loaded.
+    func testTheVisualSetIsLoadedOnly() throws {
+        let tests = try ConformanceManifest.loadVisualSet()
+        XCTAssertEqual(tests.count, 37)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
+        XCTAssertTrue(tests.allSatisfy { $0.loadOnly && $0.actions.isEmpty && $0.stages.isEmpty && FileManager.default.fileExists(atPath: $0.fileURL.path) })
+        let unstyled = try XCTUnwrap(tests.first { $0.id == "visual/14-unstyled-document" })
+        let started = Date()
+        let run = try self.runner().run(unstyled, theme: "light", timeout: 20.0)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 5.0)
+        XCTAssertTrue(run.loaded)
+        XCTAssertNil(run.dead)
+        XCTAssertTrue(run.crops.isEmpty)
+        XCTAssertEqual(ConformanceBaseline.statuses(of: run, test: unstyled), ["load · loads": "pass"])
     }
 
     func testTheManifestLoadsTheAutomaticSet() throws {
         let tests = try ConformanceManifest.loadAutomaticSet()
-        XCTAssertEqual(tests.count, 38)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 40)
+        XCTAssertEqual(tests.count, 39)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
         XCTAssertTrue(tests.allSatisfy { FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let taps = try XCTUnwrap(tests.first { $0.id == "auto/16-sdk-taps-a" })
         XCTAssertEqual(taps.actions.count, 3)

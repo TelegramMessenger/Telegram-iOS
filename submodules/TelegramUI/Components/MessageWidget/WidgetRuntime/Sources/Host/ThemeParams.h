@@ -1,7 +1,8 @@
 // The chat's palette (SDK v1 §2.3; V2a plan, Task 4): TelegramWidget.themeParams and the root's --tg-theme-* custom
 // properties. The policy is the reference's, widget-sandbox v0.1.0 packages/core/src/shared/sdk-policy.ts: THEME_KEYS,
-// DEFAULT_THEME_PARAMS, checkThemeParams, completeThemeParams and themeVariables; and the client's button tokens (§2.4;
-// V2b plan, Task 2), checked against their grammar from the spec's text.
+// DEFAULT_THEME_PARAMS, checkThemeParams, completeThemeParams and themeVariables; the client's button tokens (§2.4;
+// V2b plan, Task 2), checked against their grammar from the spec's text; and its text tokens (§2.4, v0.1.1), checked as
+// the reference's TEXT_VARS check them (v0.1.1 plan, Task 4).
 #pragma once
 
 #include <array>
@@ -34,11 +35,22 @@ struct ThemeButtonTokens {
     bool operator==(const ThemeButtonTokens&) const = default;
 };
 /// Keeps each token that matches its grammar: `bg` and `text` #rrggbb (lowercased), `radius` a length, `padding` one to
-/// four lengths, `height` a length or `auto` (lengths in px, em or rem), `font` a font shorthand whose families are all
-/// generic, the opacities in [0, 1].
+/// four lengths, `height` a length or `auto` (lengths as the reference's LENGTH: `0`, or up to four digits and three
+/// decimals in px, em or rem), `font` a font shorthand whose families are all generic, the opacities in [0, 1].
 ThemeButtonTokens checkButtonTokens(const ThemeButtonTokens& tokens);
+/// The client's message text (SDK v1 §2.4, WidgetTheme.text): the root's font size in CSS px, its unitless line height,
+/// and the body's margin; a token not passed or refused is the reference set's (15px, 1.35, 8px 12px).
+struct ThemeTextTokens {
+    std::optional<double> fontSize, lineHeight;
+    std::optional<std::string> padding;
+    bool operator==(const ThemeTextTokens&) const = default;
+};
+/// Keeps each token that matches its grammar: `fontSize` 8–64, rounded to two decimals; `lineHeight` 1–3, rounded to
+/// three; `padding` one to four lengths, each `0` or up to four digits and three decimals in px, em or rem.
+ThemeTextTokens checkTextTokens(const ThemeTextTokens& tokens);
 /// themeVariables, as declarations for the root: --tg-theme-<key, _ as -> and --tg-color-scheme, then --tg-button-* for
-/// each token passed (already checked), each !important.
-std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens = {});
+/// each button token passed, then always the three --tg-text-* (all already checked), each !important.
+std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens = {},
+                                  const ThemeTextTokens& text = {});
 
 } // namespace wr

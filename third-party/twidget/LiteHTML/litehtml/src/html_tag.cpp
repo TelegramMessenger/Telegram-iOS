@@ -689,9 +689,40 @@ namespace litehtml
             const property_value& value = tag->m_style.get_property(name);
             if(value.is<css_token_vector>())
                 return &value.get<css_token_vector>();
+            // Telegram (VENDOR.md edit 33): a custom property set to initial has no value (the guaranteed-invalid one).
+            if(value.is<initial>())
+                return nullptr;
             tag = dynamic_cast<const html_tag*>(tag->parent().get());
         }
         return nullptr;
+    }
+
+    // Telegram (VENDOR.md edit 33).
+    const property_value* html_tag::master_value(string_id name) const
+    {
+        const property_value* result = nullptr;
+        for(const auto& usel : m_used_styles)
+        {
+            if(usel->m_sheet != 0 || !usel->m_used || usel->m_selector->m_layer != 0) // edit 41: revert skips a layer
+                continue;
+            bool pseudo_element = false;
+            for(const auto& attr : usel->m_selector->m_right.m_attrs)
+                pseudo_element = pseudo_element || attr.type == select_pseudo_element;
+            if(pseudo_element)
+                continue;
+            const property_value& value = usel->m_selector->m_style->get_property(name);
+            if(value.is<invalid>())
+                continue;
+            if(!result || !result->m_important || value.m_important)
+                result = &value;
+        }
+        return result;
+    }
+
+    void html_tag::resolve_reverts()
+    {
+        m_style.resolve_reverts([this](string_id name) { return master_value(name); },
+                                [this](size_t bytes) { return bytes == 0 || charge_splice(bytes); });
     }
 
     bool html_tag::charge_splice(size_t bytes) const
@@ -711,6 +742,10 @@ namespace litehtml
         {
             result = value.get<css_token_vector>();
             return true;
+        }
+        if(value.is<initial>()) // Telegram (VENDOR.md edit 33)
+        {
+            return false;
         }
         if(auto _parent = dynamic_cast<html_tag*>(parent().get()))
         {
@@ -794,6 +829,7 @@ namespace litehtml
         }
         add_animated_style();    // Telegram (VENDOR.md edit 27)
         add_root_declarations(); // Telegram (VENDOR.md edit 26)
+        resolve_reverts();       // Telegram (VENDOR.md edit 33)
         m_style.subst_vars(this);
         m_css.compute_background_color(this);
         m_css.set_shared_id(doc->next_share_id());
@@ -862,6 +898,7 @@ namespace litehtml
             }
             add_animated_style();    // Telegram (VENDOR.md edit 27)
             add_root_declarations(); // Telegram (VENDOR.md edit 26)
+            resolve_reverts();       // Telegram (VENDOR.md edit 33)
             m_style.subst_vars(this);
             m_css.compute(this, doc);
             m_css.set_shared_id(doc->next_share_id());
@@ -1059,6 +1096,18 @@ namespace litehtml
         return res;
     }
 
+    // Telegram (VENDOR.md edit 31.4): Selectors 4's :lang() for one range: the language, ASCII case-insensitively, is the
+    // range or starts with it and a hyphen. An empty language is unknown and matches nothing.
+    static bool lang_range_matches(const std::string& lang, const std::string& range)
+    {
+        if(lang.empty() || range.empty() || lang.size() < range.size() ||
+           t_strncasecmp(lang.c_str(), range.c_str(), range.size()) != 0)
+        {
+            return false;
+        }
+        return lang.size() == range.size() || lang[range.size()] == '-';
+    }
+
     int html_tag::select_pseudoclass(const css_attribute_selector& sel)
     {
         element::ptr el_parent = parent();
@@ -1163,9 +1212,36 @@ namespace litehtml
             }
             break;
         case _lang_:
+#if 0
             if(!get_document()->match_lang(sel.value))
             {
                 return select_no_match;
+            }
+#else
+        {
+            // Telegram (VENDOR.md edit 31.4): the element's language is its own or its nearest ancestor's lang attribute,
+            // never the container's default (Blink matches nothing without one).
+            const char* lang = nullptr;
+            for(element::ptr el = shared_from_this(); el && !lang; el = el->parent())
+            {
+                lang = el->get_attr("lang");
+            }
+            if(!lang || !lang_range_matches(lang, sel.value))
+            {
+                return select_no_match;
+            }
+        }
+#endif
+            break;
+        // Telegram (VENDOR.md edit 31.5): :empty, no children but generated content (::before, ::after). A text piece of
+        // any data counts, whitespace included, as Blink has it.
+        case _empty_:
+            for(const auto& child : children())
+            {
+                if(child->tag() != __tag_before_ && child->tag() != __tag_after_)
+                {
+                    return select_no_match;
+                }
             }
             break;
         case _checked_:

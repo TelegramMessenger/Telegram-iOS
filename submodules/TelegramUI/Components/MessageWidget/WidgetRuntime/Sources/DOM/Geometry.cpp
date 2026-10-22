@@ -242,15 +242,20 @@ void DOMRectList::dispose(JSRuntime* rt) {
 
 // MARK: Element
 
+// getClientRects and getBoundingClientRect report where the boxes are drawn: transformed (RenderTree::visualRects).
 Ref<DOMRectList> Element::getClientRects(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    return DOMRectList::make(ctx, render ? chargedClientRects(ctx, *render, *this) : std::vector<RenderBox>());
+    return DOMRectList::make(ctx, render ? render->visualRects(*this, chargedClientRects(ctx, *render, *this))
+                                         : std::vector<RenderBox>());
 }
 
 Ref<DOMRect> Element::getBoundingClientRect(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;
-    return DOMRectReadOnly::make(ctx, box.value_or(RenderBox()));
+    RenderBox box;
+    if (!render || !unionOfRects(render->visualRects(*this, chargedClientRects(ctx, *render, *this)), box)) {
+        box = RenderBox();
+    }
+    return DOMRectReadOnly::make(ctx, box);
 }
 
 int32_t Element::clientTop(JSContext* ctx) {

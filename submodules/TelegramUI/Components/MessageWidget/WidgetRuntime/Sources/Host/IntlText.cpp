@@ -7,6 +7,7 @@
 #include <cmath>
 #include <memory>
 #include <string_view>
+#include <tuple>
 
 #include "Sources/Host/Intl.h"
 #include "Sources/Runtime/Runtime.h"
@@ -674,6 +675,69 @@ JSValue localeCompare(JSContext* ctx, JSValueConst thisVal, int argc, JSValueCon
     });
 }
 
+/// ECMA-402 TransformCase's available locales: the languages whose case mappings differ from the root's, as ICU's case
+/// mapping knows them (Turkish and Azeri dotted and dotless i, Lithuanian dot above, Greek accents in upper case,
+/// Armenian ech-yiwn).
+bool hasOwnCaseRules(std::string_view language) {
+    return language == "az" || language == "el" || language == "hy" || language == "lt" || language == "tr";
+}
+
+/// String.prototype.toLocaleUpperCase (magic 1) and toLocaleLowerCase (0), ECMA-402 TransformCase: the first requested
+/// locale, else the host's; in a language with case rules of its own, ICU's mapping for that language, charged
+/// work::kCaseMapEightUnits per eight units on top of the copy's scan; otherwise the root's mapping, which is the
+/// engine's own toUpperCase or toLowerCase (data[0], kept at install; QuickJS charges it).
+JSValue transformCase(JSContext* ctx, JSValueConst thisVal, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
+    const bool upper = magic != 0;
+    return glue(ctx, [&]() -> JSValue {
+        if (JS_IsUndefined(thisVal) || JS_IsNull(thisVal)) {
+            throw TypeError{upper ? "String.prototype.toLocaleUpperCase called on null or undefined."
+                                  : "String.prototype.toLocaleLowerCase called on null or undefined."};
+        }
+        const String s = String::fromJS(ctx, thisVal);
+        const std::vector<std::string> requested = canonicalizeLocaleList(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
+        const std::string tag = requested.empty() ? resolveLocale(ctx, {}) : requested.front();
+        const std::string language = tag.substr(0, tag.find('-'));
+        if (!hasOwnCaseRules(language)) {
+            JSValue string = s.toJS(ctx);
+            JSValue mapped = JS_Call(ctx, data[0], string, 0, nullptr);
+            JS_FreeValue(ctx, string);
+            return checked(ctx, mapped);
+        }
+        const uint32_t length = s.length();
+        chargeScan(ctx, length);
+        if (length >= 8) {
+            charge(ctx, length / 8 * work::kCaseMapEightUnits);
+        }
+        Text16 units{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
+        const JSStringView view = s.view();
+        if (view.utf16) {
+            units.assign(view.utf16, view.utf16 + length);
+        } else if (view.latin1) {
+            units.assign(view.latin1, view.latin1 + length);
+        }
+        // Not icuText: a case map has no length limit of its own (the string's is the engine's), and a mapping can grow
+        // (ß is SS, İ in lower case is i and a dot): a quarter more first, then exactly what ICU asks for.
+        auto map = [&](char16_t* buffer, int32_t capacity, UErrorCode* status) {
+            return upper ? u_strToUpper(buffer, capacity, units.data(), int32_t(units.size()), language.c_str(), status)
+                         : u_strToLower(buffer, capacity, units.data(), int32_t(units.size()), language.c_str(), status);
+        };
+        Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
+        out.resize(size_t(length) + length / 4 + 16);
+        UErrorCode status = U_ZERO_ERROR;
+        int32_t mapped = map(out.data(), int32_t(out.size()), &status);
+        if (status == U_BUFFER_OVERFLOW_ERROR && mapped > 0) {
+            out.resize(size_t(mapped));
+            status = U_ZERO_ERROR;
+            mapped = map(out.data(), int32_t(out.size()), &status);
+        }
+        if (U_FAILURE(status) || mapped < 0) {
+            throw RangeError{std::string("Invalid string length: ") + u_errorName(status)};
+        }
+        out.resize(size_t(mapped));
+        return String::fromUTF16(ctx, out.data(), out.size()).toJS(ctx);
+    });
+}
+
 } // namespace
 
 void defineTextFormats(JSContext* ctx, JSValueConst intl) {
@@ -696,6 +760,14 @@ void installStringOverrides(JSContext* ctx) {
     Value proto = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, constructor.get(), "prototype")));
     JSValue function = checked(ctx, JS_NewCFunction(ctx, localeCompare, "localeCompare", 1));
     check(ctx, JS_DefinePropertyValueStr(ctx, proto.get(), "localeCompare", function, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE));
+    // ECMA-402 TransformCase (widget-sandbox v0.1.1's Intl fixture: "i" in Turkish is "İ"); the engine's own maps are
+    // the root's, kept here before any script can replace them.
+    for (const auto& [name, plain, upper] : {std::tuple{"toLocaleUpperCase", "toUpperCase", 1}, std::tuple{"toLocaleLowerCase", "toLowerCase", 0}}) {
+        Value root = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, proto.get(), plain)));
+        JSValueConst rootData[] = {root.get()};
+        JSValue mapped = checked(ctx, JS_NewCFunctionData2(ctx, transformCase, name, 0, upper, 1, rootData));
+        check(ctx, JS_DefinePropertyValueStr(ctx, proto.get(), name, mapped, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE));
+    }
 }
 
 } // namespace wr::intl

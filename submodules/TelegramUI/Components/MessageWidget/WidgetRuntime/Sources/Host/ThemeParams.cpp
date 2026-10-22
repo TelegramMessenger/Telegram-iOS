@@ -150,6 +150,66 @@ bool isGenericFont(std::string_view text) {
     return true;
 }
 
+/// The reference's LENGTH, /^(0|[0-9]{1,4}(\.[0-9]{1,3})?(px|em|rem))$/.
+bool isTokenLength(std::string_view text) {
+    if (text == "0") {
+        return true;
+    }
+    for (std::string_view unit : {"rem", "px", "em"}) {
+        if (text.size() <= unit.size() || text.substr(text.size() - unit.size()) != unit) {
+            continue;
+        }
+        const std::string_view number = text.substr(0, text.size() - unit.size());
+        const size_t dot = number.find('.');
+        const std::string_view whole = number.substr(0, dot);
+        const std::string_view fraction = dot == std::string_view::npos ? std::string_view() : number.substr(dot + 1);
+        const auto digits = [](std::string_view part, size_t most) {
+            return !part.empty() && part.size() <= most && part.find_first_not_of("0123456789") == std::string_view::npos;
+        };
+        return digits(whole, 4) && (dot == std::string_view::npos || digits(fraction, 3));
+    }
+    return false;
+}
+
+/// The reference's padding: one to four lengths separated by single spaces.
+bool isTokenPadding(std::string_view text) {
+    const std::vector<std::string_view> parts = splitOn(text, ' ');
+    if (parts.empty() || parts.size() > 4) {
+        return false;
+    }
+    for (std::string_view part : parts) {
+        if (!isTokenLength(part)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// The reference's bounded(): a finite number in [min, max], rounded to `decimals`.
+std::optional<double> bounded(double value, double min, double max, int decimals) {
+    if (!std::isfinite(value) || value < min || value > max) {
+        return std::nullopt;
+    }
+    const double factor = std::pow(10.0, decimals);
+    return std::round(value * factor) / factor;
+}
+
+/// The shortest decimal form of a value already rounded to `decimals`, as JavaScript's String(number) writes it.
+std::string formatRounded(double value, int decimals) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.*f", decimals, value);
+    std::string text = buffer;
+    if (text.find('.') != std::string::npos) {
+        while (text.back() == '0') {
+            text.pop_back();
+        }
+        if (text.back() == '.') {
+            text.pop_back();
+        }
+    }
+    return text;
+}
+
 bool isOpacity(double value) {
     return std::isfinite(value) && value >= 0 && value <= 1;
 }
@@ -170,20 +230,13 @@ ThemeButtonTokens checkButtonTokens(const ThemeButtonTokens& tokens) {
     if (tokens.text && isHexColor(*tokens.text)) {
         checked.text = lowercased(*tokens.text);
     }
-    if (tokens.radius && isLength(*tokens.radius)) {
+    if (tokens.radius && isTokenLength(*tokens.radius)) {
         checked.radius = tokens.radius;
     }
-    if (tokens.padding) {
-        const std::vector<std::string_view> parts = splitOn(*tokens.padding, ' ');
-        bool valid = parts.size() >= 1 && parts.size() <= 4;
-        for (std::string_view part : parts) {
-            valid = valid && isLength(part);
-        }
-        if (valid) {
-            checked.padding = tokens.padding;
-        }
+    if (tokens.padding && isTokenPadding(*tokens.padding)) {
+        checked.padding = tokens.padding;
     }
-    if (tokens.height && (*tokens.height == "auto" || isLength(*tokens.height))) {
+    if (tokens.height && (*tokens.height == "auto" || isTokenLength(*tokens.height))) {
         checked.height = tokens.height;
     }
     if (tokens.font && isGenericFont(*tokens.font)) {
@@ -194,6 +247,20 @@ ThemeButtonTokens checkButtonTokens(const ThemeButtonTokens& tokens) {
     }
     if (tokens.disabledOpacity && isOpacity(*tokens.disabledOpacity)) {
         checked.disabledOpacity = tokens.disabledOpacity;
+    }
+    return checked;
+}
+
+ThemeTextTokens checkTextTokens(const ThemeTextTokens& tokens) {
+    ThemeTextTokens checked;
+    if (tokens.fontSize) {
+        checked.fontSize = bounded(*tokens.fontSize, 8, 64, 2);
+    }
+    if (tokens.lineHeight) {
+        checked.lineHeight = bounded(*tokens.lineHeight, 1, 3, 3);
+    }
+    if (tokens.padding && isTokenPadding(*tokens.padding)) {
+        checked.padding = tokens.padding;
     }
     return checked;
 }
@@ -224,7 +291,7 @@ ThemeParams completeThemeParams(const ThemePalette& palette, Theme theme) {
     return params;
 }
 
-std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens) {
+std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens, const ThemeTextTokens& text) {
     std::string out;
     for (size_t i = 0; i < kThemeKeyCount; i++) {
         out += "--tg-theme-";
@@ -255,6 +322,14 @@ std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const 
     add("height", tokens.height);
     add("pressed-opacity", tokens.pressedOpacity ? std::optional<std::string>(formatOpacity(*tokens.pressedOpacity)) : std::nullopt);
     add("disabled-opacity", tokens.disabledOpacity ? std::optional<std::string>(formatOpacity(*tokens.disabledOpacity)) : std::nullopt);
+    // DEFAULT_TEXT_TOKENS for a token not passed.
+    out += ";--tg-text-font-size:";
+    out += text.fontSize ? formatRounded(*text.fontSize, 2) + "px" : "15px";
+    out += " !important;--tg-text-line-height:";
+    out += text.lineHeight ? formatRounded(*text.lineHeight, 3) : "1.35";
+    out += " !important;--tg-text-padding:";
+    out += text.padding ? *text.padding : "8px 12px";
+    out += " !important";
     return out;
 }
 

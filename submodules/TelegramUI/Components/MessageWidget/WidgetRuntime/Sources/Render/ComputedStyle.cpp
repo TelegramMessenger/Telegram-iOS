@@ -8,7 +8,9 @@
 #include <type_traits>
 
 #include <litehtml.h>
+#include <litehtml/el_svg.h>
 #include <litehtml/render_item.h>
+#include <litehtml/web_color.h>
 
 namespace wr {
 
@@ -149,15 +151,17 @@ std::string decorationLine(int bits) {
     return out.empty() ? "none" : out;
 }
 
-/// The transform functions composed into one 2D matrix (the origin is not part of the resolved value), percentages of
-/// the border box; "none" with no functions.
+/// The transform property's functions composed into one 2D matrix (the origin is not part of the resolved value),
+/// percentages of the border box; "none" with no functions. The translate, rotate and scale properties' functions,
+/// which litehtml puts first (twidget edit 34), are not transform's.
 std::string transform(const litehtml::css_properties& css, double boxWidth, double boxHeight) {
     const auto& functions = css.get_transform();
-    if (functions.empty()) {
+    const auto own = functions.begin() + std::ptrdiff_t(std::min(functions.size(), css.get_transform_individual_count()));
+    if (own == functions.end()) {
         return "none";
     }
     litehtml::transform_matrix m;
-    for (auto it = functions.rbegin(); it != functions.rend(); ++it) {
+    for (auto it = functions.rbegin(); it != std::make_reverse_iterator(own); ++it) {
         litehtml::transform_matrix f;
         switch (it->kind) {
         case litehtml::transform_function::translate:
@@ -212,6 +216,8 @@ std::string cursor(const std::string& value) {
 struct Source {
     const litehtml::css_properties& css;
     std::shared_ptr<litehtml::render_item> box;
+    /// The element (or pseudo-element) styled: for what css_properties does not hold (SVG paint, raw declarations).
+    litehtml::element* element = nullptr;
     bool inlineNonReplaced = false;
     PseudoElement pseudo = PseudoElement::None;
     bool pseudoMissing = false;
@@ -293,6 +299,176 @@ std::string usedSize(const Source& s, bool width) {
     return s.inlineNonReplaced ? "auto" : computedLength(width ? s.css.get_width() : s.css.get_height());
 }
 
+/// A length the renderer keeps as written: px, or a percentage as written.
+std::string lengthValue(const litehtml::css_length& length) {
+    if (length.units() == litehtml::css_units_percentage) {
+        return number(length.val()) + "%";
+    }
+    return px(length.val());
+}
+
+/// CSS Filter Effects' serialization, as Chromium gives it: `none`, or the functions with their resolved arguments.
+std::string filterList(const litehtml::filter_vector& filters) {
+    if (filters.empty()) {
+        return "none";
+    }
+    std::string out;
+    for (const litehtml::filter_function& f : filters) {
+        if (!out.empty()) {
+            out += ' ';
+        }
+        switch (f.kind) {
+        case litehtml::filter_function::blur:
+            out += "blur(" + lengthValue(f.radius) + ")";
+            break;
+        case litehtml::filter_function::brightness:
+            out += "brightness(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::contrast:
+            out += "contrast(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::grayscale:
+            out += "grayscale(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::hue_rotate:
+            out += "hue-rotate(" + number(f.amount) + "deg)";
+            break;
+        case litehtml::filter_function::invert:
+            out += "invert(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::opacity:
+            out += "opacity(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::saturate:
+            out += "saturate(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::sepia:
+            out += "sepia(" + number(f.amount) + ")";
+            break;
+        case litehtml::filter_function::drop_shadow:
+            out += "drop-shadow(" + color(f.color) + " " + lengthValue(f.x) + " " + lengthValue(f.y) + " " +
+                   lengthValue(f.radius) + ")";
+            break;
+        }
+    }
+    return out;
+}
+
+/// An SVG paint (`fill`, `stroke`) as the painter resolves it (twidget edit 30.2): its initial value when nothing sets
+/// it (black for fill, none for stroke), currentcolor as the element's color.
+std::string paint(const Source& s, std::string_view name) {
+    if (!s.element) {
+        return std::string();
+    }
+    const litehtml::css_token_vector tokens =
+        litehtml::svg_computed_property(s.element->shared_from_this(), litehtml::_id(std::string(name)));
+    if (tokens.empty()) {
+        return name == "fill" ? "rgb(0, 0, 0)" : "none";
+    }
+    litehtml::document_container* container = s.element->get_document() ? s.element->get_document()->container() : nullptr;
+    for (const litehtml::css_token& token : tokens) {
+        const std::string ident = litehtml::lowcase(token.ident());
+        if (ident == "none") {
+            return "none";
+        }
+        if (ident == "currentcolor") {
+            return color(s.css.get_color());
+        }
+        if (token.type == litehtml::URL || (token.type == litehtml::CV_FUNCTION && litehtml::lowcase(token.name()) == "url")) {
+            return litehtml::get_repr(tokens, 0, -1, true);
+        }
+        litehtml::web_color c;
+        if (litehtml::parse_color(token, c, container)) {
+            return color(c);
+        }
+    }
+    return litehtml::get_repr(tokens, 0, -1, true);
+}
+
+std::string strokeWidth(const Source& s) {
+    if (!s.element) {
+        return std::string();
+    }
+    const litehtml::css_token_vector tokens =
+        litehtml::svg_computed_property(s.element->shared_from_this(), litehtml::_id("stroke-width"));
+    if (tokens.empty()) {
+        return "1px";
+    }
+    const litehtml::css_token& token = tokens[0];
+    if (token.type == litehtml::NUMBER) {
+        return px(token.n.number);
+    }
+    if (token.type == litehtml::DIMENSION && litehtml::lowcase(token.unit()) == "px") {
+        return px(token.n.number);
+    }
+    return litehtml::get_repr(tokens, 0, -1, true);
+}
+
+/// One background layer's property, comma-joined over the layers (CSS Backgrounds' lists), each list repeated to the
+/// number of image layers.
+template <typename Layer>
+std::string layers(const litehtml::background& bg, Layer&& layer) {
+    const size_t count = std::max<size_t>(1, bg.m_image.size());
+    std::string out;
+    for (size_t i = 0; i < count; i++) {
+        if (i > 0) {
+            out += ", ";
+        }
+        out += layer(i);
+    }
+    return out;
+}
+
+template <typename T>
+const T* layerAt(const std::vector<T>& values, size_t i) {
+    return values.empty() ? nullptr : &values[i % values.size()];
+}
+
+std::string backgroundImage(const litehtml::background& bg) {
+    return layers(bg, [&](size_t i) -> std::string {
+        if (i >= bg.m_image.size() || bg.m_image[i].is_empty()) {
+            return "none";
+        }
+        const litehtml::image& image = bg.m_image[i];
+        // A gradient keeps no text of its own here: it reads as none until the serializer learns gradients.
+        return image.type == litehtml::image::type_url ? "url(\"" + image.url + "\")" : "none";
+    });
+}
+
+std::string backgroundSize(const litehtml::background& bg) {
+    return layers(bg, [&](size_t i) -> std::string {
+        const litehtml::css_size* size = layerAt(bg.m_size, i);
+        if (!size) {
+            return "auto";
+        }
+        if (size->width.is_predefined()) {
+            if (size->width.predef() == litehtml::background_size_cover) {
+                return "cover";
+            }
+            if (size->width.predef() == litehtml::background_size_contain) {
+                return "contain";
+            }
+            return size->height.is_predefined() ? "auto" : "auto " + lengthValue(size->height);
+        }
+        return lengthValue(size->width) + (size->height.is_predefined() ? std::string() : " " + lengthValue(size->height));
+    });
+}
+
+std::string backgroundPosition(const litehtml::background& bg) {
+    return layers(bg, [&](size_t i) -> std::string {
+        const litehtml::css_length* x = layerAt(bg.m_position_x, i);
+        const litehtml::css_length* y = layerAt(bg.m_position_y, i);
+        return (x ? lengthValue(*x) : std::string("0%")) + " " + (y ? lengthValue(*y) : std::string("0%"));
+    });
+}
+
+std::string backgroundRepeat(const litehtml::background& bg) {
+    return layers(bg, [&](size_t i) -> std::string {
+        const int* repeat = layerAt(bg.m_repeat, i);
+        return repeat ? keyword(litehtml::background_repeat_strings, *repeat) : std::string("repeat");
+    });
+}
+
 std::string value(const Source& s, std::string_view name) {
     const litehtml::css_properties& css = s.css;
     if (name == "display") {
@@ -313,6 +489,13 @@ std::string value(const Source& s, std::string_view name) {
     }
     if (name == "white-space") {
         return keyword(litehtml::white_space_strings, int(css.get_white_space()));
+    }
+    // v0.1.1 plan, Task 3: the UA layer's sub/sup and tables (auto/22-ua-defaults).
+    if (name == "vertical-align") {
+        return keyword(litehtml::vertical_align_strings, int(css.get_vertical_align()));
+    }
+    if (name == "border-collapse") {
+        return keyword(litehtml::border_collapse_strings, int(css.get_border_collapse()));
     }
     if (name == "list-style-type") {
         return keyword(litehtml::list_style_type_strings, int(css.get_list_style_type()));
@@ -357,9 +540,34 @@ std::string value(const Source& s, std::string_view name) {
     if (name == "background-image") {
         // litehtml's initial value is one empty layer, never an empty list (V4 plan, Task 3b: css.url.remote reads none
         // for a declaration the profile dropped).
-        const auto& images = css.get_bg().m_image;
-        const bool none = std::all_of(images.begin(), images.end(), [](const auto& image) { return image.is_empty(); });
-        return none ? "none" : std::string();
+        return backgroundImage(css.get_bg());
+    }
+    if (name == "background-size") {
+        return backgroundSize(css.get_bg());
+    }
+    if (name == "background-position") {
+        return backgroundPosition(css.get_bg());
+    }
+    if (name == "background-repeat") {
+        return backgroundRepeat(css.get_bg());
+    }
+    if (name == "filter") {
+        return filterList(css.get_filter());
+    }
+    if (name == "backdrop-filter") {
+        return filterList(css.get_backdrop_filter());
+    }
+    if (name == "fill" || name == "stroke") {
+        return paint(s, name);
+    }
+    if (name == "stroke-width") {
+        return strokeWidth(s);
+    }
+    if (name == "touch-action") {
+        // Not inherited: the element's own declaration (twidget edit 30.1), else auto.
+        const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
+        const std::string declared = tag ? tag->raw_declaration("touch-action") : std::string();
+        return declared.empty() ? "auto" : declared;
     }
     if (name == "opacity") {
         return number(css.get_opacity());
@@ -446,10 +654,26 @@ std::string value(const Source& s, std::string_view name) {
     }
     // Not modeled by the renderer: their initial values, which nothing can change here.
     if (name == "direction") {
-        return "ltr";
+        // twidget edit 46: inherited; [dir] sets it (the Builder resolves dir=auto).
+        return css.get_direction() == litehtml::direction_rtl ? "rtl" : "ltr";
     }
-    if (name == "user-select" || name == "-webkit-user-select" || name == "touch-action" || name == "quotes") {
-        return "auto";
+    // widget-sandbox v0.1.1 (D18): not inherited, so the element's own declaration (twidget edit 45: either name, the
+    // later winning), else auto; the UA layer gives the root none. The renderer selects nothing either way (an accepted
+    // exception: text stays unselectable until the client implements selection).
+    if (name == "user-select" || name == "-webkit-user-select") {
+        const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
+        const std::string declared = tag ? tag->raw_declaration("user-select") : std::string();
+        return declared.empty() ? "auto" : declared;
+    }
+    if (name == "quotes") {
+        // Inherited, kept as written (twidget edit 32.4); "" is auto.
+        return css.get_quotes().empty() ? "auto" : css.get_quotes();
+    }
+    if (name == "word-spacing") {
+        return css.get_word_spacing() == litehtml::pixel_t(0) ? "0px" : px(toDouble(css.get_word_spacing()));
+    }
+    if (name == "word-break") {
+        return keyword(litehtml::word_break_strings, int(css.get_word_break()));
     }
     return std::string();
 }
@@ -458,15 +682,18 @@ std::string value(const Source& s, std::string_view name) {
 
 const std::vector<std::string>& computedPropertyNames() {
     static const std::vector<std::string> names = {
-        "background-color", "background-image", "border-bottom-color", "border-bottom-style", "border-bottom-width",
-        "border-left-color", "border-left-style", "border-left-width", "border-right-color", "border-right-style",
+        "backdrop-filter", "background-color", "background-image", "background-position", "background-repeat",
+        "background-size", "border-bottom-color", "border-bottom-style", "border-bottom-width",
+        "border-collapse", "border-left-color", "border-left-style", "border-left-width", "border-right-color", "border-right-style",
         "border-right-width", "border-top-color", "border-top-style", "border-top-width", "box-sizing", "color",
-        "content", "cursor", "direction", "display", "float", "font-family", "font-size", "font-style", "font-weight",
+        "content", "cursor", "direction", "display", "fill", "filter", "float", "font-family", "font-size", "font-style",
+        "font-weight",
         "height", "line-height", "list-style-type", "margin-bottom", "margin-left", "margin-right", "margin-top",
         "opacity", "outline-color", "outline-style", "outline-width", "overflow-x", "overflow-y", "padding-bottom",
-        "padding-left", "padding-right", "padding-top", "position", "quotes", "text-align", "text-decoration-color",
-        "text-decoration-line", "text-decoration-style", "touch-action", "transform", "user-select", "visibility",
-        "white-space", "width",
+        "padding-left", "padding-right", "padding-top", "position", "quotes", "stroke", "stroke-width", "text-align",
+        "text-decoration-color",
+        "text-decoration-line", "text-decoration-style", "touch-action", "transform", "user-select", "vertical-align",
+        "visibility", "white-space", "width", "word-break", "word-spacing",
     };
     return names;
 }
@@ -510,6 +737,7 @@ std::string computedValue(litehtml::element& element, std::string_view name, Pse
         return tokens ? litehtml::get_repr(*tokens, 0, -1, true) : std::string();
     }
     Source source{styled->css(), pseudoMissing ? nullptr : styled->get_render_item()};
+    source.element = styled;
     const litehtml::style_display display = styled->css().get_display();
     source.inlineNonReplaced = (display == litehtml::display_inline || display == litehtml::display_inline_text) && !styled->is_replaced();
     source.pseudo = pseudo;

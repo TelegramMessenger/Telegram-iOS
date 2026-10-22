@@ -155,6 +155,7 @@ cc_test(
         "Tests/RenderCorpusTests.cpp",
         "Tests/NoIOScanTests.cpp",
         "Tests/URLDataTests.cpp",
+        "Tests/IntlCasesTests.cpp",
     ]) + [
         "Tests/DOMHarness.cpp",
         "Tests/DOMHarness.h",
@@ -244,6 +245,14 @@ cc_test(
     srcs = [
         "Tests/DOMHarness.cpp",
         "Tests/DOMHarness.h",
+        "Tests/FakeRenderHost.cpp",
+        "Tests/FakeRenderHost.h",
+        "Tests/HostHarness.cpp",
+        "Tests/HostHarness.h",
+        "Tests/RenderHarness.cpp",
+        "Tests/RenderHarness.h",
+        "Tests/VirtualTime.cpp",
+        "Tests/VirtualTime.h",
         "Tests/WorkCostTests.cpp",
     ],
     copts = WR_COPTS,
@@ -295,6 +304,40 @@ cc_test(
         ":WidgetRuntime",
         ":WidgetRuntimeTestSupport",
     ],
+)
+
+# widget-sandbox v0.1.1's Intl parity fixture over the host's ICU (v0.1.1 plan, Task 10; Tests/IntlCasesTests.cpp),
+# with the drift list Tests/intl-cases-expected-failures.txt.
+cc_test(
+    name = "WidgetRuntimeIntlCasesTests",
+    srcs = [
+        "Tests/IntlCasesTests.cpp",
+        "Tests/DOMHarness.cpp",
+        "Tests/DOMHarness.h",
+        "Tests/HostHarness.cpp",
+        "Tests/HostHarness.h",
+        "Tests/FakeRenderHost.cpp",
+        "Tests/FakeRenderHost.h",
+        "Tests/RenderHarness.cpp",
+        "Tests/RenderHarness.h",
+        "Tests/VirtualTime.cpp",
+        "Tests/VirtualTime.h",
+    ],
+    copts = WR_COPTS,
+    data = ["//third-party/widget-sandbox:IntlCases", ":IntlCasesSupport"],
+    env = {"WR_INTL_CASES": "$(location //third-party/widget-sandbox:IntlCases) $(locations :IntlCasesSupport)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# The Intl cases' mapping and drift list, for the host test above and WidgetRuntimeIOS's WRIntlCasesTests.
+filegroup(
+    name = "IntlCasesSupport",
+    testonly = True,
+    srcs = ["Tests/IntlCases.js", "Tests/intl-cases-expected-failures.txt"],
+    visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
 )
 
 # The headless corpus boot (M1b plan, Task 18): every non-attack corpus document booted on a virtual clock, its

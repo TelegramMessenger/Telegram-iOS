@@ -6,6 +6,7 @@
 #include <cmath>
 #include <map>
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include "Sources/Host/Intl.h"
@@ -266,6 +267,31 @@ Text16 withHourLetter(Text16 pattern, char16_t letter) {
     return pattern;
 }
 
+/// `pattern` with its era field (outside quoted literals) at the requested width (`letters`: G, GGGG or GGGGG): Apple's
+/// CLDR data answers a short era with a narrow one ("1/1/1970 A"), where ECMA-402 asks for the requested representation
+/// and V8 gives "AD" (widget-sandbox v0.1.1's Intl fixture).
+Text16 withEraWidth(const Text16& pattern, std::u16string_view letters) {
+    // On the runtime's allocator, as the generator's answer is.
+    Text16 out(pattern.get_allocator());
+    bool quoted = false;
+    for (size_t i = 0; i < pattern.size();) {
+        const char16_t c = pattern[i];
+        if (c == u'\'') {
+            quoted = !quoted;
+        }
+        if (quoted || c != u'G') {
+            out.push_back(c);
+            i++;
+            continue;
+        }
+        while (i < pattern.size() && pattern[i] == u'G') {
+            i++;
+        }
+        out.insert(out.end(), letters.begin(), letters.end());
+    }
+    return out;
+}
+
 /// The runs of pattern letters outside quoted literals: (letter, count).
 template <class F>
 void eachPatternField(std::u16string_view pattern, F f) {
@@ -517,7 +543,12 @@ DateTimeFormatRecord createDateTimeFormat(JSContext* ctx, JSValueConst locales, 
         if (c[Second] >= 0) add(c[Second] == 0 ? "ss" : "s");
         if (c[FractionalSecondDigits] > 0) skeleton += std::u16string(size_t(c[FractionalSecondDigits]), u'S');
         if (c[TimeZoneName] >= 0) add(zoneLetters[c[TimeZoneName]]);
-        setPattern(r, withHourLetter(bestPattern(ctx, generator, skeleton), hourLetter));
+        Text16 pattern = withHourLetter(bestPattern(ctx, generator, skeleton), hourLetter);
+        if (c[Era] >= 0) {
+            const std::string_view era = textualLetters[1][c[Era]];
+            pattern = withEraWidth(pattern, std::u16string(era.begin(), era.end()));
+        }
+        setPattern(r, pattern);
         readPatternFields(r, true);
     }
     // The calendar and numbering system ICU uses for this locale.

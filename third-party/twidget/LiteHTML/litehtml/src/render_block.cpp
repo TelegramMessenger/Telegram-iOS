@@ -212,10 +212,37 @@ litehtml::rendered_width litehtml::render_item_block::_render(pixel_t x, pixel_t
         }
     }
 
+    // Telegram (VENDOR.md edit 39): a block whose width is min-content, max-content or fit-content measures its content
+    // in passes that lay every nested keyword box out as auto (`intrinsic_measuring`), so only its fitted pass lays them
+    // out in full, and at most kMaxIntrinsicDepth keyword boxes deep (`intrinsic_depth`): when every pass laid every
+    // nested keyword box out in full, the work doubled with each level of nesting.
+    struct count_scope
+    {
+        int* count;
+        explicit count_scope(int* c) : count(c) { if(count) ++*count; }
+        ~count_scope() { if(count) --*count; }
+    };
+    static constexpr int kMaxIntrinsicDepth = 8;
+    const document*      intrinsic_doc      = src_el()->doc_ptr();
+    const bool           intrinsic =
+        intrinsic_doc && intrinsic_doc->intrinsic_measuring() == 0 && intrinsic_doc->intrinsic_depth() < kMaxIntrinsicDepth &&
+        (containing_block_size.size_mode & containing_block_context::size_mode_content) == 0 &&
+        self_size.width.type == containing_block_context::cbc_value_type_auto && css().get_width().is_predefined() &&
+        css().get_width().predef() != width_auto && !is_root() && src_el()->css().get_display() != display_table_cell;
+
     //*****************************************
     // Render content
     //*****************************************
+#if 0
     auto [ret_width, ret_min_width] = _render_content(x, y, second_pass, self_size, fmt_ctx);
+#else
+    rendered_width first_pass;
+    {
+        count_scope measuring(intrinsic ? &intrinsic_doc->intrinsic_measuring() : nullptr);
+        first_pass = _render_content(x, y, second_pass, self_size, fmt_ctx);
+    }
+    auto [ret_width, ret_min_width] = first_pass;
+#endif
     //*****************************************
     const bool size_contained = css().contains(contain_size);
     if(size_contained || css().contains(contain_inline_size))
@@ -251,6 +278,34 @@ litehtml::rendered_width litehtml::render_item_block::_render(pixel_t x, pixel_t
         {
             ret_width = self_size.width;
         }
+    }
+
+    // Telegram (VENDOR.md edit 39): width min-content, max-content or fit-content (min(max-content, max(min-content,
+    // available))) sizes a block's content box. min-content is what the content pass measured; max-content takes one
+    // more content pass with nothing to wrap at. The content is then laid out again at the fitted width.
+    if(intrinsic)
+    {
+        auto clear_floats = [&]() {
+            if(src_el()->is_block_formatting_context())
+                fmt_ctx->clear_floats(-1);
+            else
+                fmt_ctx->clear_floats(self_size.context_idx);
+        };
+        const int keyword = css().get_width().predef();
+        pixel_t   fitted  = ret_min_width;
+        if(keyword != width_min_content)
+        {
+            clear_floats();
+            count_scope          measuring(&intrinsic_doc->intrinsic_measuring());
+            const rendered_width unbounded = _render_content(x, y, true, self_size.new_width(pixel_t(1000000)), fmt_ctx);
+            fitted = keyword == width_max_content
+                         ? unbounded.natural_width
+                         : std::min(unbounded.natural_width, std::max(ret_min_width, pixel_t(self_size.render_width)));
+        }
+        clear_floats();
+        m_pos.width = fitted;
+        count_scope depth(&intrinsic_doc->intrinsic_depth());
+        _render_content(x, y, true, self_size.new_width(fitted), fmt_ctx);
     }
 
     // Fix width with max-width attribute

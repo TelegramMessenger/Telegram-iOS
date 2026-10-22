@@ -58,18 +58,6 @@ std::vector<size_t> topItems(std::span<const css_token> values) {
     return out;
 }
 
-/// Removes `values[i]` and the whitespace token before it (or, for the first item, the one after it).
-void removeItem(css_token_vector& values, size_t i) {
-    size_t from = i;
-    size_t to = i + 1;
-    if (from > 0 && isWhitespace(values[from - 1])) {
-        from--;
-    } else if (to < values.size() && isWhitespace(values[to])) {
-        to++;
-    }
-    values.erase(values.begin() + std::ptrdiff_t(from), values.begin() + std::ptrdiff_t(to));
-}
-
 // MARK: URLs
 
 /// Decodes the UTF-8 code point at `s[i]`, advancing `i`; a malformed byte is returned as itself.
@@ -280,8 +268,15 @@ FontReduction reduceFamilies(const css_token_vector& values, size_t from, size_t
     };
     FontReduction out;
     std::vector<Entry> kept;
+    // The named entries' keys: deduplicated, so at most the profile's generic families, aliases and global keywords,
+    // whatever the list's length (a function group is never a key; final review C1).
+    std::vector<std::string> keys;
     auto present = [&](std::string_view key) {
-        return std::any_of(kept.begin(), kept.end(), [&](const Entry& e) { return !key.empty() && e.key == key; });
+        return !key.empty() && std::find(keys.begin(), keys.end(), key) != keys.end();
+    };
+    auto keep = [&](std::string text, std::string key) {
+        keys.push_back(key);
+        kept.push_back({std::move(text), std::move(key)});
     };
     std::vector<const css_token*> group;
     auto closeGroup = [&]() {
@@ -300,13 +295,13 @@ FontReduction reduceFamilies(const css_token_vector& values, size_t from, size_t
             if (std::optional<std::string_view> alias = profile::fontAlias(name)) {
                 out.changed = true;
                 if (!present(*alias)) {
-                    kept.push_back({std::string(*alias), std::string(*alias)});
+                    keep(std::string(*alias), std::string(*alias));
                 }
             } else if (profile::contains(CSSTable::GenericFonts, name) || isGlobalKeyword(name)) {
                 if (present(name)) {
                     out.changed = true;
                 } else {
-                    kept.push_back({group[0]->str(), name});
+                    keep(group[0]->str(), name);
                 }
             } else {
                 out.changed = true;
@@ -377,8 +372,14 @@ bool isOverflowProperty(std::string_view name) {
 
 // MARK: selectors
 
-/// RB §5 over one complex selector's tokens, rewriting :disabled and :enabled in place; false for a bad one.
+/// RB §5 over one complex selector's tokens, rewriting :disabled and :enabled; false for a bad one. A rewrite is made
+/// into a fresh vector in one pass (css_token has no move, so an erase or insert in the middle copied the rest of the
+/// group every time: final review C1).
 bool walkSelector(css_token_vector& tokens, bool& augmented, size_t& visited) {
+    css_token_vector rewritten;
+    bool rewriting = false;
+    // The tokens [copied, k) not yet in `rewritten`.
+    size_t copied = 0;
     for (size_t k = 0; k < tokens.size(); k++) {
         visited++;
         const css_token& t = tokens[k];
@@ -406,17 +407,26 @@ bool walkSelector(css_token_vector& tokens, bool& augmented, size_t& visited) {
         }
         if (tokens[at].type == litehtml::IDENT) {
             if (std::optional<std::string_view> rewrite = profile::pseudoRewrite(name)) {
-                css_token_vector replacement = tokensOf(*rewrite);
-                tokens.erase(tokens.begin() + std::ptrdiff_t(k), tokens.begin() + std::ptrdiff_t(at) + 1);
-                tokens.insert(tokens.begin() + std::ptrdiff_t(k), replacement.begin(), replacement.end());
+                if (!rewriting) {
+                    rewriting = true;
+                    rewritten.reserve(tokens.size());
+                }
+                rewritten.insert(rewritten.end(), tokens.begin() + std::ptrdiff_t(copied), tokens.begin() + std::ptrdiff_t(k));
+                const css_token_vector replacement = tokensOf(*rewrite);
+                rewritten.insert(rewritten.end(), replacement.begin(), replacement.end());
+                copied = at + 1;
                 augmented = true;
-                k += replacement.size() - 1;
+                k = at;
                 continue;
             }
         } else if (!walkSelector(tokens[at].value, augmented, visited)) {
             return false;
         }
         k = at;
+    }
+    if (rewriting) {
+        rewritten.insert(rewritten.end(), tokens.begin() + std::ptrdiff_t(copied), tokens.end());
+        tokens = std::move(rewritten);
     }
     return true;
 }
@@ -690,20 +700,37 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
     bool augmented = false;
     // RB §4.4: the filter list is pruned before the value is checked.
     if (!custom && isFilterProperty(name)) {
-        for (size_t i = 0; i < values.size();) {
-            out.visited++;
-            const css_token& t = values[i];
+        // In one pass into a fresh list: a removed item goes with the whitespace before it, or, with none before it, the
+        // one after it. Erasing in place copied the rest of the list per item (final review C1).
+        auto pruned = [](const css_token& t) {
             const std::string function = t.type == litehtml::CV_FUNCTION ? lowered(t.name()) : std::string();
-            const bool removed = t.type == litehtml::URL ||
-                                 (t.type == litehtml::CV_FUNCTION && function != "var" && function != "env" &&
-                                  function != "attr" && !profile::contains(CSSTable::FilterFunctions, function));
-            if (!removed) {
-                i++;
-                continue;
+            return t.type == litehtml::URL ||
+                   (t.type == litehtml::CV_FUNCTION && function != "var" && function != "env" && function != "attr" &&
+                    !profile::contains(CSSTable::FilterFunctions, function));
+        };
+        if (std::any_of(values.begin(), values.end(), pruned)) {
+            css_token_vector kept;
+            kept.reserve(values.size());
+            bool skipWhitespace = false;
+            for (const css_token& t : values) {
+                out.visited++;
+                if (skipWhitespace) {
+                    skipWhitespace = false;
+                    if (isWhitespace(t)) {
+                        continue;
+                    }
+                }
+                if (!pruned(t)) {
+                    kept.push_back(t);
+                    continue;
+                }
+                if (!kept.empty() && isWhitespace(kept.back())) {
+                    kept.pop_back();
+                } else {
+                    skipWhitespace = true;
+                }
             }
-            const size_t before = values.size();
-            removeItem(values, i);
-            i -= std::min(i, before - values.size() - 1);
+            values = std::move(kept);
             changed = true;
         }
         if (topItems(values).empty()) {
@@ -740,12 +767,9 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
             }
         }
     }
-    // The value sets, unless a substitution may carry the value.
-    if (name == "display" && !scanned.hasVar &&
-        !(top.size() == 1 && profile::contains(CSSTable::DisplayValues, identAt(0)))) {
-        return out;
-    }
-    if (position && !scanned.hasVar && !(top.size() == 1 && profile::contains(CSSTable::PositionValues, identAt(0)))) {
+    // The value sets (css.values: display, position, user-select, …), unless a substitution may carry the value.
+    if (profile::contains(CSSTable::ValuedProperties, name) && !scanned.hasVar &&
+        !(top.size() == 1 && profile::keywordAllowed(name, identAt(0)))) {
         return out;
     }
     std::vector<std::string> idents;

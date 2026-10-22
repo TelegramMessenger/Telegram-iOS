@@ -81,12 +81,12 @@ WR_TEST(testTheInterfaces) {
 }
 
 /// A shape has no CSS box: its client rect is its user-unit box mapped into the <svg>'s content box through the viewBox
-/// (preserveAspectRatio's default, xMidYMid meet). geo is 120×40 at (8, 8) over 60×20 user units: twice the size.
+/// (preserveAspectRatio's default, xMidYMid meet). geo is 120×40 at (12, 8) over 60×20 user units: twice the size.
 WR_TEST(testAShapesRectIsMappedThroughTheViewBox) {
     RenderEnv env(kShapes);
-    CHECK_EQ(env.env().eval("box(r.getBoundingClientRect())"), std::string("18,12,20,16"));
+    CHECK_EQ(env.env().eval("box(r.getBoundingClientRect())"), std::string("22,12,20,16"));
     CHECK_EQ(env.env().eval("r.getClientRects().length"), std::string("1"));
-    CHECK_EQ(env.env().eval("box(g.getBoundingClientRect())"), std::string("10,10,22,14"));
+    CHECK_EQ(env.env().eval("box(g.getBoundingClientRect())"), std::string("14,10,22,14"));
 }
 
 /// The final review's I2: what the SVG painter does not draw has no geometry (display none by CSS or attribute, under a

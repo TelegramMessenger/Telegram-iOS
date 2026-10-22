@@ -92,7 +92,8 @@ RenderEnv::RenderEnv(std::string_view html, wr::RenderOptions options, bool drai
 RenderEnv::~RenderEnv() = default;
 
 std::tuple<std::string, std::string, std::string> rebuildDump(RenderEnv& env) {
-    wr::RenderTree fresh(env.ctx(), env.host(), env.options());
+    // The render tree's options as they are now: the width and the theme (its root declarations) set since boot.
+    wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
     fresh.rebuild(env.ctx());
     std::shared_ptr<const wr::LayerTree> tree = fresh.layerTree();
     return {fresh.layoutDump(), fresh.renderInput(), tree ? tree->dump() : std::string()};

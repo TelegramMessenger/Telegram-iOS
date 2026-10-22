@@ -3,6 +3,7 @@
 // and charged. Expected strings are ICU's own output.
 #include <string>
 
+#include "Sources/Host/HostState.h"
 #include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 
@@ -116,4 +117,27 @@ WR_TEST(testACollatorKeepsTheLocalesOwnDefaults) {
     CHECK_EQ(env.eval("[new Intl.Collator('da', { caseFirst: 'lower' }).compare('a', 'A'), new Intl.Collator('en').resolvedOptions().caseFirst,"
                       " new Intl.Collator('en').resolvedOptions().ignorePunctuation].join()"),
              std::string("-1,false,false"));
+}
+
+/// v0.1.1 plan, Task 10 (ECMA-402 TransformCase): toLocaleUpperCase and toLocaleLowerCase follow the language's own
+/// case rules, the first requested locale's or else the host's; other languages keep the root's mapping, the engine's
+/// own even when a widget replaces toUpperCase; a long string is mapped whole and charged for.
+WR_TEST(testLocaleCaseMapping) {
+    HostEnv env;
+    env.eval(kErr);
+    CHECK_EQ(env.eval("['i'.toLocaleUpperCase('tr'), 'I'.toLocaleLowerCase('tr-TR'), 'i'.toLocaleUpperCase(['az', 'en']),"
+                      " 'i'.toLocaleUpperCase('en'), 'straße'.toLocaleUpperCase('de'), 'i'.toLocaleUpperCase(),"
+                      " 'Ά'.toLocaleUpperCase('el')].join()"),
+             std::string("İ,ı,İ,I,STRASSE,I,Α"));
+    CHECK_EQ(env.eval("[err(() => String.prototype.toLocaleUpperCase.call(null)), err(() => 'a'.toLocaleLowerCase('not a tag!'))].join()"),
+             std::string("TypeError,RangeError"));
+    // The root's mapping is the engine's own, kept at install.
+    CHECK_EQ(env.eval("String.prototype.toUpperCase = () => 'replaced'; 'abc'.toLocaleUpperCase('en')"), std::string("ABC"));
+    // The host's locale when none is requested.
+    wr::HostState::of(env.ctx()).setLocale("tr-TR");
+    CHECK_EQ(env.eval("'i'.toLocaleUpperCase()"), std::string("İ"));
+    JSRuntime* rt = env.runtime().jsRuntime();
+    const uint64_t before = JS_GetWorkUnits(rt);
+    CHECK_EQ(env.eval("'i'.repeat(4000000).toLocaleUpperCase('tr').length"), std::string("4000000"));
+    CHECK(JS_GetWorkUnits(rt) - before >= 4000000 / 8 * (1 + wr::work::kCaseMapEightUnits));
 }

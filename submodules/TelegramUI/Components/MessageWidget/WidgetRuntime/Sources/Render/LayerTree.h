@@ -277,6 +277,10 @@ bool sameContent(const Layer& a, const Layer& b);
 /// Whether two groups' parameters are equal (null: no group).
 bool sameMirrorGroup(const MirrorGroup* a, const MirrorGroup* b);
 
+/// LayerTree::canvasColor for `document` as laid out now: the background litehtml paints on the root (its own, or the
+/// body's it propagates), currentColor resolved against the element that sets it.
+litehtml::web_color canvasColor(litehtml::document& document);
+
 /// Stable text for tests: one line per node, depth-indented, then a Box's or an Inline's content as LayerTree::dump
 /// prints entries; its kind, key, origin, pass, clips, a Context's kind, escape and group. No id is printed, so a mirror
 /// and one built afresh dump the same.
@@ -286,10 +290,11 @@ std::string dumpEntries(const Layer& layer, size_t depth);
 
 class LayerTree {
 public:
-    /// `root` must be a Root layer; WidgetContainer::record is its producer.
-    LayerTree(double width, double height, Layer root);
+    /// `root` must be a Root layer; WidgetContainer::record is its producer. `canvas` is canvasColor's.
+    LayerTree(double width, double height, Layer root, litehtml::web_color canvas = litehtml::web_color::transparent);
     /// A mirror (LayerMirror); `root` must be a Root Context.
-    LayerTree(double width, double height, std::shared_ptr<const MirrorNode> root);
+    LayerTree(double width, double height, std::shared_ptr<const MirrorNode> root,
+              litehtml::web_color canvas = litehtml::web_color::transparent);
     LayerTree(const LayerTree&) = delete;
     LayerTree& operator=(const LayerTree&) = delete;
 
@@ -299,6 +304,10 @@ public:
     const MirrorNode* mirror() const { return m_mirror.get(); }
     double width() const { return m_width; }
     double height() const { return m_height; }
+    /// The canvas's colour (CSS 2.1 §14.2): the root's background colour, or the body's when the root has none, never
+    /// currentColor; transparent when neither sets one. The tree paints it over the root's box only, so a host whose
+    /// view is taller than the document (the bubble's minimum, a fixed height) paints it under the tree.
+    const litehtml::web_color& canvasColor() const { return m_canvas; }
     /// Every PaintItem in root(), at any depth (layers are not items).
     size_t itemCount() const;
 
@@ -329,6 +338,7 @@ private:
 
     double m_width;
     double m_height;
+    litehtml::web_color m_canvas;
     std::shared_ptr<const MirrorNode> m_mirror;
     mutable std::once_flag m_flattened;
     mutable size_t m_itemCount = 0;

@@ -47,6 +47,10 @@ namespace litehtml
         virtual void               delete_font(litehtml::uint_ptr hFont)                                            = 0;
         virtual pixel_t            text_width(const char* text, litehtml::uint_ptr hFont)                           = 0;
         virtual std::shared_ptr<text_breaker> create_text_breaker(const std::string&, uint_ptr) { return nullptr; }
+        // Telegram (VENDOR.md edit 47): the bidi embedding level (UAX #9, after rule I2) of each of a line's units, its
+        // text in UTF-8 (U+FFFC for an atomic inline), in a paragraph of direction `rtl`. False, or levels of another
+        // size, keeps the logical order.
+        virtual bool bidi_levels(const std::vector<std::string>& runs, bool rtl, std::vector<uint8_t>& levels) { return false; }
         virtual void               draw_text(litehtml::uint_ptr hdc, const char* text, litehtml::uint_ptr hFont,
                                              litehtml::web_color color, const litehtml::position& pos)              = 0;
         virtual pixel_t            pt_to_px(float pt) const                                                         = 0;

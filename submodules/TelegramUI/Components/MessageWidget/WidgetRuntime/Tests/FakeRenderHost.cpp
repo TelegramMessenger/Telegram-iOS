@@ -99,8 +99,27 @@ double FakeRenderHost::textWidth(const wr::HostFont&, std::string_view utf8) {
     return 8.0 * double(utf8.size());
 }
 
-std::shared_ptr<litehtml::text_breaker> FakeRenderHost::createTextBreaker(const wr::HostFont&, const std::string&) {
-    return nullptr;
+namespace {
+
+/// Breaks anywhere between bytes, each 8 px wide as textWidth measures them (fidelity plan, Task 5: word-break and
+/// overflow-wrap: anywhere reach the breaker); at least one byte per line, so a fit always advances.
+class FakeTextBreaker final : public litehtml::text_breaker {
+public:
+    explicit FakeTextBreaker(size_t length) : m_length(length) {}
+    size_t fit(size_t start, litehtml::pixel_t width) override {
+        const size_t count = std::max<size_t>(1, size_t(std::max(0.0f, float(width)) / 8.0f));
+        return std::min(m_length, start + count);
+    }
+    litehtml::pixel_t minimum_width() override { return litehtml::pixel_t(m_length > 0 ? 8.0f : 0.0f); }
+
+private:
+    size_t m_length;
+};
+
+} // namespace
+
+std::shared_ptr<litehtml::text_breaker> FakeRenderHost::createTextBreaker(const wr::HostFont&, const std::string& text) {
+    return std::make_shared<FakeTextBreaker>(text.size());
 }
 
 wr::ShapedText FakeRenderHost::shape(const wr::HostFont&, std::string_view utf8) {

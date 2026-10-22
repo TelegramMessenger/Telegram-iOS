@@ -833,6 +833,11 @@ namespace litehtml
     // normalize length into value between 0 and 1
     float normalize_length(css_length length, float line_len)
     {
+        // Telegram (VENDOR.md edit 48): a calc stop at the line's length.
+        if(length.is_calc())
+        {
+            return pixel_t(line_len) != 0_px ? float(length.calc_percent(pixel_t(line_len))) / line_len : 0.0f;
+        }
         if(length.units() == css_units_percentage)
         {
             return length.val() / 100.0f;
@@ -856,6 +861,7 @@ namespace litehtml
         {
             repeating = true;
         }
+#if 0
         int  none_units      = 0;
         bool has_transparent = false;
         for(const auto& item : colors)
@@ -948,6 +954,91 @@ namespace litehtml
                 }
             }
         }
+
+#else
+        // Telegram (VENDOR.md edit 35): CSS Images 3 §3.4.3's colour-stop fix-up. A stop with no position stays unplaced
+        // until the first and last get 0 and 1; each position below an earlier one is raised to the largest before it;
+        // the unplaced are spaced evenly between their placed neighbours; only then do a non-repeating gradient's
+        // implicit ends join.
+        bool              has_transparent = false;
+        std::vector<bool> placed;
+        for(const auto& item : colors)
+        {
+            if(item.is_color_hint)
+            {
+                if(!color_points.empty())
+                {
+                    color_points.back().hint =
+                        item.length ? normalize_length(*item.length, line_len) : *item.angle / 360;
+                }
+                continue;
+            }
+            if(item.color.alpha == 0)
+            {
+                has_transparent = true;
+            }
+            if(item.length)
+            {
+                color_points.emplace_back(normalize_length(*item.length, line_len), item.color);
+            } else if(item.angle)
+            {
+                color_points.emplace_back(*item.angle / 360, item.color);
+            } else
+            {
+                color_points.emplace_back(0.0f, item.color);
+            }
+            placed.push_back(item.length || item.angle);
+        }
+        if(color_points.empty())
+        {
+            return false;
+        }
+        if(!placed.front())
+        {
+            color_points.front().offset = 0;
+            placed.front()              = true;
+        }
+        if(!placed.back())
+        {
+            color_points.back().offset = 1;
+            placed.back()              = true;
+        }
+        float largest = color_points.front().offset;
+        for(size_t i = 0; i < color_points.size(); i++)
+        {
+            if(placed[i])
+            {
+                color_points[i].offset = std::max(color_points[i].offset, largest);
+                largest                = color_points[i].offset;
+            }
+        }
+        for(size_t i = 1; i < color_points.size(); i++)
+        {
+            if(placed[i])
+                continue;
+            size_t j = i;
+            while(!placed[j])
+                j++;
+            const float from = color_points[i - 1].offset;
+            const float step = (color_points[j].offset - from) / static_cast<float>(j - i + 1);
+            for(size_t k = i; k < j; k++)
+                color_points[k].offset = from + step * static_cast<float>(k - i + 1);
+            i = j;
+        }
+        if(!repeating)
+        {
+            if(color_points.front().offset > 0)
+            {
+                const web_color first = color_points.front().color;
+                color_points.emplace(color_points.begin(), 0.0f, first);
+            }
+            if(color_points.back().offset < 1)
+            {
+                const web_color last = color_points.back().color;
+                color_points.emplace_back(1.0f, last);
+            }
+        }
+#endif
 
         // process transparent
         if(has_transparent)

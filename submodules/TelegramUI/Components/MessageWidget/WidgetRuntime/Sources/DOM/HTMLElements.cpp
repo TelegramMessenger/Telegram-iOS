@@ -25,18 +25,41 @@ void HTMLElement::click(JSContext* ctx) {
     dispatch(ctx, *event, *this);
 }
 
-void HTMLElement::focus(JSContext* ctx) {
-    HostState* host = HostState::find(ctx);
-    if (host && isFocusable(ctx, *this)) {
-        host->userActions().setFocus(ctx, this);
-    }
+// Profile 1 has no focus (V4 plan, Task 8; RB §8.1): the sandbox's focus() and blur() are no-ops.
+void HTMLElement::focus(JSContext*) {}
+
+void HTMLElement::blur(JSContext*) {}
+
+String HTMLDialogElement::returnValue(JSContext* ctx) const {
+    return m_returnValue.isUndefined() ? String::fromUTF8(ctx, "") : String::adopt(ctx, JS_DupValue(ctx, m_returnValue.value));
 }
 
-void HTMLElement::blur(JSContext* ctx) {
-    HostState* host = HostState::find(ctx);
-    if (host && host->userActions().focusedElement(ctx) == this) {
-        host->userActions().setFocus(ctx, nullptr);
+void HTMLDialogElement::setReturnValue(JSContext* ctx, String value) {
+    m_returnValue.set(JS_GetRuntime(ctx), value.toJS(ctx));
+}
+
+void HTMLDialogElement::show(JSContext* ctx) {
+    Atom open = Atom::fromUTF8(ctx, "open");
+    this->setAttributeValue(ctx, open.get(), String::fromUTF8(ctx, ""));
+}
+
+void HTMLDialogElement::showModal(JSContext* ctx) {
+    this->show(ctx);
+}
+
+void HTMLDialogElement::close(JSContext* ctx, std::optional<String> returnValue) {
+    if (returnValue) {
+        this->setReturnValue(ctx, std::move(*returnValue));
     }
+    Atom open = Atom::fromUTF8(ctx, "open");
+    this->removeAttributeAtom(ctx, open.get());
+    Atom type = Atom::fromUTF8(ctx, "close");
+    fireEvent(ctx, *this, type.get());
+}
+
+void HTMLDialogElement::dispose(JSRuntime* rt) {
+    m_returnValue.clear(rt);
+    HTMLElement::dispose(rt);
 }
 
 int32_t HTMLElement::tabIndex(JSContext* ctx) {

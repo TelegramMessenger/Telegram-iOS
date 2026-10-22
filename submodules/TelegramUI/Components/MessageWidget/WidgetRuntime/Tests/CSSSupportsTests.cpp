@@ -49,6 +49,15 @@ WR_TEST(testTheDeclarationRules) {
              std::string(""));
 }
 
+/// widget-sandbox v0.1.1: user-select's value set (css.values) holds for CSS.supports as for the validator.
+WR_TEST(testUserSelectValues) {
+    HostEnv env;
+    CHECK_EQ(env.eval("[CSS.supports('user-select', 'text'), CSS.supports('-webkit-user-select', 'none'),"
+                      " CSS.supports('user-select', 'all'), CSS.supports('user-select', 'contain'),"
+                      " CSS.supports('(user-select: auto)')].join()"),
+             std::string("true,true,false,false,true"));
+}
+
 /// V5c final review, I1: var() (or attr()) skips only the display and position value tables, as the references gate
 /// only the value-set check on it; every rule that rewrites or drops a declaration still applies.
 WR_TEST(testVarSkipsOnlyTheValueTables) {

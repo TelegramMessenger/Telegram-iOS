@@ -92,10 +92,11 @@ struct RenderOptions {
     /// which the root element takes after its own style attribute (twidget edit 26). installRender sets them from the
     /// HostState's theme; HostState keeps them current.
     std::string rootDeclarations;
-    /// The spec renderer's root CSS (widget-sandbox v0.1.0, `packages/core/src/host/shadow-renderer.ts`), without its
-    /// `:where()`: in the master sheet the author's rules win over it whatever their specificity.
+    /// The spec renderer's root CSS (widget-sandbox v0.1.1, `packages/core/src/host/shadow-renderer.ts`), without its
+    /// `:where()`: in the master sheet the author's rules win over it whatever their specificity. The body's margin is
+    /// the UA layer's (the padding token), which ranks above this sheet (twidget edit 41).
     std::string hostCSS = "html { display: flow-root; position: relative; min-height: 0 } head { display: none } "
-                          "body { display: block; margin: 8px }";
+                          "body { display: block }";
     /// Whether RenderTree keeps renderInput, the test oracle (Ruling E11). Off in production: it would live in the
     /// widget's JS heap, and escaping expands it up to 6×.
     bool keepRenderInput = false;

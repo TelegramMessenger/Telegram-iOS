@@ -316,6 +316,9 @@ namespace litehtml
                         else if(attr.type == select_pseudo_class && attr.name == _link_)
                             names.attrs.insert(_id("href")); // Telegram (VENDOR.md edit 17): el_anchor pushes :link for an href
                     }
+                    // Telegram (VENDOR.md edit 31.4): :lang() reads the lang attribute of the subject and its ancestors.
+                    if(attr.type == select_pseudo_class && attr.name == _lang_)
+                        names.attrs.insert(_id("lang"));
                     for(const auto& inner : attr.selector_list)
                     {
                         if(inner)
@@ -323,6 +326,25 @@ namespace litehtml
                     }
                 }
             }
+        }
+
+        // Telegram (VENDOR.md edit 31.5): whether `selector` uses :empty anywhere (inside :not(), :is() too).
+        bool uses_empty(const css_selector& selector)
+        {
+            for(const css_selector* sel = &selector; sel; sel = sel->m_left.get())
+            {
+                for(const auto& attr : sel->m_right.m_attrs)
+                {
+                    if(attr.type == select_pseudo_class && attr.name == _empty_)
+                        return true;
+                    for(const auto& inner : attr.selector_list)
+                    {
+                        if(inner && uses_empty(*inner))
+                            return true;
+                    }
+                }
+            }
+            return false;
         }
 
         bool restylable_in_place(const element& el)
@@ -374,6 +396,55 @@ namespace litehtml
             }
         }
     }
+
+    namespace
+    {
+        // Telegram (VENDOR.md edit 42): scan_selector, telling a positional pseudo-class in the subject compound (or in a
+        // selector list inside it) from one anywhere else: `subject_positions` for the first, `positions` for the second.
+        void scan_positions(const css_selector& selector, bool& attributes, bool& positions, bool& subject_positions,
+                            bool subject)
+        {
+            for(const css_selector* sel = &selector; sel; sel = sel->m_left.get())
+            {
+                const bool here = subject && sel == &selector;
+                if(sel->m_left && (sel->m_combinator == combinator_adjacent_sibling || sel->m_combinator == combinator_general_sibling))
+                {
+                    attributes = true;
+                    positions  = true;
+                }
+                for(const auto& attr : sel->m_right.m_attrs)
+                {
+                    if(attr.type == select_pseudo_class)
+                    {
+                        switch(attr.name)
+                        {
+                        case _only_child_:
+                        case _only_of_type_:
+                        case _first_child_:
+                        case _first_of_type_:
+                        case _last_child_:
+                        case _last_of_type_:
+                        case _nth_child_:
+                        case _nth_of_type_:
+                        case _nth_last_child_:
+                        case _nth_last_of_type_:
+                            (here ? subject_positions : positions) = true;
+                            if(!attr.selector_list.empty())
+                                attributes = true;
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                    for(const auto& inner : attr.selector_list)
+                    {
+                        if(inner)
+                            scan_positions(*inner, attributes, positions, subject_positions, here);
+                    }
+                }
+            }
+        }
+    } // namespace
 
     // The document as literal text with holes at its style attribute values and text nodes. A frame that
     // differs only inside the holes is matched without parsing: a quoted attribute value cannot contain its
@@ -1610,7 +1681,18 @@ namespace litehtml
             {
                 if(!sel)
                     continue;
+#if 0
                 scan_selector(*sel, attributes, positions);
+#else
+                // Telegram (VENDOR.md edit 42): a rule positional in its subject alone is kept apart.
+                bool subject = false;
+                scan_positions(*sel, attributes, positions, subject, true);
+                if(subject)
+                {
+                    const bool child = sel->m_left && sel->m_combinator == combinator_child;
+                    m_subject_positions.push_back({sel->m_right.m_tag, child ? sel->m_left->m_right.m_tag : star_id});
+                }
+#endif
                 collect_ancestor_names(*sel, !(sel->m_style && sel->m_style->declares_custom_property()), names);
             }
         }
@@ -1618,6 +1700,21 @@ namespace litehtml
         for(const auto& sheet : m_css)
             counters = counters || mentions_counters(sheet.text);
         m_selector_scope = (attributes ? 1 : 0) | (positions ? 2 : 0) | (counters ? 4 : 0);
+        if(!m_subject_positions.empty())
+            m_selector_scope |= 16; // Telegram (VENDOR.md edit 42)
+        // Telegram (VENDOR.md edit 31.5): 8 when :empty is used: a change of an element's children changes how the
+        // element itself matches, which neither insertion, removal nor replace_children re-matches.
+        for(const css* sheet : {&m_master_css, &m_styles, &m_user_css})
+        {
+            for(const auto& sel : sheet->selectors())
+            {
+                if(sel && uses_empty(*sel))
+                {
+                    m_selector_scope |= 8;
+                    break;
+                }
+            }
+        }
         return m_selector_scope;
     }
 
@@ -1812,10 +1909,20 @@ namespace litehtml
         if(!m_gumbo || !m_root || !m_finalized || m_build_limited || getenv("LH_NO_STRUCTURE"))
             return false;
         const int scope = selector_scope();
+#if 0
         if((scope & 4) || mentions_counters(html))
             return false;
+#else
+        // Telegram (VENDOR.md edit 31.5): nor with :empty.
+        if((scope & 12) || mentions_counters(html))
+            return false;
+#endif
         const bool attribute_scope = (scope & 1) != 0;
+#if 0
         const bool position_scope  = (scope & 2) != 0;
+#else
+        const bool position_scope  = (scope & 18) != 0; // Telegram (VENDOR.md edit 42): subject positions too
+#endif
 
         std::string  text   = html;
         GumboOutput* output = gumbo_parse_with_options(&kGumboDefaultOptions, text.data(), text.size());
@@ -2451,6 +2558,7 @@ namespace litehtml
             if(!hit)
             {
                 container()->trusted_styles(true);
+                m_master_css.set_layered_origins(true); // Telegram (VENDOR.md edit 41)
                 m_master_css.parse_css_stylesheet(master_styles, "", shared_from_this());
                 container()->trusted_styles(false);
                 m_master_css.sort_selectors();
@@ -3282,6 +3390,11 @@ namespace litehtml
         {
             return 0_px;
         }
+        // Telegram (VENDOR.md edit 48): a calc at `size`, its font-relative terms by `metrics`.
+        if(val.is_calc())
+        {
+            return val.calc_value(size, calc_fonts_for(metrics));
+        }
         // Telegram: viewport_changed() computes styles again only for a document that resolved a viewport unit.
         if(val.units() == css_units_vw || val.units() == css_units_vh || val.units() == css_units_vmin || val.units() == css_units_vmax)
             m_viewport_units = true;
@@ -3340,10 +3453,33 @@ namespace litehtml
         return ret;
     }
 
+    // Telegram (VENDOR.md edit 48).
+    calc_fonts document::calc_fonts_for(const font_metrics& metrics) const
+    {
+        calc_fonts fonts;
+        fonts.em  = double(metrics.font_size);
+        fonts.rem = m_root ? double(m_root->css().get_font_size().value()) : double(metrics.font_size);
+        fonts.ex  = double(metrics.x_height.value());
+        fonts.ch  = double(metrics.ch_width.value());
+        return fonts;
+    }
+
     void document::cvt_units(css_length& val, const font_metrics& metrics, pixel_t size) const
     {
         if(val.is_predefined())
         {
+            return;
+        }
+        // Telegram (VENDOR.md edit 48): font-relative terms fold into px now; a calc left without a percentage is a
+        // plain px length, and one with a percentage stays deferred to layout (calc_percent).
+        if(val.is_calc())
+        {
+            const calc_fonts fonts  = calc_fonts_for(metrics);
+            calc_ref         folded = calc_node::fold_fonts(val.calc(), fonts);
+            if(!folded->has_percent())
+                val.set_value(float(folded->eval(0, fonts)), css_units_px);
+            else
+                val.set_calc(std::move(folded));
             return;
         }
         if(val.units() != css_units_percentage)

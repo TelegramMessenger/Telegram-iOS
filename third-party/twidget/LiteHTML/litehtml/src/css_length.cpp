@@ -6,6 +6,22 @@ namespace litehtml
 
     bool css_length::from_token(const css_token& token, int options, css_values keywords)
     {
+        // Telegram (VENDOR.md edit 48): a math function the parse-time fold left (it mixes a percentage or a
+        // font-relative term with a length) is kept as a tree when the property takes both.
+        if(token.type == CV_FUNCTION)
+        {
+            calc_ref node = calc_node::parse(token);
+            if(!node || !(options & f_length) || (node->has_percent() && !(options & f_percentage)))
+            {
+                return false;
+            }
+            if(options & f_positive)
+            {
+                node = calc_node::at_least_zero(node);
+            }
+            set_calc(std::move(node));
+            return true;
+        }
         if((options & f_positive) && is_one_of(token.type, NUMBER, DIMENSION, PERCENTAGE) && token.n.number < 0)
         {
             return false;
@@ -80,6 +96,10 @@ namespace litehtml
 
     std::string css_length::to_string() const
     {
+        if(m_is_calc)
+        {
+            return "calc{" + m_calc->to_string() + "}";
+        }
         if(m_is_predefined)
         {
             return "def(" + std::to_string(m_predef) + ")";

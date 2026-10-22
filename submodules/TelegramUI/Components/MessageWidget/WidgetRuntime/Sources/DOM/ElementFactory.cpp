@@ -41,6 +41,12 @@ Ref<Element> createElementNode(JSContext* ctx, Document& document, Namespace ns,
         if (localName == state.name(Name::body)) {
             return create<HTMLBodyElement>(ctx, idl::kHTMLBodyElement, ctx, document, ns, localName, prefix, otherNamespace);
         }
+        if (iface == idl::kHTMLInputElement) {
+            return create<HTMLInputElement>(ctx, idl::kHTMLInputElement, ctx, document, ns, localName, prefix, otherNamespace);
+        }
+        if (iface == idl::kHTMLDialogElement) {
+            return create<HTMLDialogElement>(ctx, idl::kHTMLDialogElement, ctx, document, ns, localName, prefix, otherNamespace);
+        }
         uint16_t chosen;
         if (iface >= 0) {
             chosen = uint16_t(iface);

@@ -2,8 +2,8 @@ import XCTest
 import UIKit
 @testable import WidgetHarnessLib
 
-/// Tier 1: widget-sandbox v0.1.0's automatic conformance set, every test in every theme its manifest lists, through the
-/// app's widget path (`conformance/CLIENTS.md`). Writes the run file, the crops and the new baseline into the test's
+/// Tier 1: widget-sandbox v0.1.1's automatic conformance set, every test in every theme its manifest lists, through the
+/// app's widget path (`conformance/CLIENTS.md`), then the visual set, loaded only. Writes the run file, the crops and the new baseline into the test's
 /// undeclared outputs, then fails on a regression against the committed baseline, or on an improvement not yet
 /// recorded (`Tools/conformance_report.sh --record`).
 final class ConformanceSetTests: XCTestCase {
@@ -19,10 +19,10 @@ final class ConformanceSetTests: XCTestCase {
         options.postFilter = "no post matches this"
         root.reload(options: options)
 
-        let tests = try ConformanceManifest.loadAutomaticSet()
+        let tests = try ConformanceManifest.loadAutomaticSet() + ConformanceManifest.loadVisualSet()
         let runs = ConformanceRunner(host: root.view).runAll(tests)
         let pairs = zip(tests.flatMap { test in test.themes.map { _ in test } }, runs).map { (test: $0.0, run: $0.1) }
-        XCTAssertEqual(runs.count, 40)
+        XCTAssertEqual(runs.count, 82)
 
         let outputs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["TEST_UNDECLARED_OUTPUTS_DIR"] ?? NSTemporaryDirectory()).appendingPathComponent("conformance", isDirectory: true)
         try? FileManager.default.removeItem(at: outputs)
@@ -51,5 +51,6 @@ final class ConformanceSetTests: XCTestCase {
         let comparison = recorded.compare(current)
         XCTAssertEqual(comparison.regressions, [], "checks that passed and no longer do")
         XCTAssertEqual(comparison.improvements, [], "checks that pass now: record them with Tests/WidgetHarness/Tools/conformance_report.sh --record")
+        XCTAssertEqual(comparison.retired, [], "checks the manifest no longer has (an upstream rename): record them away with Tests/WidgetHarness/Tools/conformance_report.sh --record")
     }
 }

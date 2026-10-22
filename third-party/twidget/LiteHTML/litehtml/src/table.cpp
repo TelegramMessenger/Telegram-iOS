@@ -323,7 +323,12 @@ litehtml::pixel_t litehtml::table_grid::calc_table_width(pixel_t block_width, bo
         const table_column& column = m_columns[col];
         mins[col]                  = column.min_width.value();
         maxs[col]                  = std::max(column.max_width.value(), mins[col]);
+        // Telegram (VENDOR.md edit 48): a column whose width is a calc with a percentage lays out as auto.
+#if 0
         if(!column.css_width.is_predefined())
+#else
+        if(!column.css_width.is_predefined() && !column.css_width.is_calc())
+#endif
         {
             if(column.css_width.units() == css_units_percentage)
             {
@@ -426,6 +431,9 @@ litehtml::pixel_t litehtml::table_grid::calc_table_width(pixel_t block_width, bo
     if(available > 0 && num_auto)
     {
         available += alloc_auto;
+        // Telegram (VENDOR.md edit 31.2): auto columns whose max widths sum to 0 (no content) share what is left
+        // equally, as CSS 2.1 §17.5.2.2 and browsers give it, instead of leaving it to the fixed columns.
+        const bool empty_auto = total_auto <= 0;
         for(int col = 0; col < n; col++)
         {
             if(kinds[col] == kind_auto && total_auto > 0)
@@ -434,6 +442,21 @@ litehtml::pixel_t litehtml::table_grid::calc_table_width(pixel_t block_width, bo
                 available    -= w;
                 total_auto   -= maxs[col];
                 widths[col]   = w;
+            }
+        }
+        // Telegram (VENDOR.md edit 31.2).
+        if(empty_auto)
+        {
+            int left = num_auto;
+            for(int col = 0; col < n && left > 0; col++)
+            {
+                if(kinds[col] == kind_auto)
+                {
+                    const float w = std::max(widths[col], available / float(left));
+                    available    -= w;
+                    left--;
+                    widths[col]   = w;
+                }
             }
         }
     }
@@ -519,6 +542,12 @@ litehtml::pixel_t litehtml::table_grid::calc_fixed_table_width(pixel_t block_wid
     for(int col = 0; col < n; col++)
     {
         const css_length& w = m_columns[col].css_width;
+        // Telegram (VENDOR.md edit 48): a calc with a percentage lays out as auto (the next branch's else).
+        if(w.is_calc())
+        {
+            auto_span++;
+            continue;
+        }
         if(!w.is_predefined() && w.units() == css_units_percentage)
         {
             percent[col]  = std::max(0.0f, w.val());

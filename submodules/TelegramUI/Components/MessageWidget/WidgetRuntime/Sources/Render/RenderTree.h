@@ -269,6 +269,8 @@ public:
     void setWidth(JSContext* ctx, double width);
     /// The scheme, with the root's theme declarations (RenderOptions::rootDeclarations): either changed marks a rebuild.
     void setTheme(JSContext* ctx, Theme theme, std::string rootDeclarations);
+    /// The options a build uses now: the construction's, with the width and theme set since.
+    const RenderOptions& options() const { return m_container.options(); }
 
     /// A canvas's bitmap changed (V5d plan, Task 4): when the canvas is rendered, the next flush republishes it, today
     /// as a full rebuild (its box is the only rect that changes). An unrendered canvas changes nothing.
@@ -306,6 +308,13 @@ public:
     std::optional<RenderBox> borderBox(const Node& node) const;
     /// One rect per inline box, or the border box for a block; empty when there is none.
     std::vector<RenderBox> clientRects(const Node& node) const;
+    /// Layout boxes of `node` (clientRects, overflowClip) where they are drawn: mapped through the transforms of its
+    /// element and every ancestor (transformRects), as getClientRects and IntersectionObserver report them. Unchanged
+    /// for a node with no element. borderBox, clientRects and the offset and client members stay the layout's.
+    std::vector<RenderBox> visualRects(const Node& node, std::vector<RenderBox> rects) const;
+    std::optional<RenderBox> visualBox(const Node& node, std::optional<RenderBox> box) const;
+    /// The union of the visual client rects (getBoundingClientRect).
+    std::optional<RenderBox> visualBorderBox(const Node& node) const;
     /// What CSSOM View's client and offset members read of an element's first box (V3 plan, Task 3): its border widths
     /// in CSS px, whether it is positioned (any `position` but static) or fixed, and whether it lays out inline (an
     /// inline box has no client area). nullopt for a node that is not rendered.
@@ -397,6 +406,8 @@ public:
     ChargeParts buildChargeParts() const;
     /// The render byte budget the published build uses (Ruling 7), for tests.
     uint64_t renderBytes() const { return m_current.bytes; }
+    /// Profile 1's text units the published build counts (V4 plan, Task 7), for tests.
+    TextUnits renderedTextUnits() const { return m_current.textUnits; }
     /// The render-limit kinds the published build hit (a patch agrees with a rebuild on them), for tests.
     const std::vector<std::string>& renderLimits() const { return m_current.limits; }
     int64_t lastPatchSteps() const { return m_lastPatchSteps; }
@@ -429,6 +440,11 @@ private:
     bool rendered(const Node* node) const;
     /// Journal::record; a failure latches the stop and throws Aborted.
     void record(Node& node, JournalKind kind);
+    /// A change of the text inside `from` (a text edit, an insertion, a removal) can change the direction a dir=auto
+    /// ancestor resolves to (fidelity plan, Task 11; Builder's autoDirection): the nearest ancestor with a dir of its
+    /// own, from `from` up, is recorded for its attributes to be scanned again when that dir is auto. The walk stops
+    /// there, or at a bdi, script, style or textarea, which auto skips. A node visit per element, charged.
+    void noteAutoDirection(Node* from);
     /// What an in-place path did: patched and published; refused, having changed nothing; or abandoned after changing the
     /// published document (Ruling E20: a can't-happen, or a matching cut), which the caller replaces by a rebuild.
     enum class PatchResult { Refused, Patched, Abandoned };
@@ -498,6 +514,10 @@ private:
     std::unordered_set<const Element*> m_domAttributeChanges;
     /// What changed since the published build. Dirty (a rebuild pending) until the first build.
     Journal m_journal;
+    /// The nodes inserted into the main document since the published build where the journal does not hear them (under
+    /// an element no build renders): a build counts them against kMaxRenderNodes (V4 plan, Task 7), so the published
+    /// count plus these stays an upper bound, and past the cap the next flush rebuilds (final review C2).
+    size_t m_unheardNodes = 0;
     std::shared_ptr<const LayerTree> m_tree;
     std::optional<std::vector<litehtml::position>> m_changedRects;
     /// The union takeChangedRects hands over: every publish adds its m_changedRects (accumulateChangedRects).

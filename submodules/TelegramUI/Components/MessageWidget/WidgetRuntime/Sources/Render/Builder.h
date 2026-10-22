@@ -70,6 +70,39 @@ inline constexpr size_t kMaxRenderBytes = 1024 * 1024;
 /// RenderEntry::inputOffset of a node with no text in the render input.
 inline constexpr size_t kNoRenderInput = ~size_t(0);
 
+/// Profile 1's strict text limits (V4 plan, Task 7; RB §7.1), in UTF-16 units: one text value (a Text's data, a text
+/// attribute, the strings of a `style` attribute or a sheet), the document's text, and its complex-script text. And the
+/// node cap: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside.
+inline constexpr size_t kMaxTextValueUnits = 65536;
+inline constexpr size_t kTextBudgetUnits = 262144;
+inline constexpr size_t kComplexTextBudgetUnits = 8192;
+inline constexpr size_t kMaxRenderNodes = 50000;
+
+/// Text as profile 1's budgets count it (RB §7.2): UTF-16 units, and the complex ones, units >= U+0590 (each surrogate
+/// of an emoji, typographic punctuation, CJK, ...).
+struct TextUnits {
+    size_t units = 0;
+    size_t complex = 0;
+
+    TextUnits& operator+=(TextUnits other) {
+        units += other.units;
+        complex += other.complex;
+        return *this;
+    }
+    friend TextUnits operator+(TextUnits a, TextUnits b) { return a += b; }
+    /// `b` must be part of `a`: a total less what one of its parts counted.
+    friend TextUnits operator-(TextUnits a, TextUnits b) { return {a.units - b.units, a.complex - b.complex}; }
+};
+
+/// `s`'s units. O(length): the caller has charged the scan.
+TextUnits renderTextUnits(const String& s);
+/// RB §7.2's cssStringText over raw CSS text (UTF-8): the contents of its quoted strings, a backslash inside one taking
+/// the next character and one outside skipping two; counted as UTF-16 units.
+TextUnits renderCssStringUnits(std::string_view css);
+/// Whether a value fits beside `others`: at most kMaxTextValueUnits, and both sums within their budgets (reaching one
+/// exactly is allowed).
+bool renderTextFits(TextUnits value, TextUnits others);
+
 /// An element's attributes as the build gives them to litehtml (Builder.cpp's scanAttributes), the one reading the build
 /// and the in-place attribute patch (Task 8) share.
 struct RenderAttributes {
@@ -82,6 +115,10 @@ struct RenderAttributes {
     size_t bytes = 0;
     /// A `style` over 16 KiB was left out (the build posts `style-attribute`).
     bool styleTooLong = false;
+    /// The text units of its text attributes and its `style` strings (V4 plan, Task 7); and whether one was left out
+    /// for not fitting beside what the rest of the document counts (the build posts `text-budget`).
+    TextUnits units;
+    bool textLeftOut = false;
     /// The budget ran out at an attribute (the build posts `bytes` and stops); the other fields are then partial.
     bool overBudget = false;
 };
@@ -101,6 +138,9 @@ struct RenderEntry {
     /// The UTF-8 bytes of its data that the byte budget counted (RenderBuild::bytes); an element's, those of its
     /// attributes' names and values.
     size_t bytes = 0;
+    /// The text units the strict budgets counted for it (V4 plan, Task 7): a Text's data; an element's text attributes
+    /// and `style` strings (a `<style>`'s sheet is counted in RenderBuild::textUnits only). Zero for a Text not rendered.
+    TextUnits units;
     /// Where its escaped text sits in RenderBuild::input, and how long it is there; an element's, where its start tag
     /// is. kNoRenderInput when the render input is not kept or it is not in it (a void element's children serialize as
     /// nothing; an empty Text has no place, so no two entries start at one offset).
@@ -168,6 +208,12 @@ struct RenderBuild {
     std::vector<std::string> styleSheets;
     /// The render byte budget this build used (Ruling 7), which the text patch keeps in step.
     uint64_t bytes = 0;
+    /// The text units the strict budgets counted (V4 plan, Task 7), which the patches keep in step; and the nodes counted
+    /// against kMaxRenderNodes, which a structure patch only adds to (a removed node may stay in the DOM unrendered), so
+    /// that after one it is an upper bound until the next build; RenderTree counts the insertions its journal does not
+    /// hear beside it.
+    TextUnits textUnits;
+    size_t nodeCount = 0;
     /// The elements and form controls rendered (Rulings E9 and E6), and the next RenderEntry::seq: what a structure
     /// patch (Task 9) counts its insertions from.
     size_t elementCount = 0;
@@ -227,6 +273,8 @@ struct RenderSubtreePlace {
 /// the byte budget (Ruling 7), the elements (E9) and form controls (E6), and the next RenderEntry::seq.
 struct RenderSubtreeTotals {
     size_t bytes = 0;
+    TextUnits textUnits;
+    size_t nodes = 0;
     size_t elements = 0;
     size_t formControls = 0;
     uint32_t seq = 0;
@@ -259,10 +307,11 @@ bool renderUtf8AtMost(const String& s, size_t maxBytes, std::string& out);
 std::string renderEscapedText(std::string_view utf8);
 
 /// `element`'s attributes as the build reads them, and, when `startTag` is given and the input is kept, its start tag as
-/// the render input carries it. `usedBefore` is the budget the rest of the document uses. Charges as the build does.
+/// the render input carries it. `usedBefore` and `unitsBefore` are the byte budget and the text units the rest of the
+/// document uses. Charges as the build does.
 /// Throws Thrown (a charge) or std::bad_alloc.
-RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, bool keepInput,
-                                         std::string* startTag);
+RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, TextUnits unitsBefore,
+                                         bool keepInput, std::string* startTag);
 /// What the renderer's copy of `element` is (V4 plan, Task 4): profile 1's one decision (MarkupPolicy.h), read by the
 /// build, both patches and the render input. Charges the name.
 markup::RenderTag renderTagOf(JSContext* ctx, const Element& element);

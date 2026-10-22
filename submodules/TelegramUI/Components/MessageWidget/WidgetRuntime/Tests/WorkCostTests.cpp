@@ -23,7 +23,9 @@
 #include <string>
 
 #include "Sources/DOM/DOM.h"
+#include "Sources/Support/Work.h"
 #include "Tests/DOMHarness.h"
+#include "Tests/HostHarness.h"
 
 namespace {
 
@@ -62,6 +64,8 @@ struct Attack {
     const char* setup;
     const char* body;
     uint64_t minUnitsPerIteration = 0;
+    /// Run in a host environment (the Window, Intl) instead of the DOM alone.
+    bool host = false;
 };
 
 #define DEEP_CHAIN(n) "var d = document.body; for (let i = 0; i < " #n "; i++) d = d.appendChild(document.createElement('div'));"
@@ -174,6 +178,11 @@ const Attack kAttacks[] = {
     {"childNodes[i] over 5,000 children", WIDE_TREE " var kids = root.childNodes, x;", "for (let i = 0; i < 5000; i++) x = kids[i];"},
     {"Object.keys(childNodes) over 5,000 children", WIDE_TREE " var kids = root.childNodes, x;", "x = Object.keys(kids);"},
     {"Object.keys(attributes) over 20,000 attributes", "var e = document.createElement('p'); for (let i = 0; i < 20000; i++) e.setAttribute('a' + i, 'v'); var m = e.attributes, x;", "x = Object.keys(m);"},
+
+    // ECMA-402 TransformCase over ICU (v0.1.1 plan, Task 10): a language with its own case rules, charged per eight
+    // units for the copy and again for the mapping (work::kCaseMapEightUnits).
+    {"toLocaleUpperCase('tr'), 1 Mi units", "var s = 'i'.repeat(1 << 20), x;", "x = s.toLocaleUpperCase('tr');", (1 << 20) / 8 * (1 + wr::work::kCaseMapEightUnits), true},
+    {"toLocaleLowerCase('tr'), 1 Mi units", "var s = '\\u0130'.repeat(1 << 20), x;", "x = s.toLocaleLowerCase('tr');", (1 << 20) / 8 * (1 + wr::work::kCaseMapEightUnits), true},
 };
 
 struct Run {
@@ -185,9 +194,10 @@ struct Run {
     std::string result;
 };
 
-Run run(const Attack& attack) {
+template <class Env>
+Run runIn(const Attack& attack) {
     Run r;
-    wr_test::DOMEnv env;
+    Env env;
     JSRuntime* rt = env.runtime().jsRuntime();
     alarm(kAlarmSeconds);
     std::string setup = env.eval(std::string(attack.setup) + " var __n = 0;");
@@ -209,6 +219,8 @@ Run run(const Attack& attack) {
         aborted = true;
         r.result = "ABORTED";
     }
+    // A HostEnv answers a stopped script with the text instead.
+    aborted = aborted || r.result == "ABORTED";
     r.ns = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - t0).count();
     alarm(0);
     r.spent = JS_GetWorkUnits(rt) - start;
@@ -216,6 +228,10 @@ Run run(const Attack& attack) {
     r.stopped = aborted && env.runtime().stopReason() == wr::StopReason::Budget;
     r.iterations = iterationsOf(env.ctx());
     return r;
+}
+
+Run run(const Attack& attack) {
+    return attack.host ? runIn<wr_test::HostEnv>(attack) : runIn<wr_test::DOMEnv>(attack);
 }
 
 struct Pass {

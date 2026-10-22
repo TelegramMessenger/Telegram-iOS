@@ -24,6 +24,13 @@ public final class MessageWidgetView: UIView {
     /// Keyed by `WidgetFrame.key(row:column:)`. Sublayers of `contentLayer`.
     private var tiles: [Int: CALayer] = [:]
     private let contentLayer = CALayer()
+    /// Under the tiles: the canvas colour from the document's bottom to the view's (WidgetFrame.canvasColor).
+    private let canvasLayer = CALayer()
+    /// The colours at the view's bottom-left and bottom-right corners as it shows them: the drawn corner pixels, or the
+    /// canvas colour where the view runs below the document. A bubble continues them into its tail.
+    public private(set) var bottomCornerColors: (left: CGColor?, right: CGColor?) = (nil, nil)
+    /// Called on main when `bottomCornerColors` changes.
+    public var onBottomCornerColorsChange: ((_ left: CGColor?, _ right: CGColor?) -> Void)?
 
     init(instance: MessageWidgetInstance) {
         self.instance = instance
@@ -34,6 +41,8 @@ public final class MessageWidgetView: UIView {
         // iOS 26/27 (docs/ios27-windows-and-touches.md): transparent contents, no opacity threshold.
         self.layer.contents = MessageWidgetView.transparentContents
         self.contentLayer.actions = ["position": NSNull(), "bounds": NSNull()]
+        self.canvasLayer.actions = ["position": NSNull(), "bounds": NSNull(), "backgroundColor": NSNull()]
+        self.layer.addSublayer(self.canvasLayer)
         self.layer.addSublayer(self.contentLayer)
         let touchRecognizer = MessageWidgetTouchRecognizer()
         touchRecognizer.onTouch = { [weak self] phase, point in
@@ -103,6 +112,10 @@ public final class MessageWidgetView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         self.contentLayer.frame = CGRect(origin: .zero, size: frame.size)
+        // The tiles paint the canvas over the document; below it, as tall as the bubble makes the view, this layer does.
+        let canvasTop = min(max(frame.canvasTop, 0.0), self.bounds.height)
+        self.canvasLayer.frame = CGRect(x: 0.0, y: canvasTop, width: self.bounds.width, height: self.bounds.height - canvasTop)
+        self.canvasLayer.backgroundColor = frame.canvasColor
         for (key, image) in frame.tiles {
             let layer: CALayer
             if let existing = self.tiles[key] {
@@ -124,6 +137,12 @@ public final class MessageWidgetView: UIView {
             self.tiles[key] = nil
         }
         CATransaction.commit()
+        let belowDocument = self.bounds.height > frame.size.height + 0.5
+        let corners = belowDocument ? (frame.canvasColor, frame.canvasColor) : (frame.bottomLeftColor ?? frame.canvasColor, frame.bottomRightColor ?? frame.canvasColor)
+        if corners.0 != self.bottomCornerColors.left || corners.1 != self.bottomCornerColors.right {
+            self.bottomCornerColors = (corners.0, corners.1)
+            self.onBottomCornerColorsChange?(corners.0, corners.1)
+        }
     }
 
     // MARK: touches

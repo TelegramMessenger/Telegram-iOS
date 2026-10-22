@@ -41,6 +41,8 @@ public final class WidgetHarnessListHost {
     private var items: [ListViewItem] = []
     private var controllerInteraction: ChatControllerInteraction?
     private var extractedMessageId: EngineMessage.Id?
+    /// Settings ▸ Appearance ▸ Text Size, when set after the context's (`setFontSize`).
+    private var fontSize: PresentationFontSize?
     private var extractionEndTimer: SwiftSignalKit.Timer?
 
     /// What the bubbles asked for, in order: `openLink <url>`, `appStore`, `contextMenu <path>`, `contextMenuEnded <path>`.
@@ -59,7 +61,7 @@ public final class WidgetHarnessListHost {
     // MARK: - Content
 
     /// Replaces the list's messages with `posts`, oldest first, as the test channel posts them: each widget message
-    /// (text = caption), then its reference pictures.
+    /// (text = caption), then its reference pictures; the account's own (outgoing), or the other side's when `incoming`.
     /// A post's message id: a 30-bit FNV-1a hash of its path, never 0.
     static func messageId(forPath path: String) -> Int32 {
         var hash: UInt32 = 2166136261
@@ -69,7 +71,7 @@ public final class WidgetHarnessListHost {
         return Int32(hash & 0x3fffffff) | 1
     }
 
-    public func load(posts: [WidgetHarnessPost]) {
+    public func load(posts: [WidgetHarnessPost], incoming: Bool = false) {
         let accountPeer = TelegramUser(
             id: self.context.account.peerId, accessHash: nil, firstName: "Harness", lastName: "Account", username: nil, phone: nil,
             photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil,
@@ -95,7 +97,7 @@ public final class WidgetHarnessListHost {
             takenIds.insert(messageId)
             let id = EngineMessage.Id(peerId: WidgetHarnessListHost.chatPeer.id, namespace: Namespaces.Message.Cloud, id: messageId)
             timestamp += 1
-            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
+            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: incoming ? [.Incoming] : [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: incoming ? WidgetHarnessListHost.chatPeer : accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
             paths[id] = path
         }
         for post in posts {
@@ -136,6 +138,14 @@ public final class WidgetHarnessListHost {
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 
+    /// Settings ▸ Appearance ▸ Text Size changed in the open chat: every item again with the new presentation data, in
+    /// place, as the chat updates its history on a presentation-data change (the same messages, so the same widgets).
+    public func setFontSize(_ fontSize: PresentationFontSize) {
+        self.fontSize = fontSize
+        self.items = self.messages.reversed().map(self.makeItem)
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: self.items.enumerated().map { ListViewUpdateItem(index: $0.offset, previousIndex: $0.offset, item: $0.element, directionHint: nil) }, options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+    }
+
     /// The indices (0 = the first message, the top of the chat) of the widget messages whose path contains `part`.
     public func messageIndices(pathContaining part: String) -> [Int] {
         return self.messages.enumerated().compactMap { index, message in
@@ -159,7 +169,7 @@ public final class WidgetHarnessListHost {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let chatPresentationData = ChatPresentationData(
             theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper),
-            fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat,
+            fontSize: self.fontSize ?? presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false,
             chatBubbleCorners: presentationData.chatBubbleCorners)
         let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: nil)
@@ -257,6 +267,24 @@ public final class WidgetHarnessListHost {
         }
         bubbles.sort { $0.y < $1.y }
         return bubbles.enumerated().map { $0.element.line($0.offset) } + self.events
+    }
+
+    /// Each laid-out widget bubble's widget area (the clip view, or the pill) and its content node's bounds, in `view`'s
+    /// coordinates, top of the screen first: the widget fills its content node when the bubble adds no padding of its own.
+    public func widgetAreas(in view: UIView) -> [(path: String, area: CGRect, content: CGRect)] {
+        var out: [(path: String, area: CGRect, content: CGRect)] = []
+        self.listView.forEachItemNode { node in
+            guard let node = node as? ChatMessageBubbleItemNode, let message = node.item?.message, let path = self.paths[message.id] else {
+                return
+            }
+            guard let widgetNode = node.contentNodes.first(where: { $0 is ChatMessageWidgetBubbleContentNode }) else {
+                return
+            }
+            for subview in widgetNode.view.subviews where !subview.isHidden && (subview is UnsupportedContentPillView || subview.layer.mask != nil) {
+                out.append((path, widgetNode.view.convert(subview.frame, to: view), widgetNode.view.convert(widgetNode.view.bounds, to: view)))
+            }
+        }
+        return out.sorted { $0.area.minY < $1.area.minY }
     }
 
     // MARK: - The interaction

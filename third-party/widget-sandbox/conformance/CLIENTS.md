@@ -10,8 +10,8 @@ You need three things: the framework tag, your own host and renderer, and Node �
 
 | | |
 |---|---|
-| `auto/*.html` | The automatic set: 38 widgets that check themselves. Required. |
-| `visual/*.html` | The visual set: 13 widgets for people (the test channel). Optional in a runner, where it is only a load check. |
+| `auto/*.html` | The automatic set: 39 widgets that check themselves. Required. |
+| `visual/*.html` | The visual set: 17 widgets for people (the test channel). Optional in a runner, where it is only a load check. |
 | `channel.json` | The test channel in posting order: per message the widget, its size anchors, the caption and the reference photos. |
 | `manifest.json` | One entry per widget: scripted `actions`, `host` checks, pixel `stages` (`rect`, `themes`, `refs`), `themes`. |
 | `catalogue.json` | The profile features with their IDs and status (in / out), as `packages/core/profile.json` freezes them, plus the SDK v1 limits, and what the framework does with each (`today`; legend in `catalogue.md`). `version` is the profile version. |
@@ -48,7 +48,7 @@ Keep the last value. You need no hook in the renderer and no DOM.
 
 Build it as a test target or a debug mode in your client. For every entry of `manifest.tests` with `set: "auto"`, and for every theme in its `themes`:
 
-1. **Configure the host as in production.** Policy `strict`. `features` as the profile sets them, today `["webAnimations"]`. Your renderer, the theme, and a width of 390 CSS px (points or dp); 360 and 430 are welcome too.
+1. **Configure the host as in production.** The widget view fills the bubble with no padding of the bubble's own around it, over the bubble drawn in `bg_color` and clipped at its corner radius (`docs/integration.md`, "Theme and language"). Policy `strict`. `features` as the profile sets them, today `["webAnimations"]`. Your renderer, the theme (your palette, button and text tokens: `auto/22-ua-defaults` checks the renderer's defaults against whatever tokens you pass), and a width of 390 CSS px (points or dp); 360 and 430 are welcome too.
 2. **Focus the chat input**, or a stand-in text field, before loading the widget.
 3. **Load the widget HTML** and observe the validated ops. Every platform has the same renderer seam, so wrap your renderer: see "Reading the ops" below.
 4. **Wait** for `status` `done`, or `awaiting` when the test has `actions`. Give up after 20 s and record what you have.
@@ -183,10 +183,10 @@ They need SDK v1 in the framework (`docs/sdk-v1.md`).
 
 ## The whole set in the test channel
 
-Every widget of the set is a mini-widget, so a test bot sends all of them as real layer-233 messages (`inputMediaWidget` with the HTML; bots may post only into private chats, so a tester forwards them into the shared channel). `channel.json` is the posting order: the visual set (`visual/01…13`, in reading order), the client SDK group, then the automatic set. Each post has the widget, its size anchors (`width` / `height`, `0` = auto), a caption saying what to check, and the reference photos to post right after it: `refs/visual/<widget>.png`, plus `.dark.png` for the theme-dependent ones.
+Every widget of the set is a mini-widget, so a test bot sends all of them as real layer-233 messages (`inputMediaWidget` with the HTML; bots may post only into private chats, so a tester forwards them into the shared channel). `channel.json` is the posting order: the visual set (`visual/01…16`, in reading order, with the parts of a split topic one after the other), the client SDK group, then the automatic set. Each post has the widget, its size anchors (`width` / `height`, `0` = auto), a caption saying what to check, and the reference photos to post right after it: `refs/visual/<widget>.png`, plus `.dark.png` for the theme-dependent ones.
 
 In a visual widget each row shows a group of features drawn live by your client, with one line saying what to compare with the same row of the picture. Interactive rows say what to tap or drag. Testers scroll through on a phone and report a row that does not match, with a screenshot. Fonts differ between platforms by design: compare the structure, not the letter shapes. An automatic widget reports itself: its result line at the bottom must say `done` and show no `fail` count (each failing check is listed under it). `.tgw` is only a local development format; nothing in the channel needs it.
 
 ## When the framework changes
 
-The set belongs to the tag. When you update the framework, rerun: `catalogue.json` `version` is the profile version, and the manifest says what each test covers. The set expects a framework that enforces profile 1 (the validator neutralises the out features, `CSS.supports` and `@supports` answer from the profile, the renderer draws an unstyled `<button>` with the profile's UA stylesheet) and implements SDK v1. A check marked ⏳ is one the framework does not do yet; it turns into a pass when that lands in your tag, with no change on your side.
+The set belongs to the tag. When you update the framework, rerun: `catalogue.json` `version` is the profile version, and the manifest says what each test covers. The set expects a framework that enforces profile 1 (the validator neutralises the out features, `CSS.supports` and `@supports` answer from the profile, the renderer applies the profile's UA stylesheet: since v0.1.1 the root and text defaults on the theme and text tokens as well as the unstyled `<button>`) and implements SDK v1. A native renderer must put that stylesheet into its master CSS and set the theme variables itself (`docs/decisions.md`, "The renderer's defaults"); `visual/14-unstyled-document` shows at a glance whether it does. A check marked ⏳ is one the framework does not do yet; it turns into a pass when that lands in your tag, with no change on your side.

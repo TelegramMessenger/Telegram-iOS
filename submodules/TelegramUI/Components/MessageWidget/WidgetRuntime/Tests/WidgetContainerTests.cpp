@@ -376,7 +376,9 @@ WR_TEST(testTextGoesToTheHost) {
     CHECK(float(metrics.sub_shift) == 2 && float(metrics.super_shift) == 4 && !metrics.draw_spaces);
     CHECK(float(container.text_width("abc", font)) == 24);
     CHECK(float(container.text_width("\xc3\xa9", font)) == 16);
-    CHECK(container.create_text_breaker("abc def", font) == nullptr);
+    // The host's breaker, forwarded: the fake fits a byte per 8 px.
+    std::shared_ptr<litehtml::text_breaker> breaker = container.create_text_breaker("abc def", font);
+    CHECK(breaker && breaker->fit(0, 24) == 3 && breaker->fit(5, 100) == 7);
     // The same description is the same font; a different one is not.
     litehtml::uint_ptr again = container.create_font(description, nullptr, &metrics);
     CHECK(again != 0 && again != font);

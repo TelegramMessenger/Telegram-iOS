@@ -18,8 +18,10 @@ enum class CSSTable : uint8_t {
     Properties,
     Functions,
     Units,
-    DisplayValues,
-    PositionValues,
+    /// css.values: each property's keyword set, as "property:keyword" (keywordAllowed reads it).
+    ValueSets,
+    /// The properties css.values restricts.
+    ValuedProperties,
     /// The position values the validator rewrites (sticky → relative), and the overflow ones (auto → hidden).
     PositionRewrites,
     OverflowRewrites,
@@ -59,6 +61,8 @@ std::span<const std::string_view> table(CSSTable which);
 std::span<const std::string_view> table(MarkupTable which);
 /// Whether `lowered` (already ASCII-lowercased) is in the table.
 bool contains(CSSTable which, std::string_view lowered);
+/// Whether `keyword` is in css.values' set for `property` (both lowered); true for a property without a set.
+bool keywordAllowed(std::string_view property, std::string_view keyword);
 bool contains(MarkupTable which, std::string_view lowered);
 
 /// What the renderer's copy does with an HTML element (html.elements): keep it, render it as a span or a div (with

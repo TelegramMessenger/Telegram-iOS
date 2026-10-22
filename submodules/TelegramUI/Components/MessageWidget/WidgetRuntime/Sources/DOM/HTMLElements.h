@@ -42,6 +42,31 @@ private:
     Held m_savedRadio;
 };
 
+/// A class of its own for the methods profile 1's sandbox makes no-ops (V4 plan, Task 8; RB §8.1).
+class HTMLInputElement : public HTMLElement {
+public:
+    using HTMLElement::HTMLElement;
+    void select(JSContext*) {}
+    void setSelectionRange(JSContext*, uint32_t, uint32_t, std::optional<String>) {}
+};
+
+/// A dialog as profile 1's sandbox has it (V4 plan, Task 8; RB §8.2): show() and showModal() set open; close() sets the
+/// returnValue when given one, removes open and fires a non-bubbling close synchronously (browsers fire it from a task).
+/// Nothing reaches a top layer: the renderer's copy is an inert div.
+class HTMLDialogElement : public HTMLElement {
+public:
+    using HTMLElement::HTMLElement;
+    String returnValue(JSContext* ctx) const;
+    void setReturnValue(JSContext* ctx, String value);
+    void show(JSContext* ctx);
+    void showModal(JSContext* ctx);
+    void close(JSContext* ctx, std::optional<String> returnValue);
+    void dispose(JSRuntime* rt) override;
+
+private:
+    Held m_returnValue;
+};
+
 /// A class of its own because WindowEventHandlers' generated glue casts to it: the C++ chain mirrors the IDL chain.
 class HTMLBodyElement : public HTMLElement {
 public:

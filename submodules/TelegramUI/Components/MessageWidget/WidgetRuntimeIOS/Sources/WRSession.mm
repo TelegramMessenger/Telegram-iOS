@@ -76,6 +76,22 @@ wr::ThemeButtonTokens buttonTokens(NSDictionary<NSString*, id>* tokens) {
     return out;
 }
 
+/// SDK v1 §2.4 (v0.1.1): the text tokens as given (the runtime checks each and stands the reference value for the rest).
+wr::ThemeTextTokens textTokens(NSDictionary<NSString*, id>* tokens) {
+    wr::ThemeTextTokens out;
+    const auto number = [&](NSString* key) -> std::optional<double> {
+        id value = tokens[key];
+        return [value isKindOfClass:[NSNumber class]] ? std::optional<double>([value doubleValue]) : std::nullopt;
+    };
+    out.fontSize = number(@"fontSize");
+    out.lineHeight = number(@"lineHeight");
+    id padding = tokens[@"padding"];
+    if ([padding isKindOfClass:[NSString class]]) {
+        out.padding = utf8(padding);
+    }
+    return out;
+}
+
 /// [key, value] pairs, in order; a malformed entry is skipped.
 std::vector<std::pair<std::string, std::string>> pairs(NSArray<NSArray<NSString*>*>* entries) {
     std::vector<std::pair<std::string, std::string>> out;
@@ -130,6 +146,11 @@ public:
 
 - (CGSize)size {
     return CGSizeMake(_tree->width(), _tree->height());
+}
+
+- (uint32_t)canvasColor {
+    const litehtml::web_color& color = _tree->canvasColor();
+    return uint32_t(color.red) << 24 | uint32_t(color.green) << 16 | uint32_t(color.blue) << 8 | uint32_t(color.alpha);
 }
 
 - (CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale {
@@ -197,13 +218,14 @@ struct Depth {
     } while (0)
 
 - (instancetype)initWithWidth:(CGFloat)width dark:(BOOL)dark scale:(CGFloat)scale delegate:(id<WRSessionDelegate>)delegate {
-    return [self initWithWidth:width dark:dark themeParams:@{} buttonTokens:@{} scale:scale delegate:delegate];
+    return [self initWithWidth:width dark:dark themeParams:@{} buttonTokens:@{} textTokens:@{} scale:scale delegate:delegate];
 }
 
 - (instancetype)initWithWidth:(CGFloat)width
                          dark:(BOOL)dark
                   themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
                  buttonTokens:(NSDictionary<NSString*, id>*)tokens
+                   textTokens:(NSDictionary<NSString*, id>*)text
                         scale:(CGFloat)scale
                      delegate:(id<WRSessionDelegate>)delegate {
     if (!(self = [super init])) {
@@ -227,7 +249,8 @@ struct Depth {
         JSContext* ctx = _runtime->context();
         wr::installDOM(ctx, wr::Document::createHTML(ctx));
         // TelegramWidget.theme reads the host's theme, the scheme the render tree folds into the CSS its own.
-        wr::installHost(ctx).setInitialTheme(dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens));
+        wr::installHost(ctx).setInitialTheme(dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens),
+                                             textTokens(text));
         wr::RenderOptions renderOptions;
         renderOptions.width = width;
         renderOptions.theme = dark ? wr::Theme::Dark : wr::Theme::Light;
@@ -452,11 +475,15 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
-- (void)setDark:(BOOL)dark themeParams:(NSDictionary<NSString*, NSString*>*)themeParams buttonTokens:(NSDictionary<NSString*, id>*)tokens {
+- (void)setDark:(BOOL)dark
+     themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
+    buttonTokens:(NSDictionary<NSString*, id>*)tokens
+      textTokens:(NSDictionary<NSString*, id>*)text {
     WR_GUARD(, {
         if (_runtime) {
             JSContext* ctx = _runtime->context();
-            wr::HostState::of(ctx).setTheme(ctx, dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens));
+            wr::HostState::of(ctx).setTheme(ctx, dark ? wr::Theme::Dark : wr::Theme::Light, palette(themeParams), buttonTokens(tokens),
+                                            textTokens(text));
             wr::HostState::of(ctx).flushRender(ctx);
             [self noteTree];
         }

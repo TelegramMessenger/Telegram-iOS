@@ -1,6 +1,7 @@
 #include "Sources/Host/Profile.h"
 
 #include <algorithm>
+#include <string>
 
 namespace wr::profile {
 
@@ -44,10 +45,10 @@ std::span<const std::string_view> table(CSSTable which) {
         return kCSSFunctions;
     case CSSTable::Units:
         return kCSSUnits;
-    case CSSTable::DisplayValues:
-        return kCSSDisplayValues;
-    case CSSTable::PositionValues:
-        return kCSSPositionValues;
+    case CSSTable::ValueSets:
+        return kCSSValueSets;
+    case CSSTable::ValuedProperties:
+        return kCSSValuedProperties;
     case CSSTable::PositionRewrites:
         return kCSSPositionRewrites;
     case CSSTable::OverflowRewrites:
@@ -95,6 +96,16 @@ std::span<const std::string_view> table(MarkupTable which) {
 bool contains(CSSTable which, std::string_view lowered) {
     const std::span<const std::string_view> entries = table(which);
     return std::binary_search(entries.begin(), entries.end(), lowered);
+}
+
+bool keywordAllowed(std::string_view property, std::string_view keyword) {
+    if (!contains(CSSTable::ValuedProperties, property)) {
+        return true;
+    }
+    std::string entry(property);
+    entry += ':';
+    entry += keyword;
+    return contains(CSSTable::ValueSets, entry);
 }
 
 bool contains(MarkupTable which, std::string_view lowered) {

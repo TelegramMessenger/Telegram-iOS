@@ -3,7 +3,7 @@
  "profile": 1,
  "frozen": "2026-10-17",
  "decisions": {
-  "D3": "A feature is in when every client draws it; :hover is the exception (progressive enhancement)",
+  "D3": "A feature is in when every client draws it; :hover and user-select: text are the exceptions (progressive enhancement: where a client lacks them, the widget still works)",
   "D3a": "v1: canvas 2D; Web Animations, filter, backdrop-filter if clients draw them; out: forms, inner scroll, 3D transforms, magic move; CSS animations and transitions in",
   "D3b": "Fonts: system generic families only, other names dropped",
   "D4": "Input: taps in the PoC, drag in v1; no keyboard at all, not even Enter or Space (it conflicts with the chat input field; Artem, 2026-10-16)",
@@ -14,7 +14,7 @@
   "D12a": "Above the cap: hard clip, no fullscreen",
   "D14": "Theme: themeParams + --tg-theme-*, theme change event",
   "D17": "State: localStorage per (account, bot, message_id), 16 KB, QuotaExceededError; sessionStorage in memory",
-  "D18": "Text selection forbidden",
+  "D18": "Text is not selectable by default; a widget enables selection with user-select: text (2026-10-20, replaces \"Text selection forbidden\")",
   "D20": "Mini-HTML (2026-10-17): a widget is one HTML document of at most 4 KB after gzip and 32 KB uncompressed, delivered in the message; the server gzips the HTML from the bot and enforces both limits",
   "D21": "No accessibility in v1",
   "D23": "Runtime profile detection: TelegramWidget.profile / isProfileAtLeast, CSS.supports and @supports from the profile",
@@ -26,6 +26,7 @@
   "P1": "Profile v1 freeze (2026-10-17): a candidate is in when the corpus uses it and the web renderers draw it; the rest are out until the native renderers are measured (profile 2)",
   "P1-grid": "Grid is in on condition that the Swift renderer and TwidgetCore implement it before their releases (2026-10-17)",
   "P1-libs": "No bundled libraries in v1 (2026-10-17)",
+  "P1-ua": "Clarified in v0.1.1 (2026-10-20): the renderer's user-agent layer (tables.uaStylesheet) also fixes the root and the text elements: the bubble's text colour (the bubble's own fill is the canvas behind a transparent renderer), the client's text tokens (--tg-text-font-size, --tg-text-line-height, --tg-text-padding as the body's margin) and explicit sizes and margins for headings, paragraphs, lists, tables, quotes and code, so a UA default in this profile means that layer, not an engine's own stylesheet",
   "SDK": "SDK v1 (docs/sdk-v1.md), with Artem's answers of 2026-10-17: haptics without a gesture (bucket 5, 10 per second), any t.me path, URLs of at most 256 characters, 16 handlers per event type, stopped after 2 crashes in a row, double tap and long press stay with the bubble"
  },
  "tables": {
@@ -608,7 +609,9 @@
     "text-rendering",
     "-webkit-font-smoothing",
     "-moz-osx-font-smoothing",
-    "-webkit-tap-highlight-color"
+    "-webkit-tap-highlight-color",
+    "user-select",
+    "-webkit-user-select"
    ],
    "functions": [
     "var",
@@ -714,6 +717,16 @@
      "relative",
      "absolute",
      "fixed"
+    ],
+    "user-select": [
+     "none",
+     "text",
+     "auto"
+    ],
+    "-webkit-user-select": [
+     "none",
+     "text",
+     "auto"
     ]
    },
    "rewrite": {
@@ -819,7 +832,7 @@
     "prefers-reduced-motion"
    ]
   },
-  "uaStylesheet": "@layer tw-ua{:where(button){appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}:where(button:not([disabled])):active{opacity:var(--tg-button-pressed-opacity,.7)}:where(button[disabled]){opacity:var(--tg-button-disabled-opacity,.5);cursor:default}}*{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}"
+  "uaStylesheet": "@layer tw-ua{:where(html){color:var(--tg-theme-text-color);font:var(--tg-text-font-size,15px)/var(--tg-text-line-height,1.35) system-ui,sans-serif;-webkit-text-size-adjust:none;text-size-adjust:none;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}:where(body){margin:var(--tg-text-padding,8px 12px);padding:0}:where(h1,h2,h3,h4,h5,h6){margin:.75em 0 .35em;font-weight:600;line-height:1.25}:where(h1){font-size:1.6em}:where(h2){font-size:1.35em}:where(h3){font-size:1.2em}:where(h4){font-size:1.07em}:where(h5){font-size:1em}:where(h6){font-size:.87em}:where(p,ul,ol,menu,dl,pre,blockquote,figure,table){margin:.6em 0}:where(ul,ol,menu){padding:0 0 0 1.5em;padding-inline-start:1.5em;padding-inline-end:0}:where(ul,menu){list-style-type:disc}:where(ol){list-style-type:decimal}:where(li ul,li menu){list-style-type:circle}:where(li ul,li ol,li menu,li dl){margin:0}:where(dt){font-weight:600}:where(dd){margin:0 0 0 1.5em;margin-inline-start:1.5em;margin-inline-end:0}:where(table){border-collapse:collapse;border-spacing:0}:where(caption){padding:0 0 .3em;color:var(--tg-theme-hint-color);font-size:.87em;text-align:left;text-align:start}:where(th,td){padding:.3em .6em;border-bottom:1px solid var(--tg-theme-section-separator-color);text-align:left;text-align:start;vertical-align:top}:where(th){font-weight:600}:where(th:last-child,td:last-child){padding-right:0;padding-inline-end:0;padding-inline-start:.6em}:where(th:first-child,td:first-child){padding-left:0;padding-inline-start:0;padding-inline-end:.6em}:where(hr){height:0;margin:.6em 0;border:0;border-top:1px solid var(--tg-theme-section-separator-color)}:where(pre,code,kbd,samp){font-family:ui-monospace,monospace;font-size:.9em}:where(pre code,pre kbd,pre samp){font-size:1em}:where(pre){padding:.5em .7em;border-radius:6px;background:rgba(128,128,128,.12);white-space:pre-wrap}:where(blockquote){padding:0 0 0 .75em;padding-inline-start:.75em;padding-inline-end:0;border-left:3px solid var(--tg-theme-accent-text-color);border-inline-start:3px solid var(--tg-theme-accent-text-color);border-inline-end:0}:where(figcaption){margin:.3em 0 0;color:var(--tg-theme-hint-color);font-size:.87em}:where(img){max-width:100%}:where(a[href]){color:var(--tg-theme-link-color);text-decoration:none}:where(b,strong){font-weight:600}:where(i,em,cite,dfn,var){font-style:italic}:where(small){font-size:.85em}:where(sub,sup){position:relative;font-size:.75em;line-height:0;vertical-align:baseline}:where(sup){top:-.5em}:where(sub){bottom:-.25em}:where(mark){background:rgba(255,204,0,.4);color:inherit}:where(body>:first-child){margin-top:0}:where(body>:last-child){margin-bottom:0}:where(button){appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}:where(button:not([disabled])):active{opacity:var(--tg-button-pressed-opacity,.7)}:where(button[disabled]){opacity:var(--tg-button-disabled-opacity,.5);cursor:default}}"
  },
  "features": [
   {
@@ -1370,7 +1383,7 @@
    "status": "out",
    "decision": "P1",
    "neutralise": "drop the attribute",
-   "note": "Editing is form input; text selection is forbidden (D18).",
+   "note": "Editing is form input. Text is not selectable by default (D18); user-select: text enables selection, never editing.",
    "match": {
     "attrs": [
      "contenteditable",
@@ -2416,19 +2429,16 @@
   {
    "id": "css.text.selection",
    "area": "css",
-   "title": "Text selection (user-select: text, ::selection, select by drag or long press)",
-   "status": "out",
+   "title": "Text selection: not selectable by default; user-select: text (or -webkit-user-select) enables it (none | text | auto)",
+   "status": "in",
    "decision": "D18",
-   "neutralise": "the renderer disables selection on its root and the validator drops user-select",
    "match": {
     "properties": [
      "user-select",
      "-webkit-user-select"
-    ],
-    "selectors": [
-     "::selection"
     ]
-   }
+   },
+   "note": "user-select: all and contain, and ::selection, stay out. A native renderer that cannot select text yet keeps it unselectable: the widget still works (an accepted exception to 'every client draws it', like :hover)."
   },
   {
    "id": "css.transform.2d",
@@ -4523,7 +4533,7 @@
   {
    "id": "behaviour.no-selection",
    "area": "behaviour",
-   "title": "No text selection in a widget (drag over text selects nothing)",
+   "title": "Text is not selectable by default (a drag over text selects nothing); user-select: text enables it",
    "status": "in",
    "decision": "D18"
   },

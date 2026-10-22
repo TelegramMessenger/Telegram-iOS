@@ -30,7 +30,7 @@ final class ConformanceRecordTests: XCTestCase {
         XCTAssertEqual(Set(file.keys), ["platform", "renderer", "engine", "framework", "commit", "policy", "features", "date", "runs"])
         XCTAssertEqual(file["platform"] as? String, "ios")
         XCTAssertEqual(file["renderer"] as? String, "telegram-native")
-        XCTAssertEqual(file["framework"] as? String, "v0.1.0")
+        XCTAssertEqual(file["framework"] as? String, "v0.1.1")
         XCTAssertEqual(file["policy"] as? String, "strict")
         XCTAssertEqual(file["features"] as? [String], ["webAnimations"])
         let runs = try XCTUnwrap(file["runs"] as? [[String: Any]])
@@ -136,6 +136,17 @@ final class ConformanceRecordTests: XCTestCase {
         let baseline = ConformanceBaseline(runs: ["auto/x/light": ["css.a · A": "pass"], "auto/y/light": ["css.b · B": "xpass"]])
         let current = ConformanceBaseline(runs: ["auto/y/light": ["css.b · B": "xpass"]])
         XCTAssertEqual(baseline.compare(current).regressions, ["auto/x/light css.a · A: pass → missing"])
+    }
+
+    /// A tag that renames a check: the old name is neither expected by the manifest nor published (`statuses` lists every
+    /// expected check, `missing` at worst), so it is retired, not a regression; a run that is gone still is one.
+    func testACheckTheManifestNoLongerHasIsRetired() {
+        let baseline = ConformanceBaseline(runs: ["auto/x/light": ["css.a · old name": "pass", "css.b · B": "pass"]])
+        let current = ConformanceBaseline(runs: ["auto/x/light": ["css.a · new name": "pass", "css.b · B": "missing"]])
+        let result = baseline.compare(current)
+        XCTAssertEqual(result.regressions, ["auto/x/light css.b · B: pass → missing"])
+        XCTAssertEqual(result.improvements, ["auto/x/light css.a · new name: missing → pass"])
+        XCTAssertEqual(result.retired, ["auto/x/light css.a · old name"])
     }
 
     func testTheBaselineRoundTrips() throws {

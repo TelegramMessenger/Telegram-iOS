@@ -2,6 +2,8 @@
 // host's palette over the framework's DEFAULT_THEME_PARAMS for the scheme), a fresh frozen object per change; the same
 // values are --tg-theme-* custom properties on the root, with --tg-color-scheme, which no widget rule replaces; a theme
 // change updates all of it in the task before themeChanged and onTheme run.
+#include <cmath>
+#include <optional>
 #include <string>
 
 #include "Sources/Host/HostState.h"
@@ -124,4 +126,86 @@ WR_TEST(testButtonTokensAreChecked) {
     CHECK(declarations.find("--tg-button-bg:#3390ec !important") != std::string::npos);
     CHECK(declarations.find("--tg-button-font:500 14px/1.2 system-ui,sans-serif !important") != std::string::npos);
     CHECK(declarations.find("--tg-button-pressed-opacity:0.7 !important") != std::string::npos);
+    // Lengths are the reference's LENGTH, shared with the text tokens: a bare 0, at most four digits and three decimals.
+    wr::ThemeButtonTokens lengths;
+    lengths.radius = "0";
+    lengths.padding = "0 14px";
+    lengths.height = "12345px";
+    const wr::ThemeButtonTokens checkedLengths = wr::checkButtonTokens(lengths);
+    CHECK(checkedLengths.radius == lengths.radius && checkedLengths.padding == lengths.padding && !checkedLengths.height);
+}
+
+/// SDK v1 §2.4, the text tokens (v0.1.1): a font size of 8–64 px kept to two decimals, a line height of 1–3 kept to
+/// three, a padding of one to four lengths (`0`, or up to four digits and three decimals in px, em or rem); a token that
+/// fails is dropped.
+WR_TEST(testTextTokensAreChecked) {
+    for (const double fontSize : {7.99, 64.01, std::nan(""), HUGE_VAL}) {
+        wr::ThemeTextTokens bad;
+        bad.fontSize = fontSize;
+        CHECK(wr::checkTextTokens(bad) == wr::ThemeTextTokens{});
+    }
+    for (const double lineHeight : {0.99, 3.01, -1.0}) {
+        wr::ThemeTextTokens bad;
+        bad.lineHeight = lineHeight;
+        CHECK(wr::checkTextTokens(bad) == wr::ThemeTextTokens{});
+    }
+    for (const char* padding : {"", "8px; color: red", "1px 2px 3px 4px 5px", "10vh", "8px  12px", "12345px", "1.2345px", "8"}) {
+        wr::ThemeTextTokens bad;
+        bad.padding = padding;
+        CHECK(wr::checkTextTokens(bad) == wr::ThemeTextTokens{});
+    }
+    wr::ThemeTextTokens good;
+    good.fontSize = 17.3333;
+    good.lineHeight = 1.23456;
+    good.padding = "0 1.5em 6px 11rem";
+    const wr::ThemeTextTokens checked = wr::checkTextTokens(good);
+    CHECK(checked.fontSize == std::optional<double>(17.33));
+    CHECK(checked.lineHeight == std::optional<double>(1.235));
+    CHECK(checked.padding == good.padding);
+}
+
+/// The root always carries the three text variables, with the reference set for a token not passed or refused.
+WR_TEST(testTheRootAlwaysCarriesTheTextTokens) {
+    const wr::ThemeParams params = wr::completeThemeParams({}, wr::Theme::Light);
+    const std::string defaults = wr::themeRootDeclarations(params, wr::Theme::Light);
+    CHECK(defaults.find(";--tg-text-font-size:15px !important;--tg-text-line-height:1.35 !important;--tg-text-padding:8px 12px !important") !=
+          std::string::npos);
+    wr::ThemeTextTokens text;
+    text.fontSize = 17;
+    text.lineHeight = 1.3;
+    text.padding = "6px 11px";
+    const std::string passed = wr::themeRootDeclarations(params, wr::Theme::Light, {}, wr::checkTextTokens(text));
+    CHECK(passed.find(";--tg-text-font-size:17px !important;--tg-text-line-height:1.3 !important;--tg-text-padding:6px 11px !important") !=
+          std::string::npos);
+    text.fontSize = 100;
+    const std::string refused = wr::themeRootDeclarations(params, wr::Theme::Light, {}, wr::checkTextTokens(text));
+    CHECK(refused.find("--tg-text-font-size:15px !important;--tg-text-line-height:1.3 !important") != std::string::npos);
+}
+
+/// The tokens reach the layout: the root's font, the body's margin; no widget rule replaces them; a token change alone
+/// is a theme change (one themeChanged), and the same tokens again change nothing.
+WR_TEST(testTextTokensDriveTheRootAndTheBody) {
+    RenderEnv env("<!doctype html><html><head><style>:root { --tg-text-font-size: 30px !important }</style></head><body><p id=p>x</p>"
+                  "<script>window.css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();"
+                  "window.cs = (e, p) => getComputedStyle(e).getPropertyValue(p);"
+                  "window.n = 0; TelegramWidget.onEvent('themeChanged', () => n++);</script></body></html>");
+    const std::string read = "[css('--tg-text-font-size'), css('--tg-text-line-height'), css('--tg-text-padding'),"
+                             " cs(document.documentElement, 'font-size'), cs(document.documentElement, 'line-height'),"
+                             " cs(document.body, 'margin-top'), cs(document.body, 'margin-left'), n].join()";
+    CHECK_EQ(env.env().eval(read), std::string("15px,1.35,8px 12px,15px,20.25px,8px,12px,0"));
+    wr::ThemeTextTokens text;
+    text.fontSize = 17;
+    text.lineHeight = 1.3;
+    text.padding = "6px 11px";
+    wr::HostState& state = wr::HostState::of(env.ctx());
+    state.setTheme(env.ctx(), wr::Theme::Light, {}, {}, text);
+    env.env().drain();
+    CHECK_EQ(env.env().eval(read), std::string("17px,1.3,6px 11px,17px,22.1px,6px,11px,1"));
+    state.setTheme(env.ctx(), wr::Theme::Light, {}, {}, text);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("n"), std::string("1"));
+    // A scheme change keeps them.
+    state.themeChanged(env.ctx(), wr::Theme::Dark);
+    env.env().drain();
+    CHECK_EQ(env.env().eval(read), std::string("17px,1.3,6px 11px,17px,22.1px,6px,11px,2"));
 }

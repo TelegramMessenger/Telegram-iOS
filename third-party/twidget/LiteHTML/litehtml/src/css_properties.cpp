@@ -6,6 +6,7 @@
 #include "document_container.h"
 #include "types.h"
 #include <cstddef>
+#include "css_parser.h" // Telegram (VENDOR.md edit 32.1): normalize
 
 #define offset(member) offsetof(litehtml::css_properties, member)
 // #define offset(func)	[](const css_properties& css) { return css.func; }
@@ -73,6 +74,10 @@ void litehtml::css_properties::compute(const html_tag* el, const document::ptr& 
     m_white_space =
         static_cast<white_space>(el->get_property<int>(_white_space_, true, white_space_normal, offset(m_white_space)));
     m_overflow_wrap = static_cast<overflow_wrap>(el->get_property<int>(_overflow_wrap_, true, overflow_wrap_normal, offset(m_overflow_wrap)));
+    // Telegram (VENDOR.md edit 32.2).
+    m_word_break = el->get_property<int>(_word_break_, true, word_break_normal, offset(m_word_break));
+    // Telegram (VENDOR.md edit 46).
+    m_direction = el->get_property<int>(_direction_, true, direction_ltr, offset(m_direction));
     m_caption_side = static_cast<caption_side>(
         el->get_property<int>(_caption_side_, true, caption_side_top, offset(m_caption_side)));
 
@@ -292,6 +297,9 @@ void litehtml::css_properties::compute(const html_tag* el, const document::ptr& 
     m_content = el->get_property<std::string>(_content_, false, "", offset(m_content));
     m_cursor  = el->get_property<std::string>(_cursor_, true, "auto", offset(m_cursor));
     bound_inherited_string(el, _cursor_, m_cursor, false, "auto"); // Telegram (VENDOR.md edit 21)
+    // Telegram (VENDOR.md edit 32.4): quotes, inherited; "" is auto.
+    m_quotes = el->get_property<std::string>(_quotes_, true, "", offset(m_quotes));
+    bound_inherited_string(el, _quotes_, m_quotes, false, "");
 
     m_css_text_indent = el->get_property<css_length>(_text_indent_, true, 0, offset(m_css_text_indent));
     doc->cvt_units(m_css_text_indent, m_font_metrics, 0_px);
@@ -582,6 +590,19 @@ void litehtml::css_properties::compute_font(const html_tag* el, const document::
         m_letter_spacing           = static_cast<float>(doc->to_pixels(letter_spacing, fm, 0_px));
     }
 
+    // Telegram (VENDOR.md edit 32.3): word-spacing, as letter-spacing.
+    css_length word_spacing = el->get_property<css_length>(_word_spacing_, true, css_length::predef_value(0),
+                                                           offset(m_word_spacing));
+    if(word_spacing.is_predefined())
+    {
+        m_word_spacing = 0;
+    } else
+    {
+        font_metrics fm;
+        fm.x_height = fm.font_size = font_size;
+        m_word_spacing             = static_cast<float>(doc->to_pixels(word_spacing, fm, 0_px));
+    }
+
     m_text_shadows.clear();
     if(const auto* tokens = el->get_token_property(_text_shadow_))
     {
@@ -635,6 +656,28 @@ void litehtml::css_properties::compute_font(const html_tag* el, const document::
     m_font_variant_numeric = el->get_property<std::string>(_font_variant_numeric_, true, "", offset(m_font_variant_numeric));
     bound_inherited_string(el, _font_variant_numeric_, m_font_variant_numeric, false, ""); // Telegram (VENDOR.md edit 21)
     descr.tabular_nums     = m_font_variant_numeric.find("tabular-nums") != std::string::npos;
+    // Telegram (VENDOR.md edit 32.1): font-feature-settings "tnum" (on, or a non-zero value) asks for tabular figures
+    // too; the other features are not read.
+    m_font_feature_settings = el->get_property<std::string>(_font_feature_settings_, true, "", offset(m_font_feature_settings));
+    bound_inherited_string(el, _font_feature_settings_, m_font_feature_settings, false, "");
+    if(!descr.tabular_nums && !m_font_feature_settings.empty())
+    {
+        css_token_vector features = normalize(m_font_feature_settings, f_componentize | f_remove_whitespace);
+        bool tnum = false;
+        for(size_t i = 0; i < features.size(); i++)
+        {
+            if(features[i].type != STRING || lowcase(features[i].str()) != "tnum")
+                continue;
+            tnum = true;
+            if(i + 1 < features.size())
+            {
+                const css_token& next = features[i + 1];
+                if((next.type == NUMBER && next.n.number == 0) || (next.type == IDENT && lowcase(next.ident()) == "off"))
+                    tnum = false;
+            }
+        }
+        descr.tabular_nums = tnum;
+    }
 
     m_font = doc->get_font(descr, &m_font_metrics);
 }
@@ -961,6 +1004,42 @@ void litehtml::css_properties::compute_effects(const html_tag* el, const documen
             if(!finite)
                 m_transform.clear();
         }
+    }
+    // Telegram (VENDOR.md edit 37): object-fit and object-position (as background-position: one or two values).
+    m_object_fit        = el->get_property<int>(_object_fit_, false, object_fit_fill, offset(m_object_fit));
+    m_text_overflow     = el->get_property<int>(_text_overflow_, false, text_overflow_clip, offset(m_text_overflow)); // edit 40
+    m_object_position_x = css_length(50, css_units_percentage);
+    m_object_position_y = css_length(50, css_units_percentage);
+    if(const auto* tokens = el->get_token_property(_object_position_))
+    {
+        int        index = 0;
+        css_length x, y;
+        if(parse_bg_position(*tokens, index, x, y, true) && index == static_cast<int>(tokens->size()))
+        {
+            doc->cvt_units(x, m_font_metrics, 0_px);
+            doc->cvt_units(y, m_font_metrics, 0_px);
+            m_object_position_x = x;
+            m_object_position_y = y;
+        }
+    }
+    // Telegram (VENDOR.md edit 34): translate, rotate and scale, before transform's functions in that order (CSS
+    // Transforms 2 §6: translate · rotate · scale · transform, about the origin).
+    m_transform_individual = 0;
+    {
+        transform_vector individual;
+        for(string_id name : {_translate_, _rotate_, _scale_})
+        {
+            const auto*        tokens = el->get_token_property(name);
+            transform_function fn;
+            if(!tokens || !parse_individual_transform(name, *tokens, fn))
+                continue;
+            doc->cvt_units(fn.x, m_font_metrics, 0_px);
+            doc->cvt_units(fn.y, m_font_metrics, 0_px);
+            if(std::isfinite(fn.x.val()) && std::isfinite(fn.y.val()))
+                individual.push_back(fn);
+        }
+        m_transform.insert(m_transform.begin(), individual.begin(), individual.end());
+        m_transform_individual = individual.size();
     }
     if(const auto* tokens = el->get_token_property(_transform_origin_))
     {

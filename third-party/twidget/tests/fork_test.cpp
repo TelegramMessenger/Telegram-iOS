@@ -1,7 +1,9 @@
 #include "test_container.h"
 
+#include <litehtml/css_parser.h>
 #include <litehtml/render_item.h>
 
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 
@@ -15,6 +17,22 @@ static litehtml::element::ptr by_id(const litehtml::document::ptr& doc, const ch
 struct GroupContainer : litehtml_test::TestContainer {
     std::vector<litehtml::transform_matrix> groups;
     void begin_group(litehtml::uint_ptr, const litehtml::paint_group& group) override { groups.push_back(group.matrix); }
+};
+
+// Records the colour stops of every gradient the document draws, as "offset:r,g,b" joined by spaces.
+struct GradientContainer : litehtml_test::TestContainer {
+    std::vector<std::string> stops;
+    void record(const litehtml::background_layer::gradient_base& g) {
+        std::string out;
+        for (const auto& p : g.color_points) {
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "%s%.4g:%d,%d,%d", out.empty() ? "" : " ", p.offset, p.color.red, p.color.green, p.color.blue);
+            out += buf;
+        }
+        stops.push_back(out);
+    }
+    void draw_linear_gradient(litehtml::uint_ptr, const litehtml::background_layer&, const litehtml::background_layer::linear_gradient& g) override { record(g); }
+    void draw_conic_gradient(litehtml::uint_ptr, const litehtml::background_layer&, const litehtml::background_layer::conic_gradient& g) override { record(g); }
 };
 
 // Text pieces (el_text, el_space) reachable from `el`, ::before/::after content included.
@@ -245,6 +263,285 @@ int main() {
             whole = steady(updatable, round % 2 == 0 ? 2000 : 1200, slack, "restyle", round);
         }
         CHECK(whole);
+    }
+
+    // CSS-wide keywords (VENDOR.md edit 33): initial is the property's initial value, unset inherits an inherited
+    // property and is initial otherwise, revert is the master sheet's value (or unset where it has none), and a custom
+    // property set to initial has no value, so var() takes its fallback.
+    {
+        auto kw = litehtml_test::layout(c,
+            "<html><head><style>p{margin:0} #c{color:rgb(0,0,140);--x:rgb(9,9,9)}"
+            " #r{margin:revert;display:inline;display:revert} #i{display:initial} #u{color:rgb(200,0,0);color:unset;"
+            "margin-top:5px;margin-top:unset} #rc{color:rgb(200,0,0);color:revert} #v{--x:initial;color:var(--x,rgb(1,2,3))}"
+            "</style></head><body><div id=c><p id=r>r</p><div id=i>i</div><p id=u>u</p><p id=rc>x</p><span id=v>v</span>"
+            "</div></body></html>");
+        const auto& r = by_id(kw, "r")->css();
+        CHECK(r.get_display() == litehtml::display_block);
+        CHECK(float(r.get_margins().top.val()) == float(r.get_font_size()) && float(r.get_margins().bottom.val()) == float(r.get_font_size()));
+        CHECK(by_id(kw, "i")->css().get_display() == litehtml::display_inline);
+        const auto& u = by_id(kw, "u")->css();
+        CHECK(u.get_color() == litehtml::web_color(0, 0, 140) && float(u.get_margins().top.val()) == 0.0f);
+        CHECK(by_id(kw, "rc")->css().get_color() == litehtml::web_color(0, 0, 140));
+        CHECK(by_id(kw, "v")->css().get_color() == litehtml::web_color(1, 2, 3));
+    }
+
+    // CSS Images 3 §3.4.3's colour-stop fix-up (VENDOR.md edit 35): a position below an earlier one is raised to it, an
+    // explicit 0 on the last stop stays 0 (then raised), and unpositioned stops are spaced evenly between their neighbours.
+    {
+        GradientContainer g;
+        auto doc = litehtml_test::layout(g,
+            "<body style='margin:0'><div style='width:100px;height:100px;background:conic-gradient(rgb(1,0,0) 0 25%,rgb(2,0,0) 0 50%,"
+            "rgb(3,0,0) 0 75%,rgb(4,0,0) 0)'></div>"
+            "<div style='width:100px;height:10px;background:linear-gradient(90deg,rgb(1,0,0) 20%,rgb(2,0,0),rgb(3,0,0) 80%)'></div>"
+            "<div style='width:100px;height:10px;background:linear-gradient(90deg,rgb(1,0,0),rgb(2,0,0) 40%,rgb(3,0,0) 10%,rgb(4,0,0))'></div>"
+            "</body>");
+        doc->draw(0, litehtml::pixel_t(0.0f), litehtml::pixel_t(0.0f), nullptr);
+        const std::vector<std::string> want = {
+            "0:1,0,0 0.25:1,0,0 0.25:2,0,0 0.5:2,0,0 0.5:3,0,0 0.75:3,0,0 0.75:4,0,0 1:4,0,0",
+            "0:1,0,0 0.2:1,0,0 0.5:2,0,0 0.8:3,0,0 1:3,0,0",
+            "0:1,0,0 0.4:2,0,0 0.4:3,0,0 1:4,0,0",
+        };
+        CHECK(g.stops.size() == want.size());
+        for (size_t i = 0; i < want.size() && i < g.stops.size(); i++) {
+            if (g.stops[i] != want[i]) std::printf("  gradient %zu: %s\n          want %s\n", i, g.stops[i].c_str(), want[i].c_str());
+            CHECK(g.stops[i] == want[i]);
+        }
+    }
+
+    // A master @layer block is an origin above the master's other rules (VENDOR.md edit 41): its rules beat the
+    // engine's whatever their specificity, keep their own order among themselves, and revert skips them, rolling back
+    // to the engine's sheet as a browser rolls an author layer back to its UA sheet.
+    {
+        c.width = 300;
+        const std::string master = std::string(litehtml::master_css) +
+            "div span{color:rgb(3,0,0)} @layer tw{span{color:rgb(2,0,0)} div div span{color:rgb(1,0,0)} p{margin:3px 0}}";
+        auto doc = litehtml::document::createFromString(litehtml::estring(
+            "<html><head><style>p.r{margin:revert}</style></head><body><div><span id=a>a</span><div><span id=b>b</span>"
+            "</div></div><p id=p>p</p><p id=r class=r>r</p></body></html>"), &c, master);
+        doc->render(litehtml::pixel_t(300.0f));
+        CHECK(by_id(doc, "a")->css().get_color() == litehtml::web_color(2, 0, 0));
+        CHECK(by_id(doc, "b")->css().get_color() == litehtml::web_color(1, 0, 0));
+        CHECK(float(by_id(doc, "p")->css().get_margins().top.val()) == 3.0f);
+        const auto& r = by_id(doc, "r")->css();
+        CHECK(float(r.get_margins().top.val()) == float(r.get_font_size()));
+        // An author sheet's @layer keeps today's reading: its rules are unlayered.
+        auto author = litehtml::document::createFromString(litehtml::estring(
+            "<html><head><style>@layer x{#q{color:rgb(5,0,0)}} span{color:rgb(6,0,0)}</style></head><body><span id=q>q</span>"
+            "</body></html>"), &c);
+        author->render(litehtml::pixel_t(300.0f));
+        CHECK(by_id(author, "q")->css().get_color() == litehtml::web_color(5, 0, 0));
+    }
+
+    // VENDOR.md edit 43: a rule's declarations reach the element in their written order, so a var() shorthand after a
+    // shorthand that sets its longhands (`border:0; border-top:1px solid var(--c)`) still wins once var() is resolved.
+    {
+        auto doc = litehtml_test::layout(c,
+            "<html><head><style>html{--c:#123456} #h{border:0;border-top:2px solid var(--c);height:0}"
+            " #k{border-top:3px solid var(--c);border:0}</style></head><body><div id=h></div><div id=k></div></body></html>");
+        const auto& h = by_id(doc, "h")->css().get_borders().top;
+        CHECK(float(h.width.val()) == 2.0f && h.style == litehtml::border_style_solid);
+        CHECK(h.color == litehtml::web_color(0x12, 0x34, 0x56));
+        CHECK(float(by_id(doc, "k")->css().get_borders().top.width.val()) == 0.0f);
+    }
+
+    // VENDOR.md edit 44: a relatively positioned inline box moves its content with it (CSS 2 §9.4.3), nested ones adding
+    // up, and its own box (the inline box geometry reads).
+    {
+        auto doc = litehtml_test::layout(c,
+            "<html><head><style>sub,sup{vertical-align:baseline;font-size:inherit}</style></head>"
+            "<body style='margin:0'><div><span id=b>x</span><sup id=p style='position:relative;top:-5px'>2</sup>"
+            "<sub id=q style='position:relative;bottom:-4px'><span id=qq style='position:relative;left:3px'>3</span></sub></div></body></html>");
+        auto first_text = [](const litehtml::element::ptr& el) {
+            for (auto e = el; e; e = e->children().empty() ? nullptr : e->children().front()) {
+                if (e->is_text()) return e;
+            }
+            return litehtml::element::ptr();
+        };
+        const float base = float(first_text(by_id(doc, "b"))->get_placement().y);
+        const auto p = first_text(by_id(doc, "p"));
+        const auto qq = first_text(by_id(doc, "qq"));
+        const auto q = by_id(doc, "q");
+        CHECK(p && qq);
+        if (p && qq) {
+            CHECK(float(p->get_placement().y) == base - 5.0f);
+            CHECK(float(qq->get_placement().y) == base + 4.0f);
+            CHECK(float(qq->get_placement().x) > float(p->get_placement().x) + 3.0f);
+        }
+        // The positioned inline's own box moved too.
+        bool found = false;
+        q->get_render_item()->for_inline_boxes([&](const litehtml::position& box, bool, bool) {
+            found = true;
+            CHECK(float(box.y) >= base + 4.0f - 1.0f);
+            return true;
+        });
+        CHECK(found);
+    }
+
+    // Edit 46: direction is inherited; start and end resolve against it where a line is built (the computed value
+    // keeps start); an over-constrained block in a right-to-left parent ignores margin-left and ends at the right.
+    {
+        auto doc = litehtml_test::layout(c, "<body style='margin:0'><div id=r style='direction:rtl;width:200px'>"
+                                            "<p id=p style='margin:0'><span id=s>ab</span></p>"
+                                            "<div id=b style='width:20px;height:5px;margin:0 10px 0 0'></div>"
+                                            "<p id=e style='margin:0;text-align:end'><span id=t>ab</span></p></div>"
+                                            "<div style='width:200px'><p style='margin:0'><span id=l>ab</span></p></div></body>");
+        const auto p = by_id(doc, "p");
+        CHECK(p && p->css().get_direction() == litehtml::direction_rtl && p->css().get_text_align() == litehtml::text_align_start);
+        const auto right_of = [](const litehtml::element::ptr& el) {
+            const auto pos = el->get_placement();
+            return float(pos.x + pos.width);
+        };
+        // A span's text piece: an inline element's own placement does not follow its line items.
+        const auto text_of = [&](const char* id) { return by_id(doc, id)->children().front(); };
+        CHECK(std::abs(right_of(text_of("s")) - 200.0f) < 0.5f);
+        CHECK(float(text_of("t")->get_placement().x) < 0.5f);
+        CHECK(float(text_of("l")->get_placement().x) < 0.5f);
+        CHECK(std::abs(right_of(by_id(doc, "b")) - 190.0f) < 0.5f);
+    }
+
+    // Edit 47: a line's units in visual order from the container's levels (rule L2), a span's box over its items
+    // wherever they moved. This container answers 1 for a unit starting with a right-to-left character and the paragraph's own
+    // level otherwise (U+0590 to U+07FF: Hebrew and Arabic); without it (the default hook) the order stays logical.
+    {
+        struct BidiContainer : litehtml_test::TestContainer {
+            bool bidi_levels(const std::vector<std::string>& runs, bool rtl, std::vector<uint8_t>& levels) override {
+                levels.clear();
+                for (const auto& run : runs) {
+                    const unsigned char lead = run.empty() ? 0 : static_cast<unsigned char>(run[0]);
+                    const bool strong = lead >= 0xD6 && lead <= 0xDF;
+                    levels.push_back(strong || rtl ? 1 : 0);
+                }
+                return true;
+            }
+        } bc;
+        auto doc = litehtml_test::layout(bc, "<body style='margin:0'><div style='direction:rtl;width:200px'>"
+                                             "<i id=a style='display:inline-block;width:10px;height:8px'></i>"
+                                             "<i id=b style='display:inline-block;width:10px;height:8px'></i></div>"
+                                             "<div style='width:200px'><span id=s><i id=c style='display:inline-block;width:10px;height:8px'></i>"
+                                             "<i id=d style='display:inline-block;width:10px;height:8px'></i></span></div></body>");
+        const auto x = [&](const char* id) { return float(by_id(doc, id)->get_placement().x); };
+        CHECK(std::abs(x("a") - 190.0f) < 0.5f && std::abs(x("b") - 180.0f) < 0.5f);
+        CHECK(std::abs(x("c") - 0.0f) < 0.5f && std::abs(x("d") - 10.0f) < 0.5f);
+        // The default hook keeps the logical order.
+        auto plain = litehtml_test::layout(c, "<body style='margin:0'><div style='direction:rtl;width:200px'>"
+                                              "<i id=a style='display:inline-block;width:10px;height:8px'></i>"
+                                              "<i id=b style='display:inline-block;width:10px;height:8px'></i></div></body>");
+        CHECK(float(by_id(plain, "a")->get_placement().x) < float(by_id(plain, "b")->get_placement().x));
+    }
+
+    // Edit 48: a math function mixing a percentage with a length keeps its tree to layout, font-relative terms folded at
+    // compute; the trees are counted references. A length copied, moved and assigned releases its tree with the last
+    // copy. Documents share trees with style::add's process-wide declaration cache, so a repeated layout and patch of the
+    // same page must leave no more trees alive than the first did.
+    {
+        const int64_t before = litehtml::calc_node::live();
+        {
+            const auto tokens = litehtml::normalize(std::string("calc(50% - 10px)"), litehtml::f_componentize);
+            litehtml::css_length a;
+            CHECK(!tokens.empty() && a.from_token(tokens[0], litehtml::f_length_percentage) && a.is_calc());
+            CHECK(litehtml::calc_node::live() > before);
+            litehtml::css_length b = a;
+            litehtml::css_length m = std::move(b);
+            litehtml::css_length d;
+            d = m;
+            d = a;
+            m = 4.0f;
+            CHECK(!m.is_calc() && d.is_calc() && std::abs(float(d.calc_value(200, litehtml::calc_fonts())) - 90.0f) < 0.01f);
+        }
+        CHECK(litehtml::calc_node::live() == before);
+
+        // A tree holds at most 64 nodes (calc_node::max_nodes): one tree is shared by every element a cached declaration
+        // styles and evaluated for each at every layout, and a var() splice can make one declaration as large as the
+        // style budget. Each min(1px, 1%) is three nodes and the sum one more: 21 of them fit, 22 do not. A sum is refused
+        // as soon as its children pass the cap, so 50,000 of them times a million factors (fifteen seconds when every
+        // factor walked every child) end at once.
+        {
+            const auto sum_of_mins = [](int count, int factors) {
+                std::string text = "calc((min(1px, 1%)";
+                for (int i = 1; i < count; i++) text += " + min(1px, 1%)";
+                text += ")";
+                for (int i = 0; i < factors; i++) text += "*1";
+                return text + ")";
+            };
+            const auto parse = [](const std::string& text, litehtml::css_length& l) {
+                const auto tokens = litehtml::normalize(text, litehtml::f_componentize);
+                return !tokens.empty() && l.from_token(tokens[0], litehtml::f_length_percentage) && l.is_calc();
+            };
+            litehtml::css_length fits;
+            CHECK(parse(sum_of_mins(21, 3), fits) && fits.calc()->nodes == 64);
+            CHECK(std::abs(float(fits.calc_value(200, litehtml::calc_fonts())) - 21.0f) < 0.01f);
+            litehtml::css_length over;
+            CHECK(!parse(sum_of_mins(22, 0), over) && !over.is_calc());
+            const auto tokens = litehtml::normalize(sum_of_mins(50000, 1000000), litehtml::f_componentize);
+            const auto start = std::chrono::steady_clock::now();
+            litehtml::css_length big;
+            CHECK(!tokens.empty() && !big.from_token(tokens[0], litehtml::f_length_percentage));
+            CHECK(std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() < 2.0);
+        }
+
+        const std::string page = "<html><body style='margin:0'><div style='width:200px;font-size:10px'>"
+                                 "<div id=a style='width:calc(50% - 10px);height:2px'></div>"
+                                 "<div id=b style='width:clamp(20px, 50%, 60px);height:2px;margin-left:calc(1em + 25%)'></div>"
+                                 "</div></body></html>";
+        const auto round = [&] {
+            auto doc = litehtml_test::layout(c, page, 300);
+            const auto a = by_id(doc, "a");
+            const auto b = by_id(doc, "b");
+            CHECK(a && std::abs(float(a->get_placement().width) - 90.0f) < 0.5f);
+            CHECK(b && std::abs(float(b->get_placement().width) - 60.0f) < 0.5f && std::abs(float(b->get_placement().x) - 60.0f) < 0.5f);
+            CHECK(a && a->css().get_width().is_calc() && a->css().get_width().units() == litehtml::css_units_percentage);
+            auto first = patched(c, nullptr, page);
+            auto second = patched(c, first, std::string(page).replace(page.find("50% - 10px"), 10, "25% + 10px"));
+            const auto a2 = by_id(second, "a");
+            CHECK(a2 && std::abs(float(a2->get_placement().width) - 60.0f) < 0.5f);
+        };
+        round();
+        const int64_t cached = litehtml::calc_node::live();
+        round();
+        round();
+        CHECK(litehtml::calc_node::live() == cached);
+    }
+
+    // Edit 48: a calc on a property that takes no negative value is clamped at 0 (CSS clamps a math function's result to
+    // the property's range), so flex-basis: calc(50% - 8px) is a basis rather than auto, and a width or font size never
+    // goes negative; a term that overflows makes no tree, as the parse-time fold refuses it.
+    {
+        auto doc = litehtml_test::layout(c, "<html><body style='margin:0'><div style='width:200px'>"
+                                            "<div id=neg style='width:calc(50% - 300px);height:1px'></div>"
+                                            "<div style='display:flex'><div id=basis style='flex:0 0 calc(50% - 8px);height:1px'></div></div>"
+                                            "<div id=font style='font-size:calc(10% - 100px)'>x</div>"
+                                            "<div id=inf style='width:calc(1% + 1e38px * 1e38 * 1e38);height:1px'></div>"
+                                            "</div></body></html>", 300);
+        const auto w = [&](const char* id) { auto el = by_id(doc, id); return el ? float(el->get_placement().width) : -1.0f; };
+        CHECK(std::abs(w("neg") - 0.0f) < 0.5f);
+        CHECK(std::abs(w("basis") - 92.0f) < 0.5f);
+        const auto font = by_id(doc, "font");
+        CHECK(font && float(font->css().get_font_size()) >= 0.0f);
+        CHECK(std::abs(w("inf") - 200.0f) < 0.5f);
+    }
+
+    // Edit 39: a block whose width is min-content, max-content or fit-content measures its content in passes that lay a
+    // nested keyword box out as auto, and only its fitted pass lays them out in full, at most 8 keyword boxes deep: every
+    // pass laying out every nested keyword box in full was exponential in their nesting (2^d renders, uncharged).
+    {
+        const auto nested = [](int depth) {
+            std::string html = "<html><body style='margin:0'><style>div{width:max-content}</style>";
+            for (int i = 0; i < depth; i++) html += "<div>";
+            html += "word";
+            for (int i = 0; i < depth; i++) html += "</div>";
+            return html + "</body></html>";
+        };
+        const auto start = std::chrono::steady_clock::now();
+        auto deep = litehtml_test::layout(c, nested(40), 300);
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        CHECK(seconds < 2.0);
+        CHECK(deep && std::abs(float(deep->root()->get_placement().width) - 300.0f) < 0.5f);
+        // The nested keyword box still sizes itself in the fitted pass: "ab" beside a longer sibling.
+        auto fitted = litehtml_test::layout(c, "<html><body style='margin:0'><div style='width:max-content'>"
+                                               "<div id=in style='width:max-content'>ab</div><div>abcdefgh</div></div></body></html>", 300);
+        const auto in = by_id(fitted, "in");
+        CHECK(in && std::abs(float(in->get_placement().width) - 16.0f) < 0.5f);
+        CHECK(in && std::abs(float(in->parent()->get_placement().width) - 64.0f) < 0.5f);
     }
 
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }

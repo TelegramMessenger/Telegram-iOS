@@ -200,6 +200,8 @@ WR_TEST(testCorpusRenders) {
     size_t maxStyleCharge = 0;
     std::string maxStyleFile;
     std::vector<std::string> styleBytesHit;
+    // Profile 1's strict text and node limits (V4 plan, Task 7): no honest document reaches one.
+    std::vector<std::string> textLimitsHit;
     for (const std::string& file : files) {
         const std::string name = shortName(file);
         const std::string html = readFile(file);
@@ -248,6 +250,9 @@ WR_TEST(testCorpusRenders) {
             if (limit == "style-bytes") {
                 styleBytesHit.push_back(name);
             }
+            if (limit == "text-node" || limit == "text-budget" || limit == "nodes") {
+                textLimitsHit.push_back(name + " (" + limit + ")");
+            }
         }
 
         // Animations are render-only (V5e, V5f): their values reach litehtml in the "animated style" attribute, which no
@@ -283,12 +288,15 @@ WR_TEST(testCorpusRenders) {
                 // one: a quirks document (most of the corpus has no doctype) is parsed without it, as the document was.
                 const bool quirks = env.env().eval("document.compatMode") == "BackCompat";
                 const std::string parseInput = quirks ? input.substr(std::string("<!doctype html>").size()) : input;
-                wr::WidgetContainer container(env.host(), env.options());
+                wr::WidgetContainer container(env.host(), env.render().options());
                 std::string theirs;
                 {
+                    // The theme's root declarations (twidget edit 26), which the UA layer's values read, as a user rule on the
+                    // root: a parse cannot set them before it finalizes.
                     litehtml::document::ptr parsed = litehtml::document::createFromString(
-                        litehtml::estring(parseInput), &container, wr::masterWithHostCSS(env.options().hostCSS));
-                    parsed->render(litehtml::pixel_t(float(env.options().width)));
+                        litehtml::estring(parseInput), &container, wr::masterWithHostCSS(env.render().options().hostCSS),
+                        "html{" + env.render().options().rootDeclarations + "}");
+                    parsed->render(litehtml::pixel_t(float(env.render().options().width)));
                     theirs = wr::dumpLayout(*parsed);
                 }
                 const std::string ours = env.render().layoutDump();
@@ -334,6 +342,10 @@ WR_TEST(testCorpusRenders) {
                 size_t(litehtml::document::max_style_bytes));
     list("documents that hit the style-byte budget", styleBytesHit);
     CHECK(styleBytesHit.empty());
+    list("documents that hit profile 1's text or node limits", textLimitsHit);
+    for (const std::string& hit : textLimitsHit) {
+        CHECK(hit.starts_with("attacks/"));
+    }
     std::printf("\nparity checked on %zu of %zu documents\n", parityChecked, files.size());
     std::printf("first flush: median %llu units, p90 %llu, max %llu\n", (unsigned long long)percentile(firstFlush, 0.5),
                 (unsigned long long)percentile(firstFlush, 0.9), (unsigned long long)percentile(firstFlush, 1.0));

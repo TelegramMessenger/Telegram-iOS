@@ -218,7 +218,7 @@ WR_TEST(testBuildMirrorsTheDom) {
     RenderEnv env("<!doctype html><p class=a>Hi <b>x</b></p>");
     // A tree builds nothing until its first build. The installed one's was the boot's flush (Task 6).
     {
-        wr::RenderTree fresh(env.ctx(), env.host(), env.options());
+        wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
         CHECK(fresh.layerTree() == nullptr);
         CHECK(fresh.document() == nullptr);
         CHECK_EQ(fresh.layoutDump(), std::string());
@@ -273,12 +273,15 @@ WR_TEST(testBuildPathParity) {
         const std::string ours = env.render().layoutDump();
         // A second container over the same host, laid out from renderInput through litehtml's own parser. The
         // document goes before its container.
-        wr::WidgetContainer container(env.host(), env.options());
+        wr::WidgetContainer container(env.host(), env.render().options());
         std::string theirs;
         {
+            // The theme's root declarations (twidget edit 26, which a parse cannot set before it finalizes) as a user rule on
+            // the root: the UA layer's values read them.
             litehtml::document::ptr parsed = litehtml::document::createFromString(
-                litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.options().hostCSS));
-            parsed->render(litehtml::pixel_t(float(env.options().width)));
+                litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.render().options().hostCSS),
+                "html{" + env.render().options().rootDeclarations + "}");
+            parsed->render(litehtml::pixel_t(float(env.render().options().width)));
             theirs = wr::dumpLayout(*parsed);
         }
         CHECK_EQ(ours, theirs);
@@ -412,14 +415,16 @@ WR_TEST(testCssCaps) {
 }
 
 WR_TEST(testRenderByteBudget) {
-    const std::string a(600 * 1024, 'a');
-    const std::string b(600 * 1024, 'b');
+    // Profile 1 caps one text at 65,536 units and the document's at 262,144 (V4 plan, Task 7), so the bytes are taken by an
+    // attribute the text budgets do not count.
+    const std::string a(1000 * 1000, 'a');
+    const std::string b(60000, 'b');
     // The boot's flush is the first build.
-    RenderEnv env("<!doctype html><p>" + a + "</p><p>" + b + "</p><p>x</p>");
+    RenderEnv env("<!doctype html><p class=" + a + ">y</p><p>" + b + "</p><p>x</p>");
     const std::string input = env.render().renderInput();
     // The second <p> comes before its text in tree order, so it renders, empty; its text would pass the 1 MiB, so
     // neither it nor anything after it renders.
-    CHECK(input.find("<p>" + a + "</p><p></p></body></html>") != std::string::npos);
+    CHECK(input.find("<p class=\"" + a + "\">y</p><p></p></body></html>") != std::string::npos);
     CHECK(input.find("bbbb") == std::string::npos);
     CHECK(input.find("<p>x</p>") == std::string::npos);
     CHECK_EQ(diagnosticCount(env, "render-limit", "bytes"), size_t(1));
@@ -495,7 +500,7 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
              CHECK_EQ(diagnosticCount(env, "render-limit", "style-attribute"), size_t(1));
          }},
         {"bytes",
-         "document.body.textContent = 'a'.repeat(2 * 1024 * 1024);",
+         "document.body.setAttribute('class', 'a'.repeat(2 * 1024 * 1024));",
          [&](RenderEnv& env) {
              CHECK(env.render().renderInput().find("aaaa") == std::string::npos);
              CHECK_EQ(diagnosticCount(env, "render-limit", "bytes"), size_t(1));
@@ -619,7 +624,7 @@ WR_TEST(testRenderInputIsKeptOnlyWhenAsked) {
     env.rebuild();
     CHECK(!env.render().renderInput().empty());
     // Production's options: the same build, without the oracle.
-    wr::RenderOptions production = env.options();
+    wr::RenderOptions production = env.render().options();
     production.keepRenderInput = false;
     wr::RenderTree tree(env.ctx(), env.host(), production);
     tree.rebuild(env.ctx());
@@ -662,7 +667,7 @@ WR_TEST(testLoadsGoThroughTheContainer) {
     CHECK_EQ(env.render().refusedLoads(), uint64_t(0));
     CHECK(env.host().decodedMimeTypes == std::vector<std::string>{"image/svg+xml"});
     // A tree asks for nothing until it builds.
-    wr::RenderTree fresh(env.ctx(), env.host(), env.options());
+    wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
     fresh.rebuild(env.ctx());
     CHECK_EQ(fresh.refusedLoads(), uint64_t(0));
     CHECK_EQ(env.host().decodedMimeTypes.size(), size_t(2));
@@ -670,13 +675,15 @@ WR_TEST(testLoadsGoThroughTheContainer) {
 
 namespace {
 
-// A build whose charges are mostly in its layout pre-charge: 2,000 elements and a 100,000-byte word.
+// A build whose charges are mostly in its layout pre-charge: 2,000 elements and a 65,536-byte word (profile 1's cap on
+// one text, V4 plan, Task 7).
 std::string atomicFixture(char letter) {
     std::string html = "<!doctype html><html><head></head><body>";
     for (int i = 0; i < 2000; i++) {
         html += "<div></div>";
     }
-    return html + "<p id=t>" + std::string(100000, letter) + "</p></body></html>";
+    // One word kept whole (the UA layer's `overflow-wrap: break-word` would cut it into fragments).
+    return html + "<p id=t style='overflow-wrap:normal'>" + std::string(65536, letter) + "</p></body></html>";
 }
 
 } // namespace
@@ -693,7 +700,7 @@ WR_TEST(testRebuildIsAtomic) {
     }
     CHECK(units > 30000);
     // Inside the build (a third of the way), then inside the layout pre-charge (it is the last charge before
-    // render(), and holds the 100,000-byte word's 12,500 units).
+    // render(), and holds the 65,536-byte word's 8,192 units).
     const uint64_t limits[] = {units / 3, units - 1000};
     for (uint64_t limit : limits) {
         RenderEnv env(atomicFixture('a'));
@@ -706,7 +713,7 @@ WR_TEST(testRebuildIsAtomic) {
         // The same length, so the next build charges the same.
         CHECK_EQ(env.env().eval("const t = document.getElementById('t').firstChild; t.data = 'b'.repeat(t.data.length);"
                                 "t.data.length"),
-                 std::string("100000"));
+                 std::string("65536"));
         JSRuntime* rt = env.env().runtime().jsRuntime();
         env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + limit);
         CHECK(rebuildAborts(env));
@@ -717,7 +724,7 @@ WR_TEST(testRebuildIsAtomic) {
         CHECK_EQ(env.render().layoutDump(), dump);
         CHECK_EQ(env.render().buildCount(), builds);
         CHECK(input.find("bbbb") == std::string::npos);
-        CHECK(tree && findText(*tree, std::string(100000, 'a')) != nullptr);
+        CHECK(tree && findText(*tree, std::string(65536, 'a')) != nullptr);
     }
 }
 

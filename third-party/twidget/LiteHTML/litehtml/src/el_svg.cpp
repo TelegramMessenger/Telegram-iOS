@@ -1,4 +1,7 @@
 #include <unordered_set>
+#include <unordered_map>
+#include <algorithm>
+#include <functional>
 #include <atomic>
 #include <cstring>
 #include <cmath>
@@ -821,6 +824,12 @@ namespace litehtml
             element::ptr        m_hit;
             bool                m_cache_groups = false;
             position            m_cache_bounds;
+            // Telegram (VENDOR.md edit 38): <use>. The targets being instantiated, innermost last, and what is left of
+            // this paint's share of the document's budget of elements drawn inside instances (el_svg::use_budget).
+            static constexpr size_t     kMaxUseDepth    = 8;
+            static constexpr int        kMaxUseElements = 8192;
+            std::vector<const element*> m_use_stack;
+            int                         m_use_elements = kMaxUseElements;
 
             bool hits(float x0, float y0, float x1, float y1, float slop) const
             {
@@ -915,6 +924,7 @@ namespace litehtml
 
             void draw_text(const element::ptr& el)
             {
+#if 0
                 std::string text;
                 el->get_text(text);
                 std::string collapsed;
@@ -980,9 +990,222 @@ namespace litehtml
                     return;
                 }
                 m_container->draw_text(m_hdc, collapsed.c_str(), font, color, pos);
+#else
+                // Telegram (VENDOR.md edit 38): the text as runs. Each Text node is drawn in its own element's font and
+                // fill (the text's, a tspan's, an a's); a tspan's x and y set the position and start a new chunk, its dx
+                // and dy move it, and the move persists after it; whitespace collapses across the runs as across one
+                // string; text-anchor shifts each chunk by its width.
+                struct text_run
+                {
+                    element::ptr owner;
+                    std::string  text;
+                    float        x;
+                    float        y;
+                    float        width;
+                    bool         chunk;
+                };
+                auto shift = [](const element::ptr& owner, const char* value) -> float {
+                    if(!value || !*value)
+                        return 0;
+                    const char* p = value;
+                    float       v = 0;
+                    if(!next_number(p, v))
+                        return 0;
+                    return (p[0] == 'e' && p[1] == 'm') ? v * owner->css().get_font_size().value() : v;
+                };
+                std::vector<text_run> runs;
+                float                 x = 0, y = 0;
+                bool                  pending_space = false, any = false, chunk = true;
+                auto                  place = [&](const element::ptr& owner) {
+                    std::vector<float> xs = numbers(owner->get_attr("x", ""));
+                    std::vector<float> ys = numbers(owner->get_attr("y", ""));
+                    if(!xs.empty())
+                    {
+                        x     = xs[0];
+                        chunk = true;
+                    }
+                    if(!ys.empty())
+                        y = ys[0];
+                    x += shift(owner, owner->get_attr("dx"));
+                    y += shift(owner, owner->get_attr("dy"));
+                };
+                std::function<void(const element::ptr&, int)> walk = [&](const element::ptr& owner, int depth) {
+                    for(const auto& child : owner->children())
+                    {
+                        if(child->is_text())
+                        {
+                            std::string raw;
+                            child->get_text(raw);
+                            std::string collapsed;
+                            for(char ch : raw)
+                            {
+                                if(std::isspace(static_cast<unsigned char>(ch)))
+                                {
+                                    pending_space = any;
+                                    continue;
+                                }
+                                if(pending_space)
+                                {
+                                    collapsed += ' ';
+                                    pending_space = false;
+                                }
+                                collapsed += ch;
+                                any = true;
+                            }
+                            const uint_ptr font = owner->css().get_font();
+                            if(collapsed.empty() || !font)
+                                continue;
+                            const float width = m_container->text_width(collapsed.c_str(), font).value();
+                            runs.push_back({owner, collapsed, x, y, width, chunk});
+                            chunk = false;
+                            x += width;
+                            continue;
+                        }
+                        const std::string name = lowcase(child->get_tagName() ? child->get_tagName() : "");
+                        if(depth < 32 && (name == "tspan" || name == "a") && child->css().get_display() != display_none &&
+                           !attribute_hides(child))
+                        {
+                            place(child);
+                            walk(child, depth + 1);
+                        }
+                    }
+                };
+                place(el);
+                walk(el, 0);
+                for(size_t start = 0; start < runs.size();)
+                {
+                    size_t stop = start + 1;
+                    while(stop < runs.size() && !runs[stop].chunk)
+                        stop++;
+                    const float       width  = runs[stop - 1].x + runs[stop - 1].width - runs[start].x;
+                    const std::string anchor = svg_ident(runs[start].owner, _text_anchor_);
+                    const float       by     = anchor == "middle" ? width / 2 : anchor == "end" ? width : 0;
+                    for(size_t i = start; i < stop; i++)
+                        runs[i].x -= by;
+                    start = stop;
+                }
+                for(const text_run& run : runs)
+                {
+                    const auto& fm = run.owner->css().get_font_metrics();
+                    position    pos(pixel_t(run.x), pixel_t(run.y) - fm.ascent, pixel_t(run.width), fm.height);
+                    if(m_hit_mode)
+                    {
+                        if(hits(pos.left().value(), pos.top().value(), pos.right().value(), pos.bottom().value(), 0))
+                            m_hit = run.owner;
+                        continue;
+                    }
+                    web_color color;
+                    if(!svg_paint(run.owner, _fill_, web_color::black, true, color, m_container))
+                        continue;
+                    color = with_opacity(color, svg_number(run.owner, _fill_opacity_, 1));
+                    m_container->draw_text(m_hdc, run.text.c_str(), run.owner->css().get_font(), color, pos);
+                }
+#endif
+            }
+
+            // Telegram (VENDOR.md edit 38): the element a <use> refers to by its href (or xlink:href) fragment, the first
+            // in the document with that id; nullptr for anything else.
+            element::ptr use_target(const element::ptr& use)
+            {
+                const char* href = use->get_attr("href");
+                if(!href || !*href)
+                    href = use->get_attr("xlink:href");
+                if(!href || href[0] != '#' || !href[1])
+                    return nullptr;
+                const document* doc = use->doc_ptr();
+                return doc ? doc->svg_element_by_id(href + 1) : nullptr;
+            }
+
+            // Telegram (VENDOR.md edit 38): draws a <use>'s instance: its target translated by x and y, a symbol (or svg)
+            // in a viewport of the use's width and height (else the target's, else 100%) mapped from its viewBox by its
+            // preserveAspectRatio (xMidYMid meet), with no clip. A target that is the use, one of its ancestors or an
+            // instance being drawn is refused, as is anything past kMaxUseDepth nested instances or the paint's share of
+            // the document's kMaxUseElements; a hit inside an instance is the outermost use.
+            void draw_use(const element::ptr& use, int visibility, int depth)
+            {
+                if(m_use_stack.size() >= kMaxUseDepth || m_use_elements <= 0)
+                    return;
+                const element::ptr target = use_target(use);
+                if(!target)
+                    return;
+                for(element::ptr ancestor = use; ancestor; ancestor = ancestor->parent())
+                {
+                    if(ancestor == target)
+                        return;
+                }
+                if(std::find(m_use_stack.begin(), m_use_stack.end(), target.get()) != m_use_stack.end())
+                    return;
+                const std::string tag      = lowcase(target->get_tagName() ? target->get_tagName() : "");
+                const bool        viewport = tag == "symbol" || tag == "svg";
+                float             saved_view[4];
+                std::copy(m_view, m_view + 4, saved_view);
+                transform_matrix matrix{1, 0, 0, 1, attr_length(use, "x", m_view[2], 0), attr_length(use, "y", m_view[3], 0)};
+                if(viewport)
+                {
+                    float w = attr_length(use, "width", m_view[2], -1);
+                    float h = attr_length(use, "height", m_view[3], -1);
+                    if(w < 0)
+                        w = attr_length(target, "width", m_view[2], -1);
+                    if(h < 0)
+                        h = attr_length(target, "height", m_view[3], -1);
+                    if(w < 0)
+                        w = m_view[2];
+                    if(h < 0)
+                        h = m_view[3];
+                    if(!(w > 0) || !(h > 0))
+                        return;
+                    float              view[4] = {0, 0, w, h};
+                    std::vector<float> box     = numbers(target->get_attr("viewbox"));
+                    const bool         has_box = box.size() == 4 && box[2] > 0 && box[3] > 0;
+                    if(has_box)
+                        std::copy(box.begin(), box.end(), view);
+                    float             sx = w / view[2], sy = h / view[3], tx = 0, ty = 0;
+                    const std::string aspect = lowcase(target->get_attr("preserveaspectratio", ""));
+                    if(has_box && aspect.find("none") == std::string::npos)
+                    {
+                        const float s  = aspect.find("slice") != std::string::npos ? std::max(sx, sy) : std::min(sx, sy);
+                        const float fx = aspect.find("xmin") != std::string::npos ? 0 : aspect.find("xmax") != std::string::npos ? 1 : 0.5f;
+                        const float fy = aspect.find("ymin") != std::string::npos ? 0 : aspect.find("ymax") != std::string::npos ? 1 : 0.5f;
+                        tx = (w - view[2] * s) * fx;
+                        ty = (h - view[3] * s) * fy;
+                        sx = sy = s;
+                    }
+                    matrix = transform_matrix{sx, 0, 0, sy, tx - view[0] * sx, ty - view[1] * sy}.then(matrix);
+                    std::copy(view, view + 4, m_view);
+                }
+                const transform_matrix saved   = m_matrix;
+                const element::ptr     hit     = m_hit;
+                const bool             grouped = !m_hit_mode && !matrix.is_identity();
+                if(m_hit_mode)
+                    m_matrix = matrix.then(m_matrix);
+                if(grouped)
+                {
+                    paint_group group;
+                    group.matrix = matrix;
+                    group.bounds = position(-100000, -100000, 200000, 200000);
+                    m_container->begin_group(m_hdc, group);
+                }
+                m_use_stack.push_back(target.get());
+                if(viewport)
+                    draw_children(target, visibility, depth + 1);
+                else if(const element::ptr parent = target->parent())
+                    draw_children(parent, visibility, depth + 1, target);
+                m_use_stack.pop_back();
+                if(grouped)
+                    m_container->end_group(m_hdc);
+                if(m_hit_mode && m_hit != hit)
+                    m_hit = use;
+                m_matrix = saved;
+                std::copy(saved_view, saved_view + 4, m_view);
             }
 
           public:
+            // Telegram (VENDOR.md edit 38): the document's budget of elements drawn inside instances; this paint's share
+            // of it, and what is left.
+            static int max_use_elements() { return kMaxUseElements; }
+            void       set_use_budget(int elements) { m_use_elements = elements; }
+            int        use_budget_left() const { return m_use_elements; }
+
             svg_painter(document_container* container, uint_ptr hdc, const float view[4], const position* cache_bounds = nullptr) :
                 m_container(container),
                 m_hdc(hdc)
@@ -1035,11 +1258,31 @@ namespace litehtml
                 return v == "none";
             }
 
+#if 0
             void draw_children(const element::ptr& el, int inherited = -1, int depth = 0)
+#else
+            // Telegram (VENDOR.md edit 38): `only`, when set, is the one child drawn (a <use>'s target).
+            void draw_children(const element::ptr& el, int inherited = -1, int depth = 0, const element::ptr& only = nullptr)
+#endif
             {
                 float diag = std::sqrt((m_view[2] * m_view[2] + m_view[3] * m_view[3]) / 2);
+#if 0
                 for(const auto& child : el->children())
+#else
+                // Telegram (VENDOR.md edit 38): a <use>'s target alone, not a walk over its siblings.
+                const elements_list only_list = only ? elements_list{only} : elements_list{};
+                for(const auto& child : only ? only_list : el->children())
+#endif
                 {
+                    // Telegram (VENDOR.md edit 38).
+                    if(only && child != only)
+                    {
+                        continue;
+                    }
+                    if(!m_use_stack.empty() && --m_use_elements < 0)
+                    {
+                        return;
+                    }
                     if(child->is_text() || child->css().get_display() == display_none || attribute_hides(child))
                     {
                         continue;
@@ -1100,6 +1343,9 @@ namespace litehtml
                         if(!cached) draw_children(child, visibility, depth + 1);
                     } else if(hidden)
                     {
+                    } else if(name == "use") // Telegram (VENDOR.md edit 38)
+                    {
+                        draw_use(child, visibility, depth);
                     } else if(name == "circle")
                     {
                         float r = attr_length(child, "r", diag, 0);
@@ -1175,6 +1421,12 @@ namespace litehtml
             }
         };
     } // namespace
+
+    // Telegram (VENDOR.md edit 30.2).
+    css_token_vector svg_computed_property(const element::ptr& el, string_id name)
+    {
+        return svg_property(el, name, true);
+    }
 
     bool svg_geometry(const element::ptr& el, vector_path& path)
     {
@@ -1335,6 +1587,57 @@ namespace litehtml
         return total;
     }
 
+    // Telegram (VENDOR.md edit 38): the document's ids for <use>, the first element with an id winning, gathered again
+    // when the match epoch (every attribute and structure patch moves it) or the paint generation has moved.
+    element::ptr document::svg_element_by_id(const std::string& id) const
+    {
+        if(m_svg_ids_epoch != m_match_epoch || m_svg_ids_generation != m_paint_generation)
+        {
+            m_svg_ids.clear();
+            m_svg_ids_epoch      = m_match_epoch;
+            m_svg_ids_generation = m_paint_generation;
+            if(m_root)
+            {
+                std::vector<element::ptr> pending{m_root};
+                while(!pending.empty())
+                {
+                    element::ptr node = pending.back();
+                    pending.pop_back();
+                    if(const char* value = node->get_attr("id"); value && *value)
+                        m_svg_ids.emplace(value, node);
+                    for(auto it = node->children().rbegin(); it != node->children().rend(); ++it)
+                        pending.push_back(*it);
+                }
+            }
+        }
+        auto it = m_svg_ids.find(id);
+        return it == m_svg_ids.end() ? nullptr : it->second.lock();
+    }
+
+    // Telegram (VENDOR.md edit 38): the document's instance budget is shared by every <svg>. This svg may draw what its
+    // last paint drew plus whatever no other svg's last paint used; a removed svg gives its share back when it goes.
+    el_svg::~el_svg()
+    {
+        if(auto doc = get_document())
+            doc->use_instanced() -= m_use_instanced;
+    }
+
+    int el_svg::use_budget() const
+    {
+        const document* doc    = doc_ptr();
+        const int       others = doc ? doc->use_instanced() - m_use_instanced : 0;
+        return std::max(0, svg_painter::max_use_elements() - others);
+    }
+
+    void el_svg::note_use_drawn(int budget, int left)
+    {
+        const document* doc   = doc_ptr();
+        const int       spent = budget - std::max(0, left);
+        if(doc)
+            doc->use_instanced() += spent - m_use_instanced;
+        m_use_instanced = spent;
+    }
+
     el_svg::el_svg(const document::ptr& doc) :
         html_tag(doc)
     {
@@ -1443,6 +1746,7 @@ namespace litehtml
         float       view[4];
         view_group(pos, view, group);
         svg_painter painter(doc_ptr()->container(), view, group.matrix, x.value(), y.value());
+        painter.set_use_budget(use_budget());   // Telegram (VENDOR.md edit 38)
         painter.draw_children(shared_from_this());
         return painter.hit();
     }
@@ -1456,7 +1760,16 @@ namespace litehtml
         view_group(pos, view, group);
         auto container = doc_ptr()->container();
         container->begin_group(hdc, group);
+#if 0
         svg_painter(container, hdc, view).draw_children(shared_from_this());
+#else
+        // Telegram (VENDOR.md edit 38).
+        svg_painter painter(container, hdc, view);
+        const int   budget = use_budget();
+        painter.set_use_budget(budget);
+        painter.draw_children(shared_from_this());
+        note_use_drawn(budget, painter.use_budget_left());
+#endif
         container->end_group(hdc);
         return true;
     }
@@ -1487,11 +1800,24 @@ namespace litehtml
         container->set_clip(pos, no_radius);
         const position cache_bounds(pixel_t((pos.x.value() - group.matrix.tx) / sx), pixel_t((pos.y.value() - group.matrix.ty) / sy),
                                     pixel_t(pos.width.value() / sx), pixel_t(pos.height.value() / sy));
+#if 0
         auto paint = [&](uint_ptr target) {
             container->begin_group(target, group);
             svg_painter(container, target, view, m_group_cache_eligible ? &cache_bounds : nullptr).draw_children(shared_from_this());
             container->end_group(target);
         };
+#else
+        // Telegram (VENDOR.md edit 38): the paint draws within this svg's share of the document's instance budget.
+        const int budget = use_budget();
+        auto      paint  = [&](uint_ptr target) {
+            container->begin_group(target, group);
+            svg_painter painter(container, target, view, m_group_cache_eligible ? &cache_bounds : nullptr);
+            painter.set_use_budget(budget);
+            painter.draw_children(shared_from_this());
+            note_use_drawn(budget, painter.use_budget_left());
+            container->end_group(target);
+        };
+#endif
         uint64_t key    = 0;
         bool     cached = false;
         if(cached_paint_key(key))
