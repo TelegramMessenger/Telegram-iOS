@@ -1336,7 +1336,6 @@ public class AttachmentController: ViewController, MinimizableController {
 
                     // A dismiss during the appearance morph reverses it from where it is on screen.
                     let appearanceTransition = self.glassAppearanceTransition
-                    self.glassAppearanceTransition = nil
 
                     let initialFrame = appearanceTransition?.targetFrame ?? self.container.clipNode.view.convert(self.container.clipNode.view.bounds, to: self.view)
 
@@ -1347,6 +1346,8 @@ public class AttachmentController: ViewController, MinimizableController {
                         let containerView: ClipContainerView
                         let localGlassView: GlassBackgroundView
                         if let appearanceTransition {
+                            self.glassAppearanceTransition = nil
+                            self.container.suppressesBottomCorners = false
                             containerView = appearanceTransition.containerView
                             containerView.pinToPresentation()
                             localGlassView = appearanceTransition.localGlassView
