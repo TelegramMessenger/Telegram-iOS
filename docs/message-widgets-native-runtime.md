@@ -10,9 +10,8 @@ client's V milestones.
 **Status (2026-10-19): M1a to M1d are done, and the app runs every message widget on `WidgetRuntime`.** Since V1 of
 the widgets v0.1.0 client (spec `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`) a widget
 arrives as `messageMediaWidget` in a
-bubble of its own, on by default since 2026-10-22 (only the app config's kill switch turns it off); the root
-`CLAUDE.md`'s "Message widgets" has the client
-side. V1 changed three runtime facts recorded below: the host sheet is the spec renderer's root CSS, a widget's height
+bubble of its own, on by default since 2026-10-22 (only the app config's kill switch turns it off); `submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`
+has the client side. V1 changed three runtime facts recorded below: the host sheet is the spec renderer's root CSS, a widget's height
 is clamped to 50…600, and there is no source cap. V1 also re-vendored widget-sandbox at tag v0.1.0 (237 listed
 files, 99 attacks, 19 compat, 9 out-of-profile, and the conformance set); the corpus suites pass on it, but the
 measurements below (230 documents, 93 attacks) were taken on the earlier corpus and are not re-measured.

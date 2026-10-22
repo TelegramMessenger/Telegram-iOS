@@ -42,7 +42,7 @@ final class TableScrollGeometryCharacterizationTests: XCTestCase {
         let v = makeWideTableCanvas()
         // NOTE: `v.boxes.first!.textStart` (the brief's literal snippet) is the TABLE's own DEGENERATE
         // text extent (a `TableBlockBox`'s real content lives in its cells, not its own `textStart` —
-        // see the "resolveBox degenerate-container misroute" tech-debt note in the package CLAUDE.md), so
+        // see the "resolveBox degenerate-container misroute" tech-debt note in `Sources/RichTextEditorUIKit/CLAUDE.md`), so
         // `textStart + 1` does NOT land inside cell "a"'s text — it resolves to no leaf region at all, and
         // `caretRect` falls through to `.zero` regardless of scroll (verified: this made the assertion
         // trivially fail at 0 == 0, not a real shift). The real in-cell probe is the cell's own leaf

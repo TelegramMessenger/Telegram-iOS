@@ -172,7 +172,8 @@ The editor auto-detects each paragraph's direction (RTL for Arabic/Hebrew/…) a
 typing "just works" in the composer; an empty message's caret follows the keyboard's input language and re-flips
 live on a globe-key switch. The whole-document override (`RichTextEditorView.layoutDirectionOverride`) exists on the
 façade (and has a UI control in `RichTextAttachmentScreen`) but is **not surfaced in the chat composer** this round —
-auto-detect covers it. Editor-side architecture lives in the editor's own `CLAUDE.md` ("RTL / writing direction").
+auto-detect covers it. Editor-side architecture lives in the canvas editor's guide,
+`submodules/TelegramUI/Components/RichTextEditor/Sources/RichTextEditorUIKit/CLAUDE.md` ("RTL / writing direction").
 
 **Empty-input right inset.** `ChatTextInputPanelNode.calculateTextFieldRealInsets` reserves the action-control slot
 on the field's right (`actionControlsWidth - 10`). The effective per-layout call (applied to the rich node) passes

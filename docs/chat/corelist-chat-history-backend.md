@@ -24,7 +24,7 @@ The chosen backend is published as `ChatHistoryListNodeImpl.usesCoreListBackend`
 that is deliberately CoreList-only must read that**, not re-derive the policy — one site already
 drifted when the default moved and the Debug Settings switch stopped being the whole answer.
 
-See the "ChatHistoryListNode composition" section of the root `CLAUDE.md` for the backend seam
+See the "ChatHistoryListNode composition" section of `submodules/TelegramUI/Sources/CLAUDE.md` for the backend seam
 (`ChatHistoryListViewBackend`) this conforms to.
 
 ## Scope

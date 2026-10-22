@@ -375,7 +375,7 @@ final class TelegramCommandInputClientTests: XCTestCase {
     /// trailing `onChange` once the manager settles (`RichTextEditorView.swift:440-441`). Naively
     /// asserting a fixed `onChange` call count is wrong here: `registerUndo`'s restore closure ALSO
     /// relays through `canvas.onContentSizeChange` on its own (via `setBlocks` + its own explicit
-    /// `notifyContentSizeChanged()` — see the "layout convention" note in this package's `CLAUDE.md`),
+    /// `notifyContentSizeChanged()` — see the "layout convention" note in `Sources/RichTextEditorUIKit/CLAUDE.md`),
     /// so that relay fires whether or not a facade is involved. The comparison below isolates exactly
     /// what routing through the facade ADDS on top of that shared relay: its own one extra trailing call.
     func test_undoAndRedoRouteThroughTheFacade() {
