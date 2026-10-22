@@ -42,6 +42,17 @@ final class ChatListCommunitySourceTests: XCTestCase {
         XCTAssertEqual(source?.placement, .previewPrefix)
     }
 
+    func testTheSourceChatIsFoundAmongTheRowsPeersWhenTheMessageLacksIt() {
+        let row = EngineRenderedPeer(peerId: self.communityId, peers: [self.communityId: EnginePeer(self.community), self.groupId: EnginePeer(self.group)], associatedMedia: [:])
+        let source = chatListCommunitySource(chatPeer: row, message: self.message(in: self.groupId, peers: []), hasTags: true)
+        XCTAssertEqual(source?.peer.id, self.groupId)
+        XCTAssertEqual(source?.placement, .previewPrefix)
+    }
+
+    func testAnUnknownSourceChatNamesNoSource() {
+        XCTAssertNil(chatListCommunitySource(chatPeer: self.communityRow(), message: self.message(in: self.groupId, peers: []), hasTags: true))
+    }
+
     func testAMessageOfTheCommunityItselfNamesNoSource() {
         XCTAssertNil(chatListCommunitySource(chatPeer: self.communityRow(), message: self.message(in: self.communityId, peers: []), hasTags: true))
     }

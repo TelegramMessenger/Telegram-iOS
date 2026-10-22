@@ -2689,6 +2689,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            var communitySource: (peer: EnginePeer, title: String, placement: ChatListCommunitySourcePlacement)?
+            if case let .peer(peerData) = item.content, let message = messages.last, let source = chatListCommunitySource(chatPeer: peerData.peer, message: message, hasTags: !itemTags.isEmpty) {
+                let sourceTitle = source.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                if !sourceTitle.isEmpty {
+                    communitySource = (source.peer, sourceTitle, source.placement)
+                }
+            }
+            
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             var chatListQuoteSearchResult: CachedChatListSearchResult?
@@ -2923,11 +2931,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                         }
                         var previewPrefix = inlineAuthorPrefix
-                        if let communitySource = chatListCommunitySource(chatPeer: itemPeer, message: message, hasTags: !itemTags.isEmpty), case .previewPrefix = communitySource.placement {
-                            let sourceTitle = communitySource.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                            if !sourceTitle.isEmpty {
-                                previewPrefix = sourceTitle
-                            }
+                        if let communitySource, case .previewPrefix = communitySource.placement {
+                            previewPrefix = communitySource.title
                         }
                         if let previewPrefix {
                             composedString = NSMutableAttributedString()
@@ -3808,12 +3813,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 effectiveAuthorTitle = nil
             }
             
-            if case let .peer(peerData) = item.content, let message = messages.last, let communitySource = chatListCommunitySource(chatPeer: peerData.peer, message: message, hasTags: !itemTags.isEmpty), case .authorLine = communitySource.placement {
-                let sourceTitle = communitySource.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                if !sourceTitle.isEmpty {
-                    forumThreads.append((id: communitySource.peer.id.toInt64(), threadPeer: nil, title: NSAttributedString(string: sourceTitle, font: textFont, textColor: theme.titleColor), iconId: nil, iconColor: nil))
-                    authorTopicArrowColor = theme.messageTextColor
-                }
+            if let communitySource, case .authorLine = communitySource.placement {
+                forumThreads.append((id: communitySource.peer.id.toInt64(), threadPeer: nil, title: NSAttributedString(string: communitySource.title, font: textFont, textColor: theme.titleColor), iconId: nil, iconColor: nil))
+                authorTopicArrowColor = theme.messageTextColor
             }
 
             let (authorLayout, authorApply) = authorLayout(item.context, rawContentWidth - badgeSize, item.presentationData.theme, effectiveAuthorTitle, forumThreads, authorTopicArrowColor)
