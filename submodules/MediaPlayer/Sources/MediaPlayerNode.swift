@@ -98,6 +98,15 @@ public final class MediaPlayerNode: ASDisplayNode {
     var currentRotationAngle = 0.0
     var currentAspect = 1.0
     
+    // ChunkMediaPlayerV2 owns its synchronizer, so it cannot use the legacy state.
+    var externalVideoRotationAngle: Double? {
+        didSet {
+            if self.externalVideoRotationAngle != oldValue {
+                self.updateLayout()
+            }
+        }
+    }
+
     public var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double, aspect: Double)? {
         didSet {
             self.updateState()
@@ -114,7 +123,8 @@ public final class MediaPlayerNode: ASDisplayNode {
                     }
                 }
                 
-                if !self.currentRotationAngle.isEqual(to: rotationAngle) || !self.currentAspect.isEqual(to: aspect) {
+                if self.externalVideoRotationAngle != nil || !self.currentRotationAngle.isEqual(to: rotationAngle) || !self.currentAspect.isEqual(to: aspect) {
+                    self.externalVideoRotationAngle = nil
                     self.currentRotationAngle = rotationAngle
                     self.currentAspect = aspect
                     var transform = CGAffineTransform(rotationAngle: CGFloat(rotationAngle))
@@ -427,6 +437,9 @@ public final class MediaPlayerNode: ASDisplayNode {
         if let videoLayer = self.videoLayer {
             videoLayer.position = CGPoint(x: fittedRect.midX, y: fittedRect.midY)
             videoLayer.bounds = CGRect(origin: CGPoint(), size: fittedRect.size)
+            if let rotationAngle = self.externalVideoRotationAngle {
+                videoLayer.setAffineTransform(mediaPlayerVideoRotationTransform(size: fittedRect.size, rotationAngle: rotationAngle))
+            }
         }
         self.snapshotNode?.frame = fittedRect
     }
