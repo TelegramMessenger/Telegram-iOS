@@ -110,7 +110,7 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - A presenting context's side insets counted on top of `safeInsets`: a chat hands its presentation context (toasts,
   tooltips) its history list's insets, whose left and right hold the safe insets swapped, so `intrinsicInsets.left` is
   FP's 84pt strip. Counting it on both sides again left the undo toast no width for its text (one letter per line);
-  `undoOverlayHorizontalLayout` takes only the part both sides share.
+  `undoOverlayHorizontalLayout` takes the strip (the side safe insets' difference) out of it.
 - Trailing control at `W - safeInsets.left - N`.
 - Side insets ignored in a full-screen surface: controls under a corner block.
 - Two status heights mixed in unfolded portrait (compact for one part, full for the other).

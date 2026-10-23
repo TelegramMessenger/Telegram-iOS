@@ -13,11 +13,12 @@ struct UndoOverlayHorizontalLayout: Equatable {
 }
 
 func undoOverlayHorizontalLayout(width: CGFloat, safeInsets: UIEdgeInsets, intrinsicInsets: UIEdgeInsets, margin: CGFloat, leadingInset: CGFloat, trailingInset: CGFloat, buttonWidth: CGFloat?, isNarrow: Bool) -> UndoOverlayHorizontalLayout {
-    // The presenting context's side insets widen the margin by the part both sides share. A chat hands its children
-    // its history list's side insets, which hold the safe insets with left and right swapped: with unequal side
-    // insets (iPhone Duo's side strip) the unshared part is the strip, which `safeInsets` already keep clear of, and
-    // counting it again left no width for the text. With equal side insets this is `margin + intrinsicInsets.left`.
-    let sideMargin = margin + min(intrinsicInsets.left, intrinsicInsets.right)
+    // The presenting context's left inset widens the margin on both sides, less iPhone Duo's side strip (the
+    // difference of the side safe insets). A chat hands its children its history list's side insets, which hold the
+    // safe insets with left and right swapped, so its left inset is the strip, which `safeInsets` already keep clear
+    // of; counting it again left no width for the text. With equal side insets this is `margin + intrinsicInsets.left`.
+    let strip = abs(safeInsets.right - safeInsets.left)
+    let sideMargin = margin + max(0.0, intrinsicInsets.left - strip)
 
     let buttonMinX: CGFloat
     if let buttonWidth {

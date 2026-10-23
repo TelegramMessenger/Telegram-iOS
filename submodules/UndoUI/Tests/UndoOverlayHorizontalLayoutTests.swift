@@ -42,6 +42,14 @@ final class UndoOverlayHorizontalLayoutTests: XCTestCase {
         self.assertFitsBand(result, width: 466.0, safeInsets: safeInsets, buttonWidth: nil)
     }
 
+    // A forum's side topics panel adds to the list's leading inset, which lands on the context's right.
+    func testDuoFoldedPortraitInChatWithSideTopicsPanel() {
+        let safeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)
+        let result = self.layout(width: 466.0, safeInsets: safeInsets, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 84.0, bottom: 0.0, right: 92.0), buttonWidth: self.buttonWidth)
+        XCTAssertEqual(result.textMaxWidth, 382.0 - 24.0 - 16.0 - 64.0 - 8.0 - 50.0 - 12.0)
+        self.assertFitsBand(result, width: 466.0, safeInsets: safeInsets, buttonWidth: self.buttonWidth)
+    }
+    
     func testDuoFoldedLandscapeRightInChat() {
         let safeInsets = UIEdgeInsets(top: 0.0, left: 84.0, bottom: 0.0, right: 0.0)
         let result = self.layout(width: 678.0, safeInsets: safeInsets, intrinsicInsets: self.chatIntrinsicInsets(safeInsets: safeInsets), buttonWidth: self.buttonWidth)
@@ -76,7 +84,7 @@ final class UndoOverlayHorizontalLayoutTests: XCTestCase {
         XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 74.0, panelX: 136.0, panelWidth: 602.0, textMaxWidth: 390.0))
     }
 
-    // A forum's floating topics panel widens one side of a chat's list; the context's other side was the one used.
+    // A forum's side topics panel widens one side of a chat's list; only the context's left inset was used.
     func testPhoneChatWithFloatingTopicsPanelUnchanged() {
         let result = self.layout(width: 402.0, safeInsets: .zero, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 72.0), buttonWidth: nil)
         XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 12.0, panelWidth: 378.0, textMaxWidth: 402.0 - 16.0 - 8.0 - 50.0 - 12.0))

@@ -67,9 +67,9 @@ is not played — its clock never moves, even on a later `play()`. Looping one w
 and that no-op `seek` re-runs the end check synchronously until the stack overflows.
 
 `//submodules/UndoUI:UndoUITests` covers `undoOverlayHorizontalLayout`, the undo toast's panel and text widths. A
-chat's presentation context carries its history list's side insets (the safe insets, left and right swapped), so only
-the part of a context's side insets both sides share widens the toast's margin; with equal side insets the metrics are
-the previous ones.
+chat's presentation context carries its history list's side insets (the safe insets, left and right swapped), so the
+context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
+previous ones.
 
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's
