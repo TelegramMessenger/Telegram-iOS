@@ -2692,6 +2692,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     @discardableResult func handleUserActivity(_ userActivity: NSUserActivity) -> Bool {
         if #available(iOS 10.0, *) {
+            let startCallHandlePrefix = "TGCA"
+            if userActivity.activityType == NSStringFromClass(INStartCallIntent.self),
+               let handle = userActivity.userInfo?["handle"] as? String,
+               handle.hasPrefix(startCallHandlePrefix),
+               let peerIdValue = Int64(handle.dropFirst(startCallHandlePrefix.count)) {
+                let peerId = PeerId(peerIdValue)
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    self.startCallWhenReady(accountId: nil, peerId: peerId, isVideo: false)
+                    return true
+                }
+            }
+
             var startCallContacts: [INPerson]?
             var isVideo = false
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
