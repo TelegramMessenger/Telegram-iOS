@@ -20,6 +20,9 @@ building `:all`, traps that print no failure and reading a build's own exit code
 are the chat's. Never put a widget under `ListViewImpl` here: the chat no longer uses it, and gestures that passed
 there failed on CoreList (2026-10-22: a horizontal swipe on a widget opened the menu instead of replying).
 
+**Real too:** the chat's lock while a widget control is held: the root carries the same `MessageWidgetChatLockRecognizer`
+`ChatControllerNode` installs on the chat's view.
+
 **Synthetic:** the app context (`Tests/ComposerHarness/AppContext`), the rotated wrapper around the list (the chat's
 `ChatHistoryListNodeImpl`), the root's back swipe (an `InteractiveTransitionGestureRecognizer` to the right that
 every pan below waits for, as `NavigationContainer` declares; it records `back`), the
@@ -46,8 +49,9 @@ $BZL test $CACHE //Tests/WidgetHarness:WidgetHarnessTests      # Tier 1, in the 
 $BZL test $CACHE //Tests/WidgetHarness:WidgetHarnessUITests    # Tier 2, XCUITest (iPhone 18 Pro / 27.0)
 ```
 
-Both runners uninstall `org.telegram.WidgetHarness` from the booted Bazel test simulators first
-(`Tools/uninstall_widget_harness_from_test_sims.sh`). Drive it by hand on **K1**, never K3 (the user's logged-in
+Both runners uninstall `org.telegram.WidgetHarness`, and the UI tests' runner app, from the booted Bazel test simulators
+first (`Tools/uninstall_widget_harness_from_test_sims.sh`): installd keeps either across builds, and a run then executes
+an earlier build's code. Drive it by hand on **K1**, never K3 (the user's logged-in
 Telegram):
 
 ```bash
@@ -79,7 +83,8 @@ A hosted (Tier 1) test calls `WidgetHarnessRootViewController.reload(options:)` 
 ## The readout — a test contract
 
 `harness.readout`'s `accessibilityValue` (and `WidgetHarnessRootViewController.readoutLines()` in process) is one line
-per laid-out widget bubble, top of the screen first, then the event log:
+per laid-out widget bubble, top of the screen first, then a `log` line per fixture widget that keeps one, then the event
+log:
 
 ```
 bubble 0 visual/sdk/17-size-hint.html 370x240 @201,180 widget +caption
@@ -94,13 +99,20 @@ contextMenuEnded fixture/open-link.html
   text needs the window's). A widget reports its height after its boot: wait for the readout to leave the 160 pt
   placeholder (`x160 `) before aiming inside a widget.
 - The state is `widget` (a live `MessageWidgetView` is attached), `pill` (the unsupported pill) or `placeholder`.
-- `+caption`: the bubble holds another content node (the caption's text).
+- `+caption`: the bubble holds another content node (the caption's text); ` pressed`: its context gesture's press
+  (the shrink while it waits for a long press) is on.
+- `log <path> <value>`: a fixture widget's (`fixture/…`) `<html data-log>`, when it has one, read through
+  `MessageWidgetView.documentElementAttribute` (each read waits for the widget's queue, so only the harness's own
+  fixtures are read). `Fixtures/multitouch.html` logs each pointer event at its buttons as
+  `<down|up|cancel>:<left|right>:<finger>:<P|S>`, the finger a letter by its pointer's first appearance, `P` the primary
+  pointer.
 - Events: `openLink <url>` (the bubble asked to open a link; the chat would show "Open link?" — ` (not concealed)` is
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
   `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
   `back` (the root's back swipe began), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
   joined by `,`; each is a button `harness.menu.<title>` under the readout), `selectionMenuDismissed` (that menu went
-  away) and `copy <text>` (its Copy, a newline written `\n`).
+  away), `copy <text>` (its Copy, a newline written `\n`) and `pressed <path> <seconds>` (a bubble's press ended after
+  that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
 - Changing the format means changing every test that parses it.
 
 ## The conformance set (widget-sandbox v0.1.1, `conformance/CLIENTS.md`)
@@ -147,3 +159,13 @@ count, the bubble's height, the chat input's focus).
 Tier 1 (`Tests/`) for sizes, states and anything readable in process; Tier 2 (`UITests/`) when the touch path is the
 thing under test (the long press against the widget's own recognizer, a tap reaching a widget button). Attach
 screenshots (`XCTAttachment`) in Tier 2, so a run leaves frames to look at.
+
+Several fingers at once, with independent timing (hold one, tap another), go through `performFingers`
+(`UITests/MultiTouch.swift`): XCUIAutomation's private event synthesis (`XCSynthesizedEventRecord` of
+`XCPointerEventPath`s, sent through `XCUIDevice`'s `eventSynthesizer`), which XCUITest's public API has no equivalent of.
+Points are the readout's (window) coordinates, times seconds from the record's start; a class or selector a future Xcode
+drops throws `MultiTouchError.missing` rather than crashing. `startFingers` starts them and returns, for a test that
+waits itself; a readout query only returns once they have played. **In a record of several fingers, a finger that goes
+down after offset 0 is pressed a second time at its point after its lift** (the app gets a new touch, began and ended;
+a single late finger, or several starting at 0, get none): start fingers together where order does not matter, else
+read the log up to the late finger's first lift.

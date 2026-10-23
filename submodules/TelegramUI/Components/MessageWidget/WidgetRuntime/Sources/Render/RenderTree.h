@@ -353,8 +353,9 @@ public:
     /// The boxes the published layout laid out (RenderBuild::boxes): what a hit test over the whole tree walks.
     uint64_t boxCount() const { return m_current.boxes; }
     /// getComputedStyle's value of `name` (V3 plan, Task 4; ComputedStyle.h) for a rendered node or its pseudo-element;
-    /// nullopt when the node is not rendered.
-    std::optional<std::string> computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo) const;
+    /// nullopt when the node is not rendered. `work` gains what the read walked, for the caller to charge.
+    std::optional<std::string> computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo,
+                                                  uint64_t* work = nullptr) const;
     /// The cascaded declaration of `property` on a rendered element, as written (V5f plan, Task 2): litehtml's raw
     /// declarations, which the fork keeps for the animation and transition properties and the properties they animate
     /// (style.cpp's raw_declaration_names). Empty when nothing declares it or the node is not rendered. Animated values

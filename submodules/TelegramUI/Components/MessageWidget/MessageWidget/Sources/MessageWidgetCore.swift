@@ -239,7 +239,7 @@ final class MessageWidgetCore {
 
     /// One touch phase, queued as the session's task and run with whatever else is runnable, after what was runnable
     /// before it. The press's permission for a link call is the runtime's (SDK v1 §2.5: one call per press, from the
-    /// press's own events only). A primary press's down answers what the press is to the widget (SDK v1 §5.5).
+    /// press's own events only). A press's down answers what the press is to the widget (SDK v1 §5.5).
     @discardableResult
     func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
         guard self.state == .live, let session = self.session else {
@@ -263,7 +263,8 @@ final class MessageWidgetCore {
         }
         session.pointer(phase, at: point, pointerId: pointer, primary: primary)
         self.drain(at: now)
-        guard phase == .down, primary else {
+        // Every finger's down answers, not only the primary's (multitouch design §5.1).
+        guard phase == .down else {
             return .none
         }
         let axes = session.gestureClaim

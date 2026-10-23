@@ -220,3 +220,42 @@ WR_TEST(testTheOffsetParentAndScrollWalksAreCharged) {
     CHECK(lotsQueries >= fewQueries + 299 * (wr::work::kNodeVisit + wr::work::kLayoutBox));
     CHECK_EQ(lots.env().eval("p.scrollHeight"), std::string("300"));
 }
+
+namespace {
+
+std::string absoluteIn(int depth) {
+    std::string html = "<!doctype html><body>";
+    for (int i = 0; i < depth; i++) {
+        html += "<div>";
+    }
+    html += "<span id=c style=\"position:absolute\">x</span>";
+    for (int i = 0; i < depth; i++) {
+        html += "</div>";
+    }
+    return html + "<script>window.c = document.getElementById('c');</script></body>";
+}
+
+} // namespace
+
+/// Final review I4: getComputedStyle's ancestor walks (an inherited declaration's, an absolute element's containing
+/// block's) count against the query budget per element, as the other queries' walks do.
+WR_TEST(testComputedStyleWalksAreCharged) {
+    RenderEnv shallow(nestedIn(1));
+    RenderEnv deep(nestedIn(200));
+    costOf(shallow, "getComputedStyle(c).fontFeatureSettings");
+    costOf(deep, "getComputedStyle(c).fontFeatureSettings");
+    const auto [shallowUnits, shallowQueries] = costOf(shallow, "getComputedStyle(c).fontFeatureSettings");
+    const auto [deepUnits, deepQueries] = costOf(deep, "getComputedStyle(c).fontFeatureSettings");
+    (void)shallowUnits;
+    (void)deepUnits;
+    CHECK(deepQueries >= shallowQueries + 199 * wr::work::kNodeVisit);
+    RenderEnv near(absoluteIn(1));
+    RenderEnv far(absoluteIn(200));
+    costOf(near, "getComputedStyle(c).right");
+    costOf(far, "getComputedStyle(c).right");
+    const auto [nearUnits, nearQueries] = costOf(near, "getComputedStyle(c).right");
+    const auto [farUnits, farQueries] = costOf(far, "getComputedStyle(c).right");
+    (void)nearUnits;
+    (void)farUnits;
+    CHECK(farQueries >= nearQueries + 199 * wr::work::kNodeVisit);
+}

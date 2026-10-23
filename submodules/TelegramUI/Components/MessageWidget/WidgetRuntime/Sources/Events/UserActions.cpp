@@ -1,5 +1,6 @@
 #include "Sources/Events/UserActions.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <string_view>
@@ -197,26 +198,46 @@ bool UserActions::hovered(JSContext*, Element& element) {
 }
 
 bool UserActions::active(JSContext*, Element& element) {
-    return m_active && isInclusiveAncestor(element, m_active.get());
+    return std::any_of(m_active.begin(), m_active.end(),
+                       [&](const Ref<Element>& active) { return isInclusiveAncestor(element, active.get()); });
 }
 
-void UserActions::setPointer(JSContext* ctx, Element* hover, Element* active) {
-    if (m_hover.get() == hover && m_active.get() == active) {
+void UserActions::setHover(JSContext* ctx, Element* hover) {
+    if (m_hover.get() == hover) {
         return;
     }
     m_hover = hover ? Ref<Element>::retain(ctx, hover) : Ref<Element>();
-    m_active = active ? Ref<Element>::retain(ctx, active) : Ref<Element>();
+    noteRender(ctx);
+}
+
+void UserActions::addActive(JSContext* ctx, Element* element) {
+    if (!element) {
+        return;
+    }
+    m_active.push_back(Ref<Element>::retain(ctx, element));
+    noteRender(ctx);
+}
+
+void UserActions::removeActive(JSContext* ctx, Element* element) {
+    const auto it = std::find_if(m_active.begin(), m_active.end(), [&](const Ref<Element>& active) { return active.get() == element; });
+    if (!element || it == m_active.end()) {
+        return;
+    }
+    m_active.erase(it);
     noteRender(ctx);
 }
 
 void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
     bool changed = false;
-    for (Ref<Element>* ref : {&m_hover, &m_active}) {
-        if (*ref && isInclusiveAncestor(node, ref->get())) {
-            *ref = Ref<Element>();
-            changed = true;
-        }
+    if (m_hover && isInclusiveAncestor(node, m_hover.get())) {
+        m_hover = Ref<Element>();
+        changed = true;
     }
+    const size_t before = m_active.size();
+    m_active.erase(std::remove_if(m_active.begin(), m_active.end(),
+                                  [&](const Ref<Element>& active) { return isInclusiveAncestor(node, active.get()); }),
+                   m_active.end());
+    changed = changed || m_active.size() != before;
     if (changed) {
         noteRender(ctx);
     }
@@ -224,7 +245,7 @@ void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
 
 void UserActions::clear() {
     m_hover = Ref<Element>();
-    m_active = Ref<Element>();
+    m_active.clear();
 }
 
 // Focus

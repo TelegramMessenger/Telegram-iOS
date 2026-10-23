@@ -78,7 +78,10 @@ public:
     /// pointer and mouse events dispatches (PressScope), and so in the microtask checkpoint after each of their
     /// listeners (the reference's settle drains the jobs inside the press's task, with its gesture); never in a timer, a
     /// frame, a touch event, or a job of a later task. consumeActivation answers true once per press, while it is active and the widget visible.
+    /// Fingers press at once and lift in any order, so each press is consumed on its own, until endPress forgets it.
     uint64_t beginPress() { return ++m_lastPress; }
+    /// The press's last event has dispatched (Taps' up or cancel).
+    void endPress(uint64_t press);
     struct PressScope {
         PressScope(HostState& state, uint64_t press) : state(state), saved(state.m_activePress) { state.m_activePress = press; }
         ~PressScope() { state.m_activePress = saved; }
@@ -184,7 +187,8 @@ private:
     uint64_t m_themeGeneration = 0;
     uint64_t m_lastPress = 0;
     uint64_t m_activePress = 0;
-    uint64_t m_consumedPress = 0;
+    /// The presses in progress that consumed their activation: at most kMaxPointers.
+    std::vector<uint64_t> m_consumedPresses;
     uint32_t m_activationBlockedReports = 0;
     uint32_t m_navigationBlockedReports = 0;
     std::string m_locale = "en-US";

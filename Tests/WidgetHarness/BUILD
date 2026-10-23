@@ -156,6 +156,8 @@ swift_library(
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         # TextSelectionNodeView and its node, for the selection tests.
         "//submodules/AsyncDisplayKit",
+        # TapLongTapOrDoubleTapGestureRecognizer's long-tap policy, for the gesture tests.
+        "//submodules/Display",
         "//submodules/TextSelectionNode",
     ],
 )

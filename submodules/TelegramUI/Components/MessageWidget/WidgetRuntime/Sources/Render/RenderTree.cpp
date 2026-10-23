@@ -533,7 +533,8 @@ std::optional<std::vector<litehtml::position>> RenderTree::takeChangedRects() {
     return taken;
 }
 
-std::optional<std::string> RenderTree::computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo) const {
+std::optional<std::string> RenderTree::computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo,
+                                                          uint64_t* work) const {
     if (!m_current.document) {
         return std::nullopt;
     }
@@ -541,7 +542,7 @@ std::optional<std::string> RenderTree::computedStyleValue(const Node& node, std:
     if (it == m_current.nodes.end() || !it->second.element) {
         return std::nullopt;
     }
-    return computedValue(*it->second.element, name, pseudo);
+    return computedValue(*it->second.element, name, pseudo, work);
 }
 
 bool RenderTree::matchesMedia(JSContext* ctx, const std::string& query, bool atLastReport) const {

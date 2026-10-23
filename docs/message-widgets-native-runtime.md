@@ -134,12 +134,15 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   `wr_test::normalized` drops empty clip pairs and lone `del_clip`s.
 - **Taps and events (M1d).** The host's pointer phases (`HostState::pointer`) are hit-tested on the runtime's own
   layout and dispatched as touch browsers dispatch a tap, each phase one trusted task (spec §5 has the order and the
-  click rule). A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
+  click rule). Each finger is its own pointer with a press of its own, up to `kMaxPointers` (5; a down past them, or
+  for a pointer already down, is dropped with its later phases): its target, capture, canceled defaults and press
+  number, so lifting one disturbs no other; only the primary pointer clicks. A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
   listeners and reverts when the click is canceled, a label clicks its control, a summary toggles its details, a
   submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
-  `:active` live in `UserActions`; a change to them rebuilds the render tree, and only when the build's `<style>` text
-  names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. A primary press also decides
-  its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
+  `:active` live in `UserActions` (`:active` one entry per press, so a second finger on an element holds it after the
+  first lifts; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
+  `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. Every press also
+  decides its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
   task has run): the axes the computed touch-action of the target and its ancestors below `<html>` forbids panning on,
   read from the layout the press was hit-tested on before its handlers run, or both when the widget cancels the
   press's `pointerdown` or `touchstart` (the reference learns that from the previous press; ours dispatches before it
@@ -669,10 +672,25 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   the used ones), `transform` as one 2D `matrix()`, `::before`/`::after` from the pseudo-element litehtml made (a
   missing one reads its host's values with `content: none`). Custom properties are looked up with `_find_id`, which
   never adds the name to litehtml's process-wide id table (twidget edit 23;
-  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). Not modeled, so constant: `direction` (ltr). Not modeled but
-  read back from the element's own declaration, else `auto` (not inherited): `touch-action` (twidget edit 30.1) and
-  `user-select` (edit 45; `-webkit-user-select` is the same property, the later declaration winning). Known differences from browsers: `text-decoration-line` is merged with the
-  parent's (litehtml's), `background-image` other than `none`, `background-size`/`-position` and `filter` read "".
+  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). **Every property profile 1 marks as in answers**
+  (`ProfileSurfaceTests.testEveryInProfilePropertyComputes`, the families expanded, on an unstyled and a positioned
+  element; computed-style plan, 2026-10-22): exactly from litehtml's getters where litehtml stores the property (the
+  offsets as CSSOM resolves them, an absolute element's auto ones from its margin edge to its containing block's
+  padding edge; the flex and box alignment properties on the containers and items litehtml computes them for, a
+  container's `justify-content` and `align-content` as they lay it out; min/max sizes, gaps, the text properties,
+  radii, `transform-origin` and `transform`'s percentages against the border box, as litehtml draws them; the grid
+  tracks from the tokens litehtml lays a grid out from, as written; the SVG dashes as the painter reads them,
+  presentation attributes included, …). The `animation-*` and `transition-*` longhands read what the runtime runs
+  (`animationSpecs`, `transitionSpecs`): the element's own declaration, else its shorthand's entries, times in
+  seconds. Otherwise a property reads the element's own declaration as written, `var()` substituted (twidget edits
+  45, 51 keep the raw declarations), an inherited property from the nearest ancestor that declares it, else the
+  property's initial value. The positional shorthands are serialized from their longhands, the complex ones
+  canonically ("What still differs", below). A read is charged its serialization's length plus a node visit per
+  element its walks pass (an inherited declaration's ancestors, an absolute element's containing block) and a scan of
+  the lists it splits.
+  `touch-action` and `user-select` read the element's own declaration, else `auto` (not inherited). Known differences
+  from browsers: `text-decoration-line` is merged with the parent's (litehtml's), and a gradient `background-image`
+  reads `none`.
 - **Only the size is critical** (the user, 2026-10-19). Main waits for a task's snapshot within the turn's allowance
   (1,000,000 units, 20 ms), and that snapshot carries the size and no tiles; drawing is never waited for. A size change
   can show the old tiles for a frame before the new ones land. A tile that fails to draw keeps the last frame, with no
@@ -682,7 +700,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   `mousedown`, `mouseup` and `click` dispatch and the click's activation behaviour runs, the microtask checkpoint after
   each of their listeners included (the reference drains a task's promise jobs inside it, with the gesture, so an
   `async` click handler keeps the press after an `await`); never in a touch event's listener, a timer, a frame, or a
-  job of a later task. One link call consumes the press. The app's core passes `openLink`, `openTelegramLink` and `haptic` on, refuses a URL
+  job of a later task. One link call consumes the press; each finger's press is consumed on its own, and forgotten
+  after its last event (`HostState::endPress`), since fingers lift in any order. The app's core passes `openLink`, `openTelegramLink` and `haptic` on, refuses a URL
   over 4,096 bytes (`bridge-refused`) and ignores any other method (`bridge-ignored`); `ready` does nothing in the app.
 - **A core task is bounded.** Each step gets the task's budget, 28,000,000 units; one drain runs at most 256 steps and
   stops once it has spent a task's budget, so a core task spends at most about two. A width or theme change is a step
@@ -854,6 +873,17 @@ What still differs, on purpose or for now (none is measured by a conformance che
 - **`text-overflow`:** an atomic inline at the cut is hidden with no `…`; inline boxes' backgrounds after the cut still
   draw.
 - **`touch-action: initial`** (and `unset`, `revert`) reads back as written; the hit test reads it as the parent's.
+- **getComputedStyle's approximations** (computed-style plan; honest widgets read `display`, `fontSize` and
+  `borderTopWidth` in the corpus): the complex shorthands are canonical rather than Chrome-exact (`background` per
+  layer in Chrome's order; `font` without its initial parts; the grid placements without trailing autos;
+  `animation` and `transition` their longhands' reads joined entry by entry and cycled, at most 64 entries, as the
+  runtime runs, and "" past 64 KiB, so a long item cycled through them cannot build megabytes). A longhand declared
+  before a later shorthand still reads its own value, as the runtime runs it (Chrome takes the later); the grid tracks
+  read as written, not as Chrome's resolved px. A property answered from its declaration reads it as written
+  (`counter-reset: item`, not `item 0`); `aspect-ratio` reads its ratio over 1 (`16 / 9` as `1.77778 / 1`);
+  `justify-items` and `justify-self` read their initial values outside grid containers and items (litehtml computes
+  them there only); `place-content: flex-start` reads `normal` (litehtml's default is that same `flex-start`, and only
+  a `justify-content` written as such tells them apart).
 
 ## The selectable text (text selection, sdk-v1 §2.4, §5.10)
 

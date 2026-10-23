@@ -240,6 +240,33 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   and cancels the touched view's touches, so a view-level widget sees began → cancelled and never clicks. The
   recognizer cannot be prevented by a tap, can be by a pan, and recognizes on the touch's end. A tap makes no `click`
   on or inside a disabled form control, as in browsers.
+- **Several fingers** (the user: a game played with two thumbs). Each finger is its own pointer, up to five
+  (`MessageWidgetTouchRecognizer.maximumTouches`, the runtime's `kMaxPointers`; another is ignored whole): its own
+  pointer id (counting up per press), `pointerdown`, moves and `pointerup`/`pointercancel`, the first finger down while
+  none is the primary, and only the primary clicks. In the runtime each press keeps its own target, capture, canceled
+  defaults, `:active` entry (`UserActions`; `:hover` follows the primary) and activation (`HostState::endPress` forgets
+  a press's, so fingers can lift in any order). With one finger everything above holds unchanged. With two or more, the
+  rules are the user's:
+  - **The chat steps back**: a finger that lands while another is down, when either is on something the widget
+    handles, takes the touches for the widget until every finger has lifted: the recognizers above fail (as for a
+    claimed drag), and every question the bubble asks meanwhile answers as the widget's (`tookTouches`, forgotten when
+    the host takes the touches), since `TapLongTapOrDoubleTapGestureRecognizer`'s long-tap timer outlives being failed
+    from outside (it now reports nothing once failed; a long tap it cancelled itself on a drift still reports). A finger
+    that slides off its control, past the widget's edge too, stays the widget's. Two fingers landing in one event adopt
+    the press the bubble's question started for one of them, whichever order UIKit hands them over.
+  - **While the chat drags, no finger does anything**: a finger that lands while a pan above the widget has begun (the
+    list's, swipe-to-reply, the back swipe) starts no press, nor does the bubble's early question for it. Only a pan is
+    a drag (`isChatDrag`): the bubble's tap waiting for a double tap leaves a single finger as it always was.
+  - **A held control makes the rest of the chat inert**: while a finger holds something a widget handles, the widget
+    holds `MessageWidgetTouchLock`, and `MessageWidgetChatLockRecognizer` on `ChatControllerNode`'s view (the history,
+    the panels and the top bar) makes every finger landing elsewhere in the chat inert until it lifts, even after the
+    control's finger lifts: it fails what the finger reaches, cancels it in its view and delays its `touchesBegan`
+    while the lock is held (no highlight). Another widget in the chat is elsewhere too: it starts nothing while one
+    holds the lock (`MessageWidgetTouchLock.isHeld(elsewhereThan:)`). The lock lifts on every end path, the widget view
+    leaving its window included; a claimed drag and the chat-drag check spare the lock recognizer, and neither
+    recognizer prevents the other. The system keyboard is a window of its own, out of the lock's reach.
+  `WidgetHarnessUITests`' multitouch tests drive all of it (`Tests/WidgetHarness/Fixtures/multitouch.html`,
+  `performFingers`).
 - **Text selection is the lifted bubble's** (sdk-v1 §2.4, §5.10; the user, 2026-10-22: as in a text or rich bubble,
   Copy only, the widget keeps running). Lifting the bubble into its menu (`updateIsExtractedToContextPreview`) calls
   `MessageWidgetView.setExtracted(true)`: the widget keeps running and drawing but takes no input (a cancel still ends
@@ -257,8 +284,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   hooks, the widget replaced, stopped or turned into the pill): the overlay takes every point of the widget. A point
   within 4 pt of a word's glyphs hits it. Harness: `-harness-menu hold`, the `selectionMenu`/`copy` events,
   `WidgetHarnessUITests`' selection tests and `WidgetHarnessSelectionTests`.
-- **Drags are decided per press** (sdk-v1 §5.5). The runtime answers each primary press's claim once its down task has
-  run (`TapState::claim`, `WRSession.gestureClaim`): `x` when the touch-action of the target or an ancestor below
+- **Drags are decided per press** (sdk-v1 §5.5). The runtime answers each press's claim once its down task has run
+  (`TapState::claim`, `WRSession.gestureClaim`): `x` when the touch-action of the target or an ancestor below
   `<html>` forbids horizontal panning, `y` vertical, both when the widget cancels the press's `pointerdown` or
   `touchstart`; touch-action is read before the handlers run, as browsers fix it at touchstart. With neither, a drag is
   the chat's (the list scrolls, swipe-to-reply and the back swipe work) and the widget's touch ends as cancelled. Along
@@ -275,8 +302,9 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   widget-sandbox's conformance channel (`conformance/channel.json`, parsed by `MessageWidgetChannel`, each widget
   followed by its reference pictures) to Saved Messages, and "Insert widget corpus" the corpus, as Local-namespace
   messages through `engine.messages.debugInsertLocalWidgetMessages(peerId:posts:)` (`LocalWidgetMessages.swift`:
-  nothing is sent, pictures are tagged like sent ones). Replying to or forwarding such a message is not supported
-  (its local id and local media mean nothing to the server).
+  nothing is sent, pictures are tagged like sent ones). "Insert widget games" posts the client's game examples
+  (`Fixtures/11-tetris` to `14-pacman`, `WidgetGamesBundle`), to play with several fingers. Replying to or forwarding
+  such a message is not supported (its local id and local media mean nothing to the server).
 - **The widget harness** (`Tests/WidgetHarness`, its own [`CLAUDE.md`](../../../../Tests/WidgetHarness/CLAUDE.md))
   hosts the real chat bubbles (`ChatMessageItemImpl` → `ChatMessageWidgetBubbleContentNode`) over the composer
   harness's loginless app context, with the conformance set, the corpus or its fixtures, and a readout

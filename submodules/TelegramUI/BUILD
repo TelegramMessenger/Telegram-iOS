@@ -46,12 +46,13 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    # DEBUG builds only: widget-sandbox's corpus and conformance set, for Debug Settings' widget insertion
+    # DEBUG builds only: widget-sandbox's corpus and conformance set, and the client's game examples, for Debug Settings' widget insertion
     # (DebugSettingsUI/Sources/WidgetDebugPosts.swift reads them from this framework's bundle).
     data = select({
         "//third-party/widget-sandbox:debug_build": [
             "//third-party/widget-sandbox:WidgetCorpusBundle",
             "//third-party/widget-sandbox:WidgetConformanceBundle",
+            "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
         ],
         "//conditions:default": [],
     }),

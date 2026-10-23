@@ -1,8 +1,9 @@
 // The user-action state and the default actions of a click (M1d plan, Task 3).
 // - UserActions is the main document's ElementState for the user-action pseudo-classes: the focused element (:focus,
-//   :focus-within on its inclusive ancestors), the element under the last pointer down (:hover on its inclusive
-//   ancestors; it stays after the up, as touch browsers keep it), and the element pressed (:active, while the pointer is
-//   down). A change tells the render tree (RenderTree::userActionStateChanged).
+//   :focus-within on its inclusive ancestors), the element under the last primary pointer down (:hover on its inclusive
+//   ancestors; it stays after the up, as touch browsers keep it), and the elements pressed (:active, each while a
+//   press on it is down: one entry per press, so a second finger on an element holds it after the first lifts). A
+//   change tells the render tree (RenderTree::userActionStateChanged).
 // - focusElement runs HTML's focusing steps and their events: blur, focusout, focus, focusin (FocusEvent).
 // - The activation behaviours HTMLElement runs from DOM dispatch's hooks: a checkbox or radio toggles before the
 //   listeners and reverts when the click is canceled; a label clicks its control; a summary toggles its details; a
@@ -12,6 +13,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "Sources/DOM/DOMState.h"
 #include "Sources/Support/PlatformObject.h"
@@ -36,8 +38,11 @@ public:
     bool hovered(JSContext* ctx, Element& element) override;
     bool active(JSContext* ctx, Element& element) override;
 
-    /// The pointer's state: `hover` the element under the down, `active` the one pressed (nullptr when released).
-    void setPointer(JSContext* ctx, Element* hover, Element* active);
+    /// The element under the primary pointer's down.
+    void setHover(JSContext* ctx, Element* hover);
+    /// A press went down on `element` (nullptr: on no element), or ended: one entry each.
+    void addActive(JSContext* ctx, Element* element);
+    void removeActive(JSContext* ctx, Element* element);
     /// Drops every reference (the host state's destructor, while the context lives).
     void clear();
     /// A node left the main document (RenderTree's mutation listener): the hover and press inside it go. The render tree
@@ -53,7 +58,7 @@ public:
 
 private:
     Ref<Element> m_hover;
-    Ref<Element> m_active;
+    std::vector<Ref<Element>> m_active;
     bool m_labelActivating = false;
 };
 

@@ -273,9 +273,10 @@ WR_TEST(testThePressClaimsTheAxesItsTouchActionForbids) {
     CHECK_EQ(claimAt(env, 320, 20), std::string("-"));
     CHECK_EQ(claimAt(env, 370, 20), std::string("xy"));
     CHECK_EQ(claimAt(env, 420, 20), std::string("xy"));
-    // A press on nothing, and a press that is not the primary pointer's, claim nothing.
+    // A press on nothing claims nothing; a press that is not the primary pointer's claims as the primary's does
+    // (multitouch design §5.1: every finger's press answers).
     CHECK_EQ(claimAt(env, 600, 300), std::string("-"));
-    CHECK_EQ(claimAt(env, 70, 20, false), std::string("-"));
+    CHECK_EQ(claimAt(env, 70, 20, false), claimAt(env, 70, 20));
 }
 
 /// touch-action is read as the press starts, as browsers fix it at touchstart: a handler that changes it changes the
@@ -339,4 +340,109 @@ WR_TEST(testAPressTakesTapsWhereTheWidgetHandlesThem) {
     // A listener on the document (event delegation) handles every press.
     CHECK_EQ(env.env().eval("document.addEventListener('pointerup', () => {}); 1"), std::string("1"));
     CHECK_EQ(takesTapsAt(env, 20, 20), std::string("taps"));
+}
+
+namespace {
+
+// Two adjacent 50 × 40 boxes at (20, 20) and (70, 20), each logging its pointer events as type:id:pointerId:P (the
+// primary pointer) or :S, and its click as click:id.
+const char* const kPointers =
+    "<!doctype html><html><head><style>body{margin:0;padding:0} #a,#b{position:absolute;top:20px;width:50px;height:40px}"
+    "#a{left:20px} #b{left:70px}</style></head><body><div id=a></div><div id=b></div><script>"
+    "window.log = []; window.a = document.getElementById('a'); window.b = document.getElementById('b');"
+    "for (const t of ['pointerdown','pointermove','pointerup','pointercancel','click']) {"
+    "  for (const id of ['a','b']) document.getElementById(id).addEventListener(t, e => log.push(t + ':' + id +"
+    "    (e.pointerId === undefined ? '' : ':' + e.pointerId + ':' + (e.isPrimary ? 'P' : 'S'))));"
+    "}"
+    "</script></body></html>";
+
+void at(RenderEnv& env, PointerPhase phase, double x, double y, int32_t pointerId, bool primary) {
+    wr::HostState::of(env.ctx()).pointer(env.ctx(), phase, x, y, pointerId, primary);
+    env.env().drain();
+}
+
+} // namespace
+
+/// Multitouch (design §5.1): each finger is its own pointer, pressing its own target; lifting one disturbs no other.
+WR_TEST(testTwoPointersPressTwoTargets) {
+    RenderEnv env(kPointers);
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    at(env, PointerPhase::Down, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 40, 40, 1, true);
+    CHECK_EQ(log(env), std::string("pointerdown:a:1:P pointerdown:b:2:S pointerup:b:2:S pointerup:a:1:P click:a"));
+}
+
+/// A capture holds for its own pointer: another finger's events stay at that finger's target.
+WR_TEST(testACaptureHoldsForItsPointerOnly) {
+    RenderEnv env(kPointers);
+    CHECK_EQ(env.env().eval("a.onpointerdown = e => a.setPointerCapture(e.pointerId);"
+                            "b.onpointerdown = e => { window.held = a.hasPointerCapture(e.pointerId); }; 1"),
+             std::string("1"));
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    at(env, PointerPhase::Down, 90, 40, 2, false);
+    at(env, PointerPhase::Move, 90, 40, 1, true);
+    at(env, PointerPhase::Move, 110, 40, 2, false);
+    at(env, PointerPhase::Up, 90, 40, 1, true);
+    at(env, PointerPhase::Up, 110, 40, 2, false);
+    CHECK_EQ(env.env().eval("String(held)"), std::string("false"));
+    CHECK_EQ(env.env().eval("log.filter(e => !e.startsWith('pointerdown')).join(' ')"),
+             std::string("pointermove:a:1:P pointermove:b:2:S pointerup:a:1:P pointerup:b:2:S"));
+}
+
+/// Only the primary pointer clicks, as touch browsers fire the click for the primary touch alone.
+WR_TEST(testOnlyThePrimaryClicks) {
+    RenderEnv env(kPointers);
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    at(env, PointerPhase::Down, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 40, 40, 1, true);
+    CHECK_EQ(env.env().eval("log.filter(e => e.startsWith('click')).join(' ')"), std::string("click:a"));
+}
+
+/// At most kMaxPointers fingers: a sixth is dropped whole, and its up ends no one else's press.
+WR_TEST(testASixthPointerIsDropped) {
+    RenderEnv env(kPointers);
+    for (int32_t id = 1; id <= 6; id++) {
+        at(env, PointerPhase::Down, 40, 40, id, id == 1);
+    }
+    CHECK_EQ(env.env().eval("String(log.filter(e => e.startsWith('pointerdown')).length)"), std::string("5"));
+    at(env, PointerPhase::Up, 40, 40, 6, false);
+    CHECK_EQ(env.env().eval("String(log.filter(e => e.startsWith('pointerup')).length)"), std::string("0"));
+    for (int32_t id = 1; id <= 5; id++) {
+        at(env, PointerPhase::Up, 40, 40, id, id == 1);
+    }
+    CHECK_EQ(env.env().eval("String(log.filter(e => e.startsWith('pointerup')).length)"), std::string("5"));
+}
+
+/// Every held element looks pressed until its own finger lifts (a second finger on it holds it too); hover follows the
+/// primary pointer.
+WR_TEST(testEveryHeldElementIsActive) {
+    RenderEnv env(kPointers);
+    const auto state = [&] {
+        return env.env().eval("['#a:active', '#b:active', '#a:hover', '#b:hover'].map(s => !!document.querySelector(s)).join()");
+    };
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    at(env, PointerPhase::Down, 90, 40, 2, false);
+    CHECK_EQ(state(), std::string("true,true,true,false"));
+    at(env, PointerPhase::Up, 90, 40, 2, false);
+    CHECK_EQ(state(), std::string("true,false,true,false"));
+    at(env, PointerPhase::Down, 40, 40, 2, false);
+    at(env, PointerPhase::Up, 40, 40, 1, true);
+    CHECK_EQ(state(), std::string("true,false,true,false"));
+    at(env, PointerPhase::Up, 40, 40, 2, false);
+    CHECK_EQ(state(), std::string("false,false,true,false"));
+}
+
+/// Each finger's press is a press of its own (sdk-v1 §2.5): each may open a link once.
+WR_TEST(testEachPressActivatesOnce) {
+    RenderEnv env(kPointers);
+    CHECK_EQ(env.env().eval("for (const id of ['a', 'b']) document.getElementById(id).addEventListener('pointerup', () => "
+                            "TelegramWidget.openLink('https://example.org/' + id)); 1"),
+             std::string("1"));
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    at(env, PointerPhase::Down, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 90, 40, 2, false);
+    at(env, PointerPhase::Up, 40, 40, 1, true);
+    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
 }

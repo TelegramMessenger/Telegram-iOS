@@ -466,4 +466,189 @@ final class WidgetHarnessUITests: XCTestCase {
             app.terminate()
         }
     }
+
+    // MARK: multitouch (fixture/multitouch.html, `performFingers`)
+
+    /// The multitouch fixture laid out with its widget running: #left and #right side by side at its top, 140 × 100 pt
+    /// each, #pad under them, 280 × 100 pt; points in the app's (the screen's) coordinates.
+    private struct MultitouchFixture {
+        let app: XCUIApplication
+        let ready: String
+        let area: CGRect
+        var left: CGPoint { CGPoint(x: self.area.minX + 70.0, y: self.area.minY + 50.0) }
+        var right: CGPoint { CGPoint(x: self.area.minX + 210.0, y: self.area.minY + 50.0) }
+        var pad: CGPoint { CGPoint(x: self.area.minX + 140.0, y: self.area.minY + 150.0) }
+    }
+
+    private func launchMultitouch() throws -> MultitouchFixture {
+        let app = self.launch(["-widget-set", "fixture", "-widget-post", "multitouch"])
+        let ready = self.waitForReadout(app) { $0.contains("multitouch.html") && $0.contains(" widget") && !$0.contains("x160 ") }
+        let widget = try XCTUnwrap(self.bubble("multitouch.html", in: ready), ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        XCTAssertEqual(size.count, 2, ready)
+        let width = size.first ?? 0.0
+        let height = size.last ?? 0.0
+        let area = CGRect(x: widget.centre.dx - width / 2.0, y: widget.centre.dy - height / 2.0, width: width, height: height)
+        return MultitouchFixture(app: app, ready: ready, area: area)
+    }
+
+    /// The widget's pointer log (the readout's `log <path> <value>` line), "" before it logged anything.
+    private func pointerLog(_ path: String, in readout: String) -> String {
+        guard let line = readout.split(separator: "\n").first(where: { $0.hasPrefix("log ") && $0.contains(path) }) else {
+            return ""
+        }
+        return line.split(separator: " ", maxSplits: 2).dropFirst(2).first.map(String.init) ?? ""
+    }
+
+    /// The harness channel itself: one synthesized finger on a button reaches the widget, and its log reaches the readout.
+    func testTheMultitouchFixtureLogsAFinger() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 0.2)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0) == "down:left:a:P up:left:a:P" }
+        self.attachScreenshot(fixture.app, "one finger on #left")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+    }
+
+    private func hasEvent(_ event: String, in readout: String) -> Bool {
+        return readout.split(separator: "\n").contains { $0.hasPrefix(event + " ") }
+    }
+
+    /// Multitouch (design §2): each finger on a widget is its own pointer, the first the primary; the chat neither opens
+    /// the menu, reacts nor swipes to reply.
+    /// Both fingers go down together (a finger that starts later in a record gets a second press from the synthesizer:
+    /// see `performFingers`), so which is primary is UIKit's order: exactly one is, and #right lifts first while #left
+    /// stays pressed.
+    func testTwoFingersOnTwoButtonsAreTwoPointers() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 0.9), Finger(at: fixture.right, down: 0.0, up: 0.6)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).split(separator: " ").count == 4 }
+        self.attachScreenshot(fixture.app, "two fingers on #left and #right")
+        let entries = self.pointerLog("multitouch", in: after).split(separator: " ").map(String.init)
+        XCTAssertEqual(entries.count, 4, after)
+        XCTAssertEqual(Set(entries.prefix(2).map { $0.split(separator: ":")[1] }), ["left", "right"], after)
+        XCTAssertEqual(entries.suffix(2).map { $0.split(separator: ":").prefix(2).joined(separator: ":") }, ["up:right", "up:left"], after)
+        XCTAssertEqual(entries.filter { $0.hasSuffix(":P") }.count, 2, "one finger, down and up, is primary: \(after)")
+        XCTAssertEqual(Set(entries.map { $0.split(separator: ":")[2] }).count, 2, after)
+        for event in ["contextMenu", "reaction", "reply"] {
+            XCTAssertFalse(self.hasEvent(event, in: after), after)
+        }
+    }
+
+    /// A first finger on a part the widget does not handle, then a second on a button: the chat lets go of the long press
+    /// it was waiting on, and both fingers are the widget's.
+    func testASecondFingerOnAButtonTakesTheHoldFromTheMenu() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.pad, down: 0.0, up: 1.5), Finger(at: fixture.left, down: 0.2, up: 1.5)], in: fixture.app)
+        // The synthesizer presses a finger that starts later a second time after its lift (`performFingers`): read the
+        // log up to there.
+        let expected = "down:left:a:S up:left:a:S"
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).hasPrefix(expected) }
+        self.attachScreenshot(fixture.app, "after holding #pad and #left")
+        XCTAssertTrue(self.pointerLog("multitouch", in: after).hasPrefix(expected), after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// A finger that slides off its button, past the widget's edge, stays the widget's: its up arrives, never a cancel.
+    func testAFingerSlidingOffTheWidgetStaysItsOwn() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        let moves = [0.45, 0.6, 0.8].enumerated().map { index, time in
+            (CGPoint(x: left.x, y: left.y + 60.0 * Double(index + 1)), time)
+        }
+        try performFingers([Finger(at: fixture.right, down: 0.0, up: 1.0), Finger(at: left, down: 0.0, moves: moves, up: 1.0)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return log.contains("up:left:") && log.contains("up:right:")
+        }
+        self.attachScreenshot(fixture.app, "after sliding off #left")
+        let log = self.pointerLog("multitouch", in: after)
+        XCTAssertTrue(log.contains("up:left:") && log.contains("up:right:"), after)
+        XCTAssertFalse(log.contains("cancel"), after)
+    }
+
+    /// While the chat drags, a finger that lands on the widget does nothing (the user, 2026-10-23: "The second finger
+    /// can't interact with widgets ... in the chat while the first one scrolls"). The second finger lands early in the
+    /// drag, while #left is still under it (one post: the list rubber-bands).
+    func testAFingerOnTheWidgetWhileTheListScrollsDoesNothing() throws {
+        let fixture = try self.launchMultitouch()
+        let pad = fixture.pad
+        let moves = (1 ... 10).map { step in (CGPoint(x: pad.x, y: pad.y + 20.0 * Double(step)), 0.1 * Double(step)) }
+        try performFingers([Finger(at: pad, down: 0.0, moves: moves, up: 1.0), Finger(at: fixture.left, down: 0.15, up: 0.3)], in: fixture.app)
+        self.pumpReadout(fixture.app, for: 1.0)
+        let after = self.readout(fixture.app)
+        self.attachScreenshot(fixture.app, "after the drag")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "", after)
+    }
+
+    /// Lets the readout catch up for `seconds`.
+    private func pumpReadout(_ app: XCUIApplication, for seconds: TimeInterval) {
+        _ = self.waitForReadout(app, timeout: seconds) { _ in false }
+    }
+
+    // MARK: the chat's lock while a widget control is held (the user, 2026-10-23)
+
+    /// A point on the bubble's caption, under the widget.
+    private func caption(_ fixture: MultitouchFixture) -> CGPoint {
+        return CGPoint(x: fixture.area.minX + 30.0, y: fixture.area.maxY + 14.0)
+    }
+
+    /// While #left is held, a long press on the caption opens no menu, and #left is never cancelled.
+    func testAHeldButtonKeepsTheCaptionsLongPressFromTheMenu() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 2.0), Finger(at: self.caption(fixture), down: 0.3, up: 1.5)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).contains("left:a:P") && self.pointerLog("multitouch", in: $0).contains("up:left") }
+        self.attachScreenshot(fixture.app, "after holding #left and the caption")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// A held button that drags (a claimed drag fails what is above it) still keeps the lock.
+    func testAHeldButtonThatDragsStillLocksTheChat() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        try performFingers([Finger(at: left, down: 0.0, moves: [(CGPoint(x: left.x + 20.0, y: left.y), 0.15)], up: 2.0),
+                            Finger(at: self.caption(fixture), down: 0.4, up: 1.6)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).contains("up:left") }
+        self.attachScreenshot(fixture.app, "after dragging #left and holding the caption")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// While #left is held, a drag elsewhere in the chat does not take the list (which would cancel #left's touch).
+    func testAHeldButtonKeepsTheListStill() throws {
+        let fixture = try self.launchMultitouch()
+        let start = CGPoint(x: fixture.area.midX, y: fixture.area.minY - 100.0)
+        let moves = (1 ... 9).map { step in (CGPoint(x: start.x, y: start.y + 20.0 * Double(step)), 0.3 + 0.1 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: start, down: 0.3, moves: moves, up: 1.3)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("up:left") || $0.contains("cancel:left") }
+        self.attachScreenshot(fixture.app, "after a drag while #left is held")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+    }
+
+    /// While #left is held, a swipe from the screen's left edge does not go back.
+    func testAHeldButtonKeepsTheBackSwipeOff() throws {
+        let fixture = try self.launchMultitouch()
+        let start = CGPoint(x: 2.0, y: fixture.area.minY - 100.0)
+        let moves = (1 ... 6).map { step in (CGPoint(x: start.x + 25.0 * Double(step), y: start.y), 0.3 + 0.1 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: start, down: 0.3, moves: moves, up: 1.0)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("up:left") || $0.contains("cancel:left") }
+        self.attachScreenshot(fixture.app, "after an edge swipe while #left is held")
+        XCTAssertFalse(self.hasEvent("back", in: after) || after.split(separator: "\n").contains("back"), after)
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+    }
+
+    /// A finger resting on a part the widget does not handle, then one on a button: the bubble's context gesture, failed
+    /// when the chat steps back, ends its press rather than holding the bubble shrunk until every finger lifts (its
+    /// timer and animation outlive being failed from outside). The readout's `pressed <path> <seconds>` events say how
+    /// long each press lasted (a query does not return while the fingers play).
+    func testASecondFingerOnAButtonLeavesTheBubbleUnpressed() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.pad, down: 0.0, up: 3.0), Finger(at: fixture.left, down: 0.2, up: 3.0)], in: fixture.app)
+        self.pumpReadout(fixture.app, for: 1.0)
+        let after = self.readout(fixture.app)
+        self.attachScreenshot(fixture.app, "after the two-finger hold")
+        XCTAssertTrue(self.pointerLog("multitouch", in: after).hasPrefix("down:left:a:S up:left:a:S"), after)
+        let presses = after.split(separator: "\n").filter { $0.hasPrefix("pressed fixture/multitouch.html ") }.compactMap { Double($0.split(separator: " ").last ?? "") }
+        XCTAssertTrue(presses.allSatisfy { $0 < 1.0 }, after)
+    }
 }

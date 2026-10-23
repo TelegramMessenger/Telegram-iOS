@@ -60,6 +60,8 @@ public final class WidgetHarnessRootViewController: UIViewController {
             self?.listHost?.record("back")
         }
         self.backSwipe.install(on: self.view)
+        // The chat's lock while a widget control is held (ChatControllerNode installs the same on the chat's view).
+        self.view.addGestureRecognizer(MessageWidgetChatLockRecognizer())
 
         self.accountDisposable = (HarnessAccount.make()
         |> deliverOnMainQueue).start(next: { [weak self] harnessAccount in

@@ -1,5 +1,6 @@
 #include "Sources/Events/Taps.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <functional>
@@ -206,26 +207,24 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
     if (Runtime::from(ctx).stopReason() != StopReason::None || !std::isfinite(x) || !std::isfinite(y)) {
         return;
     }
+    auto pointer = std::find_if(m_pointers.begin(), m_pointers.end(), [&](const HostPointer& p) { return p.id == pointerId; });
     bool moved = false;
     switch (phase) {
     case PointerPhase::Down:
-        m_active = true;
-        m_pointerId = pointerId;
-        m_downX = x;
-        m_downY = y;
-        m_lastX = x;
-        m_lastY = y;
-        m_moved = false;
-        break;
-    case PointerPhase::Move: {
-        if (!m_active || pointerId != m_pointerId) {
+        if (pointer != m_pointers.end() || m_pointers.size() >= kMaxPointers) {
             return;
         }
-        if (!m_moved) {
-            if (std::fabs(x - m_downX) < kTapSlop && std::fabs(y - m_downY) < kTapSlop) {
+        m_pointers.push_back(HostPointer{pointerId, x, y, false});
+        break;
+    case PointerPhase::Move: {
+        if (pointer == m_pointers.end()) {
+            return;
+        }
+        if (!pointer->moved) {
+            if (std::fabs(x - pointer->downX) < kTapSlop && std::fabs(y - pointer->downY) < kTapSlop) {
                 return;
             }
-            m_moved = true;
+            pointer->moved = true;
         }
         try {
             ListenedTypes& listened = HostState::of(ctx).listenedTypes();
@@ -244,11 +243,11 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
     }
     case PointerPhase::Up:
     case PointerPhase::Cancel:
-        if (!m_active || pointerId != m_pointerId) {
+        if (pointer == m_pointers.end()) {
             return;
         }
-        moved = m_moved;
-        m_active = false;
+        moved = pointer->moved;
+        m_pointers.erase(pointer);
         break;
     }
     try {
@@ -277,123 +276,152 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
     }
 }
 
+TapState::Press* TapState::press(int32_t pointerId) const {
+    for (const std::unique_ptr<Press>& press : m_presses) {
+        if (press->pointerId == pointerId) {
+            return press.get();
+        }
+    }
+    return nullptr;
+}
+
+void TapState::endPress(const Press& press) {
+    m_presses.erase(std::remove_if(m_presses.begin(), m_presses.end(),
+                                   [&](const std::unique_ptr<Press>& p) { return p.get() == &press; }),
+                    m_presses.end());
+}
+
 void TapState::setCapture(JSContext* ctx, Element& element, int32_t pointerId) {
-    if (!m_target || pointerId != m_taskPointerId) {
+    Press* press = this->press(pointerId);
+    if (!press) {
         throw DOMError{"NotFoundError", "No active pointer has that id."};
     }
     if (!element.isConnected(ctx)) {
         throw DOMError{"InvalidStateError", "The element is not connected."};
     }
-    m_pendingCapture = Ref<EventTarget>::retain(ctx, &element);
+    press->pendingCapture = Ref<EventTarget>::retain(ctx, &element);
 }
 
 void TapState::releaseCapture(JSContext*, Element& element, int32_t pointerId) {
-    if (!m_target || pointerId != m_taskPointerId) {
+    Press* press = this->press(pointerId);
+    if (!press) {
         throw DOMError{"NotFoundError", "No active pointer has that id."};
     }
     if (this->hasCapture(element, pointerId)) {
-        m_pendingCapture = Ref<EventTarget>();
+        press->pendingCapture = Ref<EventTarget>();
     }
 }
 
 bool TapState::hasCapture(const Element& element, int32_t pointerId) const {
-    return m_target && pointerId == m_taskPointerId && m_pendingCapture.get() == &element;
+    const Press* press = this->press(pointerId);
+    return press && press->pendingCapture.get() == &element;
 }
 
-EventTarget& TapState::pointerTarget(JSContext* ctx, double x, double y, bool primary) {
-    if (m_capture.get() != m_pendingCapture.get()) {
-        Ref<EventTarget> lost = std::move(m_capture);
-        m_capture = m_pendingCapture;
+EventTarget& TapState::pointerTarget(JSContext* ctx, Press& press, double x, double y, bool primary) {
+    if (press.capture.get() != press.pendingCapture.get()) {
+        Ref<EventTarget> lost = std::move(press.capture);
+        press.capture = press.pendingCapture;
         if (lost) {
-            firePointer(ctx, "lostpointercapture", *lost, x, y, m_taskPointerId, primary, false, 0, 0, 0);
+            firePointer(ctx, "lostpointercapture", *lost, x, y, press.pointerId, primary, false, 0, 0, 0);
         }
-        if (m_capture) {
-            Ref<EventTarget> got = m_capture;
-            firePointer(ctx, "gotpointercapture", *got, x, y, m_taskPointerId, primary, false, 0, 0, 0);
+        if (press.capture) {
+            Ref<EventTarget> got = press.capture;
+            firePointer(ctx, "gotpointercapture", *got, x, y, press.pointerId, primary, false, 0, 0, 0);
         }
     }
-    return m_capture ? *m_capture : *m_target;
+    return press.capture ? *press.capture : *press.target;
 }
 
 void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {
-    m_target = Ref<EventTarget>();
-    m_pendingCapture = Ref<EventTarget>();
-    m_capture = Ref<EventTarget>();
-    m_taskPointerId = pointerId;
-    m_pointerCanceled = false;
-    m_touchCanceled = false;
     m_claim = GestureClaim();
     m_takesTaps = false;
     EventTarget* target = hitTarget(ctx, x, y);
-    if (!target) {
+    if (!target || this->press(pointerId)) {
         return;
     }
-    m_target = Ref<EventTarget>::retain(ctx, target);
-    const GestureClaim claim = primary ? touchActionClaim(ctx, *target) : GestureClaim();
-    const bool handles = primary && handlesPress(ctx, *target);
+    const GestureClaim claim = touchActionClaim(ctx, *target);
+    const bool handles = handlesPress(ctx, *target);
     HostState& state = HostState::of(ctx);
-    m_press = state.beginPress();
+    m_presses.push_back(std::make_unique<Press>());
+    Press& press = *m_presses.back();
+    press.pointerId = pointerId;
+    press.target = Ref<EventTarget>::retain(ctx, target);
+    press.number = state.beginPress();
+    press.lastX = x;
+    press.lastY = y;
     UserActions& actions = state.userActions();
     Element* element = dynamic_cast<Element*>(target);
-    actions.setPointer(ctx, element, element);
-    {
-        HostState::PressScope press(state, m_press);
-        m_pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, primary, true, 0, 1, 0.5);
-    }
-    m_touchCanceled = !fireTouch(ctx, "touchstart", *target, x, y, pointerId, true, true);
     if (primary) {
-        m_claim = (m_pointerCanceled || m_touchCanceled) ? GestureClaim{true, true} : claim;
-        m_takesTaps = handles || m_claim.x || m_claim.y;
+        actions.setHover(ctx, element);
     }
+    actions.addActive(ctx, element);
+    {
+        HostState::PressScope scope(state, press.number);
+        press.pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, primary, true, 0, 1, 0.5);
+    }
+    press.touchCanceled = !fireTouch(ctx, "touchstart", *target, x, y, pointerId, true, true);
+    m_claim = (press.pointerCanceled || press.touchCanceled) ? GestureClaim{true, true} : claim;
+    m_takesTaps = handles || m_claim.x || m_claim.y;
 }
 
 void TapState::runMove(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {
-    if (!m_target) {
+    Press* press = this->press(pointerId);
+    if (!press) {
         return;
     }
-    Ref<EventTarget> target = m_target;
+    Ref<EventTarget> target = press->target;
     // Pointer Lock 2's movement: from the last move delivered, the down point for the first (moves inside the slop are
     // not delivered: the first that is carries them).
-    const double movementX = x - m_lastX;
-    const double movementY = y - m_lastY;
-    m_lastX = x;
-    m_lastY = y;
+    const double movementX = x - press->lastX;
+    const double movementY = y - press->lastY;
+    press->lastX = x;
+    press->lastY = y;
     {
-        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, *press, x, y, primary));
         firePointer(ctx, "pointermove", *pointer, x, y, pointerId, primary, true, -1, 1, 0.5, movementX, movementY);
     }
     fireTouch(ctx, "touchmove", *target, x, y, pointerId, true, true);
 }
 
 void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool moved) {
-    if (!m_target) {
+    Press* press = this->press(pointerId);
+    if (!press) {
         return;
     }
     // The press is over; the hover stays, as touch browsers keep it.
     HostState& state = HostState::of(ctx);
-    state.userActions().setPointer(ctx, dynamic_cast<Element*>(m_target.get()), nullptr);
+    state.userActions().removeActive(ctx, dynamic_cast<Element*>(press->target.get()));
     {
-        HostState::PressScope press(state, m_press);
-        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        HostState::PressScope scope(state, press->number);
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, *press, x, y, primary));
         firePointer(ctx, "pointerup", *pointer, x, y, pointerId, primary, true, 0, 0, 0);
         // The capture ends with the press: lostpointercapture after the pointerup.
-        m_pendingCapture = Ref<EventTarget>();
-        this->pointerTarget(ctx, x, y, primary);
+        press->pendingCapture = Ref<EventTarget>();
+        this->pointerTarget(ctx, *press, x, y, primary);
     }
-    Ref<EventTarget> target = std::move(m_target);
-    m_target = Ref<EventTarget>();
+    Ref<EventTarget> target = std::move(press->target);
+    const uint64_t number = press->number;
+    const bool pointerCanceled = press->pointerCanceled;
+    bool touchCanceled = press->touchCanceled;
+    this->endPress(*press);
+    // Its activation is forgotten after its last event: the click, when there is one.
+    struct Forget {
+        HostState& state;
+        uint64_t number;
+        ~Forget() { state.endPress(number); }
+    } forget{state, number};
     if (!fireTouch(ctx, "touchend", *target, x, y, pointerId, false, true)) {
-        m_touchCanceled = true;
+        touchCanceled = true;
     }
-    if (!primary || moved || m_touchCanceled) {
+    if (!primary || moved || touchCanceled) {
         return;
     }
     Node* hit = static_cast<Node*>(hitTarget(ctx, x, y));
     if (!hit || !isInclusiveDescendant(hit, *target) || insideDisabledControl(ctx, *target)) {
         return;
     }
-    HostState::PressScope press(state, m_press);
-    if (!m_pointerCanceled) {
+    HostState::PressScope scope(state, number);
+    if (!pointerCanceled) {
         fireMouse(ctx, "mousedown", *target, x, y, 1, 1);
         fireMouse(ctx, "mouseup", *target, x, y, 0, 1);
     }
@@ -401,18 +429,21 @@ void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool
 }
 
 void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {
-    if (!m_target) {
+    Press* press = this->press(pointerId);
+    if (!press) {
         return;
     }
-    HostState::of(ctx).userActions().setPointer(ctx, dynamic_cast<Element*>(m_target.get()), nullptr);
+    HostState::of(ctx).userActions().removeActive(ctx, dynamic_cast<Element*>(press->target.get()));
     {
-        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, x, y, primary));
+        Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, *press, x, y, primary));
         firePointer(ctx, "pointercancel", *pointer, x, y, pointerId, primary, false, 0, 0, 0);
-        m_pendingCapture = Ref<EventTarget>();
-        this->pointerTarget(ctx, x, y, primary);
+        press->pendingCapture = Ref<EventTarget>();
+        this->pointerTarget(ctx, *press, x, y, primary);
     }
-    Ref<EventTarget> target = std::move(m_target);
-    m_target = Ref<EventTarget>();
+    Ref<EventTarget> target = std::move(press->target);
+    const uint64_t number = press->number;
+    this->endPress(*press);
+    HostState::of(ctx).endPress(number);
     fireTouch(ctx, "touchcancel", *target, x, y, pointerId, false, false);
 }
 

@@ -96,11 +96,16 @@ void HostState::bridgeCall(JSContext* ctx, std::string_view method, std::string_
 }
 
 bool HostState::consumeActivation(JSContext* ctx) {
-    if (m_activePress == 0 || m_activePress <= m_consumedPress || DOMState::of(ctx).document().isHidden()) {
+    if (m_activePress == 0 || DOMState::of(ctx).document().isHidden() ||
+        std::find(m_consumedPresses.begin(), m_consumedPresses.end(), m_activePress) != m_consumedPresses.end()) {
         return false;
     }
-    m_consumedPress = m_activePress;
+    m_consumedPresses.push_back(m_activePress);
     return true;
+}
+
+void HostState::endPress(uint64_t press) {
+    m_consumedPresses.erase(std::remove(m_consumedPresses.begin(), m_consumedPresses.end(), press), m_consumedPresses.end());
 }
 
 namespace {

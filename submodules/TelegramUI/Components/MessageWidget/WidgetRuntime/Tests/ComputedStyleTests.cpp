@@ -166,6 +166,96 @@ WR_TEST(testWebkitUserSelectIsTheSameProperty) {
     CHECK(!selects(env, "o"));
 }
 
+/// Computed-style plan, Task 3: a positional shorthand is serialized from its longhands' computed values (CSSOM: a value
+/// repeated across sides or axes is written once; `border` is "" when its sides differ), so a script that sets one
+/// longhand reads it back in the shorthand.
+WR_TEST(testPositionalShorthandsFollowTheirLonghands) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#d{display:flex;flex-flow:column wrap;gap:4px 8px;place-content:center space-between;"
+                  "border:2px solid rgb(255, 0, 0);border-radius:1px 2px 3px 4px;outline:3px dashed rgb(0, 0, 255);"
+                  "list-style:inside none square}"
+                  "#c{flex:2 3 10px;position:relative;inset:1px 2px 3px 4px}"
+                  "#u{border-top:1px solid rgb(255, 0, 0);border-bottom:2px solid rgb(255, 0, 0)}"
+                  "#e{border-radius:10px / 5px}"
+                  "#grid{display:grid;place-items:start end}#g{place-self:end start}"
+                  "</style></head><body><div id=d><div id=c></div></div><div id=u></div><div id=e></div>"
+                  "<div id=grid><div id=g>g</div></div><p id=p>p</p>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  " window.cs = e => getComputedStyle(e);</script></body></html>");
+    CHECK_JS_EQ(env.env(), "cs(d).flexFlow", "column wrap");
+    CHECK_JS_EQ(env.env(), "cs(d).gap", "4px 8px");
+    CHECK_JS_EQ(env.env(), "cs(d).placeContent", "center space-between");
+    // litehtml computes justify-items for grid containers (it does nothing to a flex one): a grid's place-items.
+    CHECK_JS_EQ(env.env(), "cs(grid).placeItems", "start end");
+    CHECK_JS_EQ(env.env(), "cs(d).borderWidth", "2px");
+    CHECK_JS_EQ(env.env(), "cs(d).borderStyle", "solid");
+    CHECK_JS_EQ(env.env(), "cs(d).borderColor", "rgb(255, 0, 0)");
+    CHECK_JS_EQ(env.env(), "cs(d).borderTop", "2px solid rgb(255, 0, 0)");
+    CHECK_JS_EQ(env.env(), "cs(d).border", "2px solid rgb(255, 0, 0)");
+    CHECK_JS_EQ(env.env(), "cs(d).borderRadius", "1px 2px 3px 4px");
+    CHECK_JS_EQ(env.env(), "cs(d).outline", "rgb(0, 0, 255) dashed 3px");
+    CHECK_JS_EQ(env.env(), "cs(d).listStyle", "inside none square");
+    CHECK_JS_EQ(env.env(), "cs(c).flex", "2 3 10px");
+    CHECK_JS_EQ(env.env(), "cs(c).inset", "1px 2px 3px 4px");
+    CHECK_JS_EQ(env.env(), "cs(u).border", "");
+    CHECK_JS_EQ(env.env(), "cs(u).borderWidth", "1px 0px 2px");
+    CHECK_JS_EQ(env.env(), "cs(u).borderStyle", "solid none");
+    CHECK_JS_EQ(env.env(), "cs(e).borderRadius", "10px / 5px");
+    CHECK_JS_EQ(env.env(), "cs(g).placeSelf", "end start");
+    // Nothing declared: the initial values, the colour the current one.
+    CHECK_JS_EQ(env.env(), "cs(p).flex", "0 1 auto");
+    CHECK_JS_EQ(env.env(), "cs(p).flexFlow", "row nowrap");
+    CHECK_JS_EQ(env.env(), "cs(p).gap", "normal");
+    CHECK_JS_EQ(env.env(), "cs(p).inset", "auto");
+    CHECK_JS_EQ(env.env(), "cs(p).placeContent", "normal");
+    CHECK_JS_EQ(env.env(), "cs(p).borderRadius", "0px");
+    CHECK_JS_EQ(env.env(), "cs(p).listStyle", "outside none disc");
+    CHECK_JS_EQ(env.env(), "String(cs(p).border === '0px none ' + cs(p).color)", "true");
+    CHECK_JS_EQ(env.env(), "String(cs(p).outline === cs(p).color + ' none 0px')", "true");
+    // Review Focus 4: a longhand a script sets is read back in its shorthand.
+    CHECK_JS_EQ(env.env(), "(p.style.flexGrow = '2', cs(p).flex)", "2 1 auto");
+    CHECK_JS_EQ(env.env(), "(p.style.rowGap = '3px', cs(p).gap)", "3px normal");
+    CHECK_JS_EQ(env.env(), "(d.style.borderLeftWidth = '5px', cs(d).borderWidth)", "2px 2px 2px 5px");
+    CHECK_JS_EQ(env.env(), "cs(d).border", "");
+}
+
+/// Computed-style plan, Task 3: the complex shorthands answer a canonical form built from their longhands, not claimed
+/// Chrome-exact: background per layer (Chrome's order, the colour in the last layer), font without its initial parts,
+/// the grid placements without trailing autos, and animation and transition from their longhands' lists (cycled), or
+/// the shorthand as declared.
+WR_TEST(testComplexShorthandsAnswerCanonicalForms) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#b{background:rgb(255, 0, 0)}"
+                  "#l{background-image:linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)), none;background-color:rgb(0, 0, 255)}"
+                  "#f{font:italic bold 20px/30px serif}#h{font:12px monospace}"
+                  "#grid{display:grid}#g{grid-row:1 / 3;grid-column:2 / 4}#s{grid-column:span 2}"
+                  "#a{animation-name:spin;animation-duration:2s}#t{transition-property:opacity, transform;transition-duration:1s}"
+                  "#as{animation:spin 2s linear 1s infinite alternate both paused}#ts{transition:opacity 0.3s ease-in 0.1s}"
+                  "</style></head><body><div id=b></div><div id=l></div><p id=f>f</p><p id=h>h</p>"
+                  "<div id=grid><div id=g>g</div><div id=s>s</div></div><div id=a></div><div id=t></div>"
+                  "<div id=as></div><div id=ts></div><p id=p>p</p>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  " window.cs = e => getComputedStyle(e);</script></body></html>");
+    CHECK_JS_EQ(env.env(), "cs(b).background", "rgb(255, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box");
+    CHECK_JS_EQ(env.env(), "cs(l).background",
+                "none repeat scroll 0% 0% / auto padding-box border-box, rgb(0, 0, 255) none repeat scroll 0% 0% / auto padding-box border-box");
+    CHECK_JS_EQ(env.env(), "cs(f).font", "italic 700 20px / 30px serif");
+    CHECK_JS_EQ(env.env(), "cs(h).font", "12px monospace");
+    CHECK_JS_EQ(env.env(), "cs(g).gridRow", "1 / 3");
+    CHECK_JS_EQ(env.env(), "cs(g).gridColumn", "2 / 4");
+    CHECK_JS_EQ(env.env(), "cs(g).gridArea", "1 / 2 / 3 / 4");
+    CHECK_JS_EQ(env.env(), "cs(s).gridColumn", "span 2");
+    CHECK_JS_EQ(env.env(), "cs(s).gridRow", "auto");
+    CHECK_JS_EQ(env.env(), "cs(s).gridArea", "auto / span 2");
+    CHECK_JS_EQ(env.env(), "cs(p).gridArea", "auto");
+    CHECK_JS_EQ(env.env(), "cs(p).animation", "none 0s ease 0s 1 normal none running");
+    CHECK_JS_EQ(env.env(), "cs(p).transition", "all 0s ease 0s");
+    CHECK_JS_EQ(env.env(), "cs(a).animation", "spin 2s ease 0s 1 normal none running");
+    CHECK_JS_EQ(env.env(), "cs(t).transition", "opacity 1s ease 0s, transform 1s ease 0s");
+    CHECK_JS_EQ(env.env(), "cs(as).animation", "spin 2s linear 1s infinite alternate both paused");
+    CHECK_JS_EQ(env.env(), "cs(ts).transition", "opacity 0.3s ease-in 0.1s");
+}
+
 /// v0.1.1 plan, Task 3 (auto/22-ua-defaults): vertical-align and border-collapse read back as keywords; the UA layer
 /// sets sup on the baseline and tables collapsed, and border-collapse is inherited.
 WR_TEST(testVerticalAlignAndBorderCollapse) {
@@ -319,4 +409,96 @@ WR_TEST(testExactLonghands) {
     CHECK_JS_EQ(env.env(), "all(br, ['border-top-left-radius', 'border-bottom-right-radius', 'border-top-right-radius'])",
                 "4px|4px 2px|0px");
     CHECK_JS_EQ(env.env(), "cs(wb, '-webkit-backdrop-filter') + '|' + cs(wb, 'backdrop-filter')", "blur(2px)|blur(2px)");
+}
+
+/// Final review C1: an animation or transition shorthand is its longhands' lists joined entry by entry, at most 64
+/// entries (kMaxCSSListEntries, as many as the runtime runs) and "" past kMaxJoinedBytes, so a long list cycled against
+/// a long item cannot build gigabytes before the read is charged.
+WR_TEST(testAJoinedTransitionIsBounded) {
+    std::string properties;
+    for (int i = 0; i < 2000; i++) {
+        properties += i ? ",a" : "a";
+    }
+    const std::string item(4000, 'x');
+    RenderEnv env("<!doctype html><html><head><style>#x{transition-property:" + properties + ";transition-timing-function:" +
+                  item + "}#y{transition-property:" + properties + "}</style></head><body><div id=x>x</div><div id=y>y</div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    // The long item survives the policy: the join is what has to bound it.
+    CHECK_JS_EQ(env.env(), "String(getComputedStyle(x).transitionTimingFunction.length)", "4000");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(x).transition", "");
+    CHECK_JS_EQ(env.env(), "String(getComputedStyle(y).transition.split(', ').length)", "64");
+}
+
+/// Final review I1: an absolutely positioned element's offsets run from its margin edge to its containing block's padding
+/// edge, and transform-origin and a transform's percentages resolve against the border box, as litehtml draws them.
+WR_TEST(testOffsetsAndOriginsUseTheirBoxes) {
+    RenderEnv env("<!doctype html><html><head><style>body{margin:0} div{margin:0}"
+                  "#cb{position:relative;width:200px;height:100px;padding:10px;border:2px solid}"
+                  "#a{position:absolute;left:0;top:0;padding:5px;border:1px solid;width:20px;height:10px}"
+                  "#pc{position:absolute;left:10%;top:50%;width:20px;height:10px}"
+                  "#o{width:100px;height:40px;padding:10px}"
+                  "#bb{box-sizing:border-box;width:100px;height:40px;padding:10px}"
+                  "#t{width:100px;height:40px;padding:10px;transform:translate(-50%,-50%)}"
+                  "</style></head><body><div id=cb><div id=a>a</div><div id=pc>p</div></div>"
+                  "<div id=o>o</div><div id=bb>b</div><div id=t>t</div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    // The containing block's padding box is 220 x 120; #a's margin box 32 x 22.
+    CHECK_JS_EQ(env.env(), "all(a, ['left', 'top', 'right', 'bottom'])", "0px|0px|188px|98px");
+    CHECK_JS_EQ(env.env(), "all(pc, ['left', 'top', 'right', 'bottom'])", "22px|60px|178px|50px");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(o).transformOrigin", "60px 30px");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(bb).transformOrigin", "50px 20px");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(t).transform", "matrix(1, 0, 0, 1, -60, -30)");
+}
+
+/// Final review I2: an animation or transition longhand reads what the runtime runs (animationSpecs, transitionSpecs):
+/// its own declaration, else the shorthand's entries, times in seconds as CSSOM writes them; a box container's
+/// justify-content and align-content read what lays it out, so a later place-content wins over an earlier longhand.
+WR_TEST(testLonghandsSeeTheirShorthands) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#t{transition:opacity .3s}#a{animation:spin 1s infinite}"
+                  "#m{transition:opacity 1s, transform 2s linear 50ms;transition-duration:300ms}"
+                  ".bar{display:flex;justify-content:space-between;align-content:space-around}.bar.c{place-content:center}"
+                  "#fs{display:flex;justify-content:flex-start;align-content:stretch}#fl{display:flex}"
+                  "</style></head><body><div id=t></div><div id=a></div><div id=m></div><div id=c class='bar c'></div>"
+                  "<div id=fs></div><div id=fl></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "all(t, ['transition-property', 'transition-duration', 'transition-timing-function', 'transition-delay'])",
+                "opacity|0.3s|ease|0s");
+    CHECK_JS_EQ(env.env(), "all(a, ['animation-name', 'animation-duration', 'animation-iteration-count', 'animation-direction'])",
+                "spin|1s|infinite|normal");
+    CHECK_JS_EQ(env.env(), "all(m, ['transition-property', 'transition-duration', 'transition-timing-function', 'transition-delay'])",
+                "opacity, transform|0.3s|ease, linear|0s, 0.05s");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(m).transition", "opacity 0.3s ease 0s, transform 0.3s linear 0.05s");
+    CHECK_JS_EQ(env.env(), "all(c, ['justify-content', 'align-content'])", "center|center");
+    CHECK_JS_EQ(env.env(), "all(fs, ['justify-content', 'align-content'])", "flex-start|stretch");
+    CHECK_JS_EQ(env.env(), "all(fl, ['justify-content', 'align-content'])", "normal|normal");
+}
+
+/// Final review I3: every profile 1 property answered from what the element declares reads a declared value back, never
+/// its initial value (an SVG dash from its presentation attribute too). transition-behavior is outside profile 1's
+/// property table, so the policy drops its declaration and it reads its initial value.
+WR_TEST(testDeclaredValuesReadBack) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#g{display:grid;grid-template-columns:10px 1fr;grid-template-rows:20px;grid-auto-rows:30px;"
+                  "grid-auto-columns:40px;grid-auto-flow:column;grid-template-areas:\"a b\"}"
+                  "#d{transition-behavior:allow-discrete;counter-increment:c 2;counter-reset:c 1;unicode-bidi:isolate;"
+                  "color-scheme:dark;font-feature-settings:\"liga\" 0;font-variant-numeric:tabular-nums;position:relative;"
+                  "z-index:3;pointer-events:none;translate:10px;rotate:45deg;scale:2}"
+                  "#r{stroke-dasharray:5 3;stroke-dashoffset:2}"
+                  "</style></head><body><div id=g></div><div id=d></div><svg width=40 height=40>"
+                  "<rect id=r width=10 height=10></rect><rect id=pa stroke-dasharray=4 stroke-dashoffset=3 width=4 height=4></rect></svg>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "all(g, ['grid-template-columns', 'grid-template-rows', 'grid-auto-rows', 'grid-auto-columns', "
+                           "'grid-auto-flow', 'grid-template-areas'])",
+                "10px 1fr|20px|30px|40px|column|\"a b\"");
+    CHECK_JS_EQ(env.env(), "all(d, ['counter-increment', 'counter-reset', 'unicode-bidi', 'color-scheme', "
+                           "'font-feature-settings', 'font-variant-numeric', 'z-index', 'pointer-events', 'translate', 'rotate', "
+                           "'scale'])",
+                "c 2|c 1|isolate|dark|\"liga\" 0|tabular-nums|3|none|10px|45deg|2");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(d).transitionBehavior", "normal");
+    CHECK_JS_EQ(env.env(), "all(r, ['stroke-dasharray', 'stroke-dashoffset'])", "5px, 3px|2px");
+    CHECK_JS_EQ(env.env(), "all(pa, ['stroke-dasharray', 'stroke-dashoffset'])", "4px|3px");
 }

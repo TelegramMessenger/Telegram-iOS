@@ -737,6 +737,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case fakeWalletTransfers(Bool)
     case insertWidgetConformanceSet
     case insertWidgetCorpus
+    case insertWidgetGames
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -790,7 +791,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetCorpus:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetCorpus, .insertWidgetGames:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -953,6 +954,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 76
         case .insertWidgetCorpus:
             return 77
+        case .insertWidgetGames:
+            return 78
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1463,19 +1466,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case .insertWidgetConformanceSet, .insertWidgetCorpus:
-            let isConformance: Bool
-            if case .insertWidgetConformanceSet = self {
-                isConformance = true
-            } else {
-                isConformance = false
+        case .insertWidgetConformanceSet, .insertWidgetCorpus, .insertWidgetGames:
+            let title: String
+            let posts: () -> [EngineLocalWidgetPost]
+            switch self {
+            case .insertWidgetConformanceSet:
+                title = "Insert widget conformance set"
+                posts = widgetConformanceDebugPosts
+            case .insertWidgetGames:
+                title = "Insert widget games"
+                posts = widgetGamesDebugPosts
+            default:
+                title = "Insert widget corpus"
+                posts = widgetCorpusDebugPosts
             }
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: isConformance ? "Insert widget conformance set" : "Insert widget corpus", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
                 // Local messages in Saved Messages (My Notes), in the order the test channel posts them; nothing is sent.
-                let posts = isConformance ? widgetConformanceDebugPosts() : widgetCorpusDebugPosts()
+                let posts = posts()
                 if posts.isEmpty {
                     return
                 }
@@ -2020,6 +2030,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         }
         entries.append(.insertWidgetConformanceSet)
         entries.append(.insertWidgetCorpus)
+        entries.append(.insertWidgetGames)
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

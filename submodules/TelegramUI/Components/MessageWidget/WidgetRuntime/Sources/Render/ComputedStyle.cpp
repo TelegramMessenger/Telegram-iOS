@@ -13,6 +13,9 @@
 #include <litehtml/render_item.h>
 #include <litehtml/web_color.h>
 
+#include "Sources/Animation/CSSAnimationRules.h"
+#include "Sources/Support/Work.h"
+
 namespace wr {
 
 namespace {
@@ -222,7 +225,44 @@ struct Source {
     bool inlineNonReplaced = false;
     PseudoElement pseudo = PseudoElement::None;
     bool pseudoMissing = false;
+    /// What the read walked and scanned beyond the value it returns, in work units, for the caller to charge (final
+    /// review I4: per element, like the other queries' walks).
+    uint64_t* work = nullptr;
 };
+
+void spend(const Source& s, uint64_t units) {
+    if (s.work) {
+        *s.work += units;
+    }
+}
+
+void spendScan(const Source& s, size_t bytes) {
+    spend(s, (uint64_t(bytes) / 8 + 1) * work::kScanEightUnits);
+}
+
+/// A render box's border box, document px: get_placement is its content box (render_item.h), and litehtml transforms
+/// and positions the border box (final review I1).
+struct Rect {
+    double x = 0, y = 0, width = 0, height = 0;
+};
+
+Rect borderBox(const litehtml::render_item& box) {
+    const litehtml::position p = box.get_placement();
+    const double left = toDouble(box.padding_left()) + toDouble(box.border_left());
+    const double top = toDouble(box.padding_top()) + toDouble(box.border_top());
+    return Rect{toDouble(p.x) - left, toDouble(p.y) - top,
+                toDouble(p.width) + left + toDouble(box.padding_right()) + toDouble(box.border_right()),
+                toDouble(p.height) + top + toDouble(box.padding_bottom()) + toDouble(box.border_bottom())};
+}
+
+/// Its padding box: a containing block's, which absolutely positioned offsets are measured against.
+Rect paddingBox(const litehtml::render_item& box) {
+    const litehtml::position p = box.get_placement();
+    const double left = toDouble(box.padding_left());
+    const double top = toDouble(box.padding_top());
+    return Rect{toDouble(p.x) - left, toDouble(p.y) - top, toDouble(p.width) + left + toDouble(box.padding_right()),
+                toDouble(p.height) + top + toDouble(box.padding_bottom())};
+}
 
 std::string marginTopOrBottom(const Source& s, bool top) {
     const litehtml::css_length& length = top ? s.css.get_margins().top : s.css.get_margins().bottom;
@@ -405,6 +445,31 @@ std::string strokeWidth(const Source& s) {
     return litehtml::get_repr(tokens, 0, -1, true);
 }
 
+/// stroke-dasharray and stroke-dashoffset as the painter reads them, presentation attributes and inheritance included
+/// (final review I3): numbers as px and a dash array's values comma-separated, as Chromium writes them.
+std::string strokeDash(const Source& s, std::string_view name) {
+    const bool array = name == "stroke-dasharray";
+    if (!s.element) {
+        return std::string();
+    }
+    const litehtml::css_token_vector tokens =
+        litehtml::svg_computed_property(s.element->shared_from_this(), litehtml::_id(std::string(name)));
+    std::string out;
+    for (const litehtml::css_token& token : tokens) {
+        if (token.type == litehtml::WHITESPACE || token.type == litehtml::COMMA) {
+            continue;
+        }
+        if (token.type == litehtml::IDENT && litehtml::lowcase(token.ident()) == "none") {
+            return "none";
+        }
+        const bool pixels = token.type == litehtml::NUMBER ||
+                            (token.type == litehtml::DIMENSION && litehtml::lowcase(token.unit()) == "px");
+        out += (out.empty() ? "" : ", ") +
+               (pixels ? px(token.n.number) : litehtml::get_repr(litehtml::css_token_vector{token}, 0, -1, true));
+    }
+    return out.empty() ? std::string(array ? "none" : "0px") : out;
+}
+
 /// One background layer's property, comma-joined over the layers (CSS Backgrounds' lists), each list repeated to the
 /// number of image layers.
 template <typename Layer>
@@ -425,49 +490,224 @@ const T* layerAt(const std::vector<T>& values, size_t i) {
     return values.empty() ? nullptr : &values[i % values.size()];
 }
 
+std::string layerImage(const litehtml::background& bg, size_t i) {
+    if (i >= bg.m_image.size() || bg.m_image[i].is_empty()) {
+        return "none";
+    }
+    const litehtml::image& image = bg.m_image[i];
+    // A gradient keeps no text of its own here: it reads as none until the serializer learns gradients.
+    return image.type == litehtml::image::type_url ? "url(\"" + image.url + "\")" : "none";
+}
+
 std::string backgroundImage(const litehtml::background& bg) {
-    return layers(bg, [&](size_t i) -> std::string {
-        if (i >= bg.m_image.size() || bg.m_image[i].is_empty()) {
-            return "none";
+    return layers(bg, [&](size_t i) { return layerImage(bg, i); });
+}
+
+std::string layerSize(const litehtml::background& bg, size_t i) {
+    const litehtml::css_size* size = layerAt(bg.m_size, i);
+    if (!size) {
+        return "auto";
+    }
+    if (size->width.is_predefined()) {
+        if (size->width.predef() == litehtml::background_size_cover) {
+            return "cover";
         }
-        const litehtml::image& image = bg.m_image[i];
-        // A gradient keeps no text of its own here: it reads as none until the serializer learns gradients.
-        return image.type == litehtml::image::type_url ? "url(\"" + image.url + "\")" : "none";
-    });
+        if (size->width.predef() == litehtml::background_size_contain) {
+            return "contain";
+        }
+        return size->height.is_predefined() ? "auto" : "auto " + lengthValue(size->height);
+    }
+    return lengthValue(size->width) + (size->height.is_predefined() ? std::string() : " " + lengthValue(size->height));
 }
 
 std::string backgroundSize(const litehtml::background& bg) {
-    return layers(bg, [&](size_t i) -> std::string {
-        const litehtml::css_size* size = layerAt(bg.m_size, i);
-        if (!size) {
-            return "auto";
-        }
-        if (size->width.is_predefined()) {
-            if (size->width.predef() == litehtml::background_size_cover) {
-                return "cover";
-            }
-            if (size->width.predef() == litehtml::background_size_contain) {
-                return "contain";
-            }
-            return size->height.is_predefined() ? "auto" : "auto " + lengthValue(size->height);
-        }
-        return lengthValue(size->width) + (size->height.is_predefined() ? std::string() : " " + lengthValue(size->height));
-    });
+    return layers(bg, [&](size_t i) { return layerSize(bg, i); });
+}
+
+std::string layerPosition(const litehtml::background& bg, size_t i) {
+    const litehtml::css_length* x = layerAt(bg.m_position_x, i);
+    const litehtml::css_length* y = layerAt(bg.m_position_y, i);
+    return (x ? lengthValue(*x) : std::string("0%")) + " " + (y ? lengthValue(*y) : std::string("0%"));
 }
 
 std::string backgroundPosition(const litehtml::background& bg) {
-    return layers(bg, [&](size_t i) -> std::string {
-        const litehtml::css_length* x = layerAt(bg.m_position_x, i);
-        const litehtml::css_length* y = layerAt(bg.m_position_y, i);
-        return (x ? lengthValue(*x) : std::string("0%")) + " " + (y ? lengthValue(*y) : std::string("0%"));
-    });
+    return layers(bg, [&](size_t i) { return layerPosition(bg, i); });
+}
+
+std::string layerRepeat(const litehtml::background& bg, size_t i) {
+    const int* repeat = layerAt(bg.m_repeat, i);
+    return repeat ? keyword(litehtml::background_repeat_strings, *repeat) : std::string("repeat");
 }
 
 std::string backgroundRepeat(const litehtml::background& bg) {
+    return layers(bg, [&](size_t i) { return layerRepeat(bg, i); });
+}
+
+std::string layerOrigin(const litehtml::background& bg, size_t i) {
+    const int* box = layerAt(bg.m_origin, i);
+    return box ? keyword(litehtml::background_box_strings, *box) : std::string("padding-box");
+}
+
+/// The `background` shorthand (Computed-style plan, Task 3), canonical rather than claimed Chrome-exact, in Chrome's
+/// order: each layer's image, repeat, attachment, position / size, origin and clip, the colour before the last layer's.
+std::string backgroundShorthand(const litehtml::background& bg, const std::string& color) {
+    const size_t count = std::max<size_t>(1, bg.m_image.size());
     return layers(bg, [&](size_t i) -> std::string {
-        const int* repeat = layerAt(bg.m_repeat, i);
-        return repeat ? keyword(litehtml::background_repeat_strings, *repeat) : std::string("repeat");
+        const int* attachment = layerAt(bg.m_attachment, i);
+        const int* clip = layerAt(bg.m_clip, i);
+        return (i + 1 == count ? color + " " : std::string()) + layerImage(bg, i) + " " + layerRepeat(bg, i) + " " +
+               (attachment ? keyword(litehtml::background_attachment_strings, *attachment) : std::string("scroll")) + " " +
+               layerPosition(bg, i) + " / " + layerSize(bg, i) + " " + layerOrigin(bg, i) + " " +
+               (clip ? keyword(litehtml::background_box_strings, *clip) : std::string("border-box"));
     });
+}
+
+/// Two axes' values as their shorthand writes them: once when they agree (CSSOM).
+std::string pairOf(const std::string& first, const std::string& second) {
+    return first == second ? first : first + " " + second;
+}
+
+std::string trimmedText(std::string_view text) {
+    const size_t first = text.find_first_not_of(" \t\n\r\f");
+    const size_t last = text.find_last_not_of(" \t\n\r\f");
+    return first == std::string_view::npos ? std::string() : std::string(text.substr(first, last - first + 1));
+}
+
+/// A comma-separated list's items, trimmed, commas inside parentheses kept (`cubic-bezier(…)`): at most
+/// animation::kMaxCSSListEntries, as many as the runtime runs (final review C1). The bytes read are spent.
+std::vector<std::string> commaItems(const Source& s, std::string_view list) {
+    std::vector<std::string> items;
+    size_t start = 0, end = 0;
+    int depth = 0;
+    for (; end < list.size() && items.size() < animation::kMaxCSSListEntries; end++) {
+        const char c = list[end];
+        if (c == '(') {
+            depth++;
+        } else if (c == ')' && depth > 0) {
+            depth--;
+        } else if (c == ',' && depth == 0) {
+            items.push_back(trimmedText(list.substr(start, end - start)));
+            start = end + 1;
+        }
+    }
+    if (items.size() < animation::kMaxCSSListEntries) {
+        items.push_back(trimmedText(list.substr(start, end - start)));
+    }
+    spendScan(s, end);
+    return items;
+}
+
+/// A list item's whitespace-separated tokens, outside parentheses and quotes.
+std::vector<std::string> itemTokens(const std::string& item) {
+    std::vector<std::string> tokens;
+    std::string current;
+    int depth = 0;
+    char quote = 0;
+    for (char c : item) {
+        if (quote) {
+            quote = c == quote ? 0 : quote;
+        } else if (c == '"' || c == '\'') {
+            quote = c;
+        } else if (c == '(') {
+            depth++;
+        } else if (c == ')' && depth > 0) {
+            depth--;
+        } else if (depth == 0 && (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f')) {
+            if (!current.empty()) {
+                tokens.push_back(std::move(current));
+                current.clear();
+            }
+            continue;
+        }
+        current += c;
+    }
+    if (!current.empty()) {
+        tokens.push_back(std::move(current));
+    }
+    return tokens;
+}
+
+std::string lowered(std::string text) {
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    return text;
+}
+
+bool isEasingText(const std::string& token) {
+    const std::string t = lowered(token);
+    return t == "ease" || t == "linear" || t == "ease-in" || t == "ease-out" || t == "ease-in-out" || t == "step-start" ||
+           t == "step-end" || t.rfind("cubic-bezier(", 0) == 0 || t.rfind("steps(", 0) == 0 || t.rfind("linear(", 0) == 0;
+}
+
+bool isNumberText(const std::string& token) {
+    if (token.empty()) {
+        return false;
+    }
+    char* end = nullptr;
+    std::strtod(token.c_str(), &end);
+    return end == token.c_str() + token.size();
+}
+
+/// A time as CSSOM writes it, in seconds; anything else as written.
+std::string seconds(const std::string& item) {
+    if (std::optional<double> ms = animation::parseTimeMs(item)) {
+        return number(*ms / 1000.0) + "s";
+    }
+    return item;
+}
+
+/// One entry of an `animation` or `transition` shorthand as animationSpecs and transitionSpecs read it: the first time
+/// is the duration and the second the delay, an easing the timing function, the keywords their longhands', and what no
+/// keyword claims the name (as written) or the property (lowercased). A longhand the entry does not mention is absent.
+std::unordered_map<std::string, std::string> shorthandEntry(bool animation, const std::string& item) {
+    std::unordered_map<std::string, std::string> entry;
+    bool sawDuration = false;
+    for (const std::string& token : itemTokens(item)) {
+        const std::string t = lowered(token);
+        const char* longhand;
+        if (animation::parseTimeMs(t)) {
+            longhand = sawDuration ? "delay" : "duration";
+            sawDuration = true;
+        } else if (isEasingText(t)) {
+            longhand = "timing-function";
+        } else if (!animation) {
+            longhand = "property";
+        } else if (t == "infinite" || isNumberText(t)) {
+            longhand = "iteration-count";
+        } else if (t == "normal" || t == "reverse" || t == "alternate" || t == "alternate-reverse") {
+            longhand = "direction";
+        } else if (t == "forwards" || t == "backwards" || t == "both") {
+            longhand = "fill-mode";
+        } else if (t == "paused" || t == "running") {
+            longhand = "play-state";
+        } else {
+            longhand = "name";
+        }
+        entry[std::string(animation ? "animation-" : "transition-") + longhand] = std::string_view(longhand) == "name" ? token : t;
+    }
+    return entry;
+}
+
+/// A grid item's placement on one axis as its start and end lines (`auto`, a line number, or `span N`).
+std::pair<std::string, std::string> gridLines(const litehtml::grid_placement& placement) {
+    const std::string span = "span " + std::to_string(placement.span);
+    if (placement.start == 0 && placement.end == 0) {
+        return {placement.span > 0 ? span : "auto", "auto"};
+    }
+    const std::string start = placement.start != 0 ? std::to_string(placement.start) : std::string("auto");
+    const std::string end = placement.end != 0 ? std::to_string(placement.end) : placement.span > 0 ? span : std::string("auto");
+    return {start, end};
+}
+
+/// A list of grid lines as `grid-row`, `grid-column` or `grid-area` write them: trailing autos dropped, at least one.
+std::string gridLineList(std::vector<std::string> lines) {
+    while (lines.size() > 1 && lines.back() == "auto") {
+        lines.pop_back();
+    }
+    std::string out;
+    for (const std::string& line : lines) {
+        out += (out.empty() ? "" : " / ") + line;
+    }
+    return out;
 }
 
 /// The initial value (computed form) of a profile 1 property `value` has no exact answer for, or nullptr when `name` is
@@ -527,6 +767,7 @@ std::string declaredOrInitial(const Source& s, std::string_view name) {
     }
     const bool inherited = inheritedProperty(name);
     for (const litehtml::element* el = s.element; el; el = el->parent().get()) {
+        spend(s, work::kNodeVisit);
         const auto* tag = dynamic_cast<const litehtml::html_tag*>(el);
         std::string declared = tag ? tag->raw_declaration(std::string(name)) : std::string();
         std::string keyword = declared;
@@ -586,9 +827,43 @@ std::string ownDeclaration(const Source& s, const char* name) {
     return tag ? tag->raw_declaration(name) : std::string();
 }
 
+/// An `animation-*` or `transition-*` longhand as the runtime runs it (animationSpecs, transitionSpecs; final review
+/// I2): the element's own declaration, else its shorthand's entries (the longhand's initial value where an entry names
+/// none), else the initial value. Times in seconds, as CSSOM writes them; at most kMaxCSSListEntries items.
+std::string listLonghand(const Source& s, std::string_view name) {
+    const bool animation = name.rfind("animation-", 0) == 0;
+    const bool time = name.size() > 9 && (name.substr(name.size() - 6) == "-delay" || name.substr(name.size() - 9) == "-duration");
+    std::vector<std::string> items;
+    if (!ownDeclaration(s, std::string(name).c_str()).empty()) {
+        items = commaItems(s, declaredOrInitial(s, name));
+    } else {
+        const std::string shorthand = ownDeclaration(s, animation ? "animation" : "transition");
+        const std::string keyword = lowered(trimmedText(shorthand));
+        if (shorthand.empty() || keyword == "initial" || keyword == "inherit" || keyword == "unset" || keyword == "revert" ||
+            keyword == "revert-layer") {
+            return initialValue(name);
+        }
+        for (const std::string& item : commaItems(s, shorthand)) {
+            const auto entry = shorthandEntry(animation, item);
+            const auto it = entry.find(std::string(name));
+            items.push_back(it != entry.end() ? it->second : std::string(initialValue(name)));
+        }
+    }
+    std::string out;
+    for (size_t i = 0; i < items.size(); i++) {
+        out += (i > 0 ? ", " : "") + (time ? seconds(items[i]) : items[i]);
+    }
+    return out;
+}
+
+/// Past this an `animation` or `transition` join answers "" (final review C1): 64 entries of every longhand at honest
+/// lengths stay far below it, while a long item cycled through 64 entries would not.
+constexpr size_t kMaxJoinedBytes = 64 * 1024;
+
 /// CSSOM's resolved top/right/bottom/left: a static element's computed value; a relative one's used px (a percentage of
-/// its containing block, the opposite's negation for auto, else 0); an absolute or fixed one's used px from the layout,
-/// against its containing block's padding box.
+/// its containing block, the opposite's negation for auto, else 0); an absolute or fixed one's used px: a declared length
+/// itself, a percentage of its containing block's padding box, auto from the layout as the distance from its margin edge
+/// to that padding box's edge.
 std::string offset(const Source& s, char side) {
     const litehtml::css_offsets& offsets = s.css.get_offsets();
     const auto declared = [&](char which) -> const litehtml::css_length& {
@@ -615,12 +890,14 @@ std::string offset(const Source& s, char side) {
         const litehtml::css_length& opposite = declared(side == 't' ? 'b' : side == 'b' ? 't' : side == 'l' ? 'r' : 'l');
         return opposite.is_predefined() ? "0px" : px(-resolve(opposite));
     }
-    if (!s.box) {
-        return computedLength(declared(side));
+    const litehtml::css_length& own = declared(side);
+    if (!s.box || (!own.is_predefined() && own.units() != litehtml::css_units_percentage)) {
+        return computedLength(own);
     }
     // The containing block: the nearest positioned ancestor (any, for fixed: the root's box stands for the viewport).
     litehtml::element* block = nullptr;
     for (auto el = s.element->parent(); el; el = el->parent()) {
+        spend(s, work::kNodeVisit);
         if (el->get_render_item() && (position == litehtml::element_position_fixed ? !el->parent()
                                                                                        : el->css().get_position() != litehtml::element_position_static)) {
             block = el.get();
@@ -631,24 +908,22 @@ std::string offset(const Source& s, char side) {
         }
     }
     if (!block || !block->get_render_item()) {
-        return computedLength(declared(side));
+        return computedLength(own);
     }
-    const auto box = block->get_render_item();
-    const litehtml::position cb = box->get_placement();
-    const double cbLeft = toDouble(cb.x) + toDouble(box->border_left());
-    const double cbTop = toDouble(cb.y) + toDouble(box->border_top());
-    const double cbRight = toDouble(cb.x) + toDouble(cb.width) - toDouble(box->border_right());
-    const double cbBottom = toDouble(cb.y) + toDouble(cb.height) - toDouble(box->border_bottom());
-    const litehtml::position me = s.box->get_placement();
+    const Rect cb = paddingBox(*block->get_render_item());
+    if (!own.is_predefined()) {
+        return px((vertical ? cb.height : cb.width) * own.val() / 100.0);
+    }
+    const Rect me = borderBox(*s.box);
     switch (side) {
     case 'l':
-        return px(toDouble(me.x) - toDouble(s.box->margin_left()) - cbLeft);
+        return px(me.x - toDouble(s.box->margin_left()) - cb.x);
     case 't':
-        return px(toDouble(me.y) - toDouble(s.box->margin_top()) - cbTop);
+        return px(me.y - toDouble(s.box->margin_top()) - cb.y);
     case 'r':
-        return px(cbRight - (toDouble(me.x) + toDouble(me.width) + toDouble(s.box->margin_right())));
+        return px(cb.x + cb.width - (me.x + me.width + toDouble(s.box->margin_right())));
     default:
-        return px(cbBottom - (toDouble(me.y) + toDouble(me.height) + toDouble(s.box->margin_bottom())));
+        return px(cb.y + cb.height - (me.y + me.height + toDouble(s.box->margin_bottom())));
     }
 }
 
@@ -656,9 +931,9 @@ std::string offset(const Source& s, char side) {
 std::string transformOrigin(const Source& s) {
     double width = 0, height = 0;
     if (s.box) {
-        const litehtml::position placement = s.box->get_placement();
-        width = toDouble(placement.width);
-        height = toDouble(placement.height);
+        const Rect box = borderBox(*s.box);
+        width = box.width;
+        height = box.height;
     }
     const auto resolve = [](const litehtml::css_length& length, double size) {
         return length.units() == litehtml::css_units_percentage ? size * length.val() / 100.0 : double(length.val());
@@ -782,6 +1057,18 @@ std::string value(const Source& s, std::string_view name) {
     if (name == "stroke-width") {
         return strokeWidth(s);
     }
+    if (name == "stroke-dasharray" || name == "stroke-dashoffset") {
+        return strokeDash(s, name);
+    }
+    if (name == "grid-template-columns" || name == "grid-template-rows" || name == "grid-auto-rows") {
+        // litehtml keeps the declaration's tokens (style.cpp) and lays a grid out from them: as written (final review I3).
+        const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
+        const litehtml::css_token_vector* tokens = tag ? tag->get_token_property(litehtml::_id(std::string(name))) : nullptr;
+        if (tokens && !tokens->empty()) {
+            return litehtml::get_repr(*tokens, 0, -1, true);
+        }
+        return name == "grid-auto-rows" ? "auto" : "none";
+    }
     if (name == "touch-action") {
         // Not inherited: the element's own declaration (twidget edit 30.1), else auto.
         const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
@@ -853,11 +1140,12 @@ std::string value(const Source& s, std::string_view name) {
         return color(css.get_outline().color, css);
     }
     if (name == "transform") {
+        // Percentages of the border box, as litehtml applies them (final review I1).
         double width = 0, height = 0;
         if (s.box) {
-            const litehtml::position placement = s.box->get_placement();
-            width = toDouble(placement.width);
-            height = toDouble(placement.height);
+            const Rect box = borderBox(*s.box);
+            width = box.width;
+            height = box.height;
         }
         return transform(css, width, height);
     }
@@ -941,19 +1229,22 @@ std::string value(const Source& s, std::string_view name) {
     if (name == "justify-items") {
         return alignment(css.get_justify_items());
     }
-    // litehtml's value cannot tell an undeclared one (CSS's normal) from its default: the declaration first (edit 51).
+    // A box container's value is what lays it out (a later place-content included, final review I2). litehtml's
+    // default (flex-start, stretch) also stands for CSS's undeclared normal, so there the declaration (edit 51) tells
+    // which: the default's keyword only when the element wrote it.
     if (name == "justify-content" || name == "align-content") {
-        const bool justify = name == "justify-content";
-        const std::string declared = ownDeclaration(s, justify ? "justify-content" : "align-content");
-        if (!declared.empty() || !isBoxContainer(css)) {
+        if (!isBoxContainer(css)) {
             return declaredOrInitial(s, name);
         }
-        if (justify) {
-            const int value = int(css.get_flex_justify_content());
-            return value == litehtml::flex_justify_content_flex_start ? "normal" : keyword(litehtml::flex_justify_content_strings, value);
+        const bool justify = name == "justify-content";
+        const int index = justify ? int(css.get_flex_justify_content()) : int(css.get_flex_align_content());
+        const std::string value = justify ? keyword(litehtml::flex_justify_content_strings, index)
+                                          : keyword(litehtml::flex_align_content_strings, index);
+        const bool atDefault = justify ? index == litehtml::flex_justify_content_flex_start : index == litehtml::flex_align_content_stretch;
+        if (!atDefault) {
+            return value;
         }
-        const int value = int(css.get_flex_align_content());
-        return value == litehtml::flex_align_content_stretch ? "normal" : keyword(litehtml::flex_align_content_strings, value);
+        return lowered(trimmedText(ownDeclaration(s, justify ? "justify-content" : "align-content"))) == value ? value : "normal";
     }
     if (name == "row-gap" || name == "column-gap") {
         return lengthOrKeyword(name == "row-gap" ? css.get_row_gap() : css.get_column_gap(), "normal");
@@ -1011,10 +1302,7 @@ std::string value(const Source& s, std::string_view name) {
     }
     if (name == "background-origin") {
         const litehtml::background& bg = css.get_bg();
-        return layers(bg, [&](size_t i) -> std::string {
-            const int* box = layerAt(bg.m_origin, i);
-            return box ? keyword(litehtml::background_box_strings, *box) : std::string("padding-box");
-        });
+        return layers(bg, [&](size_t i) { return layerOrigin(bg, i); });
     }
     if (name == "-webkit-backdrop-filter") {
         return filterList(css.get_backdrop_filter());
@@ -1034,6 +1322,136 @@ std::string value(const Source& s, std::string_view name) {
         if (corner == "bottom-left") {
             return radius(r.bottom_left_x, r.bottom_left_y);
         }
+    }
+    // Computed-style plan, Task 3: the positional shorthands from their longhands' computed values.
+    if (name == "flex") {
+        return value(s, "flex-grow") + " " + value(s, "flex-shrink") + " " + value(s, "flex-basis");
+    }
+    if (name == "flex-flow") {
+        return value(s, "flex-direction") + " " + value(s, "flex-wrap");
+    }
+    if (name == "gap") {
+        return pairOf(value(s, "row-gap"), value(s, "column-gap"));
+    }
+    if (name == "inset") {
+        return fourSides(value(s, "top"), value(s, "right"), value(s, "bottom"), value(s, "left"));
+    }
+    if (name == "place-content") {
+        return pairOf(value(s, "align-content"), value(s, "justify-content"));
+    }
+    if (name == "place-items") {
+        return pairOf(value(s, "align-items"), value(s, "justify-items"));
+    }
+    if (name == "place-self") {
+        // justify-self is not in profile 1 by itself; litehtml computes it for grid items, auto elsewhere.
+        return pairOf(value(s, "align-self"), alignment(css.get_justify_self()));
+    }
+    if (name == "border-width" || name == "border-style" || name == "border-color") {
+        const std::string part(name.substr(6));
+        return fourSides(value(s, "border-top" + part), value(s, "border-right" + part), value(s, "border-bottom" + part),
+                         value(s, "border-left" + part));
+    }
+    if (name == "border-top" || name == "border-right" || name == "border-bottom" || name == "border-left") {
+        const std::string side(name);
+        return value(s, side + "-width") + " " + value(s, side + "-style") + " " + value(s, side + "-color");
+    }
+    if (name == "border") {
+        // One value for four sides, so "" when they differ (CSSOM).
+        const std::string top = value(s, "border-top");
+        for (const char* side : {"border-right", "border-bottom", "border-left"}) {
+            if (value(s, side) != top) {
+                return std::string();
+            }
+        }
+        return top;
+    }
+    if (name == "border-radius") {
+        const litehtml::css_border_radius& r = css.get_borders().radius;
+        const std::string horizontal = fourSides(lengthValue(r.top_left_x), lengthValue(r.top_right_x),
+                                                 lengthValue(r.bottom_right_x), lengthValue(r.bottom_left_x));
+        const std::string vertical = fourSides(lengthValue(r.top_left_y), lengthValue(r.top_right_y),
+                                               lengthValue(r.bottom_right_y), lengthValue(r.bottom_left_y));
+        return horizontal == vertical ? horizontal : horizontal + " / " + vertical;
+    }
+    if (name == "outline") {
+        // Chrome's order.
+        return value(s, "outline-color") + " " + value(s, "outline-style") + " " + value(s, "outline-width");
+    }
+    if (name == "list-style") {
+        const std::string& image = css.get_list_style_image();
+        return value(s, "list-style-position") + " " + (image.empty() ? std::string("none") : "url(\"" + image + "\")") +
+               " " + value(s, "list-style-type");
+    }
+    // The complex shorthands, canonical rather than claimed Chrome-exact.
+    if (name == "background") {
+        return backgroundShorthand(css.get_bg(), value(s, "background-color"));
+    }
+    if (name == "font") {
+        // Style, weight, size / line height and family, without the parts at their initial values.
+        std::string out;
+        if (const std::string style = value(s, "font-style"); style != "normal") {
+            out += style + " ";
+        }
+        if (const std::string weight = value(s, "font-weight"); weight != "400") {
+            out += weight + " ";
+        }
+        out += value(s, "font-size");
+        if (const std::string lineHeight = value(s, "line-height"); lineHeight != "normal") {
+            out += " / " + lineHeight;
+        }
+        return out + " " + value(s, "font-family");
+    }
+    if (name == "grid-row" || name == "grid-column") {
+        const auto lines = gridLines(name == "grid-row" ? css.get_grid_row() : css.get_grid_column());
+        return gridLineList({lines.first, lines.second});
+    }
+    if (name == "grid-area") {
+        const auto row = gridLines(css.get_grid_row());
+        const auto column = gridLines(css.get_grid_column());
+        return gridLineList({row.first, column.first, row.second, column.second});
+    }
+    if (name.rfind("animation-", 0) == 0 || name.rfind("transition-", 0) == 0) {
+        if (initialValue(name)) {
+            return listLonghand(s, name);
+        }
+    }
+    if (name == "animation" || name == "transition") {
+        // Its longhands' lists joined entry by entry, each cycled to the first's length (the name's, the property's), as
+        // CSS repeats a shorter list; "" past kMaxJoinedBytes (final review C1).
+        const bool animation = name == "animation";
+        static const char* const animationLonghands[] = {"animation-name", "animation-duration", "animation-timing-function",
+            "animation-delay", "animation-iteration-count", "animation-direction", "animation-fill-mode", "animation-play-state"};
+        static const char* const transitionLonghands[] = {"transition-property", "transition-duration",
+            "transition-timing-function", "transition-delay"};
+        std::vector<std::vector<std::string>> lists;
+        if (animation) {
+            for (const char* longhand : animationLonghands) {
+                lists.push_back(commaItems(s, value(s, longhand)));
+            }
+        } else {
+            for (const char* longhand : transitionLonghands) {
+                lists.push_back(commaItems(s, value(s, longhand)));
+            }
+        }
+        size_t bytes = 0;
+        for (size_t entry = 0; entry < lists.front().size(); entry++) {
+            for (const std::vector<std::string>& list : lists) {
+                bytes += list[entry % list.size()].size() + 2;
+            }
+        }
+        if (bytes > kMaxJoinedBytes) {
+            return std::string();
+        }
+        std::string out;
+        for (size_t entry = 0; entry < lists.front().size(); entry++) {
+            if (entry > 0) {
+                out += ", ";
+            }
+            for (size_t k = 0; k < lists.size(); k++) {
+                out += (k > 0 ? " " : "") + lists[k][entry % lists[k].size()];
+            }
+        }
+        return out;
     }
     return declaredOrInitial(s, name);
 }
@@ -1087,7 +1505,7 @@ PseudoElement pseudoElementNamed(std::string_view name) {
     return PseudoElement::None;
 }
 
-std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo) {
+std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo, uint64_t* work) {
     litehtml::element* styled = &element;
     bool pseudoMissing = false;
     if (pseudo != PseudoElement::None) {
@@ -1119,6 +1537,7 @@ std::string computedValue(litehtml::element& element, std::string_view name, Pse
     source.inlineNonReplaced = (display == litehtml::display_inline || display == litehtml::display_inline_text) && !styled->is_replaced();
     source.pseudo = pseudo;
     source.pseudoMissing = pseudoMissing;
+    source.work = work;
     return value(source, name);
 }
 

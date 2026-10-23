@@ -31,6 +31,20 @@ func widgetConformanceDebugPosts() -> [EngineLocalWidgetPost] {
     }
 }
 
+/// The client's game examples (`MessageWidget/Fixtures` 11–14), to play with several fingers: each a widget with auto
+/// anchors and its file name as caption. Empty without `WidgetGames.bundle`.
+func widgetGamesDebugPosts() -> [EngineLocalWidgetPost] {
+    guard let root = widgetDebugBundleRoot("WidgetGames"), let names = try? FileManager.default.contentsOfDirectory(atPath: root.path) else {
+        return []
+    }
+    return names.filter { $0.hasSuffix(".html") }.sorted().compactMap { name in
+        guard let html = try? String(contentsOf: root.appendingPathComponent(name), encoding: .utf8) else {
+            return nil
+        }
+        return EngineLocalWidgetPost(html: html, width: 0, height: 0, caption: name, photos: [])
+    }
+}
+
 /// widget-sandbox v0.1.0's corpus but the attacks, each file a widget with auto anchors and its path as caption. Empty
 /// without `WidgetCorpus.bundle`.
 func widgetCorpusDebugPosts() -> [EngineLocalWidgetPost] {

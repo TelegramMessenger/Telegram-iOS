@@ -58,6 +58,8 @@ public final class WidgetHarnessListHost {
     /// <titles>` / `selectionMenuDismissed` (a text selection's menu), `copy <text>` (its Copy, `\n` for a newline); and
     /// `back` (the root's stand-in back swipe began).
     public private(set) var events: [String] = []
+    /// When each bubble's press (its context gesture's shrink) was first seen, for the `pressed` event.
+    private var pressedSince: [EngineMessage.Id: CFTimeInterval] = [:]
 
     /// `-harness-menu hold`: the stand-in context menu stays open until `endContextMenu()` (else it ends after 2 s).
     public var holdsMenu = false
@@ -326,6 +328,7 @@ public final class WidgetHarnessListHost {
     /// [+caption]`, the widget area's size and its centre in `view`'s coordinates; then the events.
     public func readoutLines(in view: UIView) -> [String] {
         var bubbles: [(y: CGFloat, line: (Int) -> String)] = []
+        var logs: [(y: CGFloat, line: String)] = []
         self.listView.forEachItemNode { node in
             guard let node = node as? ChatMessageBubbleItemNode, let message = node.item?.message, let path = self.paths[message.id] else {
                 return
@@ -335,26 +338,42 @@ public final class WidgetHarnessListHost {
             }
             var state = "placeholder"
             var area = widgetNode.view.bounds
+            var widgetView: MessageWidgetView?
             for subview in widgetNode.view.subviews {
                 if let pill = subview as? UnsupportedContentPillView, !pill.isHidden {
                     state = "pill"
                     area = pill.frame
                 } else if !subview.isHidden, subview.layer.mask != nil {
                     area = subview.frame
-                    if subview.subviews.contains(where: { $0 is MessageWidgetView }) {
+                    if let widget = subview.subviews.first(where: { $0 is MessageWidgetView }) as? MessageWidgetView {
                         state = "widget"
+                        widgetView = widget
                     }
                 }
             }
             let frame = widgetNode.view.convert(area, to: view)
+            // The harness's own fixtures only: each read waits for the widget's queue.
+            if path.hasPrefix("fixture/"), let widgetView, let log = widgetView.documentElementAttribute("data-log"), !log.isEmpty {
+                logs.append((frame.minY, "log \(path) \(log)"))
+            }
             // Another content node in the bubble is the caption's text.
             let caption = node.contentNodes.count > 1 ? " +caption" : ""
+            // The bubble's context gesture shrinks its content while it waits for a long press (ContextControllerSourceNode).
+            // A Tier 2 query does not return while synthesized fingers play, so how long a press lasted is an event.
+            let isPressed = node.mainContextSourceNode.contentNode.layer.sublayerTransform.m11 < 0.999
+            let pressed = isPressed ? " pressed" : ""
+            if isPressed, self.pressedSince[message.id] == nil {
+                self.pressedSince[message.id] = CACurrentMediaTime()
+            } else if !isPressed, let since = self.pressedSince.removeValue(forKey: message.id) {
+                self.events.append("pressed \(path) " + String(format: "%.1f", CACurrentMediaTime() - since))
+            }
             bubbles.append((frame.minY, { index in
-                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)"
+                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)\(pressed)"
             }))
         }
         bubbles.sort { $0.y < $1.y }
-        return bubbles.enumerated().map { $0.element.line($0.offset) } + self.events
+        logs.sort { $0.y < $1.y }
+        return bubbles.enumerated().map { $0.element.line($0.offset) } + logs.map(\.line) + self.events
     }
 
     /// Each laid-out widget bubble's widget area (the clip view, or the pill) and its content node's bounds, in `view`'s

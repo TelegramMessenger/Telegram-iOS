@@ -73,6 +73,21 @@ class CoreTests: MessageWidgetTestCase {
         XCTAssertTrue(click.diagnostics.contains { $0.kind == "activation-blocked" })
     }
 
+    /// Multitouch (design §5.1): every finger's down answers what its press is to the widget, not only the primary's.
+    func testANonPrimaryDownAnswers() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><button id=b style='display:block;width:200px;height:40px'>b</button></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        var press: MessageWidgetPress = .none
+        _ = self.task(core, .touch) {
+            press = core.touch(action: 0, at: CGPoint(x: 20.0, y: 20.0), pointer: 2, primary: false)
+            core.touch(action: 3, at: CGPoint(x: 20.0, y: 20.0), pointer: 2, primary: false)
+        }
+        XCTAssertTrue(press.takesTaps)
+    }
+
     func testAStoppedWidgetIsFrozenWithItsReason() throws {
         let core = self.makeCore("<!doctype html><p>x</p><script>for (;;) {}</script>")
         defer {
