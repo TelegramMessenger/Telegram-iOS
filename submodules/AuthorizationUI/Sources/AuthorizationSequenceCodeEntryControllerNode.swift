@@ -517,17 +517,15 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
         // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
         // (every other phone) it keeps the full width.
-        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
         let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let maximumWidth: CGFloat = min(430.0, bandWidth)
         let inset: CGFloat = 24.0
         
-        // The bottom buttons (and the divider above Sign in with Apple) span iPhone Duo's side strip; they keep clear
-        // only of a corner block at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        // iPhone Duo: the bottom buttons (and the divider above Sign in with Apple) keep to the content's axis
+        // (authorizationBottomBand): unfolded they span the side strip, clear only of a corner block at the bottom;
+        // folded they keep to the content band.
+        let (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
         let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         var insets = layout.insets(options: [])

@@ -455,12 +455,20 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 buttonSubtitle = environment.strings.Login_Fee_GetPremiumNone
             }
             
-            // iPhone Duo: beside a side strip the button is sized from the band it is centered in; with equal insets
-            // it keeps its full width. The bottom button spans the side strip; it keeps clear only of a corner block
-            // at the bottom.
-            let buttonSideInsets = environment.bottomEdgeSideInsets()
-            let buttonBandInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? buttonSideInsets.left + buttonSideInsets.right : 0.0
-            let buttonBandCenterX: CGFloat = buttonSideInsets.left + (availableSize.width - buttonSideInsets.left - buttonSideInsets.right) / 2.0
+            // iPhone Duo: beside a side strip the button is sized from the band it is centered in, on the content's axis
+            // (authorizationBottomBand): unfolded it spans the side strip, clear only of a corner block at the bottom;
+            // folded it keeps to the content band. With equal insets it keeps its full width.
+            let buttonBandInset: CGFloat
+            let buttonBandCenterX: CGFloat
+            if environment.safeInsets.left != environment.safeInsets.right {
+                let (buttonBandMinX, buttonBandWidth) = authorizationBottomBand(size: availableSize, safeInsets: environment.safeInsets, bottomEdgeSideInsets: environment.bottomEdgeSideInsets(), deviceMetrics: environment.deviceMetrics)
+                buttonBandInset = availableSize.width - buttonBandWidth
+                buttonBandCenterX = buttonBandMinX + buttonBandWidth / 2.0
+            } else {
+                let buttonSideInsets = environment.bottomEdgeSideInsets()
+                buttonBandInset = 0.0
+                buttonBandCenterX = buttonSideInsets.left + (availableSize.width - buttonSideInsets.left - buttonSideInsets.right) / 2.0
+            }
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let buttonSize = self.button.update(
                 transition: transition,

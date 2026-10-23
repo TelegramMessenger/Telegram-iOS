@@ -1910,10 +1910,17 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
             bandWidth = insetsDiffer ? contentAreaSize.width - layout.safeInsets.left - layout.safeInsets.right : contentAreaSize.width
         }
         // The button and the actions in its rows span iPhone Duo's side strip; they keep clear only of a corner block
-        // at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
+        // at the bottom. In the login flow they keep to the content's axis (authorizationBottomBand): unfolded as
+        // above, folded in the content band.
+        let bottomBandMinX: CGFloat
+        let bottomBandWidth: CGFloat
+        if self.isAuthorizationFlow {
+            (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
+        } else {
+            let bottomSideInsets = layout.bottomEdgeSideInsets()
+            bottomBandMinX = insetsDiffer ? bottomSideInsets.left : 0.0
+            bottomBandWidth = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
+        }
         
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0

@@ -320,10 +320,18 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         let minimalBottomInset: CGFloat = 60.0
         let bottomInset = layout.intrinsicInsets.bottom + minimalBottomInset
         
-        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom. In the
+        // login flow it keeps to the content's axis (authorizationBottomBand): unfolded as above, folded in the content
+        // band.
+        let bottomBandMinX: CGFloat
+        let bottomBandWidth: CGFloat
+        if self.isAuthorizationFlow {
+            (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
+        } else {
+            let bottomSideInsets = layout.bottomEdgeSideInsets()
+            bottomBandMinX = insetsDiffer ? bottomSideInsets.left : 0.0
+            bottomBandWidth = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        }
         let buttonWidth = bottomBandWidth - buttonSideInset * 2.0
         
         let buttonFrame = CGRect(origin: CGPoint(x: bottomBandMinX + floor((bottomBandWidth - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))

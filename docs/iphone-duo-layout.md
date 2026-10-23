@@ -84,7 +84,12 @@ These are the user's decisions; a screen that follows them is correct, one that 
    - a **panel that grows upward** (a text input above the keyboard): it takes the band of its actual rows, as the
      chat's input panel does;
    - anything beside the **side tab bar**, which sits in the strip at the bottom of the root screens;
-   - a **caption that can be dragged up** (gallery footers: `GalleryFooterContentNode.screenSideInsets`).
+   - a **caption that can be dragged up** (gallery footers: `GalleryFooterContentNode.screenSideInsets`);
+   - the **login flow's bottom button** on the folded screen (with the divider and Sign in with Apple beside it, and the
+     actions in the password-recovery button rows): it keeps to the content band so the title, the fields and the
+     button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
+     of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
+     rule 2's exception.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by 134,
    the title stays centred. Editors, camera, stories and full-screen live stream keep their top row on the island's
    clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island; sheets that rise with
@@ -148,4 +153,4 @@ other device stays byte-identical; the band helpers above are built that way.
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content band per posture).
+  flow's content and bottom-button bands per posture).

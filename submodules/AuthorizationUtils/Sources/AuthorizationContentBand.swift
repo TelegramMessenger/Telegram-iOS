@@ -30,3 +30,24 @@ public func authorizationContentBand(size: CGSize, safeInsets: UIEdgeInsets, dev
 public func authorizationContentBand(layout: ContainerViewLayout) -> (minX: CGFloat, width: CGFloat) {
     return authorizationContentBand(size: layout.size, safeInsets: layout.safeInsets, deviceMetrics: layout.deviceMetrics)
 }
+
+/// The horizontal band (`minX`, `width`) the login flow centres its bottom button in (and what sits beside it: the
+/// divider above Sign in with Apple, the actions in the button's rows).
+///
+/// With equal side insets it is the full width. On iPhone Duo's unfolded screen the button spans the side strip,
+/// keeping clear only of a corner block at the bottom (`bottomEdgeSideInsets`), on the axis of the content centred by
+/// `authorizationContentBand`. Elsewhere (the folded screen) it keeps to the content band, so the title, the fields and
+/// the button share one axis; only the system keyboard spans the strip there.
+public func authorizationBottomBand(size: CGSize, safeInsets: UIEdgeInsets, bottomEdgeSideInsets: (left: CGFloat, right: CGFloat), deviceMetrics: DeviceMetrics) -> (minX: CGFloat, width: CGFloat) {
+    if safeInsets.left == safeInsets.right {
+        return (0.0, size.width)
+    }
+    if deviceMetrics.isIPhoneDuoInnerScreen(size: size) {
+        return (bottomEdgeSideInsets.left, size.width - bottomEdgeSideInsets.left - bottomEdgeSideInsets.right)
+    }
+    return authorizationContentBand(size: size, safeInsets: safeInsets, deviceMetrics: deviceMetrics)
+}
+
+public func authorizationBottomBand(layout: ContainerViewLayout) -> (minX: CGFloat, width: CGFloat) {
+    return authorizationBottomBand(size: layout.size, safeInsets: layout.safeInsets, bottomEdgeSideInsets: layout.bottomEdgeSideInsets(), deviceMetrics: layout.deviceMetrics)
+}
