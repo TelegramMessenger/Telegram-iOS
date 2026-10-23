@@ -546,7 +546,7 @@ public final class TabBarComponent: Component {
             switch recognizer.state {
             case .began:
                 if let search = component.search, search.isActive {
-                } else if let itemId = self.item(at: recognizer.location(in: self)), let itemView = self.itemViews[itemId]?.view {
+                } else if let location = recognizer.trackedLocation(in: self), let itemId = self.item(at: location), let itemView = self.itemViews[itemId]?.view {
                     if let pendingDoubleTapItemValue = self.pendingDoubleTapItem, pendingDoubleTapItemValue.id != itemId {
                         self.pendingDoubleTapItem = nil
                         pendingDoubleTapItemValue.timer.invalidate()
@@ -570,7 +570,7 @@ public final class TabBarComponent: Component {
                 } else if var selectionGestureState = self.selectionGestureState {
                     let translation = recognizer.translation(in: self)
                     selectionGestureState.current = selectionGestureState.start + (component.axis == .horizontal ? translation.x : translation.y)
-                    if let itemId = self.item(at: recognizer.location(in: self)) {
+                    if let location = recognizer.trackedLocation(in: self), let itemId = self.item(at: location) {
                         selectionGestureState.itemId = itemId
                     }
                     self.selectionGestureState = selectionGestureState
