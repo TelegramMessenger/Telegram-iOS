@@ -1037,6 +1037,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         self.headerView.applyScroll(listOffset: offset, transition: transition)
         self.updatePillPosition(transition: transition)
+        // The floating avatars follow the header's edge, which the search block's travel has just moved.
+        let floatingTop = self.headerView.currentBottom
+        self.forYouList.setFloatingTopInset(floatingTop)
+        self.addedList.setFloatingTopInset(floatingTop)
     }
 
     /// A half-hidden search snaps open or shut when scrolling ends (as `ContactsControllerNode.contentScrollingEnded`).

@@ -822,6 +822,11 @@ public final class CoreVirtualListView: UIView {
     public var onUserScrollDelta: ((_ delta: CGFloat, _ timestamp: CFTimeInterval) -> Void)?
     // Fired after each user-scroll rebalance so a host can recompute its visible index range.
     public var onVisibleWindowChanged: (() -> Void)?
+    /// The display area floating attachments are clamped into, when it is not the content insets: a header
+    /// whose lower part scrolls away with the content keeps the content insets at rest (`insets`), but wants
+    /// its floating attachments under what is still on screen. nil means the content insets. Set through
+    /// `updateAttachmentDisplayInsets(_:)`, which re-solves the attachments.
+    var attachmentDisplayInsets: UIEdgeInsets?
     // Fired when the user starts an interactive drag (the scroll engine's pan reaches `.began`); not
     // fired for programmatic scrolls or momentum/bounce. Analogous to ListViewImpl's
     // `beganInteractiveDragging`.

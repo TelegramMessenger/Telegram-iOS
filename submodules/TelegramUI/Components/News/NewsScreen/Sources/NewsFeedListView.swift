@@ -248,6 +248,16 @@ final class NewsFeedListView: UIView {
         return false
     }
 
+    /// Where the expanded rows' floating avatars stick: the header's current bottom edge, which rises as the
+    /// search block scrolls under the top row (`NewsHeaderView.currentBottom`), while the rows' own top inset
+    /// stays the resting header's. Without it the avatars would park at the resting inset, under an empty band
+    /// where the search block was.
+    func setFloatingTopInset(_ top: CGFloat) {
+        var insets = self.coreListInsets
+        insets.top = top
+        self.coreList.updateAttachmentDisplayInsets(insets)
+    }
+
     /// Whether `point` (in this view) is on an expanded post's strip that scrolls sideways (its gallery or
     /// reactions), for the pager's rule: the strip scrolls, the page does not swipe.
     func hasHorizontalScrollingRow(at point: CGPoint) -> Bool {
