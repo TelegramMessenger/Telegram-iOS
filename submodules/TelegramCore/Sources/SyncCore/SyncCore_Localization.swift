@@ -61,21 +61,38 @@ public final class Localization: Codable, Equatable {
 
         let count = (try? container.decode(Int32.self, forKey: "c")) ?? 0
         var entries: [LocalizationEntry] = []
-        if let rawData = try? container.decodeIfPresent(Data.self, forKey: "d") {
+        if count >= 0, let rawData = try? container.decodeIfPresent(Data.self, forKey: "d") {
             let data = ReadBuffer(data: rawData)
 
-            for _ in 0 ..< count {
+            // This buffer is persisted (and can arrive via a server-pushed
+            // localization update), so a truncated or corrupt record must
+            // not be trusted blindly: ReadBuffer.read() does a raw memcpy
+            // with no bounds check, and `0 ..< count` traps on a negative
+            // count. A bad record previously crashed on decode and then
+            // crash-looped on every relaunch since the record persists.
+            // Bail out of the whole parse (keeping entries decoded so far)
+            // as soon as a length-prefixed read would go out of bounds;
+            // invalid UTF-8 in an otherwise in-bounds string is unrelated
+            // to buffer safety and only drops that one entry, as before.
+            func readLengthPrefixedData() -> Data? {
+                guard data.offset + 4 <= data.length else { return nil }
+                var length: Int32 = 0
+                data.read(&length, offset: 0, length: 4)
+                guard length >= 0, data.offset + Int(length) <= data.length else { return nil }
+                let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
+                data.skip(Int(length))
+                return valueData
+            }
+
+            outer: for _ in 0 ..< count {
+                guard data.offset + 1 <= data.length else { break }
                 var flagsValue: Int8 = 0
                 data.read(&flagsValue, offset: 0, length: 1)
                 let flags = LocalizationEntryFlags(rawValue: flagsValue)
-                
-                var length: Int32 = 0
-                data.read(&length, offset: 0, length: 4)
-                
-                let keyData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
+
+                guard let keyData = readLengthPrefixedData() else { break }
                 let key = String(data: keyData, encoding: .utf8)
-                data.skip(Int(length))
-                
+
                 if flags.contains(.pluralized) {
                     var zero: String?
                     var one: String?
@@ -83,69 +100,42 @@ public final class Localization: Codable, Equatable {
                     var few: String?
                     var many: String?
                     var other: String?
-                    
+
                     if flags.contains(.hasZero) {
-                        length = 0
-                        data.read(&length, offset: 0, length: 4)
-                        let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                        let value = String(data: valueData, encoding: .utf8)
-                        data.skip(Int(length))
-                        zero = value
+                        guard let valueData = readLengthPrefixedData() else { break outer }
+                        zero = String(data: valueData, encoding: .utf8)
                     }
-                    
+
                     if flags.contains(.hasOne) {
-                        length = 0
-                        data.read(&length, offset: 0, length: 4)
-                        let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                        let value = String(data: valueData, encoding: .utf8)
-                        data.skip(Int(length))
-                        one = value
+                        guard let valueData = readLengthPrefixedData() else { break outer }
+                        one = String(data: valueData, encoding: .utf8)
                     }
-                    
+
                     if flags.contains(.hasTwo) {
-                        length = 0
-                        data.read(&length, offset: 0, length: 4)
-                        let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                        let value = String(data: valueData, encoding: .utf8)
-                        data.skip(Int(length))
-                        two = value
+                        guard let valueData = readLengthPrefixedData() else { break outer }
+                        two = String(data: valueData, encoding: .utf8)
                     }
-                    
+
                     if flags.contains(.hasFew) {
-                        length = 0
-                        data.read(&length, offset: 0, length: 4)
-                        let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                        let value = String(data: valueData, encoding: .utf8)
-                        data.skip(Int(length))
-                        few = value
+                        guard let valueData = readLengthPrefixedData() else { break outer }
+                        few = String(data: valueData, encoding: .utf8)
                     }
-                    
+
                     if flags.contains(.hasMany) {
-                        length = 0
-                        data.read(&length, offset: 0, length: 4)
-                        let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                        let value = String(data: valueData, encoding: .utf8)
-                        data.skip(Int(length))
-                        many = value
+                        guard let valueData = readLengthPrefixedData() else { break outer }
+                        many = String(data: valueData, encoding: .utf8)
                     }
-                    
-                    length = 0
-                    data.read(&length, offset: 0, length: 4)
-                    let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
-                    let value = String(data: valueData, encoding: .utf8)
-                    data.skip(Int(length))
-                    other = value
-                    
+
+                    guard let otherData = readLengthPrefixedData() else { break outer }
+                    other = String(data: otherData, encoding: .utf8)
+
                     if let key = key, let other = other {
                         entries.append(.pluralizedString(key: key, zero: zero, one: one, two: two, few: few, many: many, other: other))
                     }
                 } else {
-                    length = 0
-                    data.read(&length, offset: 0, length: 4)
-                    let valueData = Data(bytes: data.memory.advanced(by: data.offset), count: Int(length))
+                    guard let valueData = readLengthPrefixedData() else { break }
                     let value = String(data: valueData, encoding: .utf8)
-                    data.skip(Int(length))
-                    
+
                     if let key = key, let value = value {
                         entries.append(.string(key: key, value: value))
                     }
