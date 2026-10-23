@@ -5,6 +5,7 @@ import AccountContext
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import CoreList
 import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
@@ -123,7 +124,13 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
             fading = postFading
         }
     }
-    return CoreListComponentItem(identity: identity, component: AnyComponent(NewsFeedPostComponent(
+    // An expanded row's avatar floats over a run of adjacent posts from the same channel, as a group chat's
+    // gutter avatar does: the list draws it as a run attachment, keyed by the channel.
+    var attachedItems: [AnyHashable: CoreListAttachedItem] = [:]
+    if environment.displayMode == .expanded {
+        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading)
+    }
+    return CoreListComponentItem(identity: identity, attachedItems: attachedItems, component: AnyComponent(NewsFeedPostComponent(
         context: environment.context,
         theme: presentationData.theme,
         strings: presentationData.strings,

@@ -220,7 +220,7 @@ private final class NewsGalleryItemView: UIView {
 /// A horizontal strip (the gallery, the reactions) that starts at the content column and passes under the avatar's
 /// column when scrolled. Its scrolling is its own: the list's vertical pan and the screen's page swipe yield to it.
 private final class NewsHorizontalStripView: UIScrollView {
-    var scrolled: ((CGFloat) -> Void)?
+    var scrolled: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -243,7 +243,7 @@ private final class NewsHorizontalStripView: UIScrollView {
     }
 
     @objc private func panned() {
-        self.scrolled?(self.scrolledDistance)
+        self.scrolled?()
     }
 
     override func touchesShouldCancel(in view: UIView) -> Bool {
@@ -272,10 +272,13 @@ final class NewsExpandedPostContentView: UIView {
     private let galleryView = NewsHorizontalStripView()
     private var galleryItemViews: [NewsGalleryItemView] = []
 
-    /// The avatar's horizontal offset for the gallery's scrolling (`newsExpandedAvatarOffset`).
-    var avatarOffsetChanged: ((CGFloat) -> Void)?
-    private var avatarFrame = CGRect()
-    private var galleryFrame: CGRect?
+    /// The gallery's frame in this view, when the post has one, and how far its content has moved from rest: the
+    /// floating avatar keeps out of a gallery scrolled under its column (`newsExpandedAvatarOffset`).
+    private(set) var galleryFrame: CGRect?
+    var galleryScrolledDistance: CGFloat {
+        return self.galleryView.scrolledDistance
+    }
+    var galleryScrolled: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -289,11 +292,8 @@ final class NewsExpandedPostContentView: UIView {
         self.bubbleContainerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         self.addSubview(self.bubbleContainerNode.view)
         self.addSubview(self.galleryView)
-        self.galleryView.scrolled = { [weak self] distance in
-            guard let self, let galleryFrame = self.galleryFrame else {
-                return
-            }
-            self.avatarOffsetChanged?(newsExpandedAvatarOffset(galleryScrolled: distance, galleryFrame: galleryFrame, avatarFrame: self.avatarFrame))
+        self.galleryView.scrolled = { [weak self] in
+            self?.galleryScrolled?()
         }
     }
 
@@ -325,11 +325,10 @@ final class NewsExpandedPostContentView: UIView {
         return strip.contentSize.width + strip.contentInset.left + strip.contentInset.right > strip.bounds.width + 0.5
     }
 
-    func update(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, width: CGFloat, timeSize: CGSize, avatarFrame: CGRect, synchronousLoad: Bool, transition: ComponentTransition) -> Layout {
+    func update(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, width: CGFloat, timeSize: CGSize, synchronousLoad: Bool, transition: ComponentTransition) -> Layout {
         let metrics = NewsExpandedPostMetrics.self
         let theme = component.theme
         let context = component.context
-        self.avatarFrame = avatarFrame
         let contentX = metrics.contentX(leftInset: 0.0)
         let contentWidth = metrics.contentWidth(width: width, leftInset: 0.0, rightInset: 0.0)
         let contentMaxX = contentX + contentWidth

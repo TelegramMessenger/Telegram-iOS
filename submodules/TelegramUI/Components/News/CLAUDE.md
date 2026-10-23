@@ -44,9 +44,17 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
 - **Photos and videos never reach the bubble.** `newsExpandedPostParts` strips them into the horizontal gallery
   (`newsExpandedGalleryLayout`: one photo keeps its aspect, several share the 270 pt height) and gives the bubble a
   copy of the message with the rest of its media; the reactions and comments-thread attributes are stripped as
-  well, and the row draws neither: the feed shows no reactions line and no comments pill, by design. The gallery
-  is a full-width scroll view whose content starts at the column, so scrolled content passes under the avatar's
-  column; where it meets the avatar vertically the avatar goes along with the content (`newsExpandedAvatarOffset`).
+  well, and the row draws neither: the feed shows no reactions line and no comments pill, by design. The
+  gallery is a full-width scroll view whose content starts at the column, so scrolled content passes under the
+  avatar's column.
+- **The avatar floats, as a group chat's gutter avatar does.** An expanded row hides its own avatar and
+  publishes `NewsFloatingAvatarAttachedItem` through `CoreListComponentItem.attachedItems`, keyed by the
+  channel: CoreList's run attachments (`CoreListAttachedItem`, the mechanism behind the chat's date and avatar
+  headers) make one avatar for adjacent posts of one channel, clamp it into the display area while the run is on
+  screen (`.overlay`, `.top`, `isFloating`) and park it at the run's end. The row learns its attachment views
+  through `CoreListComponentAttachmentsReceiver` and hands each a closure returning its gallery's frame and
+  scroll, so an avatar over a gallery scrolled under its column moves aside (`newsExpandedAvatarOffset`, applied
+  on every stick update). Do not draw the avatar in the row again: two avatars, one of them not floating.
 - **Show more.** While a post is collapsed its text is cut to its first ten lines as plain text, measured with a
   `TextNode` at the bubble's font and width (`newsCollapsedText`), and the entities are dropped: formatting and
   links come with Show more (`NewsScreenNode.expandedTextPosts`, per post identity, for the screen's lifetime).

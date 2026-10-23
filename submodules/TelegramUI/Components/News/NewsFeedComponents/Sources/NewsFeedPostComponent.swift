@@ -18,6 +18,8 @@ import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import AsyncDisplayKit
 import ItemListUI
+import CoreList
+import CoreListComponentHost
 import NewsFeedSupport
 
 private enum NewsPostThumbnail {
@@ -184,7 +186,7 @@ public final class NewsFeedPostComponent: Component {
         return true
     }
 
-    public final class View: UIView, UIGestureRecognizerDelegate {
+    public final class View: UIView, UIGestureRecognizerDelegate, CoreListComponentAttachmentsReceiver {
         private let avatar = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let credibilityIcon = ComponentView<Empty>()
@@ -219,9 +221,9 @@ public final class NewsFeedPostComponent: Component {
         private var thumbnailMediaId: EngineMedia.Id?
         /// The expanded post's content, made when the row first expands and kept while it is expanded.
         private var expandedContentView: NewsExpandedPostContentView?
-        /// The avatar's shift for the gallery's scrolling (`newsExpandedAvatarOffset`).
-        private var avatarOffset: CGFloat = 0.0
-        private var avatarRestingFrame = CGRect()
+        /// The floating avatars of the runs this row is in (`NewsFloatingAvatarAttachedItem`), told where the
+        /// row's gallery is so they keep out of it.
+        private var floatingAvatarViews: [NewsFloatingAvatarView] = []
         /// The time as last laid out.
         private var renderedTimeText: String?
         private var timeTimer: SwiftSignalKit.Timer?
@@ -335,6 +337,22 @@ public final class NewsFeedPostComponent: Component {
                 return false
             }
             return expandedContentView.hasHorizontalScrolling(at: self.convert(point, to: expandedContentView))
+        }
+
+        public func attachedItemsUpdated(_ attachments: [UIView & CoreListAttachedItemView]) {
+            for view in self.floatingAvatarViews {
+                view.obstacle = nil
+            }
+            self.floatingAvatarViews = attachments.compactMap { $0 as? NewsFloatingAvatarView }
+            for view in self.floatingAvatarViews {
+                view.obstacle = { [weak self, weak view] in
+                    guard let self, let view, let contentView = self.expandedContentView, contentView.superview != nil, let galleryFrame = contentView.galleryFrame else {
+                        return nil
+                    }
+                    return (contentView.convert(galleryFrame, to: view), contentView.galleryScrolledDistance)
+                }
+                view.obstacleChanged()
+            }
         }
 
         @objc private func tapped() {
@@ -498,11 +516,11 @@ public final class NewsFeedPostComponent: Component {
             if let expandedContentView = self.expandedContentView {
                 // Back to compact: the expanded content fades out as the compact text and thumbnail come back.
                 self.expandedContentView = nil
-                self.avatarOffset = 0.0
                 transition.setAlpha(view: expandedContentView, alpha: 0.0, completion: { [weak expandedContentView] _ in
                     expandedContentView?.removeFromSuperview()
                 })
             }
+            self.avatar.view?.isHidden = false
             for view in [self.text.view, self.thumbnailView, self.videoLabel] {
                 if let view {
                     transition.setAlpha(view: view, alpha: 1.0)
@@ -681,7 +699,6 @@ public final class NewsFeedPostComponent: Component {
             let contentX = metrics.contentX(leftInset: 0.0)
             let contentWidth = metrics.contentWidth(width: width, leftInset: 0.0, rightInset: 0.0)
             let avatarFrame = CGRect(x: metrics.avatarInset, y: metrics.avatarTop, width: metrics.avatarSize, height: metrics.avatarSize)
-            self.avatarRestingFrame = avatarFrame
 
             let contentView: NewsExpandedPostContentView
             if let current = self.expandedContentView {
@@ -691,13 +708,12 @@ public final class NewsFeedPostComponent: Component {
                 contentView.alpha = 0.0
                 self.lensView.insertSubview(contentView, at: 0)
                 self.expandedContentView = contentView
-                contentView.avatarOffsetChanged = { [weak self] offset in
-                    guard let self, self.avatarOffset != offset else {
+                contentView.galleryScrolled = { [weak self] in
+                    guard let self else {
                         return
                     }
-                    self.avatarOffset = offset
-                    if let avatarView = self.avatar.view {
-                        avatarView.frame = self.avatarRestingFrame.offsetBy(dx: offset, dy: 0.0)
+                    for view in self.floatingAvatarViews {
+                        view.obstacleChanged()
                     }
                 }
             }
@@ -714,7 +730,7 @@ public final class NewsFeedPostComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let layout = contentView.update(component: component, content: content, width: width, timeSize: timeSize, avatarFrame: avatarFrame, synchronousLoad: component.loading.isSynchronous, transition: transition)
+            let layout = contentView.update(component: component, content: content, width: width, timeSize: timeSize, synchronousLoad: component.loading.isSynchronous, transition: transition)
             transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.height)))
 
             var credibilitySize = CGSize()
@@ -761,7 +777,10 @@ public final class NewsFeedPostComponent: Component {
                 if avatarView.superview == nil {
                     self.lensView.addSubview(avatarView)
                 }
-                transition.setFrame(view: avatarView, frame: avatarFrame.offsetBy(dx: self.avatarOffset, dy: 0.0))
+                // The list draws an expanded row's avatar, floating over its channel's run (the row's attachment);
+                // the row keeps its own in place, hidden, so a switch back to compact finds it where it was.
+                avatarView.isHidden = true
+                transition.setFrame(view: avatarView, frame: avatarFrame)
             }
             let titleFrame = centred(x: contentX, size: titleSize)
             if let titleView = self.title.view {
