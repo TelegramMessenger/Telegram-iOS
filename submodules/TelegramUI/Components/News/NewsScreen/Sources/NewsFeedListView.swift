@@ -248,6 +248,21 @@ final class NewsFeedListView: UIView {
         return false
     }
 
+    /// Whether `point` (in this view) is on an expanded post's strip that scrolls sideways (its gallery or
+    /// reactions), for the pager's rule: the strip scrolls, the page does not swipe.
+    func hasHorizontalScrollingRow(at point: CGPoint) -> Bool {
+        for view in self.coreList.loadedItemViews {
+            guard let row = self.postRow(view) else {
+                continue
+            }
+            let pointInRow = row.convert(point, from: self)
+            if row.bounds.contains(pointInRow), row.hasHorizontalScrollingContent(at: pointInRow) {
+                return true
+            }
+        }
+        return false
+    }
+
     private func withSynchronousRowLoading(_ f: () -> Void) {
         let previous = self.rowLoading.isSynchronous
         self.rowLoading.isSynchronous = true

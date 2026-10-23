@@ -18,6 +18,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
         "//submodules/ContextUI",
         "//submodules/SearchUI",
         "//submodules/SearchBarNode",

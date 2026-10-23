@@ -2388,18 +2388,36 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatMessagePreviewItem(context: AccountContext, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool, activateGiftMessageInput: (() -> Void)?) -> ListViewItem {
+        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: theme, strings: strings, wallpaper: wallpaper, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: dateTimeFormat, nameOrder: nameOrder, forcedResourceStatus: forcedResourceStatus, tapMessage: tapMessage, clickThroughMessage: clickThroughMessage, backgroundNode: backgroundNode, availableReactions: availableReactions, accountPeer: accountPeer, isCentered: isCentered, isPreview: isPreview, isStandalone: isStandalone, rank: rank, rankRole: rankRole, isGiftMessageComposerPreview: isGiftMessageComposerPreview, activateGiftMessageInput: activateGiftMessageInput, feedActions: nil)
+    }
+
+    public func makeChatMessageFeedItem(context: AccountContext, messages: [EngineMessage], presentationData: PresentationData, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, actions: ChatMessageFeedItemActions) -> ListViewItem {
+        // Not a preview: a preview hides a link preview's action button (Instant View), and the feed shows it.
+        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: { _, _ in
+            actions.clickThrough()
+        }, backgroundNode: nil, availableReactions: availableReactions, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
+    }
+
+    /// The item behind both the preview and the feed bubble; `feedActions` is set for the feed, which draws no
+    /// bubble background or author line and routes its taps to the host.
+    private func makeStandaloneChatMessageItem(context: AccountContext, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool, activateGiftMessageInput: (() -> Void)?, feedActions: ChatMessageFeedItemActions?) -> ListViewItem {
         let messages = messages.map { $0._asMessage() }
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(
             openMessage: { message, _ in
+                if let feedActions {
+                    return feedActions.openMessage(EngineMessage(message))
+                }
                 guard isGiftMessageComposerPreview, let tapMessage else {
                     return false
                 }
                 tapMessage(EngineMessage(message))
                 return true
             },
-            openPeer: { _, _, _, _ in },
+            openPeer: { peer, _, _, _ in
+                feedActions?.openPeer(peer)
+            },
             openPeerMention: { _, _ in },
             openMessageContextMenu: { _, _, _, _, _, _ in },
             openMessageReactionContextMenu: { _, _, _, _ in
@@ -2433,13 +2451,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             requestMessageActionCallback: { _, _, _, _, _ in },
             requestMessageActionUrlAuth: { _, _ in },
             activateSwitchInline: { _, _, _ in },
-            openUrl: { _ in },
+            openUrl: { url in
+                feedActions?.openUrl(url.url)
+            },
             openExternalInstantPage: { _ in
             },
             shareCurrentLocation: { _ in },
             shareAccountContact: { _ in },
             sendBotCommand: { _, _ in },
-            openInstantPage: { _, _ in  },
+            openInstantPage: { message, _ in
+                feedActions?.openInstantPage(EngineMessage(message))
+            },
             openWallpaper: { _ in  },
             openTheme: { _ in  },
             openHashtag: { _, _ in },
@@ -2701,7 +2723,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 accountPeer: accountPeer,
                 forceInlineReactions: true,
                 isStandalone: isStandalone,
-                showTextAsPlaceholder: rank != nil
+                showTextAsPlaceholder: rank != nil,
+                hidesBubbleBackground: feedActions != nil,
+                hidesAuthorHeader: feedActions != nil
             ),
             controllerInteraction: controllerInteraction,
             content: content,

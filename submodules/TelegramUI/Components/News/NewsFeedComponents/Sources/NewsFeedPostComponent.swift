@@ -106,9 +106,12 @@ public final class NewsFeedPostComponent: Component {
     public let appearTime: Double?
     /// The row's swipe actions; nil for rows that do not swipe (Added, search results).
     public let swipe: NewsPostSwipe?
+    /// Compact (the default) or the expanded post; `expanded` carries what the expanded row needs.
+    public let displayMode: NewsFeedDisplayMode
+    public let expanded: NewsFeedPostExpandedContent?
     public let action: () -> Void
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, fresh: NewsFreshSegment? = nil, reduceMotion: Bool = false, fading: Bool = false, appearTime: Double? = nil, swipe: NewsPostSwipe? = nil, action: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peer: EnginePeer, messages: [EngineMessage], timestamp: Int32, loading: NewsFeedRowLoading, fresh: NewsFreshSegment? = nil, reduceMotion: Bool = false, fading: Bool = false, appearTime: Double? = nil, swipe: NewsPostSwipe? = nil, displayMode: NewsFeedDisplayMode = .compact, expanded: NewsFeedPostExpandedContent? = nil, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -123,6 +126,8 @@ public final class NewsFeedPostComponent: Component {
         self.fading = fading
         self.appearTime = appearTime
         self.swipe = swipe
+        self.displayMode = displayMode
+        self.expanded = expanded
         self.action = action
     }
 
@@ -170,10 +175,16 @@ public final class NewsFeedPostComponent: Component {
         if (lhs.swipe == nil) != (rhs.swipe == nil) {
             return false
         }
+        if lhs.displayMode != rhs.displayMode {
+            return false
+        }
+        if !NewsFeedPostExpandedContent.isEqual(lhs.expanded, rhs.expanded) {
+            return false
+        }
         return true
     }
 
-    public final class View: UIView {
+    public final class View: UIView, UIGestureRecognizerDelegate {
         private let avatar = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let credibilityIcon = ComponentView<Empty>()
@@ -206,6 +217,11 @@ public final class NewsFeedPostComponent: Component {
         private var component: NewsFeedPostComponent?
         private weak var state: EmptyComponentState?
         private var thumbnailMediaId: EngineMedia.Id?
+        /// The expanded post's content, made when the row first expands and kept while it is expanded.
+        private var expandedContentView: NewsExpandedPostContentView?
+        /// The avatar's shift for the gallery's scrolling (`newsExpandedAvatarOffset`).
+        private var avatarOffset: CGFloat = 0.0
+        private var avatarRestingFrame = CGRect()
         /// The time as last laid out.
         private var renderedTimeText: String?
         private var timeTimer: SwiftSignalKit.Timer?
@@ -251,6 +267,7 @@ public final class NewsFeedPostComponent: Component {
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapped))
             // The row still gets `touchesEnded`, so a quick tap flashes its highlight.
             tapRecognizer.cancelsTouchesInView = false
+            tapRecognizer.delegate = self
             self.addGestureRecognizer(tapRecognizer)
         }
 
@@ -297,6 +314,27 @@ public final class NewsFeedPostComponent: Component {
                 frames.append(textNodeView.convert(CGRect(x: baseline.x, y: baseline.y - ascent, width: width, height: ascent + descent), to: self))
             }
             return frames
+        }
+
+        /// An expanded row's content takes its own taps (links, media, pills, Show more): the row's tap leaves them.
+        public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            return !self.isOnInteractiveContent(touch)
+        }
+
+        private func isOnInteractiveContent(_ touch: UITouch) -> Bool {
+            guard let expandedContentView = self.expandedContentView, expandedContentView.superview != nil, expandedContentView.alpha > 0.0 else {
+                return false
+            }
+            return expandedContentView.hasInteractiveContent(at: touch.location(in: expandedContentView))
+        }
+
+        /// Whether `point` (in this row) is on a strip of the expanded post that scrolls sideways (the gallery, the
+        /// reactions): the screen's page swipe leaves it alone.
+        public func hasHorizontalScrollingContent(at point: CGPoint) -> Bool {
+            guard let expandedContentView = self.expandedContentView, expandedContentView.superview != nil else {
+                return false
+            }
+            return expandedContentView.hasHorizontalScrolling(at: self.convert(point, to: expandedContentView))
         }
 
         @objc private func tapped() {
@@ -400,6 +438,9 @@ public final class NewsFeedPostComponent: Component {
             if self.revealView.isRevealOptionsActive {
                 return
             }
+            if let touch = touches.first, self.isOnInteractiveContent(touch) {
+                return
+            }
             self.highlightTimer?.invalidate()
             let timer = SwiftSignalKit.Timer(timeout: 0.08, repeat: false, completion: { [weak self] in
                 self?.setHighlighted(true, animated: false)
@@ -415,6 +456,9 @@ public final class NewsFeedPostComponent: Component {
             }
             self.highlightTimer?.invalidate()
             self.highlightTimer = nil
+            if let touch = touches.first, self.isOnInteractiveContent(touch) {
+                return
+            }
             // A quick tap still flashes, as in the chat list.
             self.setHighlighted(true, animated: false)
             self.setHighlighted(false, animated: true)
@@ -448,17 +492,22 @@ public final class NewsFeedPostComponent: Component {
             }
         }
 
-        func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
-            let isFirstUpdate = self.component == nil
-            self.component = component
-            self.state = state
+        /// The compact row (Feed2's): the channel line, up to three lines of text and a thumbnail on the right.
+        private func updateCompact(component: NewsFeedPostComponent, availableSize: CGSize, timeText: String, transition: ComponentTransition) -> (CGSize, CGRect, NSAttributedString) {
             let theme = component.theme
-            let timeText = newsPostTimeText(component: component)
-            self.renderedTimeText = timeText
-            defer {
-                self.updateTimeTimer()
+            if let expandedContentView = self.expandedContentView {
+                // Back to compact: the expanded content fades out as the compact text and thumbnail come back.
+                self.expandedContentView = nil
+                self.avatarOffset = 0.0
+                transition.setAlpha(view: expandedContentView, alpha: 0.0, completion: { [weak expandedContentView] _ in
+                    expandedContentView?.removeFromSuperview()
+                })
             }
-
+            for view in [self.text.view, self.thumbnailView, self.videoLabel] {
+                if let view {
+                    transition.setAlpha(view: view, alpha: 1.0)
+                }
+            }
             let thumbnail = newsPostThumbnail(component.messages)
             let textWidth = newsPostTextWidth(width: availableSize.width, hasThumbnail: thumbnail != nil)
 
@@ -619,10 +668,155 @@ public final class NewsFeedPostComponent: Component {
                 self.videoLabel.isHidden = true
             }
 
+            return (CGSize(width: availableSize.width, height: layout.height), layout.separator, postText)
+        }
+
+        /// The expanded post (Threads/X): the 36 pt avatar, the channel line with the views and time, the bubble's
+        /// content, the gallery and the reactions line. The avatar, name, badge and time are the compact row's own
+        /// views moved into place, so a switch between the modes morphs them.
+        private func updateExpanded(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, availableSize: CGSize, timeText: String, transition: ComponentTransition) -> (CGSize, CGRect, NSAttributedString) {
+            let metrics = NewsExpandedPostMetrics.self
+            let theme = component.theme
+            let width = availableSize.width
+            let contentX = metrics.contentX(leftInset: 0.0)
+            let contentWidth = metrics.contentWidth(width: width, leftInset: 0.0, rightInset: 0.0)
+            let avatarFrame = CGRect(x: metrics.avatarInset, y: metrics.avatarTop, width: metrics.avatarSize, height: metrics.avatarSize)
+            self.avatarRestingFrame = avatarFrame
+
+            let contentView: NewsExpandedPostContentView
+            if let current = self.expandedContentView {
+                contentView = current
+            } else {
+                contentView = NewsExpandedPostContentView(frame: CGRect())
+                contentView.alpha = 0.0
+                self.lensView.insertSubview(contentView, at: 0)
+                self.expandedContentView = contentView
+                contentView.avatarOffsetChanged = { [weak self] offset in
+                    guard let self, self.avatarOffset != offset else {
+                        return
+                    }
+                    self.avatarOffset = offset
+                    if let avatarView = self.avatar.view {
+                        avatarView.frame = self.avatarRestingFrame.offsetBy(dx: offset, dy: 0.0)
+                    }
+                }
+            }
+            transition.setAlpha(view: contentView, alpha: 1.0)
+            for view in [self.text.view, self.thumbnailView, self.videoLabel] {
+                if let view {
+                    transition.setAlpha(view: view, alpha: 0.0)
+                }
+            }
+
+            let timeSize = self.time.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: timeText, font: Font.medium(11.0), textColor: theme.list.itemSecondaryTextColor)))),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            let layout = contentView.update(component: component, content: content, width: width, timeSize: timeSize, avatarFrame: avatarFrame, synchronousLoad: component.loading.isSynchronous, transition: transition)
+            transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.height)))
+
+            var credibilitySize = CGSize()
+            if component.peer.isVerified {
+                credibilitySize = self.credibilityIcon.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        content: .verified(fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, sizeType: .compact),
+                        isVisibleForAnimations: false,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 16.0, height: 16.0)
+                )
+            }
+            var titleMaxWidth = contentWidth - layout.metaWidth - metrics.headerSpacing * 2.0
+            if credibilitySize.width > 0.0 {
+                titleMaxWidth -= credibilitySize.width + metrics.headerSpacing
+            }
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.semibold(14.0), textColor: newsChannelNameColor(peer: component.peer, context: component.context, theme: theme))),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: max(1.0, titleMaxWidth), height: 100.0)
+            )
+
+            let lineMidY = metrics.headerTop + metrics.headerHeight * 0.5
+            func centred(x: CGFloat, size: CGSize) -> CGRect {
+                return CGRect(origin: CGPoint(x: x, y: floorToScreenPixels(lineMidY - size.height * 0.5)), size: size)
+            }
+            let _ = self.avatar.update(
+                transition: .immediate,
+                component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: component.peer, size: avatarFrame.size, synchronousLoad: component.loading.isSynchronous)),
+                environment: {},
+                containerSize: avatarFrame.size
+            )
+            if let avatarView = self.avatar.view {
+                if avatarView.superview == nil {
+                    self.lensView.addSubview(avatarView)
+                }
+                transition.setFrame(view: avatarView, frame: avatarFrame.offsetBy(dx: self.avatarOffset, dy: 0.0))
+            }
+            let titleFrame = centred(x: contentX, size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.lensView.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            if let credibilityView = self.credibilityIcon.view {
+                if credibilitySize.width > 0.0 {
+                    if credibilityView.superview == nil {
+                        self.lensView.addSubview(credibilityView)
+                    }
+                    credibilityView.isHidden = false
+                    transition.setFrame(view: credibilityView, frame: centred(x: titleFrame.maxX + metrics.headerSpacing, size: credibilitySize))
+                } else {
+                    credibilityView.isHidden = true
+                }
+            }
+            if let timeView = self.time.view {
+                if timeView.superview == nil {
+                    self.lensView.addSubview(timeView)
+                }
+                transition.setFrame(view: timeView, frame: layout.timeFrame)
+            }
+
+            let pixel = 1.0 / UIScreenScale
+            let separator = CGRect(x: 0.0, y: layout.height - pixel, width: width, height: pixel)
+            let postText = newsPostText(component: component, maxLength: Int(contentWidth * 2.0))
+            return (CGSize(width: width, height: layout.height), separator, postText)
+        }
+
+        func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
+            let isFirstUpdate = self.component == nil
+            self.component = component
+            self.state = state
+            let theme = component.theme
+            let timeText = newsPostTimeText(component: component)
+            self.renderedTimeText = timeText
+            defer {
+                self.updateTimeTimer()
+            }
+
+            let rowSize: CGSize
+            let separatorFrame: CGRect
+            let postText: NSAttributedString
+            if component.displayMode == .expanded, let expanded = component.expanded {
+                (rowSize, separatorFrame, postText) = self.updateExpanded(component: component, content: expanded, availableSize: availableSize, timeText: timeText, transition: transition)
+            } else {
+                (rowSize, separatorFrame, postText) = self.updateCompact(component: component, availableSize: availableSize, timeText: timeText, transition: transition)
+            }
+
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor
-            transition.setFrame(layer: self.separatorLayer, frame: layout.separator)
+            transition.setFrame(layer: self.separatorLayer, frame: separatorFrame)
             self.updateSeparatorAlpha()
-            let rowSize = CGSize(width: availableSize.width, height: layout.height)
             // The row places the view; the view lays out inside it (a size change closes an open swipe).
             self.revealView.frame = CGRect(origin: CGPoint(), size: rowSize)
             self.revealView.update(size: rowSize, options: component.swipe != nil ? newsPostRevealOptions(theme: theme, strings: component.strings) : [], highlightColor: theme.list.itemHighlightedBackgroundColor)
@@ -687,7 +881,7 @@ public final class NewsFeedPostComponent: Component {
             if isFirstUpdate, let appearTime = component.appearTime, NewsFeedbackTiming.playsAppear(appearTime: appearTime, now: CACurrentMediaTime()) {
                 self.playReturnAppear(appearTime: appearTime, rises: !component.reduceMotion)
             }
-            return CGSize(width: availableSize.width, height: layout.height)
+            return rowSize
         }
 
         /// Content seen through a lens: magnified, blurred and faded, settling on one critically damped spring

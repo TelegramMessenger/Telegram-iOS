@@ -190,6 +190,8 @@ subsystem from elsewhere.
 - **Chat history list, send animation, a non-contact's unaccepted chat**: `submodules/TelegramUI/Sources/CLAUDE.md`;
   the CoreList backend: `submodules/TelegramUI/Components/CoreList/CLAUDE.md`,
   [`docs/chat/corelist-chat-history-backend.md`](docs/chat/corelist-chat-history-backend.md).
+- **News tab** (its CoreList feeds and header, Compact / Expanded posts):
+  `submodules/TelegramUI/Components/News/CLAUDE.md`.
 - **Opening chats, history fills** (holes, poll gate, forum topics and skeletons, News feed opens, non-member read
   state): `submodules/TelegramCore/Sources/State/CLAUDE.md`; a post's comments:
   `submodules/TelegramCore/Sources/TelegramEngine/Messages/CLAUDE.md`.

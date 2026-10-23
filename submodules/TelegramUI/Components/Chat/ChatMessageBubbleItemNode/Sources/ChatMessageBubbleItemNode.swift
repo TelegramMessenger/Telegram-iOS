@@ -2504,6 +2504,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             authorNameColor = color
         }
                 
+        if item.associatedData.hidesAuthorHeader {
+            // The host draws the author line (a feed row).
+            displayAuthorInfo = false
+        }
         if initialDisplayHeader && displayAuthorInfo {
             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil, !overrideEffectiveAuthor {
                 authorNameString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
@@ -3087,7 +3091,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         let hideBackground: Bool
-        if let backgroundHiding {
+        if item.associatedData.hidesBubbleBackground {
+            hideBackground = true
+        } else if let backgroundHiding {
             switch backgroundHiding {
                 case .never:
                     hideBackground = false

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import ContextUI
 import SearchUI
 import ChatListHeaderComponent
@@ -138,8 +139,10 @@ public final class NewsScreen: ViewController {
     }
 
     private func openMoreMenu(sourceView: UIView) {
-        let items: [ContextMenuItem] = [
-            .action(ContextMenuActionItem(text: self.presentationData.strings.News_ReloadFeed, icon: { theme in
+        let strings = self.presentationData.strings
+        let displayMode = self.newsNode.displayMode
+        var items: [ContextMenuItem] = [
+            .action(ContextMenuActionItem(text: strings.News_ReloadFeed, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -148,13 +151,26 @@ public final class NewsScreen: ViewController {
                     self?.newsNode.reloadFeed()
                 })
             })),
-            .action(ContextMenuActionItem(text: self.presentationData.strings.News_MarkAllAsRead, icon: { theme in
+            .action(ContextMenuActionItem(text: strings.News_MarkAllAsRead, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadAll"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 self?.newsNode.markAllAsRead()
-            }))
+            })),
+            .separator
         ]
+        // Compact or expanded posts, the current one checked (as Contacts' Sort lists its orders).
+        for (mode, title) in [(NewsFeedDisplayMode.compact, strings.News_Display_Compact), (NewsFeedDisplayMode.expanded, strings.News_Display_Expanded)] {
+            items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                return displayMode == mode ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
+            }, action: { [weak self] _, f in
+                f(.default)
+                // The rows morph once the menu is on its way out, so the two motions do not compete.
+                Queue.mainQueue().after(0.25, {
+                    self?.newsNode.setDisplayMode(mode)
+                })
+            })))
+        }
         let contextController = makeContextController(presentationData: self.presentationData, source: .reference(NewsContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }

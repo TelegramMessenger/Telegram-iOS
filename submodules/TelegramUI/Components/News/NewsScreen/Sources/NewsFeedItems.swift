@@ -4,6 +4,7 @@ import ComponentFlow
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
@@ -43,6 +44,10 @@ struct NewsFeedItemEnvironment {
     let postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
     /// The tab's "Post hidden" flow; nil for Added and search results.
     let feedback: NewsFeedItemFeedback?
+    /// Compact rows, or the expanded posts; the content an expanded row needs, per post (its first message and
+    /// its identity).
+    let displayMode: NewsFeedDisplayMode
+    let expandedContent: ((EngineMessage, AnyHashable) -> NewsFeedPostExpandedContent?)?
 }
 
 /// What a tab's rows read from its "Post hidden" flow (spec §3).
@@ -133,6 +138,8 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         fading: fading,
         appearTime: environment.feedback?.postAppearTimes[identity],
         swipe: isLeaving ? nil : environment.postSwipe?(peer, messageId, identity),
+        displayMode: environment.displayMode,
+        expanded: environment.displayMode == .expanded ? environment.expandedContent?(first, identity) : nil,
         action: {
             if !isLeaving {
                 openPost(peer, messageId)

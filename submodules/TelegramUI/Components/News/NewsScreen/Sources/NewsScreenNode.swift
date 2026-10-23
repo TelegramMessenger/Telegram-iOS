@@ -8,6 +8,7 @@ import ComponentDisplayAdapters
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import SearchUI
 import SearchBarNode
 import ChatListHeaderComponent
@@ -76,6 +77,18 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var skeletonRowLayoutCache: (width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, layout: NewsSkeletonModelRow)?
     private var foregroundDisposable: Disposable?
     var isScreenVisible = false
+
+    /// Compact rows or expanded posts: the "…" menu's choice, kept across launches (`NewsFeedSettings`).
+    private(set) var displayMode: NewsFeedDisplayMode = .compact
+    private var hasReceivedDisplayMode = false
+    /// Posts whose Show more was tapped: their whole text, with its formatting and links.
+    private var expandedTextPosts = Set<AnyHashable>()
+    /// For the expanded rows' reaction pills and the bubble.
+    private var availableReactions: AvailableReactions?
+    private var accountPeer: EnginePeer?
+    private var settingsDisposable: Disposable?
+    private var reactionsDisposable: Disposable?
+    private var accountPeerDisposable: Disposable?
 
     private var searchDisplayController: SearchDisplayController?
     private var searchContentNode: NewsSearchContentNode?
@@ -191,10 +204,209 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.added.feed.revalidate()
             }
         })
+
+        self.settingsDisposable = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.newsFeedSettings])
+        |> map { sharedData -> NewsFeedDisplayMode in
+            return (sharedData.entries[ApplicationSpecificSharedDataKeys.newsFeedSettings]?.get(NewsFeedSettings.self) ?? .defaultSettings).displayMode
+        }
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] displayMode in
+            guard let self else {
+                return
+            }
+            // The stored choice is applied as it is read; a later change (the menu, another screen) morphs the rows.
+            self.applyDisplayMode(displayMode, animated: self.hasReceivedDisplayMode)
+            self.hasReceivedDisplayMode = true
+        })
+        self.reactionsDisposable = (context.engine.stickers.availableReactions()
+        |> deliverOnMainQueue).start(next: { [weak self] availableReactions in
+            guard let self, self.availableReactions != availableReactions else {
+                return
+            }
+            self.availableReactions = availableReactions
+            if self.displayMode == .expanded {
+                self.updateLists(transition: .immediate)
+            }
+        })
+        self.accountPeerDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let self, self.accountPeer != peer else {
+                return
+            }
+            self.accountPeer = peer
+            if self.displayMode == .expanded {
+                self.updateLists(transition: .immediate)
+            }
+        })
     }
 
     deinit {
         self.foregroundDisposable?.dispose()
+        self.settingsDisposable?.dispose()
+        self.reactionsDisposable?.dispose()
+        self.accountPeerDisposable?.dispose()
+    }
+
+    // MARK: Display mode (the "…" menu's Compact / Expanded)
+
+    /// The rows morph between the two layouts on the spring a scroll to top runs, so the height changes and the moving
+    /// avatars ride one motion.
+    private static let displayModeTransition: CoreListTransition = .spring(duration: 0.5)
+
+    func setDisplayMode(_ displayMode: NewsFeedDisplayMode) {
+        self.applyDisplayMode(displayMode, animated: true)
+        let _ = updateNewsFeedSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
+            return settings.withUpdatedDisplayMode(displayMode)
+        }).start()
+    }
+
+    private func applyDisplayMode(_ displayMode: NewsFeedDisplayMode, animated: Bool) {
+        guard displayMode != self.displayMode else {
+            return
+        }
+        self.displayMode = displayMode
+        self.closeSwipedRows(animated: animated)
+        self.updateLists(transition: animated ? NewsScreenNode.displayModeTransition : .immediate)
+    }
+
+    private func toggleTextExpanded(_ identity: AnyHashable) {
+        if self.expandedTextPosts.contains(identity) {
+            self.expandedTextPosts.remove(identity)
+        } else {
+            self.expandedTextPosts.insert(identity)
+        }
+        self.updateLists(transition: NewsScreenNode.displayModeTransition)
+    }
+
+    private func expandedContent(message: EngineMessage, identity: AnyHashable) -> NewsFeedPostExpandedContent {
+        return NewsFeedPostExpandedContent(
+            presentationData: self.presentationData,
+            availableReactions: self.availableReactions,
+            accountPeer: self.accountPeer,
+            isTextExpanded: self.expandedTextPosts.contains(identity),
+            toggleTextExpanded: { [weak self] in
+                self?.toggleTextExpanded(identity)
+            },
+            openUrl: { [weak self] url in
+                self?.openUrl(url)
+            },
+            openMedia: { [weak self] message, _ in
+                return self?.openMedia(message: message) ?? false
+            },
+            openPeer: { [weak self] peer in
+                self?.openPeer(peer)
+            },
+            openInstantPage: { [weak self] message in
+                self?.openInstantPage(message: message)
+            },
+            openComments: { [weak self] in
+                self?.openComments(message: message)
+            },
+            toggleReaction: { [weak self] value in
+                self?.toggleReaction(value, message: message)
+            }
+        )
+    }
+
+    private func openUrl(_ url: String) {
+        guard let controller = self.controller else {
+            return
+        }
+        let context = self.context
+        let navigationController = controller.navigationController as? NavigationController
+        let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: url, skipUrlAuth: true)
+        |> deliverOnMainQueue).start(next: { [weak self, weak controller] resolved in
+            guard let self, let controller else {
+                return
+            }
+            context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { [weak self] peer, _ in
+                self?.openPeer(peer)
+            }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, a in
+                controller?.present(c, in: .window(.root), with: a)
+            }, dismissInput: {
+            }, contentContext: nil, progress: nil, completion: nil)
+        })
+    }
+
+    private func openPeer(_ peer: EnginePeer) {
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+    }
+
+    /// A photo or video of the gallery, or media the bubble shows: the gallery, as a tap in the chat opens it.
+    private func openMedia(message: EngineMessage) -> Bool {
+        guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+            return false
+        }
+        return self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: .peer(id: message.id.peerId), chatFilterTag: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
+        }, present: { [weak controller] c, a, _ in
+            controller?.present(c, in: .window(.root), with: a)
+        }, transitionNode: { _, _, _ in
+            return nil
+        }, addToTransitionSurface: { _ in
+        }, openUrl: { [weak self] url in
+            self?.openUrl(url)
+        }, openPeer: { [weak self] peer, _ in
+            self?.openPeer(EnginePeer(peer))
+        }, callPeer: { _, _ in
+        }, openConferenceCall: { _ in
+        }, enqueueMessage: { _ in
+        }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in
+        }, chatAvatarHiddenMedia: { _, _ in
+        }))
+    }
+
+    private func openInstantPage(message: EngineMessage) {
+        guard let navigationController = self.controller?.navigationController as? NavigationController, let pageController = self.context.sharedContext.makeInstantPageController(context: self.context, message: message, sourcePeerType: nil) else {
+            return
+        }
+        navigationController.pushViewController(pageController)
+    }
+
+    /// The post's comments: its discussion thread, as the chat's comments button opens it.
+    private func openComments(message: EngineMessage) {
+        let _ = (self.context.engine.messages.fetchChannelReplyThreadMessage(messageId: message.id, atMessageId: nil)
+        |> deliverOnMainQueue).start(next: { [weak self] thread in
+            guard let self, let navigationController = self.controller?.navigationController as? NavigationController else {
+                return
+            }
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .replyThread(thread)))
+        }, error: { _ in
+        })
+    }
+
+    /// A tap on a reaction pill: the reaction is added to, or removed from, the account's reactions on the post.
+    private func toggleReaction(_ value: MessageReaction.Reaction, message: EngineMessage) {
+        func update(_ value: MessageReaction.Reaction) -> UpdateMessageReaction? {
+            switch value {
+            case let .builtin(emoji):
+                return .builtin(emoji)
+            case let .custom(fileId):
+                return .custom(fileId: fileId, file: nil)
+            case .stars:
+                return nil
+            }
+        }
+        guard update(value) != nil else {
+            return
+        }
+        var reactions: [UpdateMessageReaction] = []
+        var wasChosen = false
+        if let attribute = mergedMessageReactions(attributes: message.attributes, isTags: false) {
+            for reaction in attribute.reactions where reaction.isSelected {
+                if reaction.value == value {
+                    wasChosen = true
+                } else if let mapped = update(reaction.value) {
+                    reactions.append(mapped)
+                }
+            }
+        }
+        if !wasChosen, let mapped = update(value) {
+            reactions.append(mapped)
+        }
+        self.context.engine.messages.setMessageReactions(ids: [message.id], reactions: reactions)
     }
 
     override func didLoad() {
@@ -203,6 +415,11 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         // Swiping between the lists, set up as Peer Info's panes (PeerInfoPaneContainerNode).
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.pagerPanGesture(_:)), allowedDirections: { [weak self] point in
             guard let self, !self.isSearchActive, self.tappedSegment == nil else {
+                return []
+            }
+            // An expanded post's gallery or reactions scroll sideways themselves: a swipe on them is theirs.
+            let activeList = self.activeList
+            if activeList.hasHorizontalScrollingRow(at: activeList.convert(point, from: self.listsContainerNode.view)) {
                 return []
             }
             if self.selectedSegment == 0 {
@@ -476,7 +693,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
-        }, postSwipe: postSwipe, feedback: feedback)
+        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, expandedContent: { [weak self] message, identity in
+            return self?.expandedContent(message: message, identity: identity)
+        })
     }
 
     /// A post row's swipe action (spec §3). Interesting likes the post; Not Interested starts the tab's "Post hidden"
