@@ -13,6 +13,7 @@ import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
 import TelegramCore
+import AuthorizationUtils
 
 public enum TwoFactorAuthSplashMode {
     public struct Intro {
@@ -98,7 +99,13 @@ public final class TwoFactorAuthSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TwoFactorAuthSplashScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        let isAuthorizationFlow: Bool
+        if case .unauthorized = self.engine {
+            isAuthorizationFlow = true
+        } else {
+            isAuthorizationFlow = false
+        }
+        self.displayNode = TwoFactorAuthSplashScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, isAuthorizationFlow: isAuthorizationFlow, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -139,6 +146,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
 private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
     private var presentationData: PresentationData
     private let mode: TwoFactorAuthSplashMode
+    private let isAuthorizationFlow: Bool
     
     private var animationSize: CGSize = CGSize()
     private var animationOffset: CGPoint = CGPoint()
@@ -157,9 +165,10 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, action: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, isAuthorizationFlow: Bool, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
+        self.isAuthorizationFlow = isAuthorizationFlow
         
         self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         
@@ -267,10 +276,17 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         // The content above the button lays out in the band between the side insets when they differ (iPhone Duo's
-        // side strip: the text ran under it); across the screen otherwise.
+        // side strip: the text ran under it); across the screen otherwise. In the login flow (password recovery done) it
+        // is centered on the full width on the unfolded screen, as the other login screens do (authorizationContentBand).
         let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        let bandMinX: CGFloat
+        let bandWidth: CGFloat
+        if self.isAuthorizationFlow {
+            (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
+        } else {
+            bandMinX = insetsDiffer ? layout.safeInsets.left : 0.0
+            bandWidth = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        }
         
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
