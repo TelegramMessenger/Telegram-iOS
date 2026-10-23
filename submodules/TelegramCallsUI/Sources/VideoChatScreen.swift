@@ -988,7 +988,7 @@ final class VideoChatScreenComponent: Component {
             }
         }
         
-        private func onAudioRoutePressed() {
+        private func onAudioRoutePressed(sourceView: UIView?) {
             guard let environment = self.environment, let currentCall = self.currentCall else {
                 return
             }
@@ -1010,54 +1010,30 @@ final class VideoChatScreenComponent: Component {
                     }
                 }
             } else {
+                guard let controller = environment.controller(), let sourceView = sourceView ?? self.speakerButton.view else {
+                    return
+                }
                 let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                var items: [ActionSheetItem] = []
-                for output in availableOutputs {
-                    let title: String
-                    var icon: UIImage?
-                    switch output {
-                    case .builtin:
-                        title = UIDevice.current.model
-                    case .speaker:
-                        title = environment.strings.Call_AudioRouteSpeaker
-                        icon = generateScaledImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), size: CGSize(width: 48.0, height: 48.0), opaque: false)
-                    case .headphones:
-                        title = environment.strings.Call_AudioRouteHeadphones
-                    case let .port(port):
-                        title = port.name
-                        if port.type == .bluetooth {
-                            var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
-                            let portName = port.name.lowercased()
-                            if portName.contains("airpods max") {
-                                image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
-                            } else if portName.contains("airpods pro") {
-                                image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
-                            } else if portName.contains("airpods") {
-                                image = UIImage(bundleImageName: "Call/CallAirpodsButton")
-                            }
-                            icon = generateScaledImage(image: image, size: CGSize(width: 48.0, height: 48.0), opaque: false)
-                        }
-                    }
-                    items.append(CallRouteActionSheetItem(title: title, icon: icon, selected: output == currentOutput, action: { [weak self, weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        
+                let items = callAudioRouteContextMenuItems(
+                    strings: environment.strings,
+                    availableOutputs: availableOutputs,
+                    currentOutput: currentOutput,
+                    isMuted: nil,
+                    selectOutput: { [weak self] output in
                         guard let self, let currentCall = self.currentCall else {
                             return
                         }
                         currentCall.setCurrentAudioOutput(output)
-                    }))
-                }
-                
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: environment.strings.Call_AudioRouteHide, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                environment.controller()?.present(actionSheet, in: .window(.root))
+                    },
+                    toggleMute: {
+                    }
+                )
+                let contextController = makeContextController(
+                    presentationData: presentationData,
+                    source: .reference(CallAudioRouteContextReferenceContentSource(sourceView: sourceView)),
+                    items: .single(ContextController.Items(content: .list(items)))
+                )
+                controller.presentInGlobalOverlay(contextController)
             }
         }
         
@@ -3299,7 +3275,7 @@ final class VideoChatScreenComponent: Component {
                                 groupCall.switchVideoCamera()
                             }
                         } else {
-                            self.onAudioRoutePressed()
+                            self.onAudioRoutePressed(sourceView: self.speakerButton.view)
                         }
                     },
                     isEnabled: videoControlButtonEnabled,
@@ -3342,7 +3318,7 @@ final class VideoChatScreenComponent: Component {
                                 return
                             }
                             if let callState = self.callState, let muteState = callState.muteState, !muteState.canUnmute {
-                                self.onAudioRoutePressed()
+                                self.onAudioRoutePressed(sourceView: self.videoButton?.view)
                             } else {
                                 self.onCameraPressed()
                             }

@@ -11,6 +11,9 @@ import PhotoResources
 import DirectMediaImageCache
 import TelegramStringFormatting
 import TooltipUI
+import ButtonComponent
+import ComponentDisplayAdapters
+import EdgeEffect
 
 private enum SelectionTransition {
     case begin
@@ -1010,7 +1013,9 @@ public final class CalendarMessageScreen: ViewController {
 
         private weak var currentGestureDayView: DayComponent.View?
 
-        private var selectionToolbarNode: ToolbarNode?
+        private var selectionPanelView: UIView?
+        private var selectionPanelEdgeEffectView: EdgeEffectView?
+        private var selectionPanelButton: ComponentView<Empty>?
         private(set) var selectionState: SelectionState?
 
         private var ignoreContentOffset: Bool = false
@@ -1240,26 +1245,30 @@ public final class CalendarMessageScreen: ViewController {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
 
-            var tabBarHeight: CGFloat
             var options: ContainerViewLayoutInsetOptions = []
             if layout.metrics.widthClass == .regular {
                 options.insert(.input)
             }
             let bottomInset: CGFloat = layout.insets(options: options).bottom
-            // The compact landscape toolbar wherever a compact layout has a side inset in landscape: iPhone Duo's folded
-            // screen has one on the left OR the right (its side strip), so testing the left one alone gave its two
-            // landscapes different toolbars. Elsewhere a left inset implies landscape and the right one is equal.
-            let hasLandscapeSideInset = layout.metrics.widthClass == .compact && layout.size.width > layout.size.height && (!layout.safeInsets.left.isZero || !layout.safeInsets.right.isZero)
-            if !layout.safeInsets.left.isZero || hasLandscapeSideInset {
-                tabBarHeight = 34.0 + bottomInset
-            } else {
-                tabBarHeight = 49.0 + bottomInset
-            }
 
-            let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+            // The compact landscape panel wherever a compact layout has a side inset in landscape: iPhone Duo's folded
+            // screen has one on the left OR the right (its side strip), so testing the left one alone gave its two
+            // landscapes different panels. Elsewhere a left inset implies landscape and the right one is equal.
+            let hasLandscapeSideInset = layout.metrics.widthClass == .compact && layout.size.width > layout.size.height && (!layout.safeInsets.left.isZero || !layout.safeInsets.right.isZero)
+            let panelTopInset: CGFloat = 8.0
+            let panelBottomInset: CGFloat
+            if bottomInset == 0.0 {
+                panelBottomInset = panelTopInset
+            } else if !layout.safeInsets.left.isZero || hasLandscapeSideInset {
+                panelBottomInset = max(panelTopInset, bottomInset)
+            } else {
+                panelBottomInset = bottomInset + 10.0
+            }
+            let panelButtonHeight: CGFloat = 52.0
+            let panelHeight: CGFloat = panelTopInset + panelButtonHeight + panelBottomInset
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
 
             if let selectionState = self.selectionState {
-                let selectionToolbarNode: ToolbarNode
                 let toolbarText: String
                 
                 var selectedCount = 0
@@ -1285,43 +1294,85 @@ public final class CalendarMessageScreen: ViewController {
                     toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForTheseDays
                 }
                 
-                // The bottom selection toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                // The bottom selection panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
                 let bottomSideInsets = layout.bottomEdgeSideInsets()
-                if let currrent = self.selectionToolbarNode {
-                    selectionToolbarNode = currrent
-
-                    transition.updateFrame(node: selectionToolbarNode, frame: tabBarFrame)
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: bottomSideInsets.left, rightInset: bottomSideInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
+                
+                let selectionPanelView: UIView
+                let selectionPanelEdgeEffectView: EdgeEffectView
+                let selectionPanelButton: ComponentView<Empty>
+                var panelTransition = transition
+                var animateIn = false
+                if let currentView = self.selectionPanelView, let currentEdgeEffectView = self.selectionPanelEdgeEffectView, let currentButton = self.selectionPanelButton {
+                    selectionPanelView = currentView
+                    selectionPanelEdgeEffectView = currentEdgeEffectView
+                    selectionPanelButton = currentButton
                 } else {
-                    selectionToolbarNode = ToolbarNode(
-                        theme: ToolbarTheme(
-                        rootControllerTheme: self.presentationData.theme),
-                        displaySeparator: true,
-                        left: {
-                        },
-                        right: {
-                        },
-                        middle: { [weak self] in
+                    selectionPanelView = UIView()
+                    selectionPanelEdgeEffectView = EdgeEffectView()
+                    selectionPanelEdgeEffectView.isUserInteractionEnabled = false
+                    selectionPanelView.addSubview(selectionPanelEdgeEffectView)
+                    selectionPanelButton = ComponentView<Empty>()
+                    self.view.addSubview(selectionPanelView)
+                    self.selectionPanelView = selectionPanelView
+                    self.selectionPanelEdgeEffectView = selectionPanelEdgeEffectView
+                    self.selectionPanelButton = selectionPanelButton
+                    panelTransition = .immediate
+                    animateIn = true
+                }
+                
+                panelTransition.updateFrame(view: selectionPanelView, frame: panelFrame)
+                
+                let edgeEffectFrame = CGRect(origin: CGPoint(), size: panelFrame.size)
+                panelTransition.updateFrame(view: selectionPanelEdgeEffectView, frame: edgeEffectFrame)
+                selectionPanelEdgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: ComponentTransition(panelTransition))
+                
+                let hasSelection = selectionState.dayRange != nil
+                let buttonSideInsets = UIEdgeInsets(top: 0.0, left: 16.0 + bottomSideInsets.left, bottom: 0.0, right: 16.0 + bottomSideInsets.right)
+                let buttonSize = selectionPanelButton.update(
+                    transition: ComponentTransition(panelTransition),
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            style: .glass,
+                            color: self.presentationData.theme.list.itemDestructiveColor,
+                            foreground: .white,
+                            pressedColor: self.presentationData.theme.list.itemDestructiveColor.withMultipliedAlpha(0.9)
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable(toolbarText),
+                            component: AnyComponent(Text(text: toolbarText, font: Font.semibold(17.0), color: .white))
+                        ),
+                        isEnabled: hasSelection,
+                        allowActionWhenDisabled: true,
+                        action: { [weak self] in
                             self?.selectionToolbarActionSelected()
                         }
-                    )
-                    selectionToolbarNode.frame = tabBarFrame
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: bottomSideInsets.left, rightInset: bottomSideInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: .immediate)
-                    self.addSubnode(selectionToolbarNode)
-                    self.selectionToolbarNode = selectionToolbarNode
-                    transition.animatePositionAdditive(node: selectionToolbarNode, offset: CGPoint(x: 0.0, y: tabBarFrame.height))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: panelFrame.width - buttonSideInsets.left - buttonSideInsets.right, height: panelButtonHeight)
+                )
+                if let buttonView = selectionPanelButton.view {
+                    if buttonView.superview == nil {
+                        selectionPanelView.addSubview(buttonView)
+                    }
+                    panelTransition.updateFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: buttonSideInsets.left, y: panelTopInset), size: buttonSize))
                 }
-            } else if let selectionToolbarNode = self.selectionToolbarNode {
-                self.selectionToolbarNode = nil
-                transition.updatePosition(node: selectionToolbarNode, position: CGPoint(x: selectionToolbarNode.position.x, y: selectionToolbarNode.position.y + tabBarFrame.height), completion: { [weak selectionToolbarNode] _ in
-                    selectionToolbarNode?.removeFromSupernode()
+                
+                if animateIn {
+                    transition.animatePositionAdditive(layer: selectionPanelView.layer, offset: CGPoint(x: 0.0, y: panelFrame.height))
+                }
+            } else if let selectionPanelView = self.selectionPanelView {
+                self.selectionPanelView = nil
+                self.selectionPanelEdgeEffectView = nil
+                self.selectionPanelButton = nil
+                transition.updatePosition(layer: selectionPanelView.layer, position: CGPoint(x: selectionPanelView.layer.position.x, y: selectionPanelView.layer.position.y + selectionPanelView.bounds.height), completion: { [weak selectionPanelView] _ in
+                    selectionPanelView?.removeFromSuperview()
                 })
             }
 
             let _ = self.updateScrollLayoutIfNeeded()
 
             let previousInset = self.scrollView.contentInset.top
-            let updatedInset = self.selectionToolbarNode?.bounds.height ?? 0.0
+            let updatedInset = self.selectionPanelView?.bounds.height ?? 0.0
             if previousInset != updatedInset {
                 let delta = updatedInset - previousInset
                 self.ignoreContentOffset = true
@@ -1373,8 +1424,8 @@ public final class CalendarMessageScreen: ViewController {
 
         private func selectionToolbarActionSelected() {
             if self.selectionState?.dayRange == nil {
-                if let selectionToolbarNode = self.selectionToolbarNode {
-                    let toolbarFrame = selectionToolbarNode.view.convert(selectionToolbarNode.bounds, to: self.view)
+                if let buttonView = self.selectionPanelButton?.view {
+                    let toolbarFrame = buttonView.convert(buttonView.bounds, to: self.view)
                     self.controller?.present(TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.MessageCalendar_EmptySelectionTooltip), style: .default, icon: .none, location: .point(toolbarFrame.insetBy(dx: 0.0, dy: 10.0), .bottom), shouldDismissOnTouch: { _, _ in
                         return .dismiss(consume: false)
                     }), in: .current)

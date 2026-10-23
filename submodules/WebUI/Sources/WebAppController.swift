@@ -4300,6 +4300,7 @@ public func standaloneWebAppController(
     let controller = AttachmentController(
         context: context,
         updatedPresentationData: updatedPresentationData,
+        style: .glass,
         chatLocation: .peer(id: params.peerId),
         buttons: [.standalone],
         initialButton: .standalone,

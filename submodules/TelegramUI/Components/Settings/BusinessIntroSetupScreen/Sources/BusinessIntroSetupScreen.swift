@@ -321,7 +321,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                         },
                         addGroupAction: { _, _, _ in
                         },
-                        clearGroup: { _ in
+                        clearGroup: { _, _, _ in
                         },
                         editAction: { _ in
                         },

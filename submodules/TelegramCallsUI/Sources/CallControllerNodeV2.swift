@@ -49,7 +49,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     
     var toggleMute: (() -> Void)?
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)?
-    var beginAudioOuputSelection: ((Bool) -> Void)?
+    var beginAudioOuputSelection: ((Bool, UIView?) -> Void)?
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var back: (() -> Void)?
@@ -144,7 +144,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             guard let self else {
                 return
             }
-            self.beginAudioOuputSelection?(false)
+            self.beginAudioOuputSelection?(false, self.callScreen.speakerButtonView)
         }
         self.callScreen.videoAction = { [weak self] in
             guard let self else {

@@ -51,7 +51,6 @@ swift_library(
         "//submodules/SearchBarNode",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
-        "//submodules/TelegramUI/Components/ListItemSwipeOptionContainer",
         "//submodules/UndoUI",
         "//submodules/ShareController",
         "//submodules/ContextUI",

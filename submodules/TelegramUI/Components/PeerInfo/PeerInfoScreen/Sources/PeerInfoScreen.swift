@@ -3463,14 +3463,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func requestDeleteContact() {
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-        let dismissAction: () -> Void = { [weak actionSheet] in
-            actionSheet?.dismissAnimated()
-        }
-        actionSheet.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.UserInfo_DeleteContact, color: .destructive, action: { [weak self] in
-                    dismissAction()
+        let alertController = textAlertController(
+            context: self.context,
+            updatedPresentationData: self.controller?.updatedPresentationData,
+            title: self.presentationData.strings.UserInfo_DeleteContact,
+            text: "",
+            actions: [
+                TextAlertAction(type: .defaultDestructiveAction, title: self.presentationData.strings.UserInfo_DeleteContact, action: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -3527,12 +3526,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         
                         deleteSendMessageIntents(peerId: strongSelf.peerId)
                     })
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
+                }),
+                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {})
+            ],
+            actionLayout: .vertical
+        )
         self.view.endEditing(true)
-        self.controller?.present(actionSheet, in: .window(.root))
+        self.controller?.present(alertController, in: .window(.root))
     }
     
     func openAddContact() {

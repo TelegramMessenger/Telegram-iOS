@@ -378,6 +378,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                         label: nil,
                         isEnabled: buttonIsEnabled,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset + selectionPanelSideInsets.left, bottom: environment.safeInsets.bottom, right: sideInset + selectionPanelSideInsets.right),
+                        backgroundColor: environment.theme.list.plainBackgroundColor,
                         action: { [weak self] in
                             guard let self, let component = self.component, let environment = self.environment else {
                                 return

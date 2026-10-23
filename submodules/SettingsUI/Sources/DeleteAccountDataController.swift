@@ -119,17 +119,17 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
             case let .header(theme, animation, title, text, hideOnSmallScreens):
                 return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: NSAttributedString(string: text), animationName: animation, hideOnSmallScreens: hideOnSmallScreens, sectionId: self.section, linkAction: nil)
             case let .peers(_, peers):
-                return DeleteAccountPeersItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, peers: peers, sectionId: self.section)
+                return DeleteAccountPeersItem(context: arguments.context, theme: presentationData.theme, systemStyle: .glass, strings: presentationData.strings, peers: peers, sectionId: self.section)
             case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case .phone:
-                return DeleteAccountPhoneItem(theme: presentationData.theme, strings: presentationData.strings, value: (nil, nil, ""), sectionId: self.section, selectCountryCode: {
+                return DeleteAccountPhoneItem(theme: presentationData.theme, systemStyle: .glass, strings: presentationData.strings, value: (nil, nil, ""), sectionId: self.section, selectCountryCode: {
                     arguments.selectCountryCode()
                 }, updated: { _ in
                     
                 })
             case let .password(_, placeholder):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: "", placeholder: placeholder, type: .password, returnKeyType: .done, tag: DeleteAccountEntryTag.password, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(), text: "", placeholder: placeholder, type: .password, returnKeyType: .done, tag: DeleteAccountEntryTag.password, sectionId: self.section, textUpdated: { value in
                     arguments.updatePassword(value)
                 }, action: {
                     arguments.proceed()
@@ -241,7 +241,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
       
     }, selectCountryCode: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = AuthorizationSequenceCountrySelectionController(strings: presentationData.strings, theme: presentationData.theme)
+        let controller = AuthorizationSequenceCountrySelectionController(strings: presentationData.strings, theme: presentationData.theme, glass: true)
         controller.completeWithCountryCode = { code, name in
             updateCountryCodeImpl?(Int32(code), name)
             activateInputImpl?()

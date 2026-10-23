@@ -68,6 +68,10 @@ final class ButtonGroupView: OverlayMaskContainerView {
     
     var closePressed: (() -> Void)?
     
+    func buttonView(key: Button.Content.Key) -> UIView? {
+        return self.buttonViews[key]
+    }
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
     }
