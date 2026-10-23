@@ -57,10 +57,11 @@ separate question, `isNewsFeedServerAvailable` (the app config's `dev == 1`, as 
 `dev` per authorization and only to sessions created by the official app: a build signed with a personal team
 and api_id never gets it, and the official api_id/api_hash in such a build is refused at login. So without
 `dev` the Added page runs on `AddedFeedSource.localChannels` (`LocalChannelsFeedContextImpl` in TelegramCore): the
-60 most recently active subscribed broadcast channels (main and archived chat lists), each one's latest 20 posts
-through the account's view tracker (holes are filled with `messages.getHistory` as a chat does), merged newest
-first by `EngineFeedPosition`, live. Load older asks every channel for 20 more, up to 100; nothing is ever
-"newer" than the live window, so the New posts pill never shows; the read mark is kept under its own cache key
-(`localChannelsFeedFilterId = -1`) and never sent to the server. The screen opens on Added in that case; For you
-stays the server's and shows its error row for accounts without the feed. The UI is the same in both modes:
-`NewsAddedFeedBinding` chooses the source, nothing else changes.
+40 most recently active subscribed broadcast channels (main and archived chat lists), each one's latest 10 posts
+through the account's view tracker (holes are filled with `messages.getHistory` as a chat does), merged newest first
+by `EngineFeedPosition`, live, and handed to the screen as its newest 100 (history updates merged at most every 0.4 s
+after the first window). Load older widens that window by 100 and, when the merged posts run short, asks every
+channel for 10 more, up to 60; nothing is ever "newer" than the live window, so the New posts pill never shows; the
+read mark is kept under its own cache key (`localChannelsFeedFilterId = -1`) and never sent to the server. The screen
+opens on Added in that case; For you stays the server's and shows its error row for accounts without the feed. The UI
+is the same in both modes: `NewsAddedFeedBinding` chooses the source, nothing else changes.

@@ -4,10 +4,16 @@ import SwiftSignalKit
 
 /// How many channels the local feed follows (the most recently active ones), and how many of each one's latest
 /// posts it shows: the first window, each Load older step, and the most it ever asks for.
-private let localFeedChannelLimit = 60
-private let localFeedInitialPostsPerChannel = 20
-private let localFeedPostsPerChannelStep = 20
-private let localFeedMaxPostsPerChannel = 100
+private let localFeedChannelLimit = 40
+private let localFeedInitialPostsPerChannel = 10
+private let localFeedPostsPerChannelStep = 10
+private let localFeedMaxPostsPerChannel = 60
+/// The window the screen gets (the server feed's pages are this size too): the newest posts of the merged list,
+/// grown by a page on Load older. The rows beyond it stay merged but unlisted, so the list never holds every
+/// channel's every loaded post at once.
+private let localFeedWindowPage = 100
+/// Channel histories arrive one hole at a time: updates within this interval are merged into one window.
+private let localFeedCoalesceInterval: Double = 0.4
 /// The local feed's own read mark, apart from the server feed's filters (which are never negative).
 let localChannelsFeedFilterId: Int32 = -1
 
@@ -24,7 +30,12 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
     private let statePromise = Promise<AddedFeedContext.State>()
 
     private var postsPerChannel = localFeedInitialPostsPerChannel
+    private var windowSize = localFeedWindowPage
     private var channelIds: [PeerId] = []
+    private var merged: [EngineFeedEntry] = []
+    private var lastMessages: [FeedPageMessage] = []
+    private var pendingPosts: [FeedPageMessage]?
+    private var coalesceTimer: SwiftSignalKit.Timer?
     private var hasReadState = false
     private var pendingReadPosition: EngineFeedPosition?
     private var readTimer: SwiftSignalKit.Timer?
@@ -69,6 +80,7 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         self.postsDisposable.dispose()
         self.readWriteDisposable.dispose()
         self.readTimer?.invalidate()
+        self.coalesceTimer?.invalidate()
     }
 
     private func pushState() {
@@ -139,16 +151,40 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         }
         self.postsDisposable.set((combineLatest(queue: self.queue, signals)
         |> deliverOn(self.queue)).start(next: { [weak self] lists in
-            self?.applyPosts(lists.flatMap { $0 })
+            self?.receivePosts(lists.flatMap { $0 })
         }))
     }
 
+    /// The first window goes out at once; while channel histories keep arriving, later ones are merged a few
+    /// times a second at most.
+    private func receivePosts(_ messages: [FeedPageMessage]) {
+        if self.state.isLoadingInitial || self.coalesceTimer == nil {
+            self.applyPosts(messages)
+            let timer = SwiftSignalKit.Timer(timeout: localFeedCoalesceInterval, repeat: false, completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.coalesceTimer = nil
+                if let pending = self.pendingPosts {
+                    self.pendingPosts = nil
+                    self.receivePosts(pending)
+                }
+            }, queue: self.queue)
+            self.coalesceTimer = timer
+            timer.start()
+        } else {
+            self.pendingPosts = messages
+        }
+    }
+
     private func applyPosts(_ messages: [FeedPageMessage]) {
+        self.lastMessages = messages
         func position(_ message: FeedPageMessage) -> EngineFeedPosition {
             return EngineFeedPosition(date: message.timestamp, peerId: message.id.peerId, id: message.id.id)
         }
         let newestFirst = messages.sorted(by: { position($0) > position($1) })
-        let entries = groupFeedMessages(newestFirst).sorted(by: { $0.position > $1.position })
+        self.merged = groupFeedMessages(newestFirst).sorted(by: { $0.position > $1.position })
+        let entries = Array(self.merged.prefix(self.windowSize))
         let isFirstWindow = self.state.isLoadingInitial
         self.state.entries = entries
         self.state.isLoadingInitial = false
@@ -156,7 +192,7 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         self.state.isLoadingNewer = false
         self.state.hasError = false
         self.state.hasNewer = false
-        self.state.hasOlder = self.postsPerChannel < localFeedMaxPostsPerChannel && !entries.isEmpty
+        self.state.hasOlder = !entries.isEmpty && (self.merged.count > entries.count || self.postsPerChannel < localFeedMaxPostsPerChannel)
         self.state.newestKnownPosition = entries.first?.position
         if isFirstWindow {
             self.state.windowGeneration += 1
@@ -171,6 +207,7 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         self.state.hasError = false
         self.pushState()
         self.postsPerChannel = localFeedInitialPostsPerChannel
+        self.windowSize = localFeedWindowPage
         if self.hasReadState {
             self.subscribePosts()
         }
@@ -196,10 +233,18 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         guard !self.state.isLoadingInitial, !self.state.isLoadingOlder, self.state.hasOlder else {
             return
         }
-        self.postsPerChannel = min(localFeedMaxPostsPerChannel, self.postsPerChannel + localFeedPostsPerChannelStep)
-        self.state.isLoadingOlder = true
-        self.pushState()
-        self.subscribePosts()
+        self.windowSize += localFeedWindowPage
+        if self.merged.count >= self.windowSize || self.postsPerChannel >= localFeedMaxPostsPerChannel {
+            // Enough is merged already, or the channels are exhausted: just widen the window.
+            self.state.isLoadingOlder = true
+            self.pushState()
+            self.applyPosts(self.lastMessages)
+        } else {
+            self.postsPerChannel = min(localFeedMaxPostsPerChannel, self.postsPerChannel + localFeedPostsPerChannelStep)
+            self.state.isLoadingOlder = true
+            self.pushState()
+            self.subscribePosts()
+        }
     }
 
     func jumpToNewest(completion: @escaping (Bool) -> Void) {
