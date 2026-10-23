@@ -199,7 +199,7 @@ bool UserActions::hovered(JSContext*, Element& element) {
 
 bool UserActions::active(JSContext*, Element& element) {
     return std::any_of(m_active.begin(), m_active.end(),
-                       [&](const Ref<Element>& active) { return isInclusiveAncestor(element, active.get()); });
+                       [&](const Active& active) { return isInclusiveAncestor(element, active.element.get()); });
 }
 
 void UserActions::setHover(JSContext* ctx, Element* hover) {
@@ -210,17 +210,17 @@ void UserActions::setHover(JSContext* ctx, Element* hover) {
     noteRender(ctx);
 }
 
-void UserActions::addActive(JSContext* ctx, Element* element) {
+void UserActions::addActive(JSContext* ctx, Element* element, uint64_t press) {
     if (!element) {
         return;
     }
-    m_active.push_back(Ref<Element>::retain(ctx, element));
+    m_active.push_back(Active{press, Ref<Element>::retain(ctx, element)});
     noteRender(ctx);
 }
 
-void UserActions::removeActive(JSContext* ctx, Element* element) {
-    const auto it = std::find_if(m_active.begin(), m_active.end(), [&](const Ref<Element>& active) { return active.get() == element; });
-    if (!element || it == m_active.end()) {
+void UserActions::removeActive(JSContext* ctx, uint64_t press) {
+    const auto it = std::find_if(m_active.begin(), m_active.end(), [&](const Active& active) { return active.press == press; });
+    if (it == m_active.end()) {
         return;
     }
     m_active.erase(it);
@@ -235,7 +235,7 @@ void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
     }
     const size_t before = m_active.size();
     m_active.erase(std::remove_if(m_active.begin(), m_active.end(),
-                                  [&](const Ref<Element>& active) { return isInclusiveAncestor(node, active.get()); }),
+                                  [&](const Active& active) { return isInclusiveAncestor(node, active.element.get()); }),
                    m_active.end());
     changed = changed || m_active.size() != before;
     if (changed) {

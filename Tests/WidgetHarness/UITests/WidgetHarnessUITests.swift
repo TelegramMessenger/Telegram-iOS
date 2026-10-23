@@ -155,16 +155,16 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertTrue(after.split(separator: "\n").contains("back"), after)
     }
 
-    /// sdk-v1 §5.5: touch-action: none claims both axes. A vertical drag is the widget's (its first pointermove grows it)
-    /// and the list holds still.
-    func testAClaimedVerticalDragHoldsTheList() throws {
+    /// A vertical drag is never a widget's (the user, 2026-10-23: "widgets should not be able to prevent vertical
+    /// scrolling, ever"): on a part with touch-action: none the list scrolls.
+    func testAClaimedVerticalDragScrollsTheChat() throws {
         let fixture = try self.launchDrag()
-        fixture.claim.press(forDuration: 0.05, thenDragTo: fixture.claim.withOffset(CGVector(dx: 0.0, dy: 150.0)))
-        let after = self.waitForDragFixtureToGrow(fixture.app, from: fixture.ready)
+        fixture.claim.press(forDuration: 0.05, thenDragTo: fixture.claim.withOffset(CGVector(dx: 0.0, dy: 200.0)))
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            (self.listMovement(from: fixture.ready, to: value) ?? 1000.0) > 50.0
+        }
         self.attachScreenshot(fixture.app, "after a vertical drag on #claim")
-        XCTAssertNotEqual(self.bubble("touch-drag.html", in: after)?.size, self.bubble("touch-drag.html", in: fixture.ready)?.size, after)
-        let movement = try XCTUnwrap(self.listMovement(from: fixture.ready, to: after), after)
-        XCTAssertLessThan(movement, 30.0, after)
+        XCTAssertGreaterThan(self.listMovement(from: fixture.ready, to: after) ?? 1000.0, 50.0, after)
         XCTAssertFalse(after.contains("contextMenu"), after)
     }
 
@@ -534,6 +534,25 @@ final class WidgetHarnessUITests: XCTestCase {
         }
     }
 
+    /// Each finger's moves are its own pointer's: two fingers dragging sideways on #left and #right each log a move, one
+    /// of them primary (vertically they would scroll the chat).
+    func testTwoFingersDraggingMoveAsTwoPointers() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        let right = fixture.right
+        try performFingers([Finger(at: left, down: 0.0, moves: [(CGPoint(x: left.x + 30.0, y: left.y), 0.3)], up: 0.8),
+                            Finger(at: right, down: 0.0, moves: [(CGPoint(x: right.x + 30.0, y: right.y), 0.4)], up: 0.8)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return log.contains("up:left:") && log.contains("up:right:")
+        }
+        self.attachScreenshot(fixture.app, "after dragging on #left and #right")
+        let moves = self.pointerLog("multitouch", in: after).split(separator: " ").map(String.init).filter { $0.hasPrefix("move:") }
+        XCTAssertEqual(Set(moves.map { String($0.split(separator: ":")[1]) }), ["left", "right"], after)
+        XCTAssertEqual(Set(moves.map { String($0.split(separator: ":")[2]) }).count, 2, after)
+        XCTAssertEqual(moves.filter { $0.hasSuffix(":P") }.count, 1, after)
+    }
+
     /// A first finger on a part the widget does not handle, then a second on a button: the chat lets go of the long press
     /// it was waiting on, and both fingers are the widget's.
     func testASecondFingerOnAButtonTakesTheHoldFromTheMenu() throws {
@@ -548,12 +567,13 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
     }
 
-    /// A finger that slides off its button, past the widget's edge, stays the widget's: its up arrives, never a cancel.
+    /// A finger that slides sideways off its button, past the widget's edge, stays the widget's: its up arrives, never a
+    /// cancel, and the bubble does not swipe to reply.
     func testAFingerSlidingOffTheWidgetStaysItsOwn() throws {
         let fixture = try self.launchMultitouch()
         let left = fixture.left
         let moves = [0.45, 0.6, 0.8].enumerated().map { index, time in
-            (CGPoint(x: left.x, y: left.y + 60.0 * Double(index + 1)), time)
+            (CGPoint(x: left.x - 30.0 * Double(index + 1), y: left.y), time)
         }
         try performFingers([Finger(at: fixture.right, down: 0.0, up: 1.0), Finger(at: left, down: 0.0, moves: moves, up: 1.0)], in: fixture.app)
         let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
@@ -564,6 +584,29 @@ final class WidgetHarnessUITests: XCTestCase {
         let log = self.pointerLog("multitouch", in: after)
         XCTAssertTrue(log.contains("up:left:") && log.contains("up:right:"), after)
         XCTAssertFalse(log.contains("cancel"), after)
+        XCTAssertFalse(self.hasEvent("reply", in: after), after)
+    }
+
+    /// The list began a drag (the readout's `listDrag` event): the chat scrolls.
+    private func listDragged(_ readout: String) -> Bool {
+        return readout.split(separator: "\n").contains("listDrag")
+    }
+
+    /// With two fingers on buttons (the widget took the touches), one dragging vertically still scrolls the chat (a
+    /// vertical scroll is never a widget's to stop), and the scroll ends both presses.
+    func testTwoFingersOnButtonsLetTheChatScroll() throws {
+        let fixture = try self.launchMultitouch()
+        let right = fixture.right
+        let moves = (1 ... 8).map { step in (CGPoint(x: right.x, y: right.y + 25.0 * Double(step)), 0.3 + 0.08 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: right, down: 0.0, moves: moves, up: 1.3)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return self.listDragged(value) && log.contains("cancel:left") && log.contains("cancel:right")
+        }
+        self.attachScreenshot(fixture.app, "after a vertical drag with two fingers on buttons")
+        XCTAssertTrue(self.listDragged(after), after)
+        let log = self.pointerLog("multitouch", in: after)
+        XCTAssertTrue(log.contains("cancel:left") && log.contains("cancel:right"), after)
     }
 
     /// While the chat drags, a finger that lands on the widget does nothing (the user, 2026-10-23: "The second finger
@@ -610,19 +653,21 @@ final class WidgetHarnessUITests: XCTestCase {
                             Finger(at: self.caption(fixture), down: 0.4, up: 1.6)], in: fixture.app)
         let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).contains("up:left") }
         self.attachScreenshot(fixture.app, "after dragging #left and holding the caption")
-        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P move:left:a:P up:left:a:P", after)
         XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
     }
 
-    /// While #left is held, a drag elsewhere in the chat does not take the list (which would cancel #left's touch).
-    func testAHeldButtonKeepsTheListStill() throws {
+    /// While #left is held, a vertical drag elsewhere in the chat still scrolls it (the lock never stops a vertical
+    /// scroll), and the scroll ends #left's press.
+    func testAHeldButtonLetsTheChatScroll() throws {
         let fixture = try self.launchMultitouch()
         let start = CGPoint(x: fixture.area.midX, y: fixture.area.minY - 100.0)
         let moves = (1 ... 9).map { step in (CGPoint(x: start.x, y: start.y + 20.0 * Double(step)), 0.3 + 0.1 * Double(step)) }
         try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: start, down: 0.3, moves: moves, up: 1.3)], in: fixture.app)
         let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("up:left") || $0.contains("cancel:left") }
         self.attachScreenshot(fixture.app, "after a drag while #left is held")
-        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+        XCTAssertTrue(self.listDragged(after), after)
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P cancel:left:a:P", after)
     }
 
     /// While #left is held, a swipe from the screen's left edge does not go back.

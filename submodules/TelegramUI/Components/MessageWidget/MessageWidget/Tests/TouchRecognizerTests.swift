@@ -34,20 +34,23 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
         return calls.map { "\($0.phase):\($0.primary ? "P" : "S")" }
     }
 
-    /// Multitouch (design §5.2): each finger is its own pointer; the first down while none is tracked is primary.
+    /// Multitouch (design §5.2): each finger is its own pointer, its moves included; the first down while none is
+    /// tracked is primary.
     func testTwoTouchesAreTwoPointers() {
         let (recognizer, calls) = self.pointerRecognizer()
         let first = UITouch()
         let second = UITouch()
         recognizer.touchesBegan([first], with: UIEvent())
         recognizer.touchesBegan([second], with: UIEvent())
+        recognizer.touchesMoved([second], with: UIEvent())
         recognizer.touchesEnded([second], with: UIEvent())
         recognizer.touchesMoved([first], with: UIEvent())
         let made = calls()
-        XCTAssertEqual(self.described(made), ["began:P", "began:S", "ended:S", "moved:P"])
+        XCTAssertEqual(self.described(made), ["began:P", "began:S", "moved:S", "ended:S", "moved:P"])
         XCTAssertNotEqual(made[0].pointer, made[1].pointer)
         XCTAssertEqual(made[2].pointer, made[1].pointer)
-        XCTAssertEqual(made[3].pointer, made[0].pointer)
+        XCTAssertEqual(made[3].pointer, made[1].pointer)
+        XCTAssertEqual(made[4].pointer, made[0].pointer)
     }
 
     /// Every end path ends every finger: UIKit's reset and the host's cancel cancel each tracked touch once.
@@ -62,6 +65,43 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
             XCTAssertEqual(self.described(made), ["began:P", "began:S", "cancelled:P", "cancelled:S"])
             XCTAssertEqual(Set(made.dropFirst(2).map(\.pointer)), Set(made.prefix(2).map(\.pointer)))
         }
+    }
+
+    /// Once the chat scrolls (a pan above the widget began, which nothing the widget does can stop), the touches the
+    /// widget took end as cancelled, as a finger landing during a scroll starts nothing.
+    func testAChatScrollEndsTheTouchesTheWidgetTook() {
+        let (recognizer, calls) = self.pointerRecognizer { _ in MessageWidgetPress(claim: [], takesTaps: true) }
+        var dragging = false
+        recognizer.chatIsDragging = { dragging }
+        let first = UITouch()
+        let second = UITouch()
+        recognizer.touchesBegan([first], with: UIEvent())
+        recognizer.touchesBegan([second], with: UIEvent())
+        dragging = true
+        recognizer.touchesMoved([first], with: UIEvent())
+        XCTAssertEqual(self.described(calls()).filter { $0.hasPrefix("cancelled") }.count, 2)
+    }
+
+    /// A move the widget answers by ending every touch (the host's cancel, from inside the move's callback) leaves the
+    /// recognizer no finger to go on with: the move ends there.
+    func testAMoveThatCancelsTheTouchesEndsThere() {
+        let recognizer = MessageWidgetTouchRecognizer()
+        var phases: [MessageWidgetView.TouchPhase] = []
+        recognizer.onTouch = { [unowned recognizer] phase, _, _, _ in
+            phases.append(phase)
+            if phase == .moved {
+                recognizer.cancelTrackedTouches()
+            }
+            return phase == .began ? MessageWidgetPress(claim: [.horizontal], takesTaps: true) : .none
+        }
+        var at = CGPoint.zero
+        recognizer.touchLocation = { _ in at }
+        let touch = UITouch()
+        recognizer.touchesBegan([touch], with: UIEvent())
+        at = CGPoint(x: 40.0, y: 0.0)
+        recognizer.touchesMoved([touch], with: UIEvent())
+        XCTAssertEqual(phases, [.began, .moved, .cancelled])
+        XCTAssertEqual(recognizer.state, .possible)
     }
 
     /// The app going to the background or a system alert cancels every touch at once.
@@ -157,14 +197,14 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
     /// With two fingers down on parts the widget does not handle, a question reads the press of the finger nearest its
     /// point (here told apart by their claims).
     func testAQuestionWithTwoTouchesReadsTheNearestPress() {
-        let (recognizer, _) = self.pointerRecognizer { pointer in MessageWidgetPress(claim: pointer == 1 ? [.vertical] : [], takesTaps: false) }
+        let (recognizer, _) = self.pointerRecognizer { pointer in MessageWidgetPress(claim: pointer == 1 ? [.horizontal] : [], takesTaps: false) }
         let first = UITouch()
         let second = UITouch()
         let points = [ObjectIdentifier(first): CGPoint(x: 10.0, y: 10.0), ObjectIdentifier(second): CGPoint(x: 200.0, y: 10.0)]
         recognizer.touchLocation = { points[ObjectIdentifier($0)] ?? .zero }
         recognizer.touchesBegan([first], with: UIEvent())
         recognizer.touchesBegan([second], with: UIEvent())
-        XCTAssertEqual(recognizer.pressAnswer(near: CGPoint(x: 11.0, y: 12.0))?.claim, [.vertical])
+        XCTAssertEqual(recognizer.pressAnswer(near: CGPoint(x: 11.0, y: 12.0))?.claim, [.horizontal])
         XCTAssertEqual(recognizer.pressAnswer(near: CGPoint(x: 199.0, y: 9.0))?.claim, [])
     }
 
@@ -252,7 +292,9 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
     }
 
     /// sdk-v1 §5.5: a press answers the drags its widget claims, from the touch-action at its point, and whether it
-    /// landed on something the widget handles (a button here).
+    /// landed on something the widget handles (a button here). A vertical drag is never the widget's (the user,
+    /// 2026-10-23: "widgets should not be able to prevent vertical scrolling, ever"): touch-action: none claims the
+    /// horizontal one only.
     func testAPressAnswersItsClaimAndWhetherItTakesTaps() {
         let (instance, view) = self.booted("<!doctype html><html><head><style>body{margin:0} div,button{display:block;"
             + "width:100px;height:50px;margin:0;padding:0;border:0}</style></head><body><div></div>"
@@ -267,7 +309,7 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
         }
         XCTAssertEqual(presses, [
             MessageWidgetPress(claim: [], takesTaps: false),
-            MessageWidgetPress(claim: [.horizontal, .vertical], takesTaps: true),
+            MessageWidgetPress(claim: [.horizontal], takesTaps: true),
             MessageWidgetPress(claim: [.horizontal], takesTaps: true),
             MessageWidgetPress(claim: [], takesTaps: true)
         ])

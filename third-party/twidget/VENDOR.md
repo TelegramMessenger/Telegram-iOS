@@ -1422,11 +1422,15 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `grid-auto-columns`, `grid-auto-flow`, `font-feature-settings`, `font-variant-numeric`) join `raw_declaration_names`
     (`style.cpp`), as `touch-action` did (edit 30.1), so WidgetRuntime's getComputedStyle answers what the element
     declared, `var()` substituted, rather than the initial value. So do properties litehtml keeps in a form that
-    cannot tell an undeclared value from a declared one (`z-index`, whose auto reads 0; `justify-content` and
-    `align-content`, which default to flex-start and stretch where CSS's initial value is normal) or computes only on
-    flex or grid containers or flex items (`flex-direction`, `flex-wrap`, `align-items`, `row-gap`, `column-gap`,
-    `flex-shrink`, `flex-basis`). Insertions only; a raw copy exists only on an element that declares the property,
-    counted as its other declarations are.
+    cannot tell an undeclared value from a declared one (`justify-content` and `align-content`, which default to
+    flex-start and stretch where CSS's initial value is normal) or computes only on flex or grid containers or flex
+    items (`flex-direction`, `flex-wrap`, `align-items`, `row-gap`, `column-gap`, `flex-shrink`, `flex-basis`; since
+    edit 54 getComputedStyle reads litehtml's own parse of these, `flex-basis`'s copy telling a declared basis from the
+    `flex` shorthand's, and each copy stays the cascaded value a CSS animation's implicit keyframe starts from), and
+    properties whose spelling litehtml's value loses (`aspect-ratio`, kept as one float; `flex`, whose omitted basis it
+    stores as 0px where CSS writes 0%; `place-content`, whose `normal` and `stretch` it stores as the defaults). Insertions only; a raw copy exists only on an element that declares the property, counted as its other
+    declarations are. `z-index` is one too, for the cascaded value a CSS animation's implicit keyframe starts from
+    (getComputedStyle reads litehtml's own, edit 53).
 52. **Caret offsets for text selection** (2026-10-22, text-selection plan, Task 3). `LHContainer::caret_offsets` (and
     `LHHostContainer::caretOffsets`) reads back where `draw_text` puts each UTF-16 boundary of a text: the simple
     shaper's per-glyph xs and its width for printable ASCII (one glyph per byte), otherwise the cached `CTLine`'s caret
@@ -1436,6 +1440,20 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     (`CTLineGetOffsetForStringIndex`) costs the line's length each, which made a long run quadratic (final review C1:
     minutes at the text cap). WidgetRuntime's iOS host answers `RenderHost::caretOffsets` with it, so a selection's knobs sit where
     the glyphs are drawn on both paths. Additions only.
+53. **z-index as kept** (getComputedStyle). `css_properties::get_z_index_length()` returns the stored `css_length`, whose
+    predefined value is `auto`, so a read tells `auto` from `0` without a raw copy of the declaration; litehtml
+    validates the value itself (an integer or `auto`), so an invalid declaration never reads back. One accessor,
+    insertions only.
+54. **The element's own parsed values** (getComputedStyle). `html_tag::own_property(name)` returns the element's
+    cascaded `property_value` of `name` as litehtml parsed it. litehtml computes the flex longhands, `align-items`,
+    `justify-items` and `justify-self` only on the containers or items they lay out, and a gap's `normal` as 0, but it
+    parses them on every element, expanding `flex`, `flex-flow`, `gap` and `place-*` into their longhands in cascade
+    order: WidgetRuntime reads that parse where litehtml computed nothing. One accessor, insertions only.
+55. **The box alignment shorthands in the shorthand table** (`style.cpp` `shorthands`). `gap` (and its alias `grid-gap`),
+    `place-content`, `place-items` and `place-self` join `flex` and `flex-flow` there, so `inherit`, `initial`,
+    `unset` and `revert` on them reach their longhands (they were kept under the shorthand's own name, which nothing
+    reads), and `subst_vars` keeps a longhand written after one of them holding a `var()`, in layout as in
+    WidgetRuntime's getComputedStyle. Insertions only.
 
 ## The iOS font resolver
 

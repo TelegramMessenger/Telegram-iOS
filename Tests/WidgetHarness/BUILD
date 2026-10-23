@@ -184,6 +184,8 @@ swift_library(
 ios_ui_test(
     name = "WidgetHarnessUITests",
     env = {"REUSE_GLOBAL_SIMULATOR": "1"},
+    # Every test launches the harness app (36, about 300 s on a loaded machine: past medium's limit).
+    size = "large",
     minimum_os_version = "15.0",
     runner = ":WidgetHarnessUITestRunner",
     test_host = ":WidgetHarness",

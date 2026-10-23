@@ -4,12 +4,12 @@ import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
 /// The drags of a press its widget takes for itself (SDK v1 §5.5): with `horizontal` the chat's horizontal gestures
-/// (swipe-to-reply, the back swipe) stay off the touch, with `vertical` the list holds still.
+/// (swipe-to-reply, the back swipe) stay off the touch. A vertical drag is never the widget's, whatever it declares:
+/// the chat always scrolls (the user, 2026-10-23: "widgets should not be able to prevent vertical scrolling, ever").
 struct MessageWidgetGestureClaim: OptionSet {
     let rawValue: Int
 
     static let horizontal = MessageWidgetGestureClaim(rawValue: 1 << 0)
-    static let vertical = MessageWidgetGestureClaim(rawValue: 1 << 1)
 }
 
 /// What a press answered when it went down (SDK v1 §5.5): the drags it claims for the widget, and whether it landed on
@@ -302,6 +302,9 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     /// lifted, every question is the widget's, since a recognizer failed from outside can still act on a timer (the
     /// bubble's long tap does) and asks then.
     private var tookTouches = false
+    /// A finger went sideways (a claimed drag, or one of the touches the widget took): UIKit's exclusion keeps the pans
+    /// out from then on (`canPrevent`). Until then none, so the chat's scroll survives the widget taking the touches.
+    private var preventsPans = false
     /// Pointer ids count up, one per press.
     private var nextPointer: Int32 = 1
     /// A press started before its touch reached the recognizer (`beginPressEarly`): adopted by the touch that begins at
@@ -350,10 +353,20 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         return (state == .began || state == .changed) && recognizer is UIPanGestureRecognizer
     }
 
-    /// Whether a drag or a second finger the widget takes fails `recognizer` above it: everything but the chat's lock,
-    /// which must still hear the fingers that land elsewhere.
-    static func failsAbove(_ recognizer: UIGestureRecognizer) -> Bool {
-        return !(recognizer is MessageWidgetChatLockRecognizer)
+    /// Whether a drag or a second finger the widget takes (or a finger the chat's lock holds) fails `recognizer` above
+    /// it: everything but the chat's lock, which must still hear the fingers that land elsewhere, and, until a finger has
+    /// moved sideways (`pans`), a pan inside the chat's view `chat` (its scroll, a bubble's swipe to reply, which needs
+    /// 10 pt sideways): a vertical drag is never a widget's to stop (the user, 2026-10-23: "widgets should not be able to
+    /// prevent vertical scrolling, ever"). A pan on the chat's view or above it (the navigation's back swipe, which
+    /// begins at 2 pt) goes at once.
+    static func failsAbove(_ recognizer: UIGestureRecognizer, pans: Bool, chat: UIView?) -> Bool {
+        if recognizer is MessageWidgetChatLockRecognizer {
+            return false
+        }
+        if !pans, recognizer is UIPanGestureRecognizer, let chat, let view = recognizer.view, view !== chat, view.isDescendant(of: chat) {
+            return false
+        }
+        return true
     }
 
     /// The chat's lock (`MessageWidgetTouchLock`) is held while a finger is on a part the widget handles.
@@ -419,7 +432,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         switch self.state {
         case .possible:
             self.state = .began
-            self.failRecognizersAbove()
+            self.failRecognizersAbove(pans: false)
         case .began, .changed:
             self.state = .changed
         default:
@@ -502,6 +515,12 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
+        // The chat scrolls (a pan above began, which nothing here stops): the widget's fingers end, as a finger landing
+        // during a scroll starts nothing.
+        if !self.tracked.isEmpty && self.isChatDragging() {
+            self.cancelTrackedTouches()
+            return
+        }
         for touch in touches {
             guard let index = self.tracked.firstIndex(where: { $0.touch === touch }) else {
                 continue
@@ -510,13 +529,28 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
             self.tracked[index].lastLocation = location
             let finger = self.tracked[index]
             _ = self.onTouch?(.moved, location, finger.pointer, finger.primary)
+            // The callback may have ended the touches (the host's cancel): the finger is looked up again.
+            guard let current = self.tracked.firstIndex(where: { $0.touch === touch }) else {
+                continue
+            }
+            let sideways = self.movedSideways(current, at: location)
             switch self.state {
             case .possible:
-                if self.takesDrag(index, at: location) {
+                // A drag its press claimed (horizontal: a vertical one is never the widget's).
+                if sideways == true && self.tracked[current].press.claim.contains(.horizontal) {
+                    // Set before beginning: the exclusion at the transition is what keeps a pan that would begin in the
+                    // same event (swipe-to-reply on a fast drag) out; failing it from here does not hold within the event.
+                    self.preventsPans = true
                     self.state = .began
-                    self.failRecognizersAbove()
+                    self.failRecognizersAbove(pans: true)
                 }
             case .began, .changed:
+                // The widget holds the touches: a finger moving sideways first takes the chat's pans off them too, one
+                // moving vertically leaves the chat's scroll to begin.
+                if sideways == true {
+                    self.preventsPans = true
+                    self.failRecognizersAbove(pans: true)
+                }
                 self.state = .changed
             default:
                 break
@@ -524,28 +558,30 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         }
     }
 
-    /// Whether the finger at `index`, now at `location`, is a drag its press claimed: decided once, the first time it is
-    /// `claimDistance` from where it went down, by the axis it moved along most.
-    private func takesDrag(_ index: Int, at location: CGPoint) -> Bool {
+    /// Whether the finger at `index`, now at `location`, moved mostly sideways: decided once, the first time it is
+    /// `claimDistance` from where it went down; nil before and after.
+    private func movedSideways(_ index: Int, at location: CGPoint) -> Bool? {
         let finger = self.tracked[index]
-        guard !finger.directionDecided, !finger.press.claim.isEmpty else {
-            return false
+        guard !finger.directionDecided else {
+            return nil
         }
         let dx = abs(location.x - finger.downLocation.x)
         let dy = abs(location.y - finger.downLocation.y)
         guard max(dx, dy) >= MessageWidgetTouchRecognizer.claimDistance else {
-            return false
+            return nil
         }
         self.tracked[index].directionDecided = true
-        return finger.press.claim.contains(dx >= dy ? .horizontal : .vertical)
+        return dx >= dy
     }
 
-    /// The drag is the widget's: the list's pan, swipe-to-reply, the back swipe and the bubble's taps and long press fail
-    /// (the window's own recognizers are the system's and are left alone).
-    private func failRecognizersAbove() {
+    /// The touches are the widget's: the bubble's taps and long press, swipe-to-reply, the back swipe fail (the window's
+    /// own recognizers are the system's and are left alone). `pans`: a finger went sideways, so the pans inside the
+    /// chat's view (`failsAbove`) go too.
+    private func failRecognizersAbove(pans: Bool) {
+        let chat = MessageWidgetTouchLock.chatView(of: self.view)
         var view = self.view?.superview
         while let current = view, !(current is UIWindow) {
-            for recognizer in current.gestureRecognizers ?? [] where recognizer !== self && MessageWidgetTouchRecognizer.failsAbove(recognizer) && recognizer.state == .possible {
+            for recognizer in current.gestureRecognizers ?? [] where recognizer !== self && MessageWidgetTouchRecognizer.failsAbove(recognizer, pans: pans, chat: chat) && recognizer.state == .possible {
                 recognizer.state = .failed
             }
             view = current.superview
@@ -608,6 +644,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         super.reset()
         self.sequenceTakesTaps = false
         self.tookTouches = false
+        self.preventsPans = false
         self.cancelTrackedTouches()
     }
 
@@ -616,5 +653,14 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
             return false
         }
         return super.canBePrevented(by: preventingGestureRecognizer)
+    }
+
+    override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // A pan only once a finger went sideways (`preventsPans`): when the widget takes the touches for two fingers,
+        // UIKit would otherwise fail every pan still possible, the chat's scroll included.
+        if preventedGestureRecognizer is UIPanGestureRecognizer {
+            return self.preventsPans
+        }
+        return super.canPrevent(preventedGestureRecognizer)
     }
 }

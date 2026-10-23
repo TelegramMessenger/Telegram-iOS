@@ -502,3 +502,158 @@ WR_TEST(testDeclaredValuesReadBack) {
     CHECK_JS_EQ(env.env(), "all(r, ['stroke-dasharray', 'stroke-dashoffset'])", "5px, 3px|2px");
     CHECK_JS_EQ(env.env(), "all(pa, ['stroke-dasharray', 'stroke-dashoffset'])", "4px|3px");
 }
+
+/// A declaration litehtml rejects never reads back: z-index reads what litehtml keeps (an integer, else auto), and a
+/// non-container's justify-content and align-content read only a keyword of litehtml's tables, else normal.
+WR_TEST(testInvalidDeclarationsDoNotReadBack) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#a{position:relative;z-index:abc}#b{position:relative;z-index:1.5}"
+                  "#c{position:relative;z-index:2}#c.c{z-index:abc}#z{position:relative;z-index:0}#z.z{z-index:abc}"
+                  "#d{justify-content:centre;align-content:middle}#e{justify-content:space-evenly;align-content:space-between}"
+                  "</style></head><body><div id=a></div><div id=b></div><div id=c class=c></div><div id=z class=z></div>"
+                  "<div id=d></div><div id=e></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "[a, b, c, z].map(e => getComputedStyle(e).zIndex).join('|')", "auto|auto|2|0");
+    CHECK_JS_EQ(env.env(), "all(d, ['justify-content', 'align-content'])", "normal|normal");
+    CHECK_JS_EQ(env.env(), "all(e, ['justify-content', 'align-content'])", "space-evenly|space-between");
+}
+
+/// A computed declaration lists longhands only (CSSOM), so a script copying every listed property one by one never
+/// clears what an earlier copy set; the shorthands and the legacy alias stay readable by name.
+WR_TEST(testTheListHoldsLonghandsOnly) {
+    RenderEnv env("<!doctype html><html><body><div id=a style='border:1px solid red'>a</div>"
+                  "<script>window.a = document.getElementById('a');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "(() => { const names = [...getComputedStyle(a)]; return [names.includes('border-top-width'),"
+                           " ['animation', 'background', 'border', 'border-bottom', 'border-color', 'border-left', 'border-radius',"
+                           " 'border-right', 'border-style', 'border-top', 'border-width', 'flex', 'flex-flow', 'font', 'gap',"
+                           " 'grid-area', 'grid-column', 'grid-row', 'inset', 'list-style', 'outline', 'place-content',"
+                           " 'place-items', 'place-self', 'transition', 'word-wrap'].filter(n => names.includes(n)).join(' ')].join('|'); })()",
+                "true|");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(a).border", "1px solid rgb(255, 0, 0)");
+}
+
+/// A declaration whose var() never resolved is invalid at computed-value time: a non-inherited property reads its
+/// initial value, an inherited one its parent's, never the var() as written.
+WR_TEST(testAnUnresolvedVarIsInvalidAtComputedTime) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#u{unicode-bidi:var(--nope)}#p{font-feature-settings:\"liga\" 0}#c{font-feature-settings:var(--nope)}"
+                  "#g{grid-auto-flow:var(--nope)}"
+                  "</style></head><body><div id=u>u</div><div id=p><div id=c>c</div></div><div id=g>g</div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(u).unicodeBidi", "normal");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(c).fontFeatureSettings", "\"liga\" 0");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(g).gridAutoFlow", "row");
+}
+
+/// Spellings as CSSOM writes them: aspect-ratio as declared (16 / 9, not its float over 1), a flex shorthand's omitted
+/// basis as 0%, and grid lines side by side as declared, a span on the side it was written on.
+WR_TEST(testDeclaredSpellingsReadBack) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#r{aspect-ratio:16/9;width:32px}#q{aspect-ratio:2;width:20px}"
+                  "#f{display:flex}#i{flex:1}#j{flex:2 3}#k{flex:1 1 10px}"
+                  "#g{display:grid}#a{grid-column:span 2 / 5}#b{grid-row-start:2;grid-row-end:span 3}"
+                  "</style></head><body><div id=r></div><div id=q></div><div id=f><div id=i>i</div><div id=j>j</div>"
+                  "<div id=k>k</div></div><div id=g><div id=a>a</div><div id=b>b</div></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.cs = e => getComputedStyle(e);</script></body></html>");
+    CHECK_JS_EQ(env.env(), "cs(r).aspectRatio + '|' + cs(q).aspectRatio", "16 / 9|2 / 1");
+    CHECK_JS_EQ(env.env(), "[i, j, k].map(e => cs(e).flexBasis).join('|')", "0%|0%|10px");
+    CHECK_JS_EQ(env.env(), "cs(i).flex", "1 1 0%");
+    CHECK_JS_EQ(env.env(), "cs(a).gridColumn + '|' + cs(a).gridArea", "span 2 / 5|auto / span 2 / auto / 5");
+    CHECK_JS_EQ(env.env(), "cs(b).gridRow + '|' + cs(b).gridArea", "2 / span 3|2 / auto / span 3");
+}
+
+/// Outside the containers and items litehtml computes them for, a flex, gap or place longhand reads litehtml's own parse
+/// of the element's declarations, a shorthand's part included, as CSS expands it; the parent's value for inherit; else
+/// its initial value. A gap reads normal wherever none is declared, a container included.
+WR_TEST(testLonghandsOutsideContainersSeeTheirShorthands) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#n{flex:2}#ni{flex-grow:inherit}#m{flex:none}#k{flex:3 10px}#x{flex-direction:diagonal}"
+                  "#g{gap:3px 4px}#h{gap:5px}#o{gap:3px;row-gap:9px}#r{row-gap:9px;gap:3px}#em{font-size:10px;gap:1em 50%}"
+                  "#fl{display:flex}#w{flex-flow:column wrap}#p{place-content:center space-between}"
+                  "#pn{place-content:normal}#ps{place-content:stretch}#q{place-items:end}#s{place-self:start end}"
+                  "</style></head><body><div id=n><div id=ni></div></div><div id=m></div><div id=k></div><div id=x></div>"
+                  "<div id=g></div><div id=h></div><div id=o></div><div id=r></div><div id=em></div><div id=fl></div>"
+                  "<div id=w></div><div id=p></div><div id=pn></div><div id=ps></div><div id=q></div><div id=s></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "[n, ni, m, k].map(e => all(e, ['flex-grow', 'flex-shrink', 'flex-basis'])).join(' ')",
+                "2|1|0% 2|1|auto 0|0|auto 3|1|10px");
+    CHECK_JS_EQ(env.env(), "all(x, ['flex-direction'])", "row");
+    CHECK_JS_EQ(env.env(), "[g, h, o, r, em, fl].map(e => all(e, ['row-gap', 'column-gap'])).join(' ')",
+                "3px|4px 5px|5px 9px|3px 3px|3px 10px|50% normal|normal");
+    CHECK_JS_EQ(env.env(), "all(w, ['flex-direction', 'flex-wrap', 'flex-flow'])", "column|wrap|column wrap");
+    CHECK_JS_EQ(env.env(), "[p, pn, ps].map(e => all(e, ['align-content', 'justify-content'])).join(' ')",
+                "center|space-between normal|normal stretch|stretch");
+    CHECK_JS_EQ(env.env(), "all(q, ['align-items', 'justify-items', 'place-items'])", "end|end|end");
+    CHECK_JS_EQ(env.env(), "all(s, ['align-self', 'place-self'])", "start|start end");
+}
+
+/// justify-content and align-content at litehtml's default read the keyword litehtml applied: `!important` decides
+/// between the longhand and place-content as the cascade does, and an animation's value stands over a declaration's
+/// (final review I1).
+WR_TEST(testContentAtTheDefaultReadsWhatWasApplied) {
+    RenderEnv env("<!doctype html><html><head><style>"
+                  "#f{display:flex;justify-content:flex-start!important}#f.x{place-content:center}"
+                  ".y{place-content:stretch!important}#y{display:flex;justify-content:flex-start}"
+                  "#b{justify-content:flex-start!important}#b.x{place-content:normal}#an{display:flex;justify-content:center}"
+                  "</style></head><body><div id=f class=x></div><div id=y class=y></div><div id=b class=x></div><div id=an></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "all(f, ['justify-content', 'align-content'])", "flex-start|center");
+    CHECK_JS_EQ(env.env(), "all(y, ['justify-content', 'align-content'])", "stretch|stretch");
+    CHECK_JS_EQ(env.env(), "all(b, ['justify-content', 'align-content'])", "flex-start|normal");
+    CHECK_JS_EQ(env.env(), "(() => { const k = an.animate({justifyContent: ['flex-start', 'flex-start']}, 1000); k.pause();"
+                           " k.currentTime = 500; return getComputedStyle(an).justifyContent; })()",
+                "flex-start");
+}
+
+/// A flex shorthand's omitted basis reads 0% only when that `flex` wrote the basis litehtml applied: a later one wins
+/// over an earlier flex-basis, an invalid later one and a refused one (`!important`) do not (final review M1).
+WR_TEST(testAnOmittedFlexBasisIsTheAppliedFlexs) {
+    RenderEnv env("<!doctype html><html><head><style>#f{display:flex}"
+                  "#k{flex-basis:10px}#k.k{flex:1}#j{flex:1 1 0px}#j.j{flex:-1}#i{flex:1!important;flex-basis:5px}"
+                  "</style></head><body><div id=f><div id=k class=k></div><div id=j class=j></div><div id=i></div></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    CHECK_JS_EQ(env.env(), "[k, j, i].map(e => getComputedStyle(e).flexBasis).join('|')", "0%|0px|0%");
+}
+
+/// gap and place-* are shorthands litehtml expands: a CSS-wide keyword reaches their longhands, and a longhand written
+/// after one holding a var() stands once the var() is substituted (final review M2).
+WR_TEST(testGapAndPlaceKeywordsReachTheirLonghands) {
+    RenderEnv env("<!doctype html><html><head><style>.p{row-gap:7px;column-gap:6px}.c{row-gap:9px}.c.d{gap:inherit}"
+                  "#v{--g:3px;gap:var(--g);row-gap:9px}#pc{display:flex;--pc:end;place-content:var(--pc);justify-content:center}"
+                  "#pi{display:flex;justify-content:center}#pi.x{place-content:initial}"
+                  "</style></head><body><div class=p><div id=c class='c d'></div></div><div id=v></div><div id=pc></div>"
+                  "<div id=pi class=x></div><script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "all(c, ['row-gap', 'column-gap'])", "7px|6px");
+    CHECK_JS_EQ(env.env(), "all(v, ['row-gap', 'column-gap'])", "9px|3px");
+    CHECK_JS_EQ(env.env(), "all(pc, ['align-content', 'justify-content'])", "end|center");
+    CHECK_JS_EQ(env.env(), "all(pi, ['align-content', 'justify-content'])", "normal|normal");
+}
+
+/// A length litehtml keeps as a calc() (a percentage it cannot resolve yet) reads as CSS writes its computed value,
+/// font-relative terms in px (final review M3).
+WR_TEST(testACalcLengthReadsAsACalc) {
+    RenderEnv env("<!doctype html><html><head><style>#n{font-size:10px;gap:calc(10% + 2em) calc(5px + 50%)}"
+                  "#m{gap:min(10%, 30px)}#x{display:flex;gap:calc(10% - 2px)}"
+                  "</style></head><body><div id=n></div><div id=m></div><div id=x></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
+                  "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
+    CHECK_JS_EQ(env.env(), "all(n, ['row-gap', 'column-gap'])", "calc(10% + 20px)|calc(50% + 5px)");
+    CHECK_JS_EQ(env.env(), "all(m, ['row-gap'])", "min(10%, 30px)");
+    CHECK_JS_EQ(env.env(), "all(x, ['row-gap'])", "calc(10% - 2px)");
+}
+
+/// A grid line declaration litehtml cannot lay out (an unresolved var(), a name) reads as if absent, as layout treats
+/// it (final review M5).
+WR_TEST(testAnInvalidGridLineReadsAsAbsent) {
+    RenderEnv env("<!doctype html><html><head><style>#g{display:grid}#a{grid-row:var(--nope)}#b{grid-column-start:foo bar}"
+                  "#c{grid-column:2 / 4;grid-column-start:foo}"
+                  "</style></head><body><div id=g><div id=a></div><div id=b></div><div id=c></div></div>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    CHECK_JS_EQ(env.env(), "[getComputedStyle(a).gridRow, getComputedStyle(b).gridColumn, getComputedStyle(c).gridColumn].join('|')",
+                "auto|auto|2 / 4");
+}

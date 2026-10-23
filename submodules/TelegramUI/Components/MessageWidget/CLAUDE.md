@@ -247,24 +247,29 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`MessageWidgetTouchRecognizer.maximumTouches`, the runtime's `kMaxPointers`; another is ignored whole): its own
   pointer id (counting up per press), `pointerdown`, moves and `pointerup`/`pointercancel`, the first finger down while
   none is the primary, and only the primary clicks. In the runtime each press keeps its own target, capture, canceled
-  defaults, `:active` entry (`UserActions`; `:hover` follows the primary) and activation (`HostState::endPress` forgets
-  a press's, so fingers can lift in any order). With one finger everything above holds unchanged. With two or more, the
-  rules are the user's:
+  defaults, `:active` entry (`UserActions`, removed by its own press's end or its element leaving the document; `:hover`
+  follows the primary) and activation (`HostState::endPress` forgets a press's, so fingers can lift in any order).
+  With one finger everything above holds unchanged. With two or more, the rules are the user's:
   - **The chat steps back**: a finger that lands while another is down, when either is on something the widget
     handles, takes the touches for the widget until every finger has lifted: the recognizers above fail (as for a
-    claimed drag), and every question the bubble asks meanwhile answers as the widget's (`tookTouches`, forgotten when
-    the host takes the touches), since `TapLongTapOrDoubleTapGestureRecognizer`'s long-tap timer outlives being failed
-    from outside (it now reports nothing once failed; a long tap it cancelled itself on a drift still reports). A finger
-    that slides off its control, past the widget's edge too, stays the widget's. Two fingers landing in one event adopt
-    the press the bubble's question started for one of them, whichever order UIKit hands them over.
+    claimed drag, but the chat's own pans until a finger moves sideways: see "The chat always scrolls" below), and every
+    question the bubble asks meanwhile answers as the widget's (`tookTouches`, forgotten when
+    the host takes the touches). `TapLongTapOrDoubleTapGestureRecognizer`, set to `.failed`, ends its highlight and stops
+    its long-tap timer at once (a `state` observer keyed on the value set; a long tap it cancelled itself on a drift
+    still reports), where UIKit would reset it only after every finger had lifted. A finger that slides sideways off
+    its control, past the widget's edge too, stays the widget's. Two fingers landing in one event adopt the press the
+    bubble's question started for one of them, whichever order UIKit hands them over.
   - **While the chat drags, no finger does anything**: a finger that lands while a pan above the widget has begun (the
-    list's, swipe-to-reply, the back swipe) starts no press, nor does the bubble's early question for it. Only a pan is
-    a drag (`isChatDrag`): the bubble's tap waiting for a double tap leaves a single finger as it always was.
+    list's, swipe-to-reply, the back swipe) starts no press, nor does the bubble's early question for it, and a pan
+    that begins while fingers are on the widget ends them as cancelled (the widget's recognizer on its next move; the
+    lock for a held control, which may not move). Only a pan is a drag (`isChatDrag`): the bubble's tap waiting for a
+    double tap leaves a single finger as it always was.
   - **A held control makes the rest of the chat inert**: while a finger holds something a widget handles, the widget
     holds `MessageWidgetTouchLock`, and `MessageWidgetChatLockRecognizer` on `ChatControllerNode`'s view (the history,
     the panels and the top bar) makes every finger landing elsewhere in the chat inert until it lifts, even after the
-    control's finger lifts: it fails what the finger reaches, cancels it in its view and delays its `touchesBegan`
-    while the lock is held (no highlight). Another widget in the chat is elsewhere too: it starts nothing while one
+    control's finger lifts: it fails what the finger reaches (cancels what has already begun there; the chat's own pans
+    only once the finger moves sideways, so it still scrolls the chat), cancels it in its view and delays its
+    `touchesBegan` while the lock is held (no highlight). Another widget in the chat is elsewhere too: it starts nothing while one
     holds the lock (`MessageWidgetTouchLock.isHeld(elsewhereThan:)`). The lock lifts on every end path, the widget view
     leaving its window included; a claimed drag and the chat-drag check spare the lock recognizer, and neither
     recognizer prevents the other. The system keyboard is a window of its own, out of the lock's reach.
@@ -287,14 +292,29 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   hooks, the widget replaced, stopped or turned into the pill): the overlay takes every point of the widget. A point
   within 4 pt of a word's glyphs hits it. Harness: `-harness-menu hold`, the `selectionMenu`/`copy` events,
   `WidgetHarnessUITests`' selection tests and `WidgetHarnessSelectionTests`.
+- **The chat always scrolls** (the user, 2026-10-23: "widgets should not be able to prevent vertical scrolling,
+  ever"). A vertical drag is never a widget's, whatever it declares (`MessageWidgetCore` drops the runtime's `y`), and
+  nothing on the widget's side stops one. When the widget takes the touches (two fingers) or the lock takes a finger,
+  every recognizer above fails as before but the pans inside the chat's view (`MessageWidgetTouchLock.chatView`, the
+  lock recognizer's: the history's scroll, a bubble's swipe-to-reply); those wait for each finger's first 4 pt
+  (`claimDistance`): sideways, they fail too (swipe-to-reply needs 10 pt), vertically they are left to begin
+  (`MessageWidgetTouchRecognizer.failsAbove(_:pans:chat:)`). A pan on the chat's view or above it (the navigation's
+  back swipe, which begins at 2 pt) fails at once. Each keeps pans out by exclusion (`canPrevent`) only once a finger
+  went sideways (`preventsPans`): before, the widget's recognizer beginning for two fingers would fail every pan still
+  possible, the chat's scroll included; from then, it is what keeps out a pan beginning in the same touch event, which
+  failing it from inside that event does not (a claim sets it before beginning the recognizer, or a fast drag swipes
+  to reply). The scroll then ends the widget's fingers as cancelled: the widget's recognizer on its next move, the
+  lock for a held control. A horizontal
+  claim fails the chat's pans with the rest, so after a finger went sideways the chat does not scroll until every
+  finger lifts (UIKit fails a recognizer for the whole touch sequence): direction is decided by the first movement.
 - **Drags are decided per press** (sdk-v1 §5.5). The runtime answers each press's claim once its down task has run
   (`TapState::claim`, `WRSession.gestureClaim`): `x` when the touch-action of the target or an ancestor below
   `<html>` forbids horizontal panning, `y` vertical, both when the widget cancels the press's `pointerdown` or
-  `touchstart`; touch-action is read before the handlers run, as browsers fix it at touchstart. With neither, a drag is
-  the chat's (the list scrolls, swipe-to-reply and the back swipe work) and the widget's touch ends as cancelled. Along
-  a claimed axis the recognizer begins at 4 pt (`claimDistance`, under the chat's 10 pt pans) and fails every
-  recognizer still possible above it: exclusion alone does not, because `ContextGesture` recognizes alongside anything
-  that is not a pan. **The back swipe begins at 2 pt and asks in its own `touchesBegan`, before the widget's recognizer
+  `touchstart`; touch-action is read before the handlers run, as browsers fix it at touchstart. The host takes `x`
+  only (above). Without it, a drag is the chat's (the list scrolls, swipe-to-reply and the back swipe work) and the
+  widget's touch ends as cancelled. A horizontal drag on a claimed press begins the recognizer at 4 pt
+  (`claimDistance`, under the chat's 10 pt pans), which fails every recognizer still possible above it but the pans:
+  exclusion alone does not, because `ContextGesture` recognizes alongside anything that is not a pan. **The back swipe begins at 2 pt and asks in its own `touchesBegan`, before the widget's recognizer
   has the touch**, so `interactiveTransitionGestureRecognizerTest` starts the press itself
   (`MessageWidgetView.claimsHorizontalDrag(at:)`) and the recognizer adopts it; a claimed press keeps the back swipe to
   the screen's edge. Swipe-to-reply cancels the bubble's long press when it begins

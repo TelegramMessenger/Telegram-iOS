@@ -2,6 +2,7 @@
 // (RenderTree::flushForQuery, then borderBox / clientRects / nodeAt / boxMetrics), in CSS px from the document's
 // top-left (there is no scrolling viewport). The default layout is 300 px wide under the UA layer's body margin, the
 // padding token (its reference default `8px 12px` here: widget-sandbox v0.1.1).
+#include <cstdio>
 #include <string>
 
 #include "Sources/Runtime/Runtime.h"
@@ -258,4 +259,72 @@ WR_TEST(testComputedStyleWalksAreCharged) {
     (void)nearUnits;
     (void)farUnits;
     CHECK(farQueries >= nearQueries + 199 * wr::work::kNodeVisit);
+}
+
+namespace {
+
+std::string inheritingIn(int depth) {
+    std::string html = "<!doctype html><head><style>div, span { row-gap: inherit }</style></head><body>";
+    for (int i = 0; i < depth; i++) {
+        html += "<div>";
+    }
+    html += "<span id=c>x</span>";
+    for (int i = 0; i < depth; i++) {
+        html += "</div>";
+    }
+    return html + "<script>window.c = document.getElementById('c');</script></body>";
+}
+
+std::string rawJunk(const std::string& rule, const std::string& junk) {
+    return "<!doctype html><head><style>" + rule + junk + "}</style></head><body><div style=\"display:flex\"><div id=c>"
+           "</div></div><script>window.c = document.getElementById('c');</script></body>";
+}
+
+} // namespace
+
+/// A longhand read from litehtml's parse walks the ancestors that inherit it too, each a node visit charged, and never
+/// recurses (final review I3).
+WR_TEST(testAnInheritWalkIsCharged) {
+    RenderEnv shallow(inheritingIn(1));
+    RenderEnv deep(inheritingIn(200));
+    costOf(shallow, "getComputedStyle(c).rowGap");
+    costOf(deep, "getComputedStyle(c).rowGap");
+    const auto [shallowUnits, shallowQueries] = costOf(shallow, "getComputedStyle(c).rowGap");
+    const auto [deepUnits, deepQueries] = costOf(deep, "getComputedStyle(c).rowGap");
+    (void)shallowUnits;
+    (void)deepUnits;
+    CHECK(deepQueries >= shallowQueries + 199 * wr::work::kNodeVisit);
+    CHECK_EQ(deep.env().eval("getComputedStyle(c).rowGap"), std::string("normal"));
+}
+
+/// A raw declaration a read spells from is charged by its length: its copy is kept before litehtml validates it, so a
+/// long invalid place-content or flex would otherwise be scanned for nothing on every read (final review I2).
+WR_TEST(testRawDeclarationReadsAreChargedByLength) {
+    // No trailing space: the declaration keeps exactly these bytes.
+    std::string junk = "a";
+    for (int i = 1; i < 30000; i++) {
+        junk += " a";
+    }
+    const struct {
+        const char* rule;
+        const char* read;
+    } cases[] = {
+        {"#c{display:flex;justify-content:flex-start;place-content:", "getComputedStyle(c).justifyContent"},
+        {"#c{flex:1;flex:", "getComputedStyle(c).flexBasis"},
+    };
+    for (const auto& item : cases) {
+        RenderEnv small(rawJunk(item.rule, "a a a"));
+        RenderEnv large(rawJunk(item.rule, junk));
+        costOf(small, item.read);
+        costOf(large, item.read);
+        const auto [smallUnits, smallQueries] = costOf(small, item.read);
+        const auto [largeUnits, largeQueries] = costOf(large, item.read);
+        (void)smallUnits;
+        (void)largeUnits;
+        if (largeQueries < smallQueries + junk.size() / 8 * wr::work::kScanEightUnits) {
+            std::printf("  %s: %llu query units, against %llu with a short declaration\n", item.read,
+                        (unsigned long long)largeQueries, (unsigned long long)smallQueries);
+        }
+        CHECK(largeQueries >= smallQueries + junk.size() / 8 * wr::work::kScanEightUnits);
+    }
 }

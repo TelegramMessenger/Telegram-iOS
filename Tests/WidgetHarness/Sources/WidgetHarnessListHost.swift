@@ -83,6 +83,10 @@ public final class WidgetHarnessListHost {
         self.listView = makeCoreListChatHistoryBackend(rotated: true)
         self.node.addSubnode(self.listView)
         self.controllerInteraction = self.makeControllerInteraction()
+        // The `listDrag` event: the list's pan began, the chat scrolls (one post only rubber-bands, so no position shows it).
+        self.listView.beganInteractiveDragging = { [weak self] _ in
+            self?.events.append("listDrag")
+        }
     }
 
     // MARK: - Content

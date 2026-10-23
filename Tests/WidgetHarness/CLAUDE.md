@@ -103,13 +103,14 @@ contextMenuEnded fixture/open-link.html
   (the shrink while it waits for a long press) is on.
 - `log <path> <value>`: a fixture widget's (`fixture/…`) `<html data-log>`, when it has one, read through
   `MessageWidgetView.documentElementAttribute` (each read waits for the widget's queue, so only the harness's own
-  fixtures are read). `Fixtures/multitouch.html` logs each pointer event at its buttons as
-  `<down|up|cancel>:<left|right>:<finger>:<P|S>`, the finger a letter by its pointer's first appearance, `P` the primary
-  pointer.
+  fixtures are read). `Fixtures/multitouch.html` logs each pointer event at its buttons (a finger's first move only) as
+  `<down|move|up|cancel>:<left|right>:<finger>:<P|S>`, the finger a letter by its pointer's first appearance, `P` the
+  primary pointer.
 - Events: `openLink <url>` (the bubble asked to open a link; the chat would show "Open link?" — ` (not concealed)` is
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
   `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
-  `back` (the root's back swipe began), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
+  `back` (the root's back swipe began), `listDrag` (the list's pan began: the chat scrolls, though one post only
+  rubber-bands back), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
   joined by `,`; each is a button `harness.menu.<title>` under the readout), `selectionMenuDismissed` (that menu went
   away), `copy <text>` (its Copy, a newline written `\n`) and `pressed <path> <seconds>` (a bubble's press ended after
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
@@ -158,7 +159,8 @@ count, the bubble's height, the chat input's focus).
 
 Tier 1 (`Tests/`) for sizes, states and anything readable in process; Tier 2 (`UITests/`) when the touch path is the
 thing under test (the long press against the widget's own recognizer, a tap reaching a widget button). Attach
-screenshots (`XCTAttachment`) in Tier 2, so a run leaves frames to look at.
+screenshots (`XCTAttachment`) in Tier 2, so a run leaves frames to look at. Every Tier 2 test launches the app, a few
+seconds each: both suites are `size = "large"`, as the UI suite outgrew a medium test's 300 s.
 
 Several fingers at once, with independent timing (hold one, tap another), go through `performFingers`
 (`UITests/MultiTouch.swift`): XCUIAutomation's private event synthesis (`XCSynthesizedEventRecord` of

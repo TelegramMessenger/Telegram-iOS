@@ -359,3 +359,11 @@ WR_TEST(testAnInlineStyleChangeIsSampledAgain) {
               "0.15");
     checkEval(env, "$('x').style.opacity = '0.8'; getComputedStyle($('x')).opacity", "0.4");
 }
+
+/// An animation's implicit keyframe starts from the stylesheet's z-index, its raw declaration (twidget edit 51), not
+/// from nothing (final review M4): a quarter of the way from 2 to 10 is 4.
+WR_TEST(testAnImplicitZIndexKeyframeStartsFromTheStylesheet) {
+    RenderEnv env("<!doctype html><html><head><style>#z { position: relative; z-index: 2 }</style></head><body>"
+                  "<div id=z></div><script>window.z = document.getElementById('z');</script></body></html>");
+    checkEval(env, "const k = z.animate({zIndex: 10}, 1000); k.pause(); k.currentTime = 250; getComputedStyle(z).zIndex", "4");
+}

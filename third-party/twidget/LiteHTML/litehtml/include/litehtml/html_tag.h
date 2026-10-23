@@ -191,6 +191,12 @@ namespace litehtml
             return !value.is<invalid>() && !value.is<unset>();
         }
 #endif
+        // Telegram (VENDOR.md edit 54): the element's cascaded value of `name` as litehtml parsed it (invalid without one),
+        // shorthands expanded, for getComputedStyle's longhands litehtml computes on some elements only.
+        const property_value& own_property(string_id name) const
+        {
+            return m_style.get_property(name);
+        }
         const css_token_vector* get_token_property(string_id name) const
         {
             const property_value& value = m_style.get_property(name);

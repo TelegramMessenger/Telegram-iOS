@@ -267,14 +267,8 @@ final class MessageWidgetCore {
         guard phase == .down else {
             return .none
         }
-        let axes = session.gestureClaim
-        var claim: MessageWidgetGestureClaim = []
-        if axes.contains(.horizontal) {
-            claim.insert(.horizontal)
-        }
-        if axes.contains(.vertical) {
-            claim.insert(.vertical)
-        }
+        // A vertical claim is dropped: the chat always scrolls (`MessageWidgetGestureClaim`).
+        let claim: MessageWidgetGestureClaim = session.gestureClaim.contains(.horizontal) ? .horizontal : []
         return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps)
     }
 

@@ -66,6 +66,29 @@ enum MessageWidgetTouchLock {
         return !held.contains { touchView.isDescendant(of: $0) }
     }
 
+    /// The chat's view a widget view is in: the nearest ancestor the chat's lock recognizer is on (`ChatControllerNode`'s),
+    /// else its window.
+    static func chatView(of view: UIView?) -> UIView? {
+        var current = view?.superview
+        while let candidate = current {
+            if candidate.gestureRecognizers?.contains(where: { $0 is MessageWidgetChatLockRecognizer }) ?? false {
+                return candidate
+            }
+            current = candidate.superview
+        }
+        return view?.window
+    }
+
+    /// The chat under `root` scrolls: every widget view holding the lock there ends its fingers.
+    fileprivate static func releaseHolders(under root: UIView) {
+        let held = self.holders.compactMap(\.view).filter { $0.isDescendant(of: root) }
+        for view in held {
+            for recognizer in view.gestureRecognizers ?? [] {
+                (recognizer as? MessageWidgetTouchRecognizer)?.cancelTrackedTouches()
+            }
+        }
+    }
+
     fileprivate static func register(_ recognizer: MessageWidgetChatLockRecognizer) {
         self.recognizers.removeAll { $0.recognizer == nil }
         self.recognizers.append(WeakLockRecognizer(recognizer: recognizer))
@@ -92,13 +115,23 @@ enum MessageWidgetTouchLock {
 
 /// The chat's side of the lock (`MessageWidgetTouchLock`), on the chat's root view (`ChatControllerNode`): a finger
 /// that lands while a widget under it holds a control, anywhere but on that widget, begins this recognizer, which fails
-/// every recognizer the finger reaches and cancels the finger in its view, and stays locked until the finger lifts,
-/// whatever the widget does meanwhile. Every other finger is ignored, never failing the recognizer, so later fingers
-/// still reach it.
+/// or cancels every recognizer the finger reaches and cancels the finger in its view, and stays locked until the finger
+/// lifts, whatever the widget does meanwhile. The chat's scroll is the exception: a pan inside this view is left to the
+/// finger's first movement, failed when it goes sideways and left to begin when it goes vertically
+/// (`MessageWidgetTouchRecognizer.failsAbove`), and a scroll that begins lets go of the held controls. Every other
+/// finger is ignored, never failing the recognizer, so later fingers still reach it.
 public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
+    private struct Locked {
+        let touch: UITouch
+        let down: CGPoint
+        var directionDecided = false
+    }
+
     /// Tests: whether a touch is locked; nil asks `MessageWidgetTouchLock` about the touch's view under this view.
     var locks: ((UITouch) -> Bool)?
-    private var locked: [UITouch] = []
+    private var locked: [Locked] = []
+    /// A locked finger went sideways: UIKit's exclusion keeps the pans out too (`canPrevent`).
+    private var preventsPans = false
 
     var lockedTouchCount: Int {
         return self.locked.count
@@ -127,11 +160,8 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
                 self.ignore(touch, for: event)
                 continue
             }
-            self.locked.append(touch)
-            // The window's own recognizers are the system's and are left alone, as a widget's claimed drag leaves them.
-            for recognizer in touch.gestureRecognizers ?? [] where recognizer !== self && !(recognizer is MessageWidgetTouchRecognizer) && !(recognizer.view is UIWindow) && recognizer.state == .possible {
-                recognizer.state = .failed
-            }
+            self.locked.append(Locked(touch: touch, down: touch.location(in: nil)))
+            self.lockRecognizers(of: touch, pans: false)
         }
         if !self.locked.isEmpty {
             switch self.state {
@@ -142,6 +172,58 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
             default:
                 break
             }
+        }
+    }
+
+    /// What a locked finger does to a recognizer it reaches: one still deciding fails, one already running (a pan that
+    /// began as content moved under the finger) is cancelled, one that has ended is left as it is.
+    static func lockedState(from state: UIGestureRecognizer.State) -> UIGestureRecognizer.State? {
+        switch state {
+        case .possible:
+            return .failed
+        case .began, .changed:
+            return .cancelled
+        default:
+            return nil
+        }
+    }
+
+    /// Fails or cancels what a locked finger reaches (`lockedState`), but the widgets' recognizers and the window's own
+    /// (the system's, which a widget's claimed drag leaves alone too); `pans`: the finger went sideways, so the pans
+    /// inside this view go too.
+    private func lockRecognizers(of touch: UITouch, pans: Bool) {
+        for recognizer in touch.gestureRecognizers ?? [] where recognizer !== self && !(recognizer is MessageWidgetTouchRecognizer) && !(recognizer.view is UIWindow) && MessageWidgetTouchRecognizer.failsAbove(recognizer, pans: pans, chat: self.view) {
+            if let state = MessageWidgetChatLockRecognizer.lockedState(from: recognizer.state) {
+                recognizer.state = state
+            }
+        }
+    }
+
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        var scrolls = false
+        for index in self.locked.indices where touches.contains(self.locked[index].touch) {
+            let touch = self.locked[index].touch
+            // Its first `claimDistance`: sideways, the chat's pans go as everything else did; vertically, its scroll may
+            // begin.
+            if !self.locked[index].directionDecided {
+                let location = touch.location(in: nil)
+                let dx = abs(location.x - self.locked[index].down.x)
+                let dy = abs(location.y - self.locked[index].down.y)
+                if max(dx, dy) >= MessageWidgetTouchRecognizer.claimDistance {
+                    self.locked[index].directionDecided = true
+                    if dx >= dy {
+                        self.preventsPans = true
+                        self.lockRecognizers(of: touch, pans: true)
+                    }
+                }
+            }
+            scrolls = scrolls || (touch.gestureRecognizers ?? []).contains { MessageWidgetTouchRecognizer.isChatDrag($0, state: $0.state) }
+        }
+        // A locked finger scrolls the chat: the controls held under this view let go, as the chat's scroll ends every
+        // widget's fingers (a held control may not move, so its own recognizer would not see the scroll).
+        if scrolls, let root = self.view {
+            MessageWidgetTouchLock.releaseHolders(under: root)
         }
     }
 
@@ -157,7 +239,7 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
 
     private func release(_ touches: Set<UITouch>, ending: UIGestureRecognizer.State) {
         let before = self.locked.count
-        self.locked.removeAll { touches.contains($0) }
+        self.locked.removeAll { touches.contains($0.touch) }
         if before > 0 && self.locked.isEmpty {
             self.state = ending
         }
@@ -166,10 +248,15 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
     override public func reset() {
         super.reset()
         self.locked = []
+        self.preventsPans = false
     }
 
     override public func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {
-        // It fails what a locked finger reaches itself, and never a widget's fingers.
+        // It fails what a locked finger reaches itself, and never a widget's fingers; a pan once a locked finger went
+        // sideways, never before (the chat's scroll).
+        if preventedGestureRecognizer is UIPanGestureRecognizer {
+            return self.preventsPans
+        }
         return false
     }
 

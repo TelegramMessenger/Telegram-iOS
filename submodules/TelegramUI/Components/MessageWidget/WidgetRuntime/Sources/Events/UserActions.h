@@ -2,7 +2,8 @@
 // - UserActions is the main document's ElementState for the user-action pseudo-classes: the focused element (:focus,
 //   :focus-within on its inclusive ancestors), the element under the last primary pointer down (:hover on its inclusive
 //   ancestors; it stays after the up, as touch browsers keep it), and the elements pressed (:active, each while a
-//   press on it is down: one entry per press, so a second finger on an element holds it after the first lifts). A
+//   press on it is down: one entry per press, which only that press's end removes, so a second finger on an element
+//   holds it after the first lifts, even when the element left the document between their downs). A
 //   change tells the render tree (RenderTree::userActionStateChanged).
 // - focusElement runs HTML's focusing steps and their events: blur, focusout, focus, focusin (FocusEvent).
 // - The activation behaviours HTMLElement runs from DOM dispatch's hooks: a checkbox or radio toggles before the
@@ -40,9 +41,9 @@ public:
 
     /// The element under the primary pointer's down.
     void setHover(JSContext* ctx, Element* hover);
-    /// A press went down on `element` (nullptr: on no element), or ended: one entry each.
-    void addActive(JSContext* ctx, Element* element);
-    void removeActive(JSContext* ctx, Element* element);
+    /// Press `press` (HostState::beginPress's number) went down on `element` (nullptr: on no element), or ended.
+    void addActive(JSContext* ctx, Element* element, uint64_t press);
+    void removeActive(JSContext* ctx, uint64_t press);
     /// Drops every reference (the host state's destructor, while the context lives).
     void clear();
     /// A node left the main document (RenderTree's mutation listener): the hover and press inside it go. The render tree
@@ -57,8 +58,13 @@ public:
     };
 
 private:
+    struct Active {
+        uint64_t press = 0;
+        Ref<Element> element;
+    };
+
     Ref<Element> m_hover;
-    std::vector<Ref<Element>> m_active;
+    std::vector<Active> m_active;
     bool m_labelActivating = false;
 };
 

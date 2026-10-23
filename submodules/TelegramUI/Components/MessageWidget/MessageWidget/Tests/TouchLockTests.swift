@@ -71,11 +71,58 @@ final class TouchLockTests: MessageWidgetTestCase {
         XCTAssertFalse(MessageWidgetTouchRecognizer.isChatDrag(lock, state: .began))
         XCTAssertTrue(MessageWidgetTouchRecognizer.isChatDrag(UIPanGestureRecognizer(), state: .changed))
         XCTAssertFalse(MessageWidgetTouchRecognizer.isChatDrag(UIPanGestureRecognizer(), state: .possible))
-        XCTAssertFalse(MessageWidgetTouchRecognizer.failsAbove(lock))
-        XCTAssertTrue(MessageWidgetTouchRecognizer.failsAbove(UIPanGestureRecognizer()))
+        XCTAssertFalse(MessageWidgetTouchRecognizer.failsAbove(lock, pans: true, chat: nil))
+        XCTAssertTrue(MessageWidgetTouchRecognizer.failsAbove(UITapGestureRecognizer(), pans: false, chat: nil))
         XCTAssertFalse(MessageWidgetTouchRecognizer().canBePrevented(by: lock))
         XCTAssertFalse(lock.canBePrevented(by: UIPanGestureRecognizer()))
         XCTAssertFalse(lock.canPrevent(MessageWidgetTouchRecognizer()))
+    }
+
+    /// The chat's vertical scroll is never a widget's to stop (the user, 2026-10-23: "widgets should not be able to prevent
+    /// vertical scrolling, ever"): a widget taking the touches, or the lock taking a finger, leaves a pan inside the
+    /// chat's view (its scroll, a bubble's swipe to reply) until a finger moves sideways, and fails one on the chat's view
+    /// or above it (the back swipe) at once; neither keeps a pan out by exclusion.
+    func testNoWidgetStopsAVerticalPan() {
+        let chat = UIView()
+        let list = UIView()
+        chat.addSubview(list)
+        let scroll = UIPanGestureRecognizer()
+        list.addGestureRecognizer(scroll)
+        let back = UIPanGestureRecognizer()
+        chat.addGestureRecognizer(back)
+        let tap = UITapGestureRecognizer()
+        list.addGestureRecognizer(tap)
+        XCTAssertFalse(MessageWidgetTouchRecognizer.failsAbove(scroll, pans: false, chat: chat))
+        XCTAssertTrue(MessageWidgetTouchRecognizer.failsAbove(scroll, pans: true, chat: chat))
+        XCTAssertTrue(MessageWidgetTouchRecognizer.failsAbove(back, pans: false, chat: chat))
+        XCTAssertTrue(MessageWidgetTouchRecognizer.failsAbove(tap, pans: false, chat: chat))
+        for recognizer in [MessageWidgetTouchRecognizer(), MessageWidgetChatLockRecognizer()] as [UIGestureRecognizer] {
+            XCTAssertFalse(recognizer.canPrevent(scroll), "\(recognizer)")
+        }
+        XCTAssertFalse(MessageWidgetChatLockRecognizer().canPrevent(MessageWidgetTouchRecognizer()))
+    }
+
+    /// The chat's view is the one its lock recognizer is on, else the window.
+    func testTheChatViewIsTheLocksView() {
+        let chat = UIView()
+        let bubble = UIView()
+        let widget = UIView()
+        chat.addSubview(bubble)
+        bubble.addSubview(widget)
+        XCTAssertNil(MessageWidgetTouchLock.chatView(of: widget))
+        chat.addGestureRecognizer(MessageWidgetChatLockRecognizer())
+        XCTAssertTrue(MessageWidgetTouchLock.chatView(of: widget) === chat)
+    }
+
+    /// What a locked finger does to a recognizer it reaches: one still deciding fails, one already running (a pan that
+    /// began as content moved under the finger) is cancelled, one that has ended is left as it is.
+    func testALockedFingerFailsOrCancelsWhatItReaches() {
+        XCTAssertEqual(MessageWidgetChatLockRecognizer.lockedState(from: .possible), .failed)
+        XCTAssertEqual(MessageWidgetChatLockRecognizer.lockedState(from: .began), .cancelled)
+        XCTAssertEqual(MessageWidgetChatLockRecognizer.lockedState(from: .changed), .cancelled)
+        for state in [UIGestureRecognizer.State.ended, .cancelled, .failed] {
+            XCTAssertNil(MessageWidgetChatLockRecognizer.lockedState(from: state))
+        }
     }
 
     /// Only a drag is a chat drag: a recognizer that began otherwise (the bubble's tap waiting for a double tap) leaves a

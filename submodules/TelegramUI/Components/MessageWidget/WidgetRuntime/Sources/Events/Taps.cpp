@@ -354,7 +354,7 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
     if (primary) {
         actions.setHover(ctx, element);
     }
-    actions.addActive(ctx, element);
+    actions.addActive(ctx, element, press.number);
     {
         HostState::PressScope scope(state, press.number);
         press.pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, primary, true, 0, 1, 0.5);
@@ -390,7 +390,7 @@ void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool
     }
     // The press is over; the hover stays, as touch browsers keep it.
     HostState& state = HostState::of(ctx);
-    state.userActions().removeActive(ctx, dynamic_cast<Element*>(press->target.get()));
+    state.userActions().removeActive(ctx, press->number);
     {
         HostState::PressScope scope(state, press->number);
         Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, *press, x, y, primary));
@@ -433,7 +433,7 @@ void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, 
     if (!press) {
         return;
     }
-    HostState::of(ctx).userActions().removeActive(ctx, dynamic_cast<Element*>(press->target.get()));
+    HostState::of(ctx).userActions().removeActive(ctx, press->number);
     {
         Ref<EventTarget> pointer = Ref<EventTarget>::retain(ctx, &this->pointerTarget(ctx, *press, x, y, primary));
         firePointer(ctx, "pointercancel", *pointer, x, y, pointerId, primary, false, 0, 0, 0);

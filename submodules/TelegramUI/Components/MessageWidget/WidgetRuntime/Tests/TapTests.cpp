@@ -434,6 +434,23 @@ WR_TEST(testEveryHeldElementIsActive) {
     CHECK_EQ(state(), std::string("false,false,true,false"));
 }
 
+/// A press's :active is its own, not its element's: a press whose element left the document and came back ends without
+/// taking the element's :active from a later press on it.
+WR_TEST(testAPressEndsOnlyItsOwnActive) {
+    RenderEnv env(kPointers);
+    const auto active = [&] { return env.env().eval("String(!!document.querySelector('#a:active'))"); };
+    at(env, PointerPhase::Down, 40, 40, 1, true);
+    CHECK_EQ(env.env().eval("(() => { const next = a.nextSibling; a.remove(); document.body.insertBefore(a, next); return 1; })()"),
+             std::string("1"));
+    CHECK_EQ(active(), std::string("false"));
+    at(env, PointerPhase::Down, 40, 40, 2, false);
+    CHECK_EQ(active(), std::string("true"));
+    at(env, PointerPhase::Up, 40, 40, 1, true);
+    CHECK_EQ(active(), std::string("true"));
+    at(env, PointerPhase::Up, 40, 40, 2, false);
+    CHECK_EQ(active(), std::string("false"));
+}
+
 /// Each finger's press is a press of its own (sdk-v1 §2.5): each may open a link once.
 WR_TEST(testEachPressActivatesOnce) {
     RenderEnv env(kPointers);

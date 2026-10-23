@@ -113,6 +113,13 @@ namespace litehtml
 
         {_flex_,            {_flex_grow_, _flex_shrink_, _flex_basis_}                                                },
         {_flex_flow_,       {_flex_direction_, _flex_wrap_}                                                           },
+        // Telegram (VENDOR.md edit 55): the box alignment shorthands, so a CSS-wide keyword reaches their longhands and
+        // a longhand written after one holding a var() stands once it is substituted.
+        {_gap_,             {_row_gap_, _column_gap_}                                                                 },
+        {_grid_gap_,        {_row_gap_, _column_gap_}                                                                 },
+        {_place_content_,   {_align_content_, _justify_content_}                                                      },
+        {_place_items_,     {_align_items_, _justify_items_}                                                          },
+        {_place_self_,      {_align_self_, _justify_self_}                                                            },
 
         {_text_decoration_,
          {_text_decoration_color_, _text_decoration_line_, _text_decoration_style_, _text_decoration_thickness_}      },
@@ -385,10 +392,19 @@ namespace litehtml
         "counter-increment", "counter-reset", "unicode-bidi", "color-scheme", "grid-template-areas", "grid-auto-columns",
         "grid-auto-flow", "font-feature-settings", "font-variant-numeric",
         // Telegram (VENDOR.md edit 51): litehtml keeps these, but its value cannot tell an undeclared one from a
-        // declared one (z-index auto reads 0, justify-content and align-content default to flex-start and stretch).
-        "z-index", "justify-content", "align-content",
+        // declared one (justify-content and align-content default to flex-start and stretch).
+        "justify-content", "align-content",
         // Telegram (VENDOR.md edit 51): litehtml computes these on flex or grid containers or flex items only.
         "flex-direction", "flex-wrap", "align-items", "row-gap", "column-gap", "flex-shrink", "flex-basis",
+        // Telegram (VENDOR.md edit 51): as written, which litehtml's value loses (a ratio stored as one float, a flex
+        // shorthand's omitted basis stored as 0px where CSS writes 0%).
+        "aspect-ratio", "flex",
+        // Telegram (VENDOR.md edit 51): as written, which litehtml's value loses (normal and stretch stored as the
+        // defaults, flex-start and stretch).
+        "place-content",
+        // Telegram (VENDOR.md edit 51): the cascaded value a CSS animation's implicit keyframe starts from
+        // (getComputedStyle reads litehtml's own, edit 53).
+        "z-index",
     };
 
     static const std::map<string_id, string_id>& raw_declaration_ids()

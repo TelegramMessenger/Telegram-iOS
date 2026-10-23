@@ -197,7 +197,7 @@ WR_TEST(testCorpusRenders) {
     std::vector<std::string> stopped, stopsOnlyWithTree, skipped, emptyTree, nonImage, buildMismatch, mirrorMismatch;
     std::vector<uint64_t> firstFlush;
     size_t parityChecked = 0;
-    size_t maxStyleCharge = 0;
+    size_t maxStyleCharge = 0, totalStyleCharge = 0;
     std::string maxStyleFile;
     std::vector<std::string> styleBytesHit;
     // Profile 1's strict text and node limits (V4 plan, Task 7): no honest document reaches one.
@@ -241,6 +241,7 @@ WR_TEST(testCorpusRenders) {
         // Edit 21: the style-byte budget. No corpus file may reach it.
         if (env.render().document()) {
             const size_t charge = env.render().document()->style_bytes_charged();
+            totalStyleCharge += charge;
             if (charge > maxStyleCharge) {
                 maxStyleCharge = charge;
                 maxStyleFile = name;
@@ -338,8 +339,8 @@ WR_TEST(testCorpusRenders) {
     list("documents that stop only with the render tree", stopsOnlyWithTree);
     list("documents with an empty layer tree", emptyTree);
     list("documents whose render input a re-parse does not reproduce (parity skipped; counted for Task 12)", skipped);
-    std::printf("\nstyle bytes: the corpus maximum charge is %zu (%s); the budget is %zu\n", maxStyleCharge, maxStyleFile.c_str(),
-                size_t(litehtml::document::max_style_bytes));
+    std::printf("\nstyle bytes: the corpus maximum charge is %zu (%s), its total %zu over %zu documents; the budget is %zu\n",
+                maxStyleCharge, maxStyleFile.c_str(), totalStyleCharge, files.size(), size_t(litehtml::document::max_style_bytes));
     list("documents that hit the style-byte budget", styleBytesHit);
     CHECK(styleBytesHit.empty());
     list("documents that hit profile 1's text or node limits", textLimitsHit);

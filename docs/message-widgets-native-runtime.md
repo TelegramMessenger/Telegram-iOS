@@ -139,14 +139,16 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   number, so lifting one disturbs no other; only the primary pointer clicks. A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
   listeners and reverts when the click is canceled, a label clicks its control, a summary toggles its details, a
   submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
-  `:active` live in `UserActions` (`:active` one entry per press, so a second finger on an element holds it after the
-  first lifts; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
+  `:active` live in `UserActions` (`:active` one entry per press, removed by that press's end or by its element leaving
+  the document, so a second finger on an element holds it after the first lifts, even when the element left and came
+  back between their downs; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
   `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. Every press also
   decides its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
   task has run): the axes the computed touch-action of the target and its ancestors below `<html>` forbids panning on,
   read from the layout the press was hit-tested on before its handlers run, or both when the widget cancels the
   press's `pointerdown` or `touchstart` (the reference learns that from the previous press; ours dispatches before it
-  answers). It answers too whether the press lands on something the widget handles (`TapState::takesTaps`,
+  answers). The client takes only the horizontal axis: a vertical drag always scrolls the chat (the message widgets
+  guide, "The chat always scrolls"). It answers too whether the press lands on something the widget handles (`TapState::takesTaps`,
   `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element with activation
   behaviour outside a disabled control, or a drag claim; the client gives the widget the tap and the long press there,
   as on a message button, and the double tap and the long press (the reaction and the menu) to the bubble anywhere
@@ -685,17 +687,30 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   element; computed-style plan, 2026-10-22): exactly from litehtml's getters where litehtml stores the property (the
   offsets as CSSOM resolves them, an absolute element's auto ones from its margin edge to its containing block's
   padding edge; the flex and box alignment properties on the containers and items litehtml computes them for, a
-  container's `justify-content` and `align-content` as they lay it out; min/max sizes, gaps, the text properties,
-  radii, `transform-origin` and `transform`'s percentages against the border box, as litehtml draws them; the grid
-  tracks from the tokens litehtml lays a grid out from, as written; the SVG dashes as the painter reads them,
-  presentation attributes included, …). The `animation-*` and `transition-*` longhands read what the runtime runs
-  (`animationSpecs`, `transitionSpecs`): the element's own declaration, else its shorthand's entries, times in
-  seconds. Otherwise a property reads the element's own declaration as written, `var()` substituted (twidget edits
-  45, 51 keep the raw declarations), an inherited property from the nearest ancestor that declares it, else the
-  property's initial value. The positional shorthands are serialized from their longhands, the complex ones
+  container's `justify-content` and `align-content` as they lay it out; `z-index` as litehtml validated it (twidget
+  edit 53); min/max sizes, the text properties, radii, `transform-origin` and `transform`'s percentages against the
+  border box, as litehtml draws them; the grid tracks from the tokens litehtml lays a grid out from, as written; the
+  SVG dashes as the painter reads them, presentation attributes included, …). Where litehtml computes none (the flex
+  and box alignment longhands outside those containers and items) and for the gaps everywhere (litehtml computes an
+  undeclared gap as 0), a longhand reads litehtml's own parse of the element's declarations (edit 54), which expands
+  `flex`, `flex-flow`, `gap` and `place-*` into their longhands in cascade order: `flex: 2` on a block reads
+  `flex-grow` 2; an invalid declaration is dropped, so an earlier one stands, else the initial value; `inherit` reads
+  the nearest ancestor that does not inherit it too, the walk charged a node visit per ancestor. Of
+  `justify-content` and `align-content` at litehtml's default (flex-start, stretch), the raw declaration that wrote
+  the parse tells the spelling (`normal`, `stretch`, or the default's own keyword), `!important` deciding between the
+  longhand and `place-content` as the cascade does; so does the `flex` that wrote a flex basis, for its omitted
+  basis's `0%`. `gap` and `place-*` expand as shorthands for CSS-wide keywords and `var()` too (twidget edit 55). The `animation-*` and
+  `transition-*` longhands read what the runtime runs (`animationSpecs`, `transitionSpecs`): the element's own
+  declaration, else its shorthand's entries, times in seconds. Otherwise a property reads the element's own
+  declaration as written, `var()` substituted (twidget edits 45, 51 keep the raw declarations), an inherited property
+  from the nearest ancestor that declares it, else the property's initial value; a declaration whose `var()` never
+  resolved reads as unset. Edit 51's copies add 360,096 bytes (3.0%, 1.5 KB a document) to the 11.9 MB of style
+  bytes the corpus's 243 documents charge (`testCorpusRenders` prints the total; the heaviest document charges
+  981,904 bytes of its 16 MiB budget). The positional shorthands are serialized from their longhands, the complex ones
   canonically ("What still differs", below). A read is charged its serialization's length plus a node visit per
   element its walks pass (an inherited declaration's ancestors, an absolute element's containing block) and a scan of
-  the lists it splits.
+  the lists it splits and of the raw declarations it spells from (a raw copy is kept before litehtml validates it, so
+  its length is the author's).
   `touch-action` and `user-select` read the element's own declaration, else `auto` (not inherited). Known differences
   from browsers: `text-decoration-line` is merged with the parent's (litehtml's), and a gradient `background-image`
   reads `none`.
@@ -885,13 +900,15 @@ What still differs, on purpose or for now (none is measured by a conformance che
   `borderTopWidth` in the corpus): the complex shorthands are canonical rather than Chrome-exact (`background` per
   layer in Chrome's order; `font` without its initial parts; the grid placements without trailing autos;
   `animation` and `transition` their longhands' reads joined entry by entry and cycled, at most 64 entries, as the
-  runtime runs, and "" past 64 KiB, so a long item cycled through them cannot build megabytes). A longhand declared
-  before a later shorthand still reads its own value, as the runtime runs it (Chrome takes the later); the grid tracks
-  read as written, not as Chrome's resolved px. A property answered from its declaration reads it as written
-  (`counter-reset: item`, not `item 0`); `aspect-ratio` reads its ratio over 1 (`16 / 9` as `1.77778 / 1`);
-  `justify-items` and `justify-self` read their initial values outside grid containers and items (litehtml computes
-  them there only); `place-content: flex-start` reads `normal` (litehtml's default is that same `flex-start`, and only
-  a `justify-content` written as such tells them apart).
+  runtime runs, and "" past 64 KiB, so a long item cycled through them cannot build megabytes). An `animation-*` or
+  `transition-*` longhand declared before a later shorthand still reads its own value, as the runtime runs it (Chrome
+  takes the later); the grid tracks read as written, not as Chrome's resolved px. A property answered from its
+  declaration reads it as written (`counter-reset: item`, not `item 0`). The enumeration (`[...getComputedStyle(e)]`)
+  lists longhands only, each shorthand still answering by name; `justify-self`, which profile 1 has only inside
+  `place-self`, answers by name unlisted. A length litehtml keeps as a calc (a percentage it resolves at layout)
+  reads as CSS writes a computed one, font-relative terms in px and without the clamp at 0 litehtml adds for a
+  length that may not be negative (`calc(10% + 20px)`, `min(10%, 30px)`). A grid line litehtml cannot lay out (an
+  unresolved `var()`, a line name) reads as absent.
 
 ## The selectable text (text selection, sdk-v1 §2.4, §5.10)
 
