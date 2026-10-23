@@ -724,6 +724,14 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     let own = platter.frame(at: self.time)
                     let start = self.startMatchedMorph(platter, source: own, target: partner.frame, appearing: false, containerWidth: containerWidth)
                     platter.partner = partner.role
+                    if let partnerTint = target.tints[partner.role], platter.tint != partnerTint {
+                        // Its glass merges with the partner's, where a shape's own opacity does not hide it, until it
+                        // rests: it takes the partner's tint, the old one fading out above it as on a capsule both bars
+                        // have. Keeping the leaving bar's (a profile's coloured bar into a plain one) left a patch of that
+                        // colour inside the partner for as long.
+                        self.startTintFade(platter, from: platter.tint)
+                        platter.tint = partnerTint
+                    }
                     if let partnerPlatter = self.platters[partner.role] {
                         self.pulseMatchedPair(platter, ownSize: own.size, start: start, partner: partnerPlatter, partnerFrame: partner.frame, rowFrame: rowFrame)
                     }
@@ -1101,6 +1109,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var press: CGFloat
         var glow: CGFloat
         var fadingTintAlpha: CGFloat?
+        var tint: GlassBackgroundView.TintColor
         /// The translation kick's offset now.
         var kick: CGSize
     }
@@ -1122,6 +1131,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             press: platter.press.value(at: time),
             glow: platter.glow.value(at: time),
             fadingTintAlpha: platter.fadingContainer != nil ? platter.tintFade.value(at: time) : nil,
+            tint: platter.tint,
             kick: platter.kick?.translation(at: time) ?? CGSize()
         )
     }
