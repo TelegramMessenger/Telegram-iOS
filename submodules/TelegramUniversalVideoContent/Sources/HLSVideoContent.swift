@@ -212,12 +212,14 @@ public final class HLSVideoContent: UniversalVideoContent {
     let autoFetchFullSizeThumbnail: Bool
     let captureProtected: Bool
     let codecConfiguration: HLSCodecConfiguration
+    // Where playback will start (a tapped timecode or a stored position), when the caller knows it before playing.
+    let startTimestamp: Double?
     // Only for the base-file fallback in `makeContentNode`, as NativeVideoContent takes them.
     let continuePlayingWithoutSoundOnLostAudioSession: Bool
     let placeholderColor: UIColor
     let storeAfterDownload: (() -> Void)?
     
-    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, useLargeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false, captureProtected: Bool = false, codecConfiguration: HLSCodecConfiguration, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor = .white, storeAfterDownload: (() -> Void)? = nil) {
+    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, useLargeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false, captureProtected: Bool = false, codecConfiguration: HLSCodecConfiguration, startTimestamp: Double? = nil, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor = .white, storeAfterDownload: (() -> Void)? = nil) {
         self.id = id
         self.userLocation = userLocation
         self.nativeId = id
@@ -234,6 +236,7 @@ public final class HLSVideoContent: UniversalVideoContent {
         self.autoFetchFullSizeThumbnail = autoFetchFullSizeThumbnail
         self.captureProtected = captureProtected
         self.codecConfiguration = codecConfiguration
+        self.startTimestamp = startTimestamp
         self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         self.placeholderColor = placeholderColor
         self.storeAfterDownload = storeAfterDownload
@@ -242,11 +245,11 @@ public final class HLSVideoContent: UniversalVideoContent {
     public func makeContentNode(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         guard let qualities = HLSVideoNativeContentNode.qualityFiles(file: self.fileReference, codecConfiguration: self.codecConfiguration) else {
             // Nothing to play adaptively: play the base file rather than nothing.
-            return NativeVideoContent(id: self.nativeId, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: .conservative, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, placeholderColor: self.placeholderColor, captureProtected: self.captureProtected, storeAfterDownload: self.storeAfterDownload).makeContentNode(context: context, postbox: postbox, audioSession: audioSession)
+            return NativeVideoContent(id: self.nativeId, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: .conservative, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, startTimestamp: self.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, placeholderColor: self.placeholderColor, captureProtected: self.captureProtected, storeAfterDownload: self.storeAfterDownload).makeContentNode(context: context, postbox: postbox, audioSession: audioSession)
         }
         let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: self.fileReference, codecConfiguration: self.codecConfiguration)?.file ?? self.fileReference
         let thumbnail = internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: thumbnailVideoReference, previewSourceFileReference: self.fileReference, imageReference: nil, onlyFullSize: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail || self.fileReference.media.isInstantVideo)
-        return HLSVideoNativeContentNode(context: context, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, levels: qualities.levels, qualityFiles: qualities.files, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, captureProtected: self.captureProtected, thumbnail: thumbnail)
+        return HLSVideoNativeContentNode(context: context, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, levels: qualities.levels, qualityFiles: qualities.files, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, captureProtected: self.captureProtected, startTimestamp: self.startTimestamp, thumbnail: thumbnail)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {

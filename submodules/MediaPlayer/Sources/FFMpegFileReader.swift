@@ -238,12 +238,15 @@ public final class FFMpegFileReader {
     private var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
     private var lastReadPts: (streamIndex: Int, pts: Int64)?
     private var isWaitingForMoreData: Bool = false
-    
+    // While set, the video decoder skips non-reference frames, until the first packet at or after the pts (frames before
+    // it are only decoded to be hidden).
+    private var skipNonReferenceFrames: (codecContext: FFMpegAVCodecContext, beforePts: Int64)?
+
     public convenience init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?) {
         self.init(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, skipLoopFilter: skipLoopFilter, selectedStream: selectedStream, seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: false)
     }
 
-    init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?, ignoreEditList: Bool) {
+    init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?, ignoreEditList: Bool, skipNonReferenceFramesBefore: Double? = nil, probeOnlySelectedMediaType: Bool = false) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         switch source {
@@ -273,7 +276,13 @@ public final class FFMpegFileReader {
             self.readingError = true
             return nil
         }
-        
+
+        // The probe below otherwise analyses every stream: an audio reader would decode video frames to describe a
+        // stream it never reads.
+        if probeOnlySelectedMediaType, case let .mediaType(mediaType) = selectedStream {
+            avFormatContext.discardStreams(notOf: mediaType == .video ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio)
+        }
+
         if !avFormatContext.findStreamInfo() {
             self.readingError = true
             return nil
@@ -362,6 +371,10 @@ public final class FFMpegFileReader {
                                 }
                                 
                                 if codecContext.open() {
+                                    if let skipNonReferenceFramesBefore {
+                                        codecContext.setSkipNonReferenceFrames(true)
+                                        self.skipNonReferenceFrames = (codecContext, CMTimeMakeWithSeconds(skipNonReferenceFramesBefore, preferredTimescale: info.timeScale).value)
+                                    }
                                     stream = Stream(
                                         info: info,
                                         decoder: .video(FFMpegMediaVideoFrameDecoder(codecContext: codecContext))
@@ -499,6 +512,12 @@ public final class FFMpegFileReader {
             
             if !self.isWaitingForMoreData && !self.readingError && !self.hasReadToEnd {
                 if let decodableFrame = self.readDecodableFrame() {
+                    // Every frame at or after the target is this packet's or a later one's: a B-frame at or after it
+                    // follows, in decode order, the reference frame it is predicted from.
+                    if let skip = self.skipNonReferenceFrames, decodableFrame.pts.value >= skip.beforePts {
+                        skip.codecContext.setSkipNonReferenceFrames(false)
+                        self.skipNonReferenceFrames = nil
+                    }
                     let _ = stream.decoder.send(frame: decodableFrame)
                 }
             } else if self.hasReadToEnd && !self.didSendEndToDecoder {

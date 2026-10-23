@@ -117,9 +117,19 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     private var didLogStart = false
     private let stats = HLSPlaybackStats()
     private var isEffectivelyPlaying = false
+    private var isPlayRequested = false
+
+    // While the user watches with sound (the gallery, not muted inline autoplay) and the buffer ahead is short, the
+    // quality files' requests go ahead of other downloads in the queue. Above `priorityBufferHigh` the queue is shared
+    // as usual, so a video filling a long buffer does not hold back the photos and files around it.
+    private static let priorityBufferLow: Double = 10.0
+    private static let priorityBufferHigh: Double = 20.0
+    private let engine: TelegramEngine
+    private let qualityResourceIds: [String]
+    private var downloadPriorityDisposables: [Disposable]?
     private var networkClass = "unknown"
     
-    init(context: AccountContext, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, levels: [HLSLevel], qualityFiles: [HLSNativeQualityFile], loopVideo: Bool, enableSound: Bool, baseRate: Double, captureProtected: Bool, thumbnail: Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError>) {
+    init(context: AccountContext, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, levels: [HLSLevel], qualityFiles: [HLSNativeQualityFile], loopVideo: Bool, enableSound: Bool, baseRate: Double, captureProtected: Bool, startTimestamp: Double?, thumbnail: Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError>) {
         self.fileReference = fileReference
         self.approximateDuration = fileReference.media.duration ?? 0.0
         self.captureProtected = captureProtected
@@ -151,6 +161,8 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
         self.playerNode = MediaPlayerNode(captureProtected: captureProtected)
         
         let engine = context.engine
+        self.engine = engine
+        self.qualityResourceIds = qualityFiles.map { EngineMediaResource($0.file.media.resource).id.stringRepresentation }
         self.partStore = HLSNativePartStore(engine: engine, files: qualityFiles)
         self.environment = HLSNativeEnvironment(engine: engine, userLocation: userLocation, files: qualityFiles, partStore: self.partStore)
         self.playlistLoader = HLSNativePlaylistLoader(engine: engine, userLocation: userLocation, files: qualityFiles, startLevel: self.preloadLevel)
@@ -258,6 +270,7 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             self.controller.updatePlayback(position: position, isPlaying: isPlaying, rate: self.requestedBaseRate)
             self.stats.notePlayhead(level: self.controller.level(at: position), isPlaying: self.isEffectivelyPlaying, now: CACurrentMediaTime())
             self.updateVideoQualityState()
+            self.updateDownloadPriority()
         }
         self.environment.onDiskStateKnown = { [weak self] in
             guard let self else {
@@ -273,6 +286,12 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             }
             let networkClass = HLSVideoNativeContentNode.networkClass(networkType)
             self.networkClass = networkClass.rawValue
+            // The first video on a network starts from what the account's other downloads measured there. The store
+            // takes it only for a class with no estimate of its own.
+            if networkType != .none, HLSBandwidthStore.shared.estimator(for: networkClass) == nil, let estimate = self.engine.resources.downloadThroughputEstimate(isWifi: networkType == .wifi) {
+                HLSBandwidthStore.shared.seedPrior(bitsPerSecond: estimate, networkClass: networkClass)
+                Logger.shared.log("HLSNative", "\(fileId): seeded estimate=\(Int(estimate)) from downloads")
+            }
             self.controller.setNetworkClass(networkClass)
         })
         self.connectionStatusDisposable = (context.account.network.connectionStatus
@@ -284,6 +303,15 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
                 self?.controller.setNetworkAvailable(false)
             }
         })
+        
+        // A start position known up front (a tapped timecode, a stored one) is where the controller starts, so a resumed open
+        // does not first load or append the opening. The player moves there too: its position reports would otherwise
+        // take the controller back to 0 until the gallery's own seek arrives.
+        if let startTimestamp, startTimestamp > 0.0 {
+            self.lastPosition = startTimestamp
+            self.controller.seek(to: startTimestamp)
+            self.player.seek(timestamp: startTimestamp, play: nil)
+        }
         
         self.applyCap()
         self.playlistLoader.start()
@@ -301,6 +329,7 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
         self.playerStatusDisposable?.dispose()
         self.connectionStatusDisposable?.dispose()
         self.networkTypeDisposable?.dispose()
+        self.downloadPriorityDisposables?.forEach { $0.dispose() }
     }
     
     // MARK: Controller
@@ -322,6 +351,30 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             self._bufferingStatus.set(.single((ranges, Int64(duration * 1000.0))))
         }
         self.updateVideoQualityState()
+        self.updateDownloadPriority()
+    }
+
+    private func updateDownloadPriority() {
+        let isOn: Bool
+        if !self.enableSound || !self.isPlayRequested {
+            isOn = false
+        } else if self.downloadPriorityDisposables != nil {
+            isOn = self.controller.forwardBufferLength < HLSVideoNativeContentNode.priorityBufferHigh
+        } else {
+            isOn = self.controller.forwardBufferLength < HLSVideoNativeContentNode.priorityBufferLow
+        }
+        if isOn == (self.downloadPriorityDisposables != nil) {
+            return
+        }
+        if isOn {
+            self.downloadPriorityDisposables = self.qualityResourceIds.map { resourceId in
+                return self.engine.resources.pushPriorityDownload(resourceId: resourceId, priority: 2)
+            }
+        } else {
+            self.downloadPriorityDisposables?.forEach { $0.dispose() }
+            self.downloadPriorityDisposables = nil
+        }
+        Logger.shared.log("HLSNative", "\(self.fileReference.media.fileId.id): download priority \(isOn ? "on" : "off") buffered=\(String(format: "%.1f", self.controller.forwardBufferLength))")
     }
     
     // Without sound the video plays at most at the preload quality.
@@ -350,15 +403,19 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
         switch status {
         case let .buffering(_, whilePlaying, _, _):
             self.isEffectivelyPlaying = false
+            self.isPlayRequested = whilePlaying
             self.stats.noteStatus(isBuffering: true, isPlayRequested: whilePlaying, now: now)
         case .playing:
             self.isEffectivelyPlaying = true
+            self.isPlayRequested = true
             self.stats.noteStatus(isBuffering: false, isPlayRequested: true, now: now)
         case .paused:
             self.isEffectivelyPlaying = false
+            self.isPlayRequested = false
             self.stats.noteStatus(isBuffering: false, isPlayRequested: false, now: now)
         }
         self.stats.notePlayhead(level: self.controller.level(at: self.lastPosition), isPlaying: self.isEffectivelyPlaying, now: now)
+        self.updateDownloadPriority()
     }
     
     // Milliseconds from the node's creation to a controller timeline moment, -1 when it has not happened.

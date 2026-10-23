@@ -50,6 +50,11 @@ final class HLSPlaybackLabTests: XCTestCase {
             let label = "\(base.profile) \(base.cache)"
             XCTAssertLessThanOrEqual(result.stallCount, base.stallCount, label)
             XCTAssertLessThanOrEqual(result.stallTime, base.stallTime + 0.25, label)
+            // Quality and data: the mean bitrate may not drop by more than 2%, and what a played second costs beyond its
+            // own bitrate (refetches, abandoned loads) may not grow by more than 2%. Bytes alone would grow with any
+            // better bitrate.
+            XCTAssertGreaterThanOrEqual(result.meanBitrate, base.meanBitrate * 0.98, label)
+            XCTAssertLessThanOrEqual(result.bytesPerPlayedSecond * 8.0 / result.meanBitrate, base.bytesPerPlayedSecond * 8.0 / base.meanBitrate * 1.02, label)
             guard let startTime = result.startTime, let baseStartTime = base.startTime else {
                 XCTFail("\(label) never started")
                 continue

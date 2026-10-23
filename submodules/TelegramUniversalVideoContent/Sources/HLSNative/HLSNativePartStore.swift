@@ -82,7 +82,7 @@ final class HLSNativePartStore {
                 combined.reserveCapacity(initData.count + segmentData.count)
                 combined.append(initData)
                 combined.append(segmentData)
-                guard let _ = try? combined.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic), let mediaInfo = extractFFMpegMediaInfo(path: tempFile.path), let timing = HLSPartTiming.range(audio: mediaInfo.audio.map { ($0.startTime.seconds, $0.duration.seconds) }, video: mediaInfo.video.map { ($0.startTime.seconds, $0.duration.seconds) }) else {
+                guard let _ = try? combined.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic), let trackTiming = HLSNativePartStore.trackTiming(data: combined, path: tempFile.path), let timing = HLSPartTiming.range(audio: trackTiming.audio, video: trackTiming.video) else {
                     EngineTempBox.shared.dispose(tempFile)
                     subscriber.putNext(nil)
                     subscriber.putCompletion()
@@ -96,7 +96,7 @@ final class HLSNativePartStore {
                     startTime: timing.start,
                     endTime: timing.end,
                     content: ChunkMediaPlayerPart.TempFile(file: tempFile, ignoreAudioEditList: true),
-                    codecName: mediaInfo.video?.codecName,
+                    codecName: trackTiming.videoCodecName,
                     offsetTime: 0.0
                 ))
                 subscriber.putCompletion()
@@ -129,6 +129,18 @@ final class HLSNativePartStore {
         })
     }
     
+    // Each track's start and duration and the video codec, from the part's boxes (`HLSFragmentTiming`), else from
+    // FFmpeg's probe of the written file, which costs 15–80 ms a part on a phone.
+    private static func trackTiming(data: Data, path: String) -> (audio: (start: Double, duration: Double)?, video: (start: Double, duration: Double)?, videoCodecName: String?)? {
+        if let info = HLSFragmentTiming.parse(data) {
+            return (info.audio.map { ($0.start, $0.duration) }, info.video.map { ($0.start, $0.duration) }, info.videoCodecName)
+        }
+        guard let mediaInfo = extractFFMpegMediaInfo(path: path) else {
+            return nil
+        }
+        return (mediaInfo.audio.map { ($0.startTime.seconds, $0.duration.seconds) }, mediaInfo.video.map { ($0.startTime.seconds, $0.duration.seconds) }, mediaInfo.video?.codecName)
+    }
+
     // The player's parts for the buffered segments, sorted by start time (the player reads them in array order).
     // Parts the controller no longer holds (a result it ignored after a seek or a quality change) are released.
     func parts(for buffered: [HLSBufferedPart]) -> [ChunkMediaPlayerPart] {

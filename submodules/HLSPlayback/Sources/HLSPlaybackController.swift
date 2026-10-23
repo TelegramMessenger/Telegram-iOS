@@ -36,7 +36,7 @@ public final class HLSPlaybackController {
         // A start with no opening on disk takes the level the class's estimate picks only when that level's key is above
         // this one; otherwise it takes the preload level (the owner's rule).
         public var estimateStartAboveKey: Int = 480
-
+        
         public init() {
         }
     }
@@ -441,6 +441,11 @@ self.playlists = Array(repeating: nil, count: levels.count)
         return self.buffer.part(at: position)?.key.level
     }
     
+    // Seconds buffered ahead of the playhead, through the gaps the player plays over.
+    public var forwardBufferLength: Double {
+        return self.buffer.forwardLength(from: self.position)
+    }
+    
     // MARK: State
     
     private var maxAutoLevel: Int {
@@ -684,7 +689,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         }
         return result
     }
-
+    
     private func isPending(_ key: HLSSegmentKey) -> Bool {
         return self.pendingRequests.contains(where: { $0.key == key })
     }
@@ -707,7 +712,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         }
         return true
     }
-
+    
     // The buffer the level choice judges a segment against (seconds of playback): with loads in flight, the buffer as
     // it will be once they land, less the time the link still needs for what they owe. With none, the buffer, as hls.js.
     private func levelChoiceBuffer(bufferEnd: Double) -> Double {
@@ -742,7 +747,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         if let plannedEnd, let endPart = planned.part(at: max(position, plannedEnd - 0.001)), let endPlaylist = self.playlists[endPart.key.level], endPart.key.index == endPlaylist.segments.count - 1 {
             return
         }
-
+        
         var level: Int
         if let manualLevel = self.manualLevel {
             level = manualLevel

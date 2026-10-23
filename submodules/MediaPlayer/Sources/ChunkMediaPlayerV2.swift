@@ -81,13 +81,15 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             let codecName: String?
             let offset: Double
             let ignoreEditList: Bool
+            // The seek target in the part's own time, when the part holds one.
+            let startAt: Double?
             
             private(set) var reader: MediaDataReader?
             
             var didBeginReading: Bool = false
             var isFinished: Bool = false
             
-            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?, offset: Double, ignoreEditList: Bool = false) {
+            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?, offset: Double, ignoreEditList: Bool = false, startAt: Double? = nil) {
                 assert(queue.isCurrent())
                 
                 self.queue = queue
@@ -96,6 +98,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 self.codecName = codecName
                 self.offset = offset
                 self.ignoreEditList = ignoreEditList
+                self.startAt = startAt
             }
             
             deinit {
@@ -110,7 +113,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                         reader = AVAssetVideoDataReader(filePath: tempFile.file.path, isVideo: self.mediaType == .video)
                     } else {
                         if params.useV2Reader {
-                            reader = FFMpegMediaDataReaderV2(content: .tempFile(tempFile), isVideo: self.mediaType == .video, codecName: self.codecName, ignoreEditList: self.ignoreEditList)
+                            reader = FFMpegMediaDataReaderV2(content: .tempFile(tempFile), isVideo: self.mediaType == .video, codecName: self.codecName, ignoreEditList: self.ignoreEditList, startAt: self.startAt)
                         } else {
                             reader = FFMpegMediaDataReaderV1(filePath: tempFile.file.path, isVideo: self.mediaType == .video, codecName: self.codecName, ignoreEditList: self.ignoreEditList)
                         }
@@ -605,12 +608,19 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             )
                         }
                     } else {
+                        // The part that holds a seek target is read from the keyframe before it: what lies earlier is
+                        // only decoded to be hidden.
+                        var startAt: Double?
+                        if let seekFromMinTimestamp = loadedPartsMediaData.seekFromMinTimestamp, seekFromMinTimestamp > part.part.startTime, seekFromMinTimestamp < part.part.endTime {
+                            startAt = seekFromMinTimestamp - part.part.offsetTime
+                        }
                         let video = LoadedPart.Media(
                             queue: dataQueue,
                             content: .tempFile(part.part.content),
                             mediaType: .video,
                             codecName: part.part.codecName,
-                            offset: part.part.offsetTime
+                            offset: part.part.offsetTime,
+                            startAt: startAt
                         )
                         video.load(params: mediaDataReaderParams)
                         
@@ -620,7 +630,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             mediaType: .audio,
                             codecName: part.part.codecName,
                             offset: part.part.offsetTime,
-                            ignoreEditList: ignoreAudioEditList
+                            ignoreEditList: ignoreAudioEditList,
+                            startAt: startAt
                         )
                         audio.load(params: mediaDataReaderParams)
                         

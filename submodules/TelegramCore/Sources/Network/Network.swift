@@ -939,7 +939,10 @@ public final class Network: NSObject {
     var multiplexedRequestManager: MultiplexedRequestManager {
         return self._multiplexedRequestManager!
     }
-    
+
+    // Fed by FetchV2's media part requests.
+    let downloadThroughputMeter = DownloadThroughputMeter()
+
     private let _contextProxyId: ValuePromise<NetworkContextProxyId?>
     var contextProxyId: Signal<NetworkContextProxyId?, NoError> {
         return self._contextProxyId.get()

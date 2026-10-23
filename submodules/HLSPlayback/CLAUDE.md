@@ -33,6 +33,24 @@ from hls.js (D1–D13), the failure policy, the logs and the measurements are in
   slow link and it is abandoned. hls.js's switch hysteresis is judged against the level last chosen, not the last
   appended part (two segments back), or picks alternate between two levels. Changes to the scheduler go through the
   playback lab (`HLSPlaybackLabTests`): no profile may stall more or start later than `LabBaseline`.
+- **A caller that knows where playback starts passes it** (`HLSVideoContent.startTimestamp`; the gallery passes the
+  timecode, stored position or forwarded timestamp by its own precedence). Without it the controller starts at 0 and
+  loads or appends the opening before the seek arrives.
+- **Queue priority only while the watched video is short of buffer** (sound-on playback, under 10 s buffered, off
+  above 20 s or on pause; `pushPriorityDownload` on the quality files). Holding it for the whole playback starves
+  every other download on a slow link: the owner's rule is that the player must not.
+- **A first video is seeded from the account's other downloads** (`TelegramEngine.resources.downloadThroughputEstimate`
+  into `HLSBandwidthStore.seedPrior`, weightless, only for a class with no estimate of its own).
+- **A part's timing comes from its boxes** (`HLSFragmentTiming`), FFmpeg's probe only when they are in another shape.
+  It must give what FFmpeg's probe gives: `HLSFragmentTimingParityTests` (UniversalMediaPlayer) pins that on
+  ffmpeg-CLI fixtures. A change of the server's segment format makes parts fall back to the probe, slower but right;
+  check a new format against `extractFFMpegMediaInfo` before widening what the parser accepts. Its bytes come from the
+  network, so it never traps or walks an unbounded count: every size and time is checked for overflow and the samples
+  it reads are bounded (`maximumSampleCount`), and any such input goes to FFmpeg (`testCorruptedBoxesNeverTrap` and
+  the overflow tests in `HLSFragmentTimingTests`).
+- **`ChunkMediaPlayerV2`'s temp-file readers (HLS parts only)** open a part that holds a seek target at the keyframe
+  before it and skip non-reference frames until the target, and probe only their own stream. Both are scoped by the
+  content kind; other players' readers are unchanged.
 - **No network failure is terminal** (owner decision). A fetch waits for the server for as long as it takes; only a
   fatal error ends one, and a range fetch reports that as completion, so check the bytes
   (`fetchedResourceRangeUntilOnDisk`). Every HLS fetch retries with backoff, and a failing level is avoided for a

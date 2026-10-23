@@ -12,12 +12,13 @@ does, where it deliberately differs from hls.js, and the facts the code depends 
   - `HLSBandwidthEstimator`: hls.js's EWMA estimator, pinned against goldens.
   - `HLSLevels` and `HLSAbr`: levels, the preload-quality rule, the start rule, `findBestLevel`, `nextAutoLevel` and
     the abandon rule.
-  - `HLSBufferModel`, `HLSPartTiming`.
+  - `HLSBufferModel`, `HLSPartTiming`, `HLSFragmentTiming` (a part's track timing from its fMP4 boxes).
+  - `HLSBandwidthStore`: the estimate per network class, shared by every player.
   - `HLSPlaybackController`: the event-driven scheduler, behind an injected `HLSPlaybackEnvironment`.
 - `submodules/TelegramUniversalVideoContent/Sources/HLSNative/` — the app's environment over `TelegramEngine.resources`:
   - the playlist loader;
   - `HLSNativeEnvironment`: loads, ranges status, timers;
-  - `HLSNativePartStore`: init + segment to a temp file, probed with FFmpeg;
+  - `HLSNativePartStore`: init + segment to a temp file, timed from its boxes (FFmpeg's probe only for other shapes);
   - `HLSNativePlayerSource`: the `ChunkMediaPlayerV2` `.custom` source.
 - `HLSVideoNativeContentNode` — the `UniversalVideoContentNode`. `HLSVideoContent.makeContentNode` returns it, or
   `NativeVideoContent` for the base file when no quality is playable (`HLSQualitySet` nil).
@@ -27,8 +28,8 @@ does, where it deliberately differs from hls.js, and the facts the code depends 
 | | hls.js | here | why |
 |---|---|---|---|
 | D1 | every fragment samples bandwidth | only bytes that came over the network sample; a load that joined a fetch already under way does not | disk reads would inflate the estimate |
-| D2 | sample to end of parsing; measured TTFB | a sample is the load's network bytes over the link's busy time charged to it: from the later of the busy period's start and the previous load's end (`HLSBandwidthStore`), so loads in flight together are not charged the same seconds twice; a fixed 100 ms TTFB in the fetch-time model | MediaBox reports bytes only as whole parts land |
-| D3 | default estimate 500 kbit/s, reset per player | one estimate per network class (Wi-Fi, cellular: one class, since LTE and 5G hand over under a playing video) for the process, read and fed by every player (`HLSBandwidthStore`); after 60 s without a sample it becomes a prior of at most 4 s of weight, halved per 300 s idle | a second video should not start from scratch; Wi-Fi says nothing about cellular |
+| D2 | sample to end of parsing; measured TTFB | a sample is the load's network bytes over the link's busy time charged to it: from the later of the busy period's start and the previous completed load's end (`HLSBandwidthStore`), so loads in flight together are not charged the same seconds twice; a cancelled load's time goes to the loads still running, so the estimate errs low; a fixed 100 ms TTFB in the fetch-time model | MediaBox reports bytes only as whole parts land |
+| D3 | default estimate 500 kbit/s, reset per player | one estimate per network class (Wi-Fi, cellular: one class, since LTE and 5G hand over under a playing video) for the process, read and fed by every player (`HLSBandwidthStore`); after 60 s without a sample it becomes a prior of at most 4 s of weight, halved per 300 s idle; a class with no estimate starts from what the account's other downloads measured on that network (`DownloadThroughputMeter`), with no weight | a second video should not start from scratch; Wi-Fi says nothing about cellular |
 | D4 | quality from bandwidth alone | cache-aware: a level whose next segment is on disk wins over the target | play what is cached |
 | D5 | master → level playlist → init ∥ segment | no master; every level's playlist at creation; when the init is not ready, init and first segment are one fetch `[0, seg0.end)` | fewer round trips to the first frame |
 | D6 | an abandon falls to the rule's level | to a lower level cached at that position first | |
@@ -133,6 +134,43 @@ bytes still missing.
   on main: the player calls it from inside its own state update.
 - **Part temp files** are disposed a main-queue turn after the next parts list is built, by which time the player has
   that list.
+- **A gallery open starts the controller at its position** (`HLSVideoContent.startTimestamp`: the tapped timecode, the
+  stored position, a forwarded timestamp, by the gallery's own precedence). Before it, the controller started at 0
+  and heard of the position only from the gallery's seek about 50 ms later, after the opening had been appended or
+  its load issued. The node seeks the player too: its position reports would otherwise take the controller back to 0.
+- **The watched video goes ahead in the download queue while its buffer is short.** While playback with sound (the
+  gallery) is playing or buffering, the node pushes download priority for its quality files when less than 10 s is
+  buffered and drops it above 20 s or on pause; inline autoplay never does. A priority held for the whole playback
+  would hold back every other download for as long as a slow link keeps the buffer from filling.
+- **Within one file the player's ranges go first.** FetchV2 takes a file's parts from its highest priority bucket
+  (the player loads at `.elevated`, the chat preload of the same file at `.default`), and a range asked for at two
+  priorities is fetched once; it used to share part slots round-robin, a third to the player.
+- **A first video starts from the account's other downloads** (D3): FetchV2 times every media part with the engine's
+  send-to-receive duration into `DownloadThroughputMeter` (bits over the union of the parts' intervals, the last
+  120 s, nil below 512 KB); a class with no estimate is seeded from it, with no weight. Small files measure round
+  trips, so the seed errs low. Under `-debugNetworkProfile` the shaper reports a held response's time as the shaped
+  link's, or the meter would measure the Mac's network.
+- **A part's timing is read from its boxes** (`HLSFragmentTiming`): per track, the first sample's presentation time
+  less the edit list's media time, and the end of the decode times, as FFmpeg's probe reports them (its start is the
+  first packet's, `index_entries[0]`, not the earliest: open-GOP leading pictures present before it). Only the shape
+  Telegram's segments come in is read (one `moof`, one `traf` per track, no edit list or one plain entry on the video
+  track, no negative composition offset); anything else, an audio edit list marking priming included, goes to FFmpeg's
+  probe as before, and so do bytes no honest segment holds (a size past its box, a time that overflows, more than
+  `maximumSampleCount` samples): segment bytes come from the network, and the parser must never trap or walk an
+  unbounded count. Matched to the
+  microsecond on 26 real 720p and 1080p segments of the test video (against ffprobe; 6 of them against the vendored
+  FFmpeg's probe), on ffmpeg-CLI fixtures, and on 64 real parts cut from the simulator's cache of 45 quality files
+  (AV1 29, H.264 28, HEVC 7; ffprobe 9.0.2, start and `extractFFMpegMediaInfo`'s `duration − start`). The other 34
+  parts of that cache carry an audio edit list marking AAC priming (media time 2112 or 1024, on AV1 and H.264 quality
+  files) and are left to the probe, as are both such videos of the device run below. FFmpeg's start for them adds the
+  priming back as skipped samples at the codec's sample rate (`update_initial_timestamps`), which the boxes alone do
+  not give for HE-AAC.
+- **A seek inside a part decodes from the keyframe before it** (`ChunkMediaPlayerV2`, temp-file parts only): the
+  part's readers open with a direct seek to the target, and the video decoder skips non-reference frames
+  (`AVDISCARD_NONREF`) until the first packet at or after the target, which no frame at or after the target precedes
+  in decode order. A real 1080p segment held 2 keyframes and 48 non-reference frames of 98.
+- **A part's two readers probe only their own stream** (temp-file parts only): the other media type is discarded
+  before `avformat_find_stream_info`, which otherwise decodes H.264 in software for the audio reader too.
 
 ## Logs
 
@@ -230,8 +268,61 @@ timestamp link, sound on, its playlists and quality files deleted before each ru
 - **Quality switches on 3g:** the first build after the change showed six switches a minute, 480/720 alternating.
   That was hls.js's hysteresis judged against a part two segments back. With the fix
   (`testPipelinedPicksDoNotAlternateBetweenTwoLevels`) there were two.
-- `step-down` was not run on the simulator. The shaper's steps count from app launch, so the drop does not line up
-  with playback.
+- `step-down` was not run on the simulator. The shaper's steps count from its first use (the process's first media
+  request), so the drop does not line up with playback.
+
+## The start path (2026-10-23, iPhone Air, debug build, Wi-Fi)
+
+Measured with temporary timing logs in the part store and `ChunkMediaPlayerV2`, on resumed and timestamp opens of
+two videos from disk:
+
+| open | first frame | hidden frames decoded first | part probe | readers (video + audio) |
+|---|---|---|---|---|
+| resumed at 1:16:34, first after launch | 591 ms | 114 (342 ms) | 78 ms | 32 + 43 ms |
+| reopened at 1:17:02 | 159 ms | 14 (32 ms) | ~25 ms | 21 + 22 ms |
+| other video, resumed at 0:59 | 238 ms | 62 (144 ms) | ~25 ms | 22 + 21 ms |
+
+- **The first frame is on screen 1–2 ms after the first frame at or after the target is enqueued.** Everything before
+  it is getting that frame decoded.
+- **Most of a resumed or timestamp open is hidden frames:** the part starts at its segment's keyframe, and every frame
+  up to the target was decoded (about 3 ms each with VideoToolbox) only to be hidden. Hence the keyframe seek and the
+  non-reference skip above.
+- **The part store's FFmpeg probe** took 15–78 ms a part (the first part's is on the critical path); hence the box
+  timing. Each reader's probe took 20–43 ms; hence the probe of only its own stream.
+- The first activation of the audio session took 62 ms, off the video's path.
+- The simulator showed the same shape at about twice the cost (software decoding).
+
+After this branch (2026-10-24, same device and build type, the same timing logs), on the same two videos a little
+further on, and two others from 0:
+
+| open | first frame | hidden frames decoded first | part timing | readers (video + audio) |
+|---|---|---|---|---|
+| other video, resumed at 1:05, first after launch | 181 ms | 7 | boxes, 0.1–0.2 ms | 72 + 4 ms |
+| other video, reopened at 1:20 | 95 ms | 6 | boxes | 30 + 5 ms |
+| long video, resumed at 1:17:08 | 132 ms | 13 | boxes | 23 + 1 ms |
+| two videos from 0 (AAC priming, so probed) | 69, 57 ms | 0 | FFmpeg's probe | 30 + 1, 16 + 2 ms |
+
+- **First frame, warm:** 159 → 132 ms (long video), 238 → 95 ms (other video). First after launch: 591 ms before
+  (long video, 114 hidden frames), 181 ms now (other video, 7 hidden frames); not the same video, so read it as the
+  hidden frames gone rather than a like-for-like number.
+- **Hidden frames** are now the reference frames between the keyframe and the target: 6–13 against 14–114, and they
+  are most of what is left of a resumed open (about 50 ms from the readers to the first frame, against 10 ms from 0).
+- **Part timing** from the boxes takes 0.1–0.7 ms a part against the probe's 15–78 ms, and the audio reader opens in
+  1–5 ms against 21–43 ms. The first video reader after launch took 72 ms against 32 ms; with the audio reader the
+  first part's readers took the same 75 ms in both runs, one sample each.
+
+## Considered and not built (2026-10-23)
+
+- **Fetching the opening alongside the playlists** (a guessed `[0, guess)` range at start): position-0 openings are
+  already on disk from the bubble thumbnail or the chat preload (every `HLSStart` from 0 on the simulator was
+  `firstSegment=disk`), and resumed opens now start at their own position.
+- **A resume threshold above 1.0 s after a stall:** parts are whole 5 s segments, so the playable duration grows by a
+  part at a time and a 1.0 s threshold cannot stutter-cycle.
+- **Caching refreshed file references:** each new fetch of a file starts from its caller's reference, so after it
+  expires every later segment load would pay a failed part and a refresh; no session in hand showed it. FetchV2 now
+  logs "refreshing file reference again in this process" when it happens.
+- **Keeping readers across a seek inside the current part:** the decode from the keyframe is the cost, and that is
+  covered by the keyframe seek; the reader probes it would save are now small.
 
 ## Simulator checks (2026-10-22)
 
@@ -289,7 +380,11 @@ timestamp link, sound on, its playlists and quality files deleted before each ru
 - Goldens: `Tests/HLSJSGoldens.swift` holds values computed by hls.js 1.7.3's own TypeScript.
   - Regenerate with `sh submodules/HLSPlayback/Tools/hlsjs-goldens/generate.sh`; see its README.
   - Never edit the file by hand.
-- `ChunkMediaPlayerV2`'s custom source: `Make.py test --target //submodules/MediaPlayer:UniversalMediaPlayerTests`.
+- `HLSFragmentTimingTests` (host) builds parts box by box: the timing, the shapes left to FFmpeg, truncation.
+- `Make.py test --target //submodules/MediaPlayer:UniversalMediaPlayerTests`: `ChunkMediaPlayerV2`'s custom source;
+  `HLSFragmentTimingParityTests`, the box timing against the vendored FFmpeg's probe; `FFMpegFileReaderStartTests` and
+  `FFMpegFileReaderProbeTests`, the readers of a part. Their fixtures (`Tests/Fixtures/`) come from the ffmpeg CLI
+  (`testsrc2`, a sine tone); the commands are in the test files. Never commit a real segment.
 
 ## Licence
 
